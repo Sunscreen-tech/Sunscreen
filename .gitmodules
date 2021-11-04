@@ -1,0 +1,3 @@
+[submodule "seal/SEAL"]
+	path = seal/SEAL
+	url = git@github.com:microsoft/SEAL.git

@@ -49,6 +49,7 @@ fn main() {
         .allowlist_function("BatchEncoder_.*")
         .allowlist_function("Ciphertext_.*")
         .allowlist_function("CKKSEncoder_.*")
+        .allowlist_function("CoeffModulus_.*")
         .allowlist_function("ContextData_.*")
         .allowlist_function("Decryptor_.*")
         .allowlist_function("EPQ_.*")
@@ -68,9 +69,6 @@ fn main() {
         .allowlist_function("SecretKey_.*")
         .allowlist_function("Serialization_.*")
         .allowlist_function("ValCheck_.*")
-        .allowlist_function("SEALContext_.*")
-        .allowlist_function("SEALContext_.*")
-        .allowlist_function("SEALContext_.*")
         .generate()
         .unwrap();
 

@@ -1,7 +1,7 @@
 use std::ffi::c_void;
 use std::ptr::null_mut;
 
-use crate::bindgen::{self, E_OK};
+use crate::bindgen::{self};
 
 use crate::error::{convert_seal_error, Error};
 
@@ -28,10 +28,6 @@ impl EncryptionParameters {
         convert_seal_error(unsafe { bindgen::EncParams_Create1(scheme as u8, &mut handle) })?;
 
         Ok(Self { handle })
-    }
-
-    fn set_poly_modulus_degree(&mut self, degree: u64) -> Result<(), Error> {
-        Ok(())
     }
 
     pub fn get_poly_modulus_degree(&self) -> u64 {
@@ -96,7 +92,7 @@ impl BfvEncryptionParametersBuilder {
     }
 
     pub fn build(self) -> Result<EncryptionParameters, Error> {
-        let mut params = EncryptionParameters::new(SchemeType::Bfv)?;
+        let params = EncryptionParameters::new(SchemeType::Bfv)?;
 
         convert_seal_error(unsafe {
             bindgen::EncParams_SetPolyModulusDegree(
@@ -106,25 +102,25 @@ impl BfvEncryptionParametersBuilder {
         })?;
 
         match self.coefficient_modulus {
-            NotSet => return Err(Error::CoefficientModulusNotSet),
+            CoefficientModulusType::NotSet => return Err(Error::CoefficientModulusNotSet),
             CoefficientModulusType::Constant(q) => {
                 convert_seal_error(unsafe {
                     bindgen::EncParams_SetCoeffModulus(params.handle, 0, &mut null_mut())
                 })?;
             }
-            Modulus => {
+            CoefficientModulusType::Modulus => {
                 unimplemented!()
             }
         };
 
         match self.plain_modulus {
-            NotSet => return Err(Error::PlainModulusNotSet),
+            PlainModulusType::NotSet => return Err(Error::PlainModulusNotSet),
             PlainModulusType::Constant(p) => {
                 convert_seal_error(unsafe {
                     bindgen::EncParams_SetPlainModulus2(params.handle, p)
                 })?;
             }
-            Modulus => {
+            PlainModulusType::Modulus => {
                 unimplemented!()
             }
         };
@@ -147,8 +143,8 @@ mod tests {
     fn can_build_params() {
         let result = BfvEncryptionParametersBuilder::new()
             .set_poly_modulus_degree(1024)
-            .set_coefficient_modulus(64)
-            .set_plain_modulus_no_batching(64)
+            .set_coefficient_modulus(1234)
+            .set_plain_modulus_no_batching(1234)
             .build();
 
         assert_eq!(result.is_ok(), true);

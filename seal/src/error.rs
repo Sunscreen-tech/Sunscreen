@@ -26,7 +26,7 @@ impl From<c_long> for Error {
             E_INVALIDARG => Error::InvalidArgument,
             E_OUTOFMEMORY => Error::OutOfMemory,
             E_UNEXPECTED => Error::Unexpected,
-            COR_E => Error::InternalError(err),
+            COR_E_IO => Error::InternalError(err),
             COR_E_INVALIDOPERATION => Error::InternalError(err),
             _ => Error::Unknown(err),
         }

@@ -43,6 +43,14 @@ impl Modulus {
 
         Ok(Modulus { handle })
     }
+
+    pub fn value(&self) -> u64 {
+        let mut val: u64 = 0;
+
+        convert_seal_error(unsafe { bindgen::Modulus_Value(self.handle, &mut val) }).expect("Internal error. Could not get modulus value.");
+
+        val
+    }
 }
 
 impl Drop for Modulus {
@@ -79,23 +87,24 @@ impl CoefficientModulus {
     pub fn create(degree: u64, bit_sizes: &[i32]) -> Result<Vec<Modulus>> {
         let mut bit_sizes = bit_sizes.to_owned();
         let length = bit_sizes.len() as u64;
-        let mut coefficients_arr_ptr: *mut c_void = null_mut();
+
+        let mut coefficients: Vec<*mut c_void> = Vec::with_capacity(bit_sizes.len());
+        let coefficients_ptr = coefficients.as_mut_ptr() as *mut *mut c_void;
 
         convert_seal_error(unsafe {
             bindgen::CoeffModulus_Create(
                 degree,
                 length,
                 bit_sizes.as_mut_ptr(),
-                &mut coefficients_arr_ptr,
+                coefficients_ptr
             )
         })?;
 
-        Ok(unsafe {
-            std::slice::from_raw_parts(coefficients_arr_ptr as *const u64, length as usize)
-        }
-        .into_iter()
-        .map(|m| Modulus::new(*m))
-        .collect::<Result<Vec<Modulus>>>()?)
+        unsafe { coefficients.set_len(length as usize) };
+
+        Ok(
+            coefficients.iter().map(|h| Modulus{handle: *h} ).collect()
+        )
     }
 
     /**
@@ -115,22 +124,21 @@ impl CoefficientModulus {
             bindgen::CoeffModulus_BFVDefault(degree, security_level as i32, &mut len, null_mut())
         })?;
 
-        let mut coefficients = vec![0; len as usize];
-        let mut coefficients_ptr = coefficients.as_mut_ptr() as *mut c_void;
+        let mut coefficients: Vec<*mut c_void> = Vec::with_capacity(len as usize);
+        let coefficients_ptr = coefficients.as_mut_ptr() as *mut *mut c_void;
 
         convert_seal_error(unsafe {
             bindgen::CoeffModulus_BFVDefault(
                 degree,
                 security_level as i32,
                 &mut len,
-                &mut coefficients_ptr,
+                coefficients_ptr,
             )
         })?;
 
-        Ok(coefficients
-            .iter()
-            .map(|m| Modulus::new(*m))
-            .collect::<Result<Vec<Modulus>>>()?)
+        unsafe { coefficients.set_len(len as usize) };
+
+        Ok(coefficients.iter().map(|handle| { println!("{:?}", handle); Modulus {handle: *handle} }).collect())
     }
 
     /**
@@ -172,6 +180,38 @@ mod tests {
 
     #[test]
     fn can_create_plain_modulus() {
-        assert_eq!(PlainModulus::batching(1024, 20).is_ok(), true);
+        let modulus = PlainModulus::batching(1024, 20).unwrap();
+
+        assert_eq!(modulus.value(), 1038337);
+    }
+
+    #[test]
+    fn can_create_default_coefficient_modulus() {
+        let modulus = CoefficientModulus::bfv_default(1024, SecurityLevel::TC128).unwrap();
+
+        assert_eq!(modulus.len(), 1);
+        assert_eq!(modulus[0].value(), 132120577);
+
+        let modulus = CoefficientModulus::bfv_default(1024, SecurityLevel::TC192).unwrap();
+
+        assert_eq!(modulus.len(), 1);
+        assert_eq!(modulus[0].value(), 520193);
+
+        let modulus = CoefficientModulus::bfv_default(1024, SecurityLevel::TC256).unwrap();
+
+        assert_eq!(modulus.len(), 1);
+        assert_eq!(modulus[0].value(), 12289);
+    }
+
+    #[test]
+    fn can_create_custom_coefficient_modulus() {
+        let modulus = CoefficientModulus::create(8192, &vec![50, 30, 30, 50, 50]).unwrap();
+
+        assert_eq!(modulus.len(), 5);
+        assert_eq!(modulus[0].value(), 1125899905744897);
+        assert_eq!(modulus[1].value(), 1073643521);
+        assert_eq!(modulus[2].value(), 1073692673);
+        assert_eq!(modulus[3].value(), 1125899906629633);
+        assert_eq!(modulus[4].value(), 1125899906826241);
     }
 }

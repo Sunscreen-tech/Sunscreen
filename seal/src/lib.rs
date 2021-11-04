@@ -1,3 +1,7 @@
+//! This crate provides wrappers for Micorosft's SEAL Homomorphic encryption library.
+
+#![warn(missing_docs)]
+
 extern crate link_cplusplus;
 
 #[allow(dead_code)]

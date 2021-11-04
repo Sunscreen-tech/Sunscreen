@@ -4,6 +4,15 @@ use std::ptr::null_mut;
 use crate::bindgen;
 use crate::error::*;
 
+/**
+ * Represent an integer modulus of up to 61 bits. An instance of the Modulus
+ * struct represents a non-negative integer modulus up to 61 bits. In particular,
+ * the encryption parameter PlainModulus, and the primes in CoeffModulus, are
+ * represented by instances of Modulus. The purpose of this class is to
+ * perform and store the pre-computation required by Barrett reduction.
+ * 
+ * A Modulus is immuatable from Rust once created.
+*/
 pub struct Modulus {
     handle: *mut c_void,
 }
@@ -36,7 +45,7 @@ impl Default for SecurityLevel {
 }
 
 impl Modulus {
-    fn new(value: u64) -> Result<Self> {
+    fn _new(value: u64) -> Result<Self> {
         let mut handle: *mut c_void = null_mut();
 
         convert_seal_error(unsafe { bindgen::Modulus_Create1(value, &mut handle) })?;
@@ -44,6 +53,9 @@ impl Modulus {
         Ok(Modulus { handle })
     }
 
+    /**
+     * The value of the modulus
+     */
     pub fn value(&self) -> u64 {
         let mut val: u64 = 0;
 
@@ -74,6 +86,17 @@ impl Clone for Modulus {
     }
 }
 
+/**
+ * This struct contains static methods for creating a coefficient modulus easily.
+ * Note that while these functions take a SecLevelType argument, all security
+ * guarantees are lost if the output is used with encryption parameters with
+ * a mismatching value for the PolyModulusDegree.
+ *
+ * The default value SecLevelType.TC128 provides a very high level of security
+ * and is the default security level enforced by Microsoft SEAL when constructing
+ * a SEALContext object. Normal users should not have to specify the security
+ * level explicitly anywhere.
+ */
 pub struct CoefficientModulus;
 
 impl CoefficientModulus {
@@ -158,6 +181,9 @@ impl CoefficientModulus {
     }
 }
 
+/**
+ * Methods for easily constructing plaintext modulus
+ */
 pub struct PlainModulus;
 
 impl PlainModulus {

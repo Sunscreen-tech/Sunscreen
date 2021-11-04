@@ -4,17 +4,39 @@ use crate::bindgen::{
     COR_E_INVALIDOPERATION, COR_E_IO, E_INVALIDARG, E_OK, E_OUTOFMEMORY, E_POINTER, E_UNEXPECTED,
 };
 
+/**
+ * A type representing all errors that can occur in SEAL.
+ */
 #[derive(Debug, Copy, Clone)]
 pub enum Error {
+    /// No error
     Ok,
+    
+    /// An argument is invalid
     InvalidArgument,
+
+    /// A pointer is invalid. When using the rust bindings, encountering this error is a bug.
     InvalidPointer,
+
+    /// The machine ran out of memory.
     OutOfMemory,
+
+    /// An unknown error occurred in SEAL.
     Unexpected,
+
+    /// An internal invariant was violated.
     InternalError(i64),
+
+    /// An unknown error occurred in SEAL.
     Unknown(i64),
+
+    /// User failed to set a polynomial degree.
     DegreeNotSet,
+
+    /// User failed to set a coefficient modulus.
     CoefficientModulusNotSet,
+
+    /// User failed to set a plaintext modulus.
     PlainModulusNotSet,
 }
 

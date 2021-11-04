@@ -114,8 +114,12 @@ impl BfvEncryptionParametersBuilder {
             CoefficientModulusType::Modulus(mut m) => {
                 convert_seal_error(unsafe {
                     let mut modulus_ptr = m.as_mut_ptr() as *mut c_void;
-                    bindgen::EncParams_SetCoeffModulus(params.handle, m.len() as u64, &mut modulus_ptr)
-                })?;                
+                    bindgen::EncParams_SetCoeffModulus(
+                        params.handle,
+                        m.len() as u64,
+                        &mut modulus_ptr,
+                    )
+                })?;
             }
         };
 
@@ -143,14 +147,16 @@ impl Drop for EncryptionParameters {
 
 #[cfg(test)]
 mod tests {
-    use crate::*;
     use crate::CoefficientModulus;
+    use crate::*;
 
     #[test]
     fn can_build_params() {
         let result = BfvEncryptionParametersBuilder::new()
             .set_poly_modulus_degree(1024)
-            .set_coefficient_modulus(CoefficientModulus::bfv_default(1024, SecurityLevel::default()).unwrap())
+            .set_coefficient_modulus(
+                CoefficientModulus::bfv_default(1024, SecurityLevel::default()).unwrap(),
+            )
             .set_plain_modulus_no_batching(1234)
             .build();
 

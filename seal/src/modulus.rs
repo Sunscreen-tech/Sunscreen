@@ -58,25 +58,17 @@ impl Clone for Modulus {
         let mut copy = null_mut();
 
         unsafe {
-            bindgen::Modulus_Create2(
-                self.handle,
-                &mut copy
-            )
+            convert_seal_error(bindgen::Modulus_Create2(self.handle, &mut copy))
+                .expect("Failed to clone modulus")
         };
 
-        Self {
-            handle: copy
-        }
+        Self { handle: copy }
     }
 }
 
-pub mod CoefficientModulus {
-    use super::*;
-    use crate::bindgen;
+pub struct CoefficientModulus;
 
-    use std::ffi::c_void;
-    use std::ptr::null_mut;
-
+impl CoefficientModulus {
     /**
      * Returns a custom coefficient modulus suitable for use with the specified
      * PolyModulusDegree.The return value will be a vector consisting of
@@ -158,10 +150,9 @@ pub mod CoefficientModulus {
     }
 }
 
-pub mod PlainModulus {
-    use super::*;
-    use super::CoefficientModulus;
+pub struct PlainModulus;
 
+impl PlainModulus {
     /**
      * Creates a prime number Modulus for use as PlainModulus encryption
      * parameter that supports batching with a given PolyModulusDegree.
@@ -176,7 +167,7 @@ pub mod PlainModulus {
 }
 
 #[cfg(test)]
-mod Tests {
+mod tests {
     use super::*;
 
     #[test]

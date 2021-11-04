@@ -197,6 +197,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "link-cplusplus"
+version = "1.0.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8f1becd27d473556dc610b8afa1636ef90747b574a84553bc11e82371d5ef2d1"
+dependencies = [
+ "cc",
+]
+
+[[package]]
 name = "log"
 version = "0.4.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -282,6 +291,7 @@ version = "0.1.0"
 dependencies = [
  "bindgen",
  "cmake",
+ "link-cplusplus",
 ]
 
 [[package]]

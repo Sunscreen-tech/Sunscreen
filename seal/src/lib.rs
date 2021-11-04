@@ -1,3 +1,6 @@
+extern crate link_cplusplus;
+
+#[allow(dead_code)]
 mod bindgen {
     use std::os::raw::c_long;
 

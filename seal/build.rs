@@ -21,6 +21,7 @@ fn main() {
         .define("CMAKE_CXX_FLAGS_RELEASE", "-DNDEBUG -flto -O3")
         .define("CMAKE_C_FLAGS_RELEASE", "-DNDEBUG -flto -O3")
         .define("SEAL_BUILD_STATIC_SEAL_C", "ON")
+        .define("SEAL_BUILD_DEPS", "ON")
         .define("SEAL_BUILD_SEAL_C", "ON")
         .define("SEAL_BUILD_BENCH", "OFF")
         .define("SEAL_BUILD_EXAMPLES", "OFF")
@@ -33,6 +34,7 @@ fn main() {
 
     println!("cargo:rustc-link-search=native={}/build/lib", dst.display());
     println!("cargo:rustc-link-lib=static=sealc-3.7");
+    println!("cargo:rustc-link-lib=static=seal-3.7");
 
     println!("-I{}", out_path.join("include").display());
 

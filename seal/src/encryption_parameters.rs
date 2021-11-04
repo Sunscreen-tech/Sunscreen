@@ -138,3 +138,19 @@ impl Drop for EncryptionParameters {
         unsafe { bindgen::EncParams_Destroy(self.handle) };
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn can_build_params() {
+        let result = BfvEncryptionParametersBuilder::new()
+            .set_poly_modulus_degree(1024)
+            .set_coefficient_modulus(64)
+            .set_plain_modulus_no_batching(64)
+            .build();
+
+        assert_eq!(result.is_ok(), true);
+    }
+}

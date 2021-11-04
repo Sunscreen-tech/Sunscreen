@@ -33,7 +33,9 @@ impl From<c_long> for Error {
     }
 }
 
-pub fn convert_seal_error(err: c_long) -> Result<(), Error> {
+pub type Result<T> = std::result::Result<T, Error>;
+
+pub fn convert_seal_error(err: c_long) -> Result<()> {
     if err == E_OK {
         Ok(())
     } else {

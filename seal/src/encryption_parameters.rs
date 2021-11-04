@@ -2,6 +2,7 @@ use std::ffi::c_void;
 use std::ptr::null_mut;
 
 use crate::bindgen::{self};
+use crate::Modulus;
 
 use crate::error::{convert_seal_error, Error};
 
@@ -47,8 +48,7 @@ impl EncryptionParameters {
 
 enum CoefficientModulusType {
     NotSet,
-    Constant(u64),
-    Modulus,
+    Modulus(Vec<Modulus>),
 }
 
 enum PlainModulusType {
@@ -77,9 +77,17 @@ impl BfvEncryptionParametersBuilder {
         self
     }
 
-    /// Forgo modulus switching and just set a single coefficient modulus level
-    pub fn set_coefficient_modulus(mut self, modulus: u64) -> Self {
-        self.coefficient_modulus = CoefficientModulusType::Constant(modulus);
+    /**
+     * Sets the coefficient modulus parameter. The coefficient modulus consists
+     * of a list of distinct prime numbers, and is represented by a vector of
+     * Modulus objects. The coefficient modulus directly affects the size
+     * of ciphertext elements, the amount of computation that the scheme can
+     * perform (bigger is better), and the security level (bigger is worse). In
+     * Microsoft SEAL each of the prime numbers in the coefficient modulus must
+     * be at most 60 bits, and must be congruent to 1 modulo 2*poly_modulus_degree.
+     */
+    pub fn set_coefficient_modulus(mut self, modulus: Vec<Modulus>) -> Self {
+        self.coefficient_modulus = CoefficientModulusType::Modulus(modulus);
         self
     }
 
@@ -103,13 +111,11 @@ impl BfvEncryptionParametersBuilder {
 
         match self.coefficient_modulus {
             CoefficientModulusType::NotSet => return Err(Error::CoefficientModulusNotSet),
-            CoefficientModulusType::Constant(q) => {
+            CoefficientModulusType::Modulus(mut m) => {
                 convert_seal_error(unsafe {
-                    bindgen::EncParams_SetCoeffModulus(params.handle, 0, &mut null_mut())
-                })?;
-            }
-            CoefficientModulusType::Modulus => {
-                unimplemented!()
+                    let mut modulus_ptr = m.as_mut_ptr() as *mut c_void;
+                    bindgen::EncParams_SetCoeffModulus(params.handle, m.len() as u64, &mut modulus_ptr)
+                })?;                
             }
         };
 
@@ -137,13 +143,14 @@ impl Drop for EncryptionParameters {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::*;
+    use crate::CoefficientModulus;
 
     #[test]
     fn can_build_params() {
         let result = BfvEncryptionParametersBuilder::new()
             .set_poly_modulus_degree(1024)
-            .set_coefficient_modulus(1234)
+            .set_coefficient_modulus(CoefficientModulus::bfv_default(1024, SecurityLevel::default()).unwrap())
             .set_plain_modulus_no_batching(1234)
             .build();
 

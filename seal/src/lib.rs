@@ -17,6 +17,8 @@ mod bindgen {
 
 mod encryption_parameters;
 mod error;
+mod modulus;
 
 pub use encryption_parameters::*;
 pub use error::Error;
+pub use modulus::*;

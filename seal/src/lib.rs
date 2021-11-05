@@ -22,8 +22,8 @@ mod bindgen {
 mod serialization {
     #[repr(u8)]
     pub enum CompressionType {
-        None = 0,
-        ZLib = 1,
+        // None = 0,
+        // ZLib = 1,
         ZStd = 2,
     }
 }

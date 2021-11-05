@@ -63,7 +63,7 @@ impl Display for Error {
     fn fmt(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
             Error::SerializationError(s) => formatter.write_str(s),
-            _ => formatter.write_str(&format!("{:?}", self))
+            _ => formatter.write_str(&format!("{:?}", self)),
         }
     }
 }

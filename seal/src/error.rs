@@ -11,7 +11,7 @@ use crate::bindgen::{
 pub enum Error {
     /// No error
     Ok,
-    
+
     /// An argument is invalid
     InvalidArgument,
 

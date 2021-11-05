@@ -10,11 +10,12 @@ use crate::error::*;
  * the encryption parameter PlainModulus, and the primes in CoeffModulus, are
  * represented by instances of Modulus. The purpose of this class is to
  * perform and store the pre-computation required by Barrett reduction.
- * 
+ *
  * A Modulus is immuatable from Rust once created.
 */
 pub struct Modulus {
-    handle: *mut c_void,
+    /// The handle to the internal SEAL Modulus object.
+    pub handle: *mut c_void,
 }
 
 /**
@@ -44,6 +45,16 @@ impl Default for SecurityLevel {
     }
 }
 
+/**
+ * Assume the given handle is a modulus and construct a modulus out of it.
+ *
+ * If it isn't, using the returned modulus results in undefined
+ * behavior.
+ */
+pub unsafe fn unchecked_from_handle(handle: *mut c_void) -> Modulus {
+    Modulus { handle }
+}
+
 impl Modulus {
     fn _new(value: u64) -> Result<Self> {
         let mut handle: *mut c_void = null_mut();
@@ -59,7 +70,8 @@ impl Modulus {
     pub fn value(&self) -> u64 {
         let mut val: u64 = 0;
 
-        convert_seal_error(unsafe { bindgen::Modulus_Value(self.handle, &mut val) }).expect("Internal error. Could not get modulus value.");
+        convert_seal_error(unsafe { bindgen::Modulus_Value(self.handle, &mut val) })
+            .expect("Internal error. Could not get modulus value.");
 
         val
     }
@@ -115,19 +127,15 @@ impl CoefficientModulus {
         let coefficients_ptr = coefficients.as_mut_ptr() as *mut *mut c_void;
 
         convert_seal_error(unsafe {
-            bindgen::CoeffModulus_Create(
-                degree,
-                length,
-                bit_sizes.as_mut_ptr(),
-                coefficients_ptr
-            )
+            bindgen::CoeffModulus_Create(degree, length, bit_sizes.as_mut_ptr(), coefficients_ptr)
         })?;
 
         unsafe { coefficients.set_len(length as usize) };
 
-        Ok(
-            coefficients.iter().map(|h| Modulus{handle: *h} ).collect()
-        )
+        Ok(coefficients
+            .iter()
+            .map(|h| Modulus { handle: *h })
+            .collect())
     }
 
     /**
@@ -161,7 +169,13 @@ impl CoefficientModulus {
 
         unsafe { coefficients.set_len(len as usize) };
 
-        Ok(coefficients.iter().map(|handle| { println!("{:?}", handle); Modulus {handle: *handle} }).collect())
+        Ok(coefficients
+            .iter()
+            .map(|handle| {
+                println!("{:?}", handle);
+                Modulus { handle: *handle }
+            })
+            .collect())
     }
 
     /**

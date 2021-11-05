@@ -30,6 +30,7 @@ fn main() {
         .define("SEAL_USE_INTRIN", "ON")
         .define("SEAL_USE_MSGSL", "OFF")
         .define("SEAL_USE_ZLIB", "ON")
+        .define("SEAL_USE_ZSTD", "ON")
         .build();
 
     println!("cargo:rustc-link-search=native={}/build/lib", dst.display());

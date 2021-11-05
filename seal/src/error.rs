@@ -1,3 +1,4 @@
+use std::fmt::Display;
 use std::os::raw::c_long;
 
 use crate::bindgen::{
@@ -7,7 +8,7 @@ use crate::bindgen::{
 /**
  * A type representing all errors that can occur in SEAL.
  */
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Clone)]
 pub enum Error {
     /// No error
     Ok,
@@ -38,6 +39,9 @@ pub enum Error {
 
     /// User failed to set a plaintext modulus.
     PlainModulusNotSet,
+
+    /// Serialization failed.
+    SerializationError(String),
 }
 
 impl From<c_long> for Error {
@@ -55,6 +59,20 @@ impl From<c_long> for Error {
     }
 }
 
+impl Display for Error {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            Error::SerializationError(s) => formatter.write_str(s),
+            _ => formatter.write_str(&format!("{:?}", self))
+        }
+    }
+}
+
+impl std::error::Error for Error {}
+
+/**
+ * `type Result<T> = std::result::Result<T, Error>;`.
+ */
 pub type Result<T> = std::result::Result<T, Error>;
 
 pub fn convert_seal_error(err: c_long) -> Result<()> {

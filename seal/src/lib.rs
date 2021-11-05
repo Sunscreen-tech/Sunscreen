@@ -19,10 +19,23 @@ mod bindgen {
     pub const COR_E_INVALIDOPERATION: c_long = 0x80131509;
 }
 
+mod serialization {
+    #[repr(u8)]
+    pub enum CompressionType {
+        None = 0,
+        ZLib = 1,
+        ZStd = 2,
+    }
+}
+
+mod context;
 mod encryption_parameters;
 mod error;
+mod key_generator;
 mod modulus;
 
+pub use context::Context;
 pub use encryption_parameters::*;
-pub use error::Error;
-pub use modulus::*;
+pub use error::{Error, Result};
+pub use key_generator::KeyGenerator;
+pub use modulus::{CoefficientModulus, Modulus, PlainModulus, SecurityLevel};

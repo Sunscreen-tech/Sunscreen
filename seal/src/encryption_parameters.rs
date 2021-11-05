@@ -77,6 +77,13 @@ impl EncryptionParameters {
     }
 
     /**
+     * Returns the handle to the underlying SEAL object.
+     */
+    pub fn get_handle(&self) -> *mut c_void {
+        self.handle
+    }
+
+    /**
      * Returns the polynomial degree of the underlying CKKS or BFV scheme.
      */
     pub fn get_poly_modulus_degree(&self) -> u64 {
@@ -269,14 +276,10 @@ impl BfvEncryptionParametersBuilder {
             CoefficientModulusType::NotSet => return Err(Error::CoefficientModulusNotSet),
             CoefficientModulusType::Modulus(m) => {
                 convert_seal_error(unsafe {
-                    let modulus_ref = m.iter().map(|m| { m.handle }).collect::<Vec<*mut c_void>>();
+                    let modulus_ref = m.iter().map(|m| m.handle).collect::<Vec<*mut c_void>>();
                     let modulus_ptr = modulus_ref.as_ptr() as *mut *mut c_void;
 
-                    bindgen::EncParams_SetCoeffModulus(
-                        params.handle,
-                        m.len() as u64,
-                        modulus_ptr,
-                    )
+                    bindgen::EncParams_SetCoeffModulus(params.handle, m.len() as u64, modulus_ptr)
                 })?;
             }
         };

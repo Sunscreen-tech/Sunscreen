@@ -145,6 +145,15 @@ pub struct PublicKey {
     handle: *mut c_void,
 }
 
+impl PublicKey {
+    /**
+     * Returns the handle to the underlying SEAL object.
+     */
+    pub fn get_handle(&self) -> *mut c_void {
+        self.handle
+    }
+}
+
 impl Drop for PublicKey {
     fn drop(&mut self) {
         convert_seal_error(unsafe { bindgen::PublicKey_Destroy(self.handle) })
@@ -160,6 +169,15 @@ pub struct CompactPublicKey(PublicKey);
 
 pub struct SecretKey {
     handle: *mut c_void,
+}
+
+impl SecretKey {
+    /**
+     * Returns the handle to the underlying SEAL object.
+     */
+    pub fn get_handle(&self) -> *mut c_void {
+        self.handle
+    }
 }
 
 impl Drop for SecretKey {
@@ -207,6 +225,15 @@ impl Serialize for SecretKey {
 
 pub struct ReliniearizationKeys {
     handle: *mut c_void,
+}
+
+impl ReliniearizationKeys {
+    /**
+     * Returns the handle to the underlying SEAL object.
+     */
+    pub fn get_handle(&self) -> *mut c_void {
+        self.handle
+    }
 }
 
 impl Drop for ReliniearizationKeys {

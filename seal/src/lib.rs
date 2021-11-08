@@ -30,12 +30,16 @@ mod serialization {
 
 mod context;
 mod encryption_parameters;
+mod encryptor_decryptor;
 mod error;
 mod key_generator;
 mod modulus;
+mod plaintext_ciphertext;
 
 pub use context::Context;
 pub use encryption_parameters::*;
+pub use encryptor_decryptor::Encryptor;
 pub use error::{Error, Result};
-pub use key_generator::KeyGenerator;
+pub use key_generator::{KeyGenerator, PublicKey, SecretKey};
 pub use modulus::{CoefficientModulus, Modulus, PlainModulus, SecurityLevel};
+pub use plaintext_ciphertext::{Ciphertext, Plaintext};

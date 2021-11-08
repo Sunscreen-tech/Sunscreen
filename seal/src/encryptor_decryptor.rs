@@ -85,11 +85,29 @@ impl Encryptor {
         Ok(Encryptor { handle })
     }
 
+    /**
+     * 
+     * Encrypts a plaintext with the public key and returns the ciphertext as
+     * a serializable object.
+     * 
+     * The encryption parameters for the resulting ciphertext correspond to:
+     * 1) in BFV, the highest (data) level in the modulus switching chain,
+     * 2) in CKKS, the encryption parameters of the plaintext.
+     * Dynamic memory allocations in the process are allocated from the memory
+     * pool pointed to by the given MemoryPoolHandle.
+     * 
+     * * `plainext` - The plaintext to encrypt.
+     */
     pub fn encrypt(&self, plaintext: Plaintext) -> Result<Ciphertext> {
         let ciphertext = Ciphertext::new()?;
 
         convert_seal_error(unsafe {
-            bindgen::Encryptor_Encrypt(self.handle, plaintext.get_handle(), ciphertext.get_handle(), null_mut())
+            bindgen::Encryptor_Encrypt(
+                self.handle,
+                plaintext.get_handle(),
+                ciphertext.get_handle(),
+                null_mut(),
+            )
         })?;
 
         Ok(ciphertext)
@@ -100,5 +118,53 @@ impl Drop for Encryptor {
     fn drop(&mut self) {
         convert_seal_error(unsafe { bindgen::Encryptor_Destroy(self.handle) })
             .expect("Internal error in Enryptor::drop");
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::*;
+
+    #[test]
+    fn can_create_encryptor_from_public_key() {
+        let params = BfvEncryptionParametersBuilder::new()
+            .set_poly_modulus_degree(8192)
+            .set_coefficient_modulus(
+                CoefficientModulus::create(8192, &vec![50, 30, 30, 50, 50]).unwrap(),
+            )
+            .set_plain_modulus_u64(1234)
+            .build()
+            .unwrap();
+
+        let ctx = Context::new(&params, false, SecurityLevel::TC128).unwrap();
+        let gen = KeyGenerator::new(&ctx).unwrap();
+
+        let public_key = gen.create_public_key();
+
+        let encryptor = Encryptor::with_public_key(&ctx, &public_key);
+
+        std::mem::drop(encryptor);
+    }
+
+    #[test]
+    fn can_create_encryptor_from_public_and_secret_key() {
+        let params = BfvEncryptionParametersBuilder::new()
+            .set_poly_modulus_degree(8192)
+            .set_coefficient_modulus(
+                CoefficientModulus::create(8192, &vec![50, 30, 30, 50, 50]).unwrap(),
+            )
+            .set_plain_modulus_u64(1234)
+            .build()
+            .unwrap();
+
+        let ctx = Context::new(&params, false, SecurityLevel::TC128).unwrap();
+        let gen = KeyGenerator::new(&ctx).unwrap();
+
+        let public_key = gen.create_public_key();
+        let secret_key = gen.secret_key();
+        
+        let encryptor = Encryptor::with_public_and_secret_key(&ctx, &public_key, &secret_key);
+
+        std::mem::drop(encryptor);
     }
 }

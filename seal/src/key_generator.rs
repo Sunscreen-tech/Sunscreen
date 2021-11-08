@@ -141,6 +141,7 @@ impl Drop for KeyGenerator {
     }
 }
 
+/// Class to store a public key.
 pub struct PublicKey {
     handle: *mut c_void,
 }
@@ -167,6 +168,7 @@ impl Drop for PublicKey {
  */
 pub struct CompactPublicKey(PublicKey);
 
+/// Class to store a secret key.
 pub struct SecretKey {
     handle: *mut c_void,
 }

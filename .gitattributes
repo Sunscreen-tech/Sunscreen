@@ -1,0 +1,4 @@
+*.rs text eol=LF
+*.toml text eol=LF
+*.md text eol=LF
+*.json text eol=LF

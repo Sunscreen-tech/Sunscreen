@@ -189,7 +189,7 @@ enum CoefficientModulusType {
 enum PlainModulusType {
     NotSet,
     Constant(u64),
-    ModulusArray(Vec<Modulus>),
+    Modulus(Modulus),
 }
 
 /**
@@ -254,8 +254,8 @@ impl BfvEncryptionParametersBuilder {
      * Set the plaintext modulus. This method enables batching, use
      * `PlainModulus::batching()` to create a suitable modulus chain.
      */
-    pub fn set_plain_modulus(mut self, modulus: Vec<Modulus>) -> Self {
-        self.plain_modulus = PlainModulusType::ModulusArray(modulus);
+    pub fn set_plain_modulus(mut self, modulus: Modulus) -> Self {
+        self.plain_modulus = PlainModulusType::Modulus(modulus);
         self
     }
 
@@ -276,7 +276,7 @@ impl BfvEncryptionParametersBuilder {
             CoefficientModulusType::NotSet => return Err(Error::CoefficientModulusNotSet),
             CoefficientModulusType::Modulus(m) => {
                 convert_seal_error(unsafe {
-                    let modulus_ref = m.iter().map(|m| m.handle).collect::<Vec<*mut c_void>>();
+                    let modulus_ref = m.iter().map(|m| m.get_handle()).collect::<Vec<*mut c_void>>();
                     let modulus_ptr = modulus_ref.as_ptr() as *mut *mut c_void;
 
                     bindgen::EncParams_SetCoeffModulus(params.handle, m.len() as u64, modulus_ptr)
@@ -291,11 +291,11 @@ impl BfvEncryptionParametersBuilder {
                     bindgen::EncParams_SetPlainModulus2(params.handle, p)
                 })?;
             }
-            PlainModulusType::ModulusArray(mut a) => {
+            PlainModulusType::Modulus(mut m) => {
                 convert_seal_error(unsafe {
                     bindgen::EncParams_SetPlainModulus1(
                         params.handle,
-                        a.as_mut_ptr() as *mut c_void,
+                        m.get_handle(),
                     )
                 })?;
             }

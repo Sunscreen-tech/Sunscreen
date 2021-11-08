@@ -86,16 +86,16 @@ impl Encryptor {
     }
 
     /**
-     * 
+     *
      * Encrypts a plaintext with the public key and returns the ciphertext as
      * a serializable object.
-     * 
+     *
      * The encryption parameters for the resulting ciphertext correspond to:
      * 1) in BFV, the highest (data) level in the modulus switching chain,
      * 2) in CKKS, the encryption parameters of the plaintext.
      * Dynamic memory allocations in the process are allocated from the memory
      * pool pointed to by the given MemoryPoolHandle.
-     * 
+     *
      * * `plainext` - The plaintext to encrypt.
      */
     pub fn encrypt(&self, plaintext: Plaintext) -> Result<Ciphertext> {
@@ -162,7 +162,7 @@ mod tests {
 
         let public_key = gen.create_public_key();
         let secret_key = gen.secret_key();
-        
+
         let encryptor = Encryptor::with_public_and_secret_key(&ctx, &public_key, &secret_key);
 
         std::mem::drop(encryptor);

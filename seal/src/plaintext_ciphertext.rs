@@ -10,7 +10,7 @@ use crate::error::*;
  * of the plaintext polynomial must be one less than the degree of the
  * polynomial modulus. The backing array always allocates one 64-bit word
  * per each coefficient of the polynomial.
- * 
+ *
  * # Memory Management
  * The coefficient count of a plaintext refers to the number of word-size
  * coefficients in the plaintext, whereas its capacity refers to the number
@@ -41,7 +41,7 @@ impl Plaintext {
     }
 
     /**
-     * Constructs an empty ciphertext allocating no memory. 
+     * Constructs an empty ciphertext allocating no memory.
      */
     pub fn new() -> Result<Self> {
         let mut handle: *mut c_void = null_mut();

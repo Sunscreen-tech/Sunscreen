@@ -14,8 +14,7 @@ use crate::error::*;
  * A Modulus is immuatable from Rust once created.
 */
 pub struct Modulus {
-    /// The handle to the internal SEAL Modulus object.
-    pub handle: *mut c_void,
+    handle: *mut c_void,
 }
 
 /**
@@ -74,6 +73,13 @@ impl Modulus {
             .expect("Internal error. Could not get modulus value.");
 
         val
+    }
+
+    /**
+     * The handle to the internal SEAL Modulus object.
+     */
+    pub fn get_handle(&self) -> *mut c_void {
+        self.handle
     }
 }
 

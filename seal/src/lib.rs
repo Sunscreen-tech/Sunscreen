@@ -29,6 +29,7 @@ mod serialization {
 }
 
 mod context;
+mod encoder;
 mod encryption_parameters;
 mod encryptor_decryptor;
 mod error;
@@ -37,6 +38,7 @@ mod modulus;
 mod plaintext_ciphertext;
 
 pub use context::Context;
+pub use encoder::BFVEncoder;
 pub use encryption_parameters::*;
 pub use encryptor_decryptor::Encryptor;
 pub use error::{Error, Result};

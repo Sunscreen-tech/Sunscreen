@@ -41,7 +41,7 @@ pub struct BFVEncoder {
 }
 
 impl BFVEncoder {
-    /** 
+    /**
      * Creates a BatchEncoder. It is necessary that the encryption parameters
      * given through the SEALContext object support batching. This means you
      * used PlainModulus::batching when you created your encryption_parameters.
@@ -66,7 +66,7 @@ impl BFVEncoder {
      * a valid plaintext.
      *
      * The matrix's elements are of type `u64`.
-     * 
+     *
      * `data` - The `2xN` matrix of integers modulo plaintext modulus to batch
      */
     pub fn encode_unsigned(&self, data: &[u64]) -> Result<Plaintext> {
@@ -96,7 +96,7 @@ impl BFVEncoder {
      * a valid plaintext.
      *
      * The matrix's elements are of type `i64`.
-     * 
+     *
      * `data` - The `2xN` matrix of integers modulo plaintext modulus to batch
      */
     pub fn encode_signed(&self, data: &[i64]) -> Result<Plaintext> {
@@ -123,9 +123,9 @@ impl BFVEncoder {
      * and coefficients less than the plaintext modulus, i.e. it must be a valid plaintext
      * for the encryption parameters. Dynamic memory allocations in the process are
      * allocated from the memory pool pointed to by the given MemoryPoolHandle.
-     * 
+     *
      * The input plaintext matrix should be known to contain `u64` elements.
-     * 
+     *
      * * `plain` - The plaintext polynomial to unbatch
      */
     pub fn decode_unsigned(&self, plaintext: &Plaintext) -> Result<Vec<u64>> {
@@ -139,7 +139,7 @@ impl BFVEncoder {
                 plaintext.get_handle(),
                 &mut size,
                 data_ptr,
-                null_mut()
+                null_mut(),
             )
         })?;
 
@@ -153,7 +153,7 @@ impl BFVEncoder {
 
         Ok(data)
     }
-    
+
     /**  
      * Inverse of encode. This function "unbatches" a given plaintext into a matrix
      * of integers modulo the plaintext modulus, and stores the result in the destination
@@ -161,9 +161,9 @@ impl BFVEncoder {
      * and coefficients less than the plaintext modulus, i.e. it must be a valid plaintext
      * for the encryption parameters. Dynamic memory allocations in the process are
      * allocated from the memory pool pointed to by the given MemoryPoolHandle.
-     * 
+     *
      * The input plaintext matrix should be known to contain `i64` elements.
-     * 
+     *
      * * `plain` - The plaintext polynomial to unbatch
      */
     pub fn decode_signed(&self, plaintext: &Plaintext) -> Result<Vec<i64>> {
@@ -177,7 +177,7 @@ impl BFVEncoder {
                 plaintext.get_handle(),
                 &mut size,
                 data_ptr,
-                null_mut()
+                null_mut(),
             )
         })?;
 

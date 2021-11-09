@@ -276,7 +276,10 @@ impl BfvEncryptionParametersBuilder {
             CoefficientModulusType::NotSet => return Err(Error::CoefficientModulusNotSet),
             CoefficientModulusType::Modulus(m) => {
                 convert_seal_error(unsafe {
-                    let modulus_ref = m.iter().map(|m| m.get_handle()).collect::<Vec<*mut c_void>>();
+                    let modulus_ref = m
+                        .iter()
+                        .map(|m| m.get_handle())
+                        .collect::<Vec<*mut c_void>>();
                     let modulus_ptr = modulus_ref.as_ptr() as *mut *mut c_void;
 
                     bindgen::EncParams_SetCoeffModulus(params.handle, m.len() as u64, modulus_ptr)
@@ -293,10 +296,7 @@ impl BfvEncryptionParametersBuilder {
             }
             PlainModulusType::Modulus(m) => {
                 convert_seal_error(unsafe {
-                    bindgen::EncParams_SetPlainModulus1(
-                        params.handle,
-                        m.get_handle(),
-                    )
+                    bindgen::EncParams_SetPlainModulus1(params.handle, m.get_handle())
                 })?;
             }
         };

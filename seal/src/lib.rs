@@ -40,7 +40,7 @@ mod plaintext_ciphertext;
 pub use context::Context;
 pub use encoder::BFVEncoder;
 pub use encryption_parameters::*;
-pub use encryptor_decryptor::Encryptor;
+pub use encryptor_decryptor::{Decryptor, Encryptor};
 pub use error::{Error, Result};
 pub use key_generator::{KeyGenerator, PublicKey, SecretKey};
 pub use modulus::{CoefficientModulus, Modulus, PlainModulus, SecurityLevel};

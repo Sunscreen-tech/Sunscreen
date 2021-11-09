@@ -287,4 +287,42 @@ mod tests {
 
         assert_eq!(data, data_2);
     }
+
+    #[test]
+    fn can_encrypt_and_decrypt_signed() {
+        let params = BfvEncryptionParametersBuilder::new()
+            .set_poly_modulus_degree(8192)
+            .set_coefficient_modulus(
+                CoefficientModulus::create(8192, &vec![50, 30, 30, 50, 50]).unwrap(),
+            )
+            .set_plain_modulus(PlainModulus::batching(8192, 20).unwrap())
+            .build()
+            .unwrap();
+
+        let ctx = Context::new(&params, false, SecurityLevel::TC128).unwrap();
+        let gen = KeyGenerator::new(&ctx).unwrap();
+
+        let encoder = BFVEncoder::new(&ctx).unwrap();
+
+        let mut data = vec![];
+
+        for i in 0..encoder.get_slot_count() {
+            data.push(encoder.get_slot_count() as i64 / 2i64 - i as i64)
+        }
+
+        let plaintext = encoder.encode_signed(&data).unwrap();
+
+        let public_key = gen.create_public_key();
+        let secret_key = gen.secret_key();
+
+        let encryptor = Encryptor::with_public_and_secret_key(&ctx, &public_key, &secret_key).unwrap();
+        let decryptor = Decryptor::new(&ctx, &secret_key).unwrap();
+
+        let ciphertext = encryptor.encrypt(&plaintext).unwrap();
+        let decrypted = decryptor.decrypt(&ciphertext).unwrap();
+
+        let data_2 = encoder.decode_signed(&decrypted).unwrap();
+
+        assert_eq!(data, data_2);
+    }
 }

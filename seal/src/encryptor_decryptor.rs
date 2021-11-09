@@ -165,11 +165,7 @@ impl Decryptor {
         let plaintext = Plaintext::new()?;
 
         convert_seal_error(unsafe {
-            bindgen::Decryptor_Decrypt(
-                self.handle,
-                ciphertext.get_handle(),
-                plaintext.get_handle()
-            )
+            bindgen::Decryptor_Decrypt(self.handle, ciphertext.get_handle(), plaintext.get_handle())
         })?;
 
         Ok(plaintext)
@@ -225,7 +221,8 @@ mod tests {
         let public_key = gen.create_public_key();
         let secret_key = gen.secret_key();
 
-        let encryptor = Encryptor::with_public_and_secret_key(&ctx, &public_key, &secret_key).unwrap();
+        let encryptor =
+            Encryptor::with_public_and_secret_key(&ctx, &public_key, &secret_key).unwrap();
 
         std::mem::drop(encryptor);
     }
@@ -277,7 +274,8 @@ mod tests {
         let public_key = gen.create_public_key();
         let secret_key = gen.secret_key();
 
-        let encryptor = Encryptor::with_public_and_secret_key(&ctx, &public_key, &secret_key).unwrap();
+        let encryptor =
+            Encryptor::with_public_and_secret_key(&ctx, &public_key, &secret_key).unwrap();
         let decryptor = Decryptor::new(&ctx, &secret_key).unwrap();
 
         let ciphertext = encryptor.encrypt(&plaintext).unwrap();
@@ -315,7 +313,8 @@ mod tests {
         let public_key = gen.create_public_key();
         let secret_key = gen.secret_key();
 
-        let encryptor = Encryptor::with_public_and_secret_key(&ctx, &public_key, &secret_key).unwrap();
+        let encryptor =
+            Encryptor::with_public_and_secret_key(&ctx, &public_key, &secret_key).unwrap();
         let decryptor = Decryptor::new(&ctx, &secret_key).unwrap();
 
         let ciphertext = encryptor.encrypt(&plaintext).unwrap();

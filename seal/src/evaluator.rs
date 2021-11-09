@@ -101,6 +101,54 @@ impl Evaluator {
 
         Ok(out)
     }
+
+    pub fn add_inplace(&self, a: &mut Ciphertext, b: &Ciphertext) -> Result<()> {
+        convert_seal_error(unsafe {
+            bindgen::Evaluator_Add(self.handle, a.get_handle(), b.get_handle(), a.get_handle())
+        })?;
+
+        Ok(())
+    }
+
+    pub fn add(&self, a: &Ciphertext, b: &Ciphertext) -> Result<Ciphertext> {
+        let c = Ciphertext::new()?;
+
+        convert_seal_error(unsafe {
+            bindgen::Evaluator_Add(self.handle, a.get_handle(), b.get_handle(), c.get_handle())
+        })?;
+
+        Ok(c)
+    }
+
+    pub fn add_many(&self, a: &[Ciphertext]) -> Result<Ciphertext> {
+        let c = Ciphertext::new()?;
+
+        let mut a = a.iter().map(|x| x.get_handle()).collect::<Vec<*mut c_void>>();
+
+        convert_seal_error(unsafe {
+            bindgen::Evaluator_AddMany(self.handle, a.len() as u64, a.as_mut_ptr(), c.get_handle())
+        })?;
+
+        Ok(c)
+    }
+
+    pub fn sub_inplace(&self, a: &mut Ciphertext, b: &Ciphertext) -> Result<()> {
+        convert_seal_error(unsafe {
+            bindgen::Evaluator_Sub(self.handle, a.get_handle(), b.get_handle(), a.get_handle())
+        })?;
+
+        Ok(())
+    }
+
+    pub fn sub(&self, a: &Ciphertext, b: &Ciphertext) -> Result<Ciphertext> {
+        let c = Ciphertext::new()?;
+
+        convert_seal_error(unsafe {
+            bindgen::Evaluator_Sub(self.handle, a.get_handle(), b.get_handle(), c.get_handle())
+        })?;
+
+        Ok(c)
+    }
 }
 
 #[cfg(test)]
@@ -199,6 +247,137 @@ mod tests {
 
             for i in 0..a.len() {
                 assert_eq!(a[i], -b[i]);
+            }
+        });
+    }
+
+    #[test]
+    fn can_add() {
+        run_test(|decryptor, encoder, encryptor, evaluator| {
+            let a = make_vec(&encoder);
+            let b = make_vec(&encoder);
+            let a_p = encoder.encode_signed(&a).unwrap();
+            let b_p = encoder.encode_signed(&b).unwrap();
+            let a_c = encryptor.encrypt(&a_p).unwrap();
+            let b_c = encryptor.encrypt(&b_p).unwrap();
+
+            let c_c = evaluator.add(&a_c, &b_c).unwrap();
+
+            let c_p = decryptor.decrypt(&c_c).unwrap();
+            let c = encoder.decode_signed(&c_p).unwrap();
+            
+            assert_eq!(a.len(), c.len());
+            assert_eq!(b.len(), c.len());
+
+            for i in 0..a.len() {
+                assert_eq!(c[i], a[i] + b[i]);
+            }
+        });
+    }
+
+    #[test]
+    fn can_add_inplace() {
+        run_test(|decryptor, encoder, encryptor, evaluator| {
+            let a = make_vec(&encoder);
+            let b = make_vec(&encoder);
+            let a_p = encoder.encode_signed(&a).unwrap();
+            let b_p = encoder.encode_signed(&b).unwrap();
+            let mut a_c = encryptor.encrypt(&a_p).unwrap();
+            let b_c = encryptor.encrypt(&b_p).unwrap();
+
+            evaluator.add_inplace(&mut a_c, &b_c).unwrap();
+
+            let a_p = decryptor.decrypt(&a_c).unwrap();
+            let c = encoder.decode_signed(&a_p).unwrap();
+            
+            assert_eq!(a.len(), c.len());
+            assert_eq!(b.len(), c.len());
+
+            for i in 0..a.len() {
+                assert_eq!(c[i], a[i] + b[i]);
+            }
+        });
+    }
+
+    #[test]
+    fn can_add_many() {
+        run_test(|decryptor, encoder, encryptor, evaluator| {
+            let a = make_vec(&encoder);
+            let b = make_vec(&encoder);
+            let c = make_vec(&encoder);
+            let d = make_vec(&encoder);
+            let a_p = encoder.encode_signed(&a).unwrap();
+            let b_p = encoder.encode_signed(&b).unwrap();
+            let c_p = encoder.encode_signed(&c).unwrap();
+            let d_p = encoder.encode_signed(&d).unwrap();
+
+            let data_c = vec![
+                encryptor.encrypt(&a_p).unwrap(),
+                encryptor.encrypt(&b_p).unwrap(),
+                encryptor.encrypt(&c_p).unwrap(),
+                encryptor.encrypt(&d_p).unwrap(),
+            ];
+            
+            let out_c = evaluator.add_many(&data_c).unwrap();
+
+            let out_p = decryptor.decrypt(&out_c).unwrap();
+            let out = encoder.decode_signed(&out_p).unwrap();
+            
+            assert_eq!(a.len(), out.len());
+            assert_eq!(b.len(), out.len());
+            assert_eq!(c.len(), out.len());
+            assert_eq!(d.len(), out.len());
+
+            for i in 0..a.len() {
+                assert_eq!(out[i], a[i] + b[i] + c[i] + d[i]);
+            }
+        });
+    }
+
+    #[test]
+    fn can_sub() {
+        run_test(|decryptor, encoder, encryptor, evaluator| {
+            let a = make_vec(&encoder);
+            let b = make_vec(&encoder);
+            let a_p = encoder.encode_signed(&a).unwrap();
+            let b_p = encoder.encode_signed(&b).unwrap();
+            let a_c = encryptor.encrypt(&a_p).unwrap();
+            let b_c = encryptor.encrypt(&b_p).unwrap();
+
+            let c_c = evaluator.sub(&a_c, &b_c).unwrap();
+
+            let c_p = decryptor.decrypt(&c_c).unwrap();
+            let c = encoder.decode_signed(&c_p).unwrap();
+            
+            assert_eq!(a.len(), c.len());
+            assert_eq!(b.len(), c.len());
+
+            for i in 0..a.len() {
+                assert_eq!(c[i], a[i] - b[i]);
+            }
+        });
+    }
+
+    #[test]
+    fn can_sub_inplace() {
+        run_test(|decryptor, encoder, encryptor, evaluator| {
+            let a = make_vec(&encoder);
+            let b = make_vec(&encoder);
+            let a_p = encoder.encode_signed(&a).unwrap();
+            let b_p = encoder.encode_signed(&b).unwrap();
+            let mut a_c = encryptor.encrypt(&a_p).unwrap();
+            let b_c = encryptor.encrypt(&b_p).unwrap();
+
+            evaluator.sub_inplace(&mut a_c, &b_c).unwrap();
+
+            let a_p = decryptor.decrypt(&a_c).unwrap();
+            let c = encoder.decode_signed(&a_p).unwrap();
+            
+            assert_eq!(a.len(), c.len());
+            assert_eq!(b.len(), c.len());
+
+            for i in 0..a.len() {
+                assert_eq!(c[i], a[i] - b[i]);
             }
         });
     }

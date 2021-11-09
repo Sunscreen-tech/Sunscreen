@@ -76,6 +76,9 @@ impl Evaluator {
         Ok(Self { handle })
     }
 
+    /**
+     * Gets the handle to the internal SEAL object.
+     */
     pub fn get_handle(&self) -> *mut c_void {
         self.handle
     }
@@ -106,6 +109,11 @@ impl Evaluator {
         Ok(out)
     }
 
+    /**
+     * Add `a` and `b` and store the result in `a`.
+     * * `a` - the accumulator
+     * * `b` - the added value
+     */
     pub fn add_inplace(&self, a: &mut Ciphertext, b: &Ciphertext) -> Result<()> {
         convert_seal_error(unsafe {
             bindgen::Evaluator_Add(self.handle, a.get_handle(), b.get_handle(), a.get_handle())
@@ -114,6 +122,11 @@ impl Evaluator {
         Ok(())
     }
 
+    /**
+     * Adds `a` and `b`.
+     * * `a` - first operand
+     * * `b` - second operand
+     */
     pub fn add(&self, a: &Ciphertext, b: &Ciphertext) -> Result<Ciphertext> {
         let c = Ciphertext::new()?;
 
@@ -124,10 +137,17 @@ impl Evaluator {
         Ok(c)
     }
 
+    /**
+     * Performs an addition reduction of multiple ciphertexts packed into a slice.
+     * * `a` - a slice of ciphertexts to sum.
+     */
     pub fn add_many(&self, a: &[Ciphertext]) -> Result<Ciphertext> {
         let c = Ciphertext::new()?;
 
-        let mut a = a.iter().map(|x| x.get_handle()).collect::<Vec<*mut c_void>>();
+        let mut a = a
+            .iter()
+            .map(|x| x.get_handle())
+            .collect::<Vec<*mut c_void>>();
 
         convert_seal_error(unsafe {
             bindgen::Evaluator_AddMany(self.handle, a.len() as u64, a.as_mut_ptr(), c.get_handle())
@@ -136,6 +156,43 @@ impl Evaluator {
         Ok(c)
     }
 
+    /**
+     * Performs an multiplication reduction of multiple ciphertexts packed into a slice. This
+     * method creates a tree of multiplications with relinearization after each operation.
+     * * `a` - a slice of ciphertexts to sum.
+     * * `relin_keys` - the relinearization keys.
+     */
+    pub fn multiply_many(
+        &self,
+        a: &[Ciphertext],
+        relin_keys: &RelinearizationKeys,
+    ) -> Result<Ciphertext> {
+        let c = Ciphertext::new()?;
+
+        let mut a = a
+            .iter()
+            .map(|x| x.get_handle())
+            .collect::<Vec<*mut c_void>>();
+
+        convert_seal_error(unsafe {
+            bindgen::Evaluator_MultiplyMany(
+                self.handle,
+                a.len() as u64,
+                a.as_mut_ptr(),
+                relin_keys.get_handle(),
+                c.get_handle(),
+                null_mut(),
+            )
+        })?;
+
+        Ok(c)
+    }
+
+    /**
+     * Subtracts `b` from `a` and stores the result in `a`.
+     * * `a` - the left operand and destination
+     * * `b` - the right operand
+     */
     pub fn sub_inplace(&self, a: &mut Ciphertext, b: &Ciphertext) -> Result<()> {
         convert_seal_error(unsafe {
             bindgen::Evaluator_Sub(self.handle, a.get_handle(), b.get_handle(), a.get_handle())
@@ -144,6 +201,11 @@ impl Evaluator {
         Ok(())
     }
 
+    /**
+     * Subtracts `b` from `a`.
+     * * `a` - the left operand
+     * * `b` - the right operand
+     */
     pub fn sub(&self, a: &Ciphertext, b: &Ciphertext) -> Result<Ciphertext> {
         let c = Ciphertext::new()?;
 
@@ -154,24 +216,50 @@ impl Evaluator {
         Ok(c)
     }
 
+    /**
+     * Multiplies `a` and `b` and stores the result in `a`.
+     * * `a` - the left operand and destination.
+     * * `b` - the right operand.
+     */
     pub fn multiply_inplace(&self, a: &mut Ciphertext, b: &Ciphertext) -> Result<()> {
         convert_seal_error(unsafe {
-            bindgen::Evaluator_Multiply(self.handle, a.get_handle(), b.get_handle(), a.get_handle(), null_mut())
+            bindgen::Evaluator_Multiply(
+                self.handle,
+                a.get_handle(),
+                b.get_handle(),
+                a.get_handle(),
+                null_mut(),
+            )
         })?;
 
         Ok(())
     }
 
+    /**
+     * Multiplies `a` and `b`.
+     * * `a` - the left operand.
+     * * `b` - the right operand.
+     */
     pub fn multiply(&self, a: &Ciphertext, b: &Ciphertext) -> Result<Ciphertext> {
         let c = Ciphertext::new()?;
 
         convert_seal_error(unsafe {
-            bindgen::Evaluator_Multiply(self.handle, a.get_handle(), b.get_handle(), c.get_handle(), null_mut())
+            bindgen::Evaluator_Multiply(
+                self.handle,
+                a.get_handle(),
+                b.get_handle(),
+                c.get_handle(),
+                null_mut(),
+            )
         })?;
 
         Ok(c)
     }
 
+    /**
+     * Squares `a` and stores the result in `a`.
+     * * `a` - the value to square.
+     */
     pub fn square_inplace(&self, a: &mut Ciphertext) -> Result<()> {
         convert_seal_error(unsafe {
             bindgen::Evaluator_Square(self.handle, a.get_handle(), a.get_handle(), null_mut())
@@ -180,6 +268,10 @@ impl Evaluator {
         Ok(())
     }
 
+    /**
+     * Squares `a`.
+     * * `a` - the value to square.
+     */
     pub fn square(&self, a: &Ciphertext) -> Result<Ciphertext> {
         let c = Ciphertext::new()?;
 
@@ -189,8 +281,88 @@ impl Evaluator {
 
         Ok(c)
     }
+
+    /**
+     * Given a ciphertext encrypted modulo q_1...q_k, this function switches the modulus down to q_1...q_{k-1} and
+     * stores the result in the destination parameter.
+     *
+     * # Remarks
+     * In the BFV scheme if you've set up a coefficient modulus chain, this reduces the
+     * number of bits needed to represent the ciphertext. This in turn speeds up operations.
+     *
+     * If you haven't set up a modulus chain, don't use this.
+     *
+     * TODO: what does this mean for CKKS?
+     */
+    pub fn mod_switch_to_next(&self, a: &Ciphertext) -> Result<Ciphertext> {
+        let c = Ciphertext::new()?;
+
+        convert_seal_error(unsafe {
+            bindgen::Evaluator_ModSwitchToNext1(
+                self.get_handle(),
+                a.get_handle(),
+                c.get_handle(),
+                null_mut(),
+            )
+        })?;
+
+        Ok(c)
+    }
+
+    /**
+     * Given a ciphertext encrypted modulo q_1...q_k, this function switches the modulus down to q_1...q_{k-1} and
+     * stores the result in the destination parameter. This does function does so in-place.
+     *
+     * # Remarks
+     * In the BFV scheme if you've set up a coefficient modulus chain, this reduces the
+     * number of bits needed to represent the ciphertext. This in turn speeds up operations.
+     *
+     * If you haven't set up a modulus chain, don't use this.
+     *
+     * TODO: what does this mean for CKKS?
+     */
+    pub fn mod_switch_to_next_inplace(&self, a: &Ciphertext) -> Result<()> {
+        convert_seal_error(unsafe {
+            bindgen::Evaluator_ModSwitchToNext1(
+                self.get_handle(),
+                a.get_handle(),
+                a.get_handle(),
+                null_mut(),
+            )
+        })?;
+
+        Ok(())
+    }
+
+    /**
+     * Modulus switches an NTT transformed plaintext from modulo q_1...q_k down to modulo q_1...q_{k-1}.
+     */
+    pub fn mod_switch_to_next_plaintext(&self, a: &Plaintext) -> Result<Plaintext> {
+        let p = Plaintext::new()?;
+
+        convert_seal_error(unsafe {
+            bindgen::Evaluator_ModSwitchToNext2(self.get_handle(), a.get_handle(), p.get_handle())
+        })?;
+
+        Ok(p)
+    }
+
+    /**
+     * Modulus switches an NTT transformed plaintext from modulo q_1...q_k down to modulo q_1...q_{k-1}.
+     * This variant does so in-place.
+     */
+    pub fn mod_switch_to_next_inplace_plaintext(&self, a: &Plaintext) -> Result<()> {
+        convert_seal_error(unsafe {
+            bindgen::Evaluator_ModSwitchToNext2(self.get_handle(), a.get_handle(), a.get_handle())
+        })?;
+
+        Ok(())
+    }
 }
 
+/**
+ * An evaluator that contains additional operations specific to the BFV scheme.
+ */
 pub struct BFVEvaluator(Evaluator);
 
 impl std::ops::Deref for BFVEvaluator {
@@ -202,23 +374,55 @@ impl std::ops::Deref for BFVEvaluator {
 }
 
 impl BFVEvaluator {
+    /**
+     * Creates a BFVEvaluator instance initialized with the specified Context.
+     * * `ctx` - The context.
+     */
     pub fn new(ctx: &Context) -> Result<BFVEvaluator> {
         Ok(BFVEvaluator(Evaluator::new(&ctx)?))
     }
 
-    pub fn relinearize_inplace(&self, a: &mut Ciphertext, relin_keys: &RelinearizationKeys) -> Result<()> {
+    /**
+     * This functions relinearizes a ciphertext in-place, reducing it to 2 polynomials. This
+     * reduces future noise growth under multiplication operations.
+     */
+    pub fn relinearize_inplace(
+        &self,
+        a: &mut Ciphertext,
+        relin_keys: &RelinearizationKeys,
+    ) -> Result<()> {
         convert_seal_error(unsafe {
-            bindgen::Evaluator_Relinearize(self.get_handle(), a.get_handle(), relin_keys.get_handle(), a.get_handle(), null_mut())
+            bindgen::Evaluator_Relinearize(
+                self.get_handle(),
+                a.get_handle(),
+                relin_keys.get_handle(),
+                a.get_handle(),
+                null_mut(),
+            )
         })?;
 
         Ok(())
     }
 
-    pub fn relinearize(&self, a: &Ciphertext, relin_keys: &RelinearizationKeys) -> Result<Ciphertext> {
+    /**
+     * This functions relinearizes a ciphertext, reducing it to 2 polynomials. This
+     * reduces future noise growth under multiplication operations.
+     */
+    pub fn relinearize(
+        &self,
+        a: &Ciphertext,
+        relin_keys: &RelinearizationKeys,
+    ) -> Result<Ciphertext> {
         let out = Ciphertext::new()?;
 
         convert_seal_error(unsafe {
-            bindgen::Evaluator_Relinearize(self.get_handle(), a.get_handle(), relin_keys.get_handle(), out.get_handle(), null_mut())
+            bindgen::Evaluator_Relinearize(
+                self.get_handle(),
+                a.get_handle(),
+                relin_keys.get_handle(),
+                out.get_handle(),
+                null_mut(),
+            )
         })?;
 
         Ok(out)
@@ -229,8 +433,9 @@ impl BFVEvaluator {
 mod tests {
     use crate::*;
 
-    fn run_bfv_test<F>(test: F) 
-        where F: FnOnce(Decryptor, BFVEncoder, Encryptor, BFVEvaluator, RelinearizationKeys)
+    fn run_bfv_test<F>(test: F)
+    where
+        F: FnOnce(Decryptor, BFVEncoder, Encryptor, BFVEvaluator, RelinearizationKeys),
     {
         let params = BfvEncryptionParametersBuilder::new()
             .set_poly_modulus_degree(8192)
@@ -255,7 +460,13 @@ mod tests {
         let decryptor = Decryptor::new(&ctx, &secret_key).unwrap();
         let evaluator = BFVEvaluator::new(&ctx).unwrap();
 
-        test(decryptor, encoder, encryptor, evaluator, relinearization_keys);
+        test(
+            decryptor,
+            encoder,
+            encryptor,
+            evaluator,
+            relinearization_keys,
+        );
     }
 
     fn make_vec(encoder: &BFVEncoder) -> Vec<i64> {
@@ -297,7 +508,7 @@ mod tests {
 
             let b_p = decryptor.decrypt(&b_c).unwrap();
             let b = encoder.decode_signed(&b_p).unwrap();
-            
+
             assert_eq!(a.len(), b.len());
 
             for i in 0..a.len() {
@@ -317,7 +528,7 @@ mod tests {
 
             let a_p = decryptor.decrypt(&a_c).unwrap();
             let b = encoder.decode_signed(&a_p).unwrap();
-            
+
             assert_eq!(a.len(), b.len());
 
             for i in 0..a.len() {
@@ -340,7 +551,7 @@ mod tests {
 
             let c_p = decryptor.decrypt(&c_c).unwrap();
             let c = encoder.decode_signed(&c_p).unwrap();
-            
+
             assert_eq!(a.len(), c.len());
             assert_eq!(b.len(), c.len());
 
@@ -364,7 +575,7 @@ mod tests {
 
             let a_p = decryptor.decrypt(&a_c).unwrap();
             let c = encoder.decode_signed(&a_p).unwrap();
-            
+
             assert_eq!(a.len(), c.len());
             assert_eq!(b.len(), c.len());
 
@@ -392,12 +603,12 @@ mod tests {
                 encryptor.encrypt(&c_p).unwrap(),
                 encryptor.encrypt(&d_p).unwrap(),
             ];
-            
+
             let out_c = evaluator.add_many(&data_c).unwrap();
 
             let out_p = decryptor.decrypt(&out_c).unwrap();
             let out = encoder.decode_signed(&out_p).unwrap();
-            
+
             assert_eq!(a.len(), out.len());
             assert_eq!(b.len(), out.len());
             assert_eq!(c.len(), out.len());
@@ -405,6 +616,51 @@ mod tests {
 
             for i in 0..a.len() {
                 assert_eq!(out[i], a[i] + b[i] + c[i] + d[i]);
+            }
+        });
+    }
+
+    #[test]
+    fn can_multiply_many() {
+        run_bfv_test(|decryptor, encoder, encryptor, evaluator, relin_keys| {
+            let make_small_vec = || {
+                let mut data = vec![];
+
+                for i in 0..encoder.get_slot_count() {
+                    data.push(16i64 - i as i64 % 32i64);
+                }
+
+                data
+            };
+
+            let a = make_small_vec();
+            let b = make_small_vec();
+            let c = make_small_vec();
+            let d = make_small_vec();
+            let a_p = encoder.encode_signed(&a).unwrap();
+            let b_p = encoder.encode_signed(&b).unwrap();
+            let c_p = encoder.encode_signed(&c).unwrap();
+            let d_p = encoder.encode_signed(&d).unwrap();
+
+            let data_c = vec![
+                encryptor.encrypt(&a_p).unwrap(),
+                encryptor.encrypt(&b_p).unwrap(),
+                encryptor.encrypt(&c_p).unwrap(),
+                encryptor.encrypt(&d_p).unwrap(),
+            ];
+
+            let out_c = evaluator.multiply_many(&data_c, &relin_keys).unwrap();
+
+            let out_p = decryptor.decrypt(&out_c).unwrap();
+            let out = encoder.decode_signed(&out_p).unwrap();
+
+            assert_eq!(a.len(), out.len());
+            assert_eq!(b.len(), out.len());
+            assert_eq!(c.len(), out.len());
+            assert_eq!(d.len(), out.len());
+
+            for i in 0..a.len() {
+                assert_eq!(out[i], a[i] * b[i] * c[i] * d[i]);
             }
         });
     }
@@ -423,7 +679,7 @@ mod tests {
 
             let c_p = decryptor.decrypt(&c_c).unwrap();
             let c = encoder.decode_signed(&c_p).unwrap();
-            
+
             assert_eq!(a.len(), c.len());
             assert_eq!(b.len(), c.len());
 
@@ -447,7 +703,7 @@ mod tests {
 
             let a_p = decryptor.decrypt(&a_c).unwrap();
             let c = encoder.decode_signed(&a_p).unwrap();
-            
+
             assert_eq!(a.len(), c.len());
             assert_eq!(b.len(), c.len());
 
@@ -471,7 +727,7 @@ mod tests {
 
             let c_p = decryptor.decrypt(&c_c).unwrap();
             let c = encoder.decode_signed(&c_p).unwrap();
-            
+
             assert_eq!(a.len(), c.len());
             assert_eq!(b.len(), c.len());
 
@@ -495,7 +751,7 @@ mod tests {
 
             let a_p = decryptor.decrypt(&a_c).unwrap();
             let c = encoder.decode_signed(&a_p).unwrap();
-            
+
             assert_eq!(a.len(), c.len());
             assert_eq!(b.len(), c.len());
 
@@ -516,7 +772,7 @@ mod tests {
 
             let b_p = decryptor.decrypt(&b_c).unwrap();
             let b = encoder.decode_signed(&b_p).unwrap();
-            
+
             assert_eq!(a.len(), b.len());
 
             for i in 0..a.len() {
@@ -536,7 +792,7 @@ mod tests {
 
             let a_p = decryptor.decrypt(&a_c).unwrap();
             let b = encoder.decode_signed(&a_p).unwrap();
-            
+
             assert_eq!(a.len(), b.len());
 
             for i in 0..a.len() {
@@ -556,9 +812,13 @@ mod tests {
             let noise_before = decryptor.invariant_noise_budget(&a_c).unwrap();
 
             evaluator.square_inplace(&mut a_c).unwrap();
-            evaluator.relinearize_inplace(&mut a_c, &relin_keys).unwrap();
+            evaluator
+                .relinearize_inplace(&mut a_c, &relin_keys)
+                .unwrap();
             evaluator.square_inplace(&mut a_c).unwrap();
-            evaluator.relinearize_inplace(&mut a_c, &relin_keys).unwrap();
+            evaluator
+                .relinearize_inplace(&mut a_c, &relin_keys)
+                .unwrap();
 
             let relin_noise = noise_before - decryptor.invariant_noise_budget(&a_c).unwrap();
 

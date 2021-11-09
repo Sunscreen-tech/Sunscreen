@@ -213,6 +213,16 @@ impl BFVEvaluator {
 
         Ok(())
     }
+
+    pub fn relinearize(&self, a: &Ciphertext, relin_keys: &RelinearizationKeys) -> Result<Ciphertext> {
+        let out = Ciphertext::new()?;
+
+        convert_seal_error(unsafe {
+            bindgen::Evaluator_Relinearize(self.get_handle(), a.get_handle(), relin_keys.get_handle(), out.get_handle(), null_mut())
+        })?;
+
+        Ok(out)
+    }
 }
 
 #[cfg(test)]
@@ -549,6 +559,34 @@ mod tests {
             evaluator.relinearize_inplace(&mut a_c, &relin_keys).unwrap();
             evaluator.square_inplace(&mut a_c).unwrap();
             evaluator.relinearize_inplace(&mut a_c, &relin_keys).unwrap();
+
+            let relin_noise = noise_before - decryptor.invariant_noise_budget(&a_c).unwrap();
+
+            let noise_before = decryptor.invariant_noise_budget(&a_c_2).unwrap();
+
+            evaluator.square_inplace(&mut a_c_2).unwrap();
+            evaluator.square_inplace(&mut a_c_2).unwrap();
+
+            let no_relin_noise = noise_before - decryptor.invariant_noise_budget(&a_c_2).unwrap();
+
+            assert_eq!(relin_noise < no_relin_noise, true)
+        });
+    }
+
+    #[test]
+    fn can_relinearize() {
+        run_bfv_test(|decryptor, encoder, encryptor, evaluator, relin_keys| {
+            let a = make_vec(&encoder);
+            let a_p = encoder.encode_signed(&a).unwrap();
+            let mut a_c = encryptor.encrypt(&a_p).unwrap();
+            let mut a_c_2 = encryptor.encrypt(&a_p).unwrap();
+
+            let noise_before = decryptor.invariant_noise_budget(&a_c).unwrap();
+
+            evaluator.square_inplace(&mut a_c).unwrap();
+            let mut a_c = evaluator.relinearize(&a_c, &relin_keys).unwrap();
+            evaluator.square_inplace(&mut a_c).unwrap();
+            let a_c = evaluator.relinearize(&a_c, &relin_keys).unwrap();
 
             let relin_noise = noise_before - decryptor.invariant_noise_budget(&a_c).unwrap();
 

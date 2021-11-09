@@ -121,11 +121,31 @@ impl Drop for Encryptor {
     }
 }
 
+/**
+ * Decrypts Ciphertext objects into Plaintext objects. Constructing a Decryptor requires
+ * a SEALContext with valid encryption parameters, and the secret key. The Decryptor is
+ * also used to compute the invariant noise budget in a given ciphertext.
+ *
+ * # NTT form (TODO)
+ * When using the BFV scheme (SchemeType.BFV), all plaintext and ciphertexts should
+ * remain by default in the usual coefficient representation, i.e. not in NTT form.
+ * When using the CKKS scheme (SchemeType.CKKS), all plaintexts and ciphertexts
+ * should remain by default in NTT form. We call these scheme-specific NTT states the
+ * "default NTT form". Decryption requires the input ciphertexts to be in the default
+ * NTT form, and will throw an exception if this is not the case.
+*/
 pub struct Decryptor {
     handle: *mut c_void,
 }
 
 impl Decryptor {
+    /**
+     * Creates a Decryptor instance initialized with the specified SEALContext
+     * and secret key.
+     * </summary>
+     * <param name="context">The SEALContext</param>
+     * <param name="secretKey">The secret key</param>
+     */
     pub fn new(ctx: &Context, secret_key: &SecretKey) -> Result<Self> {
         let mut handle = null_mut();
 
@@ -136,6 +156,11 @@ impl Decryptor {
         Ok(Self { handle })
     }
 
+    /**
+     * Decrypts a Ciphertext and stores the result in the destination parameter.
+     *
+     * `encrypted` - The ciphertext to decrypt.
+     */
     pub fn decrypt(&self, ciphertext: &Ciphertext) -> Result<Plaintext> {
         let plaintext = Plaintext::new()?;
 

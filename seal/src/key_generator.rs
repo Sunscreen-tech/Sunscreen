@@ -101,7 +101,7 @@ impl KeyGenerator {
     /**
      * Creates relinearization keys
      */
-    pub fn create_relinearization_keys(&self) -> ReliniearizationKeys {
+    pub fn create_relinearization_keys(&self) -> RelinearizationKeys {
         self.create_relinearization_keys_internal(false)
     }
 
@@ -120,15 +120,15 @@ impl KeyGenerator {
         CompactRelinearizationKeys(self.create_relinearization_keys_internal(true))
     }
 
-    fn create_relinearization_keys_internal(&self, save_seed: bool) -> ReliniearizationKeys {
+    fn create_relinearization_keys_internal(&self, save_seed: bool) -> RelinearizationKeys {
         let mut handle = null_mut();
 
         convert_seal_error(unsafe {
             bindgen::KeyGenerator_CreateRelinKeys(self.handle, save_seed, &mut handle)
         })
-        .expect("Fatal error in KeyGenerator::secret_key");
+        .expect("Fatal error in KeyGenerator::create_relinearization_keys_internal()");
 
-        ReliniearizationKeys { handle }
+        RelinearizationKeys { handle }
     }
 
     // TODO: Galois keys
@@ -225,11 +225,11 @@ impl Serialize for SecretKey {
     }
 }
 
-pub struct ReliniearizationKeys {
+pub struct RelinearizationKeys {
     handle: *mut c_void,
 }
 
-impl ReliniearizationKeys {
+impl RelinearizationKeys {
     /**
      * Returns the handle to the underlying SEAL object.
      */
@@ -238,7 +238,7 @@ impl ReliniearizationKeys {
     }
 }
 
-impl Drop for ReliniearizationKeys {
+impl Drop for RelinearizationKeys {
     fn drop(&mut self) {
         convert_seal_error(unsafe {
             // RelinKeys doesn't have a destructor, but inherits
@@ -254,7 +254,7 @@ impl Drop for ReliniearizationKeys {
  * A relinearization key that stores a random number seed to generate the rest of the key.
  * This form isn't directly usable, but serializes in a very compact representation.
  */
-pub struct CompactRelinearizationKeys(ReliniearizationKeys);
+pub struct CompactRelinearizationKeys(RelinearizationKeys);
 
 #[cfg(test)]
 mod tests {

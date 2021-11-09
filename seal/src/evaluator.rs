@@ -3,7 +3,7 @@ use std::ptr::null_mut;
 
 use crate::bindgen;
 use crate::error::*;
-use crate::{Ciphertext, Context, Plaintext};
+use crate::{Ciphertext, Context, Plaintext, RelinearizationKeys};
 
 /**
  * Provides operations on ciphertexts. Due to the properties of the encryption scheme, the arithmetic operations
@@ -68,12 +68,16 @@ impl Evaluator {
      * Creates an Evaluator instance initialized with the specified Context.
      * * `ctx` - The context.
      */
-    pub fn new(ctx: &Context) -> Result<Self> {
+    fn new(ctx: &Context) -> Result<Self> {
         let mut handle = null_mut();
 
         convert_seal_error(unsafe { bindgen::Evaluator_Create(ctx.get_handle(), &mut handle) })?;
 
         Ok(Self { handle })
+    }
+
+    pub fn get_handle(&self) -> *mut c_void {
+        self.handle
     }
 
     /**
@@ -149,21 +153,81 @@ impl Evaluator {
 
         Ok(c)
     }
+
+    pub fn multiply_inplace(&self, a: &mut Ciphertext, b: &Ciphertext) -> Result<()> {
+        convert_seal_error(unsafe {
+            bindgen::Evaluator_Multiply(self.handle, a.get_handle(), b.get_handle(), a.get_handle(), null_mut())
+        })?;
+
+        Ok(())
+    }
+
+    pub fn multiply(&self, a: &Ciphertext, b: &Ciphertext) -> Result<Ciphertext> {
+        let c = Ciphertext::new()?;
+
+        convert_seal_error(unsafe {
+            bindgen::Evaluator_Multiply(self.handle, a.get_handle(), b.get_handle(), c.get_handle(), null_mut())
+        })?;
+
+        Ok(c)
+    }
+
+    pub fn square_inplace(&self, a: &mut Ciphertext) -> Result<()> {
+        convert_seal_error(unsafe {
+            bindgen::Evaluator_Square(self.handle, a.get_handle(), a.get_handle(), null_mut())
+        })?;
+
+        Ok(())
+    }
+
+    pub fn square(&self, a: &Ciphertext) -> Result<Ciphertext> {
+        let c = Ciphertext::new()?;
+
+        convert_seal_error(unsafe {
+            bindgen::Evaluator_Square(self.handle, a.get_handle(), c.get_handle(), null_mut())
+        })?;
+
+        Ok(c)
+    }
+}
+
+pub struct BFVEvaluator(Evaluator);
+
+impl std::ops::Deref for BFVEvaluator {
+    type Target = Evaluator;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl BFVEvaluator {
+    pub fn new(ctx: &Context) -> Result<BFVEvaluator> {
+        Ok(BFVEvaluator(Evaluator::new(&ctx)?))
+    }
+
+    pub fn relinearize_inplace(&self, a: &mut Ciphertext, relin_keys: &RelinearizationKeys) -> Result<()> {
+        convert_seal_error(unsafe {
+            bindgen::Evaluator_Relinearize(self.get_handle(), a.get_handle(), relin_keys.get_handle(), a.get_handle(), null_mut())
+        })?;
+
+        Ok(())
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use crate::*;
 
-    fn run_test<F>(test: F) 
-        where F: FnOnce(Decryptor, BFVEncoder, Encryptor, Evaluator)
+    fn run_bfv_test<F>(test: F) 
+        where F: FnOnce(Decryptor, BFVEncoder, Encryptor, BFVEvaluator, RelinearizationKeys)
     {
         let params = BfvEncryptionParametersBuilder::new()
             .set_poly_modulus_degree(8192)
             .set_coefficient_modulus(
                 CoefficientModulus::create(8192, &vec![50, 30, 30, 50, 50]).unwrap(),
             )
-            .set_plain_modulus(PlainModulus::batching(8192, 20).unwrap())
+            .set_plain_modulus(PlainModulus::batching(8192, 32).unwrap())
             .build()
             .unwrap();
 
@@ -174,13 +238,14 @@ mod tests {
 
         let public_key = gen.create_public_key();
         let secret_key = gen.secret_key();
+        let relinearization_keys = gen.create_relinearization_keys();
 
         let encryptor =
             Encryptor::with_public_and_secret_key(&ctx, &public_key, &secret_key).unwrap();
         let decryptor = Decryptor::new(&ctx, &secret_key).unwrap();
-        let evaluator = Evaluator::new(&ctx).unwrap();
+        let evaluator = BFVEvaluator::new(&ctx).unwrap();
 
-        test(decryptor, encoder, encryptor, evaluator);
+        test(decryptor, encoder, encryptor, evaluator, relinearization_keys);
     }
 
     fn make_vec(encoder: &BFVEncoder) -> Vec<i64> {
@@ -213,7 +278,7 @@ mod tests {
 
     #[test]
     fn can_negate() {
-        run_test(|decryptor, encoder, encryptor, evaluator| {
+        run_bfv_test(|decryptor, encoder, encryptor, evaluator, _| {
             let a = make_vec(&encoder);
             let a_p = encoder.encode_signed(&a).unwrap();
             let a_c = encryptor.encrypt(&a_p).unwrap();
@@ -233,7 +298,7 @@ mod tests {
 
     #[test]
     fn can_negate_inplace() {
-        run_test(|decryptor, encoder, encryptor, evaluator| {
+        run_bfv_test(|decryptor, encoder, encryptor, evaluator, _| {
             let a = make_vec(&encoder);
             let a_p = encoder.encode_signed(&a).unwrap();
             let mut a_c = encryptor.encrypt(&a_p).unwrap();
@@ -253,7 +318,7 @@ mod tests {
 
     #[test]
     fn can_add() {
-        run_test(|decryptor, encoder, encryptor, evaluator| {
+        run_bfv_test(|decryptor, encoder, encryptor, evaluator, _| {
             let a = make_vec(&encoder);
             let b = make_vec(&encoder);
             let a_p = encoder.encode_signed(&a).unwrap();
@@ -277,7 +342,7 @@ mod tests {
 
     #[test]
     fn can_add_inplace() {
-        run_test(|decryptor, encoder, encryptor, evaluator| {
+        run_bfv_test(|decryptor, encoder, encryptor, evaluator, _| {
             let a = make_vec(&encoder);
             let b = make_vec(&encoder);
             let a_p = encoder.encode_signed(&a).unwrap();
@@ -301,7 +366,7 @@ mod tests {
 
     #[test]
     fn can_add_many() {
-        run_test(|decryptor, encoder, encryptor, evaluator| {
+        run_bfv_test(|decryptor, encoder, encryptor, evaluator, _| {
             let a = make_vec(&encoder);
             let b = make_vec(&encoder);
             let c = make_vec(&encoder);
@@ -336,7 +401,7 @@ mod tests {
 
     #[test]
     fn can_sub() {
-        run_test(|decryptor, encoder, encryptor, evaluator| {
+        run_bfv_test(|decryptor, encoder, encryptor, evaluator, _| {
             let a = make_vec(&encoder);
             let b = make_vec(&encoder);
             let a_p = encoder.encode_signed(&a).unwrap();
@@ -360,7 +425,7 @@ mod tests {
 
     #[test]
     fn can_sub_inplace() {
-        run_test(|decryptor, encoder, encryptor, evaluator| {
+        run_bfv_test(|decryptor, encoder, encryptor, evaluator, _| {
             let a = make_vec(&encoder);
             let b = make_vec(&encoder);
             let a_p = encoder.encode_signed(&a).unwrap();
@@ -379,6 +444,122 @@ mod tests {
             for i in 0..a.len() {
                 assert_eq!(c[i], a[i] - b[i]);
             }
+        });
+    }
+
+    #[test]
+    fn can_multiply() {
+        run_bfv_test(|decryptor, encoder, encryptor, evaluator, _| {
+            let a = make_vec(&encoder);
+            let b = make_vec(&encoder);
+            let a_p = encoder.encode_signed(&a).unwrap();
+            let b_p = encoder.encode_signed(&b).unwrap();
+            let a_c = encryptor.encrypt(&a_p).unwrap();
+            let b_c = encryptor.encrypt(&b_p).unwrap();
+
+            let c_c = evaluator.multiply(&a_c, &b_c).unwrap();
+
+            let c_p = decryptor.decrypt(&c_c).unwrap();
+            let c = encoder.decode_signed(&c_p).unwrap();
+            
+            assert_eq!(a.len(), c.len());
+            assert_eq!(b.len(), c.len());
+
+            for i in 0..a.len() {
+                assert_eq!(c[i], a[i] * b[i]);
+            }
+        });
+    }
+
+    #[test]
+    fn can_multiply_inplace() {
+        run_bfv_test(|decryptor, encoder, encryptor, evaluator, _| {
+            let a = make_vec(&encoder);
+            let b = make_vec(&encoder);
+            let a_p = encoder.encode_signed(&a).unwrap();
+            let b_p = encoder.encode_signed(&b).unwrap();
+            let mut a_c = encryptor.encrypt(&a_p).unwrap();
+            let b_c = encryptor.encrypt(&b_p).unwrap();
+
+            evaluator.multiply_inplace(&mut a_c, &b_c).unwrap();
+
+            let a_p = decryptor.decrypt(&a_c).unwrap();
+            let c = encoder.decode_signed(&a_p).unwrap();
+            
+            assert_eq!(a.len(), c.len());
+            assert_eq!(b.len(), c.len());
+
+            for i in 0..a.len() {
+                assert_eq!(c[i], a[i] * b[i]);
+            }
+        });
+    }
+
+    #[test]
+    fn can_square() {
+        run_bfv_test(|decryptor, encoder, encryptor, evaluator, _| {
+            let a = make_vec(&encoder);
+            let a_p = encoder.encode_signed(&a).unwrap();
+            let a_c = encryptor.encrypt(&a_p).unwrap();
+
+            let b_c = evaluator.square(&a_c).unwrap();
+
+            let b_p = decryptor.decrypt(&b_c).unwrap();
+            let b = encoder.decode_signed(&b_p).unwrap();
+            
+            assert_eq!(a.len(), b.len());
+
+            for i in 0..a.len() {
+                assert_eq!(b[i], a[i] * a[i]);
+            }
+        });
+    }
+
+    #[test]
+    fn can_square_inplace() {
+        run_bfv_test(|decryptor, encoder, encryptor, evaluator, _| {
+            let a = make_vec(&encoder);
+            let a_p = encoder.encode_signed(&a).unwrap();
+            let mut a_c = encryptor.encrypt(&a_p).unwrap();
+
+            evaluator.square_inplace(&mut a_c).unwrap();
+
+            let a_p = decryptor.decrypt(&a_c).unwrap();
+            let b = encoder.decode_signed(&a_p).unwrap();
+            
+            assert_eq!(a.len(), b.len());
+
+            for i in 0..a.len() {
+                assert_eq!(b[i], a[i] * a[i]);
+            }
+        });
+    }
+
+    #[test]
+    fn can_relinearize_inplace() {
+        run_bfv_test(|decryptor, encoder, encryptor, evaluator, relin_keys| {
+            let a = make_vec(&encoder);
+            let a_p = encoder.encode_signed(&a).unwrap();
+            let mut a_c = encryptor.encrypt(&a_p).unwrap();
+            let mut a_c_2 = encryptor.encrypt(&a_p).unwrap();
+
+            let noise_before = decryptor.invariant_noise_budget(&a_c).unwrap();
+
+            evaluator.square_inplace(&mut a_c).unwrap();
+            evaluator.relinearize_inplace(&mut a_c, &relin_keys).unwrap();
+            evaluator.square_inplace(&mut a_c).unwrap();
+            evaluator.relinearize_inplace(&mut a_c, &relin_keys).unwrap();
+
+            let relin_noise = noise_before - decryptor.invariant_noise_budget(&a_c).unwrap();
+
+            let noise_before = decryptor.invariant_noise_budget(&a_c_2).unwrap();
+
+            evaluator.square_inplace(&mut a_c_2).unwrap();
+            evaluator.square_inplace(&mut a_c_2).unwrap();
+
+            let no_relin_noise = noise_before - decryptor.invariant_noise_budget(&a_c_2).unwrap();
+
+            assert_eq!(relin_noise < no_relin_noise, true)
         });
     }
 }

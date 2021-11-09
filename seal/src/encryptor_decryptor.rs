@@ -170,6 +170,39 @@ impl Decryptor {
 
         Ok(plaintext)
     }
+
+    /**
+     * Computes the invariant noise budget (in bits) of a ciphertext. The invariant noise
+     * budget measures the amount of room there is for the noise to grow while ensuring
+     * correct decryptions. Dynamic memory allocations in the process are allocated from
+     * the memory pool pointed to by the given MemoryPoolHandle. This function works only
+     * with the BFV scheme.
+     *
+     * # Invariant Noise Budget
+     * The invariant noise polynomial of a ciphertext is a rational coefficient polynomial,
+     * such that a ciphertext decrypts correctly as long as the coefficients of the invariant
+     * noise polynomial are of absolute value less than 1/2. Thus, we call the infinity-norm
+     * of the invariant noise polynomial the invariant noise, and for correct decryption require
+     * it to be less than 1/2. If v denotes the invariant noise, we define the invariant noise
+     * budget as -log2(2v). Thus, the invariant noise budget starts from some initial value,
+     * which depends on the encryption parameters, and decreases when computations are performed.
+     * When the budget reaches zero, the ciphertext becomes too noisy to decrypt correctly.
+     *
+     * * `ciphertext` - The ciphertext for which to measure noise.
+     */
+    pub fn invariant_noise_budget(&self, ciphertext: &Ciphertext) -> Result<u32> {
+        let mut noise: i32 = 0;
+
+        convert_seal_error(unsafe {
+            bindgen::Decryptor_InvariantNoiseBudget(
+                self.handle,
+                ciphertext.get_handle(),
+                &mut noise,
+            )
+        })?;
+
+        Ok(noise as u32)
+    }
 }
 
 impl Drop for Decryptor {

@@ -291,7 +291,7 @@ impl BfvEncryptionParametersBuilder {
                     bindgen::EncParams_SetPlainModulus2(params.handle, p)
                 })?;
             }
-            PlainModulusType::Modulus(mut m) => {
+            PlainModulusType::Modulus(m) => {
                 convert_seal_error(unsafe {
                     bindgen::EncParams_SetPlainModulus1(
                         params.handle,

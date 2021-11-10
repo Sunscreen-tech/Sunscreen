@@ -131,7 +131,54 @@ impl KeyGenerator {
         RelinearizationKeys { handle }
     }
 
-    // TODO: Galois keys
+    /**
+     * Generates and returns Galois keys as a serializable object.
+     *
+     * Generates and returns Galois keys as a serializable object. Every time
+     * this function is called, new Galois keys will be generated.
+     *
+     * Half of the key data is pseudo-randomly generated from a seed to reduce
+     * the object size. The resulting serializable object cannot be used
+     * directly and is meant to be serialized for the size reduction to have an
+     * impact.
+     *
+     * This function creates logarithmically many (in degree of the polynomial
+     * modulus) Galois keys that is sufficient to apply any Galois automorphism
+     * (e.g. rotations) on encrypted data. Most users will want to use this
+     * overload of the function.
+     */
+    pub fn create_compact_galois_keys(&self) -> CompactGaloisKeys {
+        CompactGaloisKeys(self.create_galois_keys_internal(true))
+    }
+
+    /**
+     * Generates Galois keys and stores the result in destination.
+     * </summary>
+     * <remarks>
+     * <para>
+     * Generates Galois keys and stores the result in destination. Every time
+     * this function is called, new Galois keys will be generated.
+     * </para>
+     * <para>
+     * This function creates logarithmically many (in degree of the polynomial
+     * modulus) Galois keys that is sufficient to apply any Galois automorphism
+     * (e.g. rotations) on encrypted data. Most users will want to use this
+     * overload of the function.
+     */
+    pub fn create_galois_keys(&self) -> GaloisKeys {
+        self.create_galois_keys_internal(false)
+    }
+
+    fn create_galois_keys_internal(&self, save_seed: bool) -> GaloisKeys {
+        let mut handle = null_mut();
+
+        convert_seal_error(unsafe {
+            bindgen::KeyGenerator_CreateGaloisKeysAll(self.handle, save_seed, &mut handle)
+        })
+        .expect("Fatal error in KeyGenerator::create_galois_keys()");
+
+        GaloisKeys { handle }
+    }
 }
 
 impl Drop for KeyGenerator {
@@ -275,15 +322,59 @@ impl Drop for RelinearizationKeys {
             // destructor.
             bindgen::KSwitchKeys_Destroy(self.handle)
         })
-        .expect("Fatal error in PublicKey::drop")
+        .expect("Fatal error in PublicKey::drop()")
     }
 }
 
 /**
  * A relinearization key that stores a random number seed to generate the rest of the key.
- * This form isn't directly usable, but serializes in a very compact representation.
+ * This form isn't directly usable, but serializes in a compact representation.
  */
 pub struct CompactRelinearizationKeys(RelinearizationKeys);
+
+/**
+ * Class to store Galois keys.
+ *
+ * Slot rotations
+ * Galois keys are certain types of public keys that are needed to perform encrypted
+ * vector rotation operations on batched ciphertexts. Batched ciphertexts encrypt
+ * a 2-by-(N/2) matrix of modular integers in the BFV scheme, or an N/2-dimensional
+ * vector of complex numbers in the CKKS scheme, where N denotes the degree of the
+ * polynomial modulus. In the BFV scheme Galois keys can enable both cyclic rotations
+ * of the encrypted matrix rows, as well as row swaps (column rotations). In the CKKS
+ * scheme Galois keys can enable cyclic vector rotations, as well as a complex
+ * conjugation operation.
+ */
+pub struct GaloisKeys {
+    handle: *mut c_void,
+}
+
+impl GaloisKeys {
+    /**
+     * Returns the handle to the underlying SEAL object.
+     */
+    pub fn get_handle(&self) -> *mut c_void {
+        self.handle
+    }
+}
+
+impl Drop for GaloisKeys {
+    fn drop(&mut self) {
+        convert_seal_error(unsafe {
+            // GaloisKeys doesn't have a destructor, but inherits
+            // from KSwitchKeys, which does. Just call the base class's
+            // destructor.
+            bindgen::KSwitchKeys_Destroy(self.handle)
+        })
+        .expect("Fatal error in GaloisKeys::drop()")
+    }
+}
+
+/**
+ * A galois key set that stores a random number seed to generate the rest of the key.
+ * This form isn't directly usable, but serializes in a compact representation.
+ */
+pub struct CompactGaloisKeys(GaloisKeys);
 
 #[cfg(test)]
 mod tests {
@@ -348,6 +439,23 @@ mod tests {
         let gen = KeyGenerator::new(&ctx).unwrap();
 
         gen.create_relinearization_keys();
+    }
+
+    #[test]
+    fn can_create_galois_key() {
+        let params = BfvEncryptionParametersBuilder::new()
+            .set_poly_modulus_degree(8192)
+            .set_coefficient_modulus(
+                CoefficientModulus::bfv_default(8192, SecurityLevel::TC128).unwrap(),
+            )
+            .set_plain_modulus(PlainModulus::batching(8192, 32).unwrap())
+            .build()
+            .unwrap();
+
+        let ctx = Context::new(&params, false, SecurityLevel::TC128).unwrap();
+        let gen = KeyGenerator::new(&ctx).unwrap();
+
+        gen.create_galois_keys();
     }
 
     #[test]

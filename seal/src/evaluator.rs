@@ -3,7 +3,7 @@ use std::ptr::null_mut;
 
 use crate::bindgen;
 use crate::error::*;
-use crate::{Ciphertext, Context, Plaintext, RelinearizationKeys};
+use crate::{Ciphertext, Context, GaloisKeys, Plaintext, RelinearizationKeys};
 
 /**
  * Provides operations on ciphertexts. Due to the properties of the encryption scheme, the arithmetic operations
@@ -428,13 +428,12 @@ impl Evaluator {
                 self.get_handle(),
                 a.get_handle(),
                 b.get_handle(),
-                c.get_handle()
+                c.get_handle(),
             )
         })?;
 
         Ok(c)
     }
-
 
     /**
      * Adds a ciphertext and a plaintext.
@@ -447,13 +446,13 @@ impl Evaluator {
                 self.get_handle(),
                 a.get_handle(),
                 b.get_handle(),
-                a.get_handle()
+                a.get_handle(),
             )
         })?;
 
         Ok(())
     }
-    
+
     /**
      * Subtract a plaintext from a ciphertext.
      * * `a` - the ciphertext
@@ -467,13 +466,12 @@ impl Evaluator {
                 self.get_handle(),
                 a.get_handle(),
                 b.get_handle(),
-                c.get_handle()
+                c.get_handle(),
             )
         })?;
 
         Ok(c)
     }
-
 
     /**
      * Subtract a plaintext from a ciphertext and store the result in the ciphertext.
@@ -486,7 +484,7 @@ impl Evaluator {
                 self.get_handle(),
                 a.get_handle(),
                 b.get_handle(),
-                a.get_handle()
+                a.get_handle(),
             )
         })?;
 
@@ -507,13 +505,12 @@ impl Evaluator {
                 a.get_handle(),
                 b.get_handle(),
                 c.get_handle(),
-                null_mut()
+                null_mut(),
             )
         })?;
 
         Ok(c)
     }
-
 
     /**
      * Multiply a ciphertext by a plaintext and store in the ciphertext.
@@ -527,7 +524,7 @@ impl Evaluator {
                 a.get_handle(),
                 b.get_handle(),
                 a.get_handle(),
-                null_mut()
+                null_mut(),
             )
         })?;
 
@@ -604,6 +601,40 @@ impl BFVEvaluator {
 
         Ok(out)
     }
+
+    /**
+     * Rotates plaintext matrix rows cyclically.
+     *
+     * When batching is used with the BFV scheme, this function rotates the encrypted plaintext matrix rows
+     * cyclically to the left (steps &gt; 0) or to the right (steps &lt; 0). Since the size of the batched matrix
+     * is 2-by-(N/2), where N is the degree of the polynomial modulus, the number of steps to rotate must have
+     * absolute value at most N/2-1.
+     *
+     * * `a` - The ciphertext to rotate
+     * * `steps` - The number of steps to rotate (positive left, negative right)
+     * * `galois_keys` - The Galois keys
+     */
+    pub fn rotate_rows(
+        &self,
+        a: &Ciphertext,
+        steps: i32,
+        galois_keys: &GaloisKeys,
+    ) -> Result<Ciphertext> {
+        let out = Ciphertext::new()?;
+
+        convert_seal_error(unsafe {
+            bindgen::Evaluator_RotateRows(
+                self.handle,
+                a.get_handle(),
+                steps,
+                galois_keys.get_handle(),
+                out.get_handle(),
+                null_mut(),
+            )
+        })?;
+
+        Ok(out)
+    }
 }
 
 #[cfg(test)]
@@ -612,7 +643,7 @@ mod tests {
 
     fn run_bfv_test<F>(test: F)
     where
-        F: FnOnce(Decryptor, BFVEncoder, Encryptor, BFVEvaluator, RelinearizationKeys),
+        F: FnOnce(Decryptor, BFVEncoder, Encryptor, BFVEvaluator, RelinearizationKeys, GaloisKeys),
     {
         let params = BfvEncryptionParametersBuilder::new()
             .set_poly_modulus_degree(8192)
@@ -631,6 +662,7 @@ mod tests {
         let public_key = gen.create_public_key();
         let secret_key = gen.secret_key();
         let relinearization_keys = gen.create_relinearization_keys();
+        let galois_keys = gen.create_galois_keys();
 
         let encryptor =
             Encryptor::with_public_and_secret_key(&ctx, &public_key, &secret_key).unwrap();
@@ -643,6 +675,7 @@ mod tests {
             encryptor,
             evaluator,
             relinearization_keys,
+            galois_keys
         );
     }
 
@@ -686,7 +719,7 @@ mod tests {
 
     #[test]
     fn can_negate() {
-        run_bfv_test(|decryptor, encoder, encryptor, evaluator, _| {
+        run_bfv_test(|decryptor, encoder, encryptor, evaluator, _, _galois| {
             let a = make_vec(&encoder);
             let a_p = encoder.encode_signed(&a).unwrap();
             let a_c = encryptor.encrypt(&a_p).unwrap();
@@ -706,7 +739,7 @@ mod tests {
 
     #[test]
     fn can_negate_inplace() {
-        run_bfv_test(|decryptor, encoder, encryptor, evaluator, _| {
+        run_bfv_test(|decryptor, encoder, encryptor, evaluator, _, _galois| {
             let a = make_vec(&encoder);
             let a_p = encoder.encode_signed(&a).unwrap();
             let mut a_c = encryptor.encrypt(&a_p).unwrap();
@@ -726,7 +759,7 @@ mod tests {
 
     #[test]
     fn can_add() {
-        run_bfv_test(|decryptor, encoder, encryptor, evaluator, _| {
+        run_bfv_test(|decryptor, encoder, encryptor, evaluator, _, _galois| {
             let a = make_vec(&encoder);
             let b = make_vec(&encoder);
             let a_p = encoder.encode_signed(&a).unwrap();
@@ -750,7 +783,7 @@ mod tests {
 
     #[test]
     fn can_add_inplace() {
-        run_bfv_test(|decryptor, encoder, encryptor, evaluator, _| {
+        run_bfv_test(|decryptor, encoder, encryptor, evaluator, _, _galois| {
             let a = make_vec(&encoder);
             let b = make_vec(&encoder);
             let a_p = encoder.encode_signed(&a).unwrap();
@@ -774,7 +807,7 @@ mod tests {
 
     #[test]
     fn can_add_many() {
-        run_bfv_test(|decryptor, encoder, encryptor, evaluator, _| {
+        run_bfv_test(|decryptor, encoder, encryptor, evaluator, _, _galois| {
             let a = make_vec(&encoder);
             let b = make_vec(&encoder);
             let c = make_vec(&encoder);
@@ -809,7 +842,7 @@ mod tests {
 
     #[test]
     fn can_multiply_many() {
-        run_bfv_test(|decryptor, encoder, encryptor, evaluator, relin_keys| {
+        run_bfv_test(|decryptor, encoder, encryptor, evaluator, relin_keys, _| {
             let a = make_small_vec(&encoder);
             let b = make_small_vec(&encoder);
             let c = make_small_vec(&encoder);
@@ -844,7 +877,7 @@ mod tests {
 
     #[test]
     fn can_sub() {
-        run_bfv_test(|decryptor, encoder, encryptor, evaluator, _| {
+        run_bfv_test(|decryptor, encoder, encryptor, evaluator, _, _galois| {
             let a = make_vec(&encoder);
             let b = make_vec(&encoder);
             let a_p = encoder.encode_signed(&a).unwrap();
@@ -868,7 +901,7 @@ mod tests {
 
     #[test]
     fn can_sub_inplace() {
-        run_bfv_test(|decryptor, encoder, encryptor, evaluator, _| {
+        run_bfv_test(|decryptor, encoder, encryptor, evaluator, _, _galois| {
             let a = make_vec(&encoder);
             let b = make_vec(&encoder);
             let a_p = encoder.encode_signed(&a).unwrap();
@@ -892,7 +925,7 @@ mod tests {
 
     #[test]
     fn can_multiply() {
-        run_bfv_test(|decryptor, encoder, encryptor, evaluator, _| {
+        run_bfv_test(|decryptor, encoder, encryptor, evaluator, _, _galois| {
             let a = make_vec(&encoder);
             let b = make_vec(&encoder);
             let a_p = encoder.encode_signed(&a).unwrap();
@@ -916,7 +949,7 @@ mod tests {
 
     #[test]
     fn can_multiply_inplace() {
-        run_bfv_test(|decryptor, encoder, encryptor, evaluator, _| {
+        run_bfv_test(|decryptor, encoder, encryptor, evaluator, _, _galois| {
             let a = make_vec(&encoder);
             let b = make_vec(&encoder);
             let a_p = encoder.encode_signed(&a).unwrap();
@@ -940,7 +973,7 @@ mod tests {
 
     #[test]
     fn can_square() {
-        run_bfv_test(|decryptor, encoder, encryptor, evaluator, _| {
+        run_bfv_test(|decryptor, encoder, encryptor, evaluator, _, _galois| {
             let a = make_vec(&encoder);
             let a_p = encoder.encode_signed(&a).unwrap();
             let a_c = encryptor.encrypt(&a_p).unwrap();
@@ -960,7 +993,7 @@ mod tests {
 
     #[test]
     fn can_square_inplace() {
-        run_bfv_test(|decryptor, encoder, encryptor, evaluator, _| {
+        run_bfv_test(|decryptor, encoder, encryptor, evaluator, _, _galois| {
             let a = make_vec(&encoder);
             let a_p = encoder.encode_signed(&a).unwrap();
             let mut a_c = encryptor.encrypt(&a_p).unwrap();
@@ -980,7 +1013,7 @@ mod tests {
 
     #[test]
     fn can_relinearize_inplace() {
-        run_bfv_test(|decryptor, encoder, encryptor, evaluator, relin_keys| {
+        run_bfv_test(|decryptor, encoder, encryptor, evaluator, relin_keys, _| {
             let a = make_vec(&encoder);
             let a_p = encoder.encode_signed(&a).unwrap();
             let mut a_c = encryptor.encrypt(&a_p).unwrap();
@@ -1012,7 +1045,7 @@ mod tests {
 
     #[test]
     fn can_relinearize() {
-        run_bfv_test(|decryptor, encoder, encryptor, evaluator, relin_keys| {
+        run_bfv_test(|decryptor, encoder, encryptor, evaluator, relin_keys, _| {
             let a = make_vec(&encoder);
             let a_p = encoder.encode_signed(&a).unwrap();
             let mut a_c = encryptor.encrypt(&a_p).unwrap();
@@ -1040,7 +1073,7 @@ mod tests {
 
     #[test]
     fn can_exponentiate() {
-        run_bfv_test(|decryptor, encoder, encryptor, evaluator, relin_keys| {
+        run_bfv_test(|decryptor, encoder, encryptor, evaluator, relin_keys, _galois| {
             let a = make_small_vec(&encoder);
             let a_p = encoder.encode_signed(&a).unwrap();
             let a_c = encryptor.encrypt(&a_p).unwrap();
@@ -1053,22 +1086,21 @@ mod tests {
             assert_eq!(a.len(), c.len());
 
             for i in 0..a.len() {
-                assert_eq!(
-                    c[i],
-                    a[i] * a[i] * a[i] * a[i]
-                );
+                assert_eq!(c[i], a[i] * a[i] * a[i] * a[i]);
             }
         });
     }
 
     #[test]
     fn can_exponentiate_inplace() {
-        run_bfv_test(|decryptor, encoder, encryptor, evaluator, relin_keys| {
+        run_bfv_test(|decryptor, encoder, encryptor, evaluator, relin_keys, _galois| {
             let a = make_small_vec(&encoder);
             let a_p = encoder.encode_signed(&a).unwrap();
             let a_c = encryptor.encrypt(&a_p).unwrap();
 
-            evaluator.exponentiate_inplace(&a_c, 4, &relin_keys).unwrap();
+            evaluator
+                .exponentiate_inplace(&a_c, 4, &relin_keys)
+                .unwrap();
 
             let a_p = decryptor.decrypt(&a_c).unwrap();
             let c = encoder.decode_signed(&a_p).unwrap();
@@ -1076,17 +1108,14 @@ mod tests {
             assert_eq!(a.len(), c.len());
 
             for i in 0..a.len() {
-                assert_eq!(
-                    c[i],
-                    a[i] * a[i] * a[i] * a[i]
-                );
+                assert_eq!(c[i], a[i] * a[i] * a[i] * a[i]);
             }
         });
     }
 
     #[test]
     fn can_add_plain() {
-        run_bfv_test(|decryptor, encoder, encryptor, evaluator, _| {
+        run_bfv_test(|decryptor, encoder, encryptor, evaluator, _, _galois| {
             let a = make_vec(&encoder);
             let b = make_vec(&encoder);
             let a_p = encoder.encode_signed(&a).unwrap();
@@ -1109,7 +1138,7 @@ mod tests {
 
     #[test]
     fn can_add_plain_inplace() {
-        run_bfv_test(|decryptor, encoder, encryptor, evaluator, _| {
+        run_bfv_test(|decryptor, encoder, encryptor, evaluator, _, _galois| {
             let a = make_vec(&encoder);
             let b = make_vec(&encoder);
             let a_p = encoder.encode_signed(&a).unwrap();
@@ -1132,7 +1161,7 @@ mod tests {
 
     #[test]
     fn can_sub_plain() {
-        run_bfv_test(|decryptor, encoder, encryptor, evaluator, _| {
+        run_bfv_test(|decryptor, encoder, encryptor, evaluator, _, _galois| {
             let a = make_vec(&encoder);
             let b = make_vec(&encoder);
             let a_p = encoder.encode_signed(&a).unwrap();
@@ -1155,7 +1184,7 @@ mod tests {
 
     #[test]
     fn can_sub_plain_inplace() {
-        run_bfv_test(|decryptor, encoder, encryptor, evaluator, _| {
+        run_bfv_test(|decryptor, encoder, encryptor, evaluator, _, _galois| {
             let a = make_vec(&encoder);
             let b = make_vec(&encoder);
             let a_p = encoder.encode_signed(&a).unwrap();
@@ -1178,7 +1207,7 @@ mod tests {
 
     #[test]
     fn can_multiply_plain() {
-        run_bfv_test(|decryptor, encoder, encryptor, evaluator, _| {
+        run_bfv_test(|decryptor, encoder, encryptor, evaluator, _, _galois| {
             let a = make_vec(&encoder);
             let b = make_vec(&encoder);
             let a_p = encoder.encode_signed(&a).unwrap();
@@ -1201,7 +1230,7 @@ mod tests {
 
     #[test]
     fn can_multiply_plain_inplace() {
-        run_bfv_test(|decryptor, encoder, encryptor, evaluator, _| {
+        run_bfv_test(|decryptor, encoder, encryptor, evaluator, _, _galois| {
             let a = make_vec(&encoder);
             let b = make_vec(&encoder);
             let a_p = encoder.encode_signed(&a).unwrap();
@@ -1219,6 +1248,39 @@ mod tests {
             for i in 0..a.len() {
                 assert_eq!(c[i], a[i] * b[i]);
             }
+        });
+    }
+
+    fn make_matrix(encoder: &BFVEncoder) -> Vec<i64> {
+        let dim = encoder.get_slot_count();
+        let dim_2 = dim / 2;
+
+        let mut matrix = vec![0i64; dim];
+
+        matrix[0] = 1;
+        matrix[1] = -2;
+        matrix[dim_2] = -1;
+        matrix[dim_2 + 1] = 2;
+
+        matrix
+    }
+
+    #[test]
+    fn can_rotate_rows() {
+        run_bfv_test(|decryptor, encoder, encryptor, evaluator, _, galois_keys| {
+            let a = make_matrix(&encoder);
+            let a_p = encoder.encode_signed(&a).unwrap();
+            let a_c = encryptor.encrypt(&a_p).unwrap();
+
+            let c_c = evaluator.rotate_rows(&a_c, -1, &galois_keys).unwrap();
+
+            let c_p = decryptor.decrypt(&c_c).unwrap();
+            let c = encoder.decode_signed(&c_p).unwrap();
+
+            assert_eq!(a[0], c[1]);
+            assert_eq!(a[1], c[2]);
+            assert_eq!(a[4096], c[4097]);
+            assert_eq!(a[4097], c[4098]);
         });
     }
 }

@@ -44,6 +44,6 @@ pub use encryption_parameters::*;
 pub use encryptor_decryptor::{Decryptor, Encryptor};
 pub use error::{Error, Result};
 pub use evaluator::{BFVEvaluator, Evaluator};
-pub use key_generator::{KeyGenerator, PublicKey, RelinearizationKeys, SecretKey};
+pub use key_generator::{GaloisKeys, KeyGenerator, PublicKey, RelinearizationKeys, SecretKey};
 pub use modulus::{CoefficientModulus, Modulus, PlainModulus, SecurityLevel};
 pub use plaintext_ciphertext::{Ciphertext, Plaintext};

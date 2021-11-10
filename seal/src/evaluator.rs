@@ -635,6 +635,98 @@ impl BFVEvaluator {
 
         Ok(out)
     }
+
+    /**
+     * Rotates plaintext matrix rows cyclically. This variant does so in-place
+     *
+     * When batching is used with the BFV scheme, this function rotates the encrypted plaintext matrix rows
+     * cyclically to the left (steps &gt; 0) or to the right (steps &lt; 0). Since the size of the batched matrix
+     * is 2-by-(N/2), where N is the degree of the polynomial modulus, the number of steps to rotate must have
+     * absolute value at most N/2-1.
+     *
+     * * `a` - The ciphertext to rotate
+     * * `steps` - The number of steps to rotate (positive left, negative right)
+     * * `galois_keys` - The Galois keys
+     */
+    pub fn rotate_rows_inplace(
+        &self,
+        a: &Ciphertext,
+        steps: i32,
+        galois_keys: &GaloisKeys,
+    ) -> Result<()> {
+        convert_seal_error(unsafe {
+            bindgen::Evaluator_RotateRows(
+                self.handle,
+                a.get_handle(),
+                steps,
+                galois_keys.get_handle(),
+                a.get_handle(),
+                null_mut(),
+            )
+        })?;
+
+        Ok(())
+    }
+
+    /**
+     * Rotates plaintext matrix columns cyclically.
+     * 
+     * When batching is used with the BFV scheme, this function rotates the encrypted plaintext matrix columns
+     * cyclically. Since the size of the batched matrix is 2-by-(N/2), where N is the degree of the polynomial
+     * modulus, this means simply swapping the two rows. Dynamic memory allocations in the process are allocated
+     * from the memory pool pointed to by the given MemoryPoolHandle.
+     * 
+     * * `encrypted` - The ciphertext to rotate
+     * * `galoisKeys` - The Galois keys
+     */
+    pub fn rotate_columns(
+        &self,
+        a: &Ciphertext,
+        galois_keys: &GaloisKeys
+    ) -> Result<Ciphertext> {
+        let out = Ciphertext::new()?;
+
+        convert_seal_error(unsafe {
+            bindgen::Evaluator_RotateColumns(
+                self.handle,
+                a.get_handle(),
+                galois_keys.get_handle(),
+                out.get_handle(),
+                null_mut(),
+            )
+        })?;
+
+        Ok(out)
+    }
+    
+    /**
+     * Rotates plaintext matrix columns cyclically. This variant does so in-place.
+     * 
+     * When batching is used with the BFV scheme, this function rotates the encrypted plaintext matrix columns
+     * cyclically. Since the size of the batched matrix is 2-by-(N/2), where N is the degree of the polynomial
+     * modulus, this means simply swapping the two rows. Dynamic memory allocations in the process are allocated
+     * from the memory pool pointed to by the given MemoryPoolHandle.
+     * 
+     * * `encrypted` - The ciphertext to rotate
+     * * `galoisKeys` - The Galois keys
+     */
+    pub fn rotate_columns_inplace(
+        &self,
+        a: &Ciphertext,
+        galois_keys: &GaloisKeys
+    ) -> Result<()> {
+        convert_seal_error(unsafe {
+            bindgen::Evaluator_RotateColumns(
+                self.handle,
+                a.get_handle(),
+                galois_keys.get_handle(),
+                a.get_handle(),
+                null_mut(),
+            )
+        })?;
+
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -1281,6 +1373,63 @@ mod tests {
             assert_eq!(a[1], c[2]);
             assert_eq!(a[4096], c[4097]);
             assert_eq!(a[4097], c[4098]);
+        });
+    }
+
+    #[test]
+    fn can_rotate_rows_inplace() {
+        run_bfv_test(|decryptor, encoder, encryptor, evaluator, _, galois_keys| {
+            let a = make_matrix(&encoder);
+            let a_p = encoder.encode_signed(&a).unwrap();
+            let a_c = encryptor.encrypt(&a_p).unwrap();
+
+            evaluator.rotate_rows_inplace(&a_c, -1, &galois_keys).unwrap();
+
+            let a_p = decryptor.decrypt(&a_c).unwrap();
+            let c = encoder.decode_signed(&a_p).unwrap();
+
+            assert_eq!(a[0], c[1]);
+            assert_eq!(a[1], c[2]);
+            assert_eq!(a[4096], c[4097]);
+            assert_eq!(a[4097], c[4098]);
+        });
+    }
+
+    #[test]
+    fn can_rotate_columns() {
+        run_bfv_test(|decryptor, encoder, encryptor, evaluator, _, galois_keys| {
+            let a = make_matrix(&encoder);
+            let a_p = encoder.encode_signed(&a).unwrap();
+            let a_c = encryptor.encrypt(&a_p).unwrap();
+
+            let c_c = evaluator.rotate_columns(&a_c, &galois_keys).unwrap();
+
+            let c_p = decryptor.decrypt(&c_c).unwrap();
+            let c = encoder.decode_signed(&c_p).unwrap();
+
+            assert_eq!(a[0], c[4096]);
+            assert_eq!(a[1], c[4097]);
+            assert_eq!(a[4096], c[0]);
+            assert_eq!(a[4097], c[1]);
+        });
+    }
+
+    #[test]
+    fn can_rotate_columns_inplace() {
+        run_bfv_test(|decryptor, encoder, encryptor, evaluator, _, galois_keys| {
+            let a = make_matrix(&encoder);
+            let a_p = encoder.encode_signed(&a).unwrap();
+            let a_c = encryptor.encrypt(&a_p).unwrap();
+
+            evaluator.rotate_columns_inplace(&a_c, &galois_keys).unwrap();
+
+            let a_p = decryptor.decrypt(&a_c).unwrap();
+            let c = encoder.decode_signed(&a_p).unwrap();
+
+            assert_eq!(a[0], c[4096]);
+            assert_eq!(a[1], c[4097]);
+            assert_eq!(a[4096], c[0]);
+            assert_eq!(a[4097], c[1]);
         });
     }
 }

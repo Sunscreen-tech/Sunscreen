@@ -358,6 +358,62 @@ impl Evaluator {
 
         Ok(())
     }
+
+    /**
+     * This functions raises encrypted to a power and stores the result in the destination parameter. Dynamic
+     * memory allocations in the process are allocated from the memory pool pointed to by the given
+     * MemoryPoolHandle. The exponentiation is done in a depth-optimal order, and relinearization is performed
+     * automatically after every multiplication in the process. In relinearization the given relinearization keys
+     * are used.
+     */
+    pub fn exponentiate(
+        &self,
+        a: &Ciphertext,
+        exponent: u64,
+        relin_keys: &RelinearizationKeys,
+    ) -> Result<Ciphertext> {
+        let c = Ciphertext::new()?;
+
+        convert_seal_error(unsafe {
+            bindgen::Evaluator_Exponentiate(
+                self.get_handle(),
+                a.get_handle(),
+                exponent,
+                relin_keys.get_handle(),
+                c.get_handle(),
+                null_mut(),
+            )
+        })?;
+
+        Ok(c)
+    }
+
+    /**
+     * This functions raises encrypted to a power and stores the result in the destination parameter. Dynamic
+     * memory allocations in the process are allocated from the memory pool pointed to by the given
+     * MemoryPoolHandle. The exponentiation is done in a depth-optimal order, and relinearization is performed
+     * automatically after every multiplication in the process. In relinearization the given relinearization keys
+     * are used.
+     */
+    pub fn exponentiate_inplace(
+        &self,
+        a: &Ciphertext,
+        exponent: u64,
+        relin_keys: &RelinearizationKeys,
+    ) -> Result<()> {
+        convert_seal_error(unsafe {
+            bindgen::Evaluator_Exponentiate(
+                self.get_handle(),
+                a.get_handle(),
+                exponent,
+                relin_keys.get_handle(),
+                a.get_handle(),
+                null_mut(),
+            )
+        })?;
+
+        Ok(())
+    }
 }
 
 /**
@@ -474,6 +530,16 @@ mod tests {
 
         for i in 0..encoder.get_slot_count() {
             data.push(encoder.get_slot_count() as i64 / 2i64 - i as i64)
+        }
+
+        data
+    }
+
+    fn make_small_vec(encoder: &BFVEncoder) -> Vec<i64> {
+        let mut data = vec![];
+
+        for i in 0..encoder.get_slot_count() {
+            data.push(16i64 - i as i64 % 32i64);
         }
 
         data
@@ -623,20 +689,10 @@ mod tests {
     #[test]
     fn can_multiply_many() {
         run_bfv_test(|decryptor, encoder, encryptor, evaluator, relin_keys| {
-            let make_small_vec = || {
-                let mut data = vec![];
-
-                for i in 0..encoder.get_slot_count() {
-                    data.push(16i64 - i as i64 % 32i64);
-                }
-
-                data
-            };
-
-            let a = make_small_vec();
-            let b = make_small_vec();
-            let c = make_small_vec();
-            let d = make_small_vec();
+            let a = make_small_vec(&encoder);
+            let b = make_small_vec(&encoder);
+            let c = make_small_vec(&encoder);
+            let d = make_small_vec(&encoder);
             let a_p = encoder.encode_signed(&a).unwrap();
             let b_p = encoder.encode_signed(&b).unwrap();
             let c_p = encoder.encode_signed(&c).unwrap();
@@ -858,6 +914,52 @@ mod tests {
             let no_relin_noise = noise_before - decryptor.invariant_noise_budget(&a_c_2).unwrap();
 
             assert_eq!(relin_noise < no_relin_noise, true)
+        });
+    }
+
+    #[test]
+    fn can_exponentiate() {
+        run_bfv_test(|decryptor, encoder, encryptor, evaluator, relin_keys| {
+            let a = make_small_vec(&encoder);
+            let a_p = encoder.encode_signed(&a).unwrap();
+            let a_c = encryptor.encrypt(&a_p).unwrap();
+
+            let c_c = evaluator.exponentiate(&a_c, 4, &relin_keys).unwrap();
+
+            let c_p = decryptor.decrypt(&c_c).unwrap();
+            let c = encoder.decode_signed(&c_p).unwrap();
+
+            assert_eq!(a.len(), c.len());
+
+            for i in 0..a.len() {
+                assert_eq!(
+                    c[i],
+                    a[i] * a[i] * a[i] * a[i]
+                );
+            }
+        });
+    }
+
+    #[test]
+    fn can_exponentiate_inplace() {
+        run_bfv_test(|decryptor, encoder, encryptor, evaluator, relin_keys| {
+            let a = make_small_vec(&encoder);
+            let a_p = encoder.encode_signed(&a).unwrap();
+            let a_c = encryptor.encrypt(&a_p).unwrap();
+
+            evaluator.exponentiate_inplace(&a_c, 4, &relin_keys).unwrap();
+
+            let a_p = decryptor.decrypt(&a_c).unwrap();
+            let c = encoder.decode_signed(&a_p).unwrap();
+
+            assert_eq!(a.len(), c.len());
+
+            for i in 0..a.len() {
+                assert_eq!(
+                    c[i],
+                    a[i] * a[i] * a[i] * a[i]
+                );
+            }
         });
     }
 }

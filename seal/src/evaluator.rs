@@ -414,6 +414,127 @@ impl Evaluator {
 
         Ok(())
     }
+
+    /**
+     * Adds a ciphertext and a plaintext.
+     * * `a` - the ciphertext
+     * * `b` - the plaintext
+     */
+    pub fn add_plain(&self, a: &Ciphertext, b: &Plaintext) -> Result<Ciphertext> {
+        let c = Ciphertext::new()?;
+
+        convert_seal_error(unsafe {
+            bindgen::Evaluator_AddPlain(
+                self.get_handle(),
+                a.get_handle(),
+                b.get_handle(),
+                c.get_handle()
+            )
+        })?;
+
+        Ok(c)
+    }
+
+
+    /**
+     * Adds a ciphertext and a plaintext.
+     * * `a` - the ciphertext
+     * * `b` - the plaintext
+     */
+    pub fn add_plain_inplace(&self, a: &mut Ciphertext, b: &Plaintext) -> Result<()> {
+        convert_seal_error(unsafe {
+            bindgen::Evaluator_AddPlain(
+                self.get_handle(),
+                a.get_handle(),
+                b.get_handle(),
+                a.get_handle()
+            )
+        })?;
+
+        Ok(())
+    }
+    
+    /**
+     * Subtract a plaintext from a ciphertext.
+     * * `a` - the ciphertext
+     * * `b` - the plaintext
+     */
+    pub fn sub_plain(&self, a: &Ciphertext, b: &Plaintext) -> Result<Ciphertext> {
+        let c = Ciphertext::new()?;
+
+        convert_seal_error(unsafe {
+            bindgen::Evaluator_SubPlain(
+                self.get_handle(),
+                a.get_handle(),
+                b.get_handle(),
+                c.get_handle()
+            )
+        })?;
+
+        Ok(c)
+    }
+
+
+    /**
+     * Subtract a plaintext from a ciphertext and store the result in the ciphertext.
+     * * `a` - the ciphertext
+     * * `b` - the plaintext
+     */
+    pub fn sub_plain_inplace(&self, a: &mut Ciphertext, b: &Plaintext) -> Result<()> {
+        convert_seal_error(unsafe {
+            bindgen::Evaluator_SubPlain(
+                self.get_handle(),
+                a.get_handle(),
+                b.get_handle(),
+                a.get_handle()
+            )
+        })?;
+
+        Ok(())
+    }
+
+    /**
+     * Multiply a ciphertext by a plaintext.
+     * * `a` - the ciphertext
+     * * `b` - the plaintext
+     */
+    pub fn multiply_plain(&self, a: &Ciphertext, b: &Plaintext) -> Result<Ciphertext> {
+        let c = Ciphertext::new()?;
+
+        convert_seal_error(unsafe {
+            bindgen::Evaluator_MultiplyPlain(
+                self.get_handle(),
+                a.get_handle(),
+                b.get_handle(),
+                c.get_handle(),
+                null_mut()
+            )
+        })?;
+
+        Ok(c)
+    }
+
+
+    /**
+     * Multiply a ciphertext by a plaintext and store in the ciphertext.
+     * * `a` - the ciphertext
+     * * `b` - the plaintext
+     */
+    pub fn multiply_plain_inplace(&self, a: &mut Ciphertext, b: &Plaintext) -> Result<()> {
+        convert_seal_error(unsafe {
+            bindgen::Evaluator_MultiplyPlain(
+                self.get_handle(),
+                a.get_handle(),
+                b.get_handle(),
+                a.get_handle(),
+                null_mut()
+            )
+        })?;
+
+        Ok(())
+    }
+
+    // TODO: NTT transform.
 }
 
 /**
@@ -959,6 +1080,144 @@ mod tests {
                     c[i],
                     a[i] * a[i] * a[i] * a[i]
                 );
+            }
+        });
+    }
+
+    #[test]
+    fn can_add_plain() {
+        run_bfv_test(|decryptor, encoder, encryptor, evaluator, _| {
+            let a = make_vec(&encoder);
+            let b = make_vec(&encoder);
+            let a_p = encoder.encode_signed(&a).unwrap();
+            let b_p = encoder.encode_signed(&b).unwrap();
+            let a_c = encryptor.encrypt(&a_p).unwrap();
+
+            let c_c = evaluator.add_plain(&a_c, &b_p).unwrap();
+
+            let c_p = decryptor.decrypt(&c_c).unwrap();
+            let c = encoder.decode_signed(&c_p).unwrap();
+
+            assert_eq!(a.len(), c.len());
+            assert_eq!(b.len(), c.len());
+
+            for i in 0..a.len() {
+                assert_eq!(c[i], a[i] + b[i]);
+            }
+        });
+    }
+
+    #[test]
+    fn can_add_plain_inplace() {
+        run_bfv_test(|decryptor, encoder, encryptor, evaluator, _| {
+            let a = make_vec(&encoder);
+            let b = make_vec(&encoder);
+            let a_p = encoder.encode_signed(&a).unwrap();
+            let b_p = encoder.encode_signed(&b).unwrap();
+            let mut a_c = encryptor.encrypt(&a_p).unwrap();
+
+            evaluator.add_plain_inplace(&mut a_c, &b_p).unwrap();
+
+            let a_p = decryptor.decrypt(&a_c).unwrap();
+            let c = encoder.decode_signed(&a_p).unwrap();
+
+            assert_eq!(a.len(), c.len());
+            assert_eq!(b.len(), c.len());
+
+            for i in 0..a.len() {
+                assert_eq!(c[i], a[i] + b[i]);
+            }
+        });
+    }
+
+    #[test]
+    fn can_sub_plain() {
+        run_bfv_test(|decryptor, encoder, encryptor, evaluator, _| {
+            let a = make_vec(&encoder);
+            let b = make_vec(&encoder);
+            let a_p = encoder.encode_signed(&a).unwrap();
+            let b_p = encoder.encode_signed(&b).unwrap();
+            let a_c = encryptor.encrypt(&a_p).unwrap();
+
+            let c_c = evaluator.sub_plain(&a_c, &b_p).unwrap();
+
+            let c_p = decryptor.decrypt(&c_c).unwrap();
+            let c = encoder.decode_signed(&c_p).unwrap();
+
+            assert_eq!(a.len(), c.len());
+            assert_eq!(b.len(), c.len());
+
+            for i in 0..a.len() {
+                assert_eq!(c[i], a[i] - b[i]);
+            }
+        });
+    }
+
+    #[test]
+    fn can_sub_plain_inplace() {
+        run_bfv_test(|decryptor, encoder, encryptor, evaluator, _| {
+            let a = make_vec(&encoder);
+            let b = make_vec(&encoder);
+            let a_p = encoder.encode_signed(&a).unwrap();
+            let b_p = encoder.encode_signed(&b).unwrap();
+            let mut a_c = encryptor.encrypt(&a_p).unwrap();
+
+            evaluator.sub_plain_inplace(&mut a_c, &b_p).unwrap();
+
+            let a_p = decryptor.decrypt(&a_c).unwrap();
+            let c = encoder.decode_signed(&a_p).unwrap();
+
+            assert_eq!(a.len(), c.len());
+            assert_eq!(b.len(), c.len());
+
+            for i in 0..a.len() {
+                assert_eq!(c[i], a[i] - b[i]);
+            }
+        });
+    }
+
+    #[test]
+    fn can_multiply_plain() {
+        run_bfv_test(|decryptor, encoder, encryptor, evaluator, _| {
+            let a = make_vec(&encoder);
+            let b = make_vec(&encoder);
+            let a_p = encoder.encode_signed(&a).unwrap();
+            let b_p = encoder.encode_signed(&b).unwrap();
+            let a_c = encryptor.encrypt(&a_p).unwrap();
+
+            let c_c = evaluator.multiply_plain(&a_c, &b_p).unwrap();
+
+            let c_p = decryptor.decrypt(&c_c).unwrap();
+            let c = encoder.decode_signed(&c_p).unwrap();
+
+            assert_eq!(a.len(), c.len());
+            assert_eq!(b.len(), c.len());
+
+            for i in 0..a.len() {
+                assert_eq!(c[i], a[i] * b[i]);
+            }
+        });
+    }
+
+    #[test]
+    fn can_multiply_plain_inplace() {
+        run_bfv_test(|decryptor, encoder, encryptor, evaluator, _| {
+            let a = make_vec(&encoder);
+            let b = make_vec(&encoder);
+            let a_p = encoder.encode_signed(&a).unwrap();
+            let b_p = encoder.encode_signed(&b).unwrap();
+            let mut a_c = encryptor.encrypt(&a_p).unwrap();
+
+            evaluator.multiply_plain_inplace(&mut a_c, &b_p).unwrap();
+
+            let a_p = decryptor.decrypt(&a_c).unwrap();
+            let c = encoder.decode_signed(&a_p).unwrap();
+
+            assert_eq!(a.len(), c.len());
+            assert_eq!(b.len(), c.len());
+
+            for i in 0..a.len() {
+                assert_eq!(c[i], a[i] * b[i]);
             }
         });
     }

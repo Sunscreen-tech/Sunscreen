@@ -18,6 +18,24 @@
             },
             "args": [],
             "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug assumption tests in library 'seal'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--package=seal"
+                ],
+                "filter": {
+                    "name": "assumptions",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
         }
     ]
 }

@@ -1,4 +1,4 @@
-use crate::{
+use sunscreen_ir::{
     IRTransform::*, IntermediateRepresentation, Operation::*, TransformList, TransformNodeIndex,
 };
 
@@ -18,15 +18,15 @@ pub fn apply_insert_relinearizations(ir: &mut IntermediateRepresentation) {
 
             transforms
         }
-        _ => TransformList::new(),
+        _ => TransformList::default(),
     });
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::Literal;
-    use crate::*;
+    use sunscreen_ir::Literal;
+    use sunscreen_ir::*;
     use petgraph::stable_graph::NodeIndex;
 
     fn create_test_dag() -> IntermediateRepresentation {

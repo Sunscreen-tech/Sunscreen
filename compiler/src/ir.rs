@@ -6,6 +6,9 @@ use petgraph::{
 };
 use serde::{Deserialize, Serialize};
 
+use IRTransform::*;
+use TransformNodeIndex::*;
+
 use std::collections::HashSet;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -74,8 +77,6 @@ type IRGraph = StableGraph<NodeInfo, EdgeInfo>;
 pub struct IntermediateRepresentation {
     pub graph: IRGraph,
 }
-
-use IRTransform::*;
 
 impl IntermediateRepresentation {
     pub fn new() -> Self {
@@ -179,7 +180,7 @@ impl IntermediateRepresentation {
      */
     pub fn forward_traverse<F>(&mut self, callback: F)
     where
-        F: FnMut(GraphQuery, NodeIndex) -> Vec<IRTransform>,
+        F: FnMut(GraphQuery, NodeIndex) -> TransformList,
     {
         self.traverse(true, callback);
     }
@@ -195,7 +196,7 @@ impl IntermediateRepresentation {
      */
     pub fn reverse_traverse<F>(&mut self, callback: F)
     where
-        F: FnMut(GraphQuery, NodeIndex) -> Vec<IRTransform>,
+        F: FnMut(GraphQuery, NodeIndex) -> TransformList,
     {
         self.traverse(false, callback);
     }
@@ -209,7 +210,7 @@ impl IntermediateRepresentation {
 
     fn traverse<F>(&mut self, forward: bool, mut callback: F)
     where
-        F: FnMut(GraphQuery, NodeIndex) -> Vec<IRTransform>,
+        F: FnMut(GraphQuery, NodeIndex) -> TransformList,
     {
         let mut ready: HashSet<NodeIndex> = HashSet::new();
         let mut visited: HashSet<NodeIndex> = HashSet::new();
@@ -246,12 +247,10 @@ impl IntermediateRepresentation {
             let next_nodes: Vec<NodeIndex> =
                 self.graph.neighbors_directed(n, next_direction).collect();
 
-            let transforms = callback(GraphQuery(self), n);
+            let mut transforms = callback(GraphQuery(self), n);
 
             // Apply the transforms the callback produced
-            for t in transforms {
-                self.apply_transform(&t);
-            }
+            transforms.apply(self);
 
             let node_ready = |n: NodeIndex| {
                 self.graph
@@ -293,40 +292,15 @@ impl IntermediateRepresentation {
             }
         }
     }
-
-    fn apply_transform(&mut self, transform: &IRTransform) {
-        match transform {
-            AppendAdd(x, y) => {
-                self.append_add(*x, *y);
-            }
-            AppendMultiply(x, y) => {
-                self.append_multiply(*x, *y);
-            }
-            AppendInputCiphertext => {
-                self.append_input_ciphertext();
-            }
-            AppendOutputCiphertext(x) => {
-                self.append_output_ciphertext(*x);
-            }
-            AppendRelinearize(x) => {
-                self.append_relinearize(*x);
-            }
-            AppendSub(x, y) => {
-                self.append_sub(*x, *y);
-            }
-            RemoveNode(x) => {
-                self.remove_node(*x);
-            }
-            AppendNegate(x) => {
-                self.append_negate(*x);
-            }
-        };
-    }
 }
 
 pub struct GraphQuery<'a>(&'a IntermediateRepresentation);
 
 impl<'a> GraphQuery<'a> {
+    pub fn new(ir: &'a IntermediateRepresentation) -> Self {
+        Self(ir)
+    }
+
     pub fn get_node(&self, x: NodeIndex) -> &NodeInfo {
         &self.0.graph[x]
     }
@@ -336,16 +310,170 @@ impl<'a> GraphQuery<'a> {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone)]
 pub enum IRTransform {
-    AppendAdd(NodeIndex, NodeIndex),
-    AppendMultiply(NodeIndex, NodeIndex),
+    AppendAdd(TransformNodeIndex, TransformNodeIndex),
+    AppendMultiply(TransformNodeIndex, TransformNodeIndex),
     AppendInputCiphertext,
-    AppendOutputCiphertext(NodeIndex),
-    AppendRelinearize(NodeIndex),
-    AppendSub(NodeIndex, NodeIndex),
-    RemoveNode(NodeIndex),
-    AppendNegate(NodeIndex),
+    AppendOutputCiphertext(TransformNodeIndex),
+    AppendRelinearize(TransformNodeIndex),
+    AppendSub(TransformNodeIndex, TransformNodeIndex),
+    RemoveNode(TransformNodeIndex),
+    AppendNegate(TransformNodeIndex),
+    RemoveEdge(TransformNodeIndex, TransformNodeIndex),
+    AddEdge(TransformNodeIndex, TransformNodeIndex),
+}
+
+/**
+ * Transforms can refer to nodes that already exist in the graph or nodes that don't
+ * yet exist in the graph, but will be inserted in a previous transform.
+ */
+#[derive(Debug, Clone, Copy)]
+pub enum TransformNodeIndex {
+    /**
+     * This node index refers to a pre-existing node in the graph.
+     */
+    NodeIndex(NodeIndex),
+
+    /**
+     * This node index refers to a
+     */
+    DeferredIndex(DeferredIndex),
+}
+
+pub type DeferredIndex = usize;
+
+impl Into<TransformNodeIndex> for DeferredIndex {
+    fn into(self) -> TransformNodeIndex {
+        TransformNodeIndex::DeferredIndex(self)
+    }
+}
+
+impl Into<TransformNodeIndex> for NodeIndex {
+    fn into(self) -> TransformNodeIndex {
+        TransformNodeIndex::NodeIndex(self)
+    }
+}
+
+pub struct TransformList {
+    transforms: Vec<IRTransform>,
+    inserted_node_ids: Vec<Option<NodeIndex>>,
+}
+
+impl Default for TransformList {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl TransformList {
+    pub fn new() -> Self {
+        Self {
+            transforms: vec![],
+            inserted_node_ids: vec![],
+        }
+    }
+
+    /**
+     * Pushes a transform into the list and returns the index of the pushed transform
+     * suitable for use in TransformNodeIndex::DeferredIndex.
+     */
+    pub fn push(&mut self, transform: IRTransform) -> DeferredIndex {
+        self.transforms.push(transform);
+
+        self.transforms.len() - 1
+    }
+
+    pub fn apply(&mut self, ir: &mut IntermediateRepresentation) {
+        for t in self.transforms.clone().iter() {
+            let inserted_node_id = match t {
+                AppendAdd(x, y) => {
+                    self.apply_2_input(ir, *x, *y, |ir, x, y| Some(ir.append_add(x, y)))
+                }
+                AppendMultiply(x, y) => {
+                    self.apply_2_input(ir, *x, *y, |ir, x, y| Some(ir.append_multiply(x, y)))
+                }
+                AppendInputCiphertext => Some(ir.append_input_ciphertext()),
+                AppendOutputCiphertext(x) => {
+                    self.apply_1_input(ir, *x, |ir, x| Some(ir.append_output_ciphertext(x)))
+                }
+                AppendRelinearize(x) => {
+                    self.apply_1_input(ir, *x, |ir, x| Some(ir.append_relinearize(x)))
+                }
+                AppendSub(x, y) => {
+                    self.apply_2_input(ir, *x, *y, |ir, x, y| Some(ir.append_sub(x, y)))
+                }
+                RemoveNode(x) => {
+                    let x = self.materialize_index(*x);
+
+                    ir.remove_node(x);
+
+                    None
+                }
+                AppendNegate(x) => self.apply_1_input(ir, *x, |ir, x| Some(ir.append_negate(x))),
+                RemoveEdge(x, y) => {
+                    let x = self.materialize_index(*x);
+                    let y = self.materialize_index(*y);
+
+                    ir.graph.remove_edge(
+                        ir.graph
+                            .find_edge(x, y)
+                            .expect("Fatal error: attempted to remove nonexistent edge."),
+                    );
+
+                    None
+                }
+                AddEdge(x, y) => {
+                    let x = self.materialize_index(*x);
+                    let y = self.materialize_index(*y);
+
+                    ir.graph.update_edge(x, y, EdgeInfo::new());
+
+                    None
+                }
+            };
+
+            self.inserted_node_ids.push(inserted_node_id);
+        }
+    }
+
+    fn apply_1_input<F>(
+        &mut self,
+        ir: &mut IntermediateRepresentation,
+        x: TransformNodeIndex,
+        callback: F,
+    ) -> Option<NodeIndex>
+    where
+        F: FnOnce(&mut IntermediateRepresentation, NodeIndex) -> Option<NodeIndex>,
+    {
+        let x = self.materialize_index(x);
+
+        callback(ir, x)
+    }
+
+    fn apply_2_input<F>(
+        &mut self,
+        ir: &mut IntermediateRepresentation,
+        x: TransformNodeIndex,
+        y: TransformNodeIndex,
+        callback: F,
+    ) -> Option<NodeIndex>
+    where
+        F: FnOnce(&mut IntermediateRepresentation, NodeIndex, NodeIndex) -> Option<NodeIndex>,
+    {
+        let x = self.materialize_index(x);
+        let y = self.materialize_index(y);
+
+        callback(ir, x, y)
+    }
+
+    fn materialize_index(&self, x: TransformNodeIndex) -> NodeIndex {
+        match x {
+            NodeIndex(x) => x,
+            DeferredIndex(x) => self.inserted_node_ids[x]
+                .expect(&format!("Fatal error: No such deferred node index :{}", x)),
+        }
+    }
 }
 
 #[cfg(test)]
@@ -432,7 +560,7 @@ mod tests {
 
         ir.forward_traverse(|_, n| {
             visited.push(n);
-            vec![]
+            TransformList::default()
         });
 
         assert_eq!(
@@ -455,7 +583,7 @@ mod tests {
 
         ir.reverse_traverse(|_, n| {
             visited.push(n);
-            vec![]
+            TransformList::default()
         });
 
         assert_eq!(
@@ -480,9 +608,12 @@ mod tests {
             visited.push(n);
             // Delete the addition
             if n.index() == 2 {
-                vec![RemoveNode(n)]
+                let mut transforms = TransformList::new();
+                transforms.push(RemoveNode(n.into()));
+
+                transforms
             } else {
-                vec![]
+                TransformList::default()
             }
         });
 
@@ -509,9 +640,12 @@ mod tests {
 
             // Delete the addition
             if n.index() == 2 {
-                vec![AppendMultiply(n, NodeIndex::from(1))]
+                let mut transforms = TransformList::new();
+                transforms.push(AppendMultiply(n.into(), NodeIndex::from(1).into()));
+
+                transforms
             } else {
-                vec![]
+                TransformList::default()
             }
         });
 

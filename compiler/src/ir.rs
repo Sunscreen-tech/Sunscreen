@@ -1,7 +1,7 @@
 use petgraph::{
     graph::NodeIndex,
     stable_graph::{Neighbors, StableGraph},
-    visit::IntoNodeIdentifiers,
+    visit::{IntoNodeIdentifiers},
     Direction,
 };
 use serde::{Deserialize, Serialize};
@@ -74,6 +74,8 @@ type IRGraph = StableGraph<NodeInfo, EdgeInfo>;
 pub struct IntermediateRepresentation {
     pub graph: IRGraph,
 }
+
+use IRTransform::*;
 
 impl IntermediateRepresentation {
     pub fn new() -> Self {
@@ -177,7 +179,7 @@ impl IntermediateRepresentation {
      */
     pub fn forward_traverse<F>(&mut self, callback: F)
     where
-        F: FnMut(&mut Self, NodeIndex),
+        F: FnMut(GraphQuery, NodeIndex) -> Vec<IRTransform>,
     {
         self.traverse(true, callback);
     }
@@ -193,7 +195,7 @@ impl IntermediateRepresentation {
      */
     pub fn reverse_traverse<F>(&mut self, callback: F)
     where
-        F: FnMut(&mut Self, NodeIndex),
+        F: FnMut(GraphQuery, NodeIndex) -> Vec<IRTransform>,
     {
         self.traverse(false, callback);
     }
@@ -207,7 +209,7 @@ impl IntermediateRepresentation {
 
     fn traverse<F>(&mut self, forward: bool, mut callback: F)
     where
-        F: FnMut(&mut Self, NodeIndex),
+        F: FnMut(GraphQuery, NodeIndex) -> Vec<IRTransform>,
     {
         let mut ready: HashSet<NodeIndex> = HashSet::new();
         let mut visited: HashSet<NodeIndex> = HashSet::new();
@@ -244,7 +246,12 @@ impl IntermediateRepresentation {
             let next_nodes: Vec<NodeIndex> =
                 self.graph.neighbors_directed(n, next_direction).collect();
 
-            callback(self, n);
+            let transforms = callback(GraphQuery(self), n);
+
+            // Apply the transforms the callback produced
+            for t in transforms {
+                self.apply_transform(&t);
+            }
 
             let node_ready = |n: NodeIndex| {
                 self.graph
@@ -286,6 +293,43 @@ impl IntermediateRepresentation {
             }
         }
     }
+
+    fn apply_transform(&mut self, transform: &IRTransform) {
+        match transform {
+            AppendAdd(x, y) => { self.append_add(*x, *y); },
+            AppendMultiply(x, y) => { self.append_multiply(*x, *y); },
+            AppendInputCiphertext => { self.append_input_ciphertext(); },
+            AppendOutputCiphertext(x) => { self.append_output_ciphertext(*x); },
+            AppendRelinearize(x) => { self.append_relinearize(*x); },
+            AppendSub(x, y) => { self.append_sub(*x, *y); },
+            RemoveNode(x) => { self.remove_node(*x); },
+            AppendNegate(x) => { self.append_negate(*x); },
+        };
+    }
+}
+
+pub struct GraphQuery<'a>(&'a IntermediateRepresentation);
+
+impl <'a> GraphQuery<'a> {
+    pub fn get_node(&self, x: NodeIndex) -> &NodeInfo {
+        &self.0.graph[x]
+    }
+
+    pub fn get_neighbors(&self, x: NodeIndex, direction: Direction) -> Neighbors<EdgeInfo> {
+        self.0.graph.neighbors_directed(x, direction)
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum IRTransform {
+    AppendAdd(NodeIndex, NodeIndex),
+    AppendMultiply(NodeIndex, NodeIndex),
+    AppendInputCiphertext,
+    AppendOutputCiphertext(NodeIndex),
+    AppendRelinearize(NodeIndex),
+    AppendSub(NodeIndex, NodeIndex),
+    RemoveNode(NodeIndex),
+    AppendNegate(NodeIndex),
 }
 
 #[cfg(test)]
@@ -370,7 +414,7 @@ mod tests {
 
         let mut visited = vec![];
 
-        ir.forward_traverse(|_, n| visited.push(n));
+        ir.forward_traverse(|_, n| { visited.push(n); vec![]});
 
         assert_eq!(
             visited,
@@ -390,7 +434,7 @@ mod tests {
 
         let mut visited = vec![];
 
-        ir.reverse_traverse(|_, n| visited.push(n));
+        ir.reverse_traverse(|_, n| { visited.push(n); vec![] });
 
         assert_eq!(
             visited,
@@ -410,13 +454,14 @@ mod tests {
 
         let mut visited = vec![];
 
-        ir.reverse_traverse(|graph, n| {
+        ir.reverse_traverse(|_, n| {
+            visited.push(n);
             // Delete the addition
             if n.index() == 2 {
-                graph.remove_node(n);
+                vec![RemoveNode(n)]
+            } else {
+                vec![]
             }
-
-            visited.push(n);
         });
 
         assert_eq!(
@@ -437,13 +482,15 @@ mod tests {
 
         let mut visited = vec![];
 
-        ir.forward_traverse(|graph, n| {
+        ir.forward_traverse(|_, n| {
+            visited.push(n);
+
             // Delete the addition
             if n.index() == 2 {
-                graph.append_multiply(n, NodeIndex::from(1));
+                vec![AppendMultiply(n, NodeIndex::from(1))]
+            } else {
+                vec![]
             }
-
-            visited.push(n);
         });
 
         assert_eq!(

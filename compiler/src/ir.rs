@@ -1,7 +1,7 @@
 use petgraph::{
     graph::NodeIndex,
     stable_graph::{Neighbors, StableGraph},
-    visit::{IntoNodeIdentifiers},
+    visit::IntoNodeIdentifiers,
     Direction,
 };
 use serde::{Deserialize, Serialize};
@@ -296,21 +296,37 @@ impl IntermediateRepresentation {
 
     fn apply_transform(&mut self, transform: &IRTransform) {
         match transform {
-            AppendAdd(x, y) => { self.append_add(*x, *y); },
-            AppendMultiply(x, y) => { self.append_multiply(*x, *y); },
-            AppendInputCiphertext => { self.append_input_ciphertext(); },
-            AppendOutputCiphertext(x) => { self.append_output_ciphertext(*x); },
-            AppendRelinearize(x) => { self.append_relinearize(*x); },
-            AppendSub(x, y) => { self.append_sub(*x, *y); },
-            RemoveNode(x) => { self.remove_node(*x); },
-            AppendNegate(x) => { self.append_negate(*x); },
+            AppendAdd(x, y) => {
+                self.append_add(*x, *y);
+            }
+            AppendMultiply(x, y) => {
+                self.append_multiply(*x, *y);
+            }
+            AppendInputCiphertext => {
+                self.append_input_ciphertext();
+            }
+            AppendOutputCiphertext(x) => {
+                self.append_output_ciphertext(*x);
+            }
+            AppendRelinearize(x) => {
+                self.append_relinearize(*x);
+            }
+            AppendSub(x, y) => {
+                self.append_sub(*x, *y);
+            }
+            RemoveNode(x) => {
+                self.remove_node(*x);
+            }
+            AppendNegate(x) => {
+                self.append_negate(*x);
+            }
         };
     }
 }
 
 pub struct GraphQuery<'a>(&'a IntermediateRepresentation);
 
-impl <'a> GraphQuery<'a> {
+impl<'a> GraphQuery<'a> {
     pub fn get_node(&self, x: NodeIndex) -> &NodeInfo {
         &self.0.graph[x]
     }
@@ -414,7 +430,10 @@ mod tests {
 
         let mut visited = vec![];
 
-        ir.forward_traverse(|_, n| { visited.push(n); vec![]});
+        ir.forward_traverse(|_, n| {
+            visited.push(n);
+            vec![]
+        });
 
         assert_eq!(
             visited,
@@ -434,7 +453,10 @@ mod tests {
 
         let mut visited = vec![];
 
-        ir.reverse_traverse(|_, n| { visited.push(n); vec![] });
+        ir.reverse_traverse(|_, n| {
+            visited.push(n);
+            vec![]
+        });
 
         assert_eq!(
             visited,

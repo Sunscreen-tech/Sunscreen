@@ -1,7 +1,10 @@
 use petgraph::{
-    graph::NodeIndex,
+    algo::is_isomorphic_matching,
+    algo::toposort,
+    algo::tred::*,
+    graph::{Graph, NodeIndex},
     stable_graph::{Neighbors, StableGraph},
-    visit::IntoNodeIdentifiers,
+    visit::{IntoNeighbors, IntoNodeIdentifiers},
     Direction,
 };
 use serde::{Deserialize, Serialize};
@@ -51,7 +54,7 @@ pub enum Operation {
     OutputCiphertext,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct NodeInfo {
     pub operation: Operation,
 }
@@ -62,7 +65,7 @@ impl NodeInfo {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct EdgeInfo;
 
 impl EdgeInfo {
@@ -76,6 +79,17 @@ type IRGraph = StableGraph<NodeInfo, EdgeInfo>;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct IntermediateRepresentation {
     pub graph: IRGraph,
+}
+
+impl PartialEq for IntermediateRepresentation {
+    fn eq(&self, b: &Self) -> bool {
+        is_isomorphic_matching(
+            &Graph::from(self.graph.clone()),
+            &Graph::from(b.graph.clone()),
+            |n1, n2| n1 == n2,
+            |e1, e2| e1 == e2,
+        )
+    }
 }
 
 impl IntermediateRepresentation {
@@ -290,6 +304,57 @@ impl IntermediateRepresentation {
                     ready_nodes.push(i);
                 }
             }
+        }
+    }
+
+    /**
+     * Runs tree shaking and returns a derived IntermediateRepresentation with only
+     * dependencies required to run the requested nodes.
+     */
+    pub fn prune(&self, nodes: &[NodeIndex]) -> IntermediateRepresentation {
+        let mut compact_graph = Graph::from(self.graph.clone());
+        compact_graph.reverse();
+
+        let topo = toposort(&compact_graph, None).unwrap();
+        let (res, revmap) = dag_to_toposorted_adjacency_list(&compact_graph, &topo);
+        let (_, closure) = dag_transitive_reduction_closure(&res);
+
+        let mut closure_set = HashSet::new();
+
+        let mut visit: Vec<NodeIndex> = vec![];
+
+        for n in nodes {
+            let mapped_id = revmap[n.index()];
+            visit.push(mapped_id);
+            closure_set.insert(mapped_id);
+        }
+
+        while visit.len() > 0 {
+            let node = visit.pop().expect("Fatal error: prune queue was empty.");
+
+            for edge in closure.neighbors(node) {
+                if !closure_set.contains(&edge) {
+                    closure_set.insert(edge);
+                    visit.push(edge);
+                }
+            }
+        }
+
+        compact_graph.reverse();
+
+        let pruned = compact_graph.filter_map(
+            |id, n| {
+                if closure_set.contains(&revmap[id.index()]) {
+                    Some(n.clone())
+                } else {
+                    None
+                }
+            },
+            |_, e| Some(e.clone()),
+        );
+
+        Self {
+            graph: StableGraph::from(pruned),
         }
     }
 }
@@ -660,5 +725,79 @@ mod tests {
                 NodeIndex::from(5),
             ]
         );
+    }
+
+    #[test]
+    fn can_prune_ir() {
+        let mut ir = IntermediateRepresentation::new();
+
+        let ct = ir.append_input_ciphertext();
+        let l1 = ir.append_input_literal(Literal::from(7i64));
+        let add = ir.append_add(ct, l1);
+        let l2 = ir.append_input_literal(Literal::from(5u64));
+        ir.append_multiply(add, l2);
+
+        let pruned = ir.prune(&vec![add]);
+
+        let mut expected_ir = IntermediateRepresentation::new();
+        let ct = expected_ir.append_input_ciphertext();
+        let l1 = expected_ir.append_input_literal(Literal::from(7i64));
+        expected_ir.append_add(ct, l1);
+
+        assert_eq!(pruned, expected_ir);
+    }
+
+    #[test]
+    fn can_prune_graph_with_removed_nodes() {
+        let mut ir = IntermediateRepresentation::new();
+
+        let ct = ir.append_input_ciphertext();
+        let rem = ir.append_input_ciphertext();
+        ir.remove_node(rem);
+        let l1 = ir.append_input_literal(Literal::from(7i64));
+        let rem = ir.append_input_ciphertext();
+        ir.remove_node(rem);
+        let add = ir.append_add(ct, l1);
+        let rem = ir.append_input_ciphertext();
+        ir.remove_node(rem);
+        let l2 = ir.append_input_literal(Literal::from(5u64));
+        ir.append_multiply(add, l2);
+        let rem = ir.append_input_ciphertext();
+        ir.remove_node(rem);
+
+        let pruned = ir.prune(&vec![add]);
+
+        let mut expected_ir = IntermediateRepresentation::new();
+        let ct = expected_ir.append_input_ciphertext();
+        let l1 = expected_ir.append_input_literal(Literal::from(7i64));
+        expected_ir.append_add(ct, l1);
+
+        assert_eq!(pruned, expected_ir);
+    }
+
+    #[test]
+    fn can_prune_with_multiple_nodes() {
+        let mut ir = IntermediateRepresentation::new();
+
+        let ct1 = ir.append_input_ciphertext();
+        let ct2 = ir.append_input_ciphertext();
+        let ct3 = ir.append_input_ciphertext();
+        let neg1 = ir.append_negate(ct1);
+        let neg2 = ir.append_negate(ct2);
+        let neg3 = ir.append_negate(ct3);
+        let o1 = ir.append_output_ciphertext(neg1);
+        ir.append_output_ciphertext(neg2);
+        ir.append_output_ciphertext(neg3);
+
+        let pruned = ir.prune(&vec![o1, neg2]);
+
+        let mut expected_ir = IntermediateRepresentation::new();
+        let ct1 = expected_ir.append_input_ciphertext();
+        let ct2 = expected_ir.append_input_ciphertext();
+        let neg1 = expected_ir.append_negate(ct1);
+        expected_ir.append_negate(ct2);
+        expected_ir.append_output_ciphertext(neg1);
+
+        assert_eq!(pruned, expected_ir);
     }
 }

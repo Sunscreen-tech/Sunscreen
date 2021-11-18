@@ -3,16 +3,16 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug unit tests in library 'compiler'",
+            "name": "Debug unit tests in library 'sunscreen_ir'",
             "cargo": {
                 "args": [
                     "test",
                     "--no-run",
                     "--lib",
-                    "--package=compiler"
+                    "--package=sunscreen_ir"
                 ],
                 "filter": {
-                    "name": "compiler",
+                    "name": "sunscreen_ir",
                     "kind": "lib"
                 }
             },

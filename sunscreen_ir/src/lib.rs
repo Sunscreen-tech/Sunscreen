@@ -800,4 +800,25 @@ mod tests {
 
         assert_eq!(pruned, expected_ir);
     }
+
+    #[test]
+    fn pruning_empty_node_list_results_in_empty_graph() {
+        let mut ir = IntermediateRepresentation::new();
+
+        let ct1 = ir.append_input_ciphertext();
+        let ct2 = ir.append_input_ciphertext();
+        let ct3 = ir.append_input_ciphertext();
+        let neg1 = ir.append_negate(ct1);
+        let neg2 = ir.append_negate(ct2);
+        let neg3 = ir.append_negate(ct3);
+        ir.append_output_ciphertext(neg1);
+        ir.append_output_ciphertext(neg2);
+        ir.append_output_ciphertext(neg3);
+
+        let pruned = ir.prune(&vec![]);
+
+        let expected_ir = IntermediateRepresentation::new();
+
+        assert_eq!(pruned, expected_ir);
+    }
 }

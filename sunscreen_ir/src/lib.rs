@@ -4,6 +4,7 @@
 //! This crate contains the types for manipulating the intermediate representation
 //! for Sunscreen's compiler backend.
 
+mod error;
 mod literal;
 mod operation;
 
@@ -18,6 +19,7 @@ use petgraph::{
 };
 use serde::{Deserialize, Serialize};
 
+pub use error::*;
 pub use literal::*;
 pub use operation::*;
 use IRTransform::*;
@@ -141,7 +143,7 @@ impl IntermediateRepresentation {
      * Appends an add operation that depends on the operands `x` and `y`.
      */
     pub fn append_add(&mut self, x: NodeIndex, y: NodeIndex) -> NodeIndex {
-        self.append_2_input_node(Operation::Add, x, y)
+        self.append_2_input_node(Operation::Add(x, y), x, y)
     }
 
     /**
@@ -378,6 +380,15 @@ impl IntermediateRepresentation {
             graph: StableGraph::from(pruned),
         }
     }
+
+    /**
+     * Validates this [`IntermediateRepresentation`] for correctness.
+     */
+    pub fn validate(&self) -> Result<()> {
+        // TODO: validate the program.
+    
+        Ok(())
+    }
 }
 
 /**
@@ -412,7 +423,7 @@ impl<'a> GraphQuery<'a> {
      */
     pub fn get_neighbors(&self, x: NodeIndex, direction: Direction) -> Neighbors<EdgeInfo> {
         self.0.graph.neighbors_directed(x, direction)
-    }
+    }    
 }
 
 #[derive(Debug, Clone)]

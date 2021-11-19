@@ -1,3 +1,9 @@
+#![warn(missing_docs)]
+#![deny(rustdoc::broken_intra_doc_links)]
+
+//! This crate contains the types and functions for executing a Sunscreen circuit 
+//! (i.e. an [`IntermediateRepresentation`](sunscreen_ir::IntermediateRepresentation)).
+
 use sunscreen_ir::{IntermediateRepresentation, Operation::*};
 
 use crossbeam::atomic::AtomicCell;
@@ -12,7 +18,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
  * Run the given [`IntermediateRepresentation`] to completion with the given inputs. This
  * method performs no validation. You must verify the program is first valid. Programs produced
  * by the compiler are guaranteed to be valid, but deserialization does not make any such
- * guarantees. Call [`sunscreen_compiler::validate`] to verify a program's correctness.
+ * guarantees. Call [`validate()`](sunscreen_ir::IntermediateRepresentation::validate()) to verify a program's correctness.
  *
  * # Panics
  * Calling this method on a malformed [`IntermediateRepresentation`] may
@@ -21,12 +27,30 @@ use std::sync::atomic::{AtomicUsize, Ordering};
  * # Non-termination
  * Calling this method on a malformed [`IntermediateRepresentation`] may
  * result in non-termination.
+ * 
+ * # Undefined behavior
+ * Calling this method on a malformed [`IntermediateRepresentation`] may
+ * result in undefined behavior.
  */
-pub fn run_program_unchecked<E: Evaluator>(
+pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
     ir: &IntermediateRepresentation,
     inputs: &[Ciphertext],
     evaluator: &E,
 ) {
+    fn get_ciphertext<'a>(data: &'a [AtomicCell<Option<Cow<Ciphertext>>>], index: usize) -> Cow<'a, Ciphertext> {
+        // This is correct so long as the IR program is indeed a DAG executed in topological order
+        // Since for a given edge (x,y), x executes before y, the operand data that y needs
+        // from x will exist.
+        let val = unsafe { data[index].as_ptr().as_ref().unwrap() };
+
+        let val = match val {
+            Some(v) => v,
+            None => panic!("Internal error: No ciphertext found for node {}", index),
+        };
+
+        Cow::Borrowed(val)
+    }
+
     let mut data: Vec<AtomicCell<Option<Cow<Ciphertext>>>> =
         Vec::with_capacity(ir.graph.node_count());
 
@@ -45,16 +69,13 @@ pub fn run_program_unchecked<E: Evaluator>(
                 }
                 ShiftLeft => unimplemented!(),
                 ShiftRight => unimplemented!(),
-                Add => {
-                    let operands = ir.graph.neighbors_directed(index, Direction::Incoming);
+                Add(a_id, b_id) => {
+                    let a = get_ciphertext(&data, a_id.index());
+                    let b = get_ciphertext(&data, b_id.index());
 
-                    let a_id = operands.next();
-                    let b_id = operands.next();
+                    let c = evaluator.add(&a, &b).unwrap();
 
-                    assert_eq!(operands.next(), None);
-
-                    let c = evaluator.add(a: &Ciphertext, b: &Ciphertext)
-
+                    data[index.index()].store(Some(Cow::Owned(c)))
                 }
                 Multiply => unimplemented!(),
                 SwapRows => unimplemented!(),

@@ -4,6 +4,9 @@
 //! This crate contains the types for manipulating the intermediate representation
 //! for Sunscreen's compiler backend.
 
+mod literal;
+mod operation;
+
 use petgraph::{
     algo::is_isomorphic_matching,
     algo::toposort,
@@ -15,119 +18,12 @@ use petgraph::{
 };
 use serde::{Deserialize, Serialize};
 
+pub use literal::*;
+pub use operation::*;
 use IRTransform::*;
 use TransformNodeIndex::*;
 
 use std::collections::HashSet;
-
-
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-/**
- * Represents a literal value in an expression.
- */ 
-pub enum Literal {
-    /**
-     * A 64-bit signed integer
-     */
-    I64(i64),
-
-    /**
-     * An unsigned 64-bit integer.
-     */
-    U64(u64),
-
-    /**
-     * A 64-bit IEEE-754 double precision number.
-     */ 
-    F64(f64),
-}
-
-impl From<i64> for Literal {
-    fn from(val: i64) -> Self {
-        Self::I64(val)
-    }
-}
-
-impl From<u64> for Literal {
-    fn from(val: u64) -> Self {
-        Self::U64(val)
-    }
-}
-
-impl From<f64> for Literal {
-    fn from(val: f64) -> Self {
-        Self::F64(val)
-    }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-/**
- * An operation in the execution graph.
- */ 
-pub enum Operation {
-    /**
-     * Rotate each row in an encrypted SIMD type to the left.
-     */ 
-    ShiftLeft,
-
-    /**
-     * Rotate each row in an encrypted SIMD type to the right.
-     */ 
-    ShiftRight,
-
-    /**
-     * In some schemes (i.e. BFV), SIMD types cannonically form a 2xN matrix.
-     * This operator swaps the rows.
-     * 
-     * While ciphertexts may contain more rows after multiplication and before 
-     * relinearization, Sunscreen relinearizes at the appropriate time to ensure 
-     * this operation only ever sees cannonical ciphertexts.
-     */ 
-    SwapRows,
-
-    /**
-     * In some schemes (i.e. BFV), this operation prevents future noise growth after
-     * a multiplication operation by reducing the resultant 3xN ciphertext down to
-     * the cannonical 2xN.
-     */ 
-    Relinearize,
-
-    /**
-     * Multiply two values. Either operand may be a literal or a ciphertext.
-     */
-    Multiply,
-
-    /**
-     * Add two values. Either operand may be a literal or a ciphertext.
-     */
-    Add,
-
-    /**
-     * Computes the additive inverse of a plaintext or ciphertext.
-     */
-    Negate,
-
-    /**
-     * Subtracts the right operand from the left. Either operand may be a
-     * literal or a ciphertext.
-     */ 
-    Sub,
-
-    /**
-     * Represents an input ciphertext for the circuit.
-     */ 
-    InputCiphertext,
-
-    /**
-     * Represents a literal value.
-     */ 
-    Literal(Literal),
-
-    /**
-     * Represents a ciphertext output for the circuit.
-     */ 
-    OutputCiphertext,
-}
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 /**
@@ -136,7 +32,7 @@ pub enum Operation {
 pub struct NodeInfo {
     /**
      * The operation this node represents.
-     */ 
+     */
     pub operation: Operation,
 }
 
@@ -149,7 +45,7 @@ impl NodeInfo {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 /**
  * Contains information about an edge between nodes in the circuit graph.
- */ 
+ */
 pub struct EdgeInfo;
 
 impl EdgeInfo {
@@ -163,14 +59,14 @@ type IRGraph = StableGraph<NodeInfo, EdgeInfo>;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 /**
  * The intermediate representation for an FHE circuit used in the compiler back-end.
- * 
+ *
  * Other modules may transform these using the [forward_traverse](`Self::forward_traverse`)
  * and [reverse_traverse](`Self::reverse_traverse`) methods, or iterate over the graph
  * member for analysis or execution.
- * 
+ *
  * The graph construction methods `append_*` take NodeIndex types as arguments. These
  * indices must refer to other nodes in the graph.
- */ 
+ */
 pub struct IntermediateRepresentation {
     /**
      * The underlying dependency graph.
@@ -192,7 +88,7 @@ impl PartialEq for IntermediateRepresentation {
 impl IntermediateRepresentation {
     /**
      * Create a new new empty intermediate representation.
-     */ 
+     */
     pub fn new() -> Self {
         Self {
             graph: StableGraph::new(),
@@ -256,18 +152,18 @@ impl IntermediateRepresentation {
     }
 
     /**
-     * Appends an input ciphertext.
+     * Appends an input ciphertext with the given name.
      */
-    pub fn append_input_ciphertext(&mut self) -> NodeIndex {
-        self.append_0_input_node(Operation::InputCiphertext)
+    pub fn append_input_ciphertext(&mut self, id: usize) -> NodeIndex {
+        self.append_0_input_node(Operation::InputCiphertext(id))
     }
 
     /**
      * Appends a constant literal unencrypted.
-     * 
+     *
      * * `value`: The integer or floating-point value in the literal.
      */
-    pub fn append_input_literal(&mut self, value: Literal) -> NodeIndex {
+    pub fn append_input_literal(&mut self, value: OuterLiteral) -> NodeIndex {
         self.append_0_input_node(Operation::Literal(value))
     }
 
@@ -293,7 +189,7 @@ impl IntermediateRepresentation {
      * * Add new nodes with no dependencies
      *
      * Any other graph mutation will likely result in unvisited nodes.
-     * 
+     *
      * * `callback`: A closure that receives the current node index and an object allowing
      *   you to make graph queryes. This closure returns a transform list.
      *   [`forward_traverse`](Self::forward_traverse) will apply these transformations
@@ -314,7 +210,7 @@ impl IntermediateRepresentation {
      * * Add new nodes with no dependencies
      *
      * Any other graph mutation will likely result in unvisited nodes.
-     * 
+     *
      * * `callback`: A closure that receives the current node index and an object allowing
      *   you to make graph queryes. This closure returns a transform list.
      *   [`reverse_traverse`](Self::reverse_traverse) will apply these transformations
@@ -423,15 +319,15 @@ impl IntermediateRepresentation {
      * Returns the node indices of output ciphertexts
      */
     pub fn get_outputs(&self) -> impl Iterator<Item = NodeIndex> + '_ {
-        self.graph.node_indices().filter(|g| {
-            self.graph[*g].operation == Operation::OutputCiphertext
-        })
+        self.graph
+            .node_indices()
+            .filter(|g| self.graph[*g].operation == Operation::OutputCiphertext)
     }
 
     /**
      * Runs tree shaking and returns a derived IntermediateRepresentation with only
      * dependencies required to run the requested nodes.
-     * 
+     *
      * * `nodes`: indices specifying a set of nodes in the graph. Prune return a new
      *   [`IntermediateRepresentation`] containing nodes in the transitive closure
      *   of this set.
@@ -488,13 +384,20 @@ impl IntermediateRepresentation {
  * A wrapper for ascertaining the structure of the underlying [`IntermediateRepresentation`].
  * This type is used in [`IntermediateRepresentation::forward_traverse`] and
  * [`IntermediateRepresentation::reverse_traverse`] callbacks.
- */ 
+ */
 pub struct GraphQuery<'a>(&'a IntermediateRepresentation);
 
 impl<'a> GraphQuery<'a> {
     /**
+     * Creates a new [`GraphQuery`] from a reference to an [`IntermediateRepresentation`].
+     */
+    pub fn new(ir: &'a IntermediateRepresentation) -> Self {
+        Self(ir)
+    }
+
+    /**
      * Returns the [`NodeInfo`] for the graph node with the given index `x`.
-     */ 
+     */
     pub fn get_node(&self, x: NodeIndex) -> &NodeInfo {
         &self.0.graph[x]
     }
@@ -503,10 +406,10 @@ impl<'a> GraphQuery<'a> {
      * Returns the children or parents of the node with index `x`.` If direction is
      * [`Direction::Outgoing`], this will return the children. If the direction is
      * [`Direction::Incoming`], this will return the parents.
-     * 
+     *
      * Typically, you want children writing forward traversal compiler passes and
      * parents when writing reverse traversal compiler passes.
-     */ 
+     */
     pub fn get_neighbors(&self, x: NodeIndex, direction: Direction) -> Neighbors<EdgeInfo> {
         self.0.graph.neighbors_directed(x, direction)
     }
@@ -518,60 +421,60 @@ impl<'a> GraphQuery<'a> {
  * [`IntermediateRepresentation::forward_traverse`] and
  * [`IntermediateRepresentation::reverse_traverse`] should emit these to update the
  * graph.
- * 
+ *
  * Each of these variants use a [`TransformNodeIndex`] to reference either a node that
  * currently exists in the graph (i.e. [`TransformNodeIndex::NodeIndex`]), or a node that
  * will result from a previous transform in the [`TransformList`]. I.e. [`TransformNodeIndex::DeferredIndex`]
- */ 
+ */
 pub enum IRTransform {
     /**
      * Appends an add node.
-     */ 
+     */
     AppendAdd(TransformNodeIndex, TransformNodeIndex),
 
     /**
      * Appends a multiply node.
-     */ 
+     */
     AppendMultiply(TransformNodeIndex, TransformNodeIndex),
 
     /**
      * Appends an input ciphertext
-     */ 
-    AppendInputCiphertext,
+     */
+    AppendInputCiphertext(usize),
 
     /**
      * Appends an output ciphertext node.
-     */ 
+     */
     AppendOutputCiphertext(TransformNodeIndex),
 
     /**
      * Appends a relinearize node.
-     */ 
+     */
     AppendRelinearize(TransformNodeIndex),
 
     /**
      * Appends a subtract node.
-     */ 
+     */
     AppendSub(TransformNodeIndex, TransformNodeIndex),
 
     /**
      * Removes a node.
-     */ 
+     */
     RemoveNode(TransformNodeIndex),
 
     /**
      * Appends a negate node.
-     */ 
+     */
     AppendNegate(TransformNodeIndex),
 
     /**
      * Remove a graph edge between two nodes..
-     */ 
+     */
     RemoveEdge(TransformNodeIndex, TransformNodeIndex),
 
     /**
      * Add a graph edge between two nodes.
-     */ 
+     */
     AddEdge(TransformNodeIndex, TransformNodeIndex),
 }
 
@@ -596,7 +499,7 @@ pub enum TransformNodeIndex {
 /**
  * The index type of a node that exists in a transform list, but does not yet exist in
  * the intermediate representation graph.
- */ 
+ */
 pub type DeferredIndex = usize;
 
 impl Into<TransformNodeIndex> for DeferredIndex {
@@ -613,7 +516,7 @@ impl Into<TransformNodeIndex> for NodeIndex {
 
 /**
  * A list of tranformations to be applied to the [`IntermediateRepresentation`] graph.
- */ 
+ */
 pub struct TransformList {
     transforms: Vec<IRTransform>,
     inserted_node_ids: Vec<Option<NodeIndex>>,
@@ -628,7 +531,7 @@ impl Default for TransformList {
 impl TransformList {
     /**
      * Creates an empty transform list.
-     */ 
+     */
     pub fn new() -> Self {
         Self {
             transforms: vec![],
@@ -649,12 +552,12 @@ impl TransformList {
     /**
      * Applies every transform in the list to the given graph. Resoves any deferred
      * indices after placing nodes in the graph.
-     * 
+     *
      * # Panics
      * If any deferred index is out of bounds or refers to a previous operation that didn't
      * result in a node being added, this function will panic. For example, if an [`IRTransform::AppendAdd`]
      * refers to the index of a [`IRTransform::RemoveEdge`] transform, a panic will result.
-     */ 
+     */
     pub fn apply(&mut self, ir: &mut IntermediateRepresentation) {
         for t in self.transforms.clone().iter() {
             let inserted_node_id = match t {
@@ -664,7 +567,7 @@ impl TransformList {
                 AppendMultiply(x, y) => {
                     self.apply_2_input(ir, *x, *y, |ir, x, y| Some(ir.append_multiply(x, y)))
                 }
-                AppendInputCiphertext => Some(ir.append_input_ciphertext()),
+                AppendInputCiphertext(id) => Some(ir.append_input_ciphertext(*id)),
                 AppendOutputCiphertext(x) => {
                     self.apply_1_input(ir, *x, |ir, x| Some(ir.append_output_ciphertext(x)))
                 }
@@ -754,10 +657,10 @@ mod tests {
     fn create_simple_dag() -> IntermediateRepresentation {
         let mut ir = IntermediateRepresentation::new();
 
-        let ct = ir.append_input_ciphertext();
-        let l1 = ir.append_input_literal(Literal::from(7i64));
+        let ct = ir.append_input_ciphertext(0);
+        let l1 = ir.append_input_literal(OuterLiteral::from(7i64));
         let add = ir.append_add(ct, l1);
-        let l2 = ir.append_input_literal(Literal::from(5u64));
+        let l2 = ir.append_input_literal(OuterLiteral::from(5u64));
         ir.append_multiply(add, l2);
 
         ir
@@ -775,15 +678,15 @@ mod tests {
             .map(|i| (i, &ir.graph[i]))
             .collect::<Vec<(NodeIndex, &NodeInfo)>>();
 
-        assert_eq!(nodes[0].1.operation, Operation::InputCiphertext);
+        assert_eq!(nodes[0].1.operation, Operation::InputCiphertext(0));
         assert_eq!(
             nodes[1].1.operation,
-            Operation::Literal(Literal::from(7i64))
+            Operation::Literal(OuterLiteral::from(7i64))
         );
         assert_eq!(nodes[2].1.operation, Operation::Add);
         assert_eq!(
             nodes[3].1.operation,
-            Operation::Literal(Literal::from(5u64))
+            Operation::Literal(OuterLiteral::from(5u64))
         );
         assert_eq!(nodes[4].1.operation, Operation::Multiply);
 
@@ -937,17 +840,17 @@ mod tests {
     fn can_prune_ir() {
         let mut ir = IntermediateRepresentation::new();
 
-        let ct = ir.append_input_ciphertext();
-        let l1 = ir.append_input_literal(Literal::from(7i64));
+        let ct = ir.append_input_ciphertext(0);
+        let l1 = ir.append_input_literal(OuterLiteral::from(7i64));
         let add = ir.append_add(ct, l1);
-        let l2 = ir.append_input_literal(Literal::from(5u64));
+        let l2 = ir.append_input_literal(OuterLiteral::from(5u64));
         ir.append_multiply(add, l2);
 
         let pruned = ir.prune(&vec![add]);
 
         let mut expected_ir = IntermediateRepresentation::new();
-        let ct = expected_ir.append_input_ciphertext();
-        let l1 = expected_ir.append_input_literal(Literal::from(7i64));
+        let ct = expected_ir.append_input_ciphertext(0);
+        let l1 = expected_ir.append_input_literal(OuterLiteral::from(7i64));
         expected_ir.append_add(ct, l1);
 
         assert_eq!(pruned, expected_ir);
@@ -957,25 +860,25 @@ mod tests {
     fn can_prune_graph_with_removed_nodes() {
         let mut ir = IntermediateRepresentation::new();
 
-        let ct = ir.append_input_ciphertext();
-        let rem = ir.append_input_ciphertext();
+        let ct = ir.append_input_ciphertext(0);
+        let rem = ir.append_input_ciphertext(1);
         ir.remove_node(rem);
-        let l1 = ir.append_input_literal(Literal::from(7i64));
-        let rem = ir.append_input_ciphertext();
+        let l1 = ir.append_input_literal(OuterLiteral::from(7i64));
+        let rem = ir.append_input_ciphertext(1);
         ir.remove_node(rem);
         let add = ir.append_add(ct, l1);
-        let rem = ir.append_input_ciphertext();
+        let rem = ir.append_input_ciphertext(1);
         ir.remove_node(rem);
-        let l2 = ir.append_input_literal(Literal::from(5u64));
+        let l2 = ir.append_input_literal(OuterLiteral::from(5u64));
         ir.append_multiply(add, l2);
-        let rem = ir.append_input_ciphertext();
+        let rem = ir.append_input_ciphertext(1);
         ir.remove_node(rem);
 
         let pruned = ir.prune(&vec![add]);
 
         let mut expected_ir = IntermediateRepresentation::new();
-        let ct = expected_ir.append_input_ciphertext();
-        let l1 = expected_ir.append_input_literal(Literal::from(7i64));
+        let ct = expected_ir.append_input_ciphertext(0);
+        let l1 = expected_ir.append_input_literal(OuterLiteral::from(7i64));
         expected_ir.append_add(ct, l1);
 
         assert_eq!(pruned, expected_ir);
@@ -985,9 +888,9 @@ mod tests {
     fn can_prune_with_multiple_nodes() {
         let mut ir = IntermediateRepresentation::new();
 
-        let ct1 = ir.append_input_ciphertext();
-        let ct2 = ir.append_input_ciphertext();
-        let ct3 = ir.append_input_ciphertext();
+        let ct1 = ir.append_input_ciphertext(0);
+        let ct2 = ir.append_input_ciphertext(1);
+        let ct3 = ir.append_input_ciphertext(2);
         let neg1 = ir.append_negate(ct1);
         let neg2 = ir.append_negate(ct2);
         let neg3 = ir.append_negate(ct3);
@@ -998,8 +901,8 @@ mod tests {
         let pruned = ir.prune(&vec![o1, neg2]);
 
         let mut expected_ir = IntermediateRepresentation::new();
-        let ct1 = expected_ir.append_input_ciphertext();
-        let ct2 = expected_ir.append_input_ciphertext();
+        let ct1 = expected_ir.append_input_ciphertext(0);
+        let ct2 = expected_ir.append_input_ciphertext(1);
         let neg1 = expected_ir.append_negate(ct1);
         expected_ir.append_negate(ct2);
         expected_ir.append_output_ciphertext(neg1);
@@ -1011,9 +914,9 @@ mod tests {
     fn pruning_empty_node_list_results_in_empty_graph() {
         let mut ir = IntermediateRepresentation::new();
 
-        let ct1 = ir.append_input_ciphertext();
-        let ct2 = ir.append_input_ciphertext();
-        let ct3 = ir.append_input_ciphertext();
+        let ct1 = ir.append_input_ciphertext(0);
+        let ct2 = ir.append_input_ciphertext(1);
+        let ct3 = ir.append_input_ciphertext(2);
         let neg1 = ir.append_negate(ct1);
         let neg2 = ir.append_negate(ct2);
         let neg3 = ir.append_negate(ct3);

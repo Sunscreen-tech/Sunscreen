@@ -1,6 +1,4 @@
-use sunscreen_ir::{
-    IRTransform::*, IntermediateRepresentation, Operation::*, TransformList, TransformNodeIndex,
-};
+use sunscreen_ir::{IRTransform::*, IntermediateRepresentation, Operation::*, TransformList};
 
 use petgraph::Direction;
 
@@ -25,17 +23,17 @@ pub fn apply_insert_relinearizations(ir: &mut IntermediateRepresentation) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use sunscreen_ir::Literal;
-    use sunscreen_ir::*;
     use petgraph::stable_graph::NodeIndex;
+    use sunscreen_ir::OuterLiteral;
+    use sunscreen_ir::*;
 
     fn create_test_dag() -> IntermediateRepresentation {
         let mut ir = IntermediateRepresentation::new();
 
-        let ct = ir.append_input_ciphertext();
-        let l1 = ir.append_input_literal(Literal::from(7i64));
+        let ct = ir.append_input_ciphertext(0);
+        let l1 = ir.append_input_literal(OuterLiteral::from(7i64));
         let add = ir.append_add(ct, l1);
-        let l2 = ir.append_input_literal(Literal::from(5u64));
+        let l2 = ir.append_input_literal(OuterLiteral::from(5u64));
         let mul = ir.append_multiply(add, l2);
         let add_2 = ir.append_add(mul, l2);
         ir.append_multiply(add_2, ct);

@@ -1,39 +1,77 @@
-use sunscreen_ir::{
-    IntermediateRepresentation,
-    Operation::*,
-};
+use sunscreen_ir::{IntermediateRepresentation, Operation::*};
 
 use crossbeam::atomic::AtomicCell;
 use petgraph::{stable_graph::NodeIndex, Direction};
-use seal::Ciphertext;
+use seal::{Ciphertext, Evaluator};
 
 use std::borrow::Cow;
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-pub fn run_program(ir: &IntermediateRepresentation, inputs: &[Ciphertext]) {
-    let mut data: Vec<AtomicCell<Option<Cow<Ciphertext>>>> = Vec::with_capacity(ir.graph.node_count());
-    
+/**
+ * Run the given [`IntermediateRepresentation`] to completion with the given inputs. This
+ * method performs no validation. You must verify the program is first valid. Programs produced
+ * by the compiler are guaranteed to be valid, but deserialization does not make any such
+ * guarantees. Call [`sunscreen_compiler::validate`] to verify a program's correctness.
+ *
+ * # Panics
+ * Calling this method on a malformed [`IntermediateRepresentation`] may
+ * result in a panic.
+ *
+ * # Non-termination
+ * Calling this method on a malformed [`IntermediateRepresentation`] may
+ * result in non-termination.
+ */
+pub fn run_program_unchecked<E: Evaluator>(
+    ir: &IntermediateRepresentation,
+    inputs: &[Ciphertext],
+    evaluator: &E,
+) {
+    let mut data: Vec<AtomicCell<Option<Cow<Ciphertext>>>> =
+        Vec::with_capacity(ir.graph.node_count());
+
     for _ in 0..ir.graph.node_count() {
         data.push(AtomicCell::new(None));
     }
 
-    parallel_traverse(ir, |index| {
-        let node = &ir.graph[index];
+    parallel_traverse(
+        ir,
+        |index| {
+            let node = &ir.graph[index];
 
-        match node.operation {
-            InputCiphertext(id) => {
-                data[id].store(Some(Cow::Borrowed(&inputs[id])));
-            },
+            match &node.operation {
+                InputCiphertext(id) => {
+                    data[*id].store(Some(Cow::Borrowed(&inputs[*id]))); // moo
+                }
+                ShiftLeft => unimplemented!(),
+                ShiftRight => unimplemented!(),
+                Add => {
+                    let operands = ir.graph.neighbors_directed(index, Direction::Incoming);
 
+                    let a_id = operands.next();
+                    let b_id = operands.next();
 
-            _ => unimplemented!()
-        }
-    }, None);
+                    assert_eq!(operands.next(), None);
+
+                    let c = evaluator.add(a: &Ciphertext, b: &Ciphertext)
+
+                }
+                Multiply => unimplemented!(),
+                SwapRows => unimplemented!(),
+                Relinearize => unimplemented!(),
+                Negate => unimplemented!(),
+                Sub => unimplemented!(),
+                Literal(_x) => unimplemented!(),
+                OutputCiphertext => unimplemented!(),
+            }
+        },
+        None,
+    );
 }
 
-fn parallel_traverse<F>(ir: &IntermediateRepresentation, callback: F, run_to: Option<NodeIndex>) 
-where F: Fn(NodeIndex) -> () + Sync + Send
+fn parallel_traverse<F>(ir: &IntermediateRepresentation, callback: F, run_to: Option<NodeIndex>)
+where
+    F: Fn(NodeIndex) -> () + Sync + Send,
 {
     let ir = if let Some(x) = run_to {
         Cow::Owned(ir.prune(&vec![x])) // MOO

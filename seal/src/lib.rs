@@ -4,9 +4,9 @@
 //! All types in this crate implement Sync/Send. So long as you never dereference the
 //! internal handle on any type after it has been dropped, these traits
 //! should safely hold. The internal handles should be of little use to you anyways.
-//! 
+//!
 //! This crate intentionally omits more esoteric use cases to streamline the API and
-//! is currently incomplete (e.g. CKKS is not currently supported). If any underlying 
+//! is currently incomplete (e.g. CKKS is not currently supported). If any underlying
 //! SEAL API you care about is missing, please add it in a pull request or file
 //! an [issue](https://github.com/Sunscreen-tech/Sunscreen/issues).
 
@@ -38,22 +38,25 @@ mod serialization {
     }
 }
 
+mod bfv_evaluator;
 mod context;
 mod encoder;
 mod encryption_parameters;
 mod encryptor_decryptor;
 mod error;
 mod evaluator;
+mod evaluator_base;
 mod key_generator;
 mod modulus;
 mod plaintext_ciphertext;
 
+pub use bfv_evaluator::BFVEvaluator;
 pub use context::Context;
 pub use encoder::BFVEncoder;
 pub use encryption_parameters::*;
 pub use encryptor_decryptor::{Decryptor, Encryptor};
 pub use error::{Error, Result};
-pub use evaluator::{BFVEvaluator, Evaluator};
+pub use evaluator::Evaluator;
 pub use key_generator::{GaloisKeys, KeyGenerator, PublicKey, RelinearizationKeys, SecretKey};
 pub use modulus::{CoefficientModulus, Modulus, PlainModulus, SecurityLevel};
 pub use plaintext_ciphertext::{Ciphertext, Plaintext};

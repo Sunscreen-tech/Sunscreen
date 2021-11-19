@@ -1,4 +1,14 @@
 //! This crate provides wrappers for Micorosft's SEAL Homomorphic encryption library.
+//!
+//! # Notes
+//! All types in this crate implement Sync/Send. So long as you never dereference the
+//! internal handle on any type after it has been dropped, these traits
+//! should safely hold. The internal handles should be of little use to you anyways.
+//! 
+//! This crate intentionally omits more esoteric use cases to streamline the API and
+//! is currently incomplete (e.g. CKKS is not currently supported). If any underlying 
+//! SEAL API you care about is missing, please add it in a pull request or file
+//! an [issue](https://github.com/Sunscreen-tech/Sunscreen/issues).
 
 #![warn(missing_docs)]
 

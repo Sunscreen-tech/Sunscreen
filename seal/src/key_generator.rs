@@ -18,6 +18,9 @@ pub struct KeyGenerator {
     handle: *mut c_void,
 }
 
+unsafe impl Sync for KeyGenerator {}
+unsafe impl Send for KeyGenerator {}
+
 impl KeyGenerator {
     /**
      *

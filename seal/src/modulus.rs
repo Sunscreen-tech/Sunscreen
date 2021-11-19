@@ -17,6 +17,9 @@ pub struct Modulus {
     handle: *mut c_void,
 }
 
+unsafe impl Sync for Modulus {}
+unsafe impl Send for Modulus {}
+
 /**
  * Represents a standard security level according to the HomomorphicEncryption.org
  * security standard. The value SecLevelType.None signals that no standard

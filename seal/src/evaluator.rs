@@ -56,6 +56,9 @@ pub struct Evaluator {
     handle: *mut c_void,
 }
 
+unsafe impl Sync for Evaluator {}
+unsafe impl Send for Evaluator {}
+
 impl Drop for Evaluator {
     fn drop(&mut self) {
         convert_seal_error(unsafe { bindgen::Evaluator_Destroy(self.handle) })
@@ -670,20 +673,16 @@ impl BFVEvaluator {
 
     /**
      * Rotates plaintext matrix columns cyclically.
-     * 
+     *
      * When batching is used with the BFV scheme, this function rotates the encrypted plaintext matrix columns
      * cyclically. Since the size of the batched matrix is 2-by-(N/2), where N is the degree of the polynomial
      * modulus, this means simply swapping the two rows. Dynamic memory allocations in the process are allocated
      * from the memory pool pointed to by the given MemoryPoolHandle.
-     * 
+     *
      * * `encrypted` - The ciphertext to rotate
      * * `galoisKeys` - The Galois keys
      */
-    pub fn rotate_columns(
-        &self,
-        a: &Ciphertext,
-        galois_keys: &GaloisKeys
-    ) -> Result<Ciphertext> {
+    pub fn rotate_columns(&self, a: &Ciphertext, galois_keys: &GaloisKeys) -> Result<Ciphertext> {
         let out = Ciphertext::new()?;
 
         convert_seal_error(unsafe {
@@ -701,20 +700,16 @@ impl BFVEvaluator {
 
     /**
      * Rotates plaintext matrix columns cyclically. This variant does so in-place.
-     * 
+     *
      * When batching is used with the BFV scheme, this function rotates the encrypted plaintext matrix columns
      * cyclically. Since the size of the batched matrix is 2-by-(N/2), where N is the degree of the polynomial
      * modulus, this means simply swapping the two rows. Dynamic memory allocations in the process are allocated
      * from the memory pool pointed to by the given MemoryPoolHandle.
-     * 
+     *
      * * `encrypted` - The ciphertext to rotate
      * * `galoisKeys` - The Galois keys
      */
-    pub fn rotate_columns_inplace(
-        &self,
-        a: &Ciphertext,
-        galois_keys: &GaloisKeys
-    ) -> Result<()> {
+    pub fn rotate_columns_inplace(&self, a: &Ciphertext, galois_keys: &GaloisKeys) -> Result<()> {
         convert_seal_error(unsafe {
             bindgen::Evaluator_RotateColumns(
                 self.handle,
@@ -753,19 +748,13 @@ mod tests {
 
         let public_key = gen.create_public_key();
         let secret_key = gen.secret_key();
-        
+
         let encryptor =
             Encryptor::with_public_and_secret_key(&ctx, &public_key, &secret_key).unwrap();
         let decryptor = Decryptor::new(&ctx, &secret_key).unwrap();
         let evaluator = BFVEvaluator::new(&ctx).unwrap();
 
-        test(
-            decryptor,
-            encoder,
-            encryptor,
-            evaluator,
-            gen
-        );
+        test(decryptor, encoder, encryptor, evaluator, gen);
     }
 
     fn make_vec(encoder: &BFVEncoder) -> Vec<i64> {
@@ -1394,7 +1383,9 @@ mod tests {
             let a_p = encoder.encode_signed(&a).unwrap();
             let a_c = encryptor.encrypt(&a_p).unwrap();
 
-            evaluator.rotate_rows_inplace(&a_c, -1, &galois_keys).unwrap();
+            evaluator
+                .rotate_rows_inplace(&a_c, -1, &galois_keys)
+                .unwrap();
 
             let a_p = decryptor.decrypt(&a_c).unwrap();
             let c = encoder.decode_signed(&a_p).unwrap();
@@ -1436,7 +1427,9 @@ mod tests {
             let a_p = encoder.encode_signed(&a).unwrap();
             let a_c = encryptor.encrypt(&a_p).unwrap();
 
-            evaluator.rotate_columns_inplace(&a_c, &galois_keys).unwrap();
+            evaluator
+                .rotate_columns_inplace(&a_c, &galois_keys)
+                .unwrap();
 
             let a_p = decryptor.decrypt(&a_c).unwrap();
             let c = encoder.decode_signed(&a_p).unwrap();

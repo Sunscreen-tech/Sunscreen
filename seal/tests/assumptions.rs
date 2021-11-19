@@ -1,4 +1,4 @@
-mod test_common; 
+mod test_common;
 
 #[test]
 fn overflow_does_not_bleed_into_other_lanes() {
@@ -7,7 +7,7 @@ fn overflow_does_not_bleed_into_other_lanes() {
 
         for i in 0..8192 {
             if i == 1 {
-                data.push(10_000);    
+                data.push(10_000);
             } else {
                 data.push(100);
             }

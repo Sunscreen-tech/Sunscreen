@@ -38,6 +38,9 @@ pub struct Encryptor {
     handle: *mut c_void,
 }
 
+unsafe impl Sync for Encryptor {}
+unsafe impl Send for Encryptor {}
+
 impl Encryptor {
     /**
     * Creates an Encryptor instance initialized with the specified SEALContext,
@@ -137,6 +140,9 @@ impl Drop for Encryptor {
 pub struct Decryptor {
     handle: *mut c_void,
 }
+
+unsafe impl Sync for Decryptor {}
+unsafe impl Send for Decryptor {}
 
 impl Decryptor {
     /**

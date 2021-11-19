@@ -46,6 +46,9 @@ pub struct Context {
     handle: *mut c_void,
 }
 
+unsafe impl Sync for Context {}
+unsafe impl Send for Context {}
+
 impl Context {
     /**
      * Creates an instance of SEALContext and performs several pre-computations

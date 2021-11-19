@@ -67,6 +67,9 @@ pub struct EncryptionParameters {
     handle: *mut c_void,
 }
 
+unsafe impl Sync for EncryptionParameters {}
+unsafe impl Send for EncryptionParameters {}
+
 impl EncryptionParameters {
     fn new(scheme: SchemeType) -> Result<Self, Error> {
         let mut handle: *mut c_void = null_mut();

@@ -40,6 +40,9 @@ pub struct BFVEncoder {
     handle: *mut c_void,
 }
 
+unsafe impl Sync for BFVEncoder {}
+unsafe impl Send for BFVEncoder {}
+
 impl BFVEncoder {
     /**
      * Creates a BatchEncoder. It is necessary that the encryption parameters

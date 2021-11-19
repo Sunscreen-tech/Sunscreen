@@ -32,6 +32,9 @@ pub struct Plaintext {
     handle: *mut c_void,
 }
 
+unsafe impl Sync for Plaintext {}
+unsafe impl Send for Plaintext {}
+
 impl Plaintext {
     /**
      * Returns the handle to the underlying SEAL object.
@@ -84,6 +87,20 @@ impl Drop for Plaintext {
  */
 pub struct Ciphertext {
     handle: *mut c_void,
+}
+
+unsafe impl Sync for Ciphertext {}
+unsafe impl Send for Ciphertext {}
+
+impl Clone for Ciphertext {
+    fn clone(&self) -> Self {
+        let mut handle = null_mut();
+
+        convert_seal_error(unsafe { bindgen::Ciphertext_Create2(self.handle, &mut handle) })
+            .expect("Fatal error: Failed to clone ciphertext");
+
+        Self { handle }
+    }
 }
 
 impl Ciphertext {

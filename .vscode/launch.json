@@ -22,6 +22,25 @@
         {
             "type": "lldb",
             "request": "launch",
+            "name": "Debug unit tests in library 'sunscreen_runtime'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=sunscreen_runtime"
+                ],
+                "filter": {
+                    "name": "sunscreen_runtime",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
             "name": "Debug unit tests in library 'seal'",
             "cargo": {
                 "args": [

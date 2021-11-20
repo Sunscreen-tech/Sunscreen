@@ -69,7 +69,7 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
 
             match &node.operation {
                 InputCiphertext(id) => {
-                    data[*id].store(Some(Cow::Borrowed(&inputs[*id]))); // moo
+                    data[index.index()].store(Some(Cow::Borrowed(&inputs[*id]))); // moo
                 }
                 ShiftLeft => unimplemented!(),
                 ShiftRight => unimplemented!(),
@@ -137,14 +137,15 @@ where
     };
 
     // Initialize the number of incomplete dependencies.
-    let mut deps: HashMap<NodeIndex, AtomicUsize> = HashMap::new();
+    let mut deps: Vec<AtomicUsize> = Vec::with_capacity(ir.graph.node_count());
 
     for n in ir.graph.node_indices() {
-        deps.insert(
-            n,
-            AtomicUsize::new(ir.graph.neighbors_directed(n, Direction::Outgoing).count()),
-        );
+        unsafe {
+            *deps.get_unchecked_mut(n.index()) = AtomicUsize::new(ir.graph.neighbors_directed(n, Direction::Incoming).count());
+        }
     }
+
+    unsafe { deps.set_len(ir.graph.node_count()) };
 
     let mut threadpool = scoped_threadpool::Pool::new(num_cpus::get() as u32);
     let items_remaining = AtomicUsize::new(ir.graph.node_count());
@@ -153,10 +154,11 @@ where
 
     for r in deps
         .iter()
-        .filter(|(_, count)| count.load(Ordering::Relaxed) == 0)
+        .filter(|count| count.load(Ordering::Relaxed) == 0)
+        .enumerate()
         .map(|(id, _)| id)
     {
-        sender.send(*r).unwrap();
+        sender.send(r).unwrap();
     }
 
     threadpool.scoped(|scope| {
@@ -168,7 +170,7 @@ where
                     // Atomically check if the number of items remaining is zero. If it is,
                     // there's no more work to do, so return. Otherwise, decrement the count
                     // and this thread will take an item.
-                    while updated_count {
+                    while !updated_count {
                         let count = items_remaining.load(Ordering::Acquire);
 
                         if count == 0 {
@@ -188,17 +190,17 @@ where
                         }
                     }
 
-                    let node_id = reciever.recv().unwrap();
+                    let node_id = NodeIndex::from(reciever.recv().unwrap() as u32);
 
                     callback(node_id);
 
                     // Check each child's dependency count and mark it as ready if 0.
                     for e in ir.graph.neighbors_directed(node_id, Direction::Outgoing) {
-                        let old_val = deps[&e].fetch_sub(1, Ordering::Relaxed);
+                        let old_val = deps[e.index()].fetch_sub(1, Ordering::Relaxed);
 
                         // Note is the value prior to atomic subtraction.
                         if old_val == 1 {
-                            sender.send(e).unwrap();
+                            sender.send(e.index()).unwrap();
                         }
                     }
                 }
@@ -214,6 +216,7 @@ mod tests {
 
     fn setup_scheme() -> (
         KeyGenerator,
+        Context,
         PublicKey,
         SecretKey,
         Encryptor,
@@ -224,7 +227,7 @@ mod tests {
 
         let params = BfvEncryptionParametersBuilder::new()
             .set_poly_modulus_degree(degree)
-            .set_plain_modulus_u64(100)
+            .set_plain_modulus(PlainModulus::batching(degree, 14).unwrap())
             .set_coefficient_modulus(
                 CoefficientModulus::bfv_default(degree, SecurityLevel::default()).unwrap(),
             )
@@ -244,7 +247,7 @@ mod tests {
         let evaluator = BFVEvaluator::new(&context).unwrap();
 
         (
-            keygen, public_key, secret_key, encryptor, decryptor, evaluator,
+            keygen, context, public_key, secret_key, encryptor, decryptor, evaluator,
         )
     }
 
@@ -253,21 +256,31 @@ mod tests {
         let mut ir = IntermediateRepresentation::new();
 
         let a = ir.append_input_ciphertext(0);
-        let b = ir.append_input_ciphertext(0);
+        let b = ir.append_input_ciphertext(1);
         let c = ir.append_add(a, b);
         ir.append_output_ciphertext(c);
 
-        let (keygen, public_key, secret_key, encryptor, decryptor, evaluator) = setup_scheme();
+        let (keygen, context, public_key, secret_key, encryptor, decryptor, evaluator) = setup_scheme();
 
-        let encoder = BFVScalarEncoder::new();
-        let pt_0 = encoder.encode_signed(-14).unwrap();
-        let pt_1 = encoder.encode_signed(16).unwrap();
+        let encoder = BFVEncoder::new(&context).unwrap();
+
+        let mut a = vec![42; 1024];
+        let mut b = vec![-24; 1024];
+
+        let pt_0 = encoder.encode_signed(&a).unwrap();
+        let pt_1 = encoder.encode_signed(&b).unwrap();
 
         let ct_0 = encryptor.encrypt(&pt_0).unwrap();
         let ct_1 = encryptor.encrypt(&pt_1).unwrap();
 
-        unsafe {
-            run_program_unchecked(&ir, &[ct_0, ct_1], &evaluator, None);
-        }
+        let output = unsafe {
+            run_program_unchecked(&ir, &[ct_0, ct_1], &evaluator, None)
+        };
+
+        assert_eq!(output.len(), 1);
+
+        let o_p = decryptor.decrypt(&output[0]).unwrap();
+        
+        assert_eq!(encoder.decode_signed(&o_p).unwrap(), vec![42-24; 1024]);
     }
 }

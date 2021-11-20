@@ -1,14 +1,14 @@
 #![warn(missing_docs)]
 #![deny(rustdoc::broken_intra_doc_links)]
 
-//! This crate contains the types and functions for executing a Sunscreen circuit 
+//! This crate contains the types and functions for executing a Sunscreen circuit
 //! (i.e. an [`IntermediateRepresentation`](sunscreen_ir::IntermediateRepresentation)).
 
 use sunscreen_ir::{IntermediateRepresentation, Operation::*};
 
 use crossbeam::atomic::AtomicCell;
 use petgraph::{stable_graph::NodeIndex, Direction};
-use seal::{Ciphertext, Evaluator};
+use seal::{Ciphertext, Evaluator, RelinearizationKeys};
 
 use std::borrow::Cow;
 use std::collections::HashMap;
@@ -27,7 +27,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
  * # Non-termination
  * Calling this method on a malformed [`IntermediateRepresentation`] may
  * result in non-termination.
- * 
+ *
  * # Undefined behavior
  * Calling this method on a malformed [`IntermediateRepresentation`] may
  * result in undefined behavior.
@@ -36,8 +36,12 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
     ir: &IntermediateRepresentation,
     inputs: &[Ciphertext],
     evaluator: &E,
-) {
-    fn get_ciphertext<'a>(data: &'a [AtomicCell<Option<Cow<Ciphertext>>>], index: usize) -> Cow<'a, Ciphertext> {
+    relin_keys: Option<RelinearizationKeys>,
+) -> Vec<Ciphertext> {
+    fn get_ciphertext<'a>(
+        data: &'a [AtomicCell<Option<Cow<Ciphertext>>>],
+        index: usize,
+    ) -> &'a Cow<'a, Ciphertext> {
         // This is correct so long as the IR program is indeed a DAG executed in topological order
         // Since for a given edge (x,y), x executes before y, the operand data that y needs
         // from x will exist.
@@ -48,7 +52,7 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
             None => panic!("Internal error: No ciphertext found for node {}", index),
         };
 
-        Cow::Borrowed(val)
+        val
     }
 
     let mut data: Vec<AtomicCell<Option<Cow<Ciphertext>>>> =
@@ -75,19 +79,51 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
 
                     let c = evaluator.add(&a, &b).unwrap();
 
-                    data[index.index()].store(Some(Cow::Owned(c)))
+                    data[index.index()].store(Some(Cow::Owned(c)));
                 }
-                Multiply => unimplemented!(),
+                Multiply(a_id, b_id) => {
+                    let a = get_ciphertext(&data, a_id.index());
+                    let b = get_ciphertext(&data, b_id.index());
+
+                    let c = evaluator.multiply(&a, &b).unwrap();
+
+                    data[index.index()].store(Some(Cow::Owned(c)));
+                }
                 SwapRows => unimplemented!(),
-                Relinearize => unimplemented!(),
+                Relinearize(a_id) => {
+                    let relin_keys = relin_keys.as_ref().expect(
+                        "Fatal error: attempted to relinearize without relinearization keys.",
+                    );
+
+                    let a = get_ciphertext(&data, a_id.index());
+
+                    let c = evaluator.relinearize(&a, relin_keys).unwrap();
+
+                    data[index.index()].store(Some(Cow::Owned(c)));
+                }
                 Negate => unimplemented!(),
                 Sub => unimplemented!(),
                 Literal(_x) => unimplemented!(),
-                OutputCiphertext => unimplemented!(),
-            }
+                OutputCiphertext(a_id) => {
+                    let a = get_ciphertext(&data, a_id.index());
+
+                    data[index.index()].store(Some(Cow::Borrowed(&a)));
+                }
+            };
         },
         None,
     );
+
+    // Copy ciphertexts to output vector
+    ir.graph
+        .node_indices()
+        .filter_map(|id| match ir.graph[id].operation {
+            OutputCiphertext(o_id) => {
+                Some(get_ciphertext(&data, o_id.index()).clone().into_owned())
+            }
+            _ => None,
+        })
+        .collect()
 }
 
 fn parallel_traverse<F>(ir: &IntermediateRepresentation, callback: F, run_to: Option<NodeIndex>)
@@ -169,4 +205,69 @@ where
             });
         }
     });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use seal::*;
+
+    fn setup_scheme() -> (
+        KeyGenerator,
+        PublicKey,
+        SecretKey,
+        Encryptor,
+        Decryptor,
+        BFVEvaluator,
+    ) {
+        let degree = 1024;
+
+        let params = BfvEncryptionParametersBuilder::new()
+            .set_poly_modulus_degree(degree)
+            .set_plain_modulus_u64(100)
+            .set_coefficient_modulus(
+                CoefficientModulus::bfv_default(degree, SecurityLevel::default()).unwrap(),
+            )
+            .build()
+            .unwrap();
+
+        let context = Context::new(&params, false, SecurityLevel::default()).unwrap();
+
+        let keygen = KeyGenerator::new(&context).unwrap();
+        let public_key = keygen.create_public_key();
+        let secret_key = keygen.secret_key();
+
+        let encryptor =
+            Encryptor::with_public_and_secret_key(&context, &public_key, &secret_key).unwrap();
+        let decryptor = Decryptor::new(&context, &secret_key).unwrap();
+
+        let evaluator = BFVEvaluator::new(&context).unwrap();
+
+        (
+            keygen, public_key, secret_key, encryptor, decryptor, evaluator,
+        )
+    }
+
+    #[test]
+    fn simple_add() {
+        let mut ir = IntermediateRepresentation::new();
+
+        let a = ir.append_input_ciphertext(0);
+        let b = ir.append_input_ciphertext(0);
+        let c = ir.append_add(a, b);
+        ir.append_output_ciphertext(c);
+
+        let (keygen, public_key, secret_key, encryptor, decryptor, evaluator) = setup_scheme();
+
+        let encoder = BFVScalarEncoder::new();
+        let pt_0 = encoder.encode_signed(-14).unwrap();
+        let pt_1 = encoder.encode_signed(16).unwrap();
+
+        let ct_0 = encryptor.encrypt(&pt_0).unwrap();
+        let ct_1 = encryptor.encrypt(&pt_1).unwrap();
+
+        unsafe {
+            run_program_unchecked(&ir, &[ct_0, ct_1], &evaluator, None);
+        }
+    }
 }

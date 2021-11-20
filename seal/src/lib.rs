@@ -52,7 +52,7 @@ mod plaintext_ciphertext;
 
 pub use bfv_evaluator::BFVEvaluator;
 pub use context::Context;
-pub use encoder::BFVEncoder;
+pub use encoder::{BFVEncoder, BFVScalarEncoder};
 pub use encryption_parameters::*;
 pub use encryptor_decryptor::{Decryptor, Encryptor};
 pub use error::{Error, Result};

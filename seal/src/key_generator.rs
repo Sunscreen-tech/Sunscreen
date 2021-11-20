@@ -198,6 +198,9 @@ pub struct PublicKey {
     handle: *mut c_void,
 }
 
+unsafe impl Sync for PublicKey {}
+unsafe impl Send for PublicKey {}
+
 impl PublicKey {
     /**
      * Returns the handle to the underlying SEAL object.
@@ -226,6 +229,9 @@ pub struct CompactPublicKey(PublicKey);
 pub struct SecretKey {
     handle: *mut c_void,
 }
+
+unsafe impl Sync for SecretKey {}
+unsafe impl Send for SecretKey {}
 
 impl SecretKey {
     /**
@@ -308,6 +314,9 @@ pub struct RelinearizationKeys {
     handle: *mut c_void,
 }
 
+unsafe impl Sync for RelinearizationKeys {}
+unsafe impl Send for RelinearizationKeys {}
+
 impl RelinearizationKeys {
     /**
      * Returns the handle to the underlying SEAL object.
@@ -351,6 +360,9 @@ pub struct CompactRelinearizationKeys(RelinearizationKeys);
 pub struct GaloisKeys {
     handle: *mut c_void,
 }
+
+unsafe impl Sync for GaloisKeys {}
+unsafe impl Send for GaloisKeys {}
 
 impl GaloisKeys {
     /**

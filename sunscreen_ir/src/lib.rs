@@ -136,7 +136,7 @@ impl IntermediateRepresentation {
      * Appends a multiply operation that depends on the operands `x` and `y`.
      */
     pub fn append_multiply(&mut self, x: NodeIndex, y: NodeIndex) -> NodeIndex {
-        self.append_2_input_node(Operation::Multiply, x, y)
+        self.append_2_input_node(Operation::Multiply(x, y), x, y)
     }
 
     /**
@@ -173,14 +173,14 @@ impl IntermediateRepresentation {
      * Sppends a node designating `x` as an output of the circuit.
      */
     pub fn append_output_ciphertext(&mut self, x: NodeIndex) -> NodeIndex {
-        self.append_1_input_node(Operation::OutputCiphertext, x)
+        self.append_1_input_node(Operation::OutputCiphertext(x), x)
     }
 
     /**
      * Appends an operation that relinearizes `x`.
      */
     pub fn append_relinearize(&mut self, x: NodeIndex) -> NodeIndex {
-        self.append_1_input_node(Operation::Relinearize, x)
+        self.append_1_input_node(Operation::Relinearize(x), x)
     }
 
     /**
@@ -323,7 +323,12 @@ impl IntermediateRepresentation {
     pub fn get_outputs(&self) -> impl Iterator<Item = NodeIndex> + '_ {
         self.graph
             .node_indices()
-            .filter(|g| self.graph[*g].operation == Operation::OutputCiphertext)
+            .filter(|g| {
+                match self.graph[*g].operation {
+                    Operation::OutputCiphertext(_) => true,
+                    _ => false
+                }
+            })
     }
 
     /**

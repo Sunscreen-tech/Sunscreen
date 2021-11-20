@@ -215,6 +215,83 @@ impl Drop for BFVEncoder {
     }
 }
 
+/**
+ * Creates an encoder that can turn i64 or u64 values into a Plaintext. This encoder
+ * is not recommended as it's an inefficient use of the plain modulus space.
+ */
+pub struct BFVScalarEncoder { }
+
+impl BFVScalarEncoder {
+    /**
+     * Creates a new ScalarBFVEncoder
+     */
+    pub fn new() -> Self {
+        Self { }
+    }
+
+    /**
+     * Encodes a u64 into a Plaintext.
+     */
+    pub fn encode_unsigned(&self, val: u64) -> Result<Plaintext> {
+        let plaintext = Plaintext::new()?;
+    
+        convert_seal_error(unsafe { 
+            bindgen::Plaintext_Set3(plaintext.get_handle(), val)
+         })?;
+
+         Ok(plaintext)
+    }
+
+    /**
+     * Encodes an i64 into a Plaintext.
+     */
+    pub fn encode_signed(&self, val: i64) -> Result<Plaintext> {
+        let plaintext = Plaintext::new()?;
+    
+        convert_seal_error(unsafe {
+            bindgen::Plaintext_Set3(plaintext.get_handle(), std::mem::transmute(val))
+         })?;
+
+         Ok(plaintext)
+    }
+
+    /**
+     * Decodes the plaintext into a u64.
+     */
+    pub fn decode_unsigned(&self, p: &Plaintext) -> Result<u64> {
+        let mut len: u64 = 0;
+        let mut coeff: u64 = 0;
+
+        convert_seal_error(unsafe {
+            bindgen::Plaintext_CoeffCount(p.get_handle(), &mut len)
+         })?;
+
+        convert_seal_error(unsafe {
+            bindgen::Plaintext_CoeffAt(p.get_handle(), 0, &mut coeff)
+        })?;
+
+         Ok(coeff)
+    }
+
+    /**
+     * Decodes the plaintext into an i64.
+     */
+    pub fn decode_signed(&self, p: &Plaintext) -> Result<i64> {
+        let mut len: u64 = 0;
+        let mut coeff: i64 = 0;
+
+        convert_seal_error(unsafe {
+            bindgen::Plaintext_CoeffCount(p.get_handle(), &mut len)
+         })?;
+
+        convert_seal_error(unsafe {
+            bindgen::Plaintext_CoeffAt(p.get_handle(), 0, std::mem::transmute(&mut coeff))
+        })?;
+
+         Ok(coeff)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::*;
@@ -307,5 +384,23 @@ mod tests {
         let data_2 = encoder.decode_signed(&plaintext).unwrap();
 
         assert_eq!(data, data_2);
+    }
+
+    #[test]
+    fn scalar_encoder_can_encode_decode_signed() {
+        let encoder = BFVScalarEncoder::new();
+
+        let p = encoder.encode_signed(-15).unwrap();
+
+        assert_eq!(encoder.decode_signed(&p).unwrap(), -15);
+    }
+
+    #[test]
+    fn scalar_encoder_can_encode_decode_unsigned() {
+        let encoder = BFVScalarEncoder::new();
+
+        let p = encoder.encode_signed(42).unwrap();
+
+        assert_eq!(encoder.decode_signed(&p).unwrap(), 42);
     }
 }

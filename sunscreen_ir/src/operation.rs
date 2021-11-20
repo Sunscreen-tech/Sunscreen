@@ -33,12 +33,12 @@ pub enum Operation {
      * a multiplication operation by reducing the resultant 3xN ciphertext down to
      * the cannonical 2xN.
      */
-    Relinearize,
+    Relinearize(NodeIndex),
 
     /**
      * Multiply two values. Either operand may be a literal or a ciphertext.
      */
-    Multiply,
+    Multiply(NodeIndex, NodeIndex),
 
     /**
      * Add two values. Either operand may be a literal or a ciphertext.
@@ -69,5 +69,5 @@ pub enum Operation {
     /**
      * Represents a ciphertext output for the circuit.
      */
-    OutputCiphertext,
+    OutputCiphertext(NodeIndex),
 }

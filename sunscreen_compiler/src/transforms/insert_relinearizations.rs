@@ -4,7 +4,7 @@ use petgraph::Direction;
 
 pub fn apply_insert_relinearizations(ir: &mut IntermediateRepresentation) {
     ir.forward_traverse(|query, id| match query.get_node(id).operation {
-        Multiply => {
+        Multiply(_a, _b) => {
             let mut transforms = TransformList::new();
 
             let relin_node = transforms.push(AppendRelinearize(id.into()));
@@ -56,7 +56,12 @@ mod tests {
         let relin_nodes = ir
             .graph
             .node_indices()
-            .filter(|i| query.get_node(*i).operation == Operation::Relinearize)
+            .filter(|i| {
+                match query.get_node(*i).operation {
+                    Operation::Relinearize(_) => true,
+                    _ => false
+                }
+            })
             .collect::<Vec<NodeIndex>>();
 
         // Should have 2 relin nodes added.
@@ -76,7 +81,10 @@ mod tests {
                 query
                     .get_neighbors(*id, Direction::Incoming)
                     .map(|id| query.get_node(id))
-                    .all(|node| node.operation == Operation::Multiply)
+                    .all(|node| match node.operation {
+                        Operation::Multiply(_a, _b) => true,
+                        _ => false
+                    })
             }),
             true
         );
@@ -101,7 +109,12 @@ mod tests {
         assert_eq!(
             query
                 .get_neighbors(relin_nodes[0], Direction::Outgoing)
-                .all(|i| query.get_node(i).operation == Operation::Add),
+                .all(|i| {
+                    match query.get_node(i).operation {
+                        Operation::Add(_a, _b) => true,
+                        _ => false
+                    }
+                }),
             true
         );
     }

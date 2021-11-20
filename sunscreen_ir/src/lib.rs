@@ -699,12 +699,12 @@ mod tests {
             nodes[1].1.operation,
             Operation::Literal(OuterLiteral::from(7i64))
         );
-        assert_eq!(nodes[2].1.operation, Operation::Add);
+        assert_eq!(nodes[2].1.operation, Operation::Add(NodeIndex::from(0), NodeIndex::from(1)));
         assert_eq!(
             nodes[3].1.operation,
             Operation::Literal(OuterLiteral::from(5u64))
         );
-        assert_eq!(nodes[4].1.operation, Operation::Multiply);
+        assert_eq!(nodes[4].1.operation, Operation::Multiply(NodeIndex::from(2), NodeIndex::from(3)));
 
         assert_eq!(
             ir.graph

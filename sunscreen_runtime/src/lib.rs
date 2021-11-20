@@ -11,7 +11,6 @@ use petgraph::{stable_graph::NodeIndex, Direction};
 use seal::{Ciphertext, Evaluator, RelinearizationKeys};
 
 use std::borrow::Cow;
-use std::collections::HashMap;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 /**
@@ -126,6 +125,9 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
         .collect()
 }
 
+/**
+ * Traverses the graph in the given 
+ */
 fn parallel_traverse<F>(ir: &IntermediateRepresentation, callback: F, run_to: Option<NodeIndex>)
 where
     F: Fn(NodeIndex) -> () + Sync + Send,
@@ -260,12 +262,12 @@ mod tests {
         let c = ir.append_add(a, b);
         ir.append_output_ciphertext(c);
 
-        let (keygen, context, public_key, secret_key, encryptor, decryptor, evaluator) = setup_scheme();
+        let (_keygen, context, _public_key, _secret_key, encryptor, decryptor, evaluator) = setup_scheme();
 
         let encoder = BFVEncoder::new(&context).unwrap();
 
-        let mut a = vec![42; 1024];
-        let mut b = vec![-24; 1024];
+        let a = vec![42; 1024];
+        let b = vec![-24; 1024];
 
         let pt_0 = encoder.encode_signed(&a).unwrap();
         let pt_1 = encoder.encode_signed(&b).unwrap();

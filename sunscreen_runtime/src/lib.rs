@@ -4,14 +4,60 @@
 //! This crate contains the types and functions for executing a Sunscreen circuit
 //! (i.e. an [`IntermediateRepresentation`](sunscreen_ir::IntermediateRepresentation)).
 
-use sunscreen_ir::{IntermediateRepresentation, Operation::*};
+use sunscreen_ir::{EdgeInfo, IntermediateRepresentation, Operation::*};
 
 use crossbeam::atomic::AtomicCell;
-use petgraph::{stable_graph::NodeIndex, Direction};
+use petgraph::{stable_graph::{NodeIndex}, Direction, visit::{EdgeRef}};
 use seal::{Ciphertext, Evaluator, RelinearizationKeys};
 
 use std::borrow::Cow;
 use std::sync::atomic::{AtomicUsize, Ordering};
+
+/**
+ * Gets the two input operands and returns a tuple of left, right. For some operations
+ * (i.e. subtraction), order matters. While it's erroneous for a binary operations to have
+ * anything other than a single left and single right operand, having more operands will result
+ * in one being selected arbitrarily. Validating the [`IntermediateRepresentation`] will
+ * reveal having the wrong number of operands.
+ * 
+ * # Panics
+ * Panics if the given node doesn't have at least one left and one right operand. Calling
+ * [`validate()`](sunscreen_ir::IntermediateRepresentation::validate()) should reveal this
+ * issue.
+ */
+pub fn get_left_right_operands(ir: &IntermediateRepresentation, index: NodeIndex) -> (NodeIndex, NodeIndex) {
+    let left = ir.graph.edges_directed(index, Direction::Incoming)
+        .filter(|e| *e.weight() == EdgeInfo::LeftOperand)
+        .map(|e| e.source())
+        .nth(0)
+        .unwrap();
+
+    let right = ir.graph.edges_directed(index, Direction::Incoming)
+        .filter(|e| *e.weight() == EdgeInfo::RightOperand)
+        .map(|e| e.source())
+        .nth(0)
+        .unwrap();
+
+    (left, right)
+}
+
+/**
+ * Gets the single unary input operand for the given node. If the [`IntermediateRepresentation`]
+ * is malformed and the node has more than one UnaryOperand, one will be selected arbitrarily.
+ * As such, one should validate the [`IntermediateRepresentation`] before calling this method.
+ * 
+ * # Panics
+ * Panics if the given node doesn't have at least one unary operant. Calling
+ * [`validate()`](sunscreen_ir::IntermediateRepresentation::validate()) should reveal this
+ * issue.
+ */
+pub fn get_unary_operand(ir: &IntermediateRepresentation, index: NodeIndex) -> NodeIndex {
+    ir.graph.edges_directed(index, Direction::Incoming)
+        .filter(|e| *e.weight() == EdgeInfo::UnaryOperand)
+        .map(|e| e.source())
+        .nth(0)
+        .unwrap()
+}
 
 /**
  * Run the given [`IntermediateRepresentation`] to completion with the given inputs. This
@@ -72,29 +118,35 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
                 }
                 ShiftLeft => unimplemented!(),
                 ShiftRight => unimplemented!(),
-                Add(a_id, b_id) => {
-                    let a = get_ciphertext(&data, a_id.index());
-                    let b = get_ciphertext(&data, b_id.index());
+                Add => {
+                    let (left, right) = get_left_right_operands(ir, index);
+
+                    let a = get_ciphertext(&data, left.index());
+                    let b = get_ciphertext(&data, right.index());
 
                     let c = evaluator.add(&a, &b).unwrap();
 
                     data[index.index()].store(Some(Cow::Owned(c)));
                 }
-                Multiply(a_id, b_id) => {
-                    let a = get_ciphertext(&data, a_id.index());
-                    let b = get_ciphertext(&data, b_id.index());
+                Multiply => {
+                    let (left, right) = get_left_right_operands(ir, index);
+
+                    let a = get_ciphertext(&data, left.index());
+                    let b = get_ciphertext(&data, right.index());
 
                     let c = evaluator.multiply(&a, &b).unwrap();
 
                     data[index.index()].store(Some(Cow::Owned(c)));
                 }
                 SwapRows => unimplemented!(),
-                Relinearize(a_id) => {
+                Relinearize => {
                     let relin_keys = relin_keys.as_ref().expect(
                         "Fatal error: attempted to relinearize without relinearization keys.",
                     );
 
-                    let a = get_ciphertext(&data, a_id.index());
+                    let input = get_unary_operand(ir, index);
+
+                    let a = get_ciphertext(&data, input.index());
 
                     let c = evaluator.relinearize(&a, relin_keys).unwrap();
 
@@ -103,8 +155,10 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
                 Negate => unimplemented!(),
                 Sub => unimplemented!(),
                 Literal(_x) => unimplemented!(),
-                OutputCiphertext(a_id) => {
-                    let a = get_ciphertext(&data, a_id.index());
+                OutputCiphertext => {
+                    let input = get_unary_operand(ir, index);
+
+                    let a = get_ciphertext(&data, input.index());
 
                     data[index.index()].store(Some(Cow::Borrowed(&a)));
                 }
@@ -117,8 +171,8 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
     ir.graph
         .node_indices()
         .filter_map(|id| match ir.graph[id].operation {
-            OutputCiphertext(o_id) => {
-                Some(get_ciphertext(&data, o_id.index()).clone().into_owned())
+            OutputCiphertext => {
+                Some(get_ciphertext(&data, id.index()).clone().into_owned())
             }
             _ => None,
         })

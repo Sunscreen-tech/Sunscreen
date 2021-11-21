@@ -1,4 +1,3 @@
-use petgraph::stable_graph::NodeIndex;
 use serde::{Deserialize, Serialize};
 
 use crate::OuterLiteral;
@@ -33,17 +32,17 @@ pub enum Operation {
      * a multiplication operation by reducing the resultant 3xN ciphertext down to
      * the cannonical 2xN.
      */
-    Relinearize(NodeIndex),
+    Relinearize,
 
     /**
      * Multiply two values. Either operand may be a literal or a ciphertext.
      */
-    Multiply(NodeIndex, NodeIndex),
+    Multiply,
 
     /**
      * Add two values. Either operand may be a literal or a ciphertext.
      */
-    Add(NodeIndex, NodeIndex),
+    Add,
 
     /**
      * Computes the additive inverse of a plaintext or ciphertext.
@@ -69,5 +68,5 @@ pub enum Operation {
     /**
      * Represents a ciphertext output for the circuit.
      */
-    OutputCiphertext(NodeIndex),
+    OutputCiphertext,
 }

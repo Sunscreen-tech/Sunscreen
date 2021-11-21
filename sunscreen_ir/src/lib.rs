@@ -12,8 +12,9 @@ use petgraph::{
     algo::is_isomorphic_matching,
     algo::toposort,
     algo::tred::*,
+    Directed,
     graph::{Graph, NodeIndex},
-    stable_graph::{Neighbors, StableGraph},
+    stable_graph::{Edges, Neighbors, StableGraph},
     visit::{IntoNeighbors, IntoNodeIdentifiers},
     Direction,
 };
@@ -44,16 +45,25 @@ impl NodeInfo {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
 /**
  * Contains information about an edge between nodes in the circuit graph.
  */
-pub struct EdgeInfo;
+pub enum EdgeInfo {
+    /**
+     * The source node is the left input to a binary operation.
+     */
+    LeftOperand,
 
-impl EdgeInfo {
-    fn new() -> Self {
-        Self
-    }
+    /**
+     * The source node is the right input to fa binary operation.
+     */
+    RightOperand,
+
+    /**
+     * The source node is the single input to a unary operation.
+     */
+    UnaryOperand,
 }
 
 type IRGraph = StableGraph<NodeInfo, EdgeInfo>;
@@ -105,8 +115,8 @@ impl IntermediateRepresentation {
     ) -> NodeIndex {
         let new_node = self.graph.add_node(NodeInfo::new(operation));
 
-        self.graph.update_edge(x, new_node, EdgeInfo::new());
-        self.graph.update_edge(y, new_node, EdgeInfo::new());
+        self.graph.update_edge(x, new_node, EdgeInfo::LeftOperand);
+        self.graph.update_edge(y, new_node, EdgeInfo::RightOperand);
 
         new_node
     }
@@ -114,7 +124,7 @@ impl IntermediateRepresentation {
     fn append_1_input_node(&mut self, operation: Operation, x: NodeIndex) -> NodeIndex {
         let new_node = self.graph.add_node(NodeInfo::new(operation));
 
-        self.graph.update_edge(x, new_node, EdgeInfo::new());
+        self.graph.update_edge(x, new_node, EdgeInfo::UnaryOperand);
 
         new_node
     }
@@ -136,14 +146,14 @@ impl IntermediateRepresentation {
      * Appends a multiply operation that depends on the operands `x` and `y`.
      */
     pub fn append_multiply(&mut self, x: NodeIndex, y: NodeIndex) -> NodeIndex {
-        self.append_2_input_node(Operation::Multiply(x, y), x, y)
+        self.append_2_input_node(Operation::Multiply, x, y)
     }
 
     /**
      * Appends an add operation that depends on the operands `x` and `y`.
      */
     pub fn append_add(&mut self, x: NodeIndex, y: NodeIndex) -> NodeIndex {
-        self.append_2_input_node(Operation::Add(x, y), x, y)
+        self.append_2_input_node(Operation::Add, x, y)
     }
 
     /**
@@ -173,14 +183,14 @@ impl IntermediateRepresentation {
      * Sppends a node designating `x` as an output of the circuit.
      */
     pub fn append_output_ciphertext(&mut self, x: NodeIndex) -> NodeIndex {
-        self.append_1_input_node(Operation::OutputCiphertext(x), x)
+        self.append_1_input_node(Operation::OutputCiphertext, x)
     }
 
     /**
      * Appends an operation that relinearizes `x`.
      */
     pub fn append_relinearize(&mut self, x: NodeIndex) -> NodeIndex {
-        self.append_1_input_node(Operation::Relinearize(x), x)
+        self.append_1_input_node(Operation::Relinearize, x)
     }
 
     /**
@@ -325,7 +335,7 @@ impl IntermediateRepresentation {
             .node_indices()
             .filter(|g| {
                 match self.graph[*g].operation {
-                    Operation::OutputCiphertext(_) => true,
+                    Operation::OutputCiphertext => true,
                     _ => false
                 }
             })
@@ -426,9 +436,13 @@ impl<'a> GraphQuery<'a> {
      * Typically, you want children writing forward traversal compiler passes and
      * parents when writing reverse traversal compiler passes.
      */
-    pub fn get_neighbors(&self, x: NodeIndex, direction: Direction) -> Neighbors<EdgeInfo> {
+    pub fn neighbors_directed(&self, x: NodeIndex, direction: Direction) -> Neighbors<EdgeInfo> {
         self.0.graph.neighbors_directed(x, direction)
-    }    
+    }
+
+    pub fn edges_directed(&self, x: NodeIndex, direction: Direction) -> Edges<EdgeInfo, Directed> {
+        self.0.graph.edges_directed(x, direction)
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -491,7 +505,7 @@ pub enum IRTransform {
     /**
      * Add a graph edge between two nodes.
      */
-    AddEdge(TransformNodeIndex, TransformNodeIndex),
+    AddEdge(TransformNodeIndex, TransformNodeIndex, EdgeInfo),
 }
 
 /**
@@ -613,11 +627,11 @@ impl TransformList {
 
                     None
                 }
-                AddEdge(x, y) => {
+                AddEdge(x, y, edge_info) => {
                     let x = self.materialize_index(*x);
                     let y = self.materialize_index(*y);
 
-                    ir.graph.update_edge(x, y, EdgeInfo::new());
+                    ir.graph.update_edge(x, y, *edge_info);
 
                     None
                 }
@@ -699,12 +713,12 @@ mod tests {
             nodes[1].1.operation,
             Operation::Literal(OuterLiteral::from(7i64))
         );
-        assert_eq!(nodes[2].1.operation, Operation::Add(NodeIndex::from(0), NodeIndex::from(1)));
+        assert_eq!(nodes[2].1.operation, Operation::Add);
         assert_eq!(
             nodes[3].1.operation,
             Operation::Literal(OuterLiteral::from(5u64))
         );
-        assert_eq!(nodes[4].1.operation, Operation::Multiply(NodeIndex::from(2), NodeIndex::from(3)));
+        assert_eq!(nodes[4].1.operation, Operation::Multiply);
 
         assert_eq!(
             ir.graph

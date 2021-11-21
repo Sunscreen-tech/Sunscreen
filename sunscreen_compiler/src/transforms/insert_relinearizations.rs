@@ -1,17 +1,22 @@
 use sunscreen_ir::{IRTransform::*, IntermediateRepresentation, Operation::*, TransformList};
 
-use petgraph::Direction;
+use petgraph::{
+    Direction,
+    visit::EdgeRef
+};
 
 pub fn apply_insert_relinearizations(ir: &mut IntermediateRepresentation) {
     ir.forward_traverse(|query, id| match query.get_node(id).operation {
-        Multiply(_a, _b) => {
+        Multiply => {
             let mut transforms = TransformList::new();
 
             let relin_node = transforms.push(AppendRelinearize(id.into()));
 
-            for e in query.get_neighbors(id, Direction::Outgoing) {
-                transforms.push(RemoveEdge(id.into(), e.into()));
-                transforms.push(AddEdge(relin_node.into(), e.into()));
+            for e in query.edges_directed(id, Direction::Outgoing) {
+                let operand_type = e.weight();
+
+                transforms.push(RemoveEdge(id.into(), e.target().into()));
+                transforms.push(AddEdge(relin_node.into(), e.target().into(), *operand_type));
             }
 
             transforms
@@ -58,7 +63,7 @@ mod tests {
             .node_indices()
             .filter(|i| {
                 match query.get_node(*i).operation {
-                    Operation::Relinearize(_) => true,
+                    Operation::Relinearize => true,
                     _ => false
                 }
             })
@@ -71,7 +76,7 @@ mod tests {
         assert_eq!(
             relin_nodes
                 .iter()
-                .all(|id| { query.get_neighbors(*id, Direction::Incoming).count() == 1 }),
+                .all(|id| { query.neighbors_directed(*id, Direction::Incoming).count() == 1 }),
             true
         );
 
@@ -79,10 +84,10 @@ mod tests {
         assert_eq!(
             relin_nodes.iter().all(|id| {
                 query
-                    .get_neighbors(*id, Direction::Incoming)
+                    .neighbors_directed(*id, Direction::Incoming)
                     .map(|id| query.get_node(id))
                     .all(|node| match node.operation {
-                        Operation::Multiply(_a, _b) => true,
+                        Operation::Multiply => true,
                         _ => false
                     })
             }),
@@ -92,7 +97,7 @@ mod tests {
         // The first relin node should point to add_2
         assert_eq!(
             query
-                .get_neighbors(relin_nodes[0], Direction::Outgoing)
+                .neighbors_directed(relin_nodes[0], Direction::Outgoing)
                 .count(),
             1
         );
@@ -100,7 +105,7 @@ mod tests {
         // The second relin node should point to nothing.
         assert_eq!(
             query
-                .get_neighbors(relin_nodes[1], Direction::Outgoing)
+                .neighbors_directed(relin_nodes[1], Direction::Outgoing)
                 .count(),
             0
         );
@@ -108,10 +113,10 @@ mod tests {
         // The first relin node should point to add_2
         assert_eq!(
             query
-                .get_neighbors(relin_nodes[0], Direction::Outgoing)
+                .neighbors_directed(relin_nodes[0], Direction::Outgoing)
                 .all(|i| {
                     match query.get_node(i).operation {
-                        Operation::Add(_a, _b) => true,
+                        Operation::Add => true,
                         _ => false
                     }
                 }),

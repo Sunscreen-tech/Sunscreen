@@ -3,7 +3,6 @@ mod insert_relinearizations;
 use petgraph::stable_graph::NodeIndex;
 use sunscreen_ir::IntermediateRepresentation;
 
-use crate::error::*;
 use insert_relinearizations::apply_insert_relinearizations;
 
 pub fn transform_intermediate_represenation(ir: &mut IntermediateRepresentation) {

@@ -270,7 +270,7 @@ mod tests {
     use super::*;
     use seal::*;
 
-    fn setup_scheme() -> (
+    fn setup_scheme(degree: u64) -> (
         KeyGenerator,
         Context,
         PublicKey,
@@ -279,18 +279,16 @@ mod tests {
         Decryptor,
         BFVEvaluator,
     ) {
-        let degree = 1024;
-
         let params = BfvEncryptionParametersBuilder::new()
             .set_poly_modulus_degree(degree)
-            .set_plain_modulus(PlainModulus::batching(degree, 14).unwrap())
+            .set_plain_modulus(PlainModulus::batching(degree, 17).unwrap())
             .set_coefficient_modulus(
                 CoefficientModulus::bfv_default(degree, SecurityLevel::default()).unwrap(),
             )
             .build()
             .unwrap();
 
-        let context = Context::new(&params, false, SecurityLevel::default()).unwrap();
+        let context = Context::new(&params, true, SecurityLevel::default()).unwrap();
 
         let keygen = KeyGenerator::new(&context).unwrap();
         let public_key = keygen.create_public_key();
@@ -316,12 +314,14 @@ mod tests {
         let c = ir.append_add(a, b);
         ir.append_output_ciphertext(c);
 
-        let (_keygen, context, _public_key, _secret_key, encryptor, decryptor, evaluator) = setup_scheme();
+        let degree = 8192;
+
+        let (_keygen, context, _public_key, _secret_key, encryptor, decryptor, evaluator) = setup_scheme(degree);
 
         let encoder = BFVEncoder::new(&context).unwrap();
 
-        let a = vec![42; 1024];
-        let b = vec![-24; 1024];
+        let a = vec![42; degree as usize];
+        let b = vec![-24; degree as usize];
 
         let pt_0 = encoder.encode_signed(&a).unwrap();
         let pt_1 = encoder.encode_signed(&b).unwrap();
@@ -337,6 +337,131 @@ mod tests {
 
         let o_p = decryptor.decrypt(&output[0]).unwrap();
         
-        assert_eq!(encoder.decode_signed(&o_p).unwrap(), vec![42-24; 1024]);
+        assert_eq!(encoder.decode_signed(&o_p).unwrap(), vec![42-24; degree as usize]);
+    }
+
+    #[test]
+    fn simple_mul() {
+        let mut ir = IntermediateRepresentation::new();
+
+        let a = ir.append_input_ciphertext(0);
+        let b = ir.append_input_ciphertext(1);
+        let c = ir.append_multiply(a, b);
+        ir.append_output_ciphertext(c);
+
+        let degree = 8192;
+
+        let (keygen, context, _public_key, _secret_key, encryptor, decryptor, evaluator) = setup_scheme(degree);
+
+        let encoder = BFVEncoder::new(&context).unwrap();
+        let relin_keys = keygen.create_relinearization_keys();
+
+        let a = vec![42; degree as usize];
+        let b = vec![-24; degree as usize];
+
+        let pt_0 = encoder.encode_signed(&a).unwrap();
+        let pt_1 = encoder.encode_signed(&b).unwrap();
+
+        let ct_0 = encryptor.encrypt(&pt_0).unwrap();
+        let ct_1 = encryptor.encrypt(&pt_1).unwrap();
+
+        let output = unsafe {
+            run_program_unchecked(&ir, &[ct_0, ct_1], &evaluator, Some(relin_keys))
+        };
+
+        assert_eq!(output.len(), 1);
+
+        let o_p = decryptor.decrypt(&output[0]).unwrap();
+        
+        assert_eq!(encoder.decode_signed(&o_p).unwrap(), vec![42*-24; degree as usize]);
+    }
+
+    #[test]
+    fn can_mul_and_relinearize() {
+        let mut ir = IntermediateRepresentation::new();
+
+        let a = ir.append_input_ciphertext(0);
+        let b = ir.append_input_ciphertext(1);
+        let c = ir.append_multiply(a, b);
+        let d = ir.append_relinearize(c);
+        ir.append_output_ciphertext(d);
+
+        let degree = 8192;
+
+        let (keygen, context, _public_key, _secret_key, encryptor, decryptor, evaluator) = setup_scheme(degree);
+
+        let encoder = BFVEncoder::new(&context).unwrap();
+        let relin_keys = keygen.create_relinearization_keys();
+
+        let a = vec![42; degree as usize];
+        let b = vec![-24; degree as usize];
+
+        let pt_0 = encoder.encode_signed(&a).unwrap();
+        let pt_1 = encoder.encode_signed(&b).unwrap();
+
+        let ct_0 = encryptor.encrypt(&pt_0).unwrap();
+        let ct_1 = encryptor.encrypt(&pt_1).unwrap();
+
+        let output = unsafe {
+            run_program_unchecked(&ir, &[ct_0, ct_1], &evaluator, Some(relin_keys))
+        };
+
+        assert_eq!(output.len(), 1);
+
+        let o_p = decryptor.decrypt(&output[0]).unwrap();
+        
+        assert_eq!(encoder.decode_signed(&o_p).unwrap(), vec![42*-24; degree as usize]);
+    }
+
+    #[test]
+    fn add_reduction() {
+        let mut ir = IntermediateRepresentation::new();
+
+        let a = ir.append_input_ciphertext(0);
+        let b = ir.append_input_ciphertext(1);
+        let c = ir.append_input_ciphertext(0);
+        let d = ir.append_input_ciphertext(1);
+        let e = ir.append_input_ciphertext(0);
+        let f = ir.append_input_ciphertext(1);
+        let g = ir.append_input_ciphertext(0);
+        let h = ir.append_input_ciphertext(1);
+
+        let a_0 = ir.append_add(a, b);
+        let a_1 = ir.append_add(c, d);
+        let a_2 = ir.append_add(e, f);
+        let a_3 = ir.append_add(g, h);
+
+        let a_0_0 = ir.append_add(a_0, a_1);
+        let a_1_0 = ir.append_add(a_2, a_3);
+
+        let res = ir.append_add(a_0_0, a_1_0);
+
+        ir.append_output_ciphertext(res);
+
+        let degree = 8192;
+
+        let (keygen, context, _public_key, _secret_key, encryptor, decryptor, evaluator) = setup_scheme(degree);
+
+        let encoder = BFVEncoder::new(&context).unwrap();
+        let relin_keys = keygen.create_relinearization_keys();
+
+        let a = vec![42; degree as usize];
+        let b = vec![-24; degree as usize];
+
+        let pt_0 = encoder.encode_signed(&a).unwrap();
+        let pt_1 = encoder.encode_signed(&b).unwrap();
+
+        let ct_0 = encryptor.encrypt(&pt_0).unwrap();
+        let ct_1 = encryptor.encrypt(&pt_1).unwrap();
+
+        let output = unsafe {
+            run_program_unchecked(&ir, &[ct_0, ct_1], &evaluator, Some(relin_keys))
+        };
+
+        assert_eq!(output.len(), 1);
+
+        let o_p = decryptor.decrypt(&output[0]).unwrap();
+        
+        assert_eq!(encoder.decode_signed(&o_p).unwrap(), vec![4 * (42-24); degree as usize]);
     }
 }

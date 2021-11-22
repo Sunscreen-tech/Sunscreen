@@ -7,11 +7,13 @@ use crate::error::{convert_seal_error, Error};
 use crate::modulus::unchecked_from_handle;
 use crate::Modulus;
 
+use serde::{Deserialize, Serialize};
+
 /**
  * The FHE scheme supported by SEAL.
  */
 #[repr(u8)]
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum SchemeType {
     /// None. Don't use this.
     None = 0x0,

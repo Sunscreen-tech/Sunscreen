@@ -29,8 +29,10 @@ mod tests {
     use sunscreen_ir::OuterLiteral;
     use sunscreen_ir::*;
 
+    use seal::SchemeType;
+
     fn create_test_dag() -> IntermediateRepresentation {
-        let mut ir = IntermediateRepresentation::new();
+        let mut ir = IntermediateRepresentation::new(SchemeType::Bfv);
 
         let ct = ir.append_input_ciphertext(0);
         let l1 = ir.append_input_literal(OuterLiteral::from(7i64));

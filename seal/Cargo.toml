@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 link-cplusplus="1.0.5"
-serde="1.0.130"
+serde={ version = "1.0.130", features = ["derive"] }
 
 [build-dependencies]
 cmake="0.1.46"

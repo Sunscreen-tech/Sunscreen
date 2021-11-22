@@ -1,5 +1,5 @@
 use crate::Operation::*;
-use crate::{EdgeInfo, Error, IRError, IntermediateRepresentation, NodeError, Result};
+use crate::{EdgeInfo, IRError, IntermediateRepresentation, NodeError};
 use petgraph::{algo::greedy_feedback_arc_set, stable_graph::NodeIndex, visit::EdgeRef, Direction};
 
 pub fn validate_ir(ir: &IntermediateRepresentation) -> Vec<IRError> {
@@ -27,7 +27,7 @@ pub fn validate_nodes(ir: &IntermediateRepresentation) -> Vec<IRError> {
 
     for i in ir.graph.node_indices() {
         let node_info = &ir.graph[i];
-        let error = match ir.graph[i].operation {
+        match ir.graph[i].operation {
             Add => {
                 errors.append(
                     &mut validate_binary_op_has_correct_operands(ir, i)

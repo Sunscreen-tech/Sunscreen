@@ -334,7 +334,7 @@ mod tests {
 
     #[test]
     fn simple_add() {
-        let mut ir = IntermediateRepresentation::new();
+        let mut ir = IntermediateRepresentation::new(SchemeType::Bfv);
 
         let a = ir.append_input_ciphertext(0);
         let b = ir.append_input_ciphertext(1);
@@ -371,7 +371,7 @@ mod tests {
 
     #[test]
     fn simple_mul() {
-        let mut ir = IntermediateRepresentation::new();
+        let mut ir = IntermediateRepresentation::new(SchemeType::Bfv);
 
         let a = ir.append_input_ciphertext(0);
         let b = ir.append_input_ciphertext(1);
@@ -410,7 +410,7 @@ mod tests {
 
     #[test]
     fn can_mul_and_relinearize() {
-        let mut ir = IntermediateRepresentation::new();
+        let mut ir = IntermediateRepresentation::new(SchemeType::Bfv);
 
         let a = ir.append_input_ciphertext(0);
         let b = ir.append_input_ciphertext(1);
@@ -450,7 +450,7 @@ mod tests {
 
     #[test]
     fn add_reduction() {
-        let mut ir = IntermediateRepresentation::new();
+        let mut ir = IntermediateRepresentation::new(SchemeType::Bfv);
 
         let a = ir.append_input_ciphertext(0);
         let b = ir.append_input_ciphertext(1);

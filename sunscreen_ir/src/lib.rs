@@ -18,12 +18,12 @@ use petgraph::{
     visit::{IntoNeighbors, IntoNodeIdentifiers},
     Directed, Direction,
 };
+use seal::SchemeType;
 use serde::{Deserialize, Serialize};
 
 pub use error::*;
 pub use literal::*;
 pub use operation::*;
-use validation::*;
 use IRTransform::*;
 use TransformNodeIndex::*;
 
@@ -88,6 +88,11 @@ type IRGraph = StableGraph<NodeInfo, EdgeInfo>;
  */
 pub struct IntermediateRepresentation {
     /**
+     * The scheme type this circuit will run under.
+     */
+    pub scheme: SchemeType,
+
+    /**
      * The underlying dependency graph.
      */
     pub graph: IRGraph,
@@ -108,8 +113,9 @@ impl IntermediateRepresentation {
     /**
      * Create a new new empty intermediate representation.
      */
-    pub fn new() -> Self {
+    pub fn new(scheme: SchemeType) -> Self {
         Self {
+            scheme,
             graph: StableGraph::new(),
         }
     }
@@ -397,6 +403,7 @@ impl IntermediateRepresentation {
         );
 
         Self {
+            scheme: self.scheme,
             graph: StableGraph::from(pruned),
         }
     }
@@ -449,6 +456,12 @@ impl<'a> GraphQuery<'a> {
         self.0.graph.neighbors_directed(x, direction)
     }
 
+    /**
+     * Returns incoming our outgoing edges for the node with index `x`.`
+     *
+     * Typically, you want outgoing writing forward traversal compiler passes and
+     * incoming when writing reverse traversal compiler passes.
+     */
     pub fn edges_directed(&self, x: NodeIndex, direction: Direction) -> Edges<EdgeInfo, Directed> {
         self.0.graph.edges_directed(x, direction)
     }
@@ -694,7 +707,7 @@ mod tests {
     use super::*;
 
     fn create_simple_dag() -> IntermediateRepresentation {
-        let mut ir = IntermediateRepresentation::new();
+        let mut ir = IntermediateRepresentation::new(SchemeType::Bfv);
 
         let ct = ir.append_input_ciphertext(0);
         let l1 = ir.append_input_literal(OuterLiteral::from(7i64));
@@ -877,7 +890,7 @@ mod tests {
 
     #[test]
     fn can_prune_ir() {
-        let mut ir = IntermediateRepresentation::new();
+        let mut ir = IntermediateRepresentation::new(SchemeType::Bfv);
 
         let ct = ir.append_input_ciphertext(0);
         let l1 = ir.append_input_literal(OuterLiteral::from(7i64));
@@ -887,7 +900,7 @@ mod tests {
 
         let pruned = ir.prune(&vec![add]);
 
-        let mut expected_ir = IntermediateRepresentation::new();
+        let mut expected_ir = IntermediateRepresentation::new(SchemeType::Bfv);
         let ct = expected_ir.append_input_ciphertext(0);
         let l1 = expected_ir.append_input_literal(OuterLiteral::from(7i64));
         expected_ir.append_add(ct, l1);
@@ -897,7 +910,7 @@ mod tests {
 
     #[test]
     fn can_prune_graph_with_removed_nodes() {
-        let mut ir = IntermediateRepresentation::new();
+        let mut ir = IntermediateRepresentation::new(SchemeType::Bfv);
 
         let ct = ir.append_input_ciphertext(0);
         let rem = ir.append_input_ciphertext(1);
@@ -915,7 +928,7 @@ mod tests {
 
         let pruned = ir.prune(&vec![add]);
 
-        let mut expected_ir = IntermediateRepresentation::new();
+        let mut expected_ir = IntermediateRepresentation::new(SchemeType::Bfv);
         let ct = expected_ir.append_input_ciphertext(0);
         let l1 = expected_ir.append_input_literal(OuterLiteral::from(7i64));
         expected_ir.append_add(ct, l1);
@@ -925,7 +938,7 @@ mod tests {
 
     #[test]
     fn can_prune_with_multiple_nodes() {
-        let mut ir = IntermediateRepresentation::new();
+        let mut ir = IntermediateRepresentation::new(SchemeType::Bfv);
 
         let ct1 = ir.append_input_ciphertext(0);
         let ct2 = ir.append_input_ciphertext(1);
@@ -939,7 +952,7 @@ mod tests {
 
         let pruned = ir.prune(&vec![o1, neg2]);
 
-        let mut expected_ir = IntermediateRepresentation::new();
+        let mut expected_ir = IntermediateRepresentation::new(SchemeType::Bfv);
         let ct1 = expected_ir.append_input_ciphertext(0);
         let ct2 = expected_ir.append_input_ciphertext(1);
         let neg1 = expected_ir.append_negate(ct1);
@@ -951,7 +964,7 @@ mod tests {
 
     #[test]
     fn pruning_empty_node_list_results_in_empty_graph() {
-        let mut ir = IntermediateRepresentation::new();
+        let mut ir = IntermediateRepresentation::new(SchemeType::Bfv);
 
         let ct1 = ir.append_input_ciphertext(0);
         let ct2 = ir.append_input_ciphertext(1);
@@ -965,7 +978,7 @@ mod tests {
 
         let pruned = ir.prune(&vec![]);
 
-        let expected_ir = IntermediateRepresentation::new();
+        let expected_ir = IntermediateRepresentation::new(SchemeType::Bfv);
 
         assert_eq!(pruned, expected_ir);
     }

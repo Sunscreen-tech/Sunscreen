@@ -1,9 +1,6 @@
 use sunscreen_ir::{IRTransform::*, IntermediateRepresentation, Operation::*, TransformList};
 
-use petgraph::{
-    Direction,
-    visit::EdgeRef
-};
+use petgraph::{visit::EdgeRef, Direction};
 
 pub fn apply_insert_relinearizations(ir: &mut IntermediateRepresentation) {
     ir.forward_traverse(|query, id| match query.get_node(id).operation {
@@ -61,11 +58,9 @@ mod tests {
         let relin_nodes = ir
             .graph
             .node_indices()
-            .filter(|i| {
-                match query.get_node(*i).operation {
-                    Operation::Relinearize => true,
-                    _ => false
-                }
+            .filter(|i| match query.get_node(*i).operation {
+                Operation::Relinearize => true,
+                _ => false,
             })
             .collect::<Vec<NodeIndex>>();
 
@@ -88,7 +83,7 @@ mod tests {
                     .map(|id| query.get_node(id))
                     .all(|node| match node.operation {
                         Operation::Multiply => true,
-                        _ => false
+                        _ => false,
                     })
             }),
             true
@@ -117,7 +112,7 @@ mod tests {
                 .all(|i| {
                     match query.get_node(i).operation {
                         Operation::Add => true,
-                        _ => false
+                        _ => false,
                     }
                 }),
             true

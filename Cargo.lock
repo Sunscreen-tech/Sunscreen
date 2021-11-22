@@ -495,7 +495,9 @@ name = "sunscreen_compiler"
 version = "0.1.0"
 dependencies = [
  "petgraph",
+ "seal",
  "sunscreen_ir",
+ "sunscreen_runtime",
 ]
 
 [[package]]

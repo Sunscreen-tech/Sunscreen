@@ -7,22 +7,23 @@
 mod error;
 mod literal;
 mod operation;
+mod validation;
 
 use petgraph::{
     algo::is_isomorphic_matching,
     algo::toposort,
     algo::tred::*,
-    Directed,
     graph::{Graph, NodeIndex},
     stable_graph::{Edges, Neighbors, StableGraph},
     visit::{IntoNeighbors, IntoNodeIdentifiers},
-    Direction,
+    Directed, Direction,
 };
 use serde::{Deserialize, Serialize};
 
 pub use error::*;
 pub use literal::*;
 pub use operation::*;
+use validation::*;
 use IRTransform::*;
 use TransformNodeIndex::*;
 
@@ -37,6 +38,12 @@ pub struct NodeInfo {
      * The operation this node represents.
      */
     pub operation: Operation,
+}
+
+impl ToString for NodeInfo {
+    fn to_string(&self) -> String {
+        format!("{:#?}", self.operation)
+    }
 }
 
 impl NodeInfo {
@@ -333,11 +340,9 @@ impl IntermediateRepresentation {
     pub fn get_outputs(&self) -> impl Iterator<Item = NodeIndex> + '_ {
         self.graph
             .node_indices()
-            .filter(|g| {
-                match self.graph[*g].operation {
-                    Operation::OutputCiphertext => true,
-                    _ => false
-                }
+            .filter(|g| match self.graph[*g].operation {
+                Operation::OutputCiphertext => true,
+                _ => false,
             })
     }
 
@@ -400,8 +405,12 @@ impl IntermediateRepresentation {
      * Validates this [`IntermediateRepresentation`] for correctness.
      */
     pub fn validate(&self) -> Result<()> {
-        // TODO: validate the program.
-    
+        let errors = validation::validate_ir(self);
+
+        if errors.len() > 0 {
+            return Err(Error::IRError(errors));
+        }
+
         Ok(())
     }
 }

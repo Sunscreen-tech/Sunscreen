@@ -4,10 +4,13 @@
 //! This crate contains the types and functions for executing a Sunscreen circuit
 //! (i.e. an [`IntermediateRepresentation`](sunscreen_ir::IntermediateRepresentation)).
 
+mod error;
+
+pub use crate::error::*;
 use sunscreen_ir::{EdgeInfo, IntermediateRepresentation, Operation::*};
 
 use crossbeam::atomic::AtomicCell;
-use petgraph::{stable_graph::{NodeIndex}, Direction, visit::{EdgeRef}};
+use petgraph::{stable_graph::NodeIndex, visit::EdgeRef, Direction};
 use seal::{Ciphertext, Evaluator, RelinearizationKeys};
 
 use std::borrow::Cow;
@@ -19,20 +22,27 @@ use std::sync::atomic::{AtomicUsize, Ordering};
  * anything other than a single left and single right operand, having more operands will result
  * in one being selected arbitrarily. Validating the [`IntermediateRepresentation`] will
  * reveal having the wrong number of operands.
- * 
+ *
  * # Panics
  * Panics if the given node doesn't have at least one left and one right operand. Calling
  * [`validate()`](sunscreen_ir::IntermediateRepresentation::validate()) should reveal this
  * issue.
  */
-pub fn get_left_right_operands(ir: &IntermediateRepresentation, index: NodeIndex) -> (NodeIndex, NodeIndex) {
-    let left = ir.graph.edges_directed(index, Direction::Incoming)
+pub fn get_left_right_operands(
+    ir: &IntermediateRepresentation,
+    index: NodeIndex,
+) -> (NodeIndex, NodeIndex) {
+    let left = ir
+        .graph
+        .edges_directed(index, Direction::Incoming)
         .filter(|e| *e.weight() == EdgeInfo::LeftOperand)
         .map(|e| e.source())
         .nth(0)
         .unwrap();
 
-    let right = ir.graph.edges_directed(index, Direction::Incoming)
+    let right = ir
+        .graph
+        .edges_directed(index, Direction::Incoming)
         .filter(|e| *e.weight() == EdgeInfo::RightOperand)
         .map(|e| e.source())
         .nth(0)
@@ -45,18 +55,33 @@ pub fn get_left_right_operands(ir: &IntermediateRepresentation, index: NodeIndex
  * Gets the single unary input operand for the given node. If the [`IntermediateRepresentation`]
  * is malformed and the node has more than one UnaryOperand, one will be selected arbitrarily.
  * As such, one should validate the [`IntermediateRepresentation`] before calling this method.
- * 
+ *
  * # Panics
  * Panics if the given node doesn't have at least one unary operant. Calling
  * [`validate()`](sunscreen_ir::IntermediateRepresentation::validate()) should reveal this
  * issue.
  */
 pub fn get_unary_operand(ir: &IntermediateRepresentation, index: NodeIndex) -> NodeIndex {
-    ir.graph.edges_directed(index, Direction::Incoming)
+    ir.graph
+        .edges_directed(index, Direction::Incoming)
         .filter(|e| *e.weight() == EdgeInfo::UnaryOperand)
         .map(|e| e.source())
         .nth(0)
         .unwrap()
+}
+
+/**
+ * Validates and runs the given 
+ */
+pub fn validate_and_run_program<E: Evaluator + Sync + Send>(
+    ir: &IntermediateRepresentation,
+    inputs: &[Ciphertext],
+    evaluator: &E,
+    relin_keys: Option<RelinearizationKeys>,
+) -> Result<Vec<Ciphertext>> {
+    ir.validate()?;
+
+    Ok(unsafe { run_program_unchecked(ir, inputs, evaluator, relin_keys) })
 }
 
 /**
@@ -114,7 +139,8 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
 
             match &node.operation {
                 InputCiphertext(id) => {
-                    data[index.index()].store(Some(Cow::Borrowed(&inputs[*id]))); // moo
+                    data[index.index()].store(Some(Cow::Borrowed(&inputs[*id])));
+                    // moo
                 }
                 ShiftLeft => unimplemented!(),
                 ShiftRight => unimplemented!(),
@@ -171,16 +197,14 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
     ir.graph
         .node_indices()
         .filter_map(|id| match ir.graph[id].operation {
-            OutputCiphertext => {
-                Some(get_ciphertext(&data, id.index()).clone().into_owned())
-            }
+            OutputCiphertext => Some(get_ciphertext(&data, id.index()).clone().into_owned()),
             _ => None,
         })
         .collect()
 }
 
 /**
- * Traverses the graph in the given 
+ * Traverses the graph in the given
  */
 fn parallel_traverse<F>(ir: &IntermediateRepresentation, callback: F, run_to: Option<NodeIndex>)
 where
@@ -197,7 +221,8 @@ where
 
     for n in ir.graph.node_indices() {
         unsafe {
-            *deps.get_unchecked_mut(n.index()) = AtomicUsize::new(ir.graph.neighbors_directed(n, Direction::Incoming).count());
+            *deps.get_unchecked_mut(n.index()) =
+                AtomicUsize::new(ir.graph.neighbors_directed(n, Direction::Incoming).count());
         }
     }
 
@@ -270,7 +295,9 @@ mod tests {
     use super::*;
     use seal::*;
 
-    fn setup_scheme(degree: u64) -> (
+    fn setup_scheme(
+        degree: u64,
+    ) -> (
         KeyGenerator,
         Context,
         PublicKey,
@@ -316,7 +343,8 @@ mod tests {
 
         let degree = 8192;
 
-        let (_keygen, context, _public_key, _secret_key, encryptor, decryptor, evaluator) = setup_scheme(degree);
+        let (_keygen, context, _public_key, _secret_key, encryptor, decryptor, evaluator) =
+            setup_scheme(degree);
 
         let encoder = BFVEncoder::new(&context).unwrap();
 
@@ -329,15 +357,16 @@ mod tests {
         let ct_0 = encryptor.encrypt(&pt_0).unwrap();
         let ct_1 = encryptor.encrypt(&pt_1).unwrap();
 
-        let output = unsafe {
-            run_program_unchecked(&ir, &[ct_0, ct_1], &evaluator, None)
-        };
+        let output = unsafe { run_program_unchecked(&ir, &[ct_0, ct_1], &evaluator, None) };
 
         assert_eq!(output.len(), 1);
 
         let o_p = decryptor.decrypt(&output[0]).unwrap();
-        
-        assert_eq!(encoder.decode_signed(&o_p).unwrap(), vec![42-24; degree as usize]);
+
+        assert_eq!(
+            encoder.decode_signed(&o_p).unwrap(),
+            vec![42 - 24; degree as usize]
+        );
     }
 
     #[test]
@@ -351,7 +380,8 @@ mod tests {
 
         let degree = 8192;
 
-        let (keygen, context, _public_key, _secret_key, encryptor, decryptor, evaluator) = setup_scheme(degree);
+        let (keygen, context, _public_key, _secret_key, encryptor, decryptor, evaluator) =
+            setup_scheme(degree);
 
         let encoder = BFVEncoder::new(&context).unwrap();
         let relin_keys = keygen.create_relinearization_keys();
@@ -365,15 +395,17 @@ mod tests {
         let ct_0 = encryptor.encrypt(&pt_0).unwrap();
         let ct_1 = encryptor.encrypt(&pt_1).unwrap();
 
-        let output = unsafe {
-            run_program_unchecked(&ir, &[ct_0, ct_1], &evaluator, Some(relin_keys))
-        };
+        let output =
+            unsafe { run_program_unchecked(&ir, &[ct_0, ct_1], &evaluator, Some(relin_keys)) };
 
         assert_eq!(output.len(), 1);
 
         let o_p = decryptor.decrypt(&output[0]).unwrap();
-        
-        assert_eq!(encoder.decode_signed(&o_p).unwrap(), vec![42*-24; degree as usize]);
+
+        assert_eq!(
+            encoder.decode_signed(&o_p).unwrap(),
+            vec![42 * -24; degree as usize]
+        );
     }
 
     #[test]
@@ -388,7 +420,8 @@ mod tests {
 
         let degree = 8192;
 
-        let (keygen, context, _public_key, _secret_key, encryptor, decryptor, evaluator) = setup_scheme(degree);
+        let (keygen, context, _public_key, _secret_key, encryptor, decryptor, evaluator) =
+            setup_scheme(degree);
 
         let encoder = BFVEncoder::new(&context).unwrap();
         let relin_keys = keygen.create_relinearization_keys();
@@ -402,15 +435,17 @@ mod tests {
         let ct_0 = encryptor.encrypt(&pt_0).unwrap();
         let ct_1 = encryptor.encrypt(&pt_1).unwrap();
 
-        let output = unsafe {
-            run_program_unchecked(&ir, &[ct_0, ct_1], &evaluator, Some(relin_keys))
-        };
+        let output =
+            unsafe { run_program_unchecked(&ir, &[ct_0, ct_1], &evaluator, Some(relin_keys)) };
 
         assert_eq!(output.len(), 1);
 
         let o_p = decryptor.decrypt(&output[0]).unwrap();
-        
-        assert_eq!(encoder.decode_signed(&o_p).unwrap(), vec![42*-24; degree as usize]);
+
+        assert_eq!(
+            encoder.decode_signed(&o_p).unwrap(),
+            vec![42 * -24; degree as usize]
+        );
     }
 
     #[test]
@@ -440,7 +475,8 @@ mod tests {
 
         let degree = 8192;
 
-        let (keygen, context, _public_key, _secret_key, encryptor, decryptor, evaluator) = setup_scheme(degree);
+        let (keygen, context, _public_key, _secret_key, encryptor, decryptor, evaluator) =
+            setup_scheme(degree);
 
         let encoder = BFVEncoder::new(&context).unwrap();
         let relin_keys = keygen.create_relinearization_keys();
@@ -454,14 +490,16 @@ mod tests {
         let ct_0 = encryptor.encrypt(&pt_0).unwrap();
         let ct_1 = encryptor.encrypt(&pt_1).unwrap();
 
-        let output = unsafe {
-            run_program_unchecked(&ir, &[ct_0, ct_1], &evaluator, Some(relin_keys))
-        };
+        let output =
+            unsafe { run_program_unchecked(&ir, &[ct_0, ct_1], &evaluator, Some(relin_keys)) };
 
         assert_eq!(output.len(), 1);
 
         let o_p = decryptor.decrypt(&output[0]).unwrap();
-        
-        assert_eq!(encoder.decode_signed(&o_p).unwrap(), vec![4 * (42-24); degree as usize]);
+
+        assert_eq!(
+            encoder.decode_signed(&o_p).unwrap(),
+            vec![4 * (42 - 24); degree as usize]
+        );
     }
 }

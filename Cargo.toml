@@ -1,7 +1,7 @@
 [workspace]
 members = [
     "seal",
-    "sunscreen_compiler",
+    "sunscreen_backend",
     "sunscreen_ir",
     "sunscreen_runtime",
 ]

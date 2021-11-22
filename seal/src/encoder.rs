@@ -219,14 +219,14 @@ impl Drop for BFVEncoder {
  * Creates an encoder that can turn i64 or u64 values into a Plaintext. This encoder
  * is not recommended as it's an inefficient use of the plain modulus space.
  */
-pub struct BFVScalarEncoder { }
+pub struct BFVScalarEncoder {}
 
 impl BFVScalarEncoder {
     /**
      * Creates a new ScalarBFVEncoder
      */
     pub fn new() -> Self {
-        Self { }
+        Self {}
     }
 
     /**
@@ -234,12 +234,10 @@ impl BFVScalarEncoder {
      */
     pub fn encode_unsigned(&self, val: u64) -> Result<Plaintext> {
         let plaintext = Plaintext::new()?;
-    
-        convert_seal_error(unsafe { 
-            bindgen::Plaintext_Set3(plaintext.get_handle(), val)
-         })?;
 
-         Ok(plaintext)
+        convert_seal_error(unsafe { bindgen::Plaintext_Set3(plaintext.get_handle(), val) })?;
+
+        Ok(plaintext)
     }
 
     /**
@@ -247,12 +245,12 @@ impl BFVScalarEncoder {
      */
     pub fn encode_signed(&self, val: i64) -> Result<Plaintext> {
         let plaintext = Plaintext::new()?;
-    
+
         convert_seal_error(unsafe {
             bindgen::Plaintext_Set3(plaintext.get_handle(), std::mem::transmute(val))
-         })?;
+        })?;
 
-         Ok(plaintext)
+        Ok(plaintext)
     }
 
     /**
@@ -262,15 +260,11 @@ impl BFVScalarEncoder {
         let mut len: u64 = 0;
         let mut coeff: u64 = 0;
 
-        convert_seal_error(unsafe {
-            bindgen::Plaintext_CoeffCount(p.get_handle(), &mut len)
-         })?;
+        convert_seal_error(unsafe { bindgen::Plaintext_CoeffCount(p.get_handle(), &mut len) })?;
 
-        convert_seal_error(unsafe {
-            bindgen::Plaintext_CoeffAt(p.get_handle(), 0, &mut coeff)
-        })?;
+        convert_seal_error(unsafe { bindgen::Plaintext_CoeffAt(p.get_handle(), 0, &mut coeff) })?;
 
-         Ok(coeff)
+        Ok(coeff)
     }
 
     /**
@@ -280,15 +274,13 @@ impl BFVScalarEncoder {
         let mut len: u64 = 0;
         let mut coeff: i64 = 0;
 
-        convert_seal_error(unsafe {
-            bindgen::Plaintext_CoeffCount(p.get_handle(), &mut len)
-         })?;
+        convert_seal_error(unsafe { bindgen::Plaintext_CoeffCount(p.get_handle(), &mut len) })?;
 
         convert_seal_error(unsafe {
             bindgen::Plaintext_CoeffAt(p.get_handle(), 0, std::mem::transmute(&mut coeff))
         })?;
 
-         Ok(coeff)
+        Ok(coeff)
     }
 }
 

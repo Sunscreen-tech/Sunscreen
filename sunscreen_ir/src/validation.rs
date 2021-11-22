@@ -2,7 +2,7 @@ use crate::Operation::*;
 use crate::{EdgeInfo, IRError, IntermediateRepresentation, NodeError};
 use petgraph::{algo::greedy_feedback_arc_set, stable_graph::NodeIndex, visit::EdgeRef, Direction};
 
-pub fn validate_ir(ir: &IntermediateRepresentation) -> Vec<IRError> {
+pub(crate) fn validate_ir(ir: &IntermediateRepresentation) -> Vec<IRError> {
     let mut errors = vec![];
 
     errors.append(&mut ir_has_no_cycle(ir));
@@ -12,7 +12,7 @@ pub fn validate_ir(ir: &IntermediateRepresentation) -> Vec<IRError> {
     errors
 }
 
-pub fn ir_has_no_cycle(ir: &IntermediateRepresentation) -> Vec<IRError> {
+pub(crate) fn ir_has_no_cycle(ir: &IntermediateRepresentation) -> Vec<IRError> {
     let mut errors = vec![];
 
     if greedy_feedback_arc_set(&ir.graph).next() != None {
@@ -22,7 +22,7 @@ pub fn ir_has_no_cycle(ir: &IntermediateRepresentation) -> Vec<IRError> {
     errors
 }
 
-pub fn validate_nodes(ir: &IntermediateRepresentation) -> Vec<IRError> {
+pub(crate) fn validate_nodes(ir: &IntermediateRepresentation) -> Vec<IRError> {
     let mut errors = vec![];
 
     for i in ir.graph.node_indices() {
@@ -169,4 +169,230 @@ pub fn get_unary_operand(ir: &IntermediateRepresentation, index: NodeIndex) -> O
         .filter(|e| *e.weight() == EdgeInfo::UnaryOperand)
         .map(|e| e.source())
         .nth(0)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use seal::SchemeType;
+
+    // IntermediateRepresentation objects created with the API are guaranteed
+    // to never produce errors. We may only deserialize an erroneous IR.
+
+    #[test]
+    fn no_errors_for_ok_ir() {
+        let mut ir = IntermediateRepresentation::new(SchemeType::Bfv);
+        let a = ir.append_input_ciphertext(0);
+        let b = ir.append_input_ciphertext(1);
+        ir.append_add(a, b);
+
+        assert_eq!(validate_ir(&ir).len(), 0);
+    }
+
+    #[test]
+    fn error_for_cycle() {
+        let ir_str = serde_json::json!({
+          "scheme": "Bfv",
+          "graph": {
+            "nodes": [
+              {
+                "operation": {
+                  "InputCiphertext": 0
+                }
+              },
+              {
+                "operation": {
+                  "InputCiphertext": 1
+                }
+              },
+              {
+                "operation": "Add"
+              }
+            ],
+            "node_holes": [],
+            "edge_property": "directed",
+            "edges": [
+              [
+                0,
+                2,
+                "LeftOperand"
+              ],
+              [
+                1,
+                2,
+                "RightOperand"
+              ],
+              [
+                2,
+                0,
+                "RightOperand"
+              ]
+            ]
+          }
+        });
+
+        let ir: IntermediateRepresentation = serde_json::from_value(ir_str).unwrap();
+
+        let errors = validate_ir(&ir);
+
+        assert_eq!(errors.len(), 1);
+        assert_eq!(errors[0], IRError::IRHasCycles);
+    }
+
+    #[test]
+    fn add_wrong_operands() {
+        let ir_str = serde_json::json!({
+          "scheme": "Bfv",
+          "graph": {
+            "nodes": [
+              {
+                "operation": {
+                  "InputCiphertext": 0
+                }
+              },
+              {
+                "operation": {
+                  "InputCiphertext": 1
+                }
+              },
+              {
+                "operation": "Add"
+              }
+            ],
+            "node_holes": [],
+            "edge_property": "directed",
+            "edges": [
+              [
+                0,
+                2,
+                "LeftOperand"
+              ],
+              [
+                1,
+                2,
+                "LeftOperand"
+              ],
+            ]
+          }
+        });
+
+        let ir: IntermediateRepresentation = serde_json::from_value(ir_str).unwrap();
+
+        let errors = validate_ir(&ir);
+
+        assert_eq!(errors.len(), 1);
+        assert_eq!(
+            errors[0],
+            IRError::NodeError(
+                NodeIndex::from(2),
+                "Add".to_owned(),
+                NodeError::MissingOperand(EdgeInfo::RightOperand)
+            )
+        );
+    }
+
+    #[test]
+    fn add_too_few_operands() {
+        let ir_str = serde_json::json!({
+          "scheme": "Bfv",
+          "graph": {
+            "nodes": [
+              {
+                "operation": {
+                  "InputCiphertext": 0
+                }
+              },
+              {
+                "operation": {
+                  "InputCiphertext": 1
+                }
+              },
+              {
+                "operation": "Add"
+              }
+            ],
+            "node_holes": [],
+            "edge_property": "directed",
+            "edges": [
+              [
+                0,
+                2,
+                "LeftOperand"
+              ],
+            ]
+          }
+        });
+
+        let ir: IntermediateRepresentation = serde_json::from_value(ir_str).unwrap();
+
+        let errors = validate_ir(&ir);
+
+        assert_eq!(errors.len(), 1);
+        assert_eq!(
+            errors[0],
+            IRError::NodeError(
+                NodeIndex::from(2),
+                "Add".to_owned(),
+                NodeError::WrongOperandCount(2, 1)
+            )
+        );
+    }
+
+    #[test]
+    fn add_too_many_operands() {
+        let ir_str = serde_json::json!({
+          "scheme": "Bfv",
+          "graph": {
+            "nodes": [
+              {
+                "operation": {
+                  "InputCiphertext": 0
+                }
+              },
+              {
+                "operation": {
+                  "InputCiphertext": 1
+                }
+              },
+              {
+                "operation": "Add"
+              }
+            ],
+            "node_holes": [],
+            "edge_property": "directed",
+            "edges": [
+              [
+                0,
+                2,
+                "LeftOperand"
+              ],
+              [
+                0,
+                2,
+                "RightOperand"
+              ],
+              [
+                0,
+                2,
+                "LeftOperand"
+              ],
+            ]
+          }
+        });
+
+        let ir: IntermediateRepresentation = serde_json::from_value(ir_str).unwrap();
+
+        let errors = validate_ir(&ir);
+
+        assert_eq!(errors.len(), 1);
+        assert_eq!(
+            errors[0],
+            IRError::NodeError(
+                NodeIndex::from(2),
+                "Add".to_owned(),
+                NodeError::WrongOperandCount(2, 3)
+            )
+        );
+    }
 }

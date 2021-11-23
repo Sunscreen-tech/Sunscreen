@@ -10,7 +10,7 @@ use seal::{
     BFVEvaluator, BFVScalarEncoder, BfvEncryptionParametersBuilder, Ciphertext, CoefficientModulus,
     Context, Decryptor, Encryptor, KeyGenerator, Modulus, PlainModulus, SchemeType, SecurityLevel,
 };
-use sunscreen_ir::{IntermediateRepresentation, Operation};
+use sunscreen_circuit::{Circuit, Operation};
 use sunscreen_runtime::run_program_unchecked;
 
 const LATTICE_DIMENSIONS: &[u64] = &[1024, 2048, 4096, 8192, 16384, 32768];
@@ -51,7 +51,7 @@ pub enum PlainModulusConstraint {
  *
  */
 pub fn determine_params(
-    ir: &IntermediateRepresentation,
+    ir: &Circuit,
     plaintext_constraint: PlainModulusConstraint,
     security_level: SecurityLevel,
     noise_margin_bits: u32,
@@ -207,9 +207,9 @@ pub fn determine_params(
 }
 
 /**
- * Clones the given [`IntermediateRepresentation`] and compiles it.
+ * Clones the given [`Circuit`] and compiles it.
  */
-pub fn compile(ir: &IntermediateRepresentation) -> IntermediateRepresentation {
+pub fn compile(ir: &Circuit) -> Circuit {
     let mut clone = ir.clone();
 
     transform_intermediate_represenation(&mut clone);
@@ -218,9 +218,9 @@ pub fn compile(ir: &IntermediateRepresentation) -> IntermediateRepresentation {
 }
 
 /**
- * Consumes the given [`IntermediateRepresentation`] and compiles it.
+ * Consumes the given [`Circuit`] and compiles it.
  */
-pub fn compile_inplace(mut ir: IntermediateRepresentation) -> IntermediateRepresentation {
+pub fn compile_inplace(mut ir: Circuit) -> Circuit {
     transform_intermediate_represenation(&mut ir);
 
     ir
@@ -234,7 +234,7 @@ mod tests {
     fn get_params_add_reduction() {
         let _ = env_logger::try_init();
 
-        let mut ir = IntermediateRepresentation::new(SchemeType::Bfv);
+        let mut ir = Circuit::new(SchemeType::Bfv);
 
         let a = ir.append_input_ciphertext(0);
         let b = ir.append_input_ciphertext(1);
@@ -280,7 +280,7 @@ mod tests {
     fn get_params_mul_reduction() {
         let _ = env_logger::try_init();
 
-        let mut ir = IntermediateRepresentation::new(SchemeType::Bfv);
+        let mut ir = Circuit::new(SchemeType::Bfv);
 
         let a = ir.append_input_ciphertext(0);
         let b = ir.append_input_ciphertext(1);
@@ -320,7 +320,7 @@ mod tests {
     fn get_params_single_mul_relin() {
         let _ = env_logger::try_init();
 
-        let mut ir = IntermediateRepresentation::new(SchemeType::Bfv);
+        let mut ir = Circuit::new(SchemeType::Bfv);
 
         let a = ir.append_input_ciphertext(0);
         let b = ir.append_input_ciphertext(1);
@@ -353,7 +353,7 @@ mod tests {
     fn get_params_single_add() {
         let _ = env_logger::try_init();
 
-        let mut ir = IntermediateRepresentation::new(SchemeType::Bfv);
+        let mut ir = Circuit::new(SchemeType::Bfv);
 
         let a = ir.append_input_ciphertext(0);
         let b = ir.append_input_ciphertext(1);

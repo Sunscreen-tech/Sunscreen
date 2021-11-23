@@ -2,12 +2,12 @@
 #![deny(rustdoc::broken_intra_doc_links)]
 
 //! This crate contains the types and functions for executing a Sunscreen circuit
-//! (i.e. an [`IntermediateRepresentation`](sunscreen_ir::IntermediateRepresentation)).
+//! (i.e. an [`Circuit`](sunscreen_circuit::Circuit)).
 
 mod error;
 
 pub use crate::error::*;
-use sunscreen_ir::{EdgeInfo, IntermediateRepresentation, Operation::*};
+use sunscreen_circuit::{EdgeInfo, Circuit, Operation::*};
 
 use crossbeam::atomic::AtomicCell;
 use petgraph::{stable_graph::NodeIndex, visit::EdgeRef, Direction};
@@ -20,16 +20,16 @@ use std::sync::atomic::{AtomicUsize, Ordering};
  * Gets the two input operands and returns a tuple of left, right. For some operations
  * (i.e. subtraction), order matters. While it's erroneous for a binary operations to have
  * anything other than a single left and single right operand, having more operands will result
- * in one being selected arbitrarily. Validating the [`IntermediateRepresentation`] will
+ * in one being selected arbitrarily. Validating the [`Circuit`] will
  * reveal having the wrong number of operands.
  *
  * # Panics
  * Panics if the given node doesn't have at least one left and one right operand. Calling
- * [`validate()`](sunscreen_ir::IntermediateRepresentation::validate()) should reveal this
+ * [`validate()`](sunscreen_circuit::Circuit::validate()) should reveal this
  * issue.
  */
 pub fn get_left_right_operands(
-    ir: &IntermediateRepresentation,
+    ir: &Circuit,
     index: NodeIndex,
 ) -> (NodeIndex, NodeIndex) {
     let left = ir
@@ -52,16 +52,16 @@ pub fn get_left_right_operands(
 }
 
 /**
- * Gets the single unary input operand for the given node. If the [`IntermediateRepresentation`]
+ * Gets the single unary input operand for the given node. If the [`Circuit`]
  * is malformed and the node has more than one UnaryOperand, one will be selected arbitrarily.
- * As such, one should validate the [`IntermediateRepresentation`] before calling this method.
+ * As such, one should validate the [`Circuit`] before calling this method.
  *
  * # Panics
  * Panics if the given node doesn't have at least one unary operant. Calling
- * [`validate()`](sunscreen_ir::IntermediateRepresentation::validate()) should reveal this
+ * [`validate()`](sunscreen_circuit::Circuit::validate()) should reveal this
  * issue.
  */
-pub fn get_unary_operand(ir: &IntermediateRepresentation, index: NodeIndex) -> NodeIndex {
+pub fn get_unary_operand(ir: &Circuit, index: NodeIndex) -> NodeIndex {
     ir.graph
         .edges_directed(index, Direction::Incoming)
         .filter(|e| *e.weight() == EdgeInfo::UnaryOperand)
@@ -71,10 +71,11 @@ pub fn get_unary_operand(ir: &IntermediateRepresentation, index: NodeIndex) -> N
 }
 
 /**
- * Validates and runs the given
+ * Validates and runs the given circuit. Unless you can guarantee your circuit is valid,
+ * you should use this method rather than [`run_program_unchecked`].
  */
 pub fn validate_and_run_program<E: Evaluator + Sync + Send>(
-    ir: &IntermediateRepresentation,
+    ir: &Circuit,
     inputs: &[Ciphertext],
     evaluator: &E,
     relin_keys: Option<RelinearizationKeys>,
@@ -85,25 +86,25 @@ pub fn validate_and_run_program<E: Evaluator + Sync + Send>(
 }
 
 /**
- * Run the given [`IntermediateRepresentation`] to completion with the given inputs. This
+ * Run the given [`Circuit`] to completion with the given inputs. This
  * method performs no validation. You must verify the program is first valid. Programs produced
  * by the compiler are guaranteed to be valid, but deserialization does not make any such
- * guarantees. Call [`validate()`](sunscreen_ir::IntermediateRepresentation::validate()) to verify a program's correctness.
+ * guarantees. Call [`validate()`](sunscreen_circuit::Circuit::validate()) to verify a program's correctness.
  *
  * # Panics
- * Calling this method on a malformed [`IntermediateRepresentation`] may
+ * Calling this method on a malformed [`Circuit`] may
  * result in a panic.
  *
  * # Non-termination
- * Calling this method on a malformed [`IntermediateRepresentation`] may
+ * Calling this method on a malformed [`Circuit`] may
  * result in non-termination.
  *
  * # Undefined behavior
- * Calling this method on a malformed [`IntermediateRepresentation`] may
+ * Calling this method on a malformed [`Circuit`] may
  * result in undefined behavior.
  */
 pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
-    ir: &IntermediateRepresentation,
+    ir: &Circuit,
     inputs: &[Ciphertext],
     evaluator: &E,
     relin_keys: Option<RelinearizationKeys>,
@@ -206,7 +207,7 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
 /**
  * Traverses the graph in the given
  */
-fn parallel_traverse<F>(ir: &IntermediateRepresentation, callback: F, run_to: Option<NodeIndex>)
+fn parallel_traverse<F>(ir: &Circuit, callback: F, run_to: Option<NodeIndex>)
 where
     F: Fn(NodeIndex) -> () + Sync + Send,
 {
@@ -334,7 +335,7 @@ mod tests {
 
     #[test]
     fn simple_add() {
-        let mut ir = IntermediateRepresentation::new(SchemeType::Bfv);
+        let mut ir = Circuit::new(SchemeType::Bfv);
 
         let a = ir.append_input_ciphertext(0);
         let b = ir.append_input_ciphertext(1);
@@ -371,7 +372,7 @@ mod tests {
 
     #[test]
     fn simple_mul() {
-        let mut ir = IntermediateRepresentation::new(SchemeType::Bfv);
+        let mut ir = Circuit::new(SchemeType::Bfv);
 
         let a = ir.append_input_ciphertext(0);
         let b = ir.append_input_ciphertext(1);
@@ -410,7 +411,7 @@ mod tests {
 
     #[test]
     fn can_mul_and_relinearize() {
-        let mut ir = IntermediateRepresentation::new(SchemeType::Bfv);
+        let mut ir = Circuit::new(SchemeType::Bfv);
 
         let a = ir.append_input_ciphertext(0);
         let b = ir.append_input_ciphertext(1);
@@ -450,7 +451,7 @@ mod tests {
 
     #[test]
     fn add_reduction() {
-        let mut ir = IntermediateRepresentation::new(SchemeType::Bfv);
+        let mut ir = Circuit::new(SchemeType::Bfv);
 
         let a = ir.append_input_ciphertext(0);
         let b = ir.append_input_ciphertext(1);

@@ -1,11 +1,11 @@
 #[derive(Debug, Clone, PartialEq)]
 pub enum Error {
     NoParams,
-    IRError(sunscreen_ir::Error),
+    IRError(sunscreen_circuit::Error),
 }
 
-impl From<sunscreen_ir::Error> for Error {
-    fn from(err: sunscreen_ir::Error) -> Self {
+impl From<sunscreen_circuit::Error> for Error {
+    fn from(err: sunscreen_circuit::Error) -> Self {
         Self::IRError(err)
     }
 }

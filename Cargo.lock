@@ -511,12 +511,12 @@ dependencies = [
  "log",
  "petgraph",
  "seal",
- "sunscreen_ir",
+ "sunscreen_circuit",
  "sunscreen_runtime",
 ]
 
 [[package]]
-name = "sunscreen_ir"
+name = "sunscreen_circuit"
 version = "0.1.0"
 dependencies = [
  "petgraph",
@@ -534,7 +534,7 @@ dependencies = [
  "petgraph",
  "scoped_threadpool",
  "seal",
- "sunscreen_ir",
+ "sunscreen_circuit",
 ]
 
 [[package]]

@@ -71,7 +71,7 @@ impl Plaintext {
      * 5. Term with the exponent value of one must be exactly written as x^1
      * 6. Term with the exponent value of zero (the constant term) must be written
      * as just a hexadecimal number without exponent
-     * 7. Terms must be separated by exactly [space]+[space] and minus is not
+     * 7. Terms must be separated by exactly \[space\]+\[space\] and minus is not
      * allowed
      * 8. Other than the +, no other terms should have whitespace
      *

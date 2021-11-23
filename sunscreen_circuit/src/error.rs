@@ -13,14 +13,14 @@ pub type OpName = String;
  */
 pub enum Error {
     /**
-     * The given [`IntermediateRepresentation`](crate::IntermediateRepresentation) has
+     * The given [`Circuit`](crate::Circuit) has
      * one or more errors. The inner value is the list of errors.
      */
     IRError(Vec<IRError>),
 }
 
 /**
- * An error in an [`IntermediateRepresentation`](crate::IntermediateRepresentation).
+ * An error in an [`Circuit`](crate::Circuit).
  */
 #[derive(Debug, Clone, PartialEq)]
 pub enum IRError {
@@ -36,7 +36,7 @@ pub enum IRError {
 }
 
 /**
- * An error on a node in an [`IntermediateRepresentation`](crate::IntermediateRepresentation).
+ * An error on a node in an [`Circuit`](crate::Circuit).
  */
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum NodeError {

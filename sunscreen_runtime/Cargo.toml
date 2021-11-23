@@ -8,7 +8,7 @@ edition = "2021"
 [dependencies]
 crossbeam = "0.8.1"
 seal = { path = "../seal" }
-sunscreen_ir = { path = "../sunscreen_ir" }
+sunscreen_circuit = { path = "../sunscreen_circuit" }
 petgraph = "0.6.0"
 num_cpus = "1.13.0"
 scoped_threadpool = "0.1.9"

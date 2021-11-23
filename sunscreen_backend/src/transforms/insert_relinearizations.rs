@@ -1,8 +1,8 @@
-use sunscreen_ir::{IRTransform::*, IntermediateRepresentation, Operation::*, TransformList};
+use sunscreen_circuit::{IRTransform::*, Circuit, Operation::*, TransformList};
 
 use petgraph::{visit::EdgeRef, Direction};
 
-pub fn apply_insert_relinearizations(ir: &mut IntermediateRepresentation) {
+pub fn apply_insert_relinearizations(ir: &mut Circuit) {
     ir.forward_traverse(|query, id| match query.get_node(id).operation {
         Multiply => {
             let mut transforms = TransformList::new();
@@ -26,13 +26,13 @@ pub fn apply_insert_relinearizations(ir: &mut IntermediateRepresentation) {
 mod tests {
     use super::*;
     use petgraph::stable_graph::NodeIndex;
-    use sunscreen_ir::OuterLiteral;
-    use sunscreen_ir::*;
+    use sunscreen_circuit::OuterLiteral;
+    use sunscreen_circuit::*;
 
     use seal::SchemeType;
 
-    fn create_test_dag() -> IntermediateRepresentation {
-        let mut ir = IntermediateRepresentation::new(SchemeType::Bfv);
+    fn create_test_dag() -> Circuit {
+        let mut ir = Circuit::new(SchemeType::Bfv);
 
         let ct = ir.append_input_ciphertext(0);
         let l1 = ir.append_input_literal(OuterLiteral::from(7i64));

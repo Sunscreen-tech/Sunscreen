@@ -7,11 +7,11 @@
 mod error;
 
 pub use crate::error::*;
-use sunscreen_circuit::{EdgeInfo, Circuit, Operation::*};
+use sunscreen_circuit::{EdgeInfo, Circuit, Literal, Operation::*, OuterLiteral};
 
 use crossbeam::atomic::AtomicCell;
 use petgraph::{stable_graph::NodeIndex, visit::EdgeRef, Direction};
-use seal::{Ciphertext, Evaluator, RelinearizationKeys};
+use seal::{Ciphertext, Evaluator, GaloisKeys, RelinearizationKeys};
 
 use std::borrow::Cow;
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -79,10 +79,11 @@ pub fn validate_and_run_program<E: Evaluator + Sync + Send>(
     inputs: &[Ciphertext],
     evaluator: &E,
     relin_keys: Option<RelinearizationKeys>,
+    galois_keys: Option<GaloisKeys>,
 ) -> Result<Vec<Ciphertext>> {
     ir.validate()?;
 
-    Ok(unsafe { run_program_unchecked(ir, inputs, evaluator, relin_keys) })
+    Ok(unsafe { run_program_unchecked(ir, inputs, evaluator, relin_keys, galois_keys) })
 }
 
 /**
@@ -108,6 +109,7 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
     inputs: &[Ciphertext],
     evaluator: &E,
     relin_keys: Option<RelinearizationKeys>,
+    galois_keys: Option<GaloisKeys>
 ) -> Vec<Ciphertext> {
     fn get_ciphertext<'a>(
         data: &'a [AtomicCell<Option<Cow<Ciphertext>>>],
@@ -143,8 +145,34 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
                     data[index.index()].store(Some(Cow::Borrowed(&inputs[*id])));
                     // moo
                 }
-                ShiftLeft => unimplemented!(),
-                ShiftRight => unimplemented!(),
+                ShiftLeft => {
+                    let (left, right) = get_left_right_operands(ir, index);
+
+                    let a = get_ciphertext(&data, left.index());
+                    let b = match ir.graph[right].operation {
+                        Literal(OuterLiteral::Scalar(Literal::U64(v))) => v as i32,
+                        _ => panic!("Illegal right operand for ShiftLeft: {:#?}", ir.graph[right].operation)
+                    };
+
+
+                    let c = evaluator.rotate_rows(a, b, galois_keys.as_ref().unwrap()).unwrap();
+
+                    data[index.index()].store(Some(Cow::Owned(c)));
+                },
+                ShiftRight => {
+                    let (left, right) = get_left_right_operands(ir, index);
+
+                    let a = get_ciphertext(&data, left.index());
+                    let b = match ir.graph[right].operation {
+                        Literal(OuterLiteral::Scalar(Literal::U64(v))) => v as i32,
+                        _ => panic!("Illegal right operand for ShiftLeft: {:#?}", ir.graph[right].operation)
+                    };
+
+
+                    let c = evaluator.rotate_rows(a, -b, galois_keys.as_ref().unwrap()).unwrap();
+
+                    data[index.index()].store(Some(Cow::Owned(c)));
+                },
                 Add => {
                     let (left, right) = get_left_right_operands(ir, index);
 
@@ -181,7 +209,7 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
                 }
                 Negate => unimplemented!(),
                 Sub => unimplemented!(),
-                Literal(_x) => unimplemented!(),
+                Literal(_x) => { },
                 OutputCiphertext => {
                     let input = get_unary_operand(ir, index);
 
@@ -358,7 +386,7 @@ mod tests {
         let ct_0 = encryptor.encrypt(&pt_0).unwrap();
         let ct_1 = encryptor.encrypt(&pt_1).unwrap();
 
-        let output = unsafe { run_program_unchecked(&ir, &[ct_0, ct_1], &evaluator, None) };
+        let output = unsafe { run_program_unchecked(&ir, &[ct_0, ct_1], &evaluator, None, None) };
 
         assert_eq!(output.len(), 1);
 
@@ -397,7 +425,7 @@ mod tests {
         let ct_1 = encryptor.encrypt(&pt_1).unwrap();
 
         let output =
-            unsafe { run_program_unchecked(&ir, &[ct_0, ct_1], &evaluator, Some(relin_keys)) };
+            unsafe { run_program_unchecked(&ir, &[ct_0, ct_1], &evaluator, Some(relin_keys), None) };
 
         assert_eq!(output.len(), 1);
 
@@ -437,7 +465,7 @@ mod tests {
         let ct_1 = encryptor.encrypt(&pt_1).unwrap();
 
         let output =
-            unsafe { run_program_unchecked(&ir, &[ct_0, ct_1], &evaluator, Some(relin_keys)) };
+            unsafe { run_program_unchecked(&ir, &[ct_0, ct_1], &evaluator, Some(relin_keys), None) };
 
         assert_eq!(output.len(), 1);
 
@@ -492,7 +520,7 @@ mod tests {
         let ct_1 = encryptor.encrypt(&pt_1).unwrap();
 
         let output =
-            unsafe { run_program_unchecked(&ir, &[ct_0, ct_1], &evaluator, Some(relin_keys)) };
+            unsafe { run_program_unchecked(&ir, &[ct_0, ct_1], &evaluator, Some(relin_keys), None) };
 
         assert_eq!(output.len(), 1);
 
@@ -501,6 +529,111 @@ mod tests {
         assert_eq!(
             encoder.decode_signed(&o_p).unwrap(),
             vec![4 * (42 - 24); degree as usize]
+        );
+    }
+
+    #[test]
+    fn rotate_left() {
+        let mut ir = Circuit::new(SchemeType::Bfv);
+
+        let a = ir.append_input_ciphertext(0);
+        let l = ir.append_input_literal(OuterLiteral::Scalar(Literal::U64(3)));
+
+        let res = ir.append_rotate_left(a, l);
+
+        ir.append_output_ciphertext(res);
+
+        let degree = 4096;
+
+        let (keygen, context, _public_key, _secret_key, encryptor, decryptor, evaluator) =
+            setup_scheme(degree);
+
+        let encoder = BFVEncoder::new(&context).unwrap();
+        let galois_keys = keygen.create_galois_keys().unwrap();
+
+        let a: Vec<u64> = (0..degree).into_iter().collect();
+
+        let pt_0 = encoder.encode_unsigned(&a).unwrap();
+
+        let ct_0 = encryptor.encrypt(&pt_0).unwrap();
+
+        let output =
+            unsafe { run_program_unchecked(&ir, &[ct_0], &evaluator, None, Some(galois_keys)) };
+
+        assert_eq!(output.len(), 1);
+
+        let o_p = decryptor.decrypt(&output[0]).unwrap();
+
+        let mut expected = (3..degree / 2)
+            .into_iter()
+            .collect::<Vec<u64>>();
+            
+        expected.append(&mut vec![0, 1, 2]);
+
+        expected.append(
+            &mut (degree / 2 + 3..degree)
+            .into_iter()
+            .collect::<Vec<u64>>()
+        );
+
+        expected.append(&mut vec![degree / 2, degree / 2 + 1, degree / 2+ 2]);
+
+        assert_eq!(
+            encoder.decode_unsigned(&o_p).unwrap(),
+            expected
+        );
+    }
+
+    #[test]
+    fn rotate_right() {
+        let mut ir = Circuit::new(SchemeType::Bfv);
+
+        let a = ir.append_input_ciphertext(0);
+        let l = ir.append_input_literal(OuterLiteral::Scalar(Literal::U64(3)));
+
+        let res = ir.append_rotate_right(a, l);
+
+        ir.append_output_ciphertext(res);
+
+        let degree = 4096;
+
+        let (keygen, context, _public_key, _secret_key, encryptor, decryptor, evaluator) =
+            setup_scheme(degree);
+
+        let encoder = BFVEncoder::new(&context).unwrap();
+        let galois_keys = keygen.create_galois_keys().unwrap();
+
+        let a: Vec<u64> = (0..degree).into_iter().collect();
+
+        let pt_0 = encoder.encode_unsigned(&a).unwrap();
+
+        let ct_0 = encryptor.encrypt(&pt_0).unwrap();
+
+        let output =
+            unsafe { run_program_unchecked(&ir, &[ct_0], &evaluator, None, Some(galois_keys)) };
+
+        assert_eq!(output.len(), 1);
+
+        let o_p = decryptor.decrypt(&output[0]).unwrap();
+
+        let mut expected = vec![degree / 2 - 3, degree / 2 - 2, degree / 2 - 1];
+    
+        expected.append(&mut (0..degree / 2 - 3)
+            .into_iter()
+            .collect::<Vec<u64>>()
+        );
+
+        expected.append(&mut vec![degree - 3, degree - 2, degree - 1]);
+
+        expected.append(
+            &mut (degree / 2..degree - 3)
+            .into_iter()
+            .collect::<Vec<u64>>()
+        );
+
+        assert_eq!(
+            encoder.decode_unsigned(&o_p).unwrap(),
+            expected
         );
     }
 }

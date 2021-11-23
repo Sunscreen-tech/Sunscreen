@@ -218,7 +218,7 @@ pub trait Evaluator {
      * Rotates plaintext matrix rows cyclically.
      *
      * When batching is used with the BFV scheme, this function rotates the encrypted plaintext matrix rows
-     * cyclically to the left (steps &gt; 0) or to the right (steps &lt; 0). Since the size of the batched matrix
+     * cyclically to the left (steps > 0) or to the right (steps < 0). Since the size of the batched matrix
      * is 2-by-(N/2), where N is the degree of the polynomial modulus, the number of steps to rotate must have
      * absolute value at most N/2-1.
      *

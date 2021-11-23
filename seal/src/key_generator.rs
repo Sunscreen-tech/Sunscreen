@@ -149,8 +149,8 @@ impl KeyGenerator {
      * (e.g. rotations) on encrypted data. Most users will want to use this
      * overload of the function.
      */
-    pub fn create_compact_galois_keys(&self) -> CompactGaloisKeys {
-        CompactGaloisKeys(self.create_galois_keys_internal(true))
+    pub fn create_compact_galois_keys(&self) -> Result<CompactGaloisKeys> {
+        Ok(CompactGaloisKeys(self.create_galois_keys_internal(true)?))
     }
 
     /**
@@ -167,19 +167,18 @@ impl KeyGenerator {
      * (e.g. rotations) on encrypted data. Most users will want to use this
      * overload of the function.
      */
-    pub fn create_galois_keys(&self) -> GaloisKeys {
+    pub fn create_galois_keys(&self) -> Result<GaloisKeys> {
         self.create_galois_keys_internal(false)
     }
 
-    fn create_galois_keys_internal(&self, save_seed: bool) -> GaloisKeys {
+    fn create_galois_keys_internal(&self, save_seed: bool) -> Result<GaloisKeys> {
         let mut handle = null_mut();
 
         convert_seal_error(unsafe {
             bindgen::KeyGenerator_CreateGaloisKeysAll(self.handle, save_seed, &mut handle)
-        })
-        .expect("Fatal error in KeyGenerator::create_galois_keys()");
+        })?;
 
-        GaloisKeys { handle }
+        Ok(GaloisKeys { handle })
     }
 }
 
@@ -469,7 +468,7 @@ mod tests {
         let ctx = Context::new(&params, false, SecurityLevel::TC128).unwrap();
         let gen = KeyGenerator::new(&ctx).unwrap();
 
-        gen.create_galois_keys();
+        gen.create_galois_keys().unwrap();
     }
 
     #[test]

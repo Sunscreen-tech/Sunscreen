@@ -140,6 +140,14 @@ pub fn determine_params(
             }
         };
 
+        let galois_keys = match keygen.create_galois_keys() {
+            Ok(v) => v,
+            Err(e) => {
+                trace!("Failed to create galois keys: {:#?}", e);
+                continue;
+            }
+        };
+
         let encryptor =
             Encryptor::with_public_and_secret_key(&context, &public_key, &secret_key).unwrap();
         let decryptor = Decryptor::new(&context, &secret_key).unwrap();
@@ -173,7 +181,7 @@ pub fn determine_params(
 
         // We already checked for errors at the start of this function. This should be
         // well-behaved.
-        let outputs = unsafe { run_program_unchecked(ir, &inputs, &evaluator, Some(relin_keys)) };
+        let outputs = unsafe { run_program_unchecked(ir, &inputs, &evaluator, Some(relin_keys), Some(galois_keys)) };
 
         for (i, o) in outputs.iter().enumerate() {
             let noise_budget = decryptor.invariant_noise_budget(&o).unwrap();

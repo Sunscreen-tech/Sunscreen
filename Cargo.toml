@@ -2,6 +2,7 @@
 members = [
     "seal",
     "sunscreen_backend",
+    "sunscreen_frontend",
     "sunscreen_circuit",
     "sunscreen_runtime",
 ]

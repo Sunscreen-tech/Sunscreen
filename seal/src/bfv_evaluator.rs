@@ -445,7 +445,7 @@ mod tests {
     #[test]
     fn can_multiply_many() {
         run_bfv_test(|decryptor, encoder, encryptor, evaluator, keygen| {
-            let relin_keys = keygen.create_relinearization_keys();
+            let relin_keys = keygen.create_relinearization_keys().unwrap();
 
             let a = make_small_vec(&encoder);
             let b = make_small_vec(&encoder);
@@ -618,7 +618,7 @@ mod tests {
     #[test]
     fn can_relinearize_inplace() {
         run_bfv_test(|decryptor, encoder, encryptor, evaluator, keygen| {
-            let relin_keys = keygen.create_relinearization_keys();
+            let relin_keys = keygen.create_relinearization_keys().unwrap();
 
             let a = make_vec(&encoder);
             let a_p = encoder.encode_signed(&a).unwrap();
@@ -652,7 +652,7 @@ mod tests {
     #[test]
     fn can_relinearize() {
         run_bfv_test(|decryptor, encoder, encryptor, evaluator, keygen| {
-            let relin_keys = keygen.create_relinearization_keys();
+            let relin_keys = keygen.create_relinearization_keys().unwrap();
 
             let a = make_vec(&encoder);
             let a_p = encoder.encode_signed(&a).unwrap();
@@ -682,7 +682,7 @@ mod tests {
     #[test]
     fn can_exponentiate() {
         run_bfv_test(|decryptor, encoder, encryptor, evaluator, keygen| {
-            let relin_keys = keygen.create_relinearization_keys();
+            let relin_keys = keygen.create_relinearization_keys().unwrap();
 
             let a = make_small_vec(&encoder);
             let a_p = encoder.encode_signed(&a).unwrap();
@@ -704,7 +704,7 @@ mod tests {
     #[test]
     fn can_exponentiate_inplace() {
         run_bfv_test(|decryptor, encoder, encryptor, evaluator, keygen| {
-            let relin_keys = keygen.create_relinearization_keys();
+            let relin_keys = keygen.create_relinearization_keys().unwrap();
 
             let a = make_small_vec(&encoder);
             let a_p = encoder.encode_signed(&a).unwrap();

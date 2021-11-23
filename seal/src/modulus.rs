@@ -20,6 +20,18 @@ pub struct Modulus {
 unsafe impl Sync for Modulus {}
 unsafe impl Send for Modulus {}
 
+impl std::fmt::Debug for Modulus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
+        write!(f, "{}", self.value())
+    }
+}
+
+impl PartialEq for Modulus {
+    fn eq(&self, other: &Self) -> bool {
+        self.value() == other.value()
+    }
+}
+
 /**
  * Represents a standard security level according to the HomomorphicEncryption.org
  * security standard. The value SecLevelType.None signals that no standard
@@ -58,7 +70,7 @@ pub unsafe fn unchecked_from_handle(handle: *mut c_void) -> Modulus {
 }
 
 impl Modulus {
-    fn _new(value: u64) -> Result<Self> {
+    fn new(value: u64) -> Result<Self> {
         let mut handle: *mut c_void = null_mut();
 
         convert_seal_error(unsafe { bindgen::Modulus_Create1(value, &mut handle) })?;
@@ -220,6 +232,14 @@ impl PlainModulus {
         let modulus_chain = CoefficientModulus::create(degree, bit_sizes.as_slice())?;
 
         Ok(modulus_chain.first().ok_or(Error::Unexpected)?.clone())
+    }
+
+    /**
+     * Creates a plain modulus with the given exact value. Batching will likely be
+     * disabled.
+     */
+    pub fn raw(val: u64) -> Result<Modulus> {
+        Modulus::new(val)
     }
 }
 

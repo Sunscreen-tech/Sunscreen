@@ -71,7 +71,7 @@ pub fn get_unary_operand(ir: &IntermediateRepresentation, index: NodeIndex) -> N
 }
 
 /**
- * Validates and runs the given 
+ * Validates and runs the given
  */
 pub fn validate_and_run_program<E: Evaluator + Sync + Send>(
     ir: &IntermediateRepresentation,
@@ -384,7 +384,7 @@ mod tests {
             setup_scheme(degree);
 
         let encoder = BFVEncoder::new(&context).unwrap();
-        let relin_keys = keygen.create_relinearization_keys();
+        let relin_keys = keygen.create_relinearization_keys().unwrap();
 
         let a = vec![42; degree as usize];
         let b = vec![-24; degree as usize];
@@ -424,7 +424,7 @@ mod tests {
             setup_scheme(degree);
 
         let encoder = BFVEncoder::new(&context).unwrap();
-        let relin_keys = keygen.create_relinearization_keys();
+        let relin_keys = keygen.create_relinearization_keys().unwrap();
 
         let a = vec![42; degree as usize];
         let b = vec![-24; degree as usize];
@@ -479,7 +479,7 @@ mod tests {
             setup_scheme(degree);
 
         let encoder = BFVEncoder::new(&context).unwrap();
-        let relin_keys = keygen.create_relinearization_keys();
+        let relin_keys = keygen.create_relinearization_keys().unwrap();
 
         let a = vec![42; degree as usize];
         let b = vec![-24; degree as usize];

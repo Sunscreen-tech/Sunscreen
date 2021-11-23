@@ -233,24 +233,16 @@ impl BFVScalarEncoder {
      * Encodes a u64 into a Plaintext.
      */
     pub fn encode_unsigned(&self, val: u64) -> Result<Plaintext> {
-        let plaintext = Plaintext::new()?;
-
-        convert_seal_error(unsafe { bindgen::Plaintext_Set3(plaintext.get_handle(), val) })?;
-
-        Ok(plaintext)
+        Plaintext::from_hex_string(&format!("{:x}", val))
     }
 
     /**
      * Encodes an i64 into a Plaintext.
      */
     pub fn encode_signed(&self, val: i64) -> Result<Plaintext> {
-        let plaintext = Plaintext::new()?;
+        let as_u64: u64 = unsafe { std::mem::transmute(val) };
 
-        convert_seal_error(unsafe {
-            bindgen::Plaintext_Set3(plaintext.get_handle(), std::mem::transmute(val))
-        })?;
-
-        Ok(plaintext)
+        Plaintext::from_hex_string(&format!("{:x}", as_u64))
     }
 
     /**

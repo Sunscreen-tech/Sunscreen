@@ -41,6 +41,28 @@
         {
             "type": "lldb",
             "request": "launch",
+            "name": "Debug unit tests in library 'sunscreen_backend'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=sunscreen_backend"
+                ],
+                "filter": {
+                    "name": "sunscreen_backend",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "RUST_LOG": "TRACE",
+            }
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
             "name": "Debug unit tests in library 'seal'",
             "cargo": {
                 "args": [

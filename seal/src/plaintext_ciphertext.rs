@@ -1,4 +1,4 @@
-use std::ffi::c_void;
+use std::ffi::{c_void, CString};
 use std::ptr::null_mut;
 
 use crate::bindgen;
@@ -50,6 +50,45 @@ impl Plaintext {
         let mut handle: *mut c_void = null_mut();
 
         convert_seal_error(unsafe { bindgen::Plaintext_Create1(null_mut(), &mut handle) })?;
+
+        Ok(Self { handle })
+    }
+
+    /**
+     * Constructs a plaintext from a given hexadecimal string describing the
+     * plaintext polynomial.
+     *
+     * The string description of the polynomial must adhere to the format
+     * returned by ToString(), which is of the form "7FFx^3 + 1x^1 + 3"
+     * and summarized by the following
+     * rules:
+     * 1. Terms are listed in order of strictly decreasing exponent
+     * 2. Coefficient values are non-negative and in hexadecimal format (upper
+     * and lower case letters are both supported)
+     * 3. Exponents are positive and in decimal format
+     * 4. Zero coefficient terms (including the constant term) may be (but do
+     * not have to be) omitted
+     * 5. Term with the exponent value of one must be exactly written as x^1
+     * 6. Term with the exponent value of zero (the constant term) must be written
+     * as just a hexadecimal number without exponent
+     * 7. Terms must be separated by exactly [space]+[space] and minus is not
+     * allowed
+     * 8. Other than the +, no other terms should have whitespace
+     *
+     * * `hex_str`: The formatted polynomial string specifying the plaintext
+     * polynomial.
+     *
+     * # Panics
+     * Panics if `hex_str` contains a null character anywhere but the end of the string.
+     */
+    pub fn from_hex_string(hex_str: &str) -> Result<Self> {
+        let mut handle: *mut c_void = null_mut();
+
+        let hex_string = CString::new(hex_str).unwrap();
+
+        convert_seal_error(unsafe {
+            bindgen::Plaintext_Create4(hex_string.as_ptr() as *mut i8, null_mut(), &mut handle)
+        })?;
 
         Ok(Self { handle })
     }

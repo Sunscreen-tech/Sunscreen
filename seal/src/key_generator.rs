@@ -104,7 +104,7 @@ impl KeyGenerator {
     /**
      * Creates relinearization keys
      */
-    pub fn create_relinearization_keys(&self) -> RelinearizationKeys {
+    pub fn create_relinearization_keys(&self) -> Result<RelinearizationKeys> {
         self.create_relinearization_keys_internal(false)
     }
 
@@ -119,19 +119,18 @@ impl KeyGenerator {
      * directly and is meant to be serialized for the size reduction to have an
      * impact.
      */
-    pub fn create_compact_relinearization_keys(&self) -> CompactRelinearizationKeys {
-        CompactRelinearizationKeys(self.create_relinearization_keys_internal(true))
+    pub fn create_compact_relinearization_keys(&self) -> Result<CompactRelinearizationKeys> {
+        Ok(CompactRelinearizationKeys(self.create_relinearization_keys_internal(true)?))
     }
 
-    fn create_relinearization_keys_internal(&self, save_seed: bool) -> RelinearizationKeys {
+    fn create_relinearization_keys_internal(&self, save_seed: bool) -> Result<RelinearizationKeys> {
         let mut handle = null_mut();
 
         convert_seal_error(unsafe {
             bindgen::KeyGenerator_CreateRelinKeys(self.handle, save_seed, &mut handle)
-        })
-        .expect("Fatal error in KeyGenerator::create_relinearization_keys_internal()");
+        })?;
 
-        RelinearizationKeys { handle }
+        Ok(RelinearizationKeys { handle })
     }
 
     /**

@@ -13,7 +13,8 @@ use seal::{
 use sunscreen_ir::{IntermediateRepresentation, Operation};
 use sunscreen_runtime::run_program_unchecked;
 
-const LATTICE_DIMENSIONS: &[u64] = &[1 << 10, 1 << 11, 1 << 12, 1 << 13, 1 << 14, 1 << 15];
+const LATTICE_DIMENSIONS: &[u64] = &[1024, 2048, 4096, 8192, 16384, 32768];
+const BATCHING_MIN_BITS: &[u32] = &[14, 14, 16, 17, 17, 17];
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Params {
@@ -58,16 +59,16 @@ pub fn determine_params(
     // Don't even try if there are complication errors.
     ir.validate()?;
 
-    'order_loop: for n in LATTICE_DIMENSIONS {
+    'order_loop: for (i, n) in LATTICE_DIMENSIONS.iter().enumerate() {
         let plaintext_modulus = match plaintext_constraint {
             PlainModulusConstraint::Raw(v) => PlainModulus::raw(v).unwrap(),
             PlainModulusConstraint::BatchingMinimum(min) => {
-                let bits = f64::log2(*n as f64) as u32 + 4;
+                let min_batching_bits = BATCHING_MIN_BITS[i];
 
-                match PlainModulus::batching(*n, u32::max(bits, min)) {
+                match PlainModulus::batching(*n, u32::max(min_batching_bits, min)) {
                     Ok(v) => v,
                     Err(e) => {
-                        trace!("Can't use batching with {} bits for dimension n={}: {:#?}", bits, n, e);
+                        trace!("Can't use batching with {} bits for dimension n={}: {:#?}", min_batching_bits, n, e);
                         continue;
                     }
                 }
@@ -166,18 +167,25 @@ pub fn determine_params(
             .map(|p| encryptor.encrypt(&p).unwrap())
             .collect::<Vec<Ciphertext>>();
 
+        let initial_noise_budget = decryptor.invariant_noise_budget(&inputs[0]).unwrap();
+
+        trace!("Initial noise budget (n={}): {}", n, initial_noise_budget);
+
         // We already checked for errors at the start of this function. This should be
         // well-behaved.
         let outputs = unsafe { run_program_unchecked(ir, &inputs, &evaluator, Some(relin_keys)) };
 
         for (i, o) in outputs.iter().enumerate() {
-            let noise = decryptor.invariant_noise_budget(&o).unwrap();
+            let noise_budget = decryptor.invariant_noise_budget(&o).unwrap();
 
-            if noise < noise_margin_bits {
+            trace!("Output {} has {} bits of noise budget remaining", i, noise_budget);
+            trace!("Circuit consumes {} bits of noise budget.", initial_noise_budget - noise_budget);
+
+            if noise_budget < noise_margin_bits {
                 trace!(
-                    "Output {} has {} bits of noise, which exceeds {}",
+                    "Output {} has {} bits of noise, is below {}",
                     i,
-                    noise,
+                    noise_budget,
                     noise_margin_bits
                 );
                 continue 'order_loop;
@@ -264,6 +272,112 @@ mod tests {
                 lattice_dimension: expected_degree,
                 coeff_modulus: CoefficientModulus::bfv_default(expected_degree, SecurityLevel::TC128).unwrap(),
                 plain_modulus: PlainModulus::raw(40961).unwrap(),
+            }
+        );
+    }
+
+    #[test]
+    fn get_params_mul_reduction() {
+        let _ = env_logger::try_init();
+
+        let mut ir = IntermediateRepresentation::new(SchemeType::Bfv);
+
+        let a = ir.append_input_ciphertext(0);
+        let b = ir.append_input_ciphertext(1);
+        let c = ir.append_input_ciphertext(0);
+        let d = ir.append_input_ciphertext(1);
+
+        let m_0 = ir.append_multiply(a, b);
+        let m_1 = ir.append_multiply(c, d);
+
+        let r_0 = ir.append_relinearize(m_0);
+        let r_1 = ir.append_relinearize(m_1);
+
+        let m_00 = ir.append_multiply(r_0, r_1);
+
+        ir.append_output_ciphertext(m_00);
+
+        let params = determine_params(
+            &ir,
+            PlainModulusConstraint::BatchingMinimum(0),
+            SecurityLevel::TC128,
+            20,
+        ).unwrap();
+
+        let expected_degree = 8192;
+
+        assert_eq!(
+            params,
+            Params {
+                lattice_dimension: expected_degree,
+                coeff_modulus: CoefficientModulus::bfv_default(expected_degree, SecurityLevel::TC128).unwrap(),
+                plain_modulus: PlainModulus::raw(114689).unwrap(),
+            }
+        );
+    }
+
+    #[test]
+    fn get_params_single_mul_relin() {
+        let _ = env_logger::try_init();
+
+        let mut ir = IntermediateRepresentation::new(SchemeType::Bfv);
+
+        let a = ir.append_input_ciphertext(0);
+        let b = ir.append_input_ciphertext(1);
+
+        let m_0 = ir.append_multiply(a, b);        
+        let r_0 = ir.append_relinearize(m_0);
+
+        ir.append_output_ciphertext(r_0);
+
+        let params = determine_params(
+            &ir,
+            PlainModulusConstraint::BatchingMinimum(0),
+            SecurityLevel::TC128,
+            500,
+        ).unwrap();
+
+        let expected_degree = 8192;
+
+        assert_eq!(
+            params,
+            Params {
+                lattice_dimension: expected_degree,
+                coeff_modulus: CoefficientModulus::bfv_default(expected_degree, SecurityLevel::TC128).unwrap(),
+                plain_modulus: PlainModulus::raw(114689).unwrap(),
+            }
+        );
+    }
+
+    #[test]
+    fn get_params_single_add() {
+        let _ = env_logger::try_init();
+
+        let mut ir = IntermediateRepresentation::new(SchemeType::Bfv);
+
+        let a = ir.append_input_ciphertext(0);
+        let b = ir.append_input_ciphertext(1);
+
+        let m_0 = ir.append_add(a, b);        
+        let r_0 = ir.append_relinearize(m_0);
+
+        ir.append_output_ciphertext(r_0);
+
+        let params = determine_params(
+            &ir,
+            PlainModulusConstraint::BatchingMinimum(0),
+            SecurityLevel::TC128,
+            1000,
+        ).unwrap();
+
+        let expected_degree = 8192;
+
+        assert_eq!(
+            params,
+            Params {
+                lattice_dimension: expected_degree,
+                coeff_modulus: CoefficientModulus::bfv_default(expected_degree, SecurityLevel::TC128).unwrap(),
+                plain_modulus: PlainModulus::raw(114689).unwrap(),
             }
         );
     }

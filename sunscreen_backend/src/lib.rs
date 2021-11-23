@@ -1,3 +1,14 @@
+#![deny(missing_docs)]
+#![deny(rustdoc::broken_intra_doc_links)]
+
+//! This crate contains the backend compiler for sunscreen circuits. It includes the
+//! following useful operations:
+//! * [`determine_params`] takes a well-formed circuit and discovers the minimal parameters
+//! that allow the circuit to operate at high performance. E.g. the polynomial degree, plain modulus,
+//! coefficient modulus.
+//! * [`compile`] takes either a circuit from the compiler frontend and applies a set 
+//! of transformations.
+
 mod error;
 mod transforms;
 
@@ -17,6 +28,9 @@ const LATTICE_DIMENSIONS: &[u64] = &[1024, 2048, 4096, 8192, 16384, 32768];
 const BATCHING_MIN_BITS: &[u32] = &[14, 14, 16, 17, 17, 17];
 
 #[derive(Debug, Clone, PartialEq)]
+/**
+ * The parameter set required for a given circuit to run efficiently and correctly.
+ */
 pub struct Params {
     lattice_dimension: u64,
     coeff_modulus: Vec<Modulus>,
@@ -47,8 +61,7 @@ pub enum PlainModulusConstraint {
 
 /**
  * Determines the minimal parameters required to satisfy the noise constraint for
- * the given circuit and plaintext modulo and security level..
- *
+ * the given circuit and plaintext modulo and security level.
  */
 pub fn determine_params(
     ir: &Circuit,

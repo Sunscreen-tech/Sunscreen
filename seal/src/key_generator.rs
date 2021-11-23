@@ -452,7 +452,7 @@ mod tests {
         let ctx = Context::new(&params, false, SecurityLevel::TC128).unwrap();
         let gen = KeyGenerator::new(&ctx).unwrap();
 
-        gen.create_relinearization_keys();
+        gen.create_relinearization_keys().unwrap();
     }
 
     #[test]

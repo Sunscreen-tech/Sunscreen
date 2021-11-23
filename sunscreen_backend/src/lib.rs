@@ -334,17 +334,17 @@ mod tests {
             &ir,
             PlainModulusConstraint::BatchingMinimum(0),
             SecurityLevel::TC128,
-            500,
+            20,
         ).unwrap();
 
-        let expected_degree = 8192;
+        let expected_degree = 4096;
 
         assert_eq!(
             params,
             Params {
                 lattice_dimension: expected_degree,
                 coeff_modulus: CoefficientModulus::bfv_default(expected_degree, SecurityLevel::TC128).unwrap(),
-                plain_modulus: PlainModulus::raw(114689).unwrap(),
+                plain_modulus: PlainModulus::raw(40961).unwrap(),
             }
         );
     }
@@ -367,17 +367,17 @@ mod tests {
             &ir,
             PlainModulusConstraint::BatchingMinimum(0),
             SecurityLevel::TC128,
-            1000,
+            20,
         ).unwrap();
 
-        let expected_degree = 8192;
+        let expected_degree = 4096;
 
         assert_eq!(
             params,
             Params {
                 lattice_dimension: expected_degree,
                 coeff_modulus: CoefficientModulus::bfv_default(expected_degree, SecurityLevel::TC128).unwrap(),
-                plain_modulus: PlainModulus::raw(114689).unwrap(),
+                plain_modulus: PlainModulus::raw(40961).unwrap(),
             }
         );
     }

@@ -206,10 +206,24 @@ impl Circuit {
         self.append_1_input_node(Operation::Relinearize, x)
     }
 
+    /**
+     * Appends an operation that rotates ciphertext `x` left by the literal node at `y` places.
+     * 
+     * # Remarks
+     * Recall that BFV has 2 rows in a SIMD vector. This rotates each row.
+     * CKKS has one large vector.
+     */
     pub fn append_rotate_left(&mut self, x: NodeIndex, y: NodeIndex) -> NodeIndex {
         self.append_2_input_node(Operation::ShiftLeft, x, y)
     }
 
+    /**
+     * Appends an operation that rotates ciphertext `x` right by the literal node at `y` places.
+     *      
+     * # Remarks
+     * Recall that BFV has 2 rows in a SIMD vector. This rotates each row.
+     * CKKS has one large vector.
+     */
     pub fn append_rotate_right(&mut self, x: NodeIndex, y: NodeIndex) -> NodeIndex {
         self.append_2_input_node(Operation::ShiftRight, x, y)
     }

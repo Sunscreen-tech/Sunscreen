@@ -323,6 +323,7 @@ where
 mod tests {
     use super::*;
     use seal::*;
+    use sunscreen_circuit::SchemeType;
 
     fn setup_scheme(
         degree: u64,

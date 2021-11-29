@@ -528,6 +528,10 @@ dependencies = [
 [[package]]
 name = "sunscreen_frontend"
 version = "0.1.0"
+dependencies = [
+ "petgraph",
+ "sunscreen_circuit",
+]
 
 [[package]]
 name = "sunscreen_runtime"

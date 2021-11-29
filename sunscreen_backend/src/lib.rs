@@ -19,9 +19,9 @@ use transforms::transform_intermediate_represenation;
 use log::{debug, trace};
 use seal::{
     BFVEvaluator, BFVScalarEncoder, BfvEncryptionParametersBuilder, Ciphertext, CoefficientModulus,
-    Context, Decryptor, Encryptor, KeyGenerator, Modulus, PlainModulus, SchemeType, SecurityLevel,
+    Context, Decryptor, Encryptor, KeyGenerator, Modulus, PlainModulus, SecurityLevel,
 };
-use sunscreen_circuit::{Circuit, Operation};
+use sunscreen_circuit::{Circuit, Operation, SchemeType};
 use sunscreen_runtime::run_program_unchecked;
 
 const LATTICE_DIMENSIONS: &[u64] = &[1024, 2048, 4096, 8192, 16384, 32768];

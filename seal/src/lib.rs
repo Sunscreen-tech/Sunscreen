@@ -1,3 +1,6 @@
+#![deny(missing_docs)]
+#![deny(rustdoc::broken_intra_doc_links)]
+
 //! This crate provides wrappers for Micorosft's SEAL Homomorphic encryption library.
 //!
 //! # Notes

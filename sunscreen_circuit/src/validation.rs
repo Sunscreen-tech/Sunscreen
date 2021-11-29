@@ -174,8 +174,7 @@ pub fn get_unary_operand(ir: &Circuit, index: NodeIndex) -> Option<NodeIndex> {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    use seal::SchemeType;
+    use crate::SchemeType;
 
     // Circuit objects created with the API are guaranteed
     // to never produce errors. We may only deserialize an erroneous IR.

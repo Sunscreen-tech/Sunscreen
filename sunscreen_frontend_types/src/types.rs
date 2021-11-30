@@ -30,6 +30,12 @@ impl Value for Signed {
             id: ctx.add_input(),
         })
     }
+
+    fn output(&self) -> Self {
+        with_ctx(|ctx| Self {
+            id: ctx.add_output(self.id)
+        })
+    }
 }
 
 impl Signed {}

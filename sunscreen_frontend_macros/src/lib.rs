@@ -6,7 +6,7 @@ use proc_macro2::{Span, TokenStream};
 use quote::{quote, quote_spanned};
 use syn::{
     parse_macro_input, parse_quote, spanned::Spanned, Data, DeriveInput, Fields, FnArg,
-    GenericParam, Generics, Ident, Index, ItemFn, Type,
+    GenericParam, Generics, Ident, Index, ItemFn, ReturnType, Type,
 };
 
 #[proc_macro_derive(Value)]
@@ -97,6 +97,7 @@ pub fn circuit(
     let body = &input_fn.block;
     let attrs = &input_fn.attrs;
     let inputs = &input_fn.sig.inputs;
+    let ret = &input_fn.sig.output;
 
     let mut unwrapped_inputs = vec![];
 
@@ -137,6 +138,44 @@ pub fn circuit(
         }
     });
 
+    let capture_outputs = match ret {
+        ReturnType::Type(_, t) => {
+            let tuple_inners = match &**t {
+                Type::Tuple(t) => {
+                    t.elems.iter().map(|x| &*x).collect::<Vec<&Type>>()
+                },
+                Type::Paren(t) => {
+                    vec![&*t.elem]
+                },
+                Type::Path(_) => {
+                    vec![&**t]
+                },
+                _ => {
+                    return proc_macro::TokenStream::from(quote! {
+                        compile_error!("Circuits must return a single Cipthertext or a tuple of Ciphertexts");
+                    });
+                }
+            };
+
+            if tuple_inners.len() == 1 {
+                quote_spanned! {tuple_inners[0].span() =>
+                    v.output();
+                }
+            } else {
+                tuple_inners.iter().enumerate().map(|(i, t)| {
+                    let index = Index::from(i);
+                    
+                    quote_spanned! {t.span() =>
+                        v.#index.output();
+                    }
+                }).collect()
+            }
+        },
+        ReturnType::Default => { 
+            quote! { }
+        }
+    };
+
     proc_macro::TokenStream::from(quote! {
         #(#attrs)*
         #vis fn #circuit_name() -> sunscreen_frontend_types::Context {
@@ -148,7 +187,7 @@ pub fn circuit(
             let mut cur_id = 0usize;
 
             CURRENT_CTX.with(|ctx| {
-                fn internal(#inputs) {
+                fn internal(#inputs) #ret {
                     #body
                 }
 
@@ -163,11 +202,15 @@ pub fn circuit(
                     internal(#(#args),*)
                 });
 
-                ctx.swap(&RefCell::new(None));
+                match panic_res {
+                    Ok(v) => { #capture_outputs },
+                    Err(err) => { 
+                        ctx.swap(&RefCell::new(None));
+                        std::panic::resume_unwind(err)
+                    }
+                };
 
-                if let Err(err) = panic_res {
-                    std::panic::resume_unwind(err);
-                }
+                ctx.swap(&RefCell::new(None));
             });
 
             context

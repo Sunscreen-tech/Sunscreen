@@ -24,17 +24,20 @@ pub enum Operation {
     Literal(Literal),
     RotateLeft,
     RotateRight,
-    SwapRows
+    SwapRows,
+    Output
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub enum OperandInfo {
     Left,
     Right,
+    Unary
 }
 
 pub trait Value {
     fn new() -> Self;
+    fn output(&self) -> Self;
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -68,6 +71,13 @@ impl Context {
         let new_id = self.graph.add_node(op);
         self.graph.add_edge(left, new_id, OperandInfo::Left);
         self.graph.add_edge(right, new_id, OperandInfo::Right);
+
+        new_id
+    }
+
+    fn add_1_input(&mut self, op: Operation, i: NodeIndex) -> NodeIndex {
+        let new_id = self.graph.add_node(op);
+        self.graph.add_edge(i, new_id, OperandInfo::Unary);
 
         new_id
     }
@@ -106,5 +116,9 @@ impl Context {
 
     pub fn add_rotate_right(&mut self, left: NodeIndex, right: NodeIndex) -> NodeIndex {
         self.add_2_input(Operation::RotateRight, left, right)
+    }
+
+    pub fn add_output(&mut self, i: NodeIndex) -> NodeIndex {
+        self.add_1_input(Operation::Output, i)
     }
 }

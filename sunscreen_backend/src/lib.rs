@@ -6,7 +6,7 @@
 //! * [`determine_params`] takes a well-formed circuit and discovers the minimal parameters
 //! that allow the circuit to operate at high performance. E.g. the polynomial degree, plain modulus,
 //! coefficient modulus.
-//! * [`compile`] takes either a circuit from the compiler frontend and applies a set 
+//! * [`compile`] takes either a circuit from the compiler frontend and applies a set
 //! of transformations.
 
 mod error;
@@ -81,7 +81,12 @@ pub fn determine_params(
                 match PlainModulus::batching(*n, u32::max(min_batching_bits, min)) {
                     Ok(v) => v,
                     Err(e) => {
-                        trace!("Can't use batching with {} bits for dimension n={}: {:#?}", min_batching_bits, n, e);
+                        trace!(
+                            "Can't use batching with {} bits for dimension n={}: {:#?}",
+                            min_batching_bits,
+                            n,
+                            e
+                        );
                         continue;
                     }
                 }
@@ -194,13 +199,22 @@ pub fn determine_params(
 
         // We already checked for errors at the start of this function. This should be
         // well-behaved.
-        let outputs = unsafe { run_program_unchecked(ir, &inputs, &evaluator, Some(relin_keys), Some(galois_keys)) };
+        let outputs = unsafe {
+            run_program_unchecked(ir, &inputs, &evaluator, Some(relin_keys), Some(galois_keys))
+        };
 
         for (i, o) in outputs.iter().enumerate() {
             let noise_budget = decryptor.invariant_noise_budget(&o).unwrap();
 
-            trace!("Output {} has {} bits of noise budget remaining", i, noise_budget);
-            trace!("Circuit consumes {} bits of noise budget.", initial_noise_budget - noise_budget);
+            trace!(
+                "Output {} has {} bits of noise budget remaining",
+                i,
+                noise_budget
+            );
+            trace!(
+                "Circuit consumes {} bits of noise budget.",
+                initial_noise_budget - noise_budget
+            );
 
             if noise_budget < noise_margin_bits {
                 trace!(
@@ -283,7 +297,8 @@ mod tests {
             PlainModulusConstraint::BatchingMinimum(0),
             SecurityLevel::TC128,
             20,
-        ).unwrap();
+        )
+        .unwrap();
 
         let expected_degree = 4096;
 
@@ -291,7 +306,11 @@ mod tests {
             params,
             Params {
                 lattice_dimension: expected_degree,
-                coeff_modulus: CoefficientModulus::bfv_default(expected_degree, SecurityLevel::TC128).unwrap(),
+                coeff_modulus: CoefficientModulus::bfv_default(
+                    expected_degree,
+                    SecurityLevel::TC128
+                )
+                .unwrap(),
                 plain_modulus: PlainModulus::raw(40961).unwrap(),
             }
         );
@@ -323,7 +342,8 @@ mod tests {
             PlainModulusConstraint::BatchingMinimum(0),
             SecurityLevel::TC128,
             20,
-        ).unwrap();
+        )
+        .unwrap();
 
         let expected_degree = 8192;
 
@@ -331,7 +351,11 @@ mod tests {
             params,
             Params {
                 lattice_dimension: expected_degree,
-                coeff_modulus: CoefficientModulus::bfv_default(expected_degree, SecurityLevel::TC128).unwrap(),
+                coeff_modulus: CoefficientModulus::bfv_default(
+                    expected_degree,
+                    SecurityLevel::TC128
+                )
+                .unwrap(),
                 plain_modulus: PlainModulus::raw(114689).unwrap(),
             }
         );
@@ -346,7 +370,7 @@ mod tests {
         let a = ir.append_input_ciphertext(0);
         let b = ir.append_input_ciphertext(1);
 
-        let m_0 = ir.append_multiply(a, b);        
+        let m_0 = ir.append_multiply(a, b);
         let r_0 = ir.append_relinearize(m_0);
 
         ir.append_output_ciphertext(r_0);
@@ -356,7 +380,8 @@ mod tests {
             PlainModulusConstraint::BatchingMinimum(0),
             SecurityLevel::TC128,
             20,
-        ).unwrap();
+        )
+        .unwrap();
 
         let expected_degree = 4096;
 
@@ -364,7 +389,11 @@ mod tests {
             params,
             Params {
                 lattice_dimension: expected_degree,
-                coeff_modulus: CoefficientModulus::bfv_default(expected_degree, SecurityLevel::TC128).unwrap(),
+                coeff_modulus: CoefficientModulus::bfv_default(
+                    expected_degree,
+                    SecurityLevel::TC128
+                )
+                .unwrap(),
                 plain_modulus: PlainModulus::raw(40961).unwrap(),
             }
         );
@@ -379,7 +408,7 @@ mod tests {
         let a = ir.append_input_ciphertext(0);
         let b = ir.append_input_ciphertext(1);
 
-        let m_0 = ir.append_add(a, b);        
+        let m_0 = ir.append_add(a, b);
         let r_0 = ir.append_relinearize(m_0);
 
         ir.append_output_ciphertext(r_0);
@@ -389,7 +418,8 @@ mod tests {
             PlainModulusConstraint::BatchingMinimum(0),
             SecurityLevel::TC128,
             20,
-        ).unwrap();
+        )
+        .unwrap();
 
         let expected_degree = 4096;
 
@@ -397,7 +427,11 @@ mod tests {
             params,
             Params {
                 lattice_dimension: expected_degree,
-                coeff_modulus: CoefficientModulus::bfv_default(expected_degree, SecurityLevel::TC128).unwrap(),
+                coeff_modulus: CoefficientModulus::bfv_default(
+                    expected_degree,
+                    SecurityLevel::TC128
+                )
+                .unwrap(),
                 plain_modulus: PlainModulus::raw(40961).unwrap(),
             }
         );

@@ -120,7 +120,9 @@ impl KeyGenerator {
      * impact.
      */
     pub fn create_compact_relinearization_keys(&self) -> Result<CompactRelinearizationKeys> {
-        Ok(CompactRelinearizationKeys(self.create_relinearization_keys_internal(true)?))
+        Ok(CompactRelinearizationKeys(
+            self.create_relinearization_keys_internal(true)?,
+        ))
     }
 
     fn create_relinearization_keys_internal(&self, save_seed: bool) -> Result<RelinearizationKeys> {

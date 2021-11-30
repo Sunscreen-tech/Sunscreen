@@ -1,4 +1,4 @@
-use sunscreen_circuit::{IRTransform::*, Circuit, Operation::*, TransformList};
+use sunscreen_circuit::{Circuit, IRTransform::*, Operation::*, TransformList};
 
 use petgraph::{visit::EdgeRef, Direction};
 

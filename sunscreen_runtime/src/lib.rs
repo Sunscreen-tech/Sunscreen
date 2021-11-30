@@ -7,7 +7,7 @@
 mod error;
 
 pub use crate::error::*;
-use sunscreen_circuit::{EdgeInfo, Circuit, Literal, Operation::*, OuterLiteral};
+use sunscreen_circuit::{Circuit, EdgeInfo, Literal, Operation::*, OuterLiteral};
 
 use crossbeam::atomic::AtomicCell;
 use petgraph::{stable_graph::NodeIndex, visit::EdgeRef, Direction};
@@ -28,10 +28,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
  * [`validate()`](sunscreen_circuit::Circuit::validate()) should reveal this
  * issue.
  */
-pub fn get_left_right_operands(
-    ir: &Circuit,
-    index: NodeIndex,
-) -> (NodeIndex, NodeIndex) {
+pub fn get_left_right_operands(ir: &Circuit, index: NodeIndex) -> (NodeIndex, NodeIndex) {
     let left = ir
         .graph
         .edges_directed(index, Direction::Incoming)
@@ -109,7 +106,7 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
     inputs: &[Ciphertext],
     evaluator: &E,
     relin_keys: Option<RelinearizationKeys>,
-    galois_keys: Option<GaloisKeys>
+    galois_keys: Option<GaloisKeys>,
 ) -> Vec<Ciphertext> {
     fn get_ciphertext<'a>(
         data: &'a [AtomicCell<Option<Cow<Ciphertext>>>],
@@ -151,28 +148,36 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
                     let a = get_ciphertext(&data, left.index());
                     let b = match ir.graph[right].operation {
                         Literal(OuterLiteral::Scalar(Literal::U64(v))) => v as i32,
-                        _ => panic!("Illegal right operand for ShiftLeft: {:#?}", ir.graph[right].operation)
+                        _ => panic!(
+                            "Illegal right operand for ShiftLeft: {:#?}",
+                            ir.graph[right].operation
+                        ),
                     };
 
-
-                    let c = evaluator.rotate_rows(a, b, galois_keys.as_ref().unwrap()).unwrap();
+                    let c = evaluator
+                        .rotate_rows(a, b, galois_keys.as_ref().unwrap())
+                        .unwrap();
 
                     data[index.index()].store(Some(Cow::Owned(c)));
-                },
+                }
                 ShiftRight => {
                     let (left, right) = get_left_right_operands(ir, index);
 
                     let a = get_ciphertext(&data, left.index());
                     let b = match ir.graph[right].operation {
                         Literal(OuterLiteral::Scalar(Literal::U64(v))) => v as i32,
-                        _ => panic!("Illegal right operand for ShiftLeft: {:#?}", ir.graph[right].operation)
+                        _ => panic!(
+                            "Illegal right operand for ShiftLeft: {:#?}",
+                            ir.graph[right].operation
+                        ),
                     };
 
-
-                    let c = evaluator.rotate_rows(a, -b, galois_keys.as_ref().unwrap()).unwrap();
+                    let c = evaluator
+                        .rotate_rows(a, -b, galois_keys.as_ref().unwrap())
+                        .unwrap();
 
                     data[index.index()].store(Some(Cow::Owned(c)));
-                },
+                }
                 Add => {
                     let (left, right) = get_left_right_operands(ir, index);
 
@@ -209,7 +214,7 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
                 }
                 Negate => unimplemented!(),
                 Sub => unimplemented!(),
-                Literal(_x) => { },
+                Literal(_x) => {}
                 OutputCiphertext => {
                     let input = get_unary_operand(ir, index);
 
@@ -425,8 +430,9 @@ mod tests {
         let ct_0 = encryptor.encrypt(&pt_0).unwrap();
         let ct_1 = encryptor.encrypt(&pt_1).unwrap();
 
-        let output =
-            unsafe { run_program_unchecked(&ir, &[ct_0, ct_1], &evaluator, Some(relin_keys), None) };
+        let output = unsafe {
+            run_program_unchecked(&ir, &[ct_0, ct_1], &evaluator, Some(relin_keys), None)
+        };
 
         assert_eq!(output.len(), 1);
 
@@ -465,8 +471,9 @@ mod tests {
         let ct_0 = encryptor.encrypt(&pt_0).unwrap();
         let ct_1 = encryptor.encrypt(&pt_1).unwrap();
 
-        let output =
-            unsafe { run_program_unchecked(&ir, &[ct_0, ct_1], &evaluator, Some(relin_keys), None) };
+        let output = unsafe {
+            run_program_unchecked(&ir, &[ct_0, ct_1], &evaluator, Some(relin_keys), None)
+        };
 
         assert_eq!(output.len(), 1);
 
@@ -520,8 +527,9 @@ mod tests {
         let ct_0 = encryptor.encrypt(&pt_0).unwrap();
         let ct_1 = encryptor.encrypt(&pt_1).unwrap();
 
-        let output =
-            unsafe { run_program_unchecked(&ir, &[ct_0, ct_1], &evaluator, Some(relin_keys), None) };
+        let output = unsafe {
+            run_program_unchecked(&ir, &[ct_0, ct_1], &evaluator, Some(relin_keys), None)
+        };
 
         assert_eq!(output.len(), 1);
 
@@ -565,24 +573,15 @@ mod tests {
 
         let o_p = decryptor.decrypt(&output[0]).unwrap();
 
-        let mut expected = (3..degree / 2)
-            .into_iter()
-            .collect::<Vec<u64>>();
-            
+        let mut expected = (3..degree / 2).into_iter().collect::<Vec<u64>>();
+
         expected.append(&mut vec![0, 1, 2]);
 
-        expected.append(
-            &mut (degree / 2 + 3..degree)
-            .into_iter()
-            .collect::<Vec<u64>>()
-        );
+        expected.append(&mut (degree / 2 + 3..degree).into_iter().collect::<Vec<u64>>());
 
-        expected.append(&mut vec![degree / 2, degree / 2 + 1, degree / 2+ 2]);
+        expected.append(&mut vec![degree / 2, degree / 2 + 1, degree / 2 + 2]);
 
-        assert_eq!(
-            encoder.decode_unsigned(&o_p).unwrap(),
-            expected
-        );
+        assert_eq!(encoder.decode_unsigned(&o_p).unwrap(), expected);
     }
 
     #[test]
@@ -618,23 +617,13 @@ mod tests {
         let o_p = decryptor.decrypt(&output[0]).unwrap();
 
         let mut expected = vec![degree / 2 - 3, degree / 2 - 2, degree / 2 - 1];
-    
-        expected.append(&mut (0..degree / 2 - 3)
-            .into_iter()
-            .collect::<Vec<u64>>()
-        );
+
+        expected.append(&mut (0..degree / 2 - 3).into_iter().collect::<Vec<u64>>());
 
         expected.append(&mut vec![degree - 3, degree - 2, degree - 1]);
 
-        expected.append(
-            &mut (degree / 2..degree - 3)
-            .into_iter()
-            .collect::<Vec<u64>>()
-        );
+        expected.append(&mut (degree / 2..degree - 3).into_iter().collect::<Vec<u64>>());
 
-        assert_eq!(
-            encoder.decode_unsigned(&o_p).unwrap(),
-            expected
-        );
+        assert_eq!(encoder.decode_unsigned(&o_p).unwrap(), expected);
     }
 }

@@ -30,34 +30,34 @@ use std::collections::HashSet;
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
 /**
- * There 3 primary FHE schemes in use today: BFV, CKKS, and TFHE. BFV is generally the best choice for algorithms 
- * requiring exact arithmetic on integers easily expressed as addition and multiplication. CKKS is generally best 
+ * There 3 primary FHE schemes in use today: BFV, CKKS, and TFHE. BFV is generally the best choice for algorithms
+ * requiring exact arithmetic on integers easily expressed as addition and multiplication. CKKS is generally best
  * suited for approximate arithmetic easily expressed as addition and multiplication. TFHE is generally best
  * when it's non-trivial to express the majority of operations and multiplications and additions. A prescribed
  * sequence of homomorphic operations on ciphertexts is referred to as a circuit.
- * 
- * Homomorphic operations in all three schemes introduce noise into the resulting ciphertext. If a ciphertext 
+ *
+ * Homomorphic operations in all three schemes introduce noise into the resulting ciphertext. If a ciphertext
  * contains too much noise, decryption will fail and result in garbled data. Fortunately, each scheme
  * has techniques to manage noise.
- * 
+ *
  * BFV and CKKS are leveled schemes. This means that if the number of homomorphic operations is known in advance,
  * one can choose parameters for the scheme to accomodate the predicted noise. Generally speaking,
  * the maximum number of multiplications required to produce any output of a circuit determines the
  * scheme parameters. For those with a digital logic background, this is analogous to worst-case propagation
  * delay determining the clock cycle of the circuit. Choosing parameters that accomodate more noise unfortunately
  * results in more time spent on each operation.
- * 
+ *
  * BFV and CKKS support SIMD, also known as batching. This means that a single addition or multiplication
  * operation can be applied to many numbers at once.
- * 
+ *
  * While TFHE is also theoretically a leveled scheme, it primarily uses bootstrapping as the method to manage noise.
  * Under bootstrapping, one homomorphically decrypts a ciphertext, which resets the noise level. With TFHE,
  * this is a fast procedure. Bootstrapping can be applied repeatedly, resulting in an arbitrary number of computations.
- * 
+ *
  * TFHE is similar to digital logic design; one expresses boolean circuits of and, or, not, etc. gates
  * on bits. While most flexible, it tends to have larger ciphertext expansion and be slower at numeric
  * computation than BFV and CKKS.
- * 
+ *
  * CKKS and BFV can also perform bootstrapping, but it is generally expensive and not built into the underlying
  * implementation Sunscreen provides.
  */
@@ -68,7 +68,7 @@ pub enum SchemeType {
      * Sunscreen automatically chooses the polynomial degree depending on the circuit. Each coefficient is
      * an integer mod p (p is a scheme parameter and is the plaintext modulus). One can encode several different
      * meanings onto these coefficients:
-     * 
+     *
      * * An integer x modulo p by setting the x^0 term to x and the remaining terms to 0 (i.e. scalar encoder).
      * This encoding requires p be the desired maximum representable value. Overflow causes wrapping as
      * one would expect. This encoding is generally inefficient.
@@ -81,17 +81,17 @@ pub enum SchemeType {
      * generally maximizes throughput when calulating many numbers. While the representation forms a matrix,
      * multiplication and addition both execute element-wise; multiplication is *not* defined as matrix multiplation.
      * This SIMD computation is also referred to on the literature as batching.
-     * 
+     *
      * Each of these encoding schemes supports both signed and unsigned values.
-     * 
+     *
      * Under BFV, each homomorphic operation introduces noise, with ciphertext-ciphertext multiplication
      * creating the most by a quadratic margin. Additionally, multiplication is the slowest operation. To
      * reduce noise under repeated multiplications, Sunscreen will automatically insert relinearization operations.
-     * 
+     *
      * After some number of operations (parameter-dependent), ciphertexts contain too much noise and
      * decryption results in garbled data. Sunscreen automatically chooses the parameters to accomodate
      * the noise growth in a given circuit at the expense of execution speed.
-     * 
+     *
      * One can think of parameters as a tradeoff between accomodating more noise and faster execution. For a given security
      * level, there are several possible parameter sets. These sets are ordered from accomodating the smallest
      * level of noise to largest. Moving from one set to the next results in every operation requiring ~4x the
@@ -99,10 +99,10 @@ pub enum SchemeType {
      * throughput resulting from using the next parameter set is 2x lower than the previous. The smallest 2
      * parameter sets fail to even generate relinearization keys and fail to even perform a single multiplication
      * when using batching, while the largest can perform over 25 multiplications with batching.
-     * 
+     *
      * When using SIMD, Sunscreen supports rotating column SIMD lanes left and right and switching the rows
      * of the matrix.
-     * 
+     *
      * Pros:
      * * Most efficient way to do integer artithmetic.
      * * Exact values.
@@ -119,26 +119,26 @@ pub enum SchemeType {
 
     /**
      * Note, this scheme is not yet implemented in Sunscreen.
-     * 
+     *
      * [CKKS](https://eprint.iacr.org/2016/421.pdf) is a leveled scheme in polynomials in a cyclotomic
      * ring. The coeffiecients of a plaintext form a vector of N/2 elements (where N is the polynomial degree),
      * where each element is a complex integer mod c (c is the ciphertext modulus for the current rescale level).
-     * 
+     *
      * Homomorphic operantions in CKKS include addition and multiplication of ciphertexts. That is,
      * one can homomorphically add and multiply floating-point-esque numbers.
-     * 
+     *
      * As one performs operations, noise manifests as increasing loss of precision, similar to floating-point
      * round-off, but more pronounced. Rescaling operations (automatically inserted by Sunscreen) reduce
      * future noise growth.
-     * 
+     *
      * Sunscreen uses Microsoft SEAL for the backing CKKS implementation.
-     * 
+     *
      * Pros:
      * * Most efficient way to do floating-point arithmetic.
      * * Natively supports complex arithmetic and complex conjugation.
      * * Good ciphertext expansion when using batching.
      * * Galois keys (needed if circuit does rotations or row swapping) can be compactly generated.
-     * 
+     *
      * Cons:
      * * Bootstrapping not natively supported and isn't fast if one does implement it.
      * * Some operations (e.g. comparison) are not easy to implement and any implementation
@@ -149,22 +149,22 @@ pub enum SchemeType {
 
     /**
      * Note, scheme not yet implemented in Sunscreen.
-     * 
+     *
      * The [TFHE](https://tfhe.github.io/tfhe/) scheme. While this scheme theoretically supports leveled computations, bootstrapping
      * is very fast in TFHE so implementors rarely support leveling. This scheme supports homomorphic binary
      * gate operations as well as an intrinsic multiplexer opeeration.
-     * 
+     *
      * This scheme is general enough to implement a [CPU](https://www.usenix.org/system/files/sec21summer_matsuoka.pdf)
      * and homomorphically run any C program you like. The linked processor runs at 1.3Hz on a
      * 96-core, 4GPU AWS instance that costs $8/hr. Additionally, you don't know when the computer
      * halts so you have to run for an upper bound number of cycles and hope your computation completes,
      * so this doesn't magically defeat some of FHE's challenges.
-     * 
+     *
      * Pros:
      * * Ultra fast (~10us) Bootstrapping allows for unlimited computation.
      * * Binary representation is completely flexible.
      * * Exact values.
-     * 
+     *
      * Cons:
      * * No batching results in poor throughput for complex operations.
      * * Arithmetic is significantly slower than BFV and CKKS schemes.
@@ -172,7 +172,7 @@ pub enum SchemeType {
      * adders, shifts, etc. to accomplish arithmetic.
      * * Large ciphertext expansion; a single bit of plaintext requires 10,000 bits of ciphertext.
      * * Required bootstrapping key is ~16MB.
-     */ 
+     */
     Tfhe,
 }
 
@@ -355,7 +355,7 @@ impl Circuit {
 
     /**
      * Appends an operation that rotates ciphertext `x` left by the literal node at `y` places.
-     * 
+     *
      * # Remarks
      * Recall that BFV has 2 rows in a SIMD vector. This rotates each row.
      * CKKS has one large vector.

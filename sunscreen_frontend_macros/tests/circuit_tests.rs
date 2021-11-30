@@ -110,3 +110,200 @@ fn can_add() {
 
     assert_eq!(context, serde_json::from_value(expected).unwrap());
 }
+
+#[test]
+fn can_mul() {
+    #[circuit]
+    fn circuit_with_args(a: Signed, b: Signed, c: Signed) {
+        let _ = a * b * c;
+    }
+
+    let context = circuit_with_args();
+
+    let expected = json!({
+        "graph": {
+            "nodes": [
+                "InputCiphertext",
+                "InputCiphertext",
+                "InputCiphertext",
+                "Multiply",
+                "Multiply"
+            ],
+            "node_holes": [],
+            "edge_property": "directed",
+            "edges": [
+                [
+                    0,
+                    3,
+                    "Left"
+                ],
+                [
+                    1,
+                    3,
+                    "Right"
+                ],
+                [
+                    3,
+                    4,
+                    "Left"
+                ],
+                [
+                    2,
+                    4,
+                    "Right"
+                ]
+            ]
+        }
+    });
+
+    assert_eq!(context, serde_json::from_value(expected).unwrap());
+}
+
+#[test]
+fn can_rotate_left() {
+    #[circuit]
+    fn circuit_with_args(a: Signed) {
+        let _ = a << 4;
+    }
+
+    let context = circuit_with_args();
+
+    let expected = json!({
+        "graph": {
+            "nodes": [
+                "InputCiphertext",
+                {
+                    "Literal": {
+                      "U64": 4
+                    }
+                },
+                "RotateLeft",
+            ],
+            "node_holes": [],
+            "edge_property": "directed",
+            "edges": [
+                [
+                    0,
+                    2,
+                    "Left"
+                ],
+                [
+                    1,
+                    2,
+                    "Right"
+                ]
+            ]
+        }
+    });
+
+    assert_eq!(context, serde_json::from_value(expected).unwrap());
+}
+
+#[test]
+fn can_rotate_right() {
+    #[circuit]
+    fn circuit_with_args(a: Signed) {
+        let _ = a >> 4;
+    }
+
+    let context = circuit_with_args();
+
+    let expected = json!({
+        "graph": {
+            "nodes": [
+                "InputCiphertext",
+                {
+                    "Literal": {
+                      "U64": 4
+                    }
+                },
+                "RotateRight",
+            ],
+            "node_holes": [],
+            "edge_property": "directed",
+            "edges": [
+                [
+                    0,
+                    2,
+                    "Left"
+                ],
+                [
+                    1,
+                    2,
+                    "Right"
+                ]
+            ]
+        }
+    });
+
+    assert_eq!(context, serde_json::from_value(expected).unwrap());
+}
+
+#[test]
+fn literals_consolidate() {
+    #[circuit]
+    fn circuit_with_args(a: Signed) {
+        let _ = a << 4;
+        let _ = a << 4;
+        let _ = a << 3;
+    }
+
+    let context = circuit_with_args();
+
+    let expected = json!({
+        "graph": {
+          "nodes": [
+            "InputCiphertext",
+            {
+              "Literal": {
+                "U64": 4 // The literal 4 should be reused
+              }
+            },
+            "RotateLeft",
+            "RotateLeft",
+            {
+              "Literal": {
+                "U64": 3
+              }
+            },
+            "RotateLeft"
+          ],
+          "node_holes": [],
+          "edge_property": "directed",
+          "edges": [
+            [
+              0,
+              2,
+              "Left"
+            ],
+            [
+              1,
+              2,
+              "Right"
+            ],
+            [
+              0,
+              3,
+              "Left"
+            ],
+            [
+              1,
+              3,
+              "Right"
+            ],
+            [
+              0,
+              5,
+              "Left"
+            ],
+            [
+              4,
+              5,
+              "Right"
+            ]
+          ]
+        }
+      });
+
+    assert_eq!(context, serde_json::from_value(expected).unwrap());
+}

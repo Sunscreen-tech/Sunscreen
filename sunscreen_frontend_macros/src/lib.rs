@@ -9,8 +9,8 @@ use syn::{
     GenericParam, Generics, Ident, Index, ItemFn, Type,
 };
 
-#[proc_macro_derive(Ciphertext)]
-pub fn derive_ciphertext(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+#[proc_macro_derive(Value)]
+pub fn derive_value(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
 
     let name = input.ident;
@@ -22,11 +22,7 @@ pub fn derive_ciphertext(input: proc_macro::TokenStream) -> proc_macro::TokenStr
 
     let expanded = quote! {
         // The generated impl.
-        impl #impl_generics heapsize::HeapSize for #name #ty_generics #where_clause {
-            /*fn num_ciphertexts() -> usize {
-                #num
-            }*/
-
+        impl #impl_generics sunscreen_frontend_types::Value for #name #ty_generics #where_clause {
             fn new(id: usize) {
                 #new
             }
@@ -42,7 +38,7 @@ fn add_trait_bounds(mut generics: Generics) -> Generics {
         if let GenericParam::Type(ref mut type_param) = *param {
             type_param
                 .bounds
-                .push(parse_quote!(sunscreen_frontend_types::Ciphertext));
+                .push(parse_quote!(sunscreen_frontend_types::Value));
         }
     }
     generics
@@ -58,7 +54,7 @@ fn new_body(data: &Data) -> TokenStream {
                     let name = &f.ident;
                     let index = Index::from(field_num);
                     let res = quote_spanned! {f.span()=>
-                        #name: Ciphertext::new(self.id + #index)
+                        #name: Value::new(self.id + #index)
                     };
 
                     field_num += 1;
@@ -74,7 +70,7 @@ fn new_body(data: &Data) -> TokenStream {
                 let recurse = fields.unnamed.iter().enumerate().map(|(i, f)| {
                     let index = Index::from(i);
                     quote_spanned! {f.span()=>
-                        Ciphertext::new(self.id + #index)
+                        Value::new(self.id + #index)
                     }
                 });
                 quote! {
@@ -146,7 +142,7 @@ pub fn circuit(
         #vis fn #circuit_name() -> sunscreen_frontend_types::Context {
             use std::cell::RefCell;
             use std::mem::transmute;
-            use sunscreen_frontend_types::{CURRENT_CTX, Ciphertext};
+            use sunscreen_frontend_types::{CURRENT_CTX, Value};
 
             let mut context = Context::new();
             let mut cur_id = 0usize;

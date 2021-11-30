@@ -1,5 +1,5 @@
 [package]
-name = "sunscreen_frontend"
+name = "sunscreen_frontend_types"
 version = "0.1.0"
 edition = "2021"
 

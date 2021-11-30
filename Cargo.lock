@@ -526,7 +526,17 @@ dependencies = [
 ]
 
 [[package]]
-name = "sunscreen_frontend"
+name = "sunscreen_frontend_macros"
+version = "0.1.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "sunscreen_frontend_types",
+ "syn",
+]
+
+[[package]]
+name = "sunscreen_frontend_types"
 version = "0.1.0"
 dependencies = [
  "petgraph",

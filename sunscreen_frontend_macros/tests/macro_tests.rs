@@ -43,3 +43,10 @@ fn panicing_circuit_clears_ctx() {
         assert_eq!(old.is_none(), true);
     });
 }
+
+#[test]
+fn compile_failures() {
+    let t = trybuild::TestCases::new();
+
+    t.compile_fail("tests/compile_failures/self_arg.rs");
+}

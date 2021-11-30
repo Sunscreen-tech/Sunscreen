@@ -1,8 +1,8 @@
 extern crate proc_macro;
 
 use proc_macro::{TokenStream};
-use syn::{ItemFn, parse_macro_input};
-use quote::quote;
+use syn::{FnArg, ItemFn, parse_macro_input};
+use quote::{quote};
 
 #[proc_macro_attribute]
 pub fn circuit(_metadata: TokenStream, input: TokenStream) -> TokenStream {
@@ -11,17 +11,28 @@ pub fn circuit(_metadata: TokenStream, input: TokenStream) -> TokenStream {
     let circuit_name = &input_fn.sig.ident;
     let vis = &input_fn.vis;
     let body = &input_fn.block;
+    let attrs = &input_fn.attrs;
+    let inputs = &input_fn.sig.inputs;
+
+    for i in inputs {
+        if let FnArg::Receiver(_) = i {
+            return TokenStream::from(quote! {
+                compile_error!("circuits must not take a reference to self");
+            });
+        }
+    }
 
     TokenStream::from(quote!{
+        #(#attrs)*
         #vis fn #circuit_name() -> sunscreen_frontend_types::Context {
             use std::cell::Cell;
             use std::mem::transmute;
             use sunscreen_frontend_types::CURRENT_CTX;
 
-            let context = Context::new();
+            let mut context = Context::new();
 
             CURRENT_CTX.with(|ctx| {
-                fn internal() {
+                fn internal(#inputs) {
                     #body
                 }
 

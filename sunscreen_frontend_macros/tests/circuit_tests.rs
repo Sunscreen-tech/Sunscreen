@@ -249,45 +249,45 @@ fn can_collect_output() {
     let context = circuit_with_args();
 
     let expected = json!({
-        "graph": {
-          "nodes": [
-            "InputCiphertext",
-            "InputCiphertext",
-            "Multiply",
-            "Add",
-            "Output"
+      "graph": {
+        "nodes": [
+          "InputCiphertext",
+          "InputCiphertext",
+          "Multiply",
+          "Add",
+          "Output"
+        ],
+        "node_holes": [],
+        "edge_property": "directed",
+        "edges": [
+          [
+            1,
+            2,
+            "Left"
           ],
-          "node_holes": [],
-          "edge_property": "directed",
-          "edges": [
-            [
-              1,
-              2,
-              "Left"
-            ],
-            [
-              0,
-              2,
-              "Right"
-            ],
-            [
-              0,
-              3,
-              "Left"
-            ],
-            [
-              2,
-              3,
-              "Right"
-            ],
-            [
-              3,
-              4,
-              "Unary"
-            ]
+          [
+            0,
+            2,
+            "Right"
+          ],
+          [
+            0,
+            3,
+            "Left"
+          ],
+          [
+            2,
+            3,
+            "Right"
+          ],
+          [
+            3,
+            4,
+            "Unary"
           ]
-        }
-      });
+        ]
+      }
+    });
 
     assert_eq!(context, serde_json::from_value(expected).unwrap());
 }

@@ -1,9 +1,9 @@
 use std::ops::{Add, Mul, Shl, Shr};
 
 use petgraph::stable_graph::NodeIndex;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
-use crate::{Value, Context, CURRENT_CTX, Literal};
+use crate::{Context, Literal, Value, CURRENT_CTX};
 
 #[derive(Clone, Copy, Serialize, Deserialize)]
 struct LiteralRef {
@@ -12,10 +12,9 @@ struct LiteralRef {
 
 impl LiteralRef {
     fn new(v: Literal) -> Self {
-        with_ctx(|ctx|
-            Self {
+        with_ctx(|ctx| Self {
             id: ctx.add_literal(v),
-        }) 
+        })
     }
 }
 
@@ -33,7 +32,7 @@ impl Value for Signed {
 
     fn output(&self) -> Self {
         with_ctx(|ctx| Self {
-            id: ctx.add_output(self.id)
+            id: ctx.add_output(self.id),
         })
     }
 }
@@ -67,7 +66,7 @@ impl Shl<u64> for Signed {
         let l = LiteralRef::new(Literal::U64(n));
 
         with_ctx(|ctx| Self {
-            id: ctx.add_rotate_left(self.id, l.id)
+            id: ctx.add_rotate_left(self.id, l.id),
         })
     }
 }
@@ -79,7 +78,7 @@ impl Shr<u64> for Signed {
         let l = LiteralRef::new(Literal::U64(n));
 
         with_ctx(|ctx| Self {
-            id: ctx.add_rotate_right(self.id, l.id)
+            id: ctx.add_rotate_right(self.id, l.id),
         })
     }
 }

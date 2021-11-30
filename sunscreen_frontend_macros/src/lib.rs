@@ -141,15 +141,13 @@ pub fn circuit(
     let capture_outputs = match ret {
         ReturnType::Type(_, t) => {
             let tuple_inners = match &**t {
-                Type::Tuple(t) => {
-                    t.elems.iter().map(|x| &*x).collect::<Vec<&Type>>()
-                },
+                Type::Tuple(t) => t.elems.iter().map(|x| &*x).collect::<Vec<&Type>>(),
                 Type::Paren(t) => {
                     vec![&*t.elem]
-                },
+                }
                 Type::Path(_) => {
                     vec![&**t]
-                },
+                }
                 _ => {
                     return proc_macro::TokenStream::from(quote! {
                         compile_error!("Circuits must return a single Cipthertext or a tuple of Ciphertexts");
@@ -162,17 +160,21 @@ pub fn circuit(
                     v.output();
                 }
             } else {
-                tuple_inners.iter().enumerate().map(|(i, t)| {
-                    let index = Index::from(i);
-                    
-                    quote_spanned! {t.span() =>
-                        v.#index.output();
-                    }
-                }).collect()
+                tuple_inners
+                    .iter()
+                    .enumerate()
+                    .map(|(i, t)| {
+                        let index = Index::from(i);
+
+                        quote_spanned! {t.span() =>
+                            v.#index.output();
+                        }
+                    })
+                    .collect()
             }
-        },
-        ReturnType::Default => { 
-            quote! { }
+        }
+        ReturnType::Default => {
+            quote! {}
         }
     };
 
@@ -204,7 +206,7 @@ pub fn circuit(
 
                 match panic_res {
                     Ok(v) => { #capture_outputs },
-                    Err(err) => { 
+                    Err(err) => {
                         ctx.swap(&RefCell::new(None));
                         std::panic::resume_unwind(err)
                     }

@@ -194,7 +194,10 @@ impl ToString for NodeInfo {
 }
 
 impl NodeInfo {
-    fn new(operation: Operation) -> Self {
+    /**
+     * Creates a new NodeInfo from the given operation.
+     */
+    pub fn new(operation: Operation) -> Self {
         Self { operation }
     }
 }

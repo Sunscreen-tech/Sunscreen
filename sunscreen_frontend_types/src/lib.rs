@@ -1,4 +1,4 @@
-mod types;
+pub mod types;
 
 use std::cell::RefCell;
 
@@ -9,11 +9,17 @@ use petgraph::{
 };
 use serde::{Deserialize, Serialize};
 
-pub use types::*;
+use sunscreen_backend::compile_inplace;
+use sunscreen_circuit::{
+    Circuit, EdgeInfo, Literal as CircuitLiteral, NodeInfo, Operation as CircuitOperation,
+    OuterLiteral as CircuitOuterLiteral,
+};
+
+pub use sunscreen_circuit::SchemeType;
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub enum Literal {
-    U64(u64)
+    U64(u64),
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
@@ -25,14 +31,14 @@ pub enum Operation {
     RotateLeft,
     RotateRight,
     SwapRows,
-    Output
+    Output,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub enum OperandInfo {
     Left,
     Right,
-    Unary
+    Unary,
 }
 
 pub trait Value {
@@ -97,16 +103,24 @@ impl Context {
     pub fn add_literal(&mut self, literal: Literal) -> NodeIndex {
         // See if we already have a node for the given literal. If so, just return it.
         // If not, make a new one.
-        let existing_literal = self.graph.node_indices().filter_map(|i| {
-            match &self.graph[i] {
-                Operation::Literal(x) => if *x == literal { Some(i) } else { None },
-                _ => None
-            }
-        }).nth(0);
+        let existing_literal = self
+            .graph
+            .node_indices()
+            .filter_map(|i| match &self.graph[i] {
+                Operation::Literal(x) => {
+                    if *x == literal {
+                        Some(i)
+                    } else {
+                        None
+                    }
+                }
+                _ => None,
+            })
+            .nth(0);
 
         match existing_literal {
             Some(x) => x,
-            None => self.graph.add_node(Operation::Literal(literal))
+            None => self.graph.add_node(Operation::Literal(literal)),
         }
     }
 
@@ -120,5 +134,35 @@ impl Context {
 
     pub fn add_output(&mut self, i: NodeIndex) -> NodeIndex {
         self.add_1_input(Operation::Output, i)
+    }
+
+    pub fn compile(&self) -> Circuit {
+        let mut circuit = Circuit::new(SchemeType::Bfv);
+
+        let mapped_graph = self.graph.map(
+            |id, n| match n {
+                Operation::Add => NodeInfo::new(CircuitOperation::Add),
+                Operation::InputCiphertext => {
+                    NodeInfo::new(CircuitOperation::InputCiphertext(id.index()))
+                }
+                Operation::Literal(Literal::U64(x)) => NodeInfo::new(CircuitOperation::Literal(
+                    CircuitOuterLiteral::Scalar(CircuitLiteral::U64(*x)),
+                )),
+                Operation::Multiply => NodeInfo::new(CircuitOperation::Multiply),
+                Operation::Output => NodeInfo::new(CircuitOperation::OutputCiphertext),
+                Operation::RotateLeft => NodeInfo::new(CircuitOperation::ShiftLeft),
+                Operation::RotateRight => NodeInfo::new(CircuitOperation::ShiftRight),
+                Operation::SwapRows => NodeInfo::new(CircuitOperation::SwapRows),
+            },
+            |_, e| match e {
+                OperandInfo::Left => EdgeInfo::LeftOperand,
+                OperandInfo::Right => EdgeInfo::RightOperand,
+                OperandInfo::Unary => EdgeInfo::UnaryOperand,
+            },
+        );
+
+        circuit.graph = StableGraph::from(mapped_graph);
+
+        compile_inplace(circuit)
     }
 }

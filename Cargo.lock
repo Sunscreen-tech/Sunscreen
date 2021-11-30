@@ -526,6 +526,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "sunscreen_frontend"
+version = "0.1.0"
+dependencies = [
+ "seal",
+ "sunscreen_backend",
+ "sunscreen_frontend_macros",
+ "sunscreen_frontend_types",
+ "sunscreen_runtime",
+]
+
+[[package]]
 name = "sunscreen_frontend_macros"
 version = "0.1.0"
 dependencies = [
@@ -543,6 +554,7 @@ version = "0.1.0"
 dependencies = [
  "petgraph",
  "serde",
+ "sunscreen_backend",
  "sunscreen_circuit",
 ]
 

@@ -1,5 +1,5 @@
 use sunscreen_frontend_macros::circuit;
-use sunscreen_frontend_types::{Context, CURRENT_CTX};
+use sunscreen_frontend_types::{Context, CURRENT_CTX, Signed};
 
 #[test]
 fn circuit_gets_called() {
@@ -25,7 +25,7 @@ fn panicing_circuit_clears_ctx() {
             let old = ctx.take();
 
             assert_eq!(old.is_some(), true);
-            ctx.set(old);
+            ctx.replace(old);
         });
 
         panic!("Oops");
@@ -49,4 +49,15 @@ fn compile_failures() {
     let t = trybuild::TestCases::new();
 
     t.compile_fail("tests/compile_failures/self_arg.rs");
+}
+
+#[test]
+fn capture_circuit_input_args() {
+    #[circuit]
+    fn circuit_with_args(_a: Signed, _b: Signed) {
+    }
+
+    let context = circuit_with_args();
+
+    assert_eq!(context.graph.node_count(), 2);
 }

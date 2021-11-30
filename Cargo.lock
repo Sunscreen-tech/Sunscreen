@@ -533,6 +533,7 @@ dependencies = [
  "quote",
  "sunscreen_frontend_types",
  "syn",
+ "trybuild",
 ]
 
 [[package]]
@@ -540,6 +541,7 @@ name = "sunscreen_frontend_types"
 version = "0.1.0"
 dependencies = [
  "petgraph",
+ "serde",
  "sunscreen_circuit",
 ]
 
@@ -588,6 +590,29 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d326610f408c7a4eb6f51c37c330e496b08506c9457c9d34287ecc38809fb060"
 dependencies = [
  "unicode-width",
+]
+
+[[package]]
+name = "toml"
+version = "0.5.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a31142970826733df8241ef35dc040ef98c679ab14d7c3e54d827099b3acecaa"
+dependencies = [
+ "serde",
+]
+
+[[package]]
+name = "trybuild"
+version = "1.0.52"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "150e726dc059e6fbd4fce3288f5bb3cf70128cf63b0dde23b938a3cad810fb23"
+dependencies = [
+ "glob",
+ "lazy_static",
+ "serde",
+ "serde_json",
+ "termcolor",
+ "toml",
 ]
 
 [[package]]

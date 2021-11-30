@@ -8,3 +8,4 @@ edition = "2021"
 [dependencies]
 petgraph = "0.6.0"
 sunscreen_circuit = { path = "../sunscreen_circuit" }
+serde = { version = "1.0.130", features = ["derive"] }

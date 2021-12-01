@@ -180,12 +180,13 @@ pub fn circuit(
 
     proc_macro::TokenStream::from(quote! {
         #(#attrs)*
-        #vis fn #circuit_name() -> sunscreen_frontend_types::Context {
+        #vis fn #circuit_name(params: &Params) -> sunscreen_frontend_types::Context {
             use std::cell::RefCell;
             use std::mem::transmute;
-            use sunscreen_frontend_types::{CURRENT_CTX, Value};
+            use sunscreen_frontend_types::{CURRENT_CTX, Params, SchemeType, Value};
 
-            let mut context = Context::new();
+            // TODO: Other schemes.
+            let mut context = Context::new(SchemeType::Bfv);
             let mut cur_id = 0usize;
 
             CURRENT_CTX.with(|ctx| {

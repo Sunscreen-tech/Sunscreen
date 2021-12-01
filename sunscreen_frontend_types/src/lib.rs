@@ -1,4 +1,7 @@
 pub mod types;
+mod compiler;
+mod error;
+mod params;
 
 use std::cell::RefCell;
 
@@ -15,7 +18,11 @@ use sunscreen_circuit::{
     OuterLiteral as CircuitOuterLiteral,
 };
 
-pub use sunscreen_circuit::SchemeType;
+pub use params::{PlainModulusConstraint};
+pub use sunscreen_circuit::{SchemeType, SecurityLevel};
+pub use compiler::{Compiler};
+pub use sunscreen_runtime::Params;
+pub use error::{Error, Result};
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub enum Literal {
@@ -49,6 +56,7 @@ pub trait Value {
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Context {
     pub graph: StableGraph<Operation, OperandInfo>,
+    pub scheme: SchemeType,
 }
 
 impl PartialEq for Context {
@@ -67,9 +75,10 @@ thread_local! {
 }
 
 impl Context {
-    pub fn new() -> Self {
+    pub fn new(scheme: SchemeType) -> Self {
         Self {
             graph: StableGraph::new(),
+            scheme,
         }
     }
 

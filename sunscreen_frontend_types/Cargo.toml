@@ -6,7 +6,10 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+log = "0.4.14"
 petgraph = "0.6.0"
 sunscreen_backend = { path = "../sunscreen_backend" }
 sunscreen_circuit = { path = "../sunscreen_circuit" }
+sunscreen_runtime = { path = "../sunscreen_runtime" }
+seal = { path = "../seal" }
 serde = { version = "1.0.130", features = ["derive"] }

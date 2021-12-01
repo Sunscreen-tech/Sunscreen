@@ -23,6 +23,8 @@ use serde::{Deserialize, Serialize};
 pub use error::*;
 pub use literal::*;
 pub use operation::*;
+pub use seal::SecurityLevel;
+
 use IRTransform::*;
 use TransformNodeIndex::*;
 
@@ -525,6 +527,13 @@ impl Circuit {
     }
 
     /**
+     * Returns the number of inputs ciphertexts this circuit takes.
+     */
+    pub fn num_inputs(&self) -> usize {
+        self.graph.node_weights().filter(|n| if let Operation::InputCiphertext(_) = n.operation { true } else  {false}).count()
+    }
+
+    /**
      * Runs tree shaking and returns a derived Circuit with only
      * dependencies required to run the requested nodes.
      *
@@ -591,6 +600,26 @@ impl Circuit {
         }
 
         Ok(())
+    }
+
+    /**
+     * Whether or not this circuit needs relin keys to run. Needed for relinearization.
+     */
+    pub fn requires_relin_keys(&self) -> bool {
+        self.graph.node_weights().any(|n| if let Operation::Relinearize = n.operation { true } else { false })
+    }
+
+    /**
+     * Whether or not this circuit requires Galois keys to run. Needed for rotation and row swap
+     * operations.
+     */
+    pub fn requires_galois_keys(&self) -> bool {
+        self.graph.node_weights().any(|n| match n.operation {
+            Operation::ShiftRight => true,
+            Operation::ShiftLeft => true,
+            Operation::SwapRows => true,
+            _ => false
+        })
     }
 }
 

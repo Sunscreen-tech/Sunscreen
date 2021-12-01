@@ -529,6 +529,7 @@ dependencies = [
 name = "sunscreen_frontend"
 version = "0.1.0"
 dependencies = [
+ "env_logger 0.9.0",
  "seal",
  "sunscreen_backend",
  "sunscreen_frontend_macros",
@@ -552,10 +553,13 @@ dependencies = [
 name = "sunscreen_frontend_types"
 version = "0.1.0"
 dependencies = [
+ "log",
  "petgraph",
+ "seal",
  "serde",
  "sunscreen_backend",
  "sunscreen_circuit",
+ "sunscreen_runtime",
 ]
 
 [[package]]
@@ -563,10 +567,12 @@ name = "sunscreen_runtime"
 version = "0.1.0"
 dependencies = [
  "crossbeam",
+ "log",
  "num_cpus",
  "petgraph",
  "scoped_threadpool",
  "seal",
+ "serde",
  "sunscreen_circuit",
 ]
 

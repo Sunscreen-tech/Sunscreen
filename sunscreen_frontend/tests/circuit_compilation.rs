@@ -3,8 +3,6 @@ use sunscreen_runtime::{RuntimeBuilder};
 
 use seal::BFVScalarEncoder;
 
-fn setup_scheme(params: Params) {}
-
 #[test]
 fn can_compile_and_run_simple_add() {
     let _ = env_logger::try_init();

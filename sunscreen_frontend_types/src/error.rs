@@ -1,7 +1,3 @@
-use petgraph::stable_graph::NodeIndex;
-
-use crate::EdgeInfo;
-
 #[derive(Debug, Clone, PartialEq)]
 /**
  * Represents an error that can occur in this crate.

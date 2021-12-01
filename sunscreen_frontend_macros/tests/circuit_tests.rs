@@ -1,7 +1,17 @@
 use sunscreen_frontend_macros::circuit;
-use sunscreen_frontend_types::{Context, Signed, CURRENT_CTX};
+use sunscreen_frontend_types::{Context, Params, types::Signed, SchemeType, SecurityLevel, CURRENT_CTX};
 
 use serde_json::json;
+
+fn get_params() -> Params {
+  Params {
+    lattice_dimension: 1024,
+    plain_modulus: 1024,
+    coeff_modulus: vec![1, 2, 3, 4],
+    security_level: SecurityLevel::TC128,
+    scheme_type: SchemeType::Bfv,
+  }
+}
 
 #[test]
 fn circuit_gets_called() {
@@ -14,7 +24,7 @@ fn circuit_gets_called() {
         };
     }
 
-    simple_circuit();
+    simple_circuit(&get_params());
 
     assert_eq!(unsafe { FOO }, 20);
 }
@@ -34,7 +44,7 @@ fn panicing_circuit_clears_ctx() {
     }
 
     let panic_result = std::panic::catch_unwind(|| {
-        panic_circuit();
+        panic_circuit(&get_params());
     });
 
     assert_eq!(panic_result.is_err(), true);
@@ -58,7 +68,7 @@ fn capture_circuit_input_args() {
     #[circuit]
     fn circuit_with_args(_a: Signed, _b: Signed, _c: Signed, _d: Signed) {}
 
-    let context = circuit_with_args();
+    let context = circuit_with_args(&get_params());
 
     assert_eq!(context.graph.node_count(), 4);
 }
@@ -70,9 +80,10 @@ fn can_add() {
         let _ = a + b + c;
     }
 
-    let context = circuit_with_args();
+    let context = circuit_with_args(&get_params());
 
     let expected = json!({
+        
         "graph": {
             "nodes": [
                 "InputCiphertext",
@@ -105,7 +116,8 @@ fn can_add() {
                     "Right"
                 ]
             ]
-        }
+        },
+        "scheme": "Bfv"
     });
 
     assert_eq!(context, serde_json::from_value(expected).unwrap());
@@ -118,7 +130,7 @@ fn can_mul() {
         let _ = a * b * c;
     }
 
-    let context = circuit_with_args();
+    let context = circuit_with_args(&get_params());
 
     let expected = json!({
         "graph": {
@@ -153,7 +165,8 @@ fn can_mul() {
                     "Right"
                 ]
             ]
-        }
+        },
+        "scheme": "Bfv"
     });
 
     assert_eq!(context, serde_json::from_value(expected).unwrap());
@@ -166,7 +179,7 @@ fn can_rotate_left() {
         let _ = a << 4;
     }
 
-    let context = circuit_with_args();
+    let context = circuit_with_args(&get_params());
 
     let expected = json!({
         "graph": {
@@ -193,7 +206,8 @@ fn can_rotate_left() {
                     "Right"
                 ]
             ]
-        }
+        },
+        "scheme": "Bfv"
     });
 
     assert_eq!(context, serde_json::from_value(expected).unwrap());
@@ -206,7 +220,7 @@ fn can_rotate_right() {
         let _ = a >> 4;
     }
 
-    let context = circuit_with_args();
+    let context = circuit_with_args(&get_params());
 
     let expected = json!({
         "graph": {
@@ -233,7 +247,8 @@ fn can_rotate_right() {
                     "Right"
                 ]
             ]
-        }
+        },
+        "scheme": "Bfv"
     });
 
     assert_eq!(context, serde_json::from_value(expected).unwrap());
@@ -246,7 +261,7 @@ fn can_collect_output() {
         a + b * a
     }
 
-    let context = circuit_with_args();
+    let context = circuit_with_args(&get_params());
 
     let expected = json!({
       "graph": {
@@ -286,7 +301,8 @@ fn can_collect_output() {
             "Unary"
           ]
         ]
-      }
+      },
+      "scheme": "Bfv"
     });
 
     assert_eq!(context, serde_json::from_value(expected).unwrap());
@@ -299,7 +315,7 @@ fn can_collect_multiple_outputs() {
         (a + b * a, a)
     }
 
-    let context = circuit_with_args();
+    let context = circuit_with_args(&get_params());
 
     let expected = json!({
         "graph": {
@@ -345,7 +361,8 @@ fn can_collect_multiple_outputs() {
               "Unary"
             ]
           ]
-        }
+        },
+        "scheme": "Bfv"
     });
 
     assert_eq!(context, serde_json::from_value(expected).unwrap());
@@ -360,7 +377,7 @@ fn literals_consolidate() {
         let _ = a << 3;
     }
 
-    let context = circuit_with_args();
+    let context = circuit_with_args(&get_params());
 
     let expected = json!({
       "graph": {
@@ -414,7 +431,8 @@ fn literals_consolidate() {
             "Right"
           ]
         ]
-      }
+      },
+      "scheme": "Bfv"
     });
 
     assert_eq!(context, serde_json::from_value(expected).unwrap());

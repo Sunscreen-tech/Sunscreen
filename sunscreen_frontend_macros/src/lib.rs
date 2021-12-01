@@ -1,4 +1,8 @@
+#![deny(missing_docs)]
+#![deny(rustdoc::broken_intra_doc_links)]
 #![recursion_limit = "128"]
+
+//! This crate contains macros to support the sunscreen compiler.
 
 extern crate proc_macro;
 
@@ -10,6 +14,9 @@ use syn::{
 };
 
 #[proc_macro_derive(Value)]
+/**
+ * Allows you to #[derive(Value)]. All members must impl value for this to work.
+ */ 
 pub fn derive_value(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
 
@@ -86,6 +93,33 @@ fn new_body(data: &Data) -> TokenStream {
 }
 
 #[proc_macro_attribute]
+/**
+ * Specifies a function to be a circuit. A circuit has any number of inputs that impl the
+ * [`Value`](sunscreen_frontend_types::Value) trait and returns either a single type implementing `Value` or a tuple of
+ * types implementing `Value`.
+ * 
+ * This function gets run by the compiler to build up the circuit you specify and does not
+ * directly or eagerly perform homomorphic operations.
+ * 
+ * # Examples
+ * ```rust
+ * # use sunscreen_frontend_types::{types::Signed, Params, Context};
+ * 
+ * #[sunscreen_frontend_macros::circuit]
+ * fn multiply_add(a: Signed, b: Signed, c: Signed) -> Signed {
+ *   a * b + c
+ * }
+ * ```
+ * 
+ * * ```rust
+ * # use sunscreen_frontend_types::{types::Signed, Params, Context};
+ * 
+ * #[sunscreen_frontend_macros::circuit]
+ * fn multi_out(a: Signed, b: Signed, c: Signed) -> (Signed, Signed) {
+ *   (a + b, b + c)
+ * }
+ * ```
+ */
 pub fn circuit(
     _metadata: proc_macro::TokenStream,
     input: proc_macro::TokenStream,

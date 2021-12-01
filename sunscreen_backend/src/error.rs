@@ -4,14 +4,6 @@
  */
 pub enum Error {
     /**
-     * Afer running [`determine_params`](crate::determine_params), no suitable parameters
-     * were found that can run the circuit. This might mean the circuit is too large,
-     * you requested too many bits of noise budget remain at the end, or the plaintext modulus
-     * constraint was too large.
-     */
-    NoParams,
-
-    /**
      * A circuit is erroneous.
      */
     IRError(sunscreen_circuit::Error),

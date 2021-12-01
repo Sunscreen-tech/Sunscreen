@@ -3,9 +3,6 @@
 
 //! This crate contains the backend compiler for sunscreen circuits. It includes the
 //! following useful operations:
-//! * [`determine_params`] takes a well-formed circuit and discovers the minimal parameters
-//! that allow the circuit to operate at high performance. E.g. the polynomial degree, plain modulus,
-//! coefficient modulus.
 //! * [`compile`] takes either a circuit from the compiler frontend and applies a set
 //! of transformations.
 

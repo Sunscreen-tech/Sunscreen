@@ -19,7 +19,14 @@ impl LiteralRef {
 }
 
 #[derive(Clone, Copy)]
+/**
+ * Represents a single signed integer encrypted as a ciphertext. Suitable for use
+ * as an input or output for a Sunscreen circuit.
+ */
 pub struct Signed {
+    /**
+     * The internal graph node id of this input or output.
+     */
     pub id: NodeIndex,
 }
 

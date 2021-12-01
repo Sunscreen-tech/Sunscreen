@@ -3,6 +3,8 @@ members = [
     "seal",
     "sunscreen_backend",
     "sunscreen_frontend",
+    "sunscreen_frontend_types",
+    "sunscreen_frontend_macros",
     "sunscreen_circuit",
     "sunscreen_runtime",
 ]

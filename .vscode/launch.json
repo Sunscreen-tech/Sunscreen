@@ -96,6 +96,24 @@
             },
             "args": [],
             "cwd": "${workspaceFolder}"
-        }
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug assumption tests in library 'sunscreen_frontend'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--package=sunscreen_frontend"
+                ],
+                "filter": {
+                    "name": "circuit_compilation",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
     ]
 }

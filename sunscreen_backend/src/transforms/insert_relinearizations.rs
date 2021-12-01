@@ -1,4 +1,4 @@
-use sunscreen_circuit::{IRTransform::*, Circuit, Operation::*, TransformList};
+use sunscreen_circuit::{Circuit, IRTransform::*, Operation::*, TransformList};
 
 use petgraph::{visit::EdgeRef, Direction};
 
@@ -26,10 +26,7 @@ pub fn apply_insert_relinearizations(ir: &mut Circuit) {
 mod tests {
     use super::*;
     use petgraph::stable_graph::NodeIndex;
-    use sunscreen_circuit::OuterLiteral;
     use sunscreen_circuit::*;
-
-    use seal::SchemeType;
 
     fn create_test_dag() -> Circuit {
         let mut ir = Circuit::new(SchemeType::Bfv);

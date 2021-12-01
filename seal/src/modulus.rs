@@ -4,6 +4,8 @@ use std::ptr::null_mut;
 use crate::bindgen;
 use crate::error::*;
 
+use serde::{Serialize, Deserialize};
+
 /**
  * Represent an integer modulus of up to 61 bits. An instance of the Modulus
  * struct represents a non-negative integer modulus up to 61 bits. In particular,
@@ -40,7 +42,7 @@ impl PartialEq for Modulus {
  * Microsoft SEAL when constructing a SEALContext object. Normal users should not
  * have to specify the security level explicitly anywhere.
  */
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq, Serialize, Deserialize)]
 #[repr(i32)]
 pub enum SecurityLevel {
     /// 128-bit security level according to HomomorphicEncryption.org standard.
@@ -70,7 +72,10 @@ pub unsafe fn unchecked_from_handle(handle: *mut c_void) -> Modulus {
 }
 
 impl Modulus {
-    fn new(value: u64) -> Result<Self> {
+    /**
+     * Creates a modulus from the given value.
+     */
+    pub fn new(value: u64) -> Result<Self> {
         let mut handle: *mut c_void = null_mut();
 
         convert_seal_error(unsafe { bindgen::Modulus_Create1(value, &mut handle) })?;

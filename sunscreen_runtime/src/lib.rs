@@ -7,14 +7,219 @@
 mod error;
 
 pub use crate::error::*;
-use sunscreen_circuit::{EdgeInfo, Circuit, Literal, Operation::*, OuterLiteral};
+use sunscreen_circuit::{Circuit, EdgeInfo, Literal, Operation::*, OuterLiteral, SchemeType};
 
 use crossbeam::atomic::AtomicCell;
 use petgraph::{stable_graph::NodeIndex, visit::EdgeRef, Direction};
-use seal::{Ciphertext, Evaluator, GaloisKeys, RelinearizationKeys};
+//use seal::{Ciphertext, Evaluator, GaloisKeys, RelinearizationKeys};
+use serde::{Serialize, Deserialize};
 
 use std::borrow::Cow;
 use std::sync::atomic::{AtomicUsize, Ordering};
+
+use seal::{
+    BFVEvaluator, BfvEncryptionParametersBuilder, Ciphertext, GaloisKeys,
+    Context as SealContext, Decryptor, Evaluator, Encryptor, KeyGenerator, Modulus, Plaintext, PublicKey, SecurityLevel, SecretKey,
+    RelinearizationKeys,
+};
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+/**
+ * The parameter set required for a given circuit to run efficiently and correctly.
+ */
+pub struct Params {
+    /**
+     * The lattice dimension. For CKKS and BFV, this is the degree of the ciphertext polynomial.
+     */
+    pub lattice_dimension: u64,
+
+    /**
+     * The modulii for each modulo switch level for BFV and CKKS.
+     */
+    pub coeff_modulus: Vec<u64>,
+
+    /**
+     * The plaintext modulus.
+     */
+    pub plain_modulus: u64,
+    
+    /**
+     * The scheme type.
+     */
+    pub scheme_type: SchemeType,
+
+    /**
+     * The securtiy level required.
+     */
+    pub security_level: SecurityLevel,
+}
+
+/**
+ * Contains all the elements needed to encrypt, decrypt, generate keys, and evaluate circuits.
+ */
+pub enum Runtime {
+    /**
+     * This runtime is for the BFV scheme.
+     */
+    Bfv {
+        /**
+         * The context associated with the BFV scheme. Created by [`RuntimeBuilder`].
+         */
+        context: SealContext,
+    },
+}
+
+impl Runtime {
+    /**
+     * Generates a tuple of public/private keys for the encapsulated scheme and parameters.
+     */
+    pub fn generate_keys(&self) -> Result<(PublicKey, SecretKey)> {
+        let keys = match self {
+            Self::Bfv { context, .. } => {
+                let keygen = KeyGenerator::new(&context)?;
+
+                (keygen.create_public_key(), keygen.secret_key())
+            }
+        };
+
+        Ok(keys)
+    }
+
+    /**
+     * Generates Galois keys needed for SIMD rotations.
+     */
+    pub fn generate_galois_keys(&self, secret_key: &SecretKey) -> Result<GaloisKeys> {
+        let keys = match self {
+            Self::Bfv { context, .. } => {
+                let keygen = KeyGenerator::new_from_secret_key(&context, secret_key)?;
+
+                keygen.create_galois_keys()?
+            }
+        };
+        
+        Ok(keys)
+    }
+
+    /**
+     * Generates Relinearization keys needed for BFV.
+     */
+    pub fn generate_relin_keys(&self, secret_key: &SecretKey) -> Result<RelinearizationKeys> {
+        let keys = match self {
+            Self::Bfv { context, .. } => {
+                let keygen = KeyGenerator::new_from_secret_key(&context, secret_key)?;
+
+                keygen.create_relinearization_keys()?
+            }
+        };
+        
+        Ok(keys)
+    }
+
+    /**
+     * Validates and runs the given circuit. Unless you can guarantee your circuit is valid,
+     * you should use this method rather than [`run_program_unchecked`].
+     */
+    pub fn validate_and_run_program(
+        &self,
+        ir: &Circuit,
+        inputs: &[Ciphertext],
+        relin_keys: Option<RelinearizationKeys>,
+        galois_keys: Option<GaloisKeys>,
+    ) -> Result<Vec<Ciphertext>> {
+        ir.validate()?;
+
+        // Aside from circuit correctness, check that the required keys are given.
+        if relin_keys.is_none() && ir.requires_relin_keys() {
+            return Err(Error::MissingRelinearizationKeys);
+        }
+
+        if galois_keys.is_none() && ir.requires_galois_keys() {
+            return Err(Error::MissingGaloisKeys);
+        }
+
+        if ir.num_inputs() != inputs.len() {
+            return Err(Error::IncorrectCiphertextCount);
+        }
+
+        match self {
+            Self::Bfv { context, .. } => {
+                let evaluator = BFVEvaluator::new(&context)?;
+
+                Ok(unsafe { run_program_unchecked(ir, inputs, &evaluator, relin_keys, galois_keys) })
+            }
+        }
+    }
+
+    /**
+     * Encrypts the given plaintext using the given public key.
+     */ 
+    pub fn encrypt(&self, p: &Plaintext, public_key: &PublicKey) -> Result<Ciphertext> {
+        let ciphertext = match self {
+            Self::Bfv { context, .. } => {
+                let encryptor = Encryptor::with_public_key(&context, public_key)?;
+
+                encryptor.encrypt(&p)?
+            }
+        };
+
+        Ok(ciphertext)
+    }
+
+    /**
+     * Decrypts the given ciphertext using the given secret key.
+     */
+    pub fn decrypt(&self, c: &Ciphertext, secret_key: &SecretKey) -> Result<Plaintext> {
+        let plaintext = match self {
+            Self::Bfv { context, .. } => {
+                let decryptor = Decryptor::new(&context, secret_key)?;
+
+                decryptor.decrypt(&c)?
+            }
+        };
+
+        Ok(plaintext)
+    }
+}
+
+/**
+ * Used to construct a runtime.
+ */
+pub struct RuntimeBuilder {
+    params: Params,
+}
+
+impl RuntimeBuilder {
+    /**
+     * Creates a Runtime with the given parameters.
+     */
+    pub fn new(params: &Params) -> Self {
+        Self {
+            params: params.clone()
+        }
+    }
+
+    /**
+     * Builds the runtime.
+     */
+    pub fn build(self) -> Result<Runtime> { 
+        match self.params.scheme_type {
+            SchemeType::Bfv => {
+                let bfv_params = BfvEncryptionParametersBuilder::new()
+                    .set_plain_modulus_u64(self.params.plain_modulus)
+                    .set_poly_modulus_degree(self.params.lattice_dimension)
+                    .set_coefficient_modulus(self.params.coeff_modulus.iter().map(|v| Modulus::new(*v).unwrap()).collect::<Vec<Modulus>>())
+                    .build()?;
+
+                let context = SealContext::new(&bfv_params, true, self.params.security_level)?;
+
+                Ok(Runtime::Bfv {
+                    context
+                })
+            },
+            _ => unimplemented!()
+        }
+    }
+}
 
 /**
  * Gets the two input operands and returns a tuple of left, right. For some operations
@@ -28,10 +233,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
  * [`validate()`](sunscreen_circuit::Circuit::validate()) should reveal this
  * issue.
  */
-pub fn get_left_right_operands(
-    ir: &Circuit,
-    index: NodeIndex,
-) -> (NodeIndex, NodeIndex) {
+pub fn get_left_right_operands(ir: &Circuit, index: NodeIndex) -> (NodeIndex, NodeIndex) {
     let left = ir
         .graph
         .edges_directed(index, Direction::Incoming)
@@ -71,22 +273,6 @@ pub fn get_unary_operand(ir: &Circuit, index: NodeIndex) -> NodeIndex {
 }
 
 /**
- * Validates and runs the given circuit. Unless you can guarantee your circuit is valid,
- * you should use this method rather than [`run_program_unchecked`].
- */
-pub fn validate_and_run_program<E: Evaluator + Sync + Send>(
-    ir: &Circuit,
-    inputs: &[Ciphertext],
-    evaluator: &E,
-    relin_keys: Option<RelinearizationKeys>,
-    galois_keys: Option<GaloisKeys>,
-) -> Result<Vec<Ciphertext>> {
-    ir.validate()?;
-
-    Ok(unsafe { run_program_unchecked(ir, inputs, evaluator, relin_keys, galois_keys) })
-}
-
-/**
  * Run the given [`Circuit`] to completion with the given inputs. This
  * method performs no validation. You must verify the program is first valid. Programs produced
  * by the compiler are guaranteed to be valid, but deserialization does not make any such
@@ -109,7 +295,7 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
     inputs: &[Ciphertext],
     evaluator: &E,
     relin_keys: Option<RelinearizationKeys>,
-    galois_keys: Option<GaloisKeys>
+    galois_keys: Option<GaloisKeys>,
 ) -> Vec<Ciphertext> {
     fn get_ciphertext<'a>(
         data: &'a [AtomicCell<Option<Cow<Ciphertext>>>],
@@ -151,28 +337,36 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
                     let a = get_ciphertext(&data, left.index());
                     let b = match ir.graph[right].operation {
                         Literal(OuterLiteral::Scalar(Literal::U64(v))) => v as i32,
-                        _ => panic!("Illegal right operand for ShiftLeft: {:#?}", ir.graph[right].operation)
+                        _ => panic!(
+                            "Illegal right operand for ShiftLeft: {:#?}",
+                            ir.graph[right].operation
+                        ),
                     };
 
-
-                    let c = evaluator.rotate_rows(a, b, galois_keys.as_ref().unwrap()).unwrap();
+                    let c = evaluator
+                        .rotate_rows(a, b, galois_keys.as_ref().unwrap())
+                        .unwrap();
 
                     data[index.index()].store(Some(Cow::Owned(c)));
-                },
+                }
                 ShiftRight => {
                     let (left, right) = get_left_right_operands(ir, index);
 
                     let a = get_ciphertext(&data, left.index());
                     let b = match ir.graph[right].operation {
                         Literal(OuterLiteral::Scalar(Literal::U64(v))) => v as i32,
-                        _ => panic!("Illegal right operand for ShiftLeft: {:#?}", ir.graph[right].operation)
+                        _ => panic!(
+                            "Illegal right operand for ShiftLeft: {:#?}",
+                            ir.graph[right].operation
+                        ),
                     };
 
-
-                    let c = evaluator.rotate_rows(a, -b, galois_keys.as_ref().unwrap()).unwrap();
+                    let c = evaluator
+                        .rotate_rows(a, -b, galois_keys.as_ref().unwrap())
+                        .unwrap();
 
                     data[index.index()].store(Some(Cow::Owned(c)));
-                },
+                }
                 Add => {
                     let (left, right) = get_left_right_operands(ir, index);
 
@@ -209,7 +403,7 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
                 }
                 Negate => unimplemented!(),
                 Sub => unimplemented!(),
-                Literal(_x) => { },
+                Literal(_x) => {}
                 OutputCiphertext => {
                     let input = get_unary_operand(ir, index);
 
@@ -323,6 +517,7 @@ where
 mod tests {
     use super::*;
     use seal::*;
+    use sunscreen_circuit::SchemeType;
 
     fn setup_scheme(
         degree: u64,
@@ -424,8 +619,9 @@ mod tests {
         let ct_0 = encryptor.encrypt(&pt_0).unwrap();
         let ct_1 = encryptor.encrypt(&pt_1).unwrap();
 
-        let output =
-            unsafe { run_program_unchecked(&ir, &[ct_0, ct_1], &evaluator, Some(relin_keys), None) };
+        let output = unsafe {
+            run_program_unchecked(&ir, &[ct_0, ct_1], &evaluator, Some(relin_keys), None)
+        };
 
         assert_eq!(output.len(), 1);
 
@@ -464,8 +660,9 @@ mod tests {
         let ct_0 = encryptor.encrypt(&pt_0).unwrap();
         let ct_1 = encryptor.encrypt(&pt_1).unwrap();
 
-        let output =
-            unsafe { run_program_unchecked(&ir, &[ct_0, ct_1], &evaluator, Some(relin_keys), None) };
+        let output = unsafe {
+            run_program_unchecked(&ir, &[ct_0, ct_1], &evaluator, Some(relin_keys), None)
+        };
 
         assert_eq!(output.len(), 1);
 
@@ -519,8 +716,9 @@ mod tests {
         let ct_0 = encryptor.encrypt(&pt_0).unwrap();
         let ct_1 = encryptor.encrypt(&pt_1).unwrap();
 
-        let output =
-            unsafe { run_program_unchecked(&ir, &[ct_0, ct_1], &evaluator, Some(relin_keys), None) };
+        let output = unsafe {
+            run_program_unchecked(&ir, &[ct_0, ct_1], &evaluator, Some(relin_keys), None)
+        };
 
         assert_eq!(output.len(), 1);
 
@@ -564,24 +762,15 @@ mod tests {
 
         let o_p = decryptor.decrypt(&output[0]).unwrap();
 
-        let mut expected = (3..degree / 2)
-            .into_iter()
-            .collect::<Vec<u64>>();
-            
+        let mut expected = (3..degree / 2).into_iter().collect::<Vec<u64>>();
+
         expected.append(&mut vec![0, 1, 2]);
 
-        expected.append(
-            &mut (degree / 2 + 3..degree)
-            .into_iter()
-            .collect::<Vec<u64>>()
-        );
+        expected.append(&mut (degree / 2 + 3..degree).into_iter().collect::<Vec<u64>>());
 
-        expected.append(&mut vec![degree / 2, degree / 2 + 1, degree / 2+ 2]);
+        expected.append(&mut vec![degree / 2, degree / 2 + 1, degree / 2 + 2]);
 
-        assert_eq!(
-            encoder.decode_unsigned(&o_p).unwrap(),
-            expected
-        );
+        assert_eq!(encoder.decode_unsigned(&o_p).unwrap(), expected);
     }
 
     #[test]
@@ -617,23 +806,13 @@ mod tests {
         let o_p = decryptor.decrypt(&output[0]).unwrap();
 
         let mut expected = vec![degree / 2 - 3, degree / 2 - 2, degree / 2 - 1];
-    
-        expected.append(&mut (0..degree / 2 - 3)
-            .into_iter()
-            .collect::<Vec<u64>>()
-        );
+
+        expected.append(&mut (0..degree / 2 - 3).into_iter().collect::<Vec<u64>>());
 
         expected.append(&mut vec![degree - 3, degree - 2, degree - 1]);
 
-        expected.append(
-            &mut (degree / 2..degree - 3)
-            .into_iter()
-            .collect::<Vec<u64>>()
-        );
+        expected.append(&mut (degree / 2..degree - 3).into_iter().collect::<Vec<u64>>());
 
-        assert_eq!(
-            encoder.decode_unsigned(&o_p).unwrap(),
-            expected
-        );
+        assert_eq!(encoder.decode_unsigned(&o_p).unwrap(), expected);
     }
 }

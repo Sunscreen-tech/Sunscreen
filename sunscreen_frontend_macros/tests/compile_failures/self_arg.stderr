@@ -1,0 +1,7 @@
+error: circuits must not take a reference to self
+ --> tests/compile_failures/self_arg.rs:6:5
+  |
+6 |     #[circuit]
+  |     ^^^^^^^^^^
+  |
+  = note: this error originates in the attribute macro `circuit` (in Nightly builds, run with -Z macro-backtrace for more info)

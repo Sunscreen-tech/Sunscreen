@@ -1,6 +1,6 @@
 use crate::Operation::*;
-use crate::{EdgeInfo, IRError, Circuit, NodeError};
-use petgraph::{algo::greedy_feedback_arc_set, stable_graph::NodeIndex, Direction, visit::EdgeRef};
+use crate::{Circuit, EdgeInfo, IRError, NodeError};
+use petgraph::{algo::greedy_feedback_arc_set, stable_graph::NodeIndex, visit::EdgeRef, Direction};
 
 pub(crate) fn validate_ir(ir: &Circuit) -> Vec<IRError> {
     let mut errors = vec![];
@@ -87,10 +87,7 @@ pub(crate) fn validate_nodes(ir: &Circuit) -> Vec<IRError> {
     errors
 }
 
-fn validate_binary_op_has_correct_operands(
-    ir: &Circuit,
-    index: NodeIndex,
-) -> Vec<NodeError> {
+fn validate_binary_op_has_correct_operands(ir: &Circuit, index: NodeIndex) -> Vec<NodeError> {
     let operand_count = ir.graph.edges_directed(index, Direction::Incoming).count();
 
     if operand_count != 2 {
@@ -118,10 +115,7 @@ fn validate_binary_op_has_correct_operands(
     errors
 }
 
-fn validate_unary_op_has_correct_operands(
-    ir: &Circuit,
-    index: NodeIndex,
-) -> Vec<NodeError> {
+fn validate_unary_op_has_correct_operands(ir: &Circuit, index: NodeIndex) -> Vec<NodeError> {
     let operand_count = ir.graph.edges_directed(index, Direction::Incoming).count();
 
     if operand_count != 1 {
@@ -174,8 +168,7 @@ pub fn get_unary_operand(ir: &Circuit, index: NodeIndex) -> Option<NodeIndex> {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    use seal::SchemeType;
+    use crate::SchemeType;
 
     // Circuit objects created with the API are guaranteed
     // to never produce errors. We may only deserialize an erroneous IR.

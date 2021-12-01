@@ -886,7 +886,9 @@ mod tests {
             let a_p = encoder.encode_signed(&a).unwrap();
             let a_c = encryptor.encrypt(&a_p).unwrap();
 
-            let c_c = evaluator.rotate_rows(&a_c, -1, &galois_keys.unwrap()).unwrap();
+            let c_c = evaluator
+                .rotate_rows(&a_c, -1, &galois_keys.unwrap())
+                .unwrap();
 
             let c_p = decryptor.decrypt(&c_c).unwrap();
             let c = encoder.decode_signed(&c_p).unwrap();
@@ -930,7 +932,9 @@ mod tests {
             let a_p = encoder.encode_signed(&a).unwrap();
             let a_c = encryptor.encrypt(&a_p).unwrap();
 
-            let c_c = evaluator.rotate_columns(&a_c, &galois_keys.unwrap()).unwrap();
+            let c_c = evaluator
+                .rotate_columns(&a_c, &galois_keys.unwrap())
+                .unwrap();
 
             let c_p = decryptor.decrypt(&c_c).unwrap();
             let c = encoder.decode_signed(&c_p).unwrap();

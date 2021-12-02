@@ -203,6 +203,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "emsdk"
+version = "0.1.0"
+
+[[package]]
 name = "env_logger"
 version = "0.8.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -455,6 +459,7 @@ version = "0.1.0"
 dependencies = [
  "bindgen",
  "cmake",
+ "emsdk",
  "link-cplusplus",
  "serde",
  "serde_json",

@@ -1,21 +1,11 @@
 use bindgen;
+
 use cmake::Config;
+use emsdk::Config as EmConfig;
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
-fn main() {
-    // debug/release
-    let profile = std::env::var("PROFILE").expect("Failed to get build profile");
-    let out_path = PathBuf::from(std::env::var("OUT_DIR").unwrap());
-
-    let profile = if profile == "release" {
-        "Release"
-    } else if profile == "debug" {
-        "Debug"
-    } else {
-        panic!("Unknown profile type {}", profile);
-    };
-
+fn compile_native(profile: &str, out_path: &Path) {
     let dst = Config::new("SEAL")
         .define("CMAKE_BUILD_TYPE", profile)
         .define("CMAKE_CXX_FLAGS_RELEASE", "-DNDEBUG -flto -O3")
@@ -38,6 +28,59 @@ fn main() {
     println!("cargo:rustc-link-lib=static=seal-3.7");
 
     println!("-I{}", out_path.join("include").display());
+}
+
+fn compile_wasm(profile: &str, out_path: &Path) {
+    let lib = PathBuf::from(std::env::var("OUT_DIR").unwrap())
+        .join("build")
+        .join("lib")
+        .join("libseal-3.7.a");
+
+    let dst = EmConfig::new("SEAL")
+        .define("CMAKE_BUILD_TYPE", profile)
+        .define("CMAKE_CXX_FLAGS_RELEASE", "-DNDEBUG -flto -O3")
+        .define("CMAKE_C_FLAGS_RELEASE", "-DNDEBUG -flto -O3")
+        //.define("SEAL_BUILD_STATIC_SEAL_C", "ON")
+        .define("SEAL_BUILD_DEPS", "ON")
+        //.define("SEAL_BUILD_SEAL_C", "ON")
+        .define("SEAL_BUILD_BENCH", "OFF")
+        .define("SEAL_BUILD_EXAMPLES", "OFF")
+        .define("SEAL_BUILD_TESTS", "OFF")
+        .define("SEAL_USE_CXX17", "ON")
+        .define("SEAL_USE_INTRIN", "ON")
+        .define("SEAL_USE_MSGSL", "OFF")
+        .define("SEAL_USE_ZLIB", "ON")
+        .define("SEAL_USE_ZSTD", "ON")
+        .emcc_arg("-Wall")
+        .emcc_arg("-flto")
+        .emcc_arg("-O3")
+        .emcc_arg("-s")
+        .emcc_arg("WASM=1")
+        .emcc_arg("-s")
+        .emcc_arg("ALLOW_MEMORY_GROWTH=1")
+        .emcc_arg(&lib.to_string_lossy())
+        .build();
+}
+
+fn main() {
+    // debug/release
+    let profile = std::env::var("PROFILE").expect("Failed to get build profile");
+    let out_path = PathBuf::from(std::env::var("OUT_DIR").unwrap());
+    let target = std::env::var("TARGET").expect("Failed to get target");
+
+    let profile = if profile == "release" {
+        "Release"
+    } else if profile == "debug" {
+        "Debug"
+    } else {
+        panic!("Unknown profile type {}", profile);
+    };
+
+    if target == "wasm32-unknown-unknown" {
+        compile_wasm(&profile, &out_path);
+    } else {
+        compile_native(&profile, &out_path);
+    }
 
     let bindings = bindgen::builder()
         .clang_arg(format!("-I{}", out_path.join("include/SEAL-3.7").display()))

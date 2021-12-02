@@ -1,3 +1,6 @@
 [submodule "seal/SEAL"]
 	path = seal/SEAL
 	url = git@github.com:microsoft/SEAL.git
+[submodule "emsdk/emsdk"]
+	path = emsdk/emsdk
+	url = https://github.com/emscripten-core/emsdk.git

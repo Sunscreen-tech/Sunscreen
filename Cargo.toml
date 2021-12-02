@@ -1,5 +1,6 @@
 [workspace]
 members = [
+    "emsdk",
     "seal",
     "sunscreen_backend",
     "sunscreen_frontend",

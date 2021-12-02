@@ -21,6 +21,7 @@ fn compile_native(profile: &str, out_path: &Path) {
         .define("SEAL_USE_MSGSL", "OFF")
         .define("SEAL_USE_ZLIB", "ON")
         .define("SEAL_USE_ZSTD", "ON")
+        .define("SEAL_PURE_SOURCETREE", "ON")
         .build();
 
     println!("cargo:rustc-link-search=native={}/build/lib", dst.display());
@@ -36,7 +37,7 @@ fn compile_wasm(profile: &str, out_path: &Path) {
         .join("lib")
         .join("libseal-3.7.a");
 
-    let dst = EmConfig::new("SEAL")
+    let _dst = EmConfig::new("SEAL")
         .define("CMAKE_BUILD_TYPE", profile)
         .define("CMAKE_CXX_FLAGS_RELEASE", "-DNDEBUG -flto -O3")
         .define("CMAKE_C_FLAGS_RELEASE", "-DNDEBUG -flto -O3")
@@ -51,6 +52,8 @@ fn compile_wasm(profile: &str, out_path: &Path) {
         .define("SEAL_USE_MSGSL", "OFF")
         .define("SEAL_USE_ZLIB", "ON")
         .define("SEAL_USE_ZSTD", "ON")
+        .define("SEAL_PURE_SOURCETREE", "ON")
+        .define("SEAL_THIRDPARTY_DIR", &out_path.to_string_lossy().as_ref())
         .emcc_arg("-Wall")
         .emcc_arg("-flto")
         .emcc_arg("-O3")

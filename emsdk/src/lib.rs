@@ -33,10 +33,6 @@ impl Config {
         let output_directory = PathBuf::from(std::env::var("OUT_DIR").unwrap());
 
         let emsdk_dir = emsdk_out_dir.join("emsdk");
-        let emsdk_tools_dir = emsdk_out_dir
-            .join("emsdk_tools");
-
-        let emcmake = emsdk_dir.join("emcmake");
 
         let script_path = output_directory.join("build.sh");
         let mut script = std::fs::File::create(&script_path).unwrap();
@@ -45,11 +41,11 @@ impl Config {
 
         std::fs::remove_dir_all(&build_dir).unwrap();
 
-        writeln!(script, "set -e");
-        writeln!(script, "source {}", emsdk_dir.join("emsdk_env.sh").to_string_lossy());
-        writeln!(script, "{}", self.get_cmake_command(&build_dir));
-        writeln!(script, "emmake make -C {:#?} -j", build_dir);
-        writeln!(script, "{}", self.get_emcc_command());
+        writeln!(script, "set -e").unwrap();
+        writeln!(script, "source {}", emsdk_dir.join("emsdk_env.sh").to_string_lossy()).unwrap();
+        writeln!(script, "{}", self.get_cmake_command(&build_dir)).unwrap();
+        writeln!(script, "emmake make -C {:#?} -j", build_dir).unwrap();
+        writeln!(script, "{}", self.get_emcc_command()).unwrap();
 
         let output = Command::new("bash")
             .arg(script_path)

@@ -26,10 +26,10 @@ pub enum Error {
     Unexpected,
 
     /// An internal invariant was violated.
-    InternalError(i64),
+    InternalError(c_long),
 
     /// An unknown error occurred in SEAL.
-    Unknown(i64),
+    Unknown(c_long),
 
     /// User failed to set a polynomial degree.
     DegreeNotSet,

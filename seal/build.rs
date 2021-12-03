@@ -54,11 +54,14 @@ fn compile_wasm(profile: &str, out_path: &Path) {
         .define("SEAL_USE_ZSTD", "ON")
         .define("SEAL_PURE_SOURCETREE", "ON")
         .define("SEAL_THIRDPARTY_DIR", &out_path.to_string_lossy().as_ref())
+        .emcc_arg("--no-entry")
         .emcc_arg("-Wall")
         .emcc_arg("-flto")
         .emcc_arg("-O3")
+        .emcc_arg("-o")
+        .emcc_arg(&out_path.join("seal.wasm").to_string_lossy())
         .emcc_arg("-s")
-        .emcc_arg("WASM=1")
+        .emcc_arg("STANDALONE_WASM")
         .emcc_arg("-s")
         .emcc_arg("ALLOW_MEMORY_GROWTH=1")
         .emcc_arg(&lib.to_string_lossy())
@@ -85,12 +88,22 @@ fn main() {
         compile_native(&profile, &out_path);
     }
 
-    let bindings = bindgen::builder()
+    let mut builder = bindgen::builder()
         .clang_arg(format!("-I{}", out_path.join("include/SEAL-3.7").display()))
         .clang_arg("-ISEAL/native/src")
         .clang_arg("-xc++")
-        .clang_arg("-std=c++17")
-        .detect_include_paths(true)
+        .clang_arg("-std=c++17");
+
+    if target == "wasm32-unknown-unknown" {
+        // Bindgen appears to be broken under wasm. Just generate bindings with
+        // the host's target.
+        builder = builder
+            .clang_arg("-target")
+            .clang_arg("aarch64-apple-darwin")
+            .detect_include_paths(false);
+    }
+
+    let builder = builder.detect_include_paths(true)
         .header("bindgen_wrapper.h")
         .parse_callbacks(Box::new(bindgen::CargoCallbacks))
         .allowlist_function("BatchEncoder_.*")
@@ -115,10 +128,13 @@ fn main() {
         .allowlist_function("SEALContext_.*")
         .allowlist_function("SecretKey_.*")
         .allowlist_function("Serialization_.*")
-        .allowlist_function("ValCheck_.*")
-        .generate()
-        .unwrap();
+        .allowlist_function("ValCheck_.*");
+            
+    builder.dump_preprocessed_input();
 
+    let bindings = builder.generate()
+        .unwrap();
+        
     bindings
         .write_to_file(out_path.join("bindings.rs"))
         .expect("Failed to write bindings");

@@ -1,18 +1,19 @@
 use crate::params::{determine_params, PlainModulusConstraint};
 use crate::{Context, Error, Params, Result, SchemeType, SecurityLevel};
-use sunscreen_circuit::{Circuit};
+use sunscreen_circuit::Circuit;
 
 #[derive(Debug, Clone)]
 enum ParamsMode {
     Search,
-    Manual(Params)
+    Manual(Params),
 }
 
 /**
  * A frontend circuit compiler for Sunscreen circuits.
  */
-pub struct Compiler<F> 
-where F: Fn(&Params) -> Context
+pub struct Compiler<F>
+where
+    F: Fn(&Params) -> Context,
 {
     circuit: F,
     params_mode: ParamsMode,
@@ -21,20 +22,20 @@ where F: Fn(&Params) -> Context
     noise_margin: u32,
 }
 
-impl <F> Compiler<F> 
-where F: Fn(&Params) -> Context
+impl<F> Compiler<F>
+where
+    F: Fn(&Params) -> Context,
 {
     /**
      * Create a new compiler with the given circuit.
      */
-    pub fn with_circuit(circuit: F) -> Self 
-    {
+    pub fn with_circuit(circuit: F) -> Self {
         Self {
             circuit,
             params_mode: ParamsMode::Search,
             plain_modulus_constraint: None,
             security_level: SecurityLevel::TC128,
-            noise_margin: 10
+            noise_margin: 10,
         }
     }
 
@@ -87,13 +88,19 @@ where F: Fn(&Params) -> Context
      */
     pub fn compile(self) -> Result<(Circuit, Params)> {
         let (circuit, params) = match self.params_mode {
-            ParamsMode::Manual(p) => {
-                ((self.circuit)(&p), p.clone())
-            },
+            ParamsMode::Manual(p) => ((self.circuit)(&p), p.clone()),
             ParamsMode::Search => {
-                let constraint = self.plain_modulus_constraint.ok_or(Error::MissingPlainModulusConstraint)?;
+                let constraint = self
+                    .plain_modulus_constraint
+                    .ok_or(Error::MissingPlainModulusConstraint)?;
 
-                let params = determine_params(&self.circuit, constraint, self.security_level, self.noise_margin, SchemeType::Bfv)?;
+                let params = determine_params(
+                    &self.circuit,
+                    constraint,
+                    self.security_level,
+                    self.noise_margin,
+                    SchemeType::Bfv,
+                )?;
 
                 ((self.circuit)(&params), params.clone())
             }

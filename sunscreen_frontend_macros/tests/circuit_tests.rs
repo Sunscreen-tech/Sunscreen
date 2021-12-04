@@ -1,16 +1,18 @@
 use sunscreen_frontend_macros::circuit;
-use sunscreen_frontend_types::{Context, Params, types::Signed, SchemeType, SecurityLevel, CURRENT_CTX};
+use sunscreen_frontend_types::{
+    types::Signed, Params, SchemeType, SecurityLevel, CURRENT_CTX
+};
 
 use serde_json::json;
 
 fn get_params() -> Params {
-  Params {
-    lattice_dimension: 1024,
-    plain_modulus: 1024,
-    coeff_modulus: vec![1, 2, 3, 4],
-    security_level: SecurityLevel::TC128,
-    scheme_type: SchemeType::Bfv,
-  }
+    Params {
+        lattice_dimension: 1024,
+        plain_modulus: 1024,
+        coeff_modulus: vec![1, 2, 3, 4],
+        security_level: SecurityLevel::TC128,
+        scheme_type: SchemeType::Bfv,
+    }
 }
 
 #[test]
@@ -83,7 +85,7 @@ fn can_add() {
     let context = circuit_with_args(&get_params());
 
     let expected = json!({
-        
+
         "graph": {
             "nodes": [
                 "InputCiphertext",

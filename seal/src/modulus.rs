@@ -4,7 +4,7 @@ use std::ptr::null_mut;
 use crate::bindgen;
 use crate::error::*;
 
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 /**
  * Represent an integer modulus of up to 61 bits. An instance of the Modulus
@@ -198,7 +198,6 @@ impl CoefficientModulus {
         Ok(coefficients
             .iter()
             .map(|handle| {
-                println!("{:?}", handle);
                 Modulus { handle: *handle }
             })
             .collect())

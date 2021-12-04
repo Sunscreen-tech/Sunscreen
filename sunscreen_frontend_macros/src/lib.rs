@@ -16,7 +16,7 @@ use syn::{
 #[proc_macro_derive(Value)]
 /**
  * Allows you to #[derive(Value)]. All members must impl value for this to work.
- */ 
+ */
 pub fn derive_value(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
 
@@ -29,7 +29,7 @@ pub fn derive_value(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 
     let expanded = quote! {
         // The generated impl.
-        impl #impl_generics sunscreen_frontend_types::Value for #name #ty_generics #where_clause {
+        impl #impl_generics sunscreen_frontend::Value for #name #ty_generics #where_clause {
             fn new(id: usize) {
                 #new
             }
@@ -45,7 +45,7 @@ fn add_trait_bounds(mut generics: Generics) -> Generics {
         if let GenericParam::Type(ref mut type_param) = *param {
             type_param
                 .bounds
-                .push(parse_quote!(sunscreen_frontend_types::Value));
+                .push(parse_quote!(sunscreen_frontend::Value));
         }
     }
     generics
@@ -97,24 +97,23 @@ fn new_body(data: &Data) -> TokenStream {
  * Specifies a function to be a circuit. A circuit has any number of inputs that impl the
  * [`Value`](sunscreen_frontend_types::Value) trait and returns either a single type implementing `Value` or a tuple of
  * types implementing `Value`.
- * 
+ *
  * This function gets run by the compiler to build up the circuit you specify and does not
  * directly or eagerly perform homomorphic operations.
- * 
+ *
  * # Examples
  * ```rust
  * # use sunscreen_frontend_types::{types::Signed, Params, Context};
+ * # use sunscreen_frontend_macros::{circuit};
  * 
- * #[sunscreen_frontend_macros::circuit]
+ * #[circuit]
  * fn multiply_add(a: Signed, b: Signed, c: Signed) -> Signed {
  *   a * b + c
  * }
  * ```
- * 
- * * ```rust
- * # use sunscreen_frontend_types::{types::Signed, Params, Context};
- * 
- * #[sunscreen_frontend_macros::circuit]
+ *
+ * ```rust
+ * #[circuit]
  * fn multi_out(a: Signed, b: Signed, c: Signed) -> (Signed, Signed) {
  *   (a + b, b + c)
  * }
@@ -214,10 +213,10 @@ pub fn circuit(
 
     proc_macro::TokenStream::from(quote! {
         #(#attrs)*
-        #vis fn #circuit_name(params: &Params) -> sunscreen_frontend_types::Context {
+        #vis fn #circuit_name(params: &Params) -> sunscreen_frontend::Context {
             use std::cell::RefCell;
             use std::mem::transmute;
-            use sunscreen_frontend_types::{CURRENT_CTX, Params, SchemeType, Value};
+            use sunscreen_frontend::{CURRENT_CTX, Context, Params, SchemeType, Value};
 
             // TODO: Other schemes.
             let mut context = Context::new(SchemeType::Bfv);

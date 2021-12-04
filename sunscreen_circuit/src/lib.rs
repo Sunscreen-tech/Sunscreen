@@ -530,7 +530,16 @@ impl Circuit {
      * Returns the number of inputs ciphertexts this circuit takes.
      */
     pub fn num_inputs(&self) -> usize {
-        self.graph.node_weights().filter(|n| if let Operation::InputCiphertext(_) = n.operation { true } else  {false}).count()
+        self.graph
+            .node_weights()
+            .filter(|n| {
+                if let Operation::InputCiphertext(_) = n.operation {
+                    true
+                } else {
+                    false
+                }
+            })
+            .count()
     }
 
     /**
@@ -606,7 +615,13 @@ impl Circuit {
      * Whether or not this circuit needs relin keys to run. Needed for relinearization.
      */
     pub fn requires_relin_keys(&self) -> bool {
-        self.graph.node_weights().any(|n| if let Operation::Relinearize = n.operation { true } else { false })
+        self.graph.node_weights().any(|n| {
+            if let Operation::Relinearize = n.operation {
+                true
+            } else {
+                false
+            }
+        })
     }
 
     /**
@@ -618,7 +633,7 @@ impl Circuit {
             Operation::ShiftRight => true,
             Operation::ShiftLeft => true,
             Operation::SwapRows => true,
-            _ => false
+            _ => false,
         })
     }
 }

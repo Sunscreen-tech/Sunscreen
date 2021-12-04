@@ -11,7 +11,7 @@ pub enum Error {
 
     /**
      * No parameters were found that satisfy the given circuit.
-     */ 
+     */
     NoParams,
 }
 

@@ -11,7 +11,7 @@ mod transforms;
 
 pub use error::*;
 
-use sunscreen_circuit::{Circuit};
+use sunscreen_circuit::Circuit;
 
 use transforms::transform_intermediate_represenation;
 

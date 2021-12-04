@@ -4,11 +4,11 @@ use log::{debug, trace};
 
 use seal::{
     BFVEvaluator, BFVScalarEncoder, BfvEncryptionParametersBuilder, Ciphertext, CoefficientModulus,
-    Context as SealContext, Decryptor, Encryptor, KeyGenerator, PlainModulus
+    Context as SealContext, Decryptor, Encryptor, KeyGenerator, PlainModulus,
 };
 use sunscreen_circuit::{Operation, SchemeType};
 use sunscreen_runtime::run_program_unchecked;
-pub use sunscreen_runtime::{Params};
+pub use sunscreen_runtime::Params;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 /**
@@ -45,8 +45,9 @@ pub fn determine_params<F>(
     security_level: SecurityLevel,
     noise_margin_bits: u32,
     scheme_type: SchemeType,
-) -> Result<Params> 
-where F: Fn(&Params) -> Context
+) -> Result<Params>
+where
+    F: Fn(&Params) -> Context,
 {
     'order_loop: for (i, n) in LATTICE_DIMENSIONS.iter().enumerate() {
         let plaintext_modulus = match plaintext_constraint {
@@ -125,7 +126,7 @@ where F: Fn(&Params) -> Context
 
         let keygen = KeyGenerator::new(&context).unwrap();
         let public_key = keygen.create_public_key();
-        let secret_key = keygen.secret_key();        
+        let secret_key = keygen.secret_key();
 
         let encryptor =
             Encryptor::with_public_and_secret_key(&context, &public_key, &secret_key).unwrap();
@@ -172,7 +173,7 @@ where F: Fn(&Params) -> Context
         trace!("Initial noise budget (n={}): {}", n, initial_noise_budget);
 
         let relin_keys = if ir.requires_relin_keys() {
-                match keygen.create_relinearization_keys() {
+            match keygen.create_relinearization_keys() {
                 Ok(v) => Some(v),
                 Err(e) => {
                     trace!("Failed to create relin keys: {:#?}", e);
@@ -197,9 +198,8 @@ where F: Fn(&Params) -> Context
 
         // We already checked for errors at the start of this function. This should be
         // well-behaved.
-        let outputs = unsafe {
-            run_program_unchecked(&ir, &inputs, &evaluator, relin_keys, galois_keys)
-        };
+        let outputs =
+            unsafe { run_program_unchecked(&ir, &inputs, &evaluator, relin_keys, galois_keys) };
 
         for (i, o) in outputs.iter().enumerate() {
             let noise_budget = decryptor.invariant_noise_budget(&o).unwrap();

@@ -1,3 +1,7 @@
 [submodule "seal/SEAL"]
 	path = seal/SEAL
-	url = git@github.com:microsoft/SEAL.git
+	url = git@github.com:rickwebiii/SEAL.git
+	branch = wasm
+[submodule "emsdk/emsdk"]
+	path = emsdk/emsdk
+	url = https://github.com/emscripten-core/emsdk.git

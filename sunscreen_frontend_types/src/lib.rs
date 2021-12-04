@@ -4,13 +4,13 @@
 //! This crate contains the frontend compiler for Sunscreen circuits and the types and
 //! algorithms that support it.
 
+mod compiler;
+mod error;
+mod params;
 /**
  * Types you can use as inputs and return values in your circuit.
  */
 pub mod types;
-mod compiler;
-mod error;
-mod params;
 
 use std::cell::RefCell;
 
@@ -27,20 +27,20 @@ use sunscreen_circuit::{
     OuterLiteral as CircuitOuterLiteral,
 };
 
-pub use params::{PlainModulusConstraint};
-pub use sunscreen_circuit::{SchemeType, SecurityLevel};
-pub use compiler::{Compiler};
-pub use sunscreen_runtime::Params;
+pub use compiler::Compiler;
 pub use error::{Error, Result};
+pub use params::PlainModulusConstraint;
+pub use sunscreen_circuit::{SchemeType, SecurityLevel};
+pub use sunscreen_runtime::Params;
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 /**
  * Represents a literal node's data.
- */ 
+ */
 pub enum Literal {
     /**
      * An unsigned 64-bit integer.
-     */ 
+     */
     U64(u64),
 }
 

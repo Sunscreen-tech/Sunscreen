@@ -17,3 +17,4 @@ sunscreen_frontend_types = { path = "../sunscreen_frontend_types" }
 [dev-dependencies]
 trybuild = "1.0.52"
 serde_json = "1.0.72"
+sunscreen_frontend = { path = "../sunscreen_frontend" }

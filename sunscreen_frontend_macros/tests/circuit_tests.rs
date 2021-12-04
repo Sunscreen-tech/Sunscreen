@@ -1,6 +1,6 @@
 use sunscreen_frontend_macros::circuit;
 use sunscreen_frontend_types::{
-    types::Signed, Context, Params, SchemeType, SecurityLevel, CURRENT_CTX,
+    types::Signed, Params, SchemeType, SecurityLevel, CURRENT_CTX
 };
 
 use serde_json::json;

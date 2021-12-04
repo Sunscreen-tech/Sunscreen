@@ -198,7 +198,6 @@ impl CoefficientModulus {
         Ok(coefficients
             .iter()
             .map(|handle| {
-                println!("{:?}", handle);
                 Modulus { handle: *handle }
             })
             .collect())

@@ -104,7 +104,7 @@ fn new_body(data: &Data) -> TokenStream {
  * # Examples
  * ```rust
  * # use sunscreen_frontend_types::{types::Signed, Params, Context};
- * 
+ * # use sunscreen_frontend_macros::{circuit};
  * #[circuit]
  * fn multiply_add(a: Signed, b: Signed, c: Signed) -> Signed {
  *   a * b + c
@@ -113,6 +113,7 @@ fn new_body(data: &Data) -> TokenStream {
  * 
  * * ```rust
  * # use sunscreen_frontend_types::{types::Signed, Params, Context};
+ * # use sunscreen_frontend_macros::{circuit};
  * 
  * #[circuit]
  * fn multi_out(a: Signed, b: Signed, c: Signed) -> (Signed, Signed) {

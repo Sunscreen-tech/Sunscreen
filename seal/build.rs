@@ -130,7 +130,7 @@ fn main() {
         .allowlist_function("Serialization_.*")
         .allowlist_function("ValCheck_.*");
             
-    builder.dump_preprocessed_input();
+    // builder.dump_preprocessed_input();
 
     let bindings = builder.generate()
         .unwrap();

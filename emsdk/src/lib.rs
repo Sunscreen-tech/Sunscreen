@@ -1,7 +1,7 @@
 use std::collections::HashMap;
+use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::Command;
-use std::io::Write;
 
 pub struct Config {
     defines: HashMap<String, String>,
@@ -14,7 +14,7 @@ impl Config {
         Self {
             path: path.as_ref().to_owned(),
             defines: HashMap::new(),
-            emcc_args: vec![]
+            emcc_args: vec![],
         }
     }
 
@@ -42,20 +42,31 @@ impl Config {
         std::fs::remove_dir_all(&build_dir).unwrap();
 
         writeln!(script, "set -e").unwrap();
-        writeln!(script, "source {}", emsdk_dir.join("emsdk_env.sh").to_string_lossy()).unwrap();
+        writeln!(
+            script,
+            "source {}",
+            emsdk_dir.join("emsdk_env.sh").to_string_lossy()
+        )
+        .unwrap();
         writeln!(script, "{}", self.get_cmake_command(&build_dir)).unwrap();
         writeln!(script, "emmake make -C {:#?} -j", build_dir).unwrap();
         writeln!(script, "{}", self.get_emcc_command()).unwrap();
 
-        let output = Command::new("bash")
-            .arg(script_path)
-            .output()
-            .unwrap();
-            
+        let output = Command::new("bash").arg(script_path).output().unwrap();
+
         if !output.status.success() {
-            println!("Stdout\n==========\n{}", String::from_utf8_lossy(&output.stdout));
-            println!("Stderr\n==========\n{}", String::from_utf8_lossy(&output.stderr));
-            panic!("emcmake exited with code {}.", output.status.code().unwrap());
+            println!(
+                "Stdout\n==========\n{}",
+                String::from_utf8_lossy(&output.stdout)
+            );
+            println!(
+                "Stderr\n==========\n{}",
+                String::from_utf8_lossy(&output.stderr)
+            );
+            panic!(
+                "emcmake exited with code {}.",
+                output.status.code().unwrap()
+            );
         }
     }
 
@@ -77,9 +88,7 @@ impl Config {
     }
 
     fn get_emcc_command(&self) -> String {
-        let mut args = vec![
-            "emcc"
-        ];
+        let mut args = vec!["emcc"];
 
         for i in &self.emcc_args {
             args.push(i);

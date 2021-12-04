@@ -1,5 +1,5 @@
-use std::process::{Command};
 use std::path::PathBuf;
+use std::process::Command;
 
 fn main() {
     let output = Command::new("./emsdk/emsdk")
@@ -9,9 +9,18 @@ fn main() {
         .unwrap();
 
     if !output.status.success() {
-        println!("stderr\n==========\n{}", String::from_utf8_lossy(&output.stderr));
-        println!("stdout\n==========\n{}", String::from_utf8_lossy(&output.stdout));
-        panic!("'emsdk install latest' failed with exit code {}.", output.status);
+        println!(
+            "stderr\n==========\n{}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        println!(
+            "stdout\n==========\n{}",
+            String::from_utf8_lossy(&output.stdout)
+        );
+        panic!(
+            "'emsdk install latest' failed with exit code {}.",
+            output.status
+        );
     }
 
     let output = Command::new("./emsdk/emsdk")
@@ -21,9 +30,18 @@ fn main() {
         .unwrap();
 
     if !output.status.success() {
-        println!("stderr\n==========\n{}", String::from_utf8_lossy(&output.stderr));
-        println!("stdout\n==========\n{}", String::from_utf8_lossy(&output.stdout));
-        panic!("'emsdk install latest' failed with exit code {}.", output.status);
+        println!(
+            "stderr\n==========\n{}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        println!(
+            "stdout\n==========\n{}",
+            String::from_utf8_lossy(&output.stdout)
+        );
+        panic!(
+            "'emsdk install latest' failed with exit code {}.",
+            output.status
+        );
     }
 
     let cwd = std::env::current_dir().unwrap();

@@ -15,7 +15,7 @@
 
 #![warn(missing_docs)]
 
-#[cfg(not(target_arch="wasm32"))]
+#[cfg(not(target_arch = "wasm32"))]
 extern crate link_cplusplus;
 
 #[allow(dead_code)]

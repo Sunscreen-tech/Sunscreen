@@ -1,6 +1,7 @@
 [workspace]
 members = [
     "emsdk",
+    "examples/simple_multiply",
     "seal",
     "sunscreen_backend",
     "sunscreen_frontend",

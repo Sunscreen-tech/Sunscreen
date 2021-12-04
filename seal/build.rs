@@ -103,7 +103,8 @@ fn main() {
             .detect_include_paths(false);
     }
 
-    let builder = builder.detect_include_paths(true)
+    let builder = builder
+        .detect_include_paths(true)
         .header("bindgen_wrapper.h")
         .parse_callbacks(Box::new(bindgen::CargoCallbacks))
         .allowlist_function("BatchEncoder_.*")
@@ -129,12 +130,11 @@ fn main() {
         .allowlist_function("SecretKey_.*")
         .allowlist_function("Serialization_.*")
         .allowlist_function("ValCheck_.*");
-            
+
     // builder.dump_preprocessed_input();
 
-    let bindings = builder.generate()
-        .unwrap();
-        
+    let bindings = builder.generate().unwrap();
+
     bindings
         .write_to_file(out_path.join("bindings.rs"))
         .expect("Failed to write bindings");

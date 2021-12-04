@@ -12,15 +12,15 @@ use sunscreen_circuit::{Circuit, EdgeInfo, Literal, Operation::*, OuterLiteral, 
 use crossbeam::atomic::AtomicCell;
 use petgraph::{stable_graph::NodeIndex, visit::EdgeRef, Direction};
 //use seal::{Ciphertext, Evaluator, GaloisKeys, RelinearizationKeys};
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 use std::borrow::Cow;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 use seal::{
-    BFVEvaluator, BfvEncryptionParametersBuilder, Ciphertext, GaloisKeys,
-    Context as SealContext, Decryptor, Evaluator, Encryptor, KeyGenerator, Modulus, Plaintext, PublicKey, SecurityLevel, SecretKey,
-    RelinearizationKeys,
+    BFVEvaluator, BfvEncryptionParametersBuilder, Ciphertext, Context as SealContext, Decryptor,
+    Encryptor, Evaluator, GaloisKeys, KeyGenerator, Modulus, Plaintext, PublicKey,
+    RelinearizationKeys, SecretKey, SecurityLevel,
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -42,7 +42,7 @@ pub struct Params {
      * The plaintext modulus.
      */
     pub plain_modulus: u64,
-    
+
     /**
      * The scheme type.
      */
@@ -96,7 +96,7 @@ impl Runtime {
                 keygen.create_galois_keys()?
             }
         };
-        
+
         Ok(keys)
     }
 
@@ -111,7 +111,7 @@ impl Runtime {
                 keygen.create_relinearization_keys()?
             }
         };
-        
+
         Ok(keys)
     }
 
@@ -145,14 +145,16 @@ impl Runtime {
             Self::Bfv { context, .. } => {
                 let evaluator = BFVEvaluator::new(&context)?;
 
-                Ok(unsafe { run_program_unchecked(ir, inputs, &evaluator, relin_keys, galois_keys) })
+                Ok(unsafe {
+                    run_program_unchecked(ir, inputs, &evaluator, relin_keys, galois_keys)
+                })
             }
         }
     }
 
     /**
      * Encrypts the given plaintext using the given public key.
-     */ 
+     */
     pub fn encrypt(&self, p: &Plaintext, public_key: &PublicKey) -> Result<Ciphertext> {
         let ciphertext = match self {
             Self::Bfv { context, .. } => {
@@ -194,29 +196,33 @@ impl RuntimeBuilder {
      */
     pub fn new(params: &Params) -> Self {
         Self {
-            params: params.clone()
+            params: params.clone(),
         }
     }
 
     /**
      * Builds the runtime.
      */
-    pub fn build(self) -> Result<Runtime> { 
+    pub fn build(self) -> Result<Runtime> {
         match self.params.scheme_type {
             SchemeType::Bfv => {
                 let bfv_params = BfvEncryptionParametersBuilder::new()
                     .set_plain_modulus_u64(self.params.plain_modulus)
                     .set_poly_modulus_degree(self.params.lattice_dimension)
-                    .set_coefficient_modulus(self.params.coeff_modulus.iter().map(|v| Modulus::new(*v).unwrap()).collect::<Vec<Modulus>>())
+                    .set_coefficient_modulus(
+                        self.params
+                            .coeff_modulus
+                            .iter()
+                            .map(|v| Modulus::new(*v).unwrap())
+                            .collect::<Vec<Modulus>>(),
+                    )
                     .build()?;
 
                 let context = SealContext::new(&bfv_params, true, self.params.security_level)?;
 
-                Ok(Runtime::Bfv {
-                    context
-                })
-            },
-            _ => unimplemented!()
+                Ok(Runtime::Bfv { context })
+            }
+            _ => unimplemented!(),
         }
     }
 }

@@ -1,5 +1,5 @@
 use seal::BFVScalarEncoder;
-use sunscreen_frontend::{circuit, types::Signed, Compiler, Params, PlainModulusConstraint};
+use sunscreen_compiler::{circuit, types::Signed, Compiler, Params, PlainModulusConstraint};
 use sunscreen_runtime::RuntimeBuilder;
 
 /**

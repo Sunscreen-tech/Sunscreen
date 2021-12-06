@@ -29,7 +29,7 @@ pub fn derive_value(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 
     let expanded = quote! {
         // The generated impl.
-        impl #impl_generics sunscreen_frontend::Value for #name #ty_generics #where_clause {
+        impl #impl_generics sunscreen_compiler::Value for #name #ty_generics #where_clause {
             fn new(id: usize) {
                 #new
             }
@@ -45,7 +45,7 @@ fn add_trait_bounds(mut generics: Generics) -> Generics {
         if let GenericParam::Type(ref mut type_param) = *param {
             type_param
                 .bounds
-                .push(parse_quote!(sunscreen_frontend::Value));
+                .push(parse_quote!(sunscreen_compiler::Value));
         }
     }
     generics
@@ -103,8 +103,7 @@ fn new_body(data: &Data) -> TokenStream {
  *
  * # Examples
  * ```rust
- * # use sunscreen_frontend_types::{types::Signed, Params, Context};
- * # use sunscreen_frontend_macros::{circuit};
+ * # use sunscreen_compiler::{circuit, types::Signed, Params, Context};
  * 
  * #[circuit]
  * fn multiply_add(a: Signed, b: Signed, c: Signed) -> Signed {
@@ -113,6 +112,8 @@ fn new_body(data: &Data) -> TokenStream {
  * ```
  *
  * ```rust
+ * # use sunscreen_compiler::{circuit, types::Signed, Params, Context};
+ * 
  * #[circuit]
  * fn multi_out(a: Signed, b: Signed, c: Signed) -> (Signed, Signed) {
  *   (a + b, b + c)
@@ -213,10 +214,10 @@ pub fn circuit(
 
     proc_macro::TokenStream::from(quote! {
         #(#attrs)*
-        #vis fn #circuit_name(params: &Params) -> sunscreen_frontend::Context {
+        #vis fn #circuit_name(params: &Params) -> sunscreen_compiler::Context {
             use std::cell::RefCell;
             use std::mem::transmute;
-            use sunscreen_frontend::{CURRENT_CTX, Context, Params, SchemeType, Value};
+            use sunscreen_compiler::{CURRENT_CTX, Context, Params, SchemeType, Value};
 
             // TODO: Other schemes.
             let mut context = Context::new(SchemeType::Bfv);

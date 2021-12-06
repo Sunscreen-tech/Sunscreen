@@ -7,5 +7,5 @@ edition = "2021"
 
 [dependencies]
 seal = { path = "../../seal" }
-sunscreen_frontend = { path = "../../sunscreen_frontend" }
+sunscreen_compiler = { path = "../../sunscreen_compiler" }
 sunscreen_runtime = { path = "../../sunscreen_runtime" }

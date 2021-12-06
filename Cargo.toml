@@ -4,7 +4,7 @@ members = [
     "examples/simple_multiply",
     "seal",
     "sunscreen_backend",
-    "sunscreen_frontend",
+    "sunscreen_compiler",
     "sunscreen_frontend_types",
     "sunscreen_frontend_macros",
     "sunscreen_circuit",

@@ -128,21 +128,32 @@ pub trait Value {
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 /**
- * The context under which std::ops:* on Value trait implementors should insert new nodes.
+ * Contains the frontend compilation graph.
  */
-pub struct Context {
+pub struct FrontendCompilation {
     /**
      * The dependency graph of the frontend's intermediate representation (IR) that backs a circuit.
      */
     pub graph: StableGraph<Operation, OperandInfo>,
-
-    /**
-     * The type of scheme this circuit uses.
-     */
-    pub scheme: SchemeType,
 }
 
-impl PartialEq for Context {
+#[derive(Clone, Debug)]
+/**
+ * The context under which std::ops:* on Value trait implementors should insert new nodes.
+ */
+pub struct Context {
+    /**
+     * The frontend compilation result.
+     */
+    pub compilation: FrontendCompilation,
+
+    /**
+     * The set of parameters for which we're currently constructing the graph.
+     */
+    pub params: Params,
+}
+
+impl PartialEq for FrontendCompilation {
     fn eq(&self, b: &Self) -> bool {
         is_isomorphic_matching(
             &Graph::from(self.graph.clone()),
@@ -164,24 +175,32 @@ impl Context {
     /**
      * Creates a new empty frontend intermediate representation context with the given scheme.
      */
-    pub fn new(scheme: SchemeType) -> Self {
+    pub fn new(params: &Params) -> Self {
         Self {
-            graph: StableGraph::new(),
-            scheme,
+            compilation: FrontendCompilation {
+                graph: StableGraph::new(),
+            },
+            params: params.clone(),
         }
     }
 
     fn add_2_input(&mut self, op: Operation, left: NodeIndex, right: NodeIndex) -> NodeIndex {
-        let new_id = self.graph.add_node(op);
-        self.graph.add_edge(left, new_id, OperandInfo::Left);
-        self.graph.add_edge(right, new_id, OperandInfo::Right);
+        let new_id = self.compilation.graph.add_node(op);
+        self.compilation
+            .graph
+            .add_edge(left, new_id, OperandInfo::Left);
+        self.compilation
+            .graph
+            .add_edge(right, new_id, OperandInfo::Right);
 
         new_id
     }
 
     fn add_1_input(&mut self, op: Operation, i: NodeIndex) -> NodeIndex {
-        let new_id = self.graph.add_node(op);
-        self.graph.add_edge(i, new_id, OperandInfo::Unary);
+        let new_id = self.compilation.graph.add_node(op);
+        self.compilation
+            .graph
+            .add_edge(i, new_id, OperandInfo::Unary);
 
         new_id
     }
@@ -190,7 +209,7 @@ impl Context {
      * Add an input this context.
      */
     pub fn add_input(&mut self) -> NodeIndex {
-        self.graph.add_node(Operation::InputCiphertext)
+        self.compilation.graph.add_node(Operation::InputCiphertext)
     }
 
     /**
@@ -214,9 +233,10 @@ impl Context {
         // See if we already have a node for the given literal. If so, just return it.
         // If not, make a new one.
         let existing_literal = self
+            .compilation
             .graph
             .node_indices()
-            .filter_map(|i| match &self.graph[i] {
+            .filter_map(|i| match &self.compilation.graph[i] {
                 Operation::Literal(x) => {
                     if *x == literal {
                         Some(i)
@@ -230,7 +250,7 @@ impl Context {
 
         match existing_literal {
             Some(x) => x,
-            None => self.graph.add_node(Operation::Literal(literal)),
+            None => self.compilation.graph.add_node(Operation::Literal(literal)),
         }
     }
 
@@ -254,7 +274,9 @@ impl Context {
     pub fn add_output(&mut self, i: NodeIndex) -> NodeIndex {
         self.add_1_input(Operation::Output, i)
     }
+}
 
+impl FrontendCompilation {
     /**
      * Performs frontend compilation of this intermediate representation into a backend [`Circuit`],
      * then perform backend compilation and return the result.

@@ -8,7 +8,7 @@ fn can_compile_and_run_simple_add() {
     let _ = env_logger::try_init();
 
     #[circuit(scheme = "bfv")]
-    fn c(a: Signed, b: Signed) -> Signed {
+    fn c(a: Unsigned, b: Unsigned) -> Unsigned {
         a + b
     }
 
@@ -48,7 +48,7 @@ fn can_compile_and_run_simple_mul() {
     let _ = env_logger::try_init();
 
     #[circuit(scheme = "bfv")]
-    fn c(a: Signed, b: Signed) -> Signed {
+    fn c(a: Unsigned, b: Unsigned) -> Unsigned {
         a * b
     }
 
@@ -90,7 +90,7 @@ fn can_compile_and_run_mul_reduction() {
     let _ = env_logger::try_init();
 
     #[circuit(scheme = "bfv")]
-    fn c(a: Signed, b: Signed, c: Signed, d: Signed) -> Signed {
+    fn c(a: Unsigned, b: Unsigned, c: Unsigned, d: Unsigned) -> Unsigned {
         a * b * c * d
     }
 
@@ -138,7 +138,7 @@ fn can_compile_and_run_add_reduction() {
     let _ = env_logger::try_init();
 
     #[circuit(scheme = "bfv")]
-    fn c(a: Signed, b: Signed, c: Signed, d: Signed) -> Signed {
+    fn c(a: Unsigned, b: Unsigned, c: Unsigned, d: Unsigned) -> Unsigned {
         a + b + c + d
     }
 

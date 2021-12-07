@@ -1,7 +1,11 @@
 use super::case::Scheme;
-use syn::{parse::{Parse, ParseStream}, Error, Expr, Lit, punctuated::Punctuated, Result, Token};
+use syn::{
+    parse::{Parse, ParseStream},
+    punctuated::Punctuated,
+    Error, Expr, Lit, Result, Token,
+};
 
-use crate::internals::symbols::{VALUE_KEYS};
+use crate::internals::symbols::VALUE_KEYS;
 
 use std::collections::HashMap;
 
@@ -26,15 +30,16 @@ impl Parse for Attrs {
                     };
 
                     let value = match &*a.right {
-                        Expr::Lit(l) => {
-                            match &l.lit {
-                                Lit::Str(s) => {
-                                    s.value()
-                                },
-                                _ => { return Err(Error::new_spanned(l, "Literal should be a string"))}
-                            }
+                        Expr::Lit(l) => match &l.lit {
+                            Lit::Str(s) => s.value(),
+                            _ => return Err(Error::new_spanned(l, "Literal should be a string")),
                         },
-                        _ => { return Err(Error::new_spanned(&a.right, "Value should be a string literal")) }
+                        _ => {
+                            return Err(Error::new_spanned(
+                                &a.right,
+                                "Value should be a string literal",
+                            ))
+                        }
                     };
 
                     if !VALUE_KEYS.iter().any(|x| *x == key) {
@@ -42,28 +47,45 @@ impl Parse for Attrs {
                     }
 
                     attrs.insert(key, Some(value));
-                },
+                }
                 Expr::Path(p) => {
-                    let key = p.path.get_ident().ok_or(Error::new_spanned(p, "Unknown identifier"))?.to_string();
+                    let key = p
+                        .path
+                        .get_ident()
+                        .ok_or(Error::new_spanned(p, "Unknown identifier"))?
+                        .to_string();
 
                     if !VALUE_KEYS.iter().any(|x| *x == key) {
                         return Err(Error::new_spanned(p, "Unknown key"));
                     }
 
                     attrs.insert(key, None);
-                },
-                _ => return Err(Error::new_spanned(var, "Expected `key = \"value\"` or `key`"))
+                }
+                _ => {
+                    return Err(Error::new_spanned(
+                        var,
+                        "Expected `key = \"value\"` or `key`",
+                    ))
+                }
             }
         }
 
         let scheme_type = attrs
             .get("scheme")
-            .ok_or(Error::new_spanned(&vars, "required `scheme` is missing".to_owned()))?
+            .ok_or(Error::new_spanned(
+                &vars,
+                "required `scheme` is missing".to_owned(),
+            ))?
             .as_ref()
-            .ok_or(Error::new_spanned(&vars, "`scheme` requires a value".to_owned()))?;
+            .ok_or(Error::new_spanned(
+                &vars,
+                "`scheme` requires a value".to_owned(),
+            ))?;
 
         Ok(Self {
-            scheme: Scheme::parse(&scheme_type).map_err(|_e| Error::new_spanned(vars, format!("Unknown variant {}", &scheme_type)))?,
+            scheme: Scheme::parse(&scheme_type).map_err(|_e| {
+                Error::new_spanned(vars, format!("Unknown variant {}", &scheme_type))
+            })?,
         })
     }
 }

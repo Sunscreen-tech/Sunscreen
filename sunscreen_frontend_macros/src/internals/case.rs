@@ -3,14 +3,14 @@ use crate::error::*;
 
 #[derive(Copy, Clone, PartialEq)]
 pub enum Scheme {
-    Bfv
+    Bfv,
 }
 
 impl Scheme {
     pub fn parse(s: &str) -> Result<Self> {
         Ok(match s {
             "bfv" => Bfv,
-            _ => Err(Error::UnknownScheme(s.to_owned()))?
+            _ => Err(Error::UnknownScheme(s.to_owned()))?,
         })
     }
 }

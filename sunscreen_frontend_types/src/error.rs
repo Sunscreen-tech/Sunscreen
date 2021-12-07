@@ -13,6 +13,11 @@ pub enum Error {
      * No parameters were found that satisfy the given circuit.
      */
     NoParams,
+
+    /**
+     * Attempted to compile the given circuit with the wrong scheme.
+     */
+    IncorrectScheme,
 }
 
 /**

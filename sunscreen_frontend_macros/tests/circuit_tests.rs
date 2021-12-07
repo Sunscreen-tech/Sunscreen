@@ -19,7 +19,7 @@ fn get_params() -> Params {
 fn circuit_gets_called() {
     static mut FOO: u32 = 0;
 
-    #[circuit]
+    #[circuit(scheme = "bfv")]
     fn simple_circuit() {
         unsafe {
             FOO = 20;
@@ -33,7 +33,7 @@ fn circuit_gets_called() {
 
 #[test]
 fn panicing_circuit_clears_ctx() {
-    #[circuit]
+    #[circuit(scheme = "bfv")]
     fn panic_circuit() {
         CURRENT_CTX.with(|ctx| {
             let old = ctx.take();
@@ -67,7 +67,7 @@ fn compile_failures() {
 
 #[test]
 fn capture_circuit_input_args() {
-    #[circuit]
+    #[circuit(scheme = "bfv")]
     fn circuit_with_args(_a: Signed, _b: Signed, _c: Signed, _d: Signed) {}
 
     let context = circuit_with_args(&get_params());
@@ -77,7 +77,7 @@ fn capture_circuit_input_args() {
 
 #[test]
 fn can_add() {
-    #[circuit]
+    #[circuit(scheme = "bfv")]
     fn circuit_with_args(a: Signed, b: Signed, c: Signed) {
         let _ = a + b + c;
     }
@@ -127,7 +127,7 @@ fn can_add() {
 
 #[test]
 fn can_mul() {
-    #[circuit]
+    #[circuit(scheme = "bfv")]
     fn circuit_with_args(a: Signed, b: Signed, c: Signed) {
         let _ = a * b * c;
     }
@@ -176,7 +176,7 @@ fn can_mul() {
 
 #[test]
 fn can_rotate_left() {
-    #[circuit]
+    #[circuit(scheme = "bfv")]
     fn circuit_with_args(a: Signed) {
         let _ = a << 4;
     }
@@ -217,7 +217,7 @@ fn can_rotate_left() {
 
 #[test]
 fn can_rotate_right() {
-    #[circuit]
+    #[circuit(scheme = "bfv")]
     fn circuit_with_args(a: Signed) {
         let _ = a >> 4;
     }
@@ -258,8 +258,8 @@ fn can_rotate_right() {
 
 #[test]
 fn can_collect_output() {
-    #[circuit]
-    fn circuit_with_args(a: Signed, b: Signed) -> Signed {
+  #[circuit(scheme = "bfv")]
+  fn circuit_with_args(a: Signed, b: Signed) -> Signed {
         a + b * a
     }
 
@@ -312,7 +312,7 @@ fn can_collect_output() {
 
 #[test]
 fn can_collect_multiple_outputs() {
-    #[circuit]
+    #[circuit(scheme = "bfv")]
     fn circuit_with_args(a: Signed, b: Signed) -> (Signed, Signed) {
         (a + b * a, a)
     }
@@ -372,7 +372,7 @@ fn can_collect_multiple_outputs() {
 
 #[test]
 fn literals_consolidate() {
-    #[circuit]
+    #[circuit(scheme = "bfv")]
     fn circuit_with_args(a: Signed) {
         let _ = a << 4;
         let _ = a << 4;

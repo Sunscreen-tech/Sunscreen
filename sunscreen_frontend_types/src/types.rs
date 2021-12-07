@@ -18,6 +18,17 @@ impl LiteralRef {
     }
 }
 
+/**
+ * Denotes the given rust type is an encoding in an FHE scheme
+ */
+pub trait FheType {}
+
+/**
+ * Denotes the given type is valid under the [SchemeType::BFV].
+ */
+pub trait BfvType : FheType {
+}
+
 #[derive(Clone, Copy)]
 /**
  * Represents a single signed integer encrypted as a ciphertext. Suitable for use

@@ -15,7 +15,7 @@ use sunscreen_runtime::RuntimeBuilder;
  * One takes a circuit and passes them to the compiler, which transforms it into a form
  * suitable for execution.
  */
-#[circuit]
+#[circuit(scheme = "bfv")]
 fn simple_multiply(a: Signed, b: Signed) -> Signed {
     a * b
 }

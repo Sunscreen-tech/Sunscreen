@@ -6,11 +6,20 @@
 
 extern crate proc_macro;
 
+mod internals;
+mod error;
+
+use crate::internals::{
+    attr::Attrs,
+    case::Scheme,  
+};
+
+
 use proc_macro2::{Span, TokenStream};
 use quote::{quote, quote_spanned};
 use syn::{
     parse_macro_input, parse_quote, spanned::Spanned, Data, DeriveInput, Fields, FnArg,
-    GenericParam, Generics, Ident, Index, ItemFn, ReturnType, Type,
+    GenericParam, Generics, Ident, Index, ItemFn, ReturnType, Type
 };
 
 #[proc_macro_derive(Value)]
@@ -101,11 +110,14 @@ fn new_body(data: &Data) -> TokenStream {
  * This function gets run by the compiler to build up the circuit you specify and does not
  * directly or eagerly perform homomorphic operations.
  *
+ * # Parameters
+ * * `scheme` (required): Designates the scheme this circuit uses. Today, this must be `"bfv"`.
+ * 
  * # Examples
  * ```rust
  * # use sunscreen_compiler::{circuit, types::Signed, Params, Context};
  * 
- * #[circuit]
+ * #[circuit(scheme = "bfv")]
  * fn multiply_add(a: Signed, b: Signed, c: Signed) -> Signed {
  *   a * b + c
  * }
@@ -114,14 +126,14 @@ fn new_body(data: &Data) -> TokenStream {
  * ```rust
  * # use sunscreen_compiler::{circuit, types::Signed, Params, Context};
  * 
- * #[circuit]
+ * #[circuit(scheme = "bfv")]
  * fn multi_out(a: Signed, b: Signed, c: Signed) -> (Signed, Signed) {
  *   (a + b, b + c)
  * }
  * ```
  */
 pub fn circuit(
-    _metadata: proc_macro::TokenStream,
+    metadata: proc_macro::TokenStream,
     input: proc_macro::TokenStream,
 ) -> proc_macro::TokenStream {
     let input_fn = parse_macro_input!(input as ItemFn);
@@ -134,6 +146,16 @@ pub fn circuit(
     let ret = &input_fn.sig.output;
 
     let mut unwrapped_inputs = vec![];
+
+    let attr_params = parse_macro_input!(metadata as Attrs);
+
+    let scheme_type = match attr_params.scheme {
+        Scheme::Bfv => {
+            quote! {
+                SchemeType::Bfv,
+            }
+        }
+    };
 
     for i in inputs {
         let input_type = match i {
@@ -220,7 +242,7 @@ pub fn circuit(
             use sunscreen_compiler::{CURRENT_CTX, Context, Params, SchemeType, Value};
 
             // TODO: Other schemes.
-            let mut context = Context::new(SchemeType::Bfv);
+            let mut context = Context::new(#scheme_type);
             let mut cur_id = 0usize;
 
             CURRENT_CTX.with(|ctx| {

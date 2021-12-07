@@ -6,6 +6,11 @@
 
 extern crate proc_macro;
 
+mod error;
+mod internals;
+
+use crate::internals::{attr::Attrs, case::Scheme};
+
 use proc_macro2::{Span, TokenStream};
 use quote::{quote, quote_spanned};
 use syn::{
@@ -29,7 +34,7 @@ pub fn derive_value(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 
     let expanded = quote! {
         // The generated impl.
-        impl #impl_generics sunscreen_frontend::Value for #name #ty_generics #where_clause {
+        impl #impl_generics sunscreen_compiler::Value for #name #ty_generics #where_clause {
             fn new(id: usize) {
                 #new
             }
@@ -45,7 +50,7 @@ fn add_trait_bounds(mut generics: Generics) -> Generics {
         if let GenericParam::Type(ref mut type_param) = *param {
             type_param
                 .bounds
-                .push(parse_quote!(sunscreen_frontend::Value));
+                .push(parse_quote!(sunscreen_compiler::Value));
         }
     }
     generics
@@ -101,26 +106,30 @@ fn new_body(data: &Data) -> TokenStream {
  * This function gets run by the compiler to build up the circuit you specify and does not
  * directly or eagerly perform homomorphic operations.
  *
+ * # Parameters
+ * * `scheme` (required): Designates the scheme this circuit uses. Today, this must be `"bfv"`.
+ *
  * # Examples
  * ```rust
- * # use sunscreen_frontend_types::{types::Signed, Params, Context};
- * # use sunscreen_frontend_macros::{circuit};
- * 
- * #[circuit]
- * fn multiply_add(a: Signed, b: Signed, c: Signed) -> Signed {
+ * # use sunscreen_compiler::{circuit, types::Unsigned, Params, Context};
+ *
+ * #[circuit(scheme = "bfv")]
+ * fn multiply_add(a: Unsigned, b: Unsigned, c: Unsigned) -> Unsigned {
  *   a * b + c
  * }
  * ```
  *
  * ```rust
- * #[circuit]
- * fn multi_out(a: Signed, b: Signed, c: Signed) -> (Signed, Signed) {
+ * # use sunscreen_compiler::{circuit, types::Unsigned, Params, Context};
+ *
+ * #[circuit(scheme = "bfv")]
+ * fn multi_out(a: Unsigned, b: Unsigned, c: Unsigned) -> (Unsigned, Unsigned) {
  *   (a + b, b + c)
  * }
  * ```
  */
 pub fn circuit(
-    _metadata: proc_macro::TokenStream,
+    metadata: proc_macro::TokenStream,
     input: proc_macro::TokenStream,
 ) -> proc_macro::TokenStream {
     let input_fn = parse_macro_input!(input as ItemFn);
@@ -133,6 +142,16 @@ pub fn circuit(
     let ret = &input_fn.sig.output;
 
     let mut unwrapped_inputs = vec![];
+
+    let attr_params = parse_macro_input!(metadata as Attrs);
+
+    let scheme_type = match attr_params.scheme {
+        Scheme::Bfv => {
+            quote! {
+                SchemeType::Bfv
+            }
+        }
+    };
 
     for i in inputs {
         let input_type = match i {
@@ -154,19 +173,31 @@ pub fn circuit(
         unwrapped_inputs.push(input_type);
     }
 
+    let circuit_args = unwrapped_inputs
+        .iter()
+        .map(|i| {
+            let name = &i.pat;
+            let ty = &i.ty;
+
+            quote! {
+                #name: CircuitNode<#ty>,
+            }
+        })
+        .collect::<Vec<TokenStream>>();
+
     let var_decl = unwrapped_inputs.iter().enumerate().map(|(i, t)| {
         let id = Ident::new(&format!("c_{}", i), Span::call_site());
         let ty = &t.ty;
 
         quote_spanned! {t.span() =>
-            let #id = #ty ::new();
+            let #id: CircuitNode<#ty> = CircuitNode::input();
         }
     });
 
-    let args = unwrapped_inputs.iter().enumerate().map(|(i, _)| {
+    let args = unwrapped_inputs.iter().enumerate().map(|(i, t)| {
         let id = Ident::new(&format!("c_{}", i), Span::call_site());
 
-        quote! {
+        quote_spanned! {t.span() =>
             #id
         }
     });
@@ -213,43 +244,50 @@ pub fn circuit(
 
     proc_macro::TokenStream::from(quote! {
         #(#attrs)*
-        #vis fn #circuit_name(params: &Params) -> sunscreen_frontend::Context {
+        #vis fn #circuit_name() -> (sunscreen_compiler::SchemeType, impl Fn(&Params) -> sunscreen_compiler::Result<sunscreen_compiler::FrontendCompilation>) {
             use std::cell::RefCell;
             use std::mem::transmute;
-            use sunscreen_frontend::{CURRENT_CTX, Context, Params, SchemeType, Value};
+            use sunscreen_compiler::{CURRENT_CTX, Context, Error, Result, Params, SchemeType, Value, types::CircuitNode};
 
-            // TODO: Other schemes.
-            let mut context = Context::new(SchemeType::Bfv);
-            let mut cur_id = 0usize;
-
-            CURRENT_CTX.with(|ctx| {
-                fn internal(#inputs) #ret {
-                    #body
+            let circuit_builder = |params: &Params| {
+                if SchemeType::Bfv != params.scheme_type {
+                    return Err(Error::IncorrectScheme)
                 }
 
-                // Transmute away the lifetime to 'static. So long as we are careful with internal()
-                // panicing, this is safe because we set the context back to none before the funtion
-                // returns.
-                ctx.swap(&RefCell::new(Some(unsafe { transmute(&context) })));
+                // TODO: Other schemes.
+                let mut context = Context::new(params);
 
-                #(#var_decl)*
+                CURRENT_CTX.with(|ctx| {
+                    let internal = | #(#circuit_args)* | {
+                        #body
+                    };
 
-                let panic_res = std::panic::catch_unwind(|| {
-                    internal(#(#args),*)
+                    // Transmute away the lifetime to 'static. So long as we are careful with internal()
+                    // panicing, this is safe because we set the context back to none before the funtion
+                    // returns.
+                    ctx.swap(&RefCell::new(Some(unsafe { transmute(&mut context) })));
+
+                    #(#var_decl)*
+
+                    let panic_res = std::panic::catch_unwind(|| {
+                        internal(#(#args),*)
+                    });
+
+                    match panic_res {
+                        Ok(v) => { #capture_outputs },
+                        Err(err) => {
+                            ctx.swap(&RefCell::new(None));
+                            std::panic::resume_unwind(err)
+                        }
+                    };
+
+                    ctx.swap(&RefCell::new(None));
                 });
 
-                match panic_res {
-                    Ok(v) => { #capture_outputs },
-                    Err(err) => {
-                        ctx.swap(&RefCell::new(None));
-                        std::panic::resume_unwind(err)
-                    }
-                };
+                Ok(context.compilation)
+            };
 
-                ctx.swap(&RefCell::new(None));
-            });
-
-            context
+            (#scheme_type, circuit_builder)
         }
     })
 }

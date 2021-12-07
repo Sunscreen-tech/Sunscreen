@@ -1,5 +1,5 @@
 use seal::BFVScalarEncoder;
-use sunscreen_frontend::{circuit, types::Signed, Compiler, Params, PlainModulusConstraint};
+use sunscreen_compiler::{circuit, types::Unsigned, Compiler, Params, PlainModulusConstraint};
 use sunscreen_runtime::RuntimeBuilder;
 
 /**
@@ -8,15 +8,15 @@ use sunscreen_runtime::RuntimeBuilder;
  * the result. Circuits may take any number of parameters and return either a single result
  * or a tuple of results.
  *
- * Currently, the Signed type is the only legal type in circuit parameters and return values,
+ * Currently, the Unsigned type is the only legal type in circuit parameters and return values,
  * which serves as a placeholder that allows the compiler to build up the circuit. Don't attach
  * much meaning to it in its current form; this example in fact uses unsigned values!
  *
  * One takes a circuit and passes them to the compiler, which transforms it into a form
  * suitable for execution.
  */
-#[circuit]
-fn simple_multiply(a: Signed, b: Signed) -> Signed {
+#[circuit(scheme = "bfv")]
+fn simple_multiply(a: Unsigned, b: Unsigned) -> Unsigned {
     a * b
 }
 

@@ -197,9 +197,7 @@ impl CoefficientModulus {
 
         Ok(coefficients
             .iter()
-            .map(|handle| {
-                Modulus { handle: *handle }
-            })
+            .map(|handle| Modulus { handle: *handle })
             .collect())
     }
 

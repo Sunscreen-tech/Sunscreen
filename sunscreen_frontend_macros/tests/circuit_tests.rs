@@ -1,6 +1,6 @@
 use sunscreen_frontend_macros::circuit;
 use sunscreen_frontend_types::{
-    types::Signed, Params, SchemeType, SecurityLevel, CURRENT_CTX
+    types::Unsigned, FrontendCompilation, Params, SchemeType, SecurityLevel, CURRENT_CTX,
 };
 
 use serde_json::json;
@@ -19,21 +19,25 @@ fn get_params() -> Params {
 fn circuit_gets_called() {
     static mut FOO: u32 = 0;
 
-    #[circuit]
+    #[circuit(scheme = "bfv")]
     fn simple_circuit() {
         unsafe {
             FOO = 20;
         };
     }
 
-    simple_circuit(&get_params());
+    let (scheme, compile_fn) = simple_circuit();
+
+    assert_eq!(scheme, SchemeType::Bfv);
+
+    let _context = compile_fn(&get_params()).unwrap();
 
     assert_eq!(unsafe { FOO }, 20);
 }
 
 #[test]
 fn panicing_circuit_clears_ctx() {
-    #[circuit]
+    #[circuit(scheme = "bfv")]
     fn panic_circuit() {
         CURRENT_CTX.with(|ctx| {
             let old = ctx.take();
@@ -46,7 +50,11 @@ fn panicing_circuit_clears_ctx() {
     }
 
     let panic_result = std::panic::catch_unwind(|| {
-        panic_circuit(&get_params());
+        let (scheme, compile_fn) = panic_circuit();
+
+        assert_eq!(scheme, SchemeType::Bfv);
+
+        let _context = compile_fn(&get_params()).unwrap();
     });
 
     assert_eq!(panic_result.is_err(), true);
@@ -67,22 +75,30 @@ fn compile_failures() {
 
 #[test]
 fn capture_circuit_input_args() {
-    #[circuit]
-    fn circuit_with_args(_a: Signed, _b: Signed, _c: Signed, _d: Signed) {}
+    #[circuit(scheme = "bfv")]
+    fn circuit_with_args(_a: Unsigned, _b: Unsigned, _c: Unsigned, _d: Unsigned) {}
 
-    let context = circuit_with_args(&get_params());
+    let (scheme, compile_fn) = circuit_with_args();
+
+    assert_eq!(scheme, SchemeType::Bfv);
+
+    let context = compile_fn(&get_params()).unwrap();
 
     assert_eq!(context.graph.node_count(), 4);
 }
 
 #[test]
 fn can_add() {
-    #[circuit]
-    fn circuit_with_args(a: Signed, b: Signed, c: Signed) {
+    #[circuit(scheme = "bfv")]
+    fn circuit_with_args(a: Unsigned, b: Unsigned, c: Unsigned) {
         let _ = a + b + c;
     }
 
-    let context = circuit_with_args(&get_params());
+    let (scheme, compile_fn) = circuit_with_args();
+
+    assert_eq!(scheme, SchemeType::Bfv);
+
+    let context: FrontendCompilation = compile_fn(&get_params()).unwrap();
 
     let expected = json!({
 
@@ -119,20 +135,26 @@ fn can_add() {
                 ]
             ]
         },
-        "scheme": "Bfv"
     });
 
-    assert_eq!(context, serde_json::from_value(expected).unwrap());
+    assert_eq!(
+        context,
+        serde_json::from_value::<FrontendCompilation>(expected).unwrap()
+    );
 }
 
 #[test]
 fn can_mul() {
-    #[circuit]
-    fn circuit_with_args(a: Signed, b: Signed, c: Signed) {
+    #[circuit(scheme = "bfv")]
+    fn circuit_with_args(a: Unsigned, b: Unsigned, c: Unsigned) {
         let _ = a * b * c;
     }
 
-    let context = circuit_with_args(&get_params());
+    let (scheme, compile_fn) = circuit_with_args();
+
+    assert_eq!(scheme, SchemeType::Bfv);
+
+    let context = compile_fn(&get_params()).unwrap();
 
     let expected = json!({
         "graph": {
@@ -168,20 +190,26 @@ fn can_mul() {
                 ]
             ]
         },
-        "scheme": "Bfv"
     });
 
-    assert_eq!(context, serde_json::from_value(expected).unwrap());
+    assert_eq!(
+        context,
+        serde_json::from_value::<FrontendCompilation>(expected).unwrap()
+    );
 }
 
 #[test]
 fn can_rotate_left() {
-    #[circuit]
-    fn circuit_with_args(a: Signed) {
+    #[circuit(scheme = "bfv")]
+    fn circuit_with_args(a: Unsigned) {
         let _ = a << 4;
     }
 
-    let context = circuit_with_args(&get_params());
+    let (scheme, compile_fn) = circuit_with_args();
+
+    assert_eq!(scheme, SchemeType::Bfv);
+
+    let context = compile_fn(&get_params()).unwrap();
 
     let expected = json!({
         "graph": {
@@ -209,20 +237,26 @@ fn can_rotate_left() {
                 ]
             ]
         },
-        "scheme": "Bfv"
     });
 
-    assert_eq!(context, serde_json::from_value(expected).unwrap());
+    assert_eq!(
+        context,
+        serde_json::from_value::<FrontendCompilation>(expected).unwrap()
+    );
 }
 
 #[test]
 fn can_rotate_right() {
-    #[circuit]
-    fn circuit_with_args(a: Signed) {
+    #[circuit(scheme = "bfv")]
+    fn circuit_with_args(a: Unsigned) {
         let _ = a >> 4;
     }
 
-    let context = circuit_with_args(&get_params());
+    let (scheme, compile_fn) = circuit_with_args();
+
+    assert_eq!(scheme, SchemeType::Bfv);
+
+    let context: FrontendCompilation = compile_fn(&get_params()).unwrap();
 
     let expected = json!({
         "graph": {
@@ -250,20 +284,26 @@ fn can_rotate_right() {
                 ]
             ]
         },
-        "scheme": "Bfv"
     });
 
-    assert_eq!(context, serde_json::from_value(expected).unwrap());
+    assert_eq!(
+        context,
+        serde_json::from_value::<FrontendCompilation>(expected).unwrap()
+    );
 }
 
 #[test]
 fn can_collect_output() {
-    #[circuit]
-    fn circuit_with_args(a: Signed, b: Signed) -> Signed {
+    #[circuit(scheme = "bfv")]
+    fn circuit_with_args(a: Unsigned, b: Unsigned) -> Unsigned {
         a + b * a
     }
 
-    let context = circuit_with_args(&get_params());
+    let (scheme, compile_fn) = circuit_with_args();
+
+    assert_eq!(scheme, SchemeType::Bfv);
+
+    let context = compile_fn(&get_params()).unwrap();
 
     let expected = json!({
       "graph": {
@@ -304,20 +344,26 @@ fn can_collect_output() {
           ]
         ]
       },
-      "scheme": "Bfv"
     });
 
-    assert_eq!(context, serde_json::from_value(expected).unwrap());
+    assert_eq!(
+        context,
+        serde_json::from_value::<FrontendCompilation>(expected).unwrap()
+    );
 }
 
 #[test]
 fn can_collect_multiple_outputs() {
-    #[circuit]
-    fn circuit_with_args(a: Signed, b: Signed) -> (Signed, Signed) {
+    #[circuit(scheme = "bfv")]
+    fn circuit_with_args(a: Unsigned, b: Unsigned) -> (Unsigned, Unsigned) {
         (a + b * a, a)
     }
 
-    let context = circuit_with_args(&get_params());
+    let (scheme, compile_fn) = circuit_with_args();
+
+    assert_eq!(scheme, SchemeType::Bfv);
+
+    let context = compile_fn(&get_params()).unwrap();
 
     let expected = json!({
         "graph": {
@@ -364,22 +410,28 @@ fn can_collect_multiple_outputs() {
             ]
           ]
         },
-        "scheme": "Bfv"
     });
 
-    assert_eq!(context, serde_json::from_value(expected).unwrap());
+    assert_eq!(
+        context,
+        serde_json::from_value::<FrontendCompilation>(expected).unwrap()
+    );
 }
 
 #[test]
 fn literals_consolidate() {
-    #[circuit]
-    fn circuit_with_args(a: Signed) {
+    #[circuit(scheme = "bfv")]
+    fn circuit_with_args(a: Unsigned) {
         let _ = a << 4;
         let _ = a << 4;
         let _ = a << 3;
     }
 
-    let context = circuit_with_args(&get_params());
+    let (scheme, compile_fn) = circuit_with_args();
+
+    assert_eq!(scheme, SchemeType::Bfv);
+
+    let context = compile_fn(&get_params()).unwrap();
 
     let expected = json!({
       "graph": {
@@ -434,8 +486,10 @@ fn literals_consolidate() {
           ]
         ]
       },
-      "scheme": "Bfv"
     });
 
-    assert_eq!(context, serde_json::from_value(expected).unwrap());
+    assert_eq!(
+        context,
+        serde_json::from_value::<FrontendCompilation>(expected).unwrap()
+    );
 }

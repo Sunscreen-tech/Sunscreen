@@ -1,5 +1,5 @@
 use crate::params::{determine_params, PlainModulusConstraint};
-use crate::{Context, Error, Params, Result, SchemeType, SecurityLevel};
+use crate::{Error, FrontendCompilation, Params, Result, SchemeType, SecurityLevel};
 use sunscreen_circuit::Circuit;
 
 #[derive(Debug, Clone)]
@@ -11,9 +11,10 @@ enum ParamsMode {
 /**
  * A frontend circuit compiler for Sunscreen circuits.
  */
-pub struct Compiler<F>
+pub struct Compiler<F, G>
 where
-    F: Fn(&Params) -> Context,
+    G: Fn(&Params) -> Result<FrontendCompilation>,
+    F: Fn() -> (SchemeType, G),
 {
     circuit: F,
     params_mode: ParamsMode,
@@ -22,9 +23,10 @@ where
     noise_margin: u32,
 }
 
-impl<F> Compiler<F>
+impl<F, G> Compiler<F, G>
 where
-    F: Fn(&Params) -> Context,
+    G: Fn(&Params) -> Result<FrontendCompilation>,
+    F: Fn() -> (SchemeType, G),
 {
     /**
      * Create a new compiler with the given circuit.
@@ -87,25 +89,29 @@ where
      * for running it.
      */
     pub fn compile(self) -> Result<(Circuit, Params)> {
+        let (scheme, circuit_fn) = (self.circuit)();
         let (circuit, params) = match self.params_mode {
-            ParamsMode::Manual(p) => ((self.circuit)(&p), p.clone()),
+            ParamsMode::Manual(p) => {
+                
+                (circuit_fn(&p), p.clone())
+            },
             ParamsMode::Search => {
                 let constraint = self
                     .plain_modulus_constraint
                     .ok_or(Error::MissingPlainModulusConstraint)?;
 
                 let params = determine_params(
-                    &self.circuit,
+                    &circuit_fn,
                     constraint,
                     self.security_level,
                     self.noise_margin,
-                    SchemeType::Bfv,
+                    scheme
                 )?;
 
-                ((self.circuit)(&params), params.clone())
+                (circuit_fn(&params), params.clone())
             }
         };
 
-        Ok((circuit.compile(), params))
+        Ok((circuit?.compile(), params))
     }
 }

@@ -507,7 +507,7 @@ name = "simple_multiply"
 version = "0.1.0"
 dependencies = [
  "seal",
- "sunscreen_frontend",
+ "sunscreen_compiler",
  "sunscreen_runtime",
 ]
 
@@ -540,7 +540,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "sunscreen_frontend"
+name = "sunscreen_compiler"
 version = "0.1.0"
 dependencies = [
  "env_logger 0.9.0",
@@ -558,7 +558,7 @@ dependencies = [
  "proc-macro2",
  "quote",
  "serde_json",
- "sunscreen_frontend",
+ "sunscreen_compiler",
  "sunscreen_frontend_types",
  "syn",
  "trybuild",

@@ -1,4 +1,4 @@
-use crate::{Context, Error, Result, SecurityLevel};
+use crate::{Error, FrontendCompilation, Result, SecurityLevel};
 
 use log::{debug, trace};
 
@@ -47,7 +47,7 @@ pub fn determine_params<F>(
     scheme_type: SchemeType,
 ) -> Result<Params>
 where
-    F: Fn(&Params) -> Context,
+    F: Fn(&Params) -> Result<FrontendCompilation>,
 {
     'order_loop: for (i, n) in LATTICE_DIMENSIONS.iter().enumerate() {
         let plaintext_modulus = match plaintext_constraint {
@@ -144,7 +144,7 @@ where
             scheme_type: scheme_type,
         };
 
-        let ir = circuit_fn(&params).compile();
+        let ir = circuit_fn(&params)?.compile();
 
         let num_inputs = ir
             .graph

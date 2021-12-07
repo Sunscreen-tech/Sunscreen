@@ -1,4 +1,4 @@
-use sunscreen_frontend::{circuit, types::*, Compiler, Params, PlainModulusConstraint};
+use sunscreen_compiler::{circuit, types::*, Compiler, Params, PlainModulusConstraint};
 use sunscreen_runtime::RuntimeBuilder;
 
 use seal::BFVScalarEncoder;
@@ -7,8 +7,8 @@ use seal::BFVScalarEncoder;
 fn can_compile_and_run_simple_add() {
     let _ = env_logger::try_init();
 
-    #[circuit]
-    fn c(a: Signed, b: Signed) -> Signed {
+    #[circuit(scheme = "bfv")]
+    fn c(a: Unsigned, b: Unsigned) -> Unsigned {
         a + b
     }
 
@@ -47,8 +47,8 @@ fn can_compile_and_run_simple_add() {
 fn can_compile_and_run_simple_mul() {
     let _ = env_logger::try_init();
 
-    #[circuit]
-    fn c(a: Signed, b: Signed) -> Signed {
+    #[circuit(scheme = "bfv")]
+    fn c(a: Unsigned, b: Unsigned) -> Unsigned {
         a * b
     }
 
@@ -89,8 +89,8 @@ fn can_compile_and_run_simple_mul() {
 fn can_compile_and_run_mul_reduction() {
     let _ = env_logger::try_init();
 
-    #[circuit]
-    fn c(a: Signed, b: Signed, c: Signed, d: Signed) -> Signed {
+    #[circuit(scheme = "bfv")]
+    fn c(a: Unsigned, b: Unsigned, c: Unsigned, d: Unsigned) -> Unsigned {
         a * b * c * d
     }
 
@@ -137,8 +137,8 @@ fn can_compile_and_run_mul_reduction() {
 fn can_compile_and_run_add_reduction() {
     let _ = env_logger::try_init();
 
-    #[circuit]
-    fn c(a: Signed, b: Signed, c: Signed, d: Signed) -> Signed {
+    #[circuit(scheme = "bfv")]
+    fn c(a: Unsigned, b: Unsigned, c: Unsigned, d: Unsigned) -> Unsigned {
         a + b + c + d
     }
 

@@ -30,7 +30,7 @@ use TransformNodeIndex::*;
 
 use std::collections::HashSet;
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 /**
  * There 3 primary FHE schemes in use today: BFV, CKKS, and TFHE. BFV is generally the best choice for algorithms
  * requiring exact arithmetic on integers easily expressed as addition and multiplication. CKKS is generally best

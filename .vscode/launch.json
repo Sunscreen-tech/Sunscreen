@@ -100,12 +100,12 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug assumption tests in library 'sunscreen_frontend'",
+            "name": "Debug tests in library 'sunscreen_frontend'",
             "cargo": {
                 "args": [
                     "test",
                     "--no-run",
-                    "--package=sunscreen_frontend"
+                    "--package=sunscreen_compiler"
                 ],
                 "filter": {
                     "name": "circuit_compilation",

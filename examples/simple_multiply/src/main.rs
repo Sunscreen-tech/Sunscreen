@@ -1,4 +1,3 @@
-use seal::BFVScalarEncoder;
 use sunscreen_compiler::{circuit, types::Unsigned, Compiler, Params, PlainModulusConstraint};
 use sunscreen_runtime::RuntimeBuilder;
 
@@ -70,21 +69,13 @@ fn main() {
     let relin = runtime.generate_relin_keys(&secret).unwrap();
 
     /*
-     * BFV uses polynomials as the plaintext, which are cumbersome and weird to work with. Encoders
-     * take more useful values like integers and map them onto the plaintext polynomial coefficients
-     * for us. BFVScalarEncoder takes an unsigned value and maps it into the constant term in the plaintext
-     * polynomial.
-     */
-    let encoder = BFVScalarEncoder::new();
-
-    /*
-     * Encode the values 15 and 5, then encrypt them with the public key.
+     * Create FHE `Unsigned` types from the given literals and encrypt them.
      */
     let a = runtime
-        .encrypt(&encoder.encode_unsigned(15).unwrap(), &public)
+        .encrypt(&Unsigned::from(15), &public)
         .unwrap();
     let b = runtime
-        .encrypt(&encoder.encode_unsigned(5).unwrap(), &public)
+        .encrypt(&Unsigned::from(5), &public)
         .unwrap();
 
     /*
@@ -104,11 +95,10 @@ fn main() {
     assert_eq!(1, results.len());
 
     /*
-     * Decrypt the result and decode the plaintext polynomial back into an unsigned integer.
+     * Decrypt the result as the `Unsigned` type declared in the turbofish and convert it
+     * into a u64.
      */
-    let c = encoder
-        .decode_unsigned(&runtime.decrypt(&results[0], &secret).unwrap())
-        .unwrap();
+    let c: u64 = runtime.decrypt::<Unsigned>(&results[0], &secret).unwrap().into();
 
     /*
      * Yay, 5 * 15 indeed equals 75.

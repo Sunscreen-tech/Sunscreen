@@ -1,9 +1,13 @@
 use std::ffi::{c_void, CString};
 use std::ptr::null_mut;
 
-use crate::bindgen;
 use crate::error::*;
+use crate::{bindgen, serialization::CompressionType, Context};
 
+use serde::ser::Error;
+use serde::{Serialize, Serializer};
+
+#[derive(Debug)]
 /**
  * Class to store a plaintext element. The data for the plaintext is
  * a polynomial with coefficients modulo the plaintext modulus. The degree
@@ -35,7 +39,75 @@ pub struct Plaintext {
 unsafe impl Sync for Plaintext {}
 unsafe impl Send for Plaintext {}
 
+impl Clone for Plaintext {
+    fn clone(&self) -> Self {
+        let mut copy = null_mut();
+
+        convert_seal_error(unsafe { bindgen::Plaintext_Create5(self.handle, &mut copy) })
+            .expect("Internal error: Failed to copy plaintext.");
+
+        Self { handle: copy }
+    }
+}
+
+impl Serialize for Plaintext {
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let mut num_bytes: i64 = 0;
+
+        convert_seal_error(unsafe {
+            bindgen::Plaintext_SaveSize(self.handle, CompressionType::ZStd as u8, &mut num_bytes)
+        })
+        .map_err(|e| {
+            S::Error::custom(format!("Failed to get secret key serialized size: {}", e))
+        })?;
+
+        let mut data: Vec<u8> = Vec::with_capacity(num_bytes as usize);
+        let mut bytes_written: i64 = 0;
+
+        convert_seal_error(unsafe {
+            let data_ptr = data.as_mut_ptr();
+
+            bindgen::Plaintext_Save(
+                self.handle,
+                data_ptr,
+                num_bytes as u64,
+                CompressionType::ZStd as u8,
+                &mut bytes_written,
+            )
+        })
+        .map_err(|e| S::Error::custom(format!("Failed to get secret key bytes: {}", e)))?;
+
+        unsafe { data.set_len(bytes_written as usize) };
+
+        serializer.serialize_bytes(&data)
+    }
+}
+
 impl Plaintext {
+    /**
+     * Deserializes a byte stream into a plaintext. This requires a context, which is why
+     * Plaintext doesn't `impl Deserialize`.
+     */
+    pub fn from_bytes(&mut self, context: Context, data: &[u8]) -> Result<()> {
+        let mut bytes_read = 0;
+
+        convert_seal_error(unsafe {
+            // While the interface marks data as mut, SEAL doesn't actually modify it, so we're okay.
+            bindgen::Plaintext_Load(
+                self.handle,
+                context.get_handle(),
+                data.as_ptr() as *mut u8,
+                data.len() as u64,
+                &mut bytes_read,
+            )
+        })?;
+
+        Ok(())
+    }
+
     /**
      * Returns the handle to the underlying SEAL object.
      */
@@ -91,6 +163,68 @@ impl Plaintext {
         })?;
 
         Ok(Self { handle })
+    }
+
+    /**
+     * Gets the coefficient at the given location. Coefficients are ordered
+     * from lowest to highest degree, with the first value being the constant
+     * coefficient.
+     *
+     * # Panics
+     * Panics if index is greater than len().
+     */
+    pub fn get_coefficient(&self, index: usize) -> u64 {
+        let mut coeff: u64 = 0;
+
+        if index > self.len() {
+            panic!("Index {} out of bounds {}", index, self.len());
+        }
+
+        convert_seal_error(unsafe {
+            bindgen::Plaintext_CoeffAt(self.handle, index as u64, &mut coeff)
+        })
+        .expect("Fatal error in Plaintext::index().");
+
+        coeff
+    }
+
+    /**
+     * Sets the coefficient at the given location. Coefficients are ordered
+     * from lowest to highest degree, with the first value being the constant
+     * coefficient.
+     *
+     * # Panics
+     * Panics if index is greater than len().
+     */
+    pub fn set_coefficient(&mut self, index: usize, value: u64) {
+        if index > self.len() {
+            panic!("Index {} out of bounds {}", index, self.len());
+        }
+
+        convert_seal_error(unsafe {
+            bindgen::Plaintext_SetCoeffAt(self.handle, index as u64, value)
+        })
+        .expect("Fatal error in Plaintext::index().");
+    }
+
+    /**
+     * Sets the number of coefficients this plaintext can hold.
+     */
+    pub fn resize(&mut self, count: usize) {
+        convert_seal_error(unsafe { bindgen::Plaintext_Resize(self.handle, count as u64) })
+            .expect("Fatal error in Plaintext::resize().");
+    }
+
+    /**
+     * Returns the number of coefficients this plaintext can hold.
+     */
+    pub fn len(&self) -> usize {
+        let mut size: u64 = 0;
+
+        convert_seal_error(unsafe { bindgen::Plaintext_CoeffCount(self.handle, &mut size) })
+            .expect("Fatal error in Plaintext::index().");
+
+        size as usize
     }
 }
 
@@ -185,5 +319,14 @@ mod tests {
         let plaintext = Plaintext::new().unwrap();
 
         std::mem::drop(plaintext);
+    }
+
+    #[test]
+    fn plaintext_coefficients_in_increasing_order() {
+        let plaintext = Plaintext::from_hex_string("1234x^2 + 4321").unwrap();
+
+        assert_eq!(plaintext.get_coefficient(0), 0x4321);
+        assert_eq!(plaintext.get_coefficient(1), 0);
+        assert_eq!(plaintext.get_coefficient(2), 0x1234);
     }
 }

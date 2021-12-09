@@ -19,7 +19,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 use seal::{
     BFVEvaluator, BfvEncryptionParametersBuilder, Ciphertext, Context as SealContext, Decryptor,
-    Encryptor, Evaluator, GaloisKeys, KeyGenerator, Modulus, Plaintext, PublicKey,
+    Encryptor, Evaluator, GaloisKeys, KeyGenerator, Modulus, Plaintext as SealPlaintext, PublicKey,
     RelinearizationKeys, SecretKey, SecurityLevel,
 };
 
@@ -62,6 +62,11 @@ pub enum Runtime {
      * This runtime is for the BFV scheme.
      */
     Bfv {
+        /**
+         * The parameters used to construct the scheme used in this runtime.
+         */
+        params: Params,
+
         /**
          * The context associated with the BFV scheme. Created by [`RuntimeBuilder`].
          */
@@ -154,13 +159,29 @@ impl Runtime {
 
     /**
      * Encrypts the given plaintext using the given public key.
+     *
+     * Returns [`Error::ParameterMismatch`] if the plaintext is incompatible with this runtime's
+     * scheme.
      */
-    pub fn encrypt(&self, p: &Plaintext, public_key: &PublicKey) -> Result<Ciphertext> {
+    pub fn encrypt<P: TryIntoPlaintext>(
+        &self,
+        p: &P,
+        public_key: &PublicKey,
+    ) -> Result<Ciphertext> {
         let ciphertext = match self {
-            Self::Bfv { context, .. } => {
-                let encryptor = Encryptor::with_public_key(&context, public_key)?;
+            Self::Bfv { context, params } => {
+                let p = p.try_into_plaintext(&params)?;
 
-                encryptor.encrypt(&p)?
+                match &p.inner {
+                    InnerPlaintext::Seal(p) => {
+                        let encryptor = Encryptor::with_public_key(&context, public_key)?;
+
+                        encryptor.encrypt(&p)?
+                    }
+                    _ => {
+                        unimplemented!();
+                    }
+                }
             }
         };
 
@@ -170,17 +191,93 @@ impl Runtime {
     /**
      * Decrypts the given ciphertext using the given secret key.
      */
-    pub fn decrypt(&self, c: &Ciphertext, secret_key: &SecretKey) -> Result<Plaintext> {
-        let plaintext = match self {
-            Self::Bfv { context, .. } => {
+    pub fn decrypt<P: TryFromPlaintext>(
+        &self,
+        c: &Ciphertext,
+        secret_key: &SecretKey,
+    ) -> Result<P> {
+        let val = match self {
+            Self::Bfv { context, params } => {
                 let decryptor = Decryptor::new(&context, secret_key)?;
 
-                decryptor.decrypt(&c)?
+                let plaintext = decryptor.decrypt(&c)?;
+
+                P::try_from_plaintext(
+                    &Plaintext {
+                        params: params.clone(),
+                        inner: InnerPlaintext::Seal(plaintext),
+                    },
+                    &params,
+                )?
             }
         };
 
-        Ok(plaintext)
+        Ok(val)
     }
+}
+
+#[derive(Debug, Serialize)]
+/**
+ * The underlying backend implementation of a plaintext (e.g. SEAL's [`Plaintext`](seal::Plaintext)).
+ */
+pub enum InnerPlaintext {
+    /**
+     * This plaintext wraps a SEAL [`Plaintext`](seal::Plaintext).
+     */
+    Seal(SealPlaintext),
+
+    /**
+     * Not used, but allows you to use _ in match statements without warning.
+     */
+    Unused,
+}
+
+#[derive(Debug, Serialize)]
+/**
+ * Represents an encoded plaintext suitable for use in the underlying scheme.
+ */
+pub struct Plaintext {
+    /**
+     * The scheme parameters under which this plaintext was created.
+     */
+    pub params: Params,
+
+    /**
+     * The scheme and backend-specific plaintext.
+     */
+    pub inner: InnerPlaintext,
+}
+
+impl Plaintext {
+    /**
+     * Creates a new plaintext. Moves the given [`InnerPlaintext`] and [`Params`].
+     */
+    pub fn new(inner: InnerPlaintext, params: Params) -> Self {
+        Self { inner, params }
+    }
+}
+
+/**
+ * This trait denotes one may attempt to turn this type into a plaintext.
+ */
+pub trait TryIntoPlaintext {
+    /**
+     * Attempts to turn this type into a [`Plaintext`].
+     */
+    fn try_into_plaintext(&self, params: &Params) -> Result<Plaintext>;
+}
+
+/**
+ * This trait specifies one may attempt to convert a plaintext into this type.
+ */
+pub trait TryFromPlaintext
+where
+    Self: Sized,
+{
+    /**
+     * Attempts to turn a [`Plaintext`] into `Self`.
+     */
+    fn try_from_plaintext(plaintext: &Plaintext, params: &Params) -> Result<Self>;
 }
 
 /**
@@ -220,7 +317,10 @@ impl RuntimeBuilder {
 
                 let context = SealContext::new(&bfv_params, true, self.params.security_level)?;
 
-                Ok(Runtime::Bfv { context })
+                Ok(Runtime::Bfv {
+                    context,
+                    params: self.params,
+                })
             }
             _ => unimplemented!(),
         }

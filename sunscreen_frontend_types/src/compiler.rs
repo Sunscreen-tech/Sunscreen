@@ -91,10 +91,7 @@ where
     pub fn compile(self) -> Result<(Circuit, Params)> {
         let (scheme, circuit_fn) = (self.circuit)();
         let (circuit, params) = match self.params_mode {
-            ParamsMode::Manual(p) => {
-                
-                (circuit_fn(&p), p.clone())
-            },
+            ParamsMode::Manual(p) => (circuit_fn(&p), p.clone()),
             ParamsMode::Search => {
                 let constraint = self
                     .plain_modulus_constraint
@@ -105,7 +102,7 @@ where
                     constraint,
                     self.security_level,
                     self.noise_margin,
-                    scheme
+                    scheme,
                 )?;
 
                 (circuit_fn(&params), params.clone())

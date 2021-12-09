@@ -1,8 +1,6 @@
 use sunscreen_compiler::{circuit, types::*, Compiler, Params, PlainModulusConstraint};
 use sunscreen_runtime::RuntimeBuilder;
 
-use seal::BFVScalarEncoder;
-
 #[test]
 fn can_compile_and_run_simple_add() {
     let _ = env_logger::try_init();
@@ -22,13 +20,8 @@ fn can_compile_and_run_simple_add() {
 
     let (public, secret) = runtime.generate_keys().unwrap();
 
-    let encoder = BFVScalarEncoder::new();
-    let a = runtime
-        .encrypt(&encoder.encode_unsigned(14).unwrap(), &public)
-        .unwrap();
-    let b = runtime
-        .encrypt(&encoder.encode_unsigned(3).unwrap(), &public)
-        .unwrap();
+    let a = runtime.encrypt(&Unsigned::from(14), &public).unwrap();
+    let b = runtime.encrypt(&Unsigned::from(3), &public).unwrap();
 
     let results = runtime
         .validate_and_run_program(&circuit, &vec![a, b], None, None)
@@ -36,9 +29,10 @@ fn can_compile_and_run_simple_add() {
 
     assert_eq!(results.len(), 1);
 
-    let c = encoder
-        .decode_unsigned(&runtime.decrypt(&results[0], &secret).unwrap())
-        .unwrap();
+    let c: u64 = runtime
+        .decrypt::<Unsigned>(&results[0], &secret)
+        .unwrap()
+        .into();
 
     assert_eq!(c, 14 + 3);
 }
@@ -62,13 +56,8 @@ fn can_compile_and_run_simple_mul() {
 
     let (public, secret) = runtime.generate_keys().unwrap();
 
-    let encoder = BFVScalarEncoder::new();
-    let a = runtime
-        .encrypt(&encoder.encode_unsigned(14).unwrap(), &public)
-        .unwrap();
-    let b = runtime
-        .encrypt(&encoder.encode_unsigned(3).unwrap(), &public)
-        .unwrap();
+    let a = runtime.encrypt(&Unsigned::from(14), &public).unwrap();
+    let b = runtime.encrypt(&Unsigned::from(3), &public).unwrap();
 
     let relin_keys = Some(runtime.generate_relin_keys(&secret).unwrap());
 
@@ -78,9 +67,10 @@ fn can_compile_and_run_simple_mul() {
 
     assert_eq!(results.len(), 1);
 
-    let c = encoder
-        .decode_unsigned(&runtime.decrypt(&results[0], &secret).unwrap())
-        .unwrap();
+    let c: u64 = runtime
+        .decrypt::<Unsigned>(&results[0], &secret)
+        .unwrap()
+        .into();
 
     assert_eq!(c, 14 * 3);
 }
@@ -104,19 +94,10 @@ fn can_compile_and_run_mul_reduction() {
 
     let (public, secret) = runtime.generate_keys().unwrap();
 
-    let encoder = BFVScalarEncoder::new();
-    let a = runtime
-        .encrypt(&encoder.encode_unsigned(2).unwrap(), &public)
-        .unwrap();
-    let b = runtime
-        .encrypt(&encoder.encode_unsigned(3).unwrap(), &public)
-        .unwrap();
-    let c = runtime
-        .encrypt(&encoder.encode_unsigned(4).unwrap(), &public)
-        .unwrap();
-    let d = runtime
-        .encrypt(&encoder.encode_unsigned(5).unwrap(), &public)
-        .unwrap();
+    let a = runtime.encrypt(&Unsigned::from(2), &public).unwrap();
+    let b = runtime.encrypt(&Unsigned::from(3), &public).unwrap();
+    let c = runtime.encrypt(&Unsigned::from(4), &public).unwrap();
+    let d = runtime.encrypt(&Unsigned::from(5), &public).unwrap();
 
     let relin_keys = Some(runtime.generate_relin_keys(&secret).unwrap());
 
@@ -126,9 +107,10 @@ fn can_compile_and_run_mul_reduction() {
 
     assert_eq!(results.len(), 1);
 
-    let c = encoder
-        .decode_unsigned(&runtime.decrypt(&results[0], &secret).unwrap())
-        .unwrap();
+    let c: u64 = runtime
+        .decrypt::<Unsigned>(&results[0], &secret)
+        .unwrap()
+        .into();
 
     assert_eq!(c, 2 * 3 * 4 * 5);
 }
@@ -152,19 +134,10 @@ fn can_compile_and_run_add_reduction() {
 
     let (public, secret) = runtime.generate_keys().unwrap();
 
-    let encoder = BFVScalarEncoder::new();
-    let a = runtime
-        .encrypt(&encoder.encode_unsigned(2).unwrap(), &public)
-        .unwrap();
-    let b = runtime
-        .encrypt(&encoder.encode_unsigned(3).unwrap(), &public)
-        .unwrap();
-    let c = runtime
-        .encrypt(&encoder.encode_unsigned(4).unwrap(), &public)
-        .unwrap();
-    let d = runtime
-        .encrypt(&encoder.encode_unsigned(5).unwrap(), &public)
-        .unwrap();
+    let a = runtime.encrypt(&Unsigned::from(2), &public).unwrap();
+    let b = runtime.encrypt(&Unsigned::from(3), &public).unwrap();
+    let c = runtime.encrypt(&Unsigned::from(4), &public).unwrap();
+    let d = runtime.encrypt(&Unsigned::from(5), &public).unwrap();
 
     let results = runtime
         .validate_and_run_program(&circuit, &vec![a, b, c, d], None, None)
@@ -172,9 +145,10 @@ fn can_compile_and_run_add_reduction() {
 
     assert_eq!(results.len(), 1);
 
-    let c = encoder
-        .decode_unsigned(&runtime.decrypt(&results[0], &secret).unwrap())
-        .unwrap();
+    let c: u64 = runtime
+        .decrypt::<Unsigned>(&results[0], &secret)
+        .unwrap()
+        .into();
 
     assert_eq!(c, 2 + 3 + 4 + 5);
 }

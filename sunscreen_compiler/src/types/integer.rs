@@ -3,6 +3,7 @@ use std::ops::{Add, Mul, Shl, Shr};
 use seal::Plaintext as SealPlaintext;
 
 use crate::{
+    TypeName,
     types::{BfvType, CircuitNode, FheType, U64LiteralRef},
     Context, Params, CURRENT_CTX,
 };
@@ -17,7 +18,7 @@ impl CircuitNode<Unsigned> {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, TypeName)]
 /**
  * Represents a single unsigned integer encrypted as a ciphertext. Suitable for use
  * as an input or output for a Sunscreen circuit.

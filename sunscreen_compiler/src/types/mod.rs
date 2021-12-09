@@ -8,13 +8,14 @@ use serde::{
     de::{self, Visitor},
     Deserialize, Deserializer, Serialize, Serializer,
 };
+use sunscreen_runtime::{TryFromPlaintext, TryIntoPlaintext};
 
 pub use integer::Unsigned;
 
 /**
  * Denotes the given rust type is an encoding in an FHE scheme
  */
-pub trait FheType {}
+pub trait FheType: TypeName + TryFromPlaintext + TryIntoPlaintext {}
 
 /**
  * Denotes the given type is valid under the [SchemeType::BFV](crate::SchemeType::Bfv).
@@ -27,8 +28,8 @@ pub trait BfvType: FheType {}
  */
 pub struct U64LiteralRef {}
 
-impl FheType for U64LiteralRef {}
-impl BfvType for U64LiteralRef {}
+//impl FheType for U64LiteralRef {}
+//impl BfvType for U64LiteralRef {}
 
 impl U64LiteralRef {
     /**

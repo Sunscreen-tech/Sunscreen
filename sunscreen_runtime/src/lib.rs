@@ -275,7 +275,7 @@ where
     Self: Sized,
 {
     /**
-     * Attempts to turn a [`Plaintext`] into [`Self::Output`].
+     * Attempts to turn a [`Plaintext`] into `Self`.
      */
     fn try_from_plaintext(plaintext: &Plaintext, params: &Params) -> Result<Self>;
 }

@@ -4,7 +4,7 @@ use seal::Plaintext as SealPlaintext;
 
 use crate::{
     types::{BfvType, CircuitNode, FheType, U64LiteralRef},
-    Context, Params, Result, CURRENT_CTX,
+    Context, Params, CURRENT_CTX,
 };
 use sunscreen_runtime::{InnerPlaintext, Plaintext, TryFromPlaintext, TryIntoPlaintext};
 

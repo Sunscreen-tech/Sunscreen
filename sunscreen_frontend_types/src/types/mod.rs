@@ -1,6 +1,6 @@
 mod integer;
 
-use crate::{with_ctx, Literal, Params, Result};
+use crate::{with_ctx, Literal};
 
 use petgraph::stable_graph::NodeIndex;
 use semver::Version;
@@ -8,7 +8,6 @@ use serde::{
     de::{self, Visitor},
     Deserialize, Deserializer, Serialize, Serializer,
 };
-use sunscreen_runtime::Plaintext;
 
 pub use integer::Unsigned;
 

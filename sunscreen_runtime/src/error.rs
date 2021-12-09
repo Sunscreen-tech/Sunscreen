@@ -27,6 +27,11 @@ pub enum Error {
      * When attempting to run a circuit, the wrong number of ciphertexts were provided.
      */
     IncorrectCiphertextCount,
+
+    /**
+     * An argument is incompatible with the parameters in the runtime.
+     */
+    ParameterMismatch,
 }
 
 impl From<sunscreen_circuit::Error> for Error {

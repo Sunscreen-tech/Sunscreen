@@ -18,6 +18,17 @@ pub enum Error {
      * Attempted to compile the given circuit with the wrong scheme.
      */
     IncorrectScheme,
+
+    /**
+     * An internal error occurred in the SEAL library.
+     */
+    SealError(seal::Error),
+}
+
+impl From<seal::Error> for Error {
+    fn from(err: seal::Error) -> Self {
+        Self::SealError(err)
+    }
 }
 
 /**

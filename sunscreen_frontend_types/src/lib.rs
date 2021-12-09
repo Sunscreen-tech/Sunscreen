@@ -171,6 +171,24 @@ thread_local! {
     pub static CURRENT_CTX: RefCell<Option<&'static mut Context>> = RefCell::new(None);
 }
 
+/**
+ * Runs the specified closure, injecting the current circuit context.
+ */
+pub fn with_ctx<F, R>(f: F) -> R
+where
+    F: FnOnce(&mut Context) -> R,
+{
+    CURRENT_CTX.with(|ctx| {
+        let mut option = ctx.borrow_mut();
+        let ctx = option
+            .as_mut()
+            .expect("Called Ciphertext::new() outside of a context.");
+
+        f(ctx)
+    })
+}
+
+
 impl Context {
     /**
      * Creates a new empty frontend intermediate representation context with the given scheme.

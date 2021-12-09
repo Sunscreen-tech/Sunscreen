@@ -19,7 +19,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 use seal::{
     BFVEvaluator, BfvEncryptionParametersBuilder, Ciphertext, Context as SealContext, Decryptor,
-    Encryptor, Evaluator, GaloisKeys, KeyGenerator, Modulus, Plaintext, PublicKey,
+    Encryptor, Evaluator, GaloisKeys, KeyGenerator, Modulus, Plaintext as SealPlaintext, PublicKey,
     RelinearizationKeys, SecretKey, SecurityLevel,
 };
 
@@ -62,6 +62,11 @@ pub enum Runtime {
      * This runtime is for the BFV scheme.
      */
     Bfv {
+        /**
+         * The parameters used to construct the scheme used in this runtime.
+         */
+        params: Params,
+
         /**
          * The context associated with the BFV scheme. Created by [`RuntimeBuilder`].
          */
@@ -154,13 +159,21 @@ impl Runtime {
 
     /**
      * Encrypts the given plaintext using the given public key.
+     * 
+     * Returns [`Error::ParameterMismatch`] if the plaintext is incompatible with this runtime's
+     * scheme.
      */
     pub fn encrypt(&self, p: &Plaintext, public_key: &PublicKey) -> Result<Ciphertext> {
         let ciphertext = match self {
             Self::Bfv { context, .. } => {
-                let encryptor = Encryptor::with_public_key(&context, public_key)?;
+                match &p.inner {
+                    InnerPlaintext::Seal(p) => {
+                        let encryptor = Encryptor::with_public_key(&context, public_key)?;
 
-                encryptor.encrypt(&p)?
+                        encryptor.encrypt(&p)?
+                    },
+                }
+                
             }
         };
 
@@ -172,14 +185,52 @@ impl Runtime {
      */
     pub fn decrypt(&self, c: &Ciphertext, secret_key: &SecretKey) -> Result<Plaintext> {
         let plaintext = match self {
-            Self::Bfv { context, .. } => {
+            Self::Bfv { context, params } => {
                 let decryptor = Decryptor::new(&context, secret_key)?;
 
-                decryptor.decrypt(&c)?
+                let plaintext = decryptor.decrypt(&c)?;
+
+                Plaintext {
+                    params: params.clone(),
+                    inner: InnerPlaintext::Seal(plaintext)
+                }
             }
         };
 
         Ok(plaintext)
+    }
+}
+
+#[derive(Debug, Serialize)]
+/**
+ * The underlying backend implementation of a plaintext (e.g. SEAL's [`Plaintext`](seal::Plaintext)).
+ */
+pub enum InnerPlaintext {
+    /**
+     * This plaintext wraps a SEAL [`Plaintext`](seal::Plaintext).
+     */
+    Seal(SealPlaintext),
+}
+
+#[derive(Debug, Serialize)]
+/**
+ * Represents an encoded plaintext suitable for use in the underlying scheme.
+ */
+pub struct Plaintext {
+    params: Params,
+
+    inner: InnerPlaintext,
+}
+
+impl Plaintext {
+    /**
+     * Creates a new plaintext. Moves the given [`InnerPlaintext`] and [`Params`].
+     */
+    pub fn new(inner: InnerPlaintext, params: Params) -> Self {
+        Self {
+            inner,
+            params
+        }
     }
 }
 
@@ -220,7 +271,7 @@ impl RuntimeBuilder {
 
                 let context = SealContext::new(&bfv_params, true, self.params.security_level)?;
 
-                Ok(Runtime::Bfv { context })
+                Ok(Runtime::Bfv { context, params: self.params })
             }
             _ => unimplemented!(),
         }

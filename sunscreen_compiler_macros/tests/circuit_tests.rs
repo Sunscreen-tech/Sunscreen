@@ -1,5 +1,5 @@
-use sunscreen_frontend_macros::circuit;
-use sunscreen_frontend_types::{
+use sunscreen_compiler_macros::circuit;
+use sunscreen_compiler::{
     types::Unsigned, FrontendCompilation, Params, SchemeType, SecurityLevel, CURRENT_CTX,
 };
 

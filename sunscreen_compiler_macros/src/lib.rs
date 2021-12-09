@@ -1,0 +1,59 @@
+#![deny(missing_docs)]
+#![deny(rustdoc::broken_intra_doc_links)]
+#![recursion_limit = "128"]
+
+//! This crate contains macros to support the sunscreen compiler.
+
+extern crate proc_macro;
+
+mod circuit;
+mod error;
+mod internals;
+mod type_name;
+
+#[proc_macro_derive(TypeName)]
+/**
+ * Allows you to `#[derive(Typename)]`.
+ */
+pub fn derive_typename(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    type_name::derive_typename(input)
+}
+    
+
+#[proc_macro_attribute]
+/**
+ * Specifies a function to be a circuit. A circuit has any number of inputs that impl the
+ * [`Value`](sunscreen_frontend_types::Value) trait and returns either a single type implementing `Value` or a tuple of
+ * types implementing `Value`.
+ *
+ * This function gets run by the compiler to build up the circuit you specify and does not
+ * directly or eagerly perform homomorphic operations.
+ *
+ * # Parameters
+ * * `scheme` (required): Designates the scheme this circuit uses. Today, this must be `"bfv"`.
+ *
+ * # Examples
+ * ```rust
+ * # use sunscreen_compiler::{circuit, types::Unsigned, Params, Context};
+ *
+ * #[circuit(scheme = "bfv")]
+ * fn multiply_add(a: Unsigned, b: Unsigned, c: Unsigned) -> Unsigned {
+ *   a * b + c
+ * }
+ * ```
+ *
+ * ```rust
+ * # use sunscreen_compiler::{circuit, types::Unsigned, Params, Context};
+ *
+ * #[circuit(scheme = "bfv")]
+ * fn multi_out(a: Unsigned, b: Unsigned, c: Unsigned) -> (Unsigned, Unsigned) {
+ *   (a + b, b + c)
+ * }
+ * ```
+ */
+pub fn circuit(
+    metadata: proc_macro::TokenStream,
+    input: proc_macro::TokenStream,
+) -> proc_macro::TokenStream {
+    circuit::circuit_impl(metadata, input)
+}

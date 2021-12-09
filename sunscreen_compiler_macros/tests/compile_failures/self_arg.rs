@@ -1,4 +1,4 @@
-use sunscreen_frontend_macros::{circuit};
+use sunscreen_compiler_macros::{circuit};
 
 struct Foo {}
 

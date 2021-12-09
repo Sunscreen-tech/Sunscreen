@@ -3,7 +3,7 @@ mod integer;
 use crate::{with_ctx, Literal};
 
 use petgraph::stable_graph::NodeIndex;
-use semver::Version;
+pub use semver::Version;
 use serde::{
     de::{self, Visitor},
     Deserialize, Deserializer, Serialize, Serializer,
@@ -80,10 +80,20 @@ impl<T: FheType> CircuitNode<T> {
 }
 
 /**
+ * A trait the gives a name an version to a given type
+ */ 
+pub trait TypeName {
+    /**
+     * Returns the [`Type`] of the given Rust type.
+     */
+    fn type_name() -> Type;
+}
+
+/**
  * A type which represents the fully qualified name and version of a datatype.
  */
-#[derive(Debug, Clone)]
-pub struct TypeName {
+#[derive(Debug, Clone, PartialEq)]
+pub struct Type {
     /**
      * The fully qualified name of the type (including crate name)
      */
@@ -95,7 +105,7 @@ pub struct TypeName {
     pub version: Version,
 }
 
-impl Serialize for TypeName {
+impl Serialize for Type {
     fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
     where
         S: Serializer,
@@ -127,7 +137,7 @@ impl<'de> Visitor<'de> for TypeNameVisitor {
     }
 }
 
-impl<'de> Deserialize<'de> for TypeName {
+impl<'de> Deserialize<'de> for Type {
     fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
     where
         D: Deserializer<'de>,
@@ -153,13 +163,13 @@ mod tests {
 
     #[test]
     fn can_serialize_deserialize_typename() {
-        let typename = TypeName {
+        let typename = Type {
             name: "foo::Bar".to_owned(),
             version: Version::new(42, 24, 6),
         };
 
         let serialized = serde_json::to_string(&typename).unwrap();
-        let deserialized: TypeName = serde_json::from_str(&serialized).unwrap();
+        let deserialized: Type = serde_json::from_str(&serialized).unwrap();
 
         assert_eq!(deserialized.name, typename.name);
         assert_eq!(deserialized.version, typename.version);

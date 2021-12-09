@@ -1,5 +1,5 @@
 [package]
-name = "sunscreen_frontend_macros"
+name = "sunscreen_compiler_macros"
 version = "0.1.0"
 edition = "2021"
 
@@ -9,11 +9,9 @@ proc-macro = true
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-clap = "2.34.0"
 proc-macro2 = "1.0.32"
 quote = "1.0.10"
 syn = { version = "1.0.81", features = ["derive", "full", "fold"] }
-sunscreen_frontend_types = { path = "../sunscreen_frontend_types" }
 
 [dev-dependencies]
 trybuild = "1.0.52"

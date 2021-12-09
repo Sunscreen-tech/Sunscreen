@@ -5,6 +5,8 @@
         "__string": "cpp",
         "regex": "cpp",
         "string": "cpp",
-        "string_view": "cpp"
-    }
+        "string_view": "cpp",
+        "span": "cpp"
+    },
+    "debug.allowBreakpointsEverywhere": true
 }

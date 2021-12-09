@@ -188,7 +188,6 @@ where
     })
 }
 
-
 impl Context {
     /**
      * Creates a new empty frontend intermediate representation context with the given scheme.

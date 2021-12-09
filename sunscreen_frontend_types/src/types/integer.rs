@@ -2,8 +2,11 @@ use std::ops::{Add, Mul, Shl, Shr};
 
 use seal::Plaintext as SealPlaintext;
 
-use crate::{Context, CURRENT_CTX, Params, Result, types::{CircuitNode, FheType, BfvType, U64LiteralRef, TryIntoPlaintext}};
-use sunscreen_runtime::{InnerPlaintext, Plaintext};
+use crate::{
+    types::{BfvType, CircuitNode, FheType, U64LiteralRef},
+    Context, Params, Result, CURRENT_CTX,
+};
+use sunscreen_runtime::{InnerPlaintext, Plaintext, TryFromPlaintext, TryIntoPlaintext};
 
 impl CircuitNode<Unsigned> {
     /**
@@ -79,10 +82,13 @@ where
 }
 
 impl TryIntoPlaintext for Unsigned {
-    fn try_into_plaintext(&self, params: &Params) -> Result<Plaintext> {
+    fn try_into_plaintext(
+        &self,
+        params: &Params,
+    ) -> std::result::Result<Plaintext, sunscreen_runtime::Error> {
         let mut seal_plaintext = SealPlaintext::new()?;
         let bits = std::mem::size_of::<u64>() * 8;
-        
+
         seal_plaintext.resize(bits);
 
         for i in 0..bits {
@@ -90,7 +96,33 @@ impl TryIntoPlaintext for Unsigned {
             seal_plaintext.set_coefficient(i, bit_value);
         }
 
-        Ok(Plaintext::new(InnerPlaintext::Seal(seal_plaintext), params.clone()))
+        Ok(Plaintext::new(
+            InnerPlaintext::Seal(seal_plaintext),
+            params.clone(),
+        ))
+    }
+}
+
+impl TryFromPlaintext for Unsigned {
+    fn try_from_plaintext(
+        plaintext: &Plaintext,
+        _params: &Params,
+    ) -> std::result::Result<Self, sunscreen_runtime::Error> {
+        match &plaintext.inner {
+            InnerPlaintext::Seal(p) => {
+                let mut val = 0u64;
+                let bits = usize::min(std::mem::size_of::<u64>() * 8, p.len());
+
+                for i in 0..bits {
+                    val += p.get_coefficient(i) * (1 << i);
+                }
+
+                Ok(Self { val })
+            }
+            _ => {
+                return Err(sunscreen_runtime::Error::ParameterMismatch);
+            }
+        }
     }
 }
 
@@ -100,15 +132,28 @@ impl From<u64> for Unsigned {
     }
 }
 
-#[cfg(test)] 
-mod tests
-{
+impl Into<u64> for Unsigned {
+    fn into(self) -> u64 {
+        self.val
+    }
+}
+
+#[cfg(test)]
+mod tests {
     use super::*;
-    
+
     #[test]
     fn can_convert_u64_to_unsigned() {
         let foo: Unsigned = 64u64.into();
 
         assert_eq!(foo.val, 64);
+    }
+
+    #[test]
+    fn can_convert_unsigned_to_u64() {
+        let foo = Unsigned { val: 64 };
+        let converted: u64 = foo.into();
+
+        assert_eq!(converted, 64u64);
     }
 }

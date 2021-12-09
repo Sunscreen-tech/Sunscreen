@@ -211,8 +211,8 @@ impl Plaintext {
      * Sets the number of coefficients this plaintext can hold.
      */
     pub fn resize(&mut self, count: usize) {
-        convert_seal_error(unsafe { bindgen::Plaintext_Reserve(self.handle, count as u64) })
-            .expect("Fatal error in Plaintext::index().");
+        convert_seal_error(unsafe { bindgen::Plaintext_Resize(self.handle, count as u64) })
+            .expect("Fatal error in Plaintext::resize().");
     }
 
     /**
@@ -221,7 +221,7 @@ impl Plaintext {
     pub fn len(&self) -> usize {
         let mut size: u64 = 0;
 
-        convert_seal_error(unsafe { bindgen::Plaintext_Capacity(self.handle, &mut size) })
+        convert_seal_error(unsafe { bindgen::Plaintext_CoeffCount(self.handle, &mut size) })
             .expect("Fatal error in Plaintext::index().");
 
         size as usize

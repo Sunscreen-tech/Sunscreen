@@ -1,11 +1,14 @@
 mod integer;
 
-use crate::{Literal, with_ctx, Params, Result};
+use crate::{with_ctx, Literal, Params, Result};
 
 use petgraph::stable_graph::NodeIndex;
-use sunscreen_runtime::Plaintext;
 use semver::Version;
-use serde::{Deserialize, de::{self, Visitor}, Deserializer, Serialize, Serializer};
+use serde::{
+    de::{self, Visitor},
+    Deserialize, Deserializer, Serialize, Serializer,
+};
+use sunscreen_runtime::Plaintext;
 
 pub use integer::Unsigned;
 
@@ -78,16 +81,6 @@ impl<T: FheType> CircuitNode<T> {
 }
 
 /**
- * This trait denotes one may attempt to turn this type into a plaintext.
- */
-pub trait TryIntoPlaintext {
-    /**
-     * Attempts to turn this type into a [`Plaintext`].
-     */
-    fn try_into_plaintext(&self, params: &Params) -> Result<Plaintext>;
-}
-
-/**
  * A type which represents the fully qualified name and version of a datatype.
  */
 #[derive(Debug, Clone)]
@@ -96,7 +89,7 @@ pub struct TypeName {
      * The fully qualified name of the type (including crate name)
      */
     pub name: String,
-    
+
     /**
      * The semantic version of this type.
      */
@@ -104,7 +97,7 @@ pub struct TypeName {
 }
 
 impl Serialize for TypeName {
-    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error> 
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
@@ -123,7 +116,7 @@ impl<'de> Visitor<'de> for TypeNameVisitor {
         write!(formatter, "A string of the form foo::bar::Baz,1.2.3")
     }
 
-    fn visit_str<E>(self, s: &str) -> std::result::Result<Self::Value, E> 
+    fn visit_str<E>(self, s: &str) -> std::result::Result<Self::Value, E>
     where
         E: de::Error,
     {
@@ -135,8 +128,8 @@ impl<'de> Visitor<'de> for TypeNameVisitor {
     }
 }
 
-impl <'de> Deserialize<'de> for TypeName {
-    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error> 
+impl<'de> Deserialize<'de> for TypeName {
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
@@ -145,13 +138,12 @@ impl <'de> Deserialize<'de> for TypeName {
         let mut splits = type_string.split(",");
 
         let typename = splits.next().unwrap();
-        let version = Version::parse(splits.next().unwrap()).map_err(|e| {
-            de::Error::custom(format!("Failed to parse version: {}", e))
-        })?;
+        let version = Version::parse(splits.next().unwrap())
+            .map_err(|e| de::Error::custom(format!("Failed to parse version: {}", e)))?;
 
         Ok(Self {
             name: typename.to_owned(),
-            version
+            version,
         })
     }
 }
@@ -159,7 +151,7 @@ impl <'de> Deserialize<'de> for TypeName {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn can_serialize_deserialize_typename() {
         let typename = TypeName {

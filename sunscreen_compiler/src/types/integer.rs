@@ -55,26 +55,6 @@ impl Mul for CircuitNode<Unsigned> {
     }
 }
 
-impl Shl<u64> for CircuitNode<Unsigned> {
-    type Output = Self;
-
-    fn shl(self, n: u64) -> Self {
-        let l = U64LiteralRef::new(n);
-
-        with_ctx(|ctx| Self::new(ctx.add_rotate_left(self.id, l)))
-    }
-}
-
-impl Shr<u64> for CircuitNode<Unsigned> {
-    type Output = Self;
-
-    fn shr(self, n: u64) -> Self {
-        let l = U64LiteralRef::new(n);
-
-        with_ctx(|ctx| Self::new(ctx.add_rotate_right(self.id, l)))
-    }
-}
-
 fn with_ctx<F, R>(f: F) -> R
 where
     F: FnOnce(&mut Context) -> R,

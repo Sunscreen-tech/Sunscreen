@@ -4,11 +4,13 @@
 //! This crate contains the types and functions for executing a Sunscreen circuit
 //! (i.e. an [`Circuit`](sunscreen_circuit::Circuit)).
 
+mod args;
 mod error;
 mod metadata;
 mod run;
 mod runtime;
 
+pub use crate::args::*;
 pub use crate::error::*;
 pub use crate::metadata::*;
 pub use runtime::*;
@@ -80,4 +82,36 @@ where
      * Attempts to turn a [`Plaintext`] into `Self`.
      */
     fn try_from_plaintext(plaintext: &Plaintext, params: &Params) -> Result<Self>;
+}
+
+/**
+ * Denotes the given rust type is an encoding in an FHE scheme
+ */
+pub trait FheType: TypeNameInstance + TryIntoPlaintext {}
+
+/**
+ * Denotes the given type is valid under the [SchemeType::BFV](crate::SchemeType::Bfv).
+ */
+pub trait BfvType: FheType {}
+
+/**
+ * A trait the gives a name an version to a given type
+ */
+pub trait TypeName {
+    /**
+     * Returns the [`Type`] of the `&self`. Lives only on the instance so you can be object-safe
+     * for use in `dyn TypeName`.
+     */
+    fn type_name() -> Type;
+}
+
+/**
+ * A trait the gives a name an version to a given type
+ */
+pub trait TypeNameInstance {
+    /**
+     * Returns the [`Type`] of the `&self`. Lives only on the instance so you can be object-safe
+     * for use in `dyn TypeName`.
+     */
+    fn type_name_instance(&self) -> Type;
 }

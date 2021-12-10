@@ -1,6 +1,7 @@
-pub use crate::error::*;
-pub use crate::metadata::*;
-pub use crate::{
+use crate::args::*;
+use crate::error::*;
+use crate::metadata::*;
+use crate::{
     run_program_unchecked, InnerPlaintext, Plaintext, TryFromPlaintext, TryIntoPlaintext,
 };
 use sunscreen_circuit::{Circuit, SchemeType};
@@ -10,24 +11,23 @@ use seal::{
     Encryptor, GaloisKeys, KeyGenerator, Modulus, PublicKey, RelinearizationKeys, SecretKey,
 };
 
+enum Context {
+    Seal(SealContext),
+}
+
 /**
  * Contains all the elements needed to encrypt, decrypt, generate keys, and evaluate circuits.
  */
-pub enum Runtime {
+pub struct Runtime {
     /**
-     * This runtime is for the BFV scheme.
+     * The parameters used to construct the scheme used in this runtime.
      */
-    Bfv {
-        /**
-         * The parameters used to construct the scheme used in this runtime.
-         */
-        metadata: CircuitMetadata,
+    metadata: CircuitMetadata,
 
-        /**
-         * The context associated with the BFV scheme. Created by [`RuntimeBuilder`].
-         */
-        context: SealContext,
-    },
+    /**
+     * The context associated with the BFV scheme. Created by [`RuntimeBuilder`].
+     */
+    context: Context,
 }
 
 impl Runtime {
@@ -35,8 +35,8 @@ impl Runtime {
      * Generates a tuple of public/private keys for the encapsulated scheme and parameters.
      */
     pub fn generate_keys(&self) -> Result<(PublicKey, SecretKey)> {
-        let keys = match self {
-            Self::Bfv { context, .. } => {
+        let keys = match &self.context {
+            Context::Seal(context) => {
                 let keygen = KeyGenerator::new(&context)?;
 
                 (keygen.create_public_key(), keygen.secret_key())
@@ -50,8 +50,8 @@ impl Runtime {
      * Generates Galois keys needed for SIMD rotations.
      */
     pub fn generate_galois_keys(&self, secret_key: &SecretKey) -> Result<GaloisKeys> {
-        let keys = match self {
-            Self::Bfv { context, .. } => {
+        let keys = match &self.context {
+            Context::Seal(context) => {
                 let keygen = KeyGenerator::new_from_secret_key(&context, secret_key)?;
 
                 keygen.create_galois_keys()?
@@ -65,12 +65,12 @@ impl Runtime {
      * Generates Relinearization keys needed for BFV.
      */
     pub fn generate_relin_keys(&self, secret_key: &SecretKey) -> Result<RelinearizationKeys> {
-        let keys = match self {
-            Self::Bfv { context, .. } => {
+        let keys = match &self.context {
+            Context::Seal(context) => {
                 let keygen = KeyGenerator::new_from_secret_key(&context, secret_key)?;
 
                 keygen.create_relinearization_keys()?
-            }
+            },
         };
 
         Ok(keys)
@@ -80,41 +80,39 @@ impl Runtime {
      * Validates and runs the given circuit. Unless you can guarantee your circuit is valid,
      * you should use this method rather than [`run_program_unchecked`].
      */
-    pub fn validate_and_run_program(
+    pub fn run(
         &self,
         ir: &Circuit,
-        inputs: &[Ciphertext],
-        relin_keys: Option<RelinearizationKeys>,
-        galois_keys: Option<GaloisKeys>,
+        input_bundle: InputBundle,
     ) -> Result<Vec<Ciphertext>> {
         ir.validate()?;
 
         // Aside from circuit correctness, check that the required keys are given.
-        if relin_keys.is_none() && ir.requires_relin_keys() {
+        if input_bundle.relin_keys.is_none() && ir.requires_relin_keys() {
             return Err(Error::MissingRelinearizationKeys);
         }
 
-        if galois_keys.is_none() && ir.requires_galois_keys() {
+        if input_bundle.galois_keys.is_none() && ir.requires_galois_keys() {
             return Err(Error::MissingGaloisKeys);
         }
 
-        if ir.num_inputs() != inputs.len() {
+        if ir.num_inputs() != input_bundle.ciphertexts.len() {
             return Err(Error::IncorrectCiphertextCount);
         }
 
-        match self {
-            Self::Bfv { context, .. } => {
+        match &self.context {
+            Context::Seal(context) => {
                 let evaluator = BFVEvaluator::new(&context)?;
 
                 Ok(unsafe {
-                    run_program_unchecked(ir, inputs, &evaluator, relin_keys, galois_keys)
+                    run_program_unchecked(ir, &input_bundle.ciphertexts, &evaluator, input_bundle.relin_keys, input_bundle.galois_keys)
                 })
-            }
+            },
         }
     }
 
     /**
-     * Encrypts the given plaintext using the given public key.
+     * Encrypts the given [`FheType`] using the given public key.
      *
      * Returns [`Error::ParameterMismatch`] if the plaintext is incompatible with this runtime's
      * scheme.
@@ -124,10 +122,14 @@ impl Runtime {
         p: &P,
         public_key: &PublicKey,
     ) -> Result<Ciphertext> {
-        let ciphertext = match self {
-            Self::Bfv { context, metadata } => {
-                let p = p.try_into_plaintext(&metadata.params)?;
+        let p = p.try_into_plaintext(&self.metadata.params)?;
 
+        Ok(self.encrypt_plaintext(p, public_key)?)
+    }
+
+    fn encrypt_plaintext(&self, p: Plaintext, public_key: &PublicKey) -> Result<Ciphertext> {
+        let ciphertext = match &self.context {
+            Context::Seal(context) => {
                 match &p.inner {
                     InnerPlaintext::Seal(p) => {
                         let encryptor = Encryptor::with_public_key(&context, public_key)?;
@@ -138,7 +140,7 @@ impl Runtime {
                         unimplemented!();
                     }
                 }
-            }
+            },
         };
 
         Ok(ciphertext)
@@ -152,23 +154,53 @@ impl Runtime {
         c: &Ciphertext,
         secret_key: &SecretKey,
     ) -> Result<P> {
-        let val = match self {
-            Self::Bfv { context, metadata } => {
+        let val = match &self.context {
+            Context::Seal(context) => {
                 let decryptor = Decryptor::new(&context, secret_key)?;
 
                 let plaintext = decryptor.decrypt(&c)?;
 
                 P::try_from_plaintext(
                     &Plaintext {
-                        params: metadata.params.clone(),
+                        params: self.metadata.params.clone(),
                         inner: InnerPlaintext::Seal(plaintext),
                     },
-                    &metadata.params,
+                    &self.metadata.params,
                 )?
-            }
+            },
         };
 
         Ok(val)
+    }
+
+    /**
+     * Validates and encrypts the given arguments, returning a bundle of all the ciphertexts
+     * and keys needed to run the circuit given by this runtime's [`CircuitMetadata`].
+     */
+    pub fn encrypt_args(&self, args: &Arguments, public_key: &PublicKey) -> Result<InputBundle> {
+        let types: Vec<Type> = args.args.iter().map(|t| t.type_name_instance()).collect();
+
+        if types != self.metadata.signature.arguments {
+            return Err(Error::ArgumentMismatch{ 
+                expected: self.metadata.signature.arguments.clone(),
+                actual: types,
+            });
+        }
+
+        let mut ciphertexts = vec![];
+
+        for t in &args.args {
+            let p = t.try_into_plaintext(&self.metadata.params)?;
+            ciphertexts.push(self.encrypt_plaintext(p, public_key)?);
+        }
+        
+        // TODO: Pass real keys here.
+        Ok(InputBundle {
+            ciphertexts,
+            galois_keys: None,
+            relin_keys: None,
+            public_keys: None,
+        })
     }
 }
 
@@ -211,8 +243,8 @@ impl RuntimeBuilder {
                 let context =
                     SealContext::new(&bfv_params, true, self.metadata.params.security_level)?;
 
-                Ok(Runtime::Bfv {
-                    context,
+                Ok(Runtime {
+                    context: Context::Seal(context),
                     metadata: self.metadata,
                 })
             }

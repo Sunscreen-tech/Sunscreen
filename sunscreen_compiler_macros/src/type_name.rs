@@ -32,5 +32,14 @@ fn derive_typename_inner(parse_stream: DeriveInput) -> TokenStream {
                 }
             }
         }
+
+        impl #sunscreen_path ::types::TypeNameInstance for #name {
+            fn type_name_instance(&self) -> #sunscreen_path ::types::Type {
+                #sunscreen_path ::types::Type {
+                    name: format!(#name_contents, module_path!()),
+                    version: #sunscreen_path ::types::Version ::parse(#sunscreen_path ::crate_version!()).expect("Crate version is not a valid semver"),
+                }
+            }
+        }
     })
 }

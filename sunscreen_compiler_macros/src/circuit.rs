@@ -1,7 +1,7 @@
 use crate::internals::{attr::Attrs, case::Scheme};
 use proc_macro2::{Span, TokenStream};
 use quote::{quote, quote_spanned};
-use syn::{parse_macro_input, spanned::Spanned, FnArg, Ident, Index, ItemFn, ReturnType, Type};
+use syn::{parse_macro_input, spanned::Spanned, FnArg, Ident, Index, ItemFn, Pat, ReturnType, Type};
 
 pub fn circuit_impl(
     metadata: proc_macro::TokenStream,
@@ -35,11 +35,11 @@ pub fn circuit_impl(
                     compile_error!("circuits must not take a reference to self");
                 });
             }
-            FnArg::Typed(t) => match &*t.ty {
-                Type::Path(_) => t,
+            FnArg::Typed(t) => match (&*t.ty, &*t.pat) {
+                (Type::Path(_), Pat::Ident(i)) => (t, &i.ident),
                 _ => {
                     return proc_macro::TokenStream::from(quote! {
-                        compile_error!("circuit arguments' type must be a plain path.");
+                        compile_error!("circuit arguments' name must be a simple identifier and type must be a plain path.");
                     });
                 }
             },
@@ -51,7 +51,7 @@ pub fn circuit_impl(
     let signature = create_signature(
         &unwrapped_inputs
             .iter()
-            .map(|t| &*t.ty)
+            .map(|t| &*t.0.ty)
             .collect::<Vec<&Type>>(),
         ret,
     );
@@ -59,8 +59,8 @@ pub fn circuit_impl(
     let circuit_args = unwrapped_inputs
         .iter()
         .map(|i| {
-            let name = &i.pat;
-            let ty = &i.ty;
+            let (ty, name) = i;
+            let ty = &ty.ty;
 
             quote! {
                 #name: CircuitNode<#ty>,
@@ -70,9 +70,9 @@ pub fn circuit_impl(
 
     let var_decl = unwrapped_inputs.iter().enumerate().map(|(i, t)| {
         let id = Ident::new(&format!("c_{}", i), Span::call_site());
-        let ty = &t.ty;
+        let ty = &t.0.ty;
 
-        quote_spanned! {t.span() =>
+        quote_spanned! {t.0.span() =>
             let #id: CircuitNode<#ty> = CircuitNode::input();
         }
     });
@@ -80,7 +80,7 @@ pub fn circuit_impl(
     let args = unwrapped_inputs.iter().enumerate().map(|(i, t)| {
         let id = Ident::new(&format!("c_{}", i), Span::call_site());
 
-        quote_spanned! {t.span() =>
+        quote_spanned! {t.0.span() =>
             #id
         }
     });
@@ -125,7 +125,7 @@ pub fn circuit_impl(
         }
     };
 
-    proc_macro::TokenStream::from(quote! {
+    let foo = proc_macro::TokenStream::from(quote! {
         #(#attrs)*
         #vis fn #circuit_name() -> (
             sunscreen_compiler::SchemeType,
@@ -134,7 +134,7 @@ pub fn circuit_impl(
         ) {
             use std::cell::RefCell;
             use std::mem::transmute;
-            use sunscreen_compiler::{CURRENT_CTX, Context, Error, Result, Params, SchemeType, Value, types::{CircuitNode, Type, TypeName}};
+            use sunscreen_compiler::{CURRENT_CTX, Context, Error, Result, Params, SchemeType, Value, types::{CircuitNode, Type, TypeName, TypeNameInstance}};
 
             let circuit_builder = |params: &Params| {
                 if SchemeType::Bfv != params.scheme_type {
@@ -178,13 +178,17 @@ pub fn circuit_impl(
 
             (#scheme_type, circuit_builder, signature)
         }
-    })
+    });
+
+    // panic!("{}", foo);
+
+    foo
 }
 
 fn create_signature(args: &[&Type], ret: &ReturnType) -> TokenStream {
     let arg_type_names = args.iter().map(|t| {
         quote! {
-            #t::type_name(),
+            #t ::type_name(),
         }
     });
 

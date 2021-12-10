@@ -486,7 +486,7 @@ fn can_collect_multiple_outputs() {
         serde_json::from_value::<FrontendCompilation>(expected).unwrap()
     );
 }
-
+ 
 #[test]
 fn literals_consolidate() {
     #[circuit(scheme = "bfv")]

@@ -4,28 +4,15 @@ use crate::{with_ctx, Literal};
 
 use petgraph::stable_graph::NodeIndex;
 use serde::{Deserialize, Serialize};
-pub use sunscreen_runtime::{TryFromPlaintext, TryIntoPlaintext, Type, Version};
+pub use sunscreen_runtime::{TryFromPlaintext, BfvType, FheType, TryIntoPlaintext, Type, Version, TypeName, TypeNameInstance};
 
 pub use integer::Unsigned;
-
-/**
- * Denotes the given rust type is an encoding in an FHE scheme
- */
-pub trait FheType: TypeName + TryFromPlaintext + TryIntoPlaintext {}
-
-/**
- * Denotes the given type is valid under the [SchemeType::BFV](crate::SchemeType::Bfv).
- */
-pub trait BfvType: FheType {}
 
 #[derive(Clone, Copy, Serialize, Deserialize)]
 /**
  * A reference to a u64 literal in a circuit graph.
  */
 pub struct U64LiteralRef {}
-
-//impl FheType for U64LiteralRef {}
-//impl BfvType for U64LiteralRef {}
 
 impl U64LiteralRef {
     /**
@@ -74,16 +61,6 @@ impl<T: FheType> CircuitNode<T> {
     pub fn output(&self) -> Self {
         with_ctx(|ctx| Self::new(ctx.add_output(self.id)))
     }
-}
-
-/**
- * A trait the gives a name an version to a given type
- */
-pub trait TypeName {
-    /**
-     * Returns the [`Type`] of the given Rust type.
-     */
-    fn type_name() -> Type;
 }
 
 #[cfg(test)]

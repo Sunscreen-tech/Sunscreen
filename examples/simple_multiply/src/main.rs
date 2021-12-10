@@ -1,4 +1,4 @@
-use sunscreen_compiler::{circuit, types::Unsigned, Compiler, Params, PlainModulusConstraint};
+use sunscreen_compiler::{Arguments, circuit, types::Unsigned, Compiler, Params, PlainModulusConstraint};
 use sunscreen_runtime::RuntimeBuilder;
 
 /**
@@ -69,10 +69,11 @@ fn main() {
     let relin = runtime.generate_relin_keys(&secret).unwrap();
 
     /*
-     * Create FHE `Unsigned` types from the given literals and encrypt them.
+     * Set the arguments to the circuit and encrypt them.
      */
-    let a = runtime.encrypt(&Unsigned::from(15), &public).unwrap();
-    let b = runtime.encrypt(&Unsigned::from(5), &public).unwrap();
+    let args = Arguments::new()
+        .arg(Unsigned::from(15))
+        .arg(Unsigned::from(5));
 
     /*
      * Run the circuit with our encrypted ciphertexts. The first argument is, well, the circuit.
@@ -81,7 +82,7 @@ fn main() {
      * keys as our circuit doesn't use rotations.
      */
     let results = runtime
-        .validate_and_run_program(&circuit, &vec![a, b], Some(relin), None)
+        .run(&circuit, runtime.encrypt_args(&args, &public).unwrap())
         .unwrap();
 
     /*

@@ -217,6 +217,17 @@ impl Drop for PublicKey {
     }
 }
 
+impl Clone for PublicKey {
+    fn clone(&self) -> Self {
+        let mut handle: *mut c_void = null_mut();
+
+        convert_seal_error(unsafe { bindgen::PublicKey_Create2(self.handle, &mut handle) })
+            .expect("Fatal error in PublicKey::clone");
+
+        Self { handle }
+    }
+}
+
 /**
  * A public key that stores a random number seed to generate the rest of the key.
  * This form isn't directly usable, but serializes in a very compact representation.
@@ -338,6 +349,21 @@ impl Drop for RelinearizationKeys {
     }
 }
 
+impl Clone for RelinearizationKeys {
+    fn clone(&self) -> Self {
+        let mut handle: *mut c_void = null_mut();
+
+        convert_seal_error(unsafe {
+            // RelinearizationKeys don't have any data members, so we simply call the parent
+            // class's copy constructor.
+            bindgen::KSwitchKeys_Create2(self.handle, &mut handle)
+        })
+        .expect("Failed to clone Galois keys.");
+
+        Self { handle }
+    }
+}
+
 /**
  * A relinearization key that stores a random number seed to generate the rest of the key.
  * This form isn't directly usable, but serializes in a compact representation.
@@ -382,6 +408,21 @@ impl Drop for GaloisKeys {
             bindgen::KSwitchKeys_Destroy(self.handle)
         })
         .expect("Fatal error in GaloisKeys::drop()")
+    }
+}
+
+impl Clone for GaloisKeys {
+    fn clone(&self) -> Self {
+        let mut handle: *mut c_void = null_mut();
+
+        convert_seal_error(unsafe {
+            // GaloisKeys don't have any data members, so we simply call the parent
+            // class's copy constructor.
+            bindgen::KSwitchKeys_Create2(self.handle, &mut handle)
+        })
+        .expect("Failed to clone Galois keys.");
+
+        Self { handle }
     }
 }
 

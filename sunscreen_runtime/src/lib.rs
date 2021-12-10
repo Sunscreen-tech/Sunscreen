@@ -6,19 +6,20 @@
 
 mod args;
 mod error;
+mod keys;
 mod metadata;
 mod run;
 mod runtime;
 
 pub use crate::args::*;
 pub use crate::error::*;
+pub use crate::keys::*;
 pub use crate::metadata::*;
-pub use runtime::*;
 pub use run::*;
+pub use runtime::*;
 
 use serde::Serialize;
-
-use seal::{Plaintext as SealPlaintext};
+use seal::Plaintext as SealPlaintext;
 
 #[derive(Debug, Serialize)]
 /**
@@ -68,7 +69,7 @@ pub trait TryIntoPlaintext {
     /**
      * Attempts to turn this type into a [`Plaintext`].
      */
-    fn try_into_plaintext(&self, params: &Params) -> Result<Plaintext>;
+    fn try_into_plaintext(&self, params: &Params) -> Result<Vec<Plaintext>>;
 }
 
 /**
@@ -79,9 +80,10 @@ where
     Self: Sized,
 {
     /**
-     * Attempts to turn a [`Plaintext`] into `Self`.
+     * Attempts to turn a [`Plaintext`] into `Self`. On success, returns 
      */
-    fn try_from_plaintext(plaintext: &Plaintext, params: &Params) -> Result<Self>;
+    fn try_from_plaintext<I>(plaintexts: &mut I, params: &Params) -> Result<Self>
+    where I: Iterator<Item=Result<Plaintext>>;
 }
 
 /**

@@ -1,7 +1,9 @@
 use crate::internals::{attr::Attrs, case::Scheme};
 use proc_macro2::{Span, TokenStream};
 use quote::{quote, quote_spanned};
-use syn::{parse_macro_input, spanned::Spanned, FnArg, Ident, Index, ItemFn, Pat, ReturnType, Type};
+use syn::{
+    parse_macro_input, spanned::Spanned, FnArg, Ident, Index, ItemFn, Pat, ReturnType, Type,
+};
 
 pub fn circuit_impl(
     metadata: proc_macro::TokenStream,

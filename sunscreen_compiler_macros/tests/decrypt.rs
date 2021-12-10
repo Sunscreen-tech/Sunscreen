@@ -1,5 +1,5 @@
-use sunscreen_compiler_macros::{decrypt};
-use sunscreen_compiler::{*, types::*};
+use sunscreen_compiler::{types::*, *};
+use sunscreen_compiler_macros::decrypt;
 
 #[test]
 fn error_on_no_args() {
@@ -18,12 +18,14 @@ fn error_on_no_args() {
 
     let (public, secret) = runtime.generate_keys().unwrap();
 
-    let args = runtime.encrypt_args(
+    let args = runtime
+        .encrypt_args(
             &Arguments::new()
                 .arg(Unsigned::from(5))
                 .arg(Unsigned::from(15)),
-            &public
-        ).unwrap();
+            &public,
+        )
+        .unwrap();
 
     let result = runtime.run(&circuit, args).unwrap();
 

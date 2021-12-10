@@ -8,7 +8,6 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 use seal::{Ciphertext, Evaluator, GaloisKeys, RelinearizationKeys};
 
-
 /**
  * Run the given [`Circuit`] to completion with the given inputs. This
  * method performs no validation. You must verify the program is first valid. Programs produced

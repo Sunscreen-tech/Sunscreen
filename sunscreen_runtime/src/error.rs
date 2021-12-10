@@ -26,7 +26,9 @@ pub enum Error {
     MissingGaloisKeys,
 
     /**
-     * When attempting to run a circuit, the wrong number of ciphertexts were provided.
+     * Returned when:
+     * * The wrong number of ciphertexts were provided as parameters to a circuit.
+     * * The wrong number of ciphertexts were returned from a circuit.
      */
     IncorrectCiphertextCount,
 
@@ -63,7 +65,7 @@ pub enum Error {
          * The given return types.
          */
         actual: Vec<Type>
-    }
+    },
 }
 
 impl From<sunscreen_circuit::Error> for Error {

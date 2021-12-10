@@ -1,6 +1,5 @@
-use crate::{FheType};
-use seal::{Ciphertext, RelinearizationKeys, GaloisKeys, PublicKey};
-
+use crate::FheType;
+use seal::{Ciphertext, GaloisKeys, PublicKey, RelinearizationKeys};
 
 /**
  * Creates and validates arguments to be passed to a circuit.
@@ -14,9 +13,7 @@ impl Arguments {
      * Construct a new [`Arguments`] object.
      */
     pub fn new() -> Self {
-        Self {
-            args: vec![]
-        }
+        Self { args: vec![] }
     }
 
     /**

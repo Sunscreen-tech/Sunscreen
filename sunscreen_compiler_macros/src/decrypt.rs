@@ -1,6 +1,11 @@
-use proc_macro2::{TokenStream};
-use quote::{quote};
-use syn::{punctuated::Punctuated, Ident, parse::{Parse, ParseStream}, Token, Expr, parse_macro_input, ExprPath, Index, Error, Result};
+use proc_macro2::TokenStream;
+use quote::quote;
+use syn::{
+    parse::{Parse, ParseStream},
+    parse_macro_input,
+    punctuated::Punctuated,
+    Error, Expr, ExprPath, Ident, Index, Result, Token,
+};
 
 pub struct DecryptArgs {
     pub return_types: Vec<ExprPath>,
@@ -19,7 +24,7 @@ impl Parse for DecryptArgs {
         if vars.len() < 2 {
             return Err(Error::new_spanned(
                 vars,
-                "Usage: decrypt_impl!(runtime, return_val, T1, T2, ...)"
+                "Usage: decrypt_impl!(runtime, return_val, T1, T2, ...)",
             ));
         };
 
@@ -27,17 +32,27 @@ impl Parse for DecryptArgs {
             match var {
                 Expr::Path(p) => {
                     if i == 0 {
-                        runtime_ident = Some(p.path.get_ident().ok_or(Error::new_spanned(p, "Not a variable"))?.clone());
+                        runtime_ident = Some(
+                            p.path
+                                .get_ident()
+                                .ok_or(Error::new_spanned(p, "Not a variable"))?
+                                .clone(),
+                        );
                     } else if i == 1 {
-                        return_bundle_ident = Some(p.path.get_ident().ok_or(Error::new_spanned(p, "Not a variable"))?.clone());
+                        return_bundle_ident = Some(
+                            p.path
+                                .get_ident()
+                                .ok_or(Error::new_spanned(p, "Not a variable"))?
+                                .clone(),
+                        );
                     } else {
                         return_types.push(p.clone())
                     }
-                },
+                }
                 _ => {
                     return Err(Error::new_spanned(
                         var,
-                        "Usage: decrypt_impl!(runtime, return_val, T1, T2, ...)"
+                        "Usage: decrypt_impl!(runtime, return_val, T1, T2, ...)",
                     ));
                 }
             };
@@ -95,7 +110,7 @@ fn validate_types(args: &DecryptArgs) -> TokenStream {
 
     let len = Index::from(args.return_types.len());
 
-    quote!{
+    quote! {
         (|| -> sunscreen_compiler::Result<()> {
             use sunscreen_compiler::*;
 

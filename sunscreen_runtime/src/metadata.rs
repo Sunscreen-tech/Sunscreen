@@ -118,6 +118,11 @@ pub enum RequiredKeys {
      * The circuit performs relinearizations and requires relinearization keys.
      */
     Relin,
+
+    /**
+     * The circuit performs an operation that requires the public encryption key.
+     */
+    PublicKey,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]

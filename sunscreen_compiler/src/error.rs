@@ -27,7 +27,7 @@ pub enum Error {
     /**
      * An Error occurred in the Sunscreen runtime.
      */
-    RuntimeError(crate::RuntimeError)
+    RuntimeError(crate::RuntimeError),
 }
 
 impl From<seal::Error> for Error {

@@ -1,4 +1,6 @@
-use sunscreen_compiler::{Arguments, circuit, types::Unsigned, Compiler, Params, PlainModulusConstraint};
+use sunscreen_compiler::{
+    circuit, types::Unsigned, Arguments, Compiler, Params, PlainModulusConstraint,
+};
 use sunscreen_runtime::RuntimeBuilder;
 
 /**

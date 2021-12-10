@@ -3,7 +3,7 @@ use std::ops::{Add, Mul, Shl, Shr};
 use seal::Plaintext as SealPlaintext;
 
 use crate::{
-    types::{BfvType, FheType, CircuitNode, U64LiteralRef},
+    types::{BfvType, CircuitNode, FheType, U64LiteralRef},
     Context, Params, TypeName as DeriveTypeName, CURRENT_CTX,
 };
 use sunscreen_runtime::{InnerPlaintext, Plaintext, TryFromPlaintext, TryIntoPlaintext};
@@ -85,7 +85,7 @@ impl TryIntoPlaintext for Unsigned {
     fn try_into_plaintext(
         &self,
         params: &Params,
-    ) -> std::result::Result<Plaintext, sunscreen_runtime::Error> {
+    ) -> std::result::Result<Vec<Plaintext>, sunscreen_runtime::Error> {
         let mut seal_plaintext = SealPlaintext::new()?;
         let bits = std::mem::size_of::<u64>() * 8;
 
@@ -96,19 +96,23 @@ impl TryIntoPlaintext for Unsigned {
             seal_plaintext.set_coefficient(i, bit_value);
         }
 
-        Ok(Plaintext::new(
+        Ok(vec![Plaintext::new(
             InnerPlaintext::Seal(seal_plaintext),
             params.clone(),
-        ))
+        )])
     }
 }
 
 impl TryFromPlaintext for Unsigned {
-    fn try_from_plaintext(
-        plaintext: &Plaintext,
+    fn try_from_plaintext<I>(
+        plaintexts: &mut I,
         _params: &Params,
-    ) -> std::result::Result<Self, sunscreen_runtime::Error> {
-        match &plaintext.inner {
+    ) -> std::result::Result<Self, sunscreen_runtime::Error> 
+    where I: Iterator<Item=sunscreen_runtime::Result<Plaintext>>
+    {
+        let p = plaintexts.next().ok_or(sunscreen_runtime::Error::IncorrectCiphertextCount)??;
+
+        let val = match p.inner {
             InnerPlaintext::Seal(p) => {
                 let mut val = 0u64;
                 let bits = usize::min(std::mem::size_of::<u64>() * 8, p.len());
@@ -117,12 +121,14 @@ impl TryFromPlaintext for Unsigned {
                     val += p.get_coefficient(i) * (1 << i);
                 }
 
-                Ok(Self { val })
+                Self { val }
             }
             _ => {
                 return Err(sunscreen_runtime::Error::ParameterMismatch);
             }
-        }
+        };
+
+        Ok(val)
     }
 }
 

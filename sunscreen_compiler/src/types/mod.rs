@@ -4,7 +4,9 @@ use crate::{with_ctx, Literal};
 
 use petgraph::stable_graph::NodeIndex;
 use serde::{Deserialize, Serialize};
-pub use sunscreen_runtime::{TryFromPlaintext, BfvType, FheType, TryIntoPlaintext, Type, Version, TypeName, TypeNameInstance};
+pub use sunscreen_runtime::{
+    BfvType, FheType, TryFromPlaintext, TryIntoPlaintext, Type, TypeName, TypeNameInstance, Version,
+};
 
 pub use integer::Unsigned;
 

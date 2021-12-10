@@ -23,11 +23,22 @@ pub enum Error {
      * An internal error occurred in the SEAL library.
      */
     SealError(seal::Error),
+
+    /**
+     * An Error occurred in the Sunscreen runtime.
+     */
+    RuntimeError(crate::RuntimeError),
 }
 
 impl From<seal::Error> for Error {
     fn from(err: seal::Error) -> Self {
         Self::SealError(err)
+    }
+}
+
+impl From<crate::RuntimeError> for Error {
+    fn from(err: crate::RuntimeError) -> Self {
+        Self::RuntimeError(err)
     }
 }
 

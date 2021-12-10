@@ -549,41 +549,28 @@ dependencies = [
 name = "sunscreen_compiler"
 version = "0.1.0"
 dependencies = [
- "env_logger 0.9.0",
- "seal",
- "sunscreen_backend",
- "sunscreen_frontend_macros",
- "sunscreen_frontend_types",
- "sunscreen_runtime",
-]
-
-[[package]]
-name = "sunscreen_frontend_macros"
-version = "0.1.0"
-dependencies = [
  "clap",
- "proc-macro2",
- "quote",
- "serde_json",
- "sunscreen_compiler",
- "sunscreen_frontend_types",
- "syn",
- "trybuild",
-]
-
-[[package]]
-name = "sunscreen_frontend_types"
-version = "0.1.0"
-dependencies = [
  "log",
  "petgraph",
  "seal",
- "semver",
  "serde",
  "serde_json",
  "sunscreen_backend",
  "sunscreen_circuit",
+ "sunscreen_compiler_macros",
  "sunscreen_runtime",
+]
+
+[[package]]
+name = "sunscreen_compiler_macros"
+version = "0.1.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "serde_json",
+ "sunscreen_compiler",
+ "syn",
+ "trybuild",
 ]
 
 [[package]]
@@ -596,6 +583,7 @@ dependencies = [
  "petgraph",
  "scoped_threadpool",
  "seal",
+ "semver",
  "serde",
  "sunscreen_circuit",
 ]

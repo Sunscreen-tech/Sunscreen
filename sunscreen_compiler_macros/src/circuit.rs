@@ -1,134 +1,11 @@
-#![deny(missing_docs)]
-#![deny(rustdoc::broken_intra_doc_links)]
-#![recursion_limit = "128"]
-
-//! This crate contains macros to support the sunscreen compiler.
-
-extern crate proc_macro;
-
-mod error;
-mod internals;
-
 use crate::internals::{attr::Attrs, case::Scheme};
-
 use proc_macro2::{Span, TokenStream};
 use quote::{quote, quote_spanned};
 use syn::{
-    parse_macro_input, parse_quote, spanned::Spanned, Data, DeriveInput, Fields, FnArg,
-    GenericParam, Generics, Ident, Index, ItemFn, ReturnType, Type,
+    parse_macro_input, spanned::Spanned, FnArg, Ident, Index, ItemFn, Pat, ReturnType, Type,
 };
 
-#[proc_macro_derive(Value)]
-/**
- * Allows you to #[derive(Value)]. All members must impl value for this to work.
- */
-pub fn derive_value(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    let input = parse_macro_input!(input as DeriveInput);
-
-    let name = input.ident;
-
-    let generics = add_trait_bounds(input.generics);
-    let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
-
-    let new = new_body(&input.data);
-
-    let expanded = quote! {
-        // The generated impl.
-        impl #impl_generics sunscreen_compiler::Value for #name #ty_generics #where_clause {
-            fn new(id: usize) {
-                #new
-            }
-        }
-    };
-
-    proc_macro::TokenStream::from(expanded)
-}
-
-// Add a bound `T: Ciphertext` to every type parameter T.
-fn add_trait_bounds(mut generics: Generics) -> Generics {
-    for param in &mut generics.params {
-        if let GenericParam::Type(ref mut type_param) = *param {
-            type_param
-                .bounds
-                .push(parse_quote!(sunscreen_compiler::Value));
-        }
-    }
-    generics
-}
-
-fn new_body(data: &Data) -> TokenStream {
-    match *data {
-        Data::Struct(ref data) => match data.fields {
-            Fields::Named(ref fields) => {
-                let mut field_num = 0usize;
-
-                let recurse = fields.named.iter().map(|f| {
-                    let name = &f.ident;
-                    let index = Index::from(field_num);
-                    let res = quote_spanned! {f.span()=>
-                        #name: Value::new(self.id + #index)
-                    };
-
-                    field_num += 1;
-                    res
-                });
-                quote! {
-                    Self {
-                        #(#recurse),*
-                    }
-                }
-            }
-            Fields::Unnamed(ref fields) => {
-                let recurse = fields.unnamed.iter().enumerate().map(|(i, f)| {
-                    let index = Index::from(i);
-                    quote_spanned! {f.span()=>
-                        Value::new(self.id + #index)
-                    }
-                });
-                quote! {
-                    Self(#(#recurse),*)
-                }
-            }
-            Fields::Unit => {
-                quote!(0)
-            }
-        },
-        Data::Enum(_) | Data::Union(_) => unimplemented!(),
-    }
-}
-
-#[proc_macro_attribute]
-/**
- * Specifies a function to be a circuit. A circuit has any number of inputs that impl the
- * [`Value`](sunscreen_frontend_types::Value) trait and returns either a single type implementing `Value` or a tuple of
- * types implementing `Value`.
- *
- * This function gets run by the compiler to build up the circuit you specify and does not
- * directly or eagerly perform homomorphic operations.
- *
- * # Parameters
- * * `scheme` (required): Designates the scheme this circuit uses. Today, this must be `"bfv"`.
- *
- * # Examples
- * ```rust
- * # use sunscreen_compiler::{circuit, types::Unsigned, Params, Context};
- *
- * #[circuit(scheme = "bfv")]
- * fn multiply_add(a: Unsigned, b: Unsigned, c: Unsigned) -> Unsigned {
- *   a * b + c
- * }
- * ```
- *
- * ```rust
- * # use sunscreen_compiler::{circuit, types::Unsigned, Params, Context};
- *
- * #[circuit(scheme = "bfv")]
- * fn multi_out(a: Unsigned, b: Unsigned, c: Unsigned) -> (Unsigned, Unsigned) {
- *   (a + b, b + c)
- * }
- * ```
- */
-pub fn circuit(
+pub fn circuit_impl(
     metadata: proc_macro::TokenStream,
     input: proc_macro::TokenStream,
 ) -> proc_macro::TokenStream {
@@ -160,11 +37,11 @@ pub fn circuit(
                     compile_error!("circuits must not take a reference to self");
                 });
             }
-            FnArg::Typed(t) => match &*t.ty {
-                Type::Path(_) => t,
+            FnArg::Typed(t) => match (&*t.ty, &*t.pat) {
+                (Type::Path(_), Pat::Ident(i)) => (t, &i.ident),
                 _ => {
                     return proc_macro::TokenStream::from(quote! {
-                        compile_error!("not path");
+                        compile_error!("circuit arguments' name must be a simple identifier and type must be a plain path.");
                     });
                 }
             },
@@ -173,11 +50,19 @@ pub fn circuit(
         unwrapped_inputs.push(input_type);
     }
 
+    let signature = create_signature(
+        &unwrapped_inputs
+            .iter()
+            .map(|t| &*t.0.ty)
+            .collect::<Vec<&Type>>(),
+        ret,
+    );
+
     let circuit_args = unwrapped_inputs
         .iter()
         .map(|i| {
-            let name = &i.pat;
-            let ty = &i.ty;
+            let (ty, name) = i;
+            let ty = &ty.ty;
 
             quote! {
                 #name: CircuitNode<#ty>,
@@ -187,9 +72,9 @@ pub fn circuit(
 
     let var_decl = unwrapped_inputs.iter().enumerate().map(|(i, t)| {
         let id = Ident::new(&format!("c_{}", i), Span::call_site());
-        let ty = &t.ty;
+        let ty = &t.0.ty;
 
-        quote_spanned! {t.span() =>
+        quote_spanned! {t.0.span() =>
             let #id: CircuitNode<#ty> = CircuitNode::input();
         }
     });
@@ -197,7 +82,7 @@ pub fn circuit(
     let args = unwrapped_inputs.iter().enumerate().map(|(i, t)| {
         let id = Ident::new(&format!("c_{}", i), Span::call_site());
 
-        quote_spanned! {t.span() =>
+        quote_spanned! {t.0.span() =>
             #id
         }
     });
@@ -242,12 +127,16 @@ pub fn circuit(
         }
     };
 
-    proc_macro::TokenStream::from(quote! {
+    let foo = proc_macro::TokenStream::from(quote! {
         #(#attrs)*
-        #vis fn #circuit_name() -> (sunscreen_compiler::SchemeType, impl Fn(&Params) -> sunscreen_compiler::Result<sunscreen_compiler::FrontendCompilation>) {
+        #vis fn #circuit_name() -> (
+            sunscreen_compiler::SchemeType,
+            impl Fn(&Params) -> sunscreen_compiler::Result<sunscreen_compiler::FrontendCompilation>,
+            sunscreen_compiler::CallSignature
+        ) {
             use std::cell::RefCell;
             use std::mem::transmute;
-            use sunscreen_compiler::{CURRENT_CTX, Context, Error, Result, Params, SchemeType, Value, types::CircuitNode};
+            use sunscreen_compiler::{CURRENT_CTX, Context, Error, Result, Params, SchemeType, Value, types::{CircuitNode, Type, TypeName, TypeNameInstance}};
 
             let circuit_builder = |params: &Params| {
                 if SchemeType::Bfv != params.scheme_type {
@@ -287,7 +176,62 @@ pub fn circuit(
                 Ok(context.compilation)
             };
 
-            (#scheme_type, circuit_builder)
+            #signature;
+
+            (#scheme_type, circuit_builder, signature)
         }
-    })
+    });
+
+    // panic!("{}", foo);
+
+    foo
+}
+
+fn create_signature(args: &[&Type], ret: &ReturnType) -> TokenStream {
+    let arg_type_names = args.iter().map(|t| {
+        quote! {
+            #t ::type_name(),
+        }
+    });
+
+    let return_type_names = match ret {
+        ReturnType::Type(_, t) => {
+            let tuple_inners = match &**t {
+                Type::Tuple(t) => t.elems.iter().map(|x| &*x).collect::<Vec<&Type>>(),
+                Type::Paren(t) => {
+                    vec![&*t.elem]
+                }
+                Type::Path(_) => {
+                    vec![&**t]
+                }
+                _ => {
+                    return TokenStream::from(quote! {
+                        compile_error!("Circuits must return a single Cipthertext or a tuple of Ciphertexts");
+                    });
+                }
+            };
+
+            let type_names = tuple_inners.iter().map(|t| {
+                quote! {
+                    #t ::type_name(),
+                }
+            });
+
+            quote! {
+                vec![
+                    #(#type_names)*
+                ]
+            }
+        }
+        ReturnType::Default => {
+            quote! { vec![] }
+        }
+    };
+
+    quote! {
+        let signature = sunscreen_compiler::CallSignature {
+            arguments: vec![#(#arg_type_names)*],
+            returns: #return_type_names
+        };
+    }
 }

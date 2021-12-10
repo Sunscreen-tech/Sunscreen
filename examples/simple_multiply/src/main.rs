@@ -1,5 +1,7 @@
-use sunscreen_compiler::{circuit, types::Unsigned, Compiler, Params, PlainModulusConstraint};
-use sunscreen_runtime::RuntimeBuilder;
+use sunscreen_compiler::{
+    circuit, decrypt, types::Unsigned, Arguments, Compiler, Params, PlainModulusConstraint,
+};
+use sunscreen_runtime::PrivateRuntime;
 
 /**
  * The #[circuit] macro indicates this function represents a homomorphic encryption
@@ -52,7 +54,7 @@ fn main() {
      * Next, we construct a runtime. The runtime provides the APIs for encryption, decryption, and
      * running a circuit.
      */
-    let runtime = RuntimeBuilder::new(&params).build().unwrap();
+    let runtime = PrivateRuntime::new(&params).unwrap();
 
     /*
      * Generate a public and private key pair. Normally, Alice would do this, sending the public
@@ -61,22 +63,11 @@ fn main() {
     let (public, secret) = runtime.generate_keys().unwrap();
 
     /*
-     * Relinearization keys are specific to the BFV scheme we're using. These are needed for
-     * relinearization operations, which reduce noise growth after multiplications. While Sunscreen
-     * inserts relinearizations into the circuit on your behalf, you do need to provide keys when
-     * running the circuit.
+     * Set the arguments to the circuit and encrypt them.
      */
-    let relin = runtime.generate_relin_keys(&secret).unwrap();
-
-    /*
-     * Create FHE `Unsigned` types from the given literals and encrypt them.
-     */
-    let a = runtime
-        .encrypt(&Unsigned::from(15), &public)
-        .unwrap();
-    let b = runtime
-        .encrypt(&Unsigned::from(5), &public)
-        .unwrap();
+    let args = Arguments::new()
+        .arg(Unsigned::from(15))
+        .arg(Unsigned::from(5));
 
     /*
      * Run the circuit with our encrypted ciphertexts. The first argument is, well, the circuit.
@@ -84,24 +75,18 @@ fn main() {
      * paramter in our circuit. We need to pass relin keys (3rd parameter), but can omit galois
      * keys as our circuit doesn't use rotations.
      */
-    let results = runtime
-        .validate_and_run_program(&circuit, &vec![a, b], Some(relin), None)
+    let mut results = runtime
+        .run(&circuit, runtime.encrypt_args(&args, &public).unwrap())
         .unwrap();
 
     /*
      * Our circuit produces a single output rather than a tuple, so the resulting Vec should contain
      * exactly one value.
      */
-    assert_eq!(1, results.len());
-
-    /*
-     * Decrypt the result as the `Unsigned` type declared in the turbofish and convert it
-     * into a u64.
-     */
-    let c: u64 = runtime.decrypt::<Unsigned>(&results[0], &secret).unwrap().into();
+    let c = decrypt!(runtime, &secret, results, Unsigned).unwrap();
 
     /*
      * Yay, 5 * 15 indeed equals 75.
      */
-    assert_eq!(c, 75);
+    assert_eq!(c, 75.into());
 }

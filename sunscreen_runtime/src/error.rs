@@ -1,4 +1,6 @@
-#[derive(Debug, Clone)]
+use crate::Type;
+
+#[derive(Debug, Clone, PartialEq)]
 /**
  * Represents an error that can occur in this crate.
  */
@@ -24,7 +26,9 @@ pub enum Error {
     MissingGaloisKeys,
 
     /**
-     * When attempting to run a circuit, the wrong number of ciphertexts were provided.
+     * Returned when:
+     * * The wrong number of ciphertexts were provided as parameters to a circuit.
+     * * The wrong number of ciphertexts were returned from a circuit.
      */
     IncorrectCiphertextCount,
 
@@ -32,6 +36,36 @@ pub enum Error {
      * An argument is incompatible with the parameters in the runtime.
      */
     ParameterMismatch,
+
+    /**
+     * The given arguments do not match the call signature of the circuit.
+     */
+    ArgumentMismatch { 
+        /**
+         * The arguments in the call signature of the circuit.
+         */
+        expected: Vec<Type>,
+
+        /**
+         * The given arguments.
+         */
+        actual: Vec<Type>
+    },
+
+    /**
+     * The given return types do not match the circuit interface.
+     */
+    ReturnMismatch { 
+        /**
+         * The return types in the call signature of the circuit.
+         */
+        expected: Vec<Type>,
+
+        /**
+         * The given return types.
+         */
+        actual: Vec<Type>
+    },
 }
 
 impl From<sunscreen_circuit::Error> for Error {

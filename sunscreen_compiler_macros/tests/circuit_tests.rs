@@ -1,7 +1,8 @@
-use sunscreen_compiler_macros::circuit;
 use sunscreen_compiler::{
-    types::Unsigned, FrontendCompilation, Params, SchemeType, SecurityLevel, CURRENT_CTX,
+    types::{TypeName, Unsigned},
+    CallSignature, FrontendCompilation, Params, SchemeType, SecurityLevel, CURRENT_CTX,
 };
+use sunscreen_compiler_macros::circuit;
 
 use serde_json::json;
 
@@ -26,8 +27,14 @@ fn circuit_gets_called() {
         };
     }
 
-    let (scheme, compile_fn) = simple_circuit();
+    let (scheme, compile_fn, signature) = simple_circuit();
 
+    let expected_signature = CallSignature {
+        arguments: vec![],
+        returns: vec![],
+    };
+
+    assert_eq!(signature, expected_signature);
     assert_eq!(scheme, SchemeType::Bfv);
 
     let _context = compile_fn(&get_params()).unwrap();
@@ -50,8 +57,14 @@ fn panicing_circuit_clears_ctx() {
     }
 
     let panic_result = std::panic::catch_unwind(|| {
-        let (scheme, compile_fn) = panic_circuit();
+        let (scheme, compile_fn, signature) = panic_circuit();
 
+        let expected_signature = CallSignature {
+            arguments: vec![],
+            returns: vec![],
+        };
+
+        assert_eq!(signature, expected_signature);
         assert_eq!(scheme, SchemeType::Bfv);
 
         let _context = compile_fn(&get_params()).unwrap();
@@ -78,9 +91,23 @@ fn capture_circuit_input_args() {
     #[circuit(scheme = "bfv")]
     fn circuit_with_args(_a: Unsigned, _b: Unsigned, _c: Unsigned, _d: Unsigned) {}
 
-    let (scheme, compile_fn) = circuit_with_args();
+    let (scheme, compile_fn, signature) = circuit_with_args();
 
     assert_eq!(scheme, SchemeType::Bfv);
+
+    let type_name = Unsigned::type_name();
+
+    let expected_signature = CallSignature {
+        arguments: vec![
+            type_name.clone(),
+            type_name.clone(),
+            type_name.clone(),
+            type_name.clone(),
+        ],
+        returns: vec![],
+    };
+
+    assert_eq!(expected_signature, signature);
 
     let context = compile_fn(&get_params()).unwrap();
 
@@ -94,8 +121,15 @@ fn can_add() {
         let _ = a + b + c;
     }
 
-    let (scheme, compile_fn) = circuit_with_args();
+    let (scheme, compile_fn, signature) = circuit_with_args();
 
+    let type_name = Unsigned::type_name();
+
+    let expected_signature = CallSignature {
+        arguments: vec![type_name.clone(), type_name.clone(), type_name.clone()],
+        returns: vec![],
+    };
+    assert_eq!(signature, expected_signature);
     assert_eq!(scheme, SchemeType::Bfv);
 
     let context: FrontendCompilation = compile_fn(&get_params()).unwrap();
@@ -150,8 +184,15 @@ fn can_mul() {
         let _ = a * b * c;
     }
 
-    let (scheme, compile_fn) = circuit_with_args();
+    let (scheme, compile_fn, signature) = circuit_with_args();
 
+    let type_name = Unsigned::type_name();
+
+    let expected_signature = CallSignature {
+        arguments: vec![type_name.clone(), type_name.clone(), type_name.clone()],
+        returns: vec![],
+    };
+    assert_eq!(signature, expected_signature);
     assert_eq!(scheme, SchemeType::Bfv);
 
     let context = compile_fn(&get_params()).unwrap();
@@ -205,8 +246,15 @@ fn can_rotate_left() {
         let _ = a << 4;
     }
 
-    let (scheme, compile_fn) = circuit_with_args();
+    let (scheme, compile_fn, signature) = circuit_with_args();
 
+    let type_name = Unsigned::type_name();
+
+    let expected_signature = CallSignature {
+        arguments: vec![type_name.clone()],
+        returns: vec![],
+    };
+    assert_eq!(signature, expected_signature);
     assert_eq!(scheme, SchemeType::Bfv);
 
     let context = compile_fn(&get_params()).unwrap();
@@ -252,8 +300,15 @@ fn can_rotate_right() {
         let _ = a >> 4;
     }
 
-    let (scheme, compile_fn) = circuit_with_args();
+    let (scheme, compile_fn, signature) = circuit_with_args();
 
+    let type_name = Unsigned::type_name();
+
+    let expected_signature = CallSignature {
+        arguments: vec![type_name.clone()],
+        returns: vec![],
+    };
+    assert_eq!(signature, expected_signature);
     assert_eq!(scheme, SchemeType::Bfv);
 
     let context: FrontendCompilation = compile_fn(&get_params()).unwrap();
@@ -299,8 +354,15 @@ fn can_collect_output() {
         a + b * a
     }
 
-    let (scheme, compile_fn) = circuit_with_args();
+    let (scheme, compile_fn, signature) = circuit_with_args();
 
+    let type_name = Unsigned::type_name();
+
+    let expected_signature = CallSignature {
+        arguments: vec![type_name.clone(), type_name.clone()],
+        returns: vec![type_name.clone()],
+    };
+    assert_eq!(signature, expected_signature);
     assert_eq!(scheme, SchemeType::Bfv);
 
     let context = compile_fn(&get_params()).unwrap();
@@ -359,8 +421,15 @@ fn can_collect_multiple_outputs() {
         (a + b * a, a)
     }
 
-    let (scheme, compile_fn) = circuit_with_args();
+    let (scheme, compile_fn, signature) = circuit_with_args();
 
+    let type_name = Unsigned::type_name();
+
+    let expected_signature = CallSignature {
+        arguments: vec![type_name.clone(), type_name.clone()],
+        returns: vec![type_name.clone(), type_name.clone()],
+    };
+    assert_eq!(signature, expected_signature);
     assert_eq!(scheme, SchemeType::Bfv);
 
     let context = compile_fn(&get_params()).unwrap();
@@ -427,8 +496,15 @@ fn literals_consolidate() {
         let _ = a << 3;
     }
 
-    let (scheme, compile_fn) = circuit_with_args();
+    let (scheme, compile_fn, signature) = circuit_with_args();
 
+    let type_name = Unsigned::type_name();
+
+    let expected_signature = CallSignature {
+        arguments: vec![type_name.clone()],
+        returns: vec![],
+    };
+    assert_eq!(signature, expected_signature);
     assert_eq!(scheme, SchemeType::Bfv);
 
     let context = compile_fn(&get_params()).unwrap();

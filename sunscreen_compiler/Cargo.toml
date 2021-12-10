@@ -15,7 +15,6 @@ sunscreen_circuit = { path = "../sunscreen_circuit" }
 sunscreen_runtime = { path = "../sunscreen_runtime" }
 seal = { path = "../seal" }
 serde = { version = "1.0.130", features = ["derive"] }
-semver = "1.0.4"
 
 [dev-dependencies]
 serde_json = "1.0.72"

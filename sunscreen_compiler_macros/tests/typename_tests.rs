@@ -1,5 +1,8 @@
-use sunscreen_compiler::{crate_version, types::{Type, TypeName, Version}};
-use sunscreen_compiler_macros::{TypeName};
+use sunscreen_compiler::{
+    crate_version,
+    types::{Type, TypeName, Version},
+};
+use sunscreen_compiler_macros::TypeName;
 
 #[test]
 fn derive_typename_example() {
@@ -8,7 +11,9 @@ fn derive_typename_example() {
         _cow: String,
     }
 
-    let _ = Foo { _cow: "moo".to_string() };
+    let _ = Foo {
+        _cow: "moo".to_string(),
+    };
 
     let name = format!("{}::{}", module_path!(), "Foo");
     let version = Version::parse(crate_version!()).unwrap();

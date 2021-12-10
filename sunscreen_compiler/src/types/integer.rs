@@ -3,9 +3,8 @@ use std::ops::{Add, Mul, Shl, Shr};
 use seal::Plaintext as SealPlaintext;
 
 use crate::{
-    TypeName,
     types::{BfvType, CircuitNode, FheType, U64LiteralRef},
-    Context, Params, CURRENT_CTX,
+    Context, Params, TypeName, CURRENT_CTX,
 };
 use sunscreen_runtime::{InnerPlaintext, Plaintext, TryFromPlaintext, TryIntoPlaintext};
 

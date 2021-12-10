@@ -553,7 +553,6 @@ dependencies = [
  "log",
  "petgraph",
  "seal",
- "semver",
  "serde",
  "serde_json",
  "sunscreen_backend",
@@ -584,6 +583,7 @@ dependencies = [
  "petgraph",
  "scoped_threadpool",
  "seal",
+ "semver",
  "serde",
  "sunscreen_circuit",
 ]

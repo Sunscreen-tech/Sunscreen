@@ -71,12 +71,8 @@ fn main() {
     /*
      * Create FHE `Unsigned` types from the given literals and encrypt them.
      */
-    let a = runtime
-        .encrypt(&Unsigned::from(15), &public)
-        .unwrap();
-    let b = runtime
-        .encrypt(&Unsigned::from(5), &public)
-        .unwrap();
+    let a = runtime.encrypt(&Unsigned::from(15), &public).unwrap();
+    let b = runtime.encrypt(&Unsigned::from(5), &public).unwrap();
 
     /*
      * Run the circuit with our encrypted ciphertexts. The first argument is, well, the circuit.
@@ -98,7 +94,10 @@ fn main() {
      * Decrypt the result as the `Unsigned` type declared in the turbofish and convert it
      * into a u64.
      */
-    let c: u64 = runtime.decrypt::<Unsigned>(&results[0], &secret).unwrap().into();
+    let c: u64 = runtime
+        .decrypt::<Unsigned>(&results[0], &secret)
+        .unwrap()
+        .into();
 
     /*
      * Yay, 5 * 15 indeed equals 75.

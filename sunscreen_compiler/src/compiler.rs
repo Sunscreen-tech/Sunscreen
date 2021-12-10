@@ -1,5 +1,8 @@
 use crate::params::{determine_params, PlainModulusConstraint};
-use crate::{Error, FrontendCompilation, Params, Result, SchemeType, SecurityLevel};
+use crate::{
+    CallSignature, CircuitMetadata, Error, FrontendCompilation, Params, RequiredKeys, Result,
+    SchemeType, SecurityLevel,
+};
 use sunscreen_circuit::Circuit;
 
 #[derive(Debug, Clone)]
@@ -14,7 +17,7 @@ enum ParamsMode {
 pub struct Compiler<F, G>
 where
     G: Fn(&Params) -> Result<FrontendCompilation>,
-    F: Fn() -> (SchemeType, G),
+    F: Fn() -> (SchemeType, G, CallSignature),
 {
     circuit: F,
     params_mode: ParamsMode,
@@ -26,7 +29,7 @@ where
 impl<F, G> Compiler<F, G>
 where
     G: Fn(&Params) -> Result<FrontendCompilation>,
-    F: Fn() -> (SchemeType, G),
+    F: Fn() -> (SchemeType, G, CallSignature),
 {
     /**
      * Create a new compiler with the given circuit.
@@ -88,8 +91,8 @@ where
      * Comile the circuit. If successful, returns a tuple of the [`Circuit`] and the [`Params`] suitable
      * for running it.
      */
-    pub fn compile(self) -> Result<(Circuit, Params)> {
-        let (scheme, circuit_fn) = (self.circuit)();
+    pub fn compile(self) -> Result<(Circuit, CircuitMetadata)> {
+        let (scheme, circuit_fn, signature) = (self.circuit)();
         let (circuit, params) = match self.params_mode {
             ParamsMode::Manual(p) => (circuit_fn(&p), p.clone()),
             ParamsMode::Search => {
@@ -109,6 +112,24 @@ where
             }
         };
 
-        Ok((circuit?.compile(), params))
+        let mut required_keys = vec![];
+
+        let circuit = circuit?.compile();
+
+        if circuit.requires_relin_keys() {
+            required_keys.push(RequiredKeys::Relin);
+        }
+
+        if circuit.requires_galois_keys() {
+            required_keys.push(RequiredKeys::Galois);
+        }
+
+        let metadata = CircuitMetadata {
+            params: params,
+            required_keys,
+            signature,
+        };
+
+        Ok((circuit, metadata))
     }
 }

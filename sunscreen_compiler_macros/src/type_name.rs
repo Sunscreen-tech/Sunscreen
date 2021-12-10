@@ -1,6 +1,6 @@
 use proc_macro2::{Span, TokenStream};
-use quote::{quote};
-use syn::{DeriveInput, LitStr, Ident, parse_macro_input};
+use quote::quote;
+use syn::{parse_macro_input, DeriveInput, Ident, LitStr};
 
 pub fn derive_typename(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let input = parse_macro_input!(input as DeriveInput);

@@ -18,13 +18,12 @@ mod type_name;
 pub fn derive_typename(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     type_name::derive_typename(input)
 }
-    
 
 #[proc_macro_attribute]
 /**
  * Specifies a function to be a circuit. A circuit has any number of inputs that impl the
- * [`Value`](sunscreen_frontend_types::Value) trait and returns either a single type implementing `Value` or a tuple of
- * types implementing `Value`.
+ * `FheType` trait and returns either a single type implementing `FheType` or a tuple of
+ * types implementing `FheType`.
  *
  * This function gets run by the compiler to build up the circuit you specify and does not
  * directly or eagerly perform homomorphic operations.

@@ -5,14 +5,16 @@
 //! (i.e. an [`Circuit`](sunscreen_circuit::Circuit)).
 
 mod error;
+mod metadata;
 
 pub use crate::error::*;
+pub use crate::metadata::*;
 use sunscreen_circuit::{Circuit, EdgeInfo, Literal, Operation::*, OuterLiteral, SchemeType};
 
 use crossbeam::atomic::AtomicCell;
 use petgraph::{stable_graph::NodeIndex, visit::EdgeRef, Direction};
 //use seal::{Ciphertext, Evaluator, GaloisKeys, RelinearizationKeys};
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 
 use std::borrow::Cow;
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -20,39 +22,8 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use seal::{
     BFVEvaluator, BfvEncryptionParametersBuilder, Ciphertext, Context as SealContext, Decryptor,
     Encryptor, Evaluator, GaloisKeys, KeyGenerator, Modulus, Plaintext as SealPlaintext, PublicKey,
-    RelinearizationKeys, SecretKey, SecurityLevel,
+    RelinearizationKeys, SecretKey,
 };
-
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-/**
- * The parameter set required for a given circuit to run efficiently and correctly.
- */
-pub struct Params {
-    /**
-     * The lattice dimension. For CKKS and BFV, this is the degree of the ciphertext polynomial.
-     */
-    pub lattice_dimension: u64,
-
-    /**
-     * The modulii for each modulo switch level for BFV and CKKS.
-     */
-    pub coeff_modulus: Vec<u64>,
-
-    /**
-     * The plaintext modulus.
-     */
-    pub plain_modulus: u64,
-
-    /**
-     * The scheme type.
-     */
-    pub scheme_type: SchemeType,
-
-    /**
-     * The securtiy level required.
-     */
-    pub security_level: SecurityLevel,
-}
 
 /**
  * Contains all the elements needed to encrypt, decrypt, generate keys, and evaluate circuits.
@@ -65,7 +36,7 @@ pub enum Runtime {
         /**
          * The parameters used to construct the scheme used in this runtime.
          */
-        params: Params,
+        metadata: CircuitMetadata,
 
         /**
          * The context associated with the BFV scheme. Created by [`RuntimeBuilder`].
@@ -169,8 +140,8 @@ impl Runtime {
         public_key: &PublicKey,
     ) -> Result<Ciphertext> {
         let ciphertext = match self {
-            Self::Bfv { context, params } => {
-                let p = p.try_into_plaintext(&params)?;
+            Self::Bfv { context, metadata } => {
+                let p = p.try_into_plaintext(&metadata.params)?;
 
                 match &p.inner {
                     InnerPlaintext::Seal(p) => {
@@ -197,17 +168,17 @@ impl Runtime {
         secret_key: &SecretKey,
     ) -> Result<P> {
         let val = match self {
-            Self::Bfv { context, params } => {
+            Self::Bfv { context, metadata } => {
                 let decryptor = Decryptor::new(&context, secret_key)?;
 
                 let plaintext = decryptor.decrypt(&c)?;
 
                 P::try_from_plaintext(
                     &Plaintext {
-                        params: params.clone(),
+                        params: metadata.params.clone(),
                         inner: InnerPlaintext::Seal(plaintext),
                     },
-                    &params,
+                    &metadata.params,
                 )?
             }
         };
@@ -284,16 +255,16 @@ where
  * Used to construct a runtime.
  */
 pub struct RuntimeBuilder {
-    params: Params,
+    metadata: CircuitMetadata,
 }
 
 impl RuntimeBuilder {
     /**
      * Creates a Runtime with the given parameters.
      */
-    pub fn new(params: &Params) -> Self {
+    pub fn new(metadata: &CircuitMetadata) -> Self {
         Self {
-            params: params.clone(),
+            metadata: metadata.clone(),
         }
     }
 
@@ -301,13 +272,14 @@ impl RuntimeBuilder {
      * Builds the runtime.
      */
     pub fn build(self) -> Result<Runtime> {
-        match self.params.scheme_type {
+        match self.metadata.params.scheme_type {
             SchemeType::Bfv => {
                 let bfv_params = BfvEncryptionParametersBuilder::new()
-                    .set_plain_modulus_u64(self.params.plain_modulus)
-                    .set_poly_modulus_degree(self.params.lattice_dimension)
+                    .set_plain_modulus_u64(self.metadata.params.plain_modulus)
+                    .set_poly_modulus_degree(self.metadata.params.lattice_dimension)
                     .set_coefficient_modulus(
-                        self.params
+                        self.metadata
+                            .params
                             .coeff_modulus
                             .iter()
                             .map(|v| Modulus::new(*v).unwrap())
@@ -315,11 +287,12 @@ impl RuntimeBuilder {
                     )
                     .build()?;
 
-                let context = SealContext::new(&bfv_params, true, self.params.security_level)?;
+                let context =
+                    SealContext::new(&bfv_params, true, self.metadata.params.security_level)?;
 
                 Ok(Runtime::Bfv {
                     context,
-                    params: self.params,
+                    metadata: self.metadata,
                 })
             }
             _ => unimplemented!(),

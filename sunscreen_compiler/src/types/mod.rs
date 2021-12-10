@@ -3,12 +3,8 @@ mod integer;
 use crate::{with_ctx, Literal};
 
 use petgraph::stable_graph::NodeIndex;
-pub use semver::Version;
-use serde::{
-    de::{self, Visitor},
-    Deserialize, Deserializer, Serialize, Serializer,
-};
-use sunscreen_runtime::{TryFromPlaintext, TryIntoPlaintext};
+use serde::{Deserialize, Serialize};
+pub use sunscreen_runtime::{TryFromPlaintext, TryIntoPlaintext, Type, Version};
 
 pub use integer::Unsigned;
 
@@ -82,80 +78,12 @@ impl<T: FheType> CircuitNode<T> {
 
 /**
  * A trait the gives a name an version to a given type
- */ 
+ */
 pub trait TypeName {
     /**
      * Returns the [`Type`] of the given Rust type.
      */
     fn type_name() -> Type;
-}
-
-/**
- * A type which represents the fully qualified name and version of a datatype.
- */
-#[derive(Debug, Clone, PartialEq)]
-pub struct Type {
-    /**
-     * The fully qualified name of the type (including crate name)
-     */
-    pub name: String,
-
-    /**
-     * The semantic version of this type.
-     */
-    pub version: Version,
-}
-
-impl Serialize for Type {
-    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        let type_string = format!("{},{}", self.name, self.version);
-
-        serializer.serialize_str(&type_string)
-    }
-}
-
-struct TypeNameVisitor;
-
-impl<'de> Visitor<'de> for TypeNameVisitor {
-    type Value = String;
-
-    fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(formatter, "A string of the form foo::bar::Baz,1.2.3")
-    }
-
-    fn visit_str<E>(self, s: &str) -> std::result::Result<Self::Value, E>
-    where
-        E: de::Error,
-    {
-        if s.split(",").count() != 2 {
-            Err(de::Error::invalid_value(de::Unexpected::Str(s), &self))
-        } else {
-            Ok(s.to_owned())
-        }
-    }
-}
-
-impl<'de> Deserialize<'de> for Type {
-    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        let type_string = deserializer.deserialize_string(TypeNameVisitor)?;
-
-        let mut splits = type_string.split(",");
-
-        let typename = splits.next().unwrap();
-        let version = Version::parse(splits.next().unwrap())
-            .map_err(|e| de::Error::custom(format!("Failed to parse version: {}", e)))?;
-
-        Ok(Self {
-            name: typename.to_owned(),
-            version,
-        })
-    }
 }
 
 #[cfg(test)]

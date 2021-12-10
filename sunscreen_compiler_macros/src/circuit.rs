@@ -1,10 +1,7 @@
+use crate::internals::{attr::Attrs, case::Scheme};
 use proc_macro2::{Span, TokenStream};
 use quote::{quote, quote_spanned};
-use syn::{
-    parse_macro_input, spanned::Spanned, FnArg,
-    Ident, Index, ItemFn, ReturnType, Type,
-};
-use crate::internals::{attr::Attrs, case::Scheme};
+use syn::{parse_macro_input, spanned::Spanned, FnArg, Ident, Index, ItemFn, ReturnType, Type};
 
 pub fn circuit_impl(
     metadata: proc_macro::TokenStream,
@@ -42,7 +39,7 @@ pub fn circuit_impl(
                 Type::Path(_) => t,
                 _ => {
                     return proc_macro::TokenStream::from(quote! {
-                        compile_error!("not path");
+                        compile_error!("circuit arguments' type must be a plain path.");
                     });
                 }
             },
@@ -50,6 +47,14 @@ pub fn circuit_impl(
 
         unwrapped_inputs.push(input_type);
     }
+
+    let signature = create_signature(
+        &unwrapped_inputs
+            .iter()
+            .map(|t| &*t.ty)
+            .collect::<Vec<&Type>>(),
+        ret,
+    );
 
     let circuit_args = unwrapped_inputs
         .iter()
@@ -122,10 +127,14 @@ pub fn circuit_impl(
 
     proc_macro::TokenStream::from(quote! {
         #(#attrs)*
-        #vis fn #circuit_name() -> (sunscreen_compiler::SchemeType, impl Fn(&Params) -> sunscreen_compiler::Result<sunscreen_compiler::FrontendCompilation>) {
+        #vis fn #circuit_name() -> (
+            sunscreen_compiler::SchemeType,
+            impl Fn(&Params) -> sunscreen_compiler::Result<sunscreen_compiler::FrontendCompilation>,
+            sunscreen_compiler::CallSignature
+        ) {
             use std::cell::RefCell;
             use std::mem::transmute;
-            use sunscreen_compiler::{CURRENT_CTX, Context, Error, Result, Params, SchemeType, Value, types::CircuitNode};
+            use sunscreen_compiler::{CURRENT_CTX, Context, Error, Result, Params, SchemeType, Value, types::{CircuitNode, Type, TypeName}};
 
             let circuit_builder = |params: &Params| {
                 if SchemeType::Bfv != params.scheme_type {
@@ -165,7 +174,58 @@ pub fn circuit_impl(
                 Ok(context.compilation)
             };
 
-            (#scheme_type, circuit_builder)
+            #signature;
+
+            (#scheme_type, circuit_builder, signature)
         }
     })
+}
+
+fn create_signature(args: &[&Type], ret: &ReturnType) -> TokenStream {
+    let arg_type_names = args.iter().map(|t| {
+        quote! {
+            #t::type_name(),
+        }
+    });
+
+    let return_type_names = match ret {
+        ReturnType::Type(_, t) => {
+            let tuple_inners = match &**t {
+                Type::Tuple(t) => t.elems.iter().map(|x| &*x).collect::<Vec<&Type>>(),
+                Type::Paren(t) => {
+                    vec![&*t.elem]
+                }
+                Type::Path(_) => {
+                    vec![&**t]
+                }
+                _ => {
+                    return TokenStream::from(quote! {
+                        compile_error!("Circuits must return a single Cipthertext or a tuple of Ciphertexts");
+                    });
+                }
+            };
+
+            let type_names = tuple_inners.iter().map(|t| {
+                quote! {
+                    #t ::type_name(),
+                }
+            });
+
+            quote! {
+                vec![
+                    #(#type_names)*
+                ]
+            }
+        }
+        ReturnType::Default => {
+            quote! { vec![] }
+        }
+    };
+
+    quote! {
+        let signature = sunscreen_compiler::CallSignature {
+            arguments: vec![#(#arg_type_names)*],
+            returns: #return_type_names
+        };
+    }
 }

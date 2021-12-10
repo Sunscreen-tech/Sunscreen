@@ -17,13 +17,21 @@ impl CircuitNode<Unsigned> {
     }
 }
 
-#[derive(Clone, Copy, DeriveTypeName)]
+#[derive(Debug, Clone, Copy, DeriveTypeName, PartialEq)]
 /**
  * Represents a single unsigned integer encrypted as a ciphertext. Suitable for use
  * as an input or output for a Sunscreen circuit.
  */
 pub struct Unsigned {
     val: u64,
+}
+
+impl std::ops::Deref for Unsigned {
+    type Target = u64;
+
+    fn deref(&self) -> &Self::Target {
+        &self.val
+    }
 }
 
 impl FheType for Unsigned {}

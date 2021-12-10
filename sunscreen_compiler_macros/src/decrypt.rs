@@ -1,67 +1,35 @@
-use proc_macro2::TokenStream;
+use proc_macro2::{Span, TokenStream};
 use quote::quote;
 use syn::{
     parse::{Parse, ParseStream},
     parse_macro_input,
     punctuated::Punctuated,
-    Error, Expr, ExprPath, Ident, Index, Result, Token,
+    Expr, Ident, Index, Result, Token, Type,
 };
 
 pub struct DecryptArgs {
-    pub return_types: Vec<ExprPath>,
-    pub runtime_ident: Ident,
-    pub return_bundle_ident: Ident,
+    pub return_types: Vec<Type>,
+    pub runtime: Expr,
+    pub secret_key: Expr,
+    pub return_bundle: Expr,
 }
 
 impl Parse for DecryptArgs {
     fn parse(input: ParseStream) -> Result<Self> {
-        let vars = Punctuated::<Expr, Token![,]>::parse_terminated(input)?;
+        let runtime: Expr = input.parse()?;
+        input.parse::<Token![,]>()?;
+        let secret_key: Expr = input.parse()?;
+        input.parse::<Token![,]>()?;
+        let return_bundle: Expr = input.parse()?;
+        input.parse::<Token![,]>()?;
 
-        let mut runtime_ident: Option<Ident> = None;
-        let mut return_bundle_ident: Option<Ident> = None;
-        let mut return_types = vec![];
-
-        if vars.len() < 2 {
-            return Err(Error::new_spanned(
-                vars,
-                "Usage: decrypt_impl!(runtime, return_val, T1, T2, ...)",
-            ));
-        };
-
-        for (i, var) in vars.iter().enumerate() {
-            match var {
-                Expr::Path(p) => {
-                    if i == 0 {
-                        runtime_ident = Some(
-                            p.path
-                                .get_ident()
-                                .ok_or(Error::new_spanned(p, "Not a variable"))?
-                                .clone(),
-                        );
-                    } else if i == 1 {
-                        return_bundle_ident = Some(
-                            p.path
-                                .get_ident()
-                                .ok_or(Error::new_spanned(p, "Not a variable"))?
-                                .clone(),
-                        );
-                    } else {
-                        return_types.push(p.clone())
-                    }
-                }
-                _ => {
-                    return Err(Error::new_spanned(
-                        var,
-                        "Usage: decrypt_impl!(runtime, return_val, T1, T2, ...)",
-                    ));
-                }
-            };
-        }
+        let rets = Punctuated::<Type, Token![,]>::parse_terminated(input)?.iter().map(|t| t.clone()).collect();
 
         Ok(Self {
-            return_bundle_ident: return_bundle_ident.unwrap(),
-            runtime_ident: runtime_ident.unwrap(),
-            return_types: return_types,
+            runtime,
+            secret_key,
+            return_bundle,
+            return_types: rets,
         })
     }
 }
@@ -79,18 +47,57 @@ pub fn decrypt_impl(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 fn decrypt_internal(input: &DecryptArgs) -> TokenStream {
     let validate = validate_types(input);
     let return_types = &input.return_types;
+    let runtime = &input.runtime;
+    let bundle = &input.return_bundle;
+    let secret = &input.secret_key;
+
+    let return_type = if return_types.len() == 0 {
+        quote! { () }
+    } else if return_types.len() == 1 {
+        let r = &return_types[0];
+
+        quote! { #r }
+    } else {
+        quote! { (#(#return_types)*) }
+    };
+
+    let decrypt_vals = input.return_types.iter().enumerate().map(|(i, r)| {
+        let var = Ident::new(&format!("v_{}", i), Span::call_site());
+
+        quote! {
+            let #var: #r = #runtime.decrypt(&mut drain, #secret)?;
+        }
+    });
+
+    let return_val = input.return_types.iter().enumerate().map(|(i, _)| {
+        let var = Ident::new(&format!("v_{}", i), Span::call_site());
+
+        quote! {
+            #var,
+        }
+    });
+
+    let return_val = if input.return_types.len() == 1 {
+         quote! { #(#return_val)* }
+    } else {
+        quote! { (#(#return_val)*) }
+    };
 
     TokenStream::from(quote! {
-        (|| -> sunscreen_compiler::Result<(#(#return_types,)*)> {
+        (|| -> sunscreen_compiler::Result<#return_type> {
             #validate
 
-            Ok(())
+            let mut drain = #bundle.0.drain(0..);
+
+            #(#decrypt_vals)*
+
+            Ok(#return_val)
         })()
     })
 }
 
 fn validate_types(args: &DecryptArgs) -> TokenStream {
-    let runtime = &args.runtime_ident;
+    let runtime = &args.runtime;
     let return_types = &args.return_types;
 
     let validate = args.return_types.iter().enumerate().map(|(i, t)| {
@@ -98,12 +105,12 @@ fn validate_types(args: &DecryptArgs) -> TokenStream {
 
         quote! {
             if #t::type_name() != #runtime.get_metadata().signature.returns[#id] {
-                return Err(Error::ReturnMismatch(
+                Err(Error::RuntimeError(
                     RuntimeError::ReturnMismatch {
                         expected: #runtime.get_metadata().signature.returns.clone(),
                         actual: vec![#(#return_types ::type_name(),)*],
                     }
-                ));
+                ))?;
             }
         }
     });
@@ -113,14 +120,15 @@ fn validate_types(args: &DecryptArgs) -> TokenStream {
     quote! {
         (|| -> sunscreen_compiler::Result<()> {
             use sunscreen_compiler::*;
+            use sunscreen_compiler::types::TypeName;
 
             if #runtime.get_metadata().signature.returns.len() != #len {
-                return Err(Error::RuntimeError(
+                Err(Error::RuntimeError(
                     RuntimeError::ReturnMismatch {
                         expected: #runtime.get_metadata().signature.returns.clone(),
                         actual: vec![#(#return_types ::type_name(),)*],
                     }
-                ));
+                ))?;
             }
 
             #(#validate)*

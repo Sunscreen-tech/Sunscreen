@@ -2,7 +2,7 @@ use sunscreen_compiler::{types::*, *};
 use sunscreen_compiler_macros::decrypt;
 
 #[test]
-fn error_on_no_args() {
+fn can_decrypt() {
     #[circuit(scheme = "bfv")]
     fn foo(a: Unsigned, b: Unsigned) -> Unsigned {
         a + b
@@ -14,7 +14,7 @@ fn error_on_no_args() {
         .compile()
         .unwrap();
 
-    let runtime = RuntimeBuilder::new(&metadata).build().unwrap();
+    let runtime = PrivateRuntime::new(&metadata).unwrap();
 
     let (public, secret) = runtime.generate_keys().unwrap();
 
@@ -27,7 +27,9 @@ fn error_on_no_args() {
         )
         .unwrap();
 
-    let result = runtime.run(&circuit, args).unwrap();
+    let mut result = runtime.run(&circuit, args).unwrap();
 
-    decrypt!(runtime, result).unwrap();
+    let c = decrypt!(runtime, &secret, result, Unsigned).unwrap();
+
+    assert_eq!(c, 20.into());
 }

@@ -77,6 +77,12 @@ impl PrivateRuntime {
     /**
      * Generates a tuple of public/private keys for the encapsulated scheme and parameters.
      *
+     * # Remarks
+     * For some parameters, generating some public key types may fail. For example, Galois
+     * keys tend to fail creation for small parameter values. Circuits with small parameters
+     * can't require these associated keys and so long as the circuit was compiled using the
+     * search algorithm, it won't.
+     * 
      * See [`PublicKey`] for more information.
      */
     pub fn generate_keys(&self) -> Result<(PublicKey, SecretKey)> {
@@ -86,8 +92,8 @@ impl PrivateRuntime {
 
                 let public_keys = PublicKey {
                     public_key: keygen.create_public_key(),
-                    galois_key: Some(keygen.create_galois_keys()?),
-                    relin_key: Some(keygen.create_relinearization_keys()?),
+                    galois_key: keygen.create_galois_keys().ok(),
+                    relin_key: keygen.create_relinearization_keys().ok(),
                 };
 
                 (public_keys, keygen.secret_key())

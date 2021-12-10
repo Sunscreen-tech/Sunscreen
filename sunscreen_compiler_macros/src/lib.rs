@@ -61,9 +61,8 @@ pub fn circuit(
 #[proc_macro]
 /**
  * Decrypts an output parameter set using the given runtime. The first argument
- * to this macro is an identifier to a runtime. The second argument is the identifier
- * of the return bundle to decrypt. 3rd-Nth arguments are the expected return types
- * from the circuit, in order. The macro returns a `Result<sunscreen_compiler::Error>`.
+ * to this macro is an identifier to a runtime. The second argument is the secret
+ * key. The third argument is the return bundle to decrypt. 3rd-Nth arguments are the expected return types from the circuit, in order. The macro returns a `Result<sunscreen_compiler::Error>`.
  *
  * # Remarks
  * This macro validates the given types against the circuit's return interface
@@ -79,6 +78,9 @@ pub fn circuit(
  * of the circuit. Circuits that return nothing, while useless, are legal. In this case,
  * you should only pass the first two arguments. In the event of failure, this function
  * returns the underlying issue.
+ * 
+ * This function drains the ciphertext vector in the return bundle. If you need to retain
+ * the ciphertexts, you must first clone them.
  */
 pub fn decrypt(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     decrypt::decrypt_impl(input)

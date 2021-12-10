@@ -34,10 +34,11 @@ pub struct InputBundle {
     pub(crate) ciphertexts: Vec<Ciphertext>,
     pub(crate) galois_keys: Option<GaloisKeys>,
     pub(crate) relin_keys: Option<RelinearizationKeys>,
+    #[allow(dead_code)]
     pub(crate) public_keys: Option<PublicKey>,
 }
 
 /**
  * The encrypted result of running a circuit.
  */
-pub struct OutputBundle(pub(crate) Vec<Ciphertext>);
+pub struct OutputBundle(pub Vec<Ciphertext>);

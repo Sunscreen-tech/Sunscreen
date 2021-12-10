@@ -92,7 +92,7 @@ where
 pub trait FheType: TypeNameInstance + TryIntoPlaintext {}
 
 /**
- * Denotes the given type is valid under the [SchemeType::BFV](crate::SchemeType::Bfv).
+ * Denotes the given type is valid under the BFV scheme.
  */
 pub trait BfvType: FheType {}
 

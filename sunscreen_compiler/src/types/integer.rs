@@ -1,9 +1,9 @@
-use std::ops::{Add, Mul, Shl, Shr};
+use std::ops::{Add, Mul};
 
 use seal::Plaintext as SealPlaintext;
 
 use crate::{
-    types::{BfvType, CircuitNode, FheType, U64LiteralRef},
+    types::{BfvType, CircuitNode, FheType},
     Context, Params, TypeName as DeriveTypeName, CURRENT_CTX,
 };
 use sunscreen_runtime::{InnerPlaintext, Plaintext, TryFromPlaintext, TryIntoPlaintext};
@@ -52,26 +52,6 @@ impl Mul for CircuitNode<Unsigned> {
 
     fn mul(self, other: Self) -> Self {
         with_ctx(|ctx| Self::new(ctx.add_multiplication(self.id, other.id)))
-    }
-}
-
-impl Shl<u64> for CircuitNode<Unsigned> {
-    type Output = Self;
-
-    fn shl(self, n: u64) -> Self {
-        let l = U64LiteralRef::new(n);
-
-        with_ctx(|ctx| Self::new(ctx.add_rotate_left(self.id, l)))
-    }
-}
-
-impl Shr<u64> for CircuitNode<Unsigned> {
-    type Output = Self;
-
-    fn shr(self, n: u64) -> Self {
-        let l = U64LiteralRef::new(n);
-
-        with_ctx(|ctx| Self::new(ctx.add_rotate_right(self.id, l)))
     }
 }
 

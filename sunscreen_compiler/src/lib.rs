@@ -33,7 +33,7 @@ pub use error::{Error, Result};
 pub use params::PlainModulusConstraint;
 pub use sunscreen_circuit::{SchemeType, SecurityLevel};
 pub use sunscreen_compiler_macros::*;
-pub use sunscreen_runtime::{Arguments, CallSignature, CircuitMetadata, Params, RequiredKeys};
+pub use sunscreen_runtime::{Arguments, CallSignature, CircuitMetadata, Error as RuntimeError, Params, RequiredKeys, RuntimeBuilder, Runtime};
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 /**

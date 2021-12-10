@@ -1,6 +1,6 @@
 use crate::Type;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 /**
  * Represents an error that can occur in this crate.
  */
@@ -46,6 +46,21 @@ pub enum Error {
 
         /**
          * The given arguments.
+         */
+        actual: Vec<Type>
+    },
+
+    /**
+     * The given return types do not match the circuit interface.
+     */
+    ReturnMismatch { 
+        /**
+         * The return types in the call signature of the circuit.
+         */
+        expected: Vec<Type>,
+
+        /**
+         * The given return types.
          */
         actual: Vec<Type>
     }

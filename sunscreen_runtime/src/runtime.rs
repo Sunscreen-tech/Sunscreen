@@ -47,6 +47,13 @@ impl Runtime {
     }
 
     /**
+     * Returns the metadata for this runtime's associated circuit.
+     */
+    pub fn get_metadata(&self) -> &CircuitMetadata {
+        &self.metadata
+    }
+
+    /**
      * Generates Galois keys needed for SIMD rotations.
      */
     pub fn generate_galois_keys(&self, secret_key: &SecretKey) -> Result<GaloisKeys> {
@@ -84,7 +91,7 @@ impl Runtime {
         &self,
         ir: &Circuit,
         input_bundle: InputBundle,
-    ) -> Result<Vec<Ciphertext>> {
+    ) -> Result<OutputBundle> {
         ir.validate()?;
 
         // Aside from circuit correctness, check that the required keys are given.
@@ -104,9 +111,9 @@ impl Runtime {
             Context::Seal(context) => {
                 let evaluator = BFVEvaluator::new(&context)?;
 
-                Ok(unsafe {
+                Ok(OutputBundle(unsafe {
                     run_program_unchecked(ir, &input_bundle.ciphertexts, &evaluator, input_bundle.relin_keys, input_bundle.galois_keys)
-                })
+                }))
             },
         }
     }

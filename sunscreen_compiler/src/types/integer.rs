@@ -1,9 +1,9 @@
-use std::ops::{Add, Mul, Shl, Shr};
+use std::ops::{Add, Mul};
 
 use seal::Plaintext as SealPlaintext;
 
 use crate::{
-    types::{BfvType, CircuitNode, FheType, U64LiteralRef},
+    types::{BfvType, CircuitNode, FheType},
     Context, Params, TypeName as DeriveTypeName, CURRENT_CTX,
 };
 use sunscreen_runtime::{InnerPlaintext, Plaintext, TryFromPlaintext, TryIntoPlaintext};

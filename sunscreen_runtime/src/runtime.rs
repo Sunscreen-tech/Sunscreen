@@ -114,7 +114,7 @@ pub struct PublicRuntime {
     metadata: CircuitMetadata,
 
     /**
-     * The context associated with the BFV scheme. Created by [`RuntimeBuilder`].
+     * The context associated with the BFV scheme.
      */
     context: Context,
 }
@@ -196,7 +196,7 @@ impl PublicRuntime {
     }
 
     /**
-     * Encrypts the given [`FheType`] using the given public key.
+     * Encrypts the given [`FheType`](crate::FheType) using the given public key.
      *
      * Returns [`Error::ParameterMismatch`] if the plaintext is incompatible with this runtime's
      * scheme.

@@ -1,5 +1,5 @@
 use sunscreen_compiler::{
-    circuit, decrypt, types::Unsigned, Arguments, Compiler, Params, PlainModulusConstraint,
+    circuit, decrypt, encrypt, types::Unsigned, Compiler, Params, PlainModulusConstraint,
 };
 use sunscreen_runtime::PrivateRuntime;
 
@@ -63,20 +63,12 @@ fn main() {
     let (public, secret) = runtime.generate_keys().unwrap();
 
     /*
-     * Set the arguments to the circuit and encrypt them.
+     * Encrypt the values 15 and 5, which matches the circuits interface.
      */
-    let args = Arguments::new()
-        .arg(Unsigned::from(15))
-        .arg(Unsigned::from(5));
+    let args = encrypt!(runtime, &public, Unsigned::from(15), Unsigned::from(5)).unwrap();
 
-    /*
-     * Run the circuit with our encrypted ciphertexts. The first argument is, well, the circuit.
-     * The second argument is a slice of ciphertexts. The nth ciphertext corresponds to the nth
-     * paramter in our circuit. We need to pass relin keys (3rd parameter), but can omit galois
-     * keys as our circuit doesn't use rotations.
-     */
     let mut results = runtime
-        .run(&circuit, runtime.encrypt_args(&args, &public).unwrap())
+        .run(&circuit, args)
         .unwrap();
 
     /*

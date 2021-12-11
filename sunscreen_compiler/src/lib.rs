@@ -35,7 +35,7 @@ pub use sunscreen_circuit::{SchemeType, SecurityLevel};
 pub use sunscreen_compiler_macros::*;
 pub use sunscreen_runtime::{
     Arguments, CallSignature, CircuitMetadata, Error as RuntimeError, Params, PublicKey,
-    RequiredKeys, PublicRuntime, PrivateRuntime
+    RequiredKeys, PublicRuntime, PrivateRuntime, InputBundle
 };
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]

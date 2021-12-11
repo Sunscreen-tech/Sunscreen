@@ -1,8 +1,8 @@
 use sunscreen_compiler::{types::*, *};
-use sunscreen_compiler_macros::decrypt;
+use sunscreen_compiler_macros::{decrypt, encrypt};
 
 #[test]
-fn can_decrypt() {
+fn can_encrypt_decrypt() {
     #[circuit(scheme = "bfv")]
     fn foo(a: Unsigned, b: Unsigned) -> Unsigned {
         a + b
@@ -18,14 +18,7 @@ fn can_decrypt() {
 
     let (public, secret) = runtime.generate_keys().unwrap();
 
-    let args = runtime
-        .encrypt_args(
-            &Arguments::new()
-                .arg(Unsigned::from(5))
-                .arg(Unsigned::from(15)),
-            &public,
-        )
-        .unwrap();
+    let args = encrypt!(runtime, &public, Unsigned::from(5), Unsigned::from(15)).unwrap();
 
     let mut result = runtime.run(&circuit, args).unwrap();
 

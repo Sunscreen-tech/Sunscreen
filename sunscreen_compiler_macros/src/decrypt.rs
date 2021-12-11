@@ -37,11 +37,7 @@ impl Parse for DecryptArgs {
 pub fn decrypt_impl(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let parsed = parse_macro_input!(input as DecryptArgs);
 
-    let tok = decrypt_internal(&parsed).into();
-
-    //panic!("{}", tok);
-
-    tok
+    decrypt_internal(&parsed).into()
 }
 
 fn decrypt_internal(input: &DecryptArgs) -> TokenStream {

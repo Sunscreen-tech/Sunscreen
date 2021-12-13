@@ -1,6 +1,11 @@
-use proc_macro2::{TokenStream};
-use syn::{parse_macro_input, parse::{Parse, ParseStream}, punctuated::Punctuated, Expr, Token, Result};
-use quote::{quote};
+use proc_macro2::TokenStream;
+use quote::quote;
+use syn::{
+    parse::{Parse, ParseStream},
+    parse_macro_input,
+    punctuated::Punctuated,
+    Expr, Result, Token,
+};
 
 pub struct EncryptArgs {
     pub runtime: Expr,
@@ -14,13 +19,16 @@ impl Parse for EncryptArgs {
         input.parse::<Token![,]>()?;
         let public_key: Expr = input.parse()?;
         input.parse::<Token![,]>()?;
-        
-        let args = Punctuated::<Expr, Token![,]>::parse_terminated(input)?.iter().map(|t| t.clone()).collect();
+
+        let args = Punctuated::<Expr, Token![,]>::parse_terminated(input)?
+            .iter()
+            .map(|t| t.clone())
+            .collect();
 
         Ok(Self {
             runtime,
             public_key,
-            args
+            args,
         })
     }
 }
@@ -49,7 +57,7 @@ pub fn encrypt_internal(parsed: &EncryptArgs) -> TokenStream {
     TokenStream::from(quote! {
         (|| -> sunscreen_compiler::Result<sunscreen_compiler::InputBundle> {
             use sunscreen_compiler::*;
-    
+
             #gen_arguments
             #(#add_args)*;
 

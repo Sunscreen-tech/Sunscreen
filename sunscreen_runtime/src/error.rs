@@ -40,7 +40,7 @@ pub enum Error {
     /**
      * The given arguments do not match the call signature of the circuit.
      */
-    ArgumentMismatch { 
+    ArgumentMismatch {
         /**
          * The arguments in the call signature of the circuit.
          */
@@ -49,13 +49,13 @@ pub enum Error {
         /**
          * The given arguments.
          */
-        actual: Vec<Type>
+        actual: Vec<Type>,
     },
 
     /**
      * The given return types do not match the circuit interface.
      */
-    ReturnMismatch { 
+    ReturnMismatch {
         /**
          * The return types in the call signature of the circuit.
          */
@@ -64,7 +64,7 @@ pub enum Error {
         /**
          * The given return types.
          */
-        actual: Vec<Type>
+        actual: Vec<Type>,
     },
 }
 

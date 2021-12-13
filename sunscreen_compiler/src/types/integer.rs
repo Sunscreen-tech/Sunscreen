@@ -94,11 +94,13 @@ impl TryIntoPlaintext for Unsigned {
 impl TryFromPlaintext for Unsigned {
     fn try_from_plaintext<I>(
         plaintexts: &mut I,
-        _params: &Params,
-    ) -> std::result::Result<Self, sunscreen_runtime::Error> 
-    where I: Iterator<Item=sunscreen_runtime::Result<Plaintext>>
+    ) -> std::result::Result<Self, sunscreen_runtime::Error>
+    where
+        I: Iterator<Item = sunscreen_runtime::Plaintext>,
     {
-        let p = plaintexts.next().ok_or(sunscreen_runtime::Error::IncorrectCiphertextCount)??;
+        let p = plaintexts
+            .next()
+            .ok_or(sunscreen_runtime::Error::IncorrectCiphertextCount)?;
 
         let val = match p.inner {
             InnerPlaintext::Seal(p) => {

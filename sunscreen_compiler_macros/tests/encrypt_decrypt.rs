@@ -1,5 +1,4 @@
 use sunscreen_compiler::{types::*, *};
-use sunscreen_compiler_macros::{decrypt, encrypt};
 
 #[test]
 fn can_encrypt_decrypt() {
@@ -14,15 +13,21 @@ fn can_encrypt_decrypt() {
         .compile()
         .unwrap();
 
-    let runtime = PrivateRuntime::new(&metadata).unwrap();
+    let runtime = Runtime::new(&metadata).unwrap();
 
     let (public, secret) = runtime.generate_keys().unwrap();
 
-    let args = encrypt!(runtime, &public, Unsigned::from(5), Unsigned::from(15)).unwrap();
+    let args = runtime
+        .encrypt_args(
+            &FooInterface::args(Unsigned::from(5), Unsigned::from(15)),
+            &public,
+        )
+        .unwrap();
 
-    let mut result = runtime.run(&circuit, args).unwrap();
+    let result = runtime.run(&circuit, args).unwrap();
 
-    let c = decrypt!(runtime, &secret, result, Unsigned).unwrap();
+    let c =
+        FooInterface::return_value(runtime.decrypt_return_value(result, &secret).unwrap()).unwrap();
 
     assert_eq!(c, 20.into());
 }

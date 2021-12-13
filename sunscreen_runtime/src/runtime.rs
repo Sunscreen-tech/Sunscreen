@@ -2,7 +2,7 @@ use crate::args::*;
 use crate::error::*;
 use crate::metadata::*;
 use crate::{
-    run_program_unchecked, InnerPlaintext, Plaintext, PublicKey, TryFromPlaintext, TryIntoPlaintext,
+    run_program_unchecked, InnerPlaintext, Plaintext, PublicKey, TryIntoPlaintext,
 };
 use sunscreen_circuit::{Circuit, SchemeType};
 
@@ -11,42 +11,31 @@ use seal::{
     Encryptor, KeyGenerator, Modulus, SecretKey,
 };
 
-use std::vec::Drain;
-
 enum Context {
     Seal(SealContext),
 }
 
 /**
- * A private runtime is one that can perform both operations that require
- * a secret key and operations that require a public key.
+ * Contains all the elements needed to encrypt, decrypt, generate keys, and evaluate circuits.
  */
-pub struct PrivateRuntime {
-    public_runtime: PublicRuntime,
-}
-
-impl std::ops::Deref for PrivateRuntime {
-    type Target = PublicRuntime;
-
-    fn deref(&self) -> &Self::Target {
-        &self.public_runtime
-    }
-}
-
-impl PrivateRuntime {
+pub struct Runtime {
     /**
-     * Creates a new [`PrivateRuntime`].
+     * The parameters used to construct the scheme used in this runtime.
      */
-    pub fn new(metadata: &CircuitMetadata) -> Result<Self> {
-        Ok(Self {
-            public_runtime: PublicRuntime::new(metadata)?,
-        })
-    }
+    metadata: CircuitMetadata,
 
+    /**
+     * The context associated with the BFV scheme.
+     */
+    context: Context,
+}
+
+impl Runtime {
     /**
      * Decrypts the given ciphertext using the given secret key.
      */
-    pub fn decrypt<P: TryFromPlaintext>(
+    /*
+    pub fn _decrypt<P: TryFromPlaintext>(
         &self,
         ciphertexts: &mut Drain<Ciphertext>,
         secret_key: &SecretKey,
@@ -67,7 +56,38 @@ impl PrivateRuntime {
                         }
                     });
 
-                P::try_from_plaintext(&mut plaintext, &self.metadata.params)?
+                P::try_from_plaintext(&mut plaintext)?
+            }
+        };
+
+        Ok(val)
+    }*/
+
+    /**
+     * Decrypts a circuit's output, returning the unprocessed decrypted output.
+     */
+    pub fn decrypt_return_value(
+        &self,
+        output_bundle: OutputBundle,
+        secret_key: &SecretKey,
+    ) -> Result<DecryptedOutput> {
+        let val = match &self.context {
+            Context::Seal(context) => {
+                let decryptor = Decryptor::new(&context, secret_key)?;
+
+                DecryptedOutput(
+                    output_bundle
+                        .0
+                        .iter()
+                        .map(|c| match decryptor.decrypt(&c) {
+                            Ok(p) => Ok(Plaintext {
+                                params: self.metadata.params.clone(),
+                                inner: InnerPlaintext::Seal(p),
+                            }),
+                            Err(e) => Err(Error::from(e)),
+                        })
+                        .collect::<Result<Vec<Plaintext>>>()?,
+                )
             }
         };
 
@@ -82,7 +102,7 @@ impl PrivateRuntime {
      * keys tend to fail creation for small parameter values. Circuits with small parameters
      * can't require these associated keys and so long as the circuit was compiled using the
      * search algorithm, it won't.
-     * 
+     *
      * See [`PublicKey`] for more information.
      */
     pub fn generate_keys(&self) -> Result<(PublicKey, SecretKey)> {
@@ -102,27 +122,9 @@ impl PrivateRuntime {
 
         Ok(keys)
     }
-}
-
-/**
- * Contains all the elements needed to encrypt, decrypt, generate keys, and evaluate circuits.
- */
-pub struct PublicRuntime {
-    /**
-     * The parameters used to construct the scheme used in this runtime.
-     */
-    metadata: CircuitMetadata,
 
     /**
-     * The context associated with the BFV scheme.
-     */
-    context: Context,
-}
-
-impl PublicRuntime {
-    /**
-     * Create a new Public Runtime. A public runtime is capable of doing cryptographic operations
-     * that involve only public keys.
+     * Create a new Runtime.
      */
     pub fn new(metadata: &CircuitMetadata) -> Result<Self> {
         match metadata.params.scheme_type {

@@ -1,7 +1,7 @@
 use sunscreen_compiler::{
-    circuit, decrypt, encrypt, types::Unsigned, Compiler, Params, PlainModulusConstraint,
+    circuit, types::Unsigned, Compiler, Params, PlainModulusConstraint,
 };
-use sunscreen_runtime::PrivateRuntime;
+use sunscreen_runtime::Runtime;
 
 /**
  * The #[circuit] macro indicates this function represents a homomorphic encryption
@@ -53,7 +53,7 @@ fn main() {
      * Next, we construct a runtime. The runtime provides the APIs for encryption, decryption, and
      * running a circuit.
      */
-    let runtime = PrivateRuntime::new(&params).unwrap();
+    let runtime = Runtime::new(&params).unwrap();
 
     /*
      * Generate a public and private key pair. Normally, Alice would do this, sending the public
@@ -68,27 +68,33 @@ fn main() {
      * are the actual arguments to the circuit. This macro is variadic;
      * circuits that take more arguments require more parameters.
      */
-    let args = encrypt!(runtime, &public, Unsigned::from(15), Unsigned::from(5)).unwrap();
+    let args = runtime
+        .encrypt_args(
+            &SimpleMultiplyInterface::args(Unsigned::from(15), Unsigned::from(5)),
+            &public,
+        )
+        .unwrap();
 
     /*
      * Run the circuit with our arguments. This produces a results
      * bundle containing the encrypted outputs of the circuit.
      */
-    let mut results = runtime
-        .run(&circuit, args)
-        .unwrap();
+    let results = runtime.run(&circuit, args).unwrap();
 
     /*
      * Our circuit produces a single `Unsigned` output. The decrypt
      * macro takes a runtime, secret key, and results bundle as the
      * first three arguments. The macro is variadic and the remaining
      * arguments are the types of the circuit's outputs.
-     * 
+     *
      * The decrypt macro validates the types we pass match the
      * circuit's return types. We need to pass these so types so
-     * the compiler can ensure the return type is known at compile time. 
+     * the compiler can ensure the return type is known at compile time.
      */
-    let c = decrypt!(runtime, &secret, results, Unsigned).unwrap();
+    let c = SimpleMultiplyInterface::return_value(
+        runtime.decrypt_return_value(results, &secret).unwrap(),
+    )
+    .unwrap();
 
     /*
      * Yay, 5 * 15 indeed equals 75.

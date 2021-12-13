@@ -79,7 +79,7 @@ pub fn circuit(
  * of the circuit. Circuits that return nothing, while useless, are legal. In this case,
  * you should only pass the first two arguments. In the event of failure, this function
  * returns the underlying issue.
- * 
+ *
  * This function drains the ciphertext vector in the return bundle. If you need to retain
  * the ciphertexts, you must first clone them.
  */
@@ -91,7 +91,7 @@ pub fn decrypt(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 /**
  * Encrypts arguments 3-N. The first argument is a runtime, while the second argument is
  * the public key with which to perform encryption.
- * 
+ *
  * # Remarks
  * The remaining arguments will be validated against the CircuitMetadata backing the runtime,
  * encrypted, and bundled into a serializable package suitable for running a circuit.

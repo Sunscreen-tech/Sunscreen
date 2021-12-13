@@ -1,4 +1,4 @@
-use crate::FheType;
+use crate::{FheType, Plaintext};
 use seal::{Ciphertext, GaloisKeys, PublicKey, RelinearizationKeys};
 
 /**
@@ -42,3 +42,8 @@ pub struct InputBundle {
  * The encrypted result of running a circuit.
  */
 pub struct OutputBundle(pub Vec<Ciphertext>);
+
+/**
+ * The decrypted, but undecoded result of running a circuit.
+ */
+pub struct DecryptedOutput(pub Vec<Plaintext>);

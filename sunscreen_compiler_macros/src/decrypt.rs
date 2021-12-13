@@ -23,7 +23,10 @@ impl Parse for DecryptArgs {
         let return_bundle: Expr = input.parse()?;
         input.parse::<Token![,]>()?;
 
-        let rets = Punctuated::<Type, Token![,]>::parse_terminated(input)?.iter().map(|t| t.clone()).collect();
+        let rets = Punctuated::<Type, Token![,]>::parse_terminated(input)?
+            .iter()
+            .map(|t| t.clone())
+            .collect();
 
         Ok(Self {
             runtime,
@@ -74,7 +77,7 @@ fn decrypt_internal(input: &DecryptArgs) -> TokenStream {
     });
 
     let return_val = if input.return_types.len() == 1 {
-         quote! { #(#return_val)* }
+        quote! { #(#return_val)* }
     } else {
         quote! { (#(#return_val)*) }
     };

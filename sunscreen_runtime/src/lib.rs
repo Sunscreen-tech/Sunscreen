@@ -18,8 +18,8 @@ pub use crate::metadata::*;
 pub use run::*;
 pub use runtime::*;
 
-use serde::Serialize;
 use seal::Plaintext as SealPlaintext;
+use serde::Serialize;
 
 #[derive(Debug, Serialize)]
 /**
@@ -80,10 +80,11 @@ where
     Self: Sized,
 {
     /**
-     * Attempts to turn a [`Plaintext`] into `Self`. On success, returns 
+     * Attempts to turn a [`Plaintext`] into `Self`. On success, returns
      */
-    fn try_from_plaintext<I>(plaintexts: &mut I, params: &Params) -> Result<Self>
-    where I: Iterator<Item=Result<Plaintext>>;
+    fn try_from_plaintext<I>(plaintexts: &mut I) -> Result<Self>
+    where
+        I: Iterator<Item = Plaintext>;
 }
 
 /**

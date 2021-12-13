@@ -11,7 +11,7 @@ use std::collections::HashMap;
 
 pub struct Attrs {
     pub scheme: Scheme,
-    pub interface_file: Option<String>
+    pub interface_file: Option<String>,
 }
 
 impl Parse for Attrs {

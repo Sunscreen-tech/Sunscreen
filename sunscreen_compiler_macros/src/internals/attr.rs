@@ -11,6 +11,7 @@ use std::collections::HashMap;
 
 pub struct Attrs {
     pub scheme: Scheme,
+    pub interface_file: Option<String>
 }
 
 impl Parse for Attrs {
@@ -82,10 +83,16 @@ impl Parse for Attrs {
                 "`scheme` requires a value".to_owned(),
             ))?;
 
+        let interface_file = attrs
+            .get("interface_file")
+            .map(|s| s.to_owned())
+            .unwrap_or(None);
+
         Ok(Self {
             scheme: Scheme::parse(&scheme_type).map_err(|_e| {
                 Error::new_spanned(vars, format!("Unknown variant {}", &scheme_type))
             })?,
+            interface_file: interface_file,
         })
     }
 }

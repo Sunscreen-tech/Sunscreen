@@ -18,8 +18,8 @@ enum Context {
 }
 
 /**
- * A private runtime is one that can perform operations that require either a public or
- * secret key.
+ * A private runtime is one that can perform both operations that require
+ * a secret key and operations that require a public key.
  */
 pub struct PrivateRuntime {
     public_runtime: PublicRuntime,

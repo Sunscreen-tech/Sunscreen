@@ -1,8 +1,9 @@
 use crate::internals::{attr::Attrs, case::Scheme};
+use convert_case::{Case, Casing};
 use proc_macro2::{Span, TokenStream};
 use quote::{quote, quote_spanned};
 use syn::{
-    parse_macro_input, spanned::Spanned, FnArg, Ident, Index, ItemFn, Pat, ReturnType, Type,
+    parse_macro_input, spanned::Spanned, FnArg, Ident, Index, ItemFn, Pat, ReturnType, Type, punctuated::Punctuated, Token
 };
 
 pub fn circuit_impl(
@@ -87,47 +88,9 @@ pub fn circuit_impl(
         }
     });
 
-    let capture_outputs = match ret {
-        ReturnType::Type(_, t) => {
-            let tuple_inners = match &**t {
-                Type::Tuple(t) => t.elems.iter().map(|x| &*x).collect::<Vec<&Type>>(),
-                Type::Paren(t) => {
-                    vec![&*t.elem]
-                }
-                Type::Path(_) => {
-                    vec![&**t]
-                }
-                _ => {
-                    return proc_macro::TokenStream::from(quote! {
-                        compile_error!("Circuits must return a single Cipthertext or a tuple of Ciphertexts");
-                    });
-                }
-            };
+    let catpured_outputs = capture_outputs(ret);
 
-            if tuple_inners.len() == 1 {
-                quote_spanned! {tuple_inners[0].span() =>
-                    v.output();
-                }
-            } else {
-                tuple_inners
-                    .iter()
-                    .enumerate()
-                    .map(|(i, t)| {
-                        let index = Index::from(i);
-
-                        quote_spanned! {t.span() =>
-                            v.#index.output();
-                        }
-                    })
-                    .collect()
-            }
-        }
-        ReturnType::Default => {
-            quote! {}
-        }
-    };
-
-    let foo = proc_macro::TokenStream::from(quote! {
+    proc_macro::TokenStream::from(quote! {
         #(#attrs)*
         #vis fn #circuit_name() -> (
             sunscreen_compiler::SchemeType,
@@ -163,7 +126,7 @@ pub fn circuit_impl(
                     });
 
                     match panic_res {
-                        Ok(v) => { #capture_outputs },
+                        Ok(v) => { #catpured_outputs },
                         Err(err) => {
                             ctx.swap(&RefCell::new(None));
                             std::panic::resume_unwind(err)
@@ -180,11 +143,82 @@ pub fn circuit_impl(
 
             (#scheme_type, circuit_builder, signature)
         }
+    })
+}
+
+fn emit_encoder(
+    circuit_name: &str,
+    inputs: &[(&syn::PatType, &proc_macro2::Ident)],
+    ret: &ReturnType
+) -> TokenStream {
+    let struct_name = Ident::new(&format!("{}Interface", circuit_name.to_case(Case::Pascal)), Span::call_site());
+
+    let arguments = inputs.iter().map(|(t, ident)| {
+        quote_spanned! { t.span()=>
+            .arg(#ident)
+        }
     });
 
-    // panic!("{}", foo);
+    let fn_args = inputs.iter().map(|(t, _)| {
+        quote! {
+            #t,
+        }
+    }).collect::<Vec<TokenStream>>();
 
-    foo
+    quote! {
+        pub struct #struct_name;
+
+        impl #struct_name {
+            fn args(#(#fn_args)*) -> sunscreen_compiler::Arguments {
+                sunscreen_compiler::Arguments::new()
+                    #(#arguments)*
+            }
+        }
+    }
+
+    
+}
+
+fn capture_outputs(ret: &ReturnType) -> TokenStream {
+    match ret {
+        ReturnType::Type(_, t) => {
+            let tuple_inners = match &**t {
+                Type::Tuple(t) => t.elems.iter().map(|x| &*x).collect::<Vec<&Type>>(),
+                Type::Paren(t) => {
+                    vec![&*t.elem]
+                }
+                Type::Path(_) => {
+                    vec![&**t]
+                }
+                _ => {
+                    return TokenStream::from(quote! {
+                        compile_error!("Circuits must return a single Cipthertext or a tuple of Ciphertexts");
+                    });
+                }
+            };
+
+            if tuple_inners.len() == 1 {
+                quote_spanned! {tuple_inners[0].span() =>
+                    v.output();
+                }
+            } else {
+                tuple_inners
+                    .iter()
+                    .enumerate()
+                    .map(|(i, t)| {
+                        let index = Index::from(i);
+
+                        quote_spanned! {t.span() =>
+                            v.#index.output();
+                        }
+                    })
+                    .collect()
+            }
+        }
+        ReturnType::Default => {
+            quote! {}
+        }
+    }
 }
 
 fn create_signature(args: &[&Type], ret: &ReturnType) -> TokenStream {

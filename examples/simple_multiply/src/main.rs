@@ -9,9 +9,8 @@ use sunscreen_runtime::PrivateRuntime;
  * the result. Circuits may take any number of parameters and return either a single result
  * or a tuple of results.
  *
- * Currently, the Unsigned type is the only legal type in circuit parameters and return values,
- * which serves as a placeholder that allows the compiler to build up the circuit. Don't attach
- * much meaning to it in its current form; this example in fact uses unsigned values!
+ * The unsigned type refers to an unsigned integer modulo the plaintext
+ * modulus (p). p is passed to the compiler via plain_modulus_constraint.
  *
  * One takes a circuit and passes them to the compiler, which transforms it into a form
  * suitable for execution.
@@ -63,17 +62,31 @@ fn main() {
     let (public, secret) = runtime.generate_keys().unwrap();
 
     /*
-     * Encrypt the values 15 and 5, which matches the circuits interface.
+     * Our circuit accepts 2 `Unsigned` types and adds them together.
+     * The encrypt macro takes a runtime and public key as its first 2
+     * arguments to faciliation encryption, and the remaining arguments
+     * are the actual arguments to the circuit. This macro is variadic;
+     * circuits that take more arguments require more parameters.
      */
     let args = encrypt!(runtime, &public, Unsigned::from(15), Unsigned::from(5)).unwrap();
 
+    /*
+     * Run the circuit with our arguments. This produces a results
+     * bundle containing the encrypted outputs of the circuit.
+     */
     let mut results = runtime
         .run(&circuit, args)
         .unwrap();
 
     /*
-     * Our circuit produces a single output rather than a tuple, so the resulting Vec should contain
-     * exactly one value.
+     * Our circuit produces a single `Unsigned` output. The decrypt
+     * macro takes a runtime, secret key, and results bundle as the
+     * first three arguments. The macro is variadic and the remaining
+     * arguments are the types of the circuit's outputs.
+     * 
+     * The decrypt macro validates the types we pass match the
+     * circuit's return types. We need to pass these so types so
+     * the compiler can ensure the return type is known at compile time. 
      */
     let c = decrypt!(runtime, &secret, results, Unsigned).unwrap();
 

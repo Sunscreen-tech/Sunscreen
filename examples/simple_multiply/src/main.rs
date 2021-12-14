@@ -51,7 +51,7 @@ fn main() {
      * Next, we construct a runtime. The runtime provides the APIs for encryption, decryption, and
      * running a circuit.
      */
-    let runtime = Runtime::new(&circuit.metadata).unwrap();
+    let runtime = Runtime::new(&circuit.metadata.params).unwrap();
 
     /*
      * Generate a public and private key pair. Normally, Alice would do this, sending the public

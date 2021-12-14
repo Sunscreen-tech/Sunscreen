@@ -199,7 +199,7 @@ where
         // We already checked for errors at the start of this function. This should be
         // well-behaved.
         let outputs =
-            unsafe { run_program_unchecked(&ir, &inputs, &evaluator, relin_keys, galois_keys) };
+            unsafe { run_program_unchecked(&ir, &inputs, &evaluator, &relin_keys, &galois_keys) };
 
         for (i, o) in outputs.iter().enumerate() {
             let noise_budget = decryptor.invariant_noise_budget(&o).unwrap();

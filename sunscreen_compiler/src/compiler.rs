@@ -3,7 +3,7 @@ use crate::{
     CallSignature, CircuitMetadata, Error, FrontendCompilation, Params, RequiredKeys, Result,
     SchemeType, SecurityLevel,
 };
-use sunscreen_circuit::Circuit;
+use sunscreen_runtime::CompiledCircuit;
 
 #[derive(Debug, Clone)]
 enum ParamsMode {
@@ -88,10 +88,10 @@ where
     }
 
     /**
-     * Comile the circuit. If successful, returns a tuple of the [`Circuit`] and the [`Params`] suitable
+     * Comile the circuit. If successful, returns a tuple of the [`Circuit`](crate::Circuit) and the [`Params`] suitable
      * for running it.
      */
-    pub fn compile(self) -> Result<(Circuit, CircuitMetadata)> {
+    pub fn compile(self) -> Result<CompiledCircuit> {
         let (scheme, circuit_fn, signature) = (self.circuit)();
         let (circuit, params) = match self.params_mode {
             ParamsMode::Manual(p) => (circuit_fn(&p), p.clone()),
@@ -130,6 +130,6 @@ where
             signature,
         };
 
-        Ok((circuit, metadata))
+        Ok(CompiledCircuit { circuit, metadata })
     }
 }

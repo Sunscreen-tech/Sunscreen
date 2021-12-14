@@ -1,7 +1,5 @@
-use sunscreen_compiler::{
-    circuit, decrypt, encrypt, types::Unsigned, Compiler, Params, PlainModulusConstraint,
-};
-use sunscreen_runtime::PrivateRuntime;
+use sunscreen_compiler::{circuit, types::Unsigned, Compiler, Params, PlainModulusConstraint};
+use sunscreen_runtime::Runtime;
 
 /**
  * The #[circuit] macro indicates this function represents a homomorphic encryption
@@ -9,9 +7,8 @@ use sunscreen_runtime::PrivateRuntime;
  * the result. Circuits may take any number of parameters and return either a single result
  * or a tuple of results.
  *
- * Currently, the Unsigned type is the only legal type in circuit parameters and return values,
- * which serves as a placeholder that allows the compiler to build up the circuit. Don't attach
- * much meaning to it in its current form; this example in fact uses unsigned values!
+ * The unsigned type refers to an unsigned integer modulo the plaintext
+ * modulus (p). p is passed to the compiler via plain_modulus_constraint.
  *
  * One takes a circuit and passes them to the compiler, which transforms it into a form
  * suitable for execution.
@@ -44,7 +41,7 @@ fn main() {
      * Afterwards, we simply compile and assert the compilation succeeds by calling unwrap. Compilation
      * returns the compiled circuit and parameters.
      */
-    let (circuit, params) = Compiler::with_circuit(simple_multiply)
+    let circuit = Compiler::with_circuit(simple_multiply)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(600))
         .noise_margin_bits(5)
         .compile()
@@ -54,7 +51,7 @@ fn main() {
      * Next, we construct a runtime. The runtime provides the APIs for encryption, decryption, and
      * running a circuit.
      */
-    let runtime = PrivateRuntime::new(&params).unwrap();
+    let runtime = Runtime::new(&circuit.metadata).unwrap();
 
     /*
      * Generate a public and private key pair. Normally, Alice would do this, sending the public
@@ -62,20 +59,19 @@ fn main() {
      */
     let (public, secret) = runtime.generate_keys().unwrap();
 
-    /*
-     * Encrypt the values 15 and 5, which matches the circuits interface.
-     */
-    let args = encrypt!(runtime, &public, Unsigned::from(15), Unsigned::from(5)).unwrap();
-
-    let mut results = runtime
-        .run(&circuit, args)
-        .unwrap();
+    let a = runtime.encrypt(Unsigned::from(15), &public).unwrap();
+    let b = runtime.encrypt(Unsigned::from(5), &public).unwrap();
 
     /*
-     * Our circuit produces a single output rather than a tuple, so the resulting Vec should contain
-     * exactly one value.
+     * Run the circuit with our arguments. This produces a results
+     * bundle containing the encrypted outputs of the circuit.
      */
-    let c = decrypt!(runtime, &secret, results, Unsigned).unwrap();
+    let results = runtime.run(&circuit, vec![a, b], &public).unwrap();
+
+    /*
+     * Our circuit outputs a Unsigned single value as the result. Decrypt it.
+     */
+    let c: Unsigned = runtime.decrypt(&results[0], &secret).unwrap();
 
     /*
      * Yay, 5 * 15 indeed equals 75.

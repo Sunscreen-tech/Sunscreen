@@ -32,6 +32,7 @@ fn circuit_gets_called() {
     let expected_signature = CallSignature {
         arguments: vec![],
         returns: vec![],
+        num_ciphertexts: vec![],
     };
 
     assert_eq!(signature, expected_signature);
@@ -62,6 +63,7 @@ fn panicing_circuit_clears_ctx() {
         let expected_signature = CallSignature {
             arguments: vec![],
             returns: vec![],
+            num_ciphertexts: vec![],
         };
 
         assert_eq!(signature, expected_signature);
@@ -105,6 +107,7 @@ fn capture_circuit_input_args() {
             type_name.clone(),
         ],
         returns: vec![],
+        num_ciphertexts: vec![],
     };
 
     assert_eq!(expected_signature, signature);
@@ -128,6 +131,7 @@ fn can_add() {
     let expected_signature = CallSignature {
         arguments: vec![type_name.clone(), type_name.clone(), type_name.clone()],
         returns: vec![],
+        num_ciphertexts: vec![],
     };
     assert_eq!(signature, expected_signature);
     assert_eq!(scheme, SchemeType::Bfv);
@@ -191,6 +195,7 @@ fn can_mul() {
     let expected_signature = CallSignature {
         arguments: vec![type_name.clone(), type_name.clone(), type_name.clone()],
         returns: vec![],
+        num_ciphertexts: vec![],
     };
     assert_eq!(signature, expected_signature);
     assert_eq!(scheme, SchemeType::Bfv);
@@ -253,6 +258,7 @@ fn can_collect_output() {
     let expected_signature = CallSignature {
         arguments: vec![type_name.clone(), type_name.clone()],
         returns: vec![type_name.clone()],
+        num_ciphertexts: vec![1],
     };
     assert_eq!(signature, expected_signature);
     assert_eq!(scheme, SchemeType::Bfv);
@@ -320,6 +326,7 @@ fn can_collect_multiple_outputs() {
     let expected_signature = CallSignature {
         arguments: vec![type_name.clone(), type_name.clone()],
         returns: vec![type_name.clone(), type_name.clone()],
+        num_ciphertexts: vec![1, 1],
     };
     assert_eq!(signature, expected_signature);
     assert_eq!(scheme, SchemeType::Bfv);

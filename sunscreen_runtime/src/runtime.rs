@@ -1,73 +1,64 @@
-use crate::args::*;
 use crate::error::*;
 use crate::metadata::*;
 use crate::{
-    run_program_unchecked, InnerPlaintext, Plaintext, PublicKey, TryFromPlaintext, TryIntoPlaintext,
+    run_program_unchecked, Ciphertext, InnerCiphertext, InnerPlaintext, Plaintext, PublicKey,
+    SealCiphertext, SealPlaintext, TryFromPlaintext, TryIntoPlaintext, TypeName,
 };
-use sunscreen_circuit::{Circuit, SchemeType};
+use sunscreen_circuit::{SchemeType};
 
 use seal::{
-    BFVEvaluator, BfvEncryptionParametersBuilder, Ciphertext, Context as SealContext, Decryptor,
-    Encryptor, KeyGenerator, Modulus, SecretKey,
+    BFVEvaluator, BfvEncryptionParametersBuilder, Context as SealContext, Decryptor, Encryptor,
+    KeyGenerator, Modulus, SecretKey,
 };
-
-use std::vec::Drain;
 
 enum Context {
     Seal(SealContext),
 }
 
 /**
- * A private runtime is one that can perform operations that require either a public or
- * secret key.
+ * Contains all the elements needed to encrypt, decrypt, generate keys, and evaluate circuits.
  */
-pub struct PrivateRuntime {
-    public_runtime: PublicRuntime,
-}
-
-impl std::ops::Deref for PrivateRuntime {
-    type Target = PublicRuntime;
-
-    fn deref(&self) -> &Self::Target {
-        &self.public_runtime
-    }
-}
-
-impl PrivateRuntime {
+pub struct Runtime {
     /**
-     * Creates a new [`PrivateRuntime`].
+     * The parameters used to construct the scheme used in this runtime.
      */
-    pub fn new(metadata: &CircuitMetadata) -> Result<Self> {
-        Ok(Self {
-            public_runtime: PublicRuntime::new(metadata)?,
-        })
-    }
+    metadata: CircuitMetadata,
 
     /**
-     * Decrypts the given ciphertext using the given secret key.
+     * The context associated with the BFV scheme.
      */
-    pub fn decrypt<P: TryFromPlaintext>(
-        &self,
-        ciphertexts: &mut Drain<Ciphertext>,
-        secret_key: &SecretKey,
-    ) -> Result<P> {
-        let val = match &self.context {
-            Context::Seal(context) => {
+    context: Context,
+}
+
+impl Runtime {
+    /**
+     * Decrypts the given ciphertext into the type P.
+     */
+    pub fn decrypt<P>(&self, ciphertext: &Ciphertext, secret_key: &SecretKey) -> Result<P>
+    where
+        P: TryFromPlaintext + TypeName,
+    {
+        let expected_type = P::type_name();
+
+        if expected_type != ciphertext.data_type {
+            return Err(Error::TypeMismatch {
+                expected: expected_type,
+                actual: ciphertext.data_type.clone(),
+            });
+        }
+
+        let val = match (&self.context, &ciphertext.inner) {
+            (Context::Seal(context), InnerCiphertext::Seal(ciphertexts)) => {
                 let decryptor = Decryptor::new(&context, secret_key)?;
 
-                let mut plaintext = ciphertexts
-                    .map(|c| decryptor.decrypt(&c))
-                    .map(|p| {
-                        match p {
-                            Ok(p) => Ok(Plaintext {
-                                params: self.metadata.params.clone(),
-                                inner: InnerPlaintext::Seal(p),
-                            }),
-                            Err(e) => Err(Error::from(e))
-                        }
-                    });
+                let plaintexts = ciphertexts
+                    .iter()
+                    .map(|c| decryptor.decrypt(c).map_err(|e| Error::SealError(e)))
+                    .collect::<Result<Vec<SealPlaintext>>>()?;
 
-                P::try_from_plaintext(&mut plaintext, &self.metadata.params)?
+                P::try_from_plaintext(&Plaintext {
+                    inner: InnerPlaintext::Seal(plaintexts),
+                })?
             }
         };
 
@@ -82,7 +73,7 @@ impl PrivateRuntime {
      * keys tend to fail creation for small parameter values. Circuits with small parameters
      * can't require these associated keys and so long as the circuit was compiled using the
      * search algorithm, it won't.
-     * 
+     *
      * See [`PublicKey`] for more information.
      */
     pub fn generate_keys(&self) -> Result<(PublicKey, SecretKey)> {
@@ -102,27 +93,9 @@ impl PrivateRuntime {
 
         Ok(keys)
     }
-}
-
-/**
- * Contains all the elements needed to encrypt, decrypt, generate keys, and evaluate circuits.
- */
-pub struct PublicRuntime {
-    /**
-     * The parameters used to construct the scheme used in this runtime.
-     */
-    metadata: CircuitMetadata,
 
     /**
-     * The context associated with the BFV scheme.
-     */
-    context: Context,
-}
-
-impl PublicRuntime {
-    /**
-     * Create a new Public Runtime. A public runtime is capable of doing cryptographic operations
-     * that involve only public keys.
+     * Create a new Runtime.
      */
     pub fn new(metadata: &CircuitMetadata) -> Result<Self> {
         match metadata.params.scheme_type {
@@ -162,35 +135,90 @@ impl PublicRuntime {
      * Validates and runs the given circuit. Unless you can guarantee your circuit is valid,
      * you should use this method rather than [`run_program_unchecked`].
      */
-    pub fn run(&self, ir: &Circuit, input_bundle: InputBundle) -> Result<OutputBundle> {
-        ir.validate()?;
+    pub fn run(
+        &self,
+        circuit: &CompiledCircuit,
+        mut arguments: Vec<Ciphertext>,
+        public_key: &PublicKey,
+    ) -> Result<Vec<Ciphertext>> {
+        circuit.circuit.validate()?;
 
         // Aside from circuit correctness, check that the required keys are given.
-        if input_bundle.relin_keys.is_none() && ir.requires_relin_keys() {
+        if public_key.relin_key.is_none() && circuit.circuit.requires_relin_keys() {
             return Err(Error::MissingRelinearizationKeys);
         }
 
-        if input_bundle.galois_keys.is_none() && ir.requires_galois_keys() {
+        if public_key.galois_key.is_none() && circuit.circuit.requires_galois_keys() {
             return Err(Error::MissingGaloisKeys);
         }
 
-        if ir.num_inputs() != input_bundle.ciphertexts.len() {
+        let expected_args = &circuit.metadata.signature.arguments;
+
+        if expected_args.len() != arguments.len() {
             return Err(Error::IncorrectCiphertextCount);
+        }
+
+        if arguments
+            .iter()
+            .enumerate()
+            .any(|(i, a)| a.data_type != expected_args[i])
+        {
+            return Err(Error::ArgumentMismatch {
+                expected: expected_args.clone(),
+                actual: arguments.iter().map(|a| a.data_type.clone()).collect(),
+            });
+        }
+
+        if circuit.metadata.signature.num_ciphertexts.len()
+            != circuit.metadata.signature.returns.len()
+        {
+            return Err(Error::ReturnTypeMetadataError);
         }
 
         match &self.context {
             Context::Seal(context) => {
                 let evaluator = BFVEvaluator::new(&context)?;
 
-                Ok(OutputBundle(unsafe {
+                let mut inputs: Vec<SealCiphertext> = vec![];
+
+                for i in arguments.drain(0..) {
+                    match i.inner {
+                        InnerCiphertext::Seal(mut c) => {
+                            for j in c.drain(0..) {
+                                inputs.push(j)
+                            }
+                        }
+                    }
+                }
+
+                let mut raw_ciphertexts = unsafe {
                     run_program_unchecked(
-                        ir,
-                        &input_bundle.ciphertexts,
+                        &circuit.circuit,
+                        &inputs,
                         &evaluator,
-                        input_bundle.relin_keys,
-                        input_bundle.galois_keys,
+                        &public_key.relin_key,
+                        &public_key.galois_key,
                     )
-                }))
+                };
+
+                let mut packed_ciphertexts = vec![];
+
+                for (i, ciphertext_count) in circuit
+                    .metadata
+                    .signature
+                    .num_ciphertexts
+                    .iter()
+                    .enumerate()
+                {
+                    packed_ciphertexts.push(Ciphertext {
+                        data_type: circuit.metadata.signature.returns[i].clone(),
+                        inner: InnerCiphertext::Seal(
+                            raw_ciphertexts.drain(0..*ciphertext_count).collect(),
+                        ),
+                    });
+                }
+
+                Ok(packed_ciphertexts)
             }
         }
     }
@@ -201,125 +229,28 @@ impl PublicRuntime {
      * Returns [`Error::ParameterMismatch`] if the plaintext is incompatible with this runtime's
      * scheme.
      */
-    pub fn encrypt<P: TryIntoPlaintext>(
-        &self,
-        p: &P,
-        public_key: &PublicKey,
-    ) -> Result<Vec<Ciphertext>> {
-        let p = p.try_into_plaintext(&self.metadata.params)?;
+    pub fn encrypt<P>(&self, val: P, public_key: &PublicKey) -> Result<Ciphertext>
+    where
+        P: TryIntoPlaintext + TypeName,
+    {
+        let plaintext = val.try_into_plaintext()?;
 
-        Ok(self.encrypt_plaintext(&p, public_key)?)
-    }
+        let ciphertext = match (&self.context, plaintext.inner) {
+            (Context::Seal(context), InnerPlaintext::Seal(inner_plain)) => {
+                let encryptor = Encryptor::with_public_key(context, &public_key.public_key)?;
 
-    fn encrypt_plaintext(
-        &self,
-        plaintexts: &[Plaintext],
-        public_key: &PublicKey,
-    ) -> Result<Vec<Ciphertext>> {
-        let ciphertexts = match &self.context {
-            Context::Seal(context) => plaintexts
-                .iter()
-                .map(|p| match &p.inner {
-                    InnerPlaintext::Seal(p) => {
-                        let encryptor =
-                            Encryptor::with_public_key(&context, &public_key.public_key)?;
+                let ciphertexts = inner_plain
+                    .iter()
+                    .map(|p| encryptor.encrypt(p).map_err(|e| Error::SealError(e)))
+                    .collect::<Result<Vec<SealCiphertext>>>()?;
 
-                        encryptor.encrypt(&p)
-                    }
-                    _ => {
-                        unimplemented!();
-                    }
-                })
-                .collect::<std::result::Result<Vec<Ciphertext>, seal::Error>>()?,
-        };
-
-        Ok(ciphertexts)
-    }
-
-    /**
-     * Validates and encrypts the given arguments, returning a bundle of all the ciphertexts
-     * and keys needed to run the circuit given by this runtime's [`CircuitMetadata`].
-     *
-     * # Remarks
-     * This method looks at the [`CircuitMetadata`] associated with this runtime to determine
-     * which keys are required. The returned [`Result`] will contain an error if:
-     * * The type signatures in the [`Arguments`] object don't match those in the circtuit's
-     * call signature.
-     * * The circuit requires Galois keys, but the [`PublicKey`] object lacks them.
-     * * The circuit requires relinearization keys, but the [`PublicKey`] object lacks them.
-     *
-     * The latter two conditions should generally never happen during the normal course of using
-     * Sunscreen's API.
-     */
-    pub fn encrypt_args(&self, args: &Arguments, public_key: &PublicKey) -> Result<InputBundle> {
-        let types: Vec<Type> = args.args.iter().map(|t| t.type_name_instance()).collect();
-
-        if types != self.metadata.signature.arguments {
-            return Err(Error::ArgumentMismatch {
-                expected: self.metadata.signature.arguments.clone(),
-                actual: types,
-            });
-        }
-
-        let mut ciphertexts = vec![];
-
-        for t in &args.args {
-            let p = t.try_into_plaintext(&self.metadata.params)?;
-            ciphertexts.append(&mut self.encrypt_plaintext(&p, public_key)?);
-        }
-
-        let galois_keys = if self
-            .metadata
-            .required_keys
-            .iter()
-            .find(|k| **k == RequiredKeys::Galois)
-            .is_some()
-        {
-            match &public_key.galois_key {
-                Some(g) => Some(g.clone()),
-                _ => {
-                    return Err(Error::MissingGaloisKeys);
+                Ciphertext {
+                    data_type: P::type_name(),
+                    inner: InnerCiphertext::Seal(ciphertexts),
                 }
             }
-        } else {
-            None
         };
 
-        let relin_keys = if self
-            .metadata
-            .required_keys
-            .iter()
-            .find(|k| **k == RequiredKeys::Relin)
-            .is_some()
-        {
-            match &public_key.relin_key {
-                Some(r) => Some(r.clone()),
-                _ => {
-                    return Err(Error::MissingRelinearizationKeys);
-                }
-            }
-        } else {
-            None
-        };
-
-        let public_key = if self
-            .metadata
-            .required_keys
-            .iter()
-            .find(|k| **k == RequiredKeys::PublicKey)
-            .is_some()
-        {
-            Some(public_key.public_key.clone())
-        } else {
-            None
-        };
-
-        // TODO: Pass real keys here.
-        Ok(InputBundle {
-            ciphertexts,
-            galois_keys: galois_keys,
-            relin_keys: relin_keys,
-            public_keys: public_key,
-        })
+        Ok(ciphertext)
     }
 }

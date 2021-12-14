@@ -66,6 +66,28 @@ pub enum Error {
          */
         actual: Vec<Type>,
     },
+
+    /**
+     * The given type does not match the expected.
+     */
+    TypeMismatch {
+        /**
+         * The expected type.
+         */
+        expected: Type,
+
+        /**
+         * The actual type.
+         */
+        actual: Type,
+    },
+
+    /**
+     * The vector indicating the number of ciphertexts in the return types isn't the same length
+     * as the signature's return type. Running valid circuits created by the Sunscreen compiler
+     * should never produce this error.
+     */
+    ReturnTypeMetadataError,
 }
 
 impl From<sunscreen_circuit::Error> for Error {

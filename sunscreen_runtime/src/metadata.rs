@@ -4,7 +4,7 @@ use serde::{
     de::{self, Visitor},
     Deserialize, Deserializer, Serialize, Serializer,
 };
-use sunscreen_circuit::SchemeType;
+use sunscreen_circuit::{Circuit, SchemeType};
 
 /**
  * A type which represents the fully qualified name and version of a datatype.
@@ -103,6 +103,11 @@ pub struct CallSignature {
      * The length of this vector equals the number of arguments to the circuit.
      */
     pub returns: Vec<Type>,
+
+    /**
+     * The number of ciphertexts that compose the nth return value.
+     */
+    pub num_ciphertexts: Vec<usize>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -175,4 +180,20 @@ pub struct CircuitMetadata {
      * The set of keys required to run the circuit.
      */
     pub required_keys: Vec<RequiredKeys>,
+}
+
+/**
+ * A circuit with its associated metadata.
+ */
+pub struct CompiledCircuit {
+    /**
+     * The underlying FHE circuit.
+     */
+    pub circuit: Circuit,
+
+    /**
+     * Information about the circuit, including its call signature and the scheme
+     * parameters needed by a [`Runtime`] to encrypt/decrypt its inputs/outputs.
+     */
+    pub metadata: CircuitMetadata,
 }

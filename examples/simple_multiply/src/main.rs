@@ -1,6 +1,4 @@
-use sunscreen_compiler::{
-    circuit, types::Unsigned, Compiler, Params, PlainModulusConstraint,
-};
+use sunscreen_compiler::{circuit, types::Unsigned, Compiler, Params, PlainModulusConstraint};
 use sunscreen_runtime::Runtime;
 
 /**
@@ -43,7 +41,7 @@ fn main() {
      * Afterwards, we simply compile and assert the compilation succeeds by calling unwrap. Compilation
      * returns the compiled circuit and parameters.
      */
-    let (circuit, params) = Compiler::with_circuit(simple_multiply)
+    let circuit = Compiler::with_circuit(simple_multiply)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(600))
         .noise_margin_bits(5)
         .compile()
@@ -53,7 +51,7 @@ fn main() {
      * Next, we construct a runtime. The runtime provides the APIs for encryption, decryption, and
      * running a circuit.
      */
-    let runtime = Runtime::new(&params).unwrap();
+    let runtime = Runtime::new(&circuit.metadata).unwrap();
 
     /*
      * Generate a public and private key pair. Normally, Alice would do this, sending the public
@@ -61,40 +59,16 @@ fn main() {
      */
     let (public, secret) = runtime.generate_keys().unwrap();
 
-    /*
-     * Our circuit accepts 2 `Unsigned` types and adds them together.
-     * The encrypt macro takes a runtime and public key as its first 2
-     * arguments to faciliation encryption, and the remaining arguments
-     * are the actual arguments to the circuit. This macro is variadic;
-     * circuits that take more arguments require more parameters.
-     */
-    let args = runtime
-        .encrypt_args(
-            &SimpleMultiplyInterface::args(Unsigned::from(15), Unsigned::from(5)),
-            &public,
-        )
-        .unwrap();
+    let a = runtime.encrypt(Unsigned::from(15), &public).unwrap();
+    let b = runtime.encrypt(Unsigned::from(5), &public).unwrap();
 
     /*
      * Run the circuit with our arguments. This produces a results
      * bundle containing the encrypted outputs of the circuit.
      */
-    let results = runtime.run(&circuit, args).unwrap();
+    let results = runtime.run(&circuit, vec![a, b], &public).unwrap();
 
-    /*
-     * Our circuit produces a single `Unsigned` output. The decrypt
-     * macro takes a runtime, secret key, and results bundle as the
-     * first three arguments. The macro is variadic and the remaining
-     * arguments are the types of the circuit's outputs.
-     *
-     * The decrypt macro validates the types we pass match the
-     * circuit's return types. We need to pass these so types so
-     * the compiler can ensure the return type is known at compile time.
-     */
-    let c = SimpleMultiplyInterface::return_value(
-        runtime.decrypt_return_value(results, &secret).unwrap(),
-    )
-    .unwrap();
+    let c: Unsigned = runtime.decrypt(&results[0], &secret).unwrap();
 
     /*
      * Yay, 5 * 15 indeed equals 75.

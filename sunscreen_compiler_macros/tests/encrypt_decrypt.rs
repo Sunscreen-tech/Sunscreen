@@ -7,27 +7,22 @@ fn can_encrypt_decrypt() {
         a + b
     }
 
-    let (circuit, metadata) = Compiler::with_circuit(foo)
+    let circuit = Compiler::with_circuit(foo)
         .noise_margin_bits(5)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(500))
         .compile()
         .unwrap();
 
-    let runtime = Runtime::new(&metadata).unwrap();
+    let runtime = Runtime::new(&circuit.metadata).unwrap();
 
     let (public, secret) = runtime.generate_keys().unwrap();
 
-    let args = runtime
-        .encrypt_args(
-            &FooInterface::args(Unsigned::from(5), Unsigned::from(15)),
-            &public,
-        )
-        .unwrap();
+    let a = runtime.encrypt(Unsigned::from(15), &public).unwrap();
+    let b = runtime.encrypt(Unsigned::from(5), &public).unwrap();
 
-    let result = runtime.run(&circuit, args).unwrap();
+    let result = runtime.run(&circuit, vec![a, b], &public).unwrap();
 
-    let c =
-        FooInterface::return_value(runtime.decrypt_return_value(result, &secret).unwrap()).unwrap();
+    let c: Unsigned = runtime.decrypt(&result[0], &secret).unwrap();
 
     assert_eq!(c, 20.into());
 }

@@ -9,10 +9,16 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use seal::{Ciphertext, Evaluator, GaloisKeys, RelinearizationKeys};
 
 /**
+ * You probably should instead use [`Runtime::run`].
+ *
  * Run the given [`Circuit`] to completion with the given inputs. This
  * method performs no validation. You must verify the program is first valid. Programs produced
  * by the compiler are guaranteed to be valid, but deserialization does not make any such
  * guarantees. Call [`validate()`](sunscreen_circuit::Circuit::validate()) to verify a program's correctness.
+ *
+ * # Remarks
+ * The input and outputs of this method are vectors containing [`seal::Ciphertext`] values, not the
+ * high-level [`Ciphertext`] types. You must first unpack them from the high-level types.
  *
  * # Panics
  * Calling this method on a malformed [`Circuit`] may
@@ -30,8 +36,8 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
     ir: &Circuit,
     inputs: &[Ciphertext],
     evaluator: &E,
-    relin_keys: Option<RelinearizationKeys>,
-    galois_keys: Option<GaloisKeys>,
+    relin_keys: &Option<RelinearizationKeys>,
+    galois_keys: &Option<GaloisKeys>,
 ) -> Vec<Ciphertext> {
     fn get_ciphertext<'a>(
         data: &'a [AtomicCell<Option<Cow<Ciphertext>>>],
@@ -368,7 +374,7 @@ mod tests {
         let ct_0 = encryptor.encrypt(&pt_0).unwrap();
         let ct_1 = encryptor.encrypt(&pt_1).unwrap();
 
-        let output = unsafe { run_program_unchecked(&ir, &[ct_0, ct_1], &evaluator, None, None) };
+        let output = unsafe { run_program_unchecked(&ir, &[ct_0, ct_1], &evaluator, &None, &None) };
 
         assert_eq!(output.len(), 1);
 
@@ -407,7 +413,7 @@ mod tests {
         let ct_1 = encryptor.encrypt(&pt_1).unwrap();
 
         let output = unsafe {
-            run_program_unchecked(&ir, &[ct_0, ct_1], &evaluator, Some(relin_keys), None)
+            run_program_unchecked(&ir, &[ct_0, ct_1], &evaluator, &Some(relin_keys), &None)
         };
 
         assert_eq!(output.len(), 1);
@@ -448,7 +454,7 @@ mod tests {
         let ct_1 = encryptor.encrypt(&pt_1).unwrap();
 
         let output = unsafe {
-            run_program_unchecked(&ir, &[ct_0, ct_1], &evaluator, Some(relin_keys), None)
+            run_program_unchecked(&ir, &[ct_0, ct_1], &evaluator, &Some(relin_keys), &None)
         };
 
         assert_eq!(output.len(), 1);
@@ -504,7 +510,7 @@ mod tests {
         let ct_1 = encryptor.encrypt(&pt_1).unwrap();
 
         let output = unsafe {
-            run_program_unchecked(&ir, &[ct_0, ct_1], &evaluator, Some(relin_keys), None)
+            run_program_unchecked(&ir, &[ct_0, ct_1], &evaluator, &Some(relin_keys), &None)
         };
 
         assert_eq!(output.len(), 1);
@@ -543,7 +549,7 @@ mod tests {
         let ct_0 = encryptor.encrypt(&pt_0).unwrap();
 
         let output =
-            unsafe { run_program_unchecked(&ir, &[ct_0], &evaluator, None, Some(galois_keys)) };
+            unsafe { run_program_unchecked(&ir, &[ct_0], &evaluator, &None, &Some(galois_keys)) };
 
         assert_eq!(output.len(), 1);
 
@@ -586,7 +592,7 @@ mod tests {
         let ct_0 = encryptor.encrypt(&pt_0).unwrap();
 
         let output =
-            unsafe { run_program_unchecked(&ir, &[ct_0], &evaluator, None, Some(galois_keys)) };
+            unsafe { run_program_unchecked(&ir, &[ct_0], &evaluator, &None, &Some(galois_keys)) };
 
         assert_eq!(output.len(), 1);
 

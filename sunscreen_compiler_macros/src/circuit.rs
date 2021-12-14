@@ -1,10 +1,8 @@
 use crate::internals::{attr::Attrs, case::Scheme};
-use convert_case::{Case, Casing};
 use proc_macro2::{Span, TokenStream};
 use quote::{quote, quote_spanned};
 use syn::{
-    parse_macro_input, spanned::Spanned, FnArg, Ident, Index, ItemFn, Pat,
-    ReturnType, Type,
+    parse_macro_input, spanned::Spanned, FnArg, Ident, Index, ItemFn, Pat, ReturnType, Type,
 };
 
 pub fn circuit_impl(
@@ -90,7 +88,6 @@ pub fn circuit_impl(
     });
 
     let catpured_outputs = capture_outputs(ret);
-    let interface = emit_encoder(&circuit_name.to_string(), &unwrapped_inputs, ret);
 
     proc_macro::TokenStream::from(quote! {
         #(#attrs)*
@@ -101,7 +98,7 @@ pub fn circuit_impl(
         ) {
             use std::cell::RefCell;
             use std::mem::transmute;
-            use sunscreen_compiler::{CURRENT_CTX, Context, Error, Result, Params, SchemeType, Value, types::{CircuitNode, Type, TypeName, TypeNameInstance}};
+            use sunscreen_compiler::{CURRENT_CTX, Context, Error, Result, Params, SchemeType, Value, types::{CircuitNode, NumCiphertexts, Type, TypeName, TypeNameInstance}};
 
             let circuit_builder = |params: &Params| {
                 if SchemeType::Bfv != params.scheme_type {
@@ -145,105 +142,7 @@ pub fn circuit_impl(
 
             (#scheme_type, circuit_builder, signature)
         }
-
-        #interface
     })
-}
-
-fn emit_encoder(
-    circuit_name: &str,
-    inputs: &[(&syn::PatType, &proc_macro2::Ident)],
-    ret: &ReturnType,
-) -> TokenStream {
-    let struct_name = Ident::new(
-        &format!("{}Interface", circuit_name.to_case(Case::Pascal)),
-        Span::call_site(),
-    );
-
-    let arguments = inputs.iter().map(|(t, ident)| {
-        quote_spanned! { t.span()=>
-            .arg(#ident)
-        }
-    });
-
-    let fn_args = inputs
-        .iter()
-        .map(|(t, _)| {
-            quote! {
-                #t,
-            }
-        })
-        .collect::<Vec<TokenStream>>();
-
-    let return_types = match ret {
-        ReturnType::Type(_, t) => match &**t {
-            Type::Tuple(t) => t.elems.iter().map(|x| &*x).collect::<Vec<&Type>>(),
-            Type::Paren(t) => {
-                vec![&*t.elem]
-            }
-            Type::Path(_) => {
-                vec![&**t]
-            }
-            _ => {
-                return TokenStream::from(quote! {
-                    compile_error!("Circuits must return a single Cipthertext or a tuple of Ciphertexts");
-                });
-            }
-        },
-        ReturnType::Default => {
-            vec![]
-        }
-    };
-
-    let ret_no_arrow = match ret {
-        ReturnType::Type(_, t) => {
-            quote! { #t }
-        }
-        ReturnType::Default => {
-            quote! { () }
-        }
-    };
-
-    let from_plaintexts = if return_types.len() == 1 {
-        let t = return_types[0];
-
-        quote! {
-            #t::try_from_plaintext(&mut drain).map_err(|e| sunscreen_compiler::Error::from(e))?
-        }
-    } else {
-        let from_pt = return_types.iter().map(|t| {
-            quote! {
-                #t::try_from_plaintext(&mut drain).map_err(|e| sunscreen_compiler::Error::from(e))?,
-            }
-        });
-
-        quote! {
-            (#(#from_pt)*)
-        }
-    };
-
-    let foo = quote! {
-        pub struct #struct_name;
-
-        impl #struct_name {
-            pub fn args(#(#fn_args)*) -> sunscreen_compiler::Arguments {
-                sunscreen_compiler::Arguments::new()
-                    #(#arguments)*
-            }
-
-            pub fn return_value(mut bundle: sunscreen_compiler::DecryptedOutput) -> sunscreen_compiler::Result<#ret_no_arrow> {
-                use sunscreen_compiler::types::TryFromPlaintext;
-
-                let mut drain = bundle.0.drain(0..);
-
-                Ok(#from_plaintexts)
-            }
-        }
-    };
-
-    //panic!("{}", foo)
-
-    foo
 }
 
 fn capture_outputs(ret: &ReturnType) -> TokenStream {
@@ -295,7 +194,7 @@ fn create_signature(args: &[&Type], ret: &ReturnType) -> TokenStream {
         }
     });
 
-    let return_type_names = match ret {
+    let (return_type_names, return_type_sizes) = match ret {
         ReturnType::Type(_, t) => {
             let tuple_inners = match &**t {
                 Type::Tuple(t) => t.elems.iter().map(|x| &*x).collect::<Vec<&Type>>(),
@@ -312,27 +211,39 @@ fn create_signature(args: &[&Type], ret: &ReturnType) -> TokenStream {
                 }
             };
 
+            let return_type_sizes = tuple_inners.iter().map(|t| {
+                quote! {
+                    #t ::num_ciphertexts(),
+                }
+            });
+
             let type_names = tuple_inners.iter().map(|t| {
                 quote! {
                     #t ::type_name(),
                 }
             });
 
-            quote! {
-                vec![
-                    #(#type_names)*
-                ]
-            }
+            (
+                quote! {
+                    vec![
+                        #(#type_names)*
+                    ]
+                },
+                quote! {
+                    vec![
+                        #(#return_type_sizes)*
+                    ]
+                },
+            )
         }
-        ReturnType::Default => {
-            quote! { vec![] }
-        }
+        ReturnType::Default => (quote! { vec![] }, quote! { vec![] }),
     };
 
     quote! {
         let signature = sunscreen_compiler::CallSignature {
             arguments: vec![#(#arg_type_names)*],
-            returns: #return_type_names
+            returns: #return_type_names,
+            num_ciphertexts: #return_type_sizes,
         };
     }
 }

@@ -4,9 +4,11 @@ use seal::Plaintext as SealPlaintext;
 
 use crate::{
     types::{BfvType, CircuitNode, FheType},
-    Context, Params, TypeName as DeriveTypeName, CURRENT_CTX,
+    Context, TypeName as DeriveTypeName, CURRENT_CTX,
 };
-use sunscreen_runtime::{InnerPlaintext, Plaintext, TryFromPlaintext, TryIntoPlaintext};
+use sunscreen_runtime::{
+    InnerPlaintext, NumCiphertexts, Plaintext, TryFromPlaintext, TryIntoPlaintext,
+};
 
 impl CircuitNode<Unsigned> {
     /**
@@ -70,10 +72,7 @@ where
 }
 
 impl TryIntoPlaintext for Unsigned {
-    fn try_into_plaintext(
-        &self,
-        params: &Params,
-    ) -> std::result::Result<Vec<Plaintext>, sunscreen_runtime::Error> {
+    fn try_into_plaintext(&self) -> std::result::Result<Plaintext, sunscreen_runtime::Error> {
         let mut seal_plaintext = SealPlaintext::new()?;
         let bits = std::mem::size_of::<u64>() * 8;
 
@@ -84,41 +83,40 @@ impl TryIntoPlaintext for Unsigned {
             seal_plaintext.set_coefficient(i, bit_value);
         }
 
-        Ok(vec![Plaintext::new(
-            InnerPlaintext::Seal(seal_plaintext),
-            params.clone(),
-        )])
+        Ok(Plaintext {
+            inner: InnerPlaintext::Seal(vec![seal_plaintext]),
+        })
     }
 }
 
 impl TryFromPlaintext for Unsigned {
-    fn try_from_plaintext<I>(
-        plaintexts: &mut I,
-    ) -> std::result::Result<Self, sunscreen_runtime::Error>
-    where
-        I: Iterator<Item = sunscreen_runtime::Plaintext>,
-    {
-        let p = plaintexts
-            .next()
-            .ok_or(sunscreen_runtime::Error::IncorrectCiphertextCount)?;
-
-        let val = match p.inner {
+    fn try_from_plaintext(
+        plaintext: &Plaintext,
+    ) -> std::result::Result<Self, sunscreen_runtime::Error> {
+        let val = match &plaintext.inner {
             InnerPlaintext::Seal(p) => {
+                if p.len() != 1 {
+                    return Err(sunscreen_runtime::Error::IncorrectCiphertextCount);
+                }
+
                 let mut val = 0u64;
-                let bits = usize::min(std::mem::size_of::<u64>() * 8, p.len());
+                let bits = usize::min(std::mem::size_of::<u64>() * 8, p[0].len());
 
                 for i in 0..bits {
-                    val += p.get_coefficient(i) * (1 << i);
+                    val += p[0].get_coefficient(i) * (1 << i);
                 }
 
                 Self { val }
             }
-            _ => {
-                return Err(sunscreen_runtime::Error::ParameterMismatch);
-            }
         };
 
         Ok(val)
+    }
+}
+
+impl NumCiphertexts for Unsigned {
+    fn num_ciphertexts() -> usize {
+        1
     }
 }
 

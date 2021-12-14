@@ -22,7 +22,7 @@ pub struct Runtime {
     /**
      * The parameters used to construct the scheme used in this runtime.
      */
-    metadata: CircuitMetadata,
+    params: Params,
 
     /**
      * The context associated with the BFV scheme.
@@ -97,15 +97,14 @@ impl Runtime {
     /**
      * Create a new Runtime.
      */
-    pub fn new(metadata: &CircuitMetadata) -> Result<Self> {
-        match metadata.params.scheme_type {
+    pub fn new(params: &Params) -> Result<Self> {
+        match params.scheme_type {
             SchemeType::Bfv => {
                 let bfv_params = BfvEncryptionParametersBuilder::new()
-                    .set_plain_modulus_u64(metadata.params.plain_modulus)
-                    .set_poly_modulus_degree(metadata.params.lattice_dimension)
+                    .set_plain_modulus_u64(params.plain_modulus)
+                    .set_poly_modulus_degree(params.lattice_dimension)
                     .set_coefficient_modulus(
-                        metadata
-                            .params
+                            params
                             .coeff_modulus
                             .iter()
                             .map(|v| Modulus::new(*v).unwrap())
@@ -113,11 +112,11 @@ impl Runtime {
                     )
                     .build()?;
 
-                let context = SealContext::new(&bfv_params, true, metadata.params.security_level)?;
+                let context = SealContext::new(&bfv_params, true, params.security_level)?;
 
                 Ok(Self {
                     context: Context::Seal(context),
-                    metadata: metadata.clone(),
+                    params: params.clone(),
                 })
             }
             _ => unimplemented!(),
@@ -127,8 +126,8 @@ impl Runtime {
     /**
      * Returns the metadata for this runtime's associated circuit.
      */
-    pub fn get_metadata(&self) -> &CircuitMetadata {
-        &self.metadata
+    pub fn params(&self) -> &Params {
+        &self.params
     }
 
     /**

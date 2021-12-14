@@ -13,7 +13,7 @@ fn can_encrypt_decrypt() {
         .compile()
         .unwrap();
 
-    let runtime = Runtime::new(&circuit.metadata).unwrap();
+    let runtime = Runtime::new(&circuit.metadata.params).unwrap();
 
     let (public, secret) = runtime.generate_keys().unwrap();
 

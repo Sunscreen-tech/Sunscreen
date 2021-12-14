@@ -88,7 +88,7 @@ where
     }
 
     /**
-     * Comile the circuit. If successful, returns a tuple of the [`Circuit`] and the [`Params`] suitable
+     * Comile the circuit. If successful, returns a tuple of the [`Circuit`](crate::Circuit) and the [`Params`] suitable
      * for running it.
      */
     pub fn compile(self) -> Result<CompiledCircuit> {

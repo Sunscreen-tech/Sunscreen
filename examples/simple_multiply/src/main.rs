@@ -68,6 +68,9 @@ fn main() {
      */
     let results = runtime.run(&circuit, vec![a, b], &public).unwrap();
 
+    /*
+     * Our circuit outputs a Unsigned single value as the result. Decrypt it.
+     */
     let c: Unsigned = runtime.decrypt(&results[0], &secret).unwrap();
 
     /*

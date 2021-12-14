@@ -193,7 +193,7 @@ pub struct CompiledCircuit {
 
     /**
      * Information about the circuit, including its call signature and the scheme
-     * parameters needed by a [`Runtime`] to encrypt/decrypt its inputs/outputs.
+     * parameters needed by a [`Runtime`](crate::Runtime) to encrypt/decrypt its inputs/outputs.
      */
     pub metadata: CircuitMetadata,
 }

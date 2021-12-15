@@ -45,7 +45,7 @@ mod params;
  */
 pub mod types;
 
-use std::cell::RefCell;
+use std::cell::{RefCell, RefMut};
 
 use petgraph::{
     algo::is_isomorphic_matching,
@@ -70,6 +70,8 @@ pub use sunscreen_runtime::{
     CallSignature, CircuitMetadata, Error as RuntimeError,
     Params, PublicKey, RequiredKeys, Runtime, InnerPlaintext, Plaintext
 };
+
+use types::{FheType, CircuitNode};
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 /**
@@ -189,6 +191,13 @@ pub struct Context {
      * The set of parameters for which we're currently constructing the graph.
      */
     pub params: Params,
+
+    /**
+     * Stores indicies for graph nodes in a bump allocator. [`CircuitNode`](crate::types::CircuitNode)
+     * can request allocations of these. This allows it to use slices instead of Vecs, which allows
+     * CircuitNode to impl Copy.
+     */
+    pub indicies_store: Vec<NodeIndex>,
 }
 
 impl PartialEq for FrontendCompilation {
@@ -214,10 +223,10 @@ thread_local! {
  */
 pub fn with_ctx<F, R>(f: F) -> R
 where
-    F: FnOnce(&mut Context) -> R,
+    F: FnOnce(&'static mut Context) -> R,
 {
     CURRENT_CTX.with(|ctx| {
-        let mut option = ctx.borrow_mut();
+        let mut option: RefMut<'static, Option<&mut Context>> = ctx.borrow_mut();
         let ctx = option
             .as_mut()
             .expect("Called Ciphertext::new() outside of a context.");
@@ -236,7 +245,26 @@ impl Context {
                 graph: StableGraph::new(),
             },
             params: params.clone(),
+            indicies_store: vec![]
         }
+    }
+
+    pub fn allocate_circuit_node<T: FheType>(&mut self, ids: &[NodeIndex]) -> CircuitNode<T> {
+        let indicies = self.allocate_indicies(T::num_ciphertexts());
+
+        indicies.copy_from_slice(ids);
+
+        CircuitNode::new(indicies)
+    }
+
+    fn allocate_indicies(&mut self, len: usize) -> &mut [NodeIndex] {
+        let before_len = self.indicies_store.len();
+
+        self.indicies_store.resize(before_len + len, NodeIndex::new(0));
+
+        let (_, right) = self.indicies_store.split_at_mut(before_len);
+
+        right
     }
 
     fn add_2_input(&mut self, op: Operation, left: NodeIndex, right: NodeIndex) -> NodeIndex {

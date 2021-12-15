@@ -1,23 +1,14 @@
-use std::ops::{Add, Mul};
-
 use seal::Plaintext as SealPlaintext;
 
 use crate::{
     types::{BfvType, CircuitNode, FheType},
-    Context, TypeName as DeriveTypeName, CURRENT_CTX, Params,
+    Context, TypeName as DeriveTypeName, Params, with_ctx
 };
+use crate::types::{GraphAdd, GraphMul};
+
 use sunscreen_runtime::{
     InnerPlaintext, NumCiphertexts, Plaintext, TryFromPlaintext, TryIntoPlaintext,
 };
-
-impl CircuitNode<Unsigned> {
-    /**
-     * Returns the plain modulus parameter for the given BFV scheme
-     */
-    pub fn get_plain_modulus() -> u64 {
-        with_ctx(|ctx| ctx.params.plain_modulus)
-    }
-}
 
 #[derive(Debug, Clone, Copy, DeriveTypeName, PartialEq, Eq)]
 /**
@@ -40,34 +31,30 @@ impl BfvType for Unsigned {}
 
 impl Unsigned {}
 
-impl Add for CircuitNode<Unsigned> {
-    type Output = Self;
+impl GraphAdd for Unsigned {
+    type Left = Unsigned;
+    type Right = Unsigned;
 
-    fn add(self, other: Self) -> Self {
-        with_ctx(|ctx| Self::new(ctx.add_addition(self.id, other.id)))
+    fn graph_add<'a>(a: CircuitNode<'a, Self::Left>, b: CircuitNode<'a, Self::Right>) -> CircuitNode<'a, Self::Left> {
+        with_ctx(|ctx| {
+            ctx.allocate_circuit_node(&[ctx.add_addition(a.ids[0], b.ids[0])])
+        })
     }
 }
 
-impl Mul for CircuitNode<Unsigned> {
-    type Output = Self;
+impl GraphMul for Unsigned {
+    type Left = Unsigned;
+    type Right = Unsigned;
 
-    fn mul(self, other: Self) -> Self {
-        with_ctx(|ctx| Self::new(ctx.add_multiplication(self.id, other.id)))
+    fn graph_mul<'a>(a: CircuitNode<'a, Self::Left>, b: CircuitNode<'a, Self::Right>) -> CircuitNode<'a, Self::Left> {
+        Context::with_ctx(|ctx| unsafe {
+            let indicies = ctx.allocate_indicies(Self::num_ciphertexts());
+
+            indicies[0] = ctx.add_multiplication(a.ids[0], b.ids[0]);
+
+            CircuitNode::new(indicies)
+        })
     }
-}
-
-fn with_ctx<F, R>(f: F) -> R
-where
-    F: FnOnce(&mut Context) -> R,
-{
-    CURRENT_CTX.with(|ctx| {
-        let mut option = ctx.borrow_mut();
-        let ctx = option
-            .as_mut()
-            .expect("Called Ciphertext::new() outside of a context.");
-
-        f(ctx)
-    })
 }
 
 impl TryIntoPlaintext for Unsigned {
@@ -213,16 +200,6 @@ impl TryFromPlaintext for Signed {
         Ok(val)
     }
 }
-
-impl CircuitNode<Signed> {
-    /**
-     * Returns the plain modulus parameter for the given BFV scheme
-     */
-    pub fn get_plain_modulus() -> u64 {
-        with_ctx(|ctx| ctx.params.plain_modulus)
-    }
-}
-
 
 impl From<i64> for Signed {
     fn from(val: i64) -> Self {

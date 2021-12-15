@@ -3,6 +3,39 @@
 
 //! This crate contains the frontend compiler for Sunscreen circuits and the types and
 //! algorithms that support it.
+//! 
+//! # Examples
+//! This example is further annotated in `examples/simple_multiply`.
+//! ```
+//! # use sunscreen_compiler::{circuit, types::Unsigned, Params, Context};
+//! 
+//! #[circuit(scheme = "bfv")]
+//! fn simple_multiply(a: Unsigned, b: Unsigned) -> Unsigned {
+//!     a * b
+//! }
+//! 
+//! fn main() {
+//!   let circuit = Compiler::with_circuit(simple_multiply)
+//!       .plain_modulus_constraint(PlainModulusConstraint::Raw(600))
+//!       .noise_margin_bits(5)
+//!       .compile()
+//!       .unwrap();
+//!
+//!   let runtime = Runtime::new(&circuit.metadata.params).unwrap();
+//!
+//!   let (public, secret) = runtime.generate_keys().unwrap();
+//!
+//!   let a = runtime.encrypt(Unsigned::from(15), &public).unwrap();
+//!   let b = runtime.encrypt(Unsigned::from(5), &public).unwrap();
+//!
+//!   let results = runtime.run(&circuit, vec![a, b], &public).unwrap();
+//!
+//!   let c: Unsigned = runtime.decrypt(&results[0], &secret).unwrap();
+//!
+//!   assert_eq!(c, 75.into());
+//! }
+//! ```
+//!
 
 mod compiler;
 mod error;
@@ -35,7 +68,7 @@ pub use sunscreen_circuit::{SchemeType, SecurityLevel};
 pub use sunscreen_compiler_macros::*;
 pub use sunscreen_runtime::{
     CallSignature, CircuitMetadata, Error as RuntimeError,
-    Params, PublicKey, RequiredKeys, Runtime,
+    Params, PublicKey, RequiredKeys, Runtime, InnerPlaintext, Plaintext
 };
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]

@@ -58,7 +58,7 @@ impl Runtime {
 
                 P::try_from_plaintext(&Plaintext {
                     inner: InnerPlaintext::Seal(plaintexts),
-                })?
+                }, &self.params)?
             }
         };
 
@@ -232,7 +232,7 @@ impl Runtime {
     where
         P: TryIntoPlaintext + TypeName,
     {
-        let plaintext = val.try_into_plaintext()?;
+        let plaintext = val.try_into_plaintext(&self.params)?;
 
         let ciphertext = match (&self.context, plaintext.inner) {
             (Context::Seal(context), InnerPlaintext::Seal(inner_plain)) => {

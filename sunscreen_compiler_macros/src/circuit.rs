@@ -93,7 +93,7 @@ pub fn circuit_impl(
         #(#attrs)*
         #vis fn #circuit_name() -> (
             sunscreen_compiler::SchemeType,
-            impl Fn(&Params) -> sunscreen_compiler::Result<sunscreen_compiler::FrontendCompilation>,
+            impl Fn(&sunscreen_compiler::Params) -> sunscreen_compiler::Result<sunscreen_compiler::FrontendCompilation>,
             sunscreen_compiler::CallSignature
         ) {
             use std::cell::RefCell;

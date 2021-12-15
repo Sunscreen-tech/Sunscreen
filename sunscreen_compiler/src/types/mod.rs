@@ -9,7 +9,8 @@ pub use sunscreen_runtime::{
     TypeNameInstance, Version,
 };
 
-pub use integer::Unsigned;
+pub use integer::{Signed, Unsigned};
+use std::ops::{Add, Mul, Div, Sub};
 
 #[derive(Clone, Copy, Serialize, Deserialize)]
 /**

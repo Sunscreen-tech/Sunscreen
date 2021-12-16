@@ -98,7 +98,7 @@ pub fn circuit_impl(
         ) {
             use std::cell::RefCell;
             use std::mem::transmute;
-            use sunscreen_compiler::{CURRENT_CTX, Context, Error, Result, Params, SchemeType, Value, types::{CircuitNode, NumCiphertexts, Type, TypeName, TypeNameInstance}};
+            use sunscreen_compiler::{CURRENT_CTX, Context, Error, INDEX_ARENA, Result, Params, SchemeType, Value, types::{CircuitNode, NumCiphertexts, Type, TypeName, TypeNameInstance}};
 
             let circuit_builder = |params: &Params| {
                 if SchemeType::Bfv != params.scheme_type {
@@ -124,14 +124,22 @@ pub fn circuit_impl(
                         internal(#(#args),*)
                     });
 
+                    // when panicing or not, we need to collect our indicies arena and
+                    // unset the context reference.
                     match panic_res {
                         Ok(v) => { #catpured_outputs },
                         Err(err) => {
+                            INDEX_ARENA.with(|allocator| {
+                                unsafe { allocator.borrow_mut().reset() }
+                            });
                             ctx.swap(&RefCell::new(None));
                             std::panic::resume_unwind(err)
                         }
                     };
-
+                    
+                    INDEX_ARENA.with(|allocator| {
+                        unsafe { allocator.borrow_mut().reset() }
+                    });
                     ctx.swap(&RefCell::new(None));
                 });
 

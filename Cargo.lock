@@ -79,6 +79,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "bumpalo"
+version = "3.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8f1e260c3a9040a7c19a12468758f4c16f31a81a1fe087482be9570ec864bb6c"
+
+[[package]]
 name = "calculator"
 version = "0.1.0"
 dependencies = [
@@ -634,6 +640,7 @@ dependencies = [
 name = "sunscreen_compiler"
 version = "0.1.0"
 dependencies = [
+ "bumpalo",
  "clap",
  "log",
  "petgraph",

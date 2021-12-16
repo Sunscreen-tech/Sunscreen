@@ -7,7 +7,7 @@
 //! # Examples
 //! This example is further annotated in `examples/simple_multiply`.
 //! ```
-//! # use sunscreen_compiler::{circuit, types::Unsigned, Params, Context};
+//! # use sunscreen_compiler::{circuit, Compiler, types::Unsigned, PlainModulusConstraint, Params, Runtime, Context};
 //! 
 //! #[circuit(scheme = "bfv")]
 //! fn simple_multiply(a: Unsigned, b: Unsigned) -> Unsigned {
@@ -210,9 +210,16 @@ impl PartialEq for FrontendCompilation {
 
 thread_local! {
     /**
-     * While constructing a circuit, this refers to the current intermediate representation.
+     * While constructing a circuit, this refers to the current intermediate 
+     * representation. An implementation detail of the [`circuit`] macro.
      */
     pub static CURRENT_CTX: RefCell<Option<&'static mut Context>> = RefCell::new(None);
+
+    /**
+     * An arena containing slices of indicies. An implementation detail of the 
+     * [`circuit`] macro.
+     */
+    pub static INDEX_ARENA: RefCell<bumpalo::Bump> = RefCell::new(bumpalo::Bump::new());
 }
 
 /**
@@ -244,16 +251,6 @@ impl Context {
             params: params.clone(),
             indicies_store: vec![]
         }
-    }
-
-    pub(crate) unsafe fn allocate_indicies(&mut self, len: usize) -> &'static mut [NodeIndex] {
-        let before_len = self.indicies_store.len();
-
-        self.indicies_store.resize(before_len + len, NodeIndex::new(0));
-
-        let (_, right) = self.indicies_store.split_at_mut(before_len);
-
-        std::mem::transmute(right)
     }
 
     fn add_2_input(&mut self, op: Operation, left: NodeIndex, right: NodeIndex) -> NodeIndex {

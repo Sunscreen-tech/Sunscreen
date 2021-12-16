@@ -51,8 +51,8 @@ impl U64LiteralRef {
  * circuit construction and thus after all CircuitNodes have gone out of scope.
  * 
  * # Undefined behavior
- * These types must be constructed while a [`CURRENT_CTX`] refers to a valid
- * [`Context`]. Furthermore, no [`CircuitNode`] should outlive the said context.
+ * These types must be constructed while a [`crate::CURRENT_CTX`] refers to a valid
+ * [`crate::Context`]. Furthermore, no [`CircuitNode`] should outlive the said context.
  * Violating any of these condicitions may result in memory corruption or
  * use-after-free.
  */
@@ -80,7 +80,7 @@ impl <T: FheType> CircuitNode<T> {
      * clone() all the time.
      * 
      * # Undefined behavior
-     * This type references memory in a backing [`Context`] and without carefully ensuring CircuitNodes
+     * This type references memory in a backing [`crate::Context`] and without carefully ensuring CircuitNodes
      * never outlive the backing context, use-after-free can occur.
      * 
      */
@@ -104,10 +104,10 @@ impl <T: FheType> CircuitNode<T> {
     /**
      * Creates a new CircuitNode denoted as an input to a circuit graph.
      * 
-     * You should not call this, but rather allow the [`circuit`] macro to do this on your behalf.
+     * You should not call this, but rather allow the [`crate::circuit`] macro to do this on your behalf.
      * 
      * # Undefined behavior
-     * This type references memory in a backing [`Context`] and without carefully ensuring CircuitNodes
+     * This type references memory in a backing [`crate::Context`] and without carefully ensuring CircuitNodes
      * never outlive the backing context, use-after-free can occur.
      * 
      */
@@ -124,10 +124,10 @@ impl <T: FheType> CircuitNode<T> {
     /**
      * Denote this node as an output by appending an output circuit node.
      * 
-     * You should not call this, but rather allow the [`circuit`] macro to do this on your behalf.
+     * You should not call this, but rather allow the [`crate::circuit`] macro to do this on your behalf.
      * 
      * # Undefined behavior
-     * This type references memory in a backing [`Context`] and without carefully ensuring CircuitNodes
+     * This type references memory in a backing [`crate::Context`] and without carefully ensuring CircuitNodes
      * never outlive the backing context, use-after-free can occur.
      * 
      */

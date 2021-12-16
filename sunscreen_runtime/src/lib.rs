@@ -91,12 +91,12 @@ where
 }
 
 /**
- * The [`NumCiphertexts::num_ciphertexts`] function denotes how many ciphertexts this type
- * decomposes into.
+ * Declare how many ciphertexts an FheType decomposes into. The runtime needs this
+ * to correctly bundle return values from a circuit.
  */
 pub trait NumCiphertexts {
     /**
-     * Returns the number of ciphertexts this type decomposes into.
+     * The number of ciphertexts this type decomposes into.
      */
     const NUM_CIPHERTEXTS: usize;
 }

@@ -131,12 +131,21 @@ impl NumCiphertexts for Signed {
 
 impl FheType for Signed {}
 
+fn significant_bits(val: u64) -> usize {
+    let bits = std::mem::size_of::<u64>() * 8;
+
+    for i in 0..bits {
+        if (0x1 << (bits - i)) & val != 0 {
+            return bits - i + 1;
+        }
+    }
+
+    0
+}
+
 impl TryIntoPlaintext for Signed {
     fn try_into_plaintext(&self, params: &Params) -> std::result::Result<Plaintext, sunscreen_runtime::Error> {
         let mut seal_plaintext = SealPlaintext::new()?;
-        let bits = std::mem::size_of::<u64>() * 8;
-
-        seal_plaintext.resize(bits);
 
         let unsigned_val = if self.val < 0 {
             -self.val
@@ -144,11 +153,14 @@ impl TryIntoPlaintext for Signed {
             self.val
         } as u64;
 
-        for i in 0..bits {
+        let sig_bits = significant_bits(unsigned_val);
+        seal_plaintext.resize(sig_bits);
+
+        for i in 0..sig_bits {
             let bit_value = (unsigned_val & 0x1 << i) >> i;
 
             let coeff_value = if self.val < 0 {
-                params.plain_modulus as u64 - bit_value
+                params.plain_modulus as u64 -bit_value
             } else {
                 bit_value
             };
@@ -173,7 +185,10 @@ impl TryFromPlaintext for Signed {
                     return Err(sunscreen_runtime::Error::IncorrectCiphertextCount);
                 }
 
-                let bits = usize::min(std::mem::size_of::<u64>() * 8, p[0].len());
+                let bits = usize::min(
+                    usize::min(std::mem::size_of::<u64>() * 8, p[0].len()),
+                    p[0].len()
+                );
 
                 let negative_cutoff = (params.plain_modulus + 1) / 2;
 
@@ -182,7 +197,7 @@ impl TryFromPlaintext for Signed {
                 for i in 0..bits {
                     let coeff =  p[0].get_coefficient(i);
                     
-                    if coeff > negative_cutoff {
+                    if coeff < negative_cutoff {
                         val += ((0x1 << i) * coeff) as i64;
                     } else {
                         val -= ((0x1 << i) * (params.plain_modulus - coeff)) as i64;
@@ -203,7 +218,37 @@ impl From<i64> for Signed {
     }
 }
 
+impl Into<i64> for Signed {
+    fn into(self) -> i64 {
+        self.val
+    }
+}
 
+impl GraphAdd for Signed {
+    type Left = Signed;
+    type Right = Signed;
+
+    fn graph_add(a: CircuitNode<Self::Left>, b: CircuitNode<Self::Right>) -> CircuitNode<Self::Left> {
+        with_ctx(|ctx| {
+            let n = ctx.add_addition(a.ids[0], b.ids[0]);
+
+            CircuitNode::new(&[n])
+        })
+    }
+}
+
+impl GraphMul for Signed {
+    type Left = Signed;
+    type Right = Signed;
+
+    fn graph_mul(a: CircuitNode<Self::Left>, b: CircuitNode<Self::Right>) -> CircuitNode<Self::Left> {
+        with_ctx(|ctx| {
+            let n = ctx.add_multiplication(a.ids[0], b.ids[0]);
+
+            CircuitNode::new(&[n])
+        })
+    }
+}
 
 #[cfg(test)]
 mod tests {

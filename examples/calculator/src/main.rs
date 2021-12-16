@@ -1,8 +1,5 @@
-mod rational;
-
 use std::thread::{self, JoinHandle};
-use sunscreen_compiler::{circuit};
-use rational::Rational;
+use sunscreen_compiler::{circuit, types::Rational};
 
 fn alice() -> JoinHandle<()> {
     thread::spawn(|| {

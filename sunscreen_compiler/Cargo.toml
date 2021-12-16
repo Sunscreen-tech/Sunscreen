@@ -9,6 +9,7 @@ edition = "2021"
 bumpalo = "3.8.0"
 clap = "2.34.0"
 log = "0.4.14"
+num = "0.4.0"
 petgraph = "0.6.0"
 sunscreen_compiler_macros = { path = "../sunscreen_compiler_macros" }
 sunscreen_backend = { path = "../sunscreen_backend" }

@@ -88,7 +88,6 @@ checksum = "8f1e260c3a9040a7c19a12468758f4c16f31a81a1fe087482be9570ec864bb6c"
 name = "calculator"
 version = "0.1.0"
 dependencies = [
- "num",
  "sunscreen_compiler",
  "sunscreen_runtime",
 ]
@@ -643,6 +642,7 @@ dependencies = [
  "bumpalo",
  "clap",
  "log",
+ "num",
  "petgraph",
  "seal",
  "serde",

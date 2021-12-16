@@ -1,4 +1,5 @@
 mod integer;
+mod rational;
 
 use crate::{with_ctx, Literal, INDEX_ARENA};
 
@@ -10,6 +11,7 @@ pub use sunscreen_runtime::{
 };
 
 pub use integer::{Signed, Unsigned};
+pub use rational::{Rational};
 use std::ops::{Add, Mul};
 
 #[derive(Clone, Copy, Serialize, Deserialize)]

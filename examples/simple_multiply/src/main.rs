@@ -1,4 +1,4 @@
-use sunscreen_compiler::{circuit, types::Unsigned, Compiler, Params, PlainModulusConstraint};
+use sunscreen_compiler::{circuit, types::Unsigned, Compiler, PlainModulusConstraint};
 use sunscreen_runtime::Runtime;
 
 /**

@@ -213,7 +213,7 @@ fn create_signature(args: &[&Type], ret: &ReturnType) -> TokenStream {
 
             let return_type_sizes = tuple_inners.iter().map(|t| {
                 quote! {
-                    #t ::num_ciphertexts(),
+                    #t ::NUM_CIPHERTEXTS,
                 }
             });
 

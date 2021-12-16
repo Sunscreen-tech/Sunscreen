@@ -1,7 +1,7 @@
 mod rational;
 
 use std::thread::{self, JoinHandle};
-use sunscreen_compiler::{circuit, Compiler};
+use sunscreen_compiler::{circuit};
 use rational::Rational;
 
 fn alice() -> JoinHandle<()> {
@@ -24,6 +24,6 @@ fn main() {
     let a = alice();
     let b = bob();
 
-    a.join();
-    b.join();
+    a.join().unwrap();
+    b.join().unwrap();
 }

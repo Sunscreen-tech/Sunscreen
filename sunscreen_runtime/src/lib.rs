@@ -98,7 +98,7 @@ pub trait NumCiphertexts {
     /**
      * Returns the number of ciphertexts this type decomposes into.
      */
-    fn num_ciphertexts() -> usize;
+    const NUM_CIPHERTEXTS: usize;
 }
 
 /**

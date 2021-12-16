@@ -45,8 +45,7 @@ mod params;
  */
 pub mod types;
 
-use std::cell::{RefCell, RefMut};
-
+use std::cell::{RefCell};
 use petgraph::{
     algo::is_isomorphic_matching,
     stable_graph::{NodeIndex, StableGraph},
@@ -70,8 +69,6 @@ pub use sunscreen_runtime::{
     CallSignature, CircuitMetadata, Error as RuntimeError,
     Params, PublicKey, RequiredKeys, Runtime, InnerPlaintext, Plaintext
 };
-
-use types::{FheType, CircuitNode};
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 /**
@@ -223,15 +220,15 @@ thread_local! {
  */
 pub fn with_ctx<F, R>(f: F) -> R
 where
-    F: FnOnce(&'static mut Context) -> R,
+    F: FnOnce(&mut Context) -> R,
 {
     CURRENT_CTX.with(|ctx| {
-        let mut option: RefMut<'static, Option<&mut Context>> = ctx.borrow_mut();
-        let ctx = option
-            .as_mut()
-            .expect("Called Ciphertext::new() outside of a context.");
-
-        f(ctx)
+                let mut option = ctx.borrow_mut();
+                let ctx = option
+                    .as_mut()
+                    .expect("Called Ciphertext::new() outside of a context.");
+        
+                f(ctx)
     })
 }
 
@@ -249,22 +246,14 @@ impl Context {
         }
     }
 
-    pub fn allocate_circuit_node<T: FheType>(&mut self, ids: &[NodeIndex]) -> CircuitNode<T> {
-        let indicies = self.allocate_indicies(T::num_ciphertexts());
-
-        indicies.copy_from_slice(ids);
-
-        CircuitNode::new(indicies)
-    }
-
-    fn allocate_indicies(&mut self, len: usize) -> &mut [NodeIndex] {
+    pub(crate) unsafe fn allocate_indicies(&mut self, len: usize) -> &'static mut [NodeIndex] {
         let before_len = self.indicies_store.len();
 
         self.indicies_store.resize(before_len + len, NodeIndex::new(0));
 
         let (_, right) = self.indicies_store.split_at_mut(before_len);
 
-        right
+        std::mem::transmute(right)
     }
 
     fn add_2_input(&mut self, op: Operation, left: NodeIndex, right: NodeIndex) -> NodeIndex {

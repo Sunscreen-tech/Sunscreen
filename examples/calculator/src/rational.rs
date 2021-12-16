@@ -1,10 +1,8 @@
-use sunscreen_compiler::{TypeName, Params, InnerPlaintext, Plaintext};
-use sunscreen_compiler::types::{BfvType, FheType, NumCiphertexts, TryIntoPlaintext, TryFromPlaintext, Signed, CircuitNode};
+use sunscreen_compiler::{TypeName, Params, InnerPlaintext, Plaintext, with_ctx};
+use sunscreen_compiler::types::{BfvType, FheType, NumCiphertexts, TryIntoPlaintext, TryFromPlaintext, Signed, GraphAdd, CircuitNode};
 use sunscreen_runtime::{Error};
 
 use num::Rational64;
-
-use std::ops::{Add, Mul, Sub, Div};
 
 #[derive(Debug, Clone, Copy, TypeName, PartialEq, Eq)]
 pub struct Rational {
@@ -16,9 +14,7 @@ pub struct Rational {
 // each type. It's spiritually similar to [`std::mem::sizeof`] except it returns the number
 // of plaintexts this type needs rather than the number of bytes.
 impl NumCiphertexts for Rational {
-    fn num_ciphertexts() -> usize {
-        Signed::num_ciphertexts() + Signed::num_ciphertexts()
-    }
+    const NUM_CIPHERTEXTS: usize = Signed::NUM_CIPHERTEXTS + Signed::NUM_CIPHERTEXTS;
 }
 
 // This trait takes a plaintext and turns it into a [`Rational`]. [`Plaintext`] is a type generally
@@ -30,12 +26,12 @@ impl NumCiphertexts for Rational {
 // This trait is needed so Runtime knows how to package this type after decryption.
 impl TryFromPlaintext for Rational {
     fn try_from_plaintext(plaintext: &Plaintext, params: &Params) -> Result<Self, Error> {
-         let (num, den) = match plaintext.inner {
+         let (num, den) = match &plaintext.inner {
             InnerPlaintext::Seal(p) => {
                 // We encode Rationals as 2 plaintexts. Wrap each plaintext and delegate
                 // to Signed::try_from_plaintext to compute our inner values.
-                let num = Plaintext {inner: InnerPlaintext::Seal(vec![p[0]]) };
-                let den = Plaintext {inner: InnerPlaintext::Seal(vec![p[1]]) };
+                let num = Plaintext {inner: InnerPlaintext::Seal(vec![p[0].clone()]) };
+                let den = Plaintext {inner: InnerPlaintext::Seal(vec![p[1].clone()]) };
 
                 (
                     Signed::try_from_plaintext(&num, params)?,
@@ -58,7 +54,7 @@ impl TryIntoPlaintext for Rational {
 
         let (num, den) = match (num.inner, den.inner) {
             (InnerPlaintext::Seal(n), InnerPlaintext::Seal(d)) => {
-                (n[0], d[0])
+                (n[0].clone(), d[0].clone())
             }
         };
 
@@ -88,6 +84,19 @@ impl TryFrom<f64> for Rational {
     }
 }
 
-impl Add for CircuitNode<Rational> {
+impl GraphAdd for Rational {
+    type Left = Self;
+    type Right = Self;
+
+    fn graph_add(a: CircuitNode<Self::Left>, b: CircuitNode<Self::Right>) -> CircuitNode<Self::Left> {
+        with_ctx(|ctx| {
+            let ids = [
+                ctx.add_addition(a.ids[0], b.ids[0]),
+                ctx.add_addition(a.ids[1], b.ids[1]),
+            ];
+
+            CircuitNode::new(&ids)
+        })
+    }
 
 }

@@ -2,7 +2,7 @@ use seal::Plaintext as SealPlaintext;
 
 use crate::{
     types::{BfvType, CircuitNode, FheType},
-    Context, TypeName as DeriveTypeName, Params, with_ctx
+    TypeName as DeriveTypeName, Params, with_ctx
 };
 use crate::types::{GraphAdd, GraphMul};
 
@@ -35,9 +35,11 @@ impl GraphAdd for Unsigned {
     type Left = Unsigned;
     type Right = Unsigned;
 
-    fn graph_add<'a>(a: CircuitNode<'a, Self::Left>, b: CircuitNode<'a, Self::Right>) -> CircuitNode<'a, Self::Left> {
+    fn graph_add(a: CircuitNode<Self::Left>, b: CircuitNode<Self::Right>) -> CircuitNode<Self::Left> {
         with_ctx(|ctx| {
-            ctx.allocate_circuit_node(&[ctx.add_addition(a.ids[0], b.ids[0])])
+            let n = ctx.add_addition(a.ids[0], b.ids[0]);
+
+            CircuitNode::new(&[n])
         })
     }
 }
@@ -46,13 +48,11 @@ impl GraphMul for Unsigned {
     type Left = Unsigned;
     type Right = Unsigned;
 
-    fn graph_mul<'a>(a: CircuitNode<'a, Self::Left>, b: CircuitNode<'a, Self::Right>) -> CircuitNode<'a, Self::Left> {
-        Context::with_ctx(|ctx| unsafe {
-            let indicies = ctx.allocate_indicies(Self::num_ciphertexts());
+    fn graph_mul(a: CircuitNode<Self::Left>, b: CircuitNode<Self::Right>) -> CircuitNode<Self::Left> {
+        with_ctx(|ctx| {
+            let n = ctx.add_multiplication(a.ids[0], b.ids[0]);
 
-            indicies[0] = ctx.add_multiplication(a.ids[0], b.ids[0]);
-
-            CircuitNode::new(indicies)
+            CircuitNode::new(&[n])
         })
     }
 }
@@ -102,9 +102,7 @@ impl TryFromPlaintext for Unsigned {
 }
 
 impl NumCiphertexts for Unsigned {
-    fn num_ciphertexts() -> usize {
-        1
-    }
+    const NUM_CIPHERTEXTS: usize = 1;
 }
 
 impl From<u64> for Unsigned {
@@ -128,9 +126,7 @@ pub struct Signed {
 }
 
 impl NumCiphertexts for Signed {
-    fn num_ciphertexts() -> usize {
-        1
-    }
+    const NUM_CIPHERTEXTS: usize = 1;
 }
 
 impl FheType for Signed {}

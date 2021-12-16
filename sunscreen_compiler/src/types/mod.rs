@@ -10,7 +10,7 @@ pub use sunscreen_runtime::{
 };
 
 pub use integer::{Signed, Unsigned};
-use std::ops::{Add, Mul, Div, Sub};
+use std::ops::{Add, Mul};
 
 #[derive(Clone, Copy, Serialize, Deserialize)]
 /**
@@ -38,14 +38,16 @@ impl U64LiteralRef {
  * no [`CircuitNode`] should outlive the said context. Violating any of these condicitions may result
  * in memory corruption or use-after-free.
  */
-pub struct CircuitNode<'a, T: FheType> {
-
-    ids: &'a [NodeIndex],
+pub struct CircuitNode<T: FheType> {
+    /**
+     * The ids on this node.
+     */
+    pub ids: &'static [NodeIndex],
 
     _phantom: std::marker::PhantomData<T>,
 }
 
-impl <'a, T: FheType> CircuitNode<'a, T> {
+impl <T: FheType> CircuitNode<T> {
     /**
      * Creates a new circuit node with the given node index.
      * 
@@ -62,9 +64,15 @@ impl <'a, T: FheType> CircuitNode<'a, T> {
      * never outlive the backing context, use-after-free can occur.
      * 
      */
-    pub unsafe fn new(ids: &'a [NodeIndex]) -> Self {
+    pub fn new(ids: &[NodeIndex]) -> Self {
+        let ids_dest = with_ctx(|ctx| {
+            unsafe { ctx.allocate_indicies(ids.len()) }
+        });
+
+        ids_dest.copy_from_slice(ids);
+
         Self {
-            ids,
+            ids: ids_dest,
             _phantom: std::marker::PhantomData,
         }
     }
@@ -79,14 +87,14 @@ impl <'a, T: FheType> CircuitNode<'a, T> {
      * never outlive the backing context, use-after-free can occur.
      * 
      */
-    pub unsafe fn input() -> Self {
-        let mut ids = with_ctx(|ctx| ctx.allocate_indicies(T::num_ciphertexts()));
+    pub fn input() -> Self {
+        let mut ids = Vec::with_capacity(T::NUM_CIPHERTEXTS);
 
-        for i in 0..T::num_ciphertexts() {
-            ids[i] = with_ctx(|ctx| ctx.add_input());
+        for _ in 0..T::NUM_CIPHERTEXTS {
+            ids.push(with_ctx(|ctx| ctx.add_input()));
         }
-
-        unsafe { Self::new(ids) }
+        
+        CircuitNode::new(&ids)
     }
 
     /**
@@ -99,14 +107,14 @@ impl <'a, T: FheType> CircuitNode<'a, T> {
      * never outlive the backing context, use-after-free can occur.
      * 
      */
-    pub unsafe fn output(&self) -> Self {
-        let mut ids = with_ctx(|ctx| ctx.allocate_indicies(T::num_ciphertexts()));
+    pub fn output(&self) -> Self {
+        let mut ids = Vec::with_capacity(self.ids.len());
 
         for i in 0..self.ids.len() {
-            ids[i] = with_ctx(|ctx| ctx.add_output(self.ids[i]));
+            ids.push(with_ctx(|ctx| ctx.add_output(self.ids[i])));
         }
         
-        unsafe { Self::new(ids) }
+        CircuitNode::new(&ids)
     }
 
     /**
@@ -134,7 +142,7 @@ pub trait GraphAdd {
     /**
      * Process the + operation
      */
-    fn graph_add<'a>(a: CircuitNode<'a, Self::Left>, b: CircuitNode<'a, Self::Right>) -> CircuitNode<'a, Self::Left>;
+    fn graph_add(a: CircuitNode<Self::Left>, b: CircuitNode<Self::Right>) -> CircuitNode<Self::Left>;
 }
 
 /**
@@ -154,7 +162,7 @@ pub trait GraphMul {
     /**
      * Process the * operation
      */
-    fn graph_mul<'a>(a: CircuitNode<'a, Self::Left>, b: CircuitNode<'a, Self::Right>) -> CircuitNode<'a, Self::Left>;
+    fn graph_mul(a: CircuitNode<Self::Left>, b: CircuitNode<Self::Right>) -> CircuitNode<Self::Left>;
 }
 
 /**
@@ -174,10 +182,10 @@ pub trait GraphDiv {
     /**
      * Process the + operation
      */
-    fn graph_mul<'a>(a: CircuitNode<'a, Self::Left>, b: CircuitNode<'a, Self::Right>) -> CircuitNode<'a, Self::Left>;
+    fn graph_mul(a: CircuitNode<Self::Left>, b: CircuitNode<Self::Right>) -> CircuitNode<Self::Left>;
 }
 
-impl <'a, T> Add for CircuitNode<'a, T> 
+impl <T> Add for CircuitNode<T> 
 where T: FheType + GraphAdd<Left=T, Right=T>
 {
     type Output = Self;
@@ -187,7 +195,7 @@ where T: FheType + GraphAdd<Left=T, Right=T>
     }
 }
 
-impl <'a, T> Mul for CircuitNode<'a, T> 
+impl <T> Mul for CircuitNode<T> 
 where T: FheType + GraphMul<Left=T, Right=T>
 {
     type Output = Self;

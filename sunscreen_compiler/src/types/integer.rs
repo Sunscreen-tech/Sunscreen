@@ -1,10 +1,10 @@
 use seal::Plaintext as SealPlaintext;
 
+use crate::types::{GraphAdd, GraphMul};
 use crate::{
     types::{BfvType, CircuitNode, FheType},
-    TypeName as DeriveTypeName, Params, with_ctx
+    with_ctx, Params, TypeName as DeriveTypeName,
 };
-use crate::types::{GraphAdd, GraphMul};
 
 use sunscreen_runtime::{
     InnerPlaintext, NumCiphertexts, Plaintext, TryFromPlaintext, TryIntoPlaintext,
@@ -35,7 +35,10 @@ impl GraphAdd for Unsigned {
     type Left = Unsigned;
     type Right = Unsigned;
 
-    fn graph_add(a: CircuitNode<Self::Left>, b: CircuitNode<Self::Right>) -> CircuitNode<Self::Left> {
+    fn graph_add(
+        a: CircuitNode<Self::Left>,
+        b: CircuitNode<Self::Right>,
+    ) -> CircuitNode<Self::Left> {
         with_ctx(|ctx| {
             let n = ctx.add_addition(a.ids[0], b.ids[0]);
 
@@ -48,7 +51,10 @@ impl GraphMul for Unsigned {
     type Left = Unsigned;
     type Right = Unsigned;
 
-    fn graph_mul(a: CircuitNode<Self::Left>, b: CircuitNode<Self::Right>) -> CircuitNode<Self::Left> {
+    fn graph_mul(
+        a: CircuitNode<Self::Left>,
+        b: CircuitNode<Self::Right>,
+    ) -> CircuitNode<Self::Left> {
         with_ctx(|ctx| {
             let n = ctx.add_multiplication(a.ids[0], b.ids[0]);
 
@@ -58,7 +64,10 @@ impl GraphMul for Unsigned {
 }
 
 impl TryIntoPlaintext for Unsigned {
-    fn try_into_plaintext(&self, _params: &Params) -> std::result::Result<Plaintext, sunscreen_runtime::Error> {
+    fn try_into_plaintext(
+        &self,
+        _params: &Params,
+    ) -> std::result::Result<Plaintext, sunscreen_runtime::Error> {
         let mut seal_plaintext = SealPlaintext::new()?;
         let bits = std::mem::size_of::<u64>() * 8;
 
@@ -78,7 +87,7 @@ impl TryIntoPlaintext for Unsigned {
 impl TryFromPlaintext for Unsigned {
     fn try_from_plaintext(
         plaintext: &Plaintext,
-        _params: &Params
+        _params: &Params,
     ) -> std::result::Result<Self, sunscreen_runtime::Error> {
         let val = match &plaintext.inner {
             InnerPlaintext::Seal(p) => {
@@ -144,14 +153,13 @@ fn significant_bits(val: u64) -> usize {
 }
 
 impl TryIntoPlaintext for Signed {
-    fn try_into_plaintext(&self, params: &Params) -> std::result::Result<Plaintext, sunscreen_runtime::Error> {
+    fn try_into_plaintext(
+        &self,
+        params: &Params,
+    ) -> std::result::Result<Plaintext, sunscreen_runtime::Error> {
         let mut seal_plaintext = SealPlaintext::new()?;
 
-        let unsigned_val = if self.val < 0 {
-            -self.val
-        } else {
-            self.val
-        } as u64;
+        let unsigned_val = if self.val < 0 { -self.val } else { self.val } as u64;
 
         let sig_bits = significant_bits(unsigned_val);
         seal_plaintext.resize(sig_bits);
@@ -160,7 +168,7 @@ impl TryIntoPlaintext for Signed {
             let bit_value = (unsigned_val & 0x1 << i) >> i;
 
             let coeff_value = if self.val < 0 {
-                params.plain_modulus as u64 -bit_value
+                params.plain_modulus as u64 - bit_value
             } else {
                 bit_value
             };
@@ -177,7 +185,7 @@ impl TryIntoPlaintext for Signed {
 impl TryFromPlaintext for Signed {
     fn try_from_plaintext(
         plaintext: &Plaintext,
-        params: &Params
+        params: &Params,
     ) -> std::result::Result<Self, sunscreen_runtime::Error> {
         let val = match &plaintext.inner {
             InnerPlaintext::Seal(p) => {
@@ -187,7 +195,7 @@ impl TryFromPlaintext for Signed {
 
                 let bits = usize::min(
                     usize::min(std::mem::size_of::<u64>() * 8, p[0].len()),
-                    p[0].len()
+                    p[0].len(),
                 );
 
                 let negative_cutoff = (params.plain_modulus + 1) / 2;
@@ -195,8 +203,8 @@ impl TryFromPlaintext for Signed {
                 let mut val: i64 = 0;
 
                 for i in 0..bits {
-                    let coeff =  p[0].get_coefficient(i);
-                    
+                    let coeff = p[0].get_coefficient(i);
+
                     if coeff < negative_cutoff {
                         val += ((0x1 << i) * coeff) as i64;
                     } else {
@@ -228,7 +236,10 @@ impl GraphAdd for Signed {
     type Left = Signed;
     type Right = Signed;
 
-    fn graph_add(a: CircuitNode<Self::Left>, b: CircuitNode<Self::Right>) -> CircuitNode<Self::Left> {
+    fn graph_add(
+        a: CircuitNode<Self::Left>,
+        b: CircuitNode<Self::Right>,
+    ) -> CircuitNode<Self::Left> {
         with_ctx(|ctx| {
             let n = ctx.add_addition(a.ids[0], b.ids[0]);
 
@@ -241,7 +252,10 @@ impl GraphMul for Signed {
     type Left = Signed;
     type Right = Signed;
 
-    fn graph_mul(a: CircuitNode<Self::Left>, b: CircuitNode<Self::Right>) -> CircuitNode<Self::Left> {
+    fn graph_mul(
+        a: CircuitNode<Self::Left>,
+        b: CircuitNode<Self::Right>,
+    ) -> CircuitNode<Self::Left> {
         with_ctx(|ctx| {
             let n = ctx.add_multiplication(a.ids[0], b.ids[0]);
 

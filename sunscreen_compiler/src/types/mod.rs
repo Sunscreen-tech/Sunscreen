@@ -11,8 +11,8 @@ pub use sunscreen_runtime::{
 };
 
 pub use integer::{Signed, Unsigned};
-pub use rational::{Rational};
-use std::ops::{Add, Div, Mul};
+pub use rational::Rational;
+use std::ops::{Add, Div, Mul, Sub};
 
 #[derive(Clone, Copy, Serialize, Deserialize)]
 /**
@@ -35,14 +35,14 @@ impl U64LiteralRef {
  * A type that wraps an FheType during graph construction. It is an implementation
  * detail and you should not construct these directly.
  * Outside of very specific semantics, use-after-free and other undefined behaviors may occur.
- * 
+ *
  * # Remarks
  * This type serves as an anchor so users can apply +, *, -, /, <<, and >> operators
  * on types inside a circuit function. If the underlying type `T` implements the
  * [`GraphAdd`], [`GraphMul`], etc trait, then `CircuitNode<T>` implements
  * [`std::ops::Add`], [`std::ops::Mul`], etc and proxies to T's underlying
  * implementation.
- * 
+ *
  * This type impls the Copy trait so users don't have to call .clone() all the time.
  * Unfortunately, this rules out the clean implementation of using a `Vec<NodeIndex>`
  * to store the graph nodes T represents; [`Vec`] does not impl [`Copy`], and thus it
@@ -51,7 +51,7 @@ impl U64LiteralRef {
  * slices. This requires we lie about the lifetime of ids, which isn't actually 'static,
  * but rather until we clear the arena. We clean the arena in the circuit macro after
  * circuit construction and thus after all CircuitNodes have gone out of scope.
- * 
+ *
  * # Undefined behavior
  * These types must be constructed while a [`crate::CURRENT_CTX`] refers to a valid
  * [`crate::Context`]. Furthermore, no [`CircuitNode`] should outlive the said context.
@@ -68,27 +68,27 @@ pub struct CircuitNode<T: FheType> {
     _phantom: std::marker::PhantomData<T>,
 }
 
-impl <T: FheType> CircuitNode<T> {
+impl<T: FheType> CircuitNode<T> {
     /**
      * Creates a new circuit node with the given node index.
-     * 
+     *
      * These are an implementation detail needed while constructing the circuit graph
      * and should not be constructed at any other time. Thus, you should never
      * directly create a [`CircuitNode`].
-     * 
+     *
      * # Remarks
      * This type internally captures a slice rather than directly storing its own Vec. We do this
      * so the type can impl Copy and composing circuits is natural without the user needing to call
      * clone() all the time.
-     * 
+     *
      * # Undefined behavior
      * This type references memory in a backing [`crate::Context`] and without carefully ensuring CircuitNodes
      * never outlive the backing context, use-after-free can occur.
-     * 
+     *
      */
     pub fn new(ids: &[NodeIndex]) -> Self {
         INDEX_ARENA.with(|allocator| {
-            let allocator = allocator.borrow();   
+            let allocator = allocator.borrow();
             let ids_dest = allocator.alloc_slice_copy(ids);
 
             ids_dest.copy_from_slice(ids);
@@ -105,13 +105,13 @@ impl <T: FheType> CircuitNode<T> {
 
     /**
      * Creates a new CircuitNode denoted as an input to a circuit graph.
-     * 
+     *
      * You should not call this, but rather allow the [`crate::circuit`] macro to do this on your behalf.
-     * 
+     *
      * # Undefined behavior
      * This type references memory in a backing [`crate::Context`] and without carefully ensuring CircuitNodes
      * never outlive the backing context, use-after-free can occur.
-     * 
+     *
      */
     pub fn input() -> Self {
         let mut ids = Vec::with_capacity(T::NUM_CIPHERTEXTS);
@@ -119,19 +119,19 @@ impl <T: FheType> CircuitNode<T> {
         for _ in 0..T::NUM_CIPHERTEXTS {
             ids.push(with_ctx(|ctx| ctx.add_input()));
         }
-        
+
         CircuitNode::new(&ids)
     }
 
     /**
      * Denote this node as an output by appending an output circuit node.
-     * 
+     *
      * You should not call this, but rather allow the [`crate::circuit`] macro to do this on your behalf.
-     * 
+     *
      * # Undefined behavior
      * This type references memory in a backing [`crate::Context`] and without carefully ensuring CircuitNodes
      * never outlive the backing context, use-after-free can occur.
-     * 
+     *
      */
     pub fn output(&self) -> Self {
         let mut ids = Vec::with_capacity(self.ids.len());
@@ -139,7 +139,7 @@ impl <T: FheType> CircuitNode<T> {
         for i in 0..self.ids.len() {
             ids.push(with_ctx(|ctx| ctx.add_output(self.ids[i])));
         }
-        
+
         CircuitNode::new(&ids)
     }
 
@@ -168,7 +168,33 @@ pub trait GraphAdd {
     /**
      * Process the + operation
      */
-    fn graph_add(a: CircuitNode<Self::Left>, b: CircuitNode<Self::Right>) -> CircuitNode<Self::Left>;
+    fn graph_add(
+        a: CircuitNode<Self::Left>,
+        b: CircuitNode<Self::Right>,
+    ) -> CircuitNode<Self::Left>;
+}
+
+/**
+ * Called when a circuit encounters a + operation.
+ */
+pub trait GraphSub {
+    /**
+     * The type of the left operand
+     */
+    type Left: FheType;
+
+    /**
+     * The type of the right operand
+     */
+    type Right: FheType;
+
+    /**
+     * Process the + operation
+     */
+    fn graph_sub(
+        a: CircuitNode<Self::Left>,
+        b: CircuitNode<Self::Right>,
+    ) -> CircuitNode<Self::Left>;
 }
 
 /**
@@ -188,7 +214,10 @@ pub trait GraphMul {
     /**
      * Process the * operation
      */
-    fn graph_mul(a: CircuitNode<Self::Left>, b: CircuitNode<Self::Right>) -> CircuitNode<Self::Left>;
+    fn graph_mul(
+        a: CircuitNode<Self::Left>,
+        b: CircuitNode<Self::Right>,
+    ) -> CircuitNode<Self::Left>;
 }
 
 /**
@@ -208,11 +237,15 @@ pub trait GraphDiv {
     /**
      * Process the + operation
      */
-    fn graph_div(a: CircuitNode<Self::Left>, b: CircuitNode<Self::Right>) -> CircuitNode<Self::Left>;
+    fn graph_div(
+        a: CircuitNode<Self::Left>,
+        b: CircuitNode<Self::Right>,
+    ) -> CircuitNode<Self::Left>;
 }
 
-impl <T> Add for CircuitNode<T> 
-where T: FheType + GraphAdd<Left=T, Right=T>
+impl<T> Add for CircuitNode<T>
+where
+    T: FheType + GraphAdd<Left = T, Right = T>,
 {
     type Output = Self;
 
@@ -221,8 +254,20 @@ where T: FheType + GraphAdd<Left=T, Right=T>
     }
 }
 
-impl <T> Mul for CircuitNode<T> 
-where T: FheType + GraphMul<Left=T, Right=T>
+impl<T> Sub for CircuitNode<T>
+where
+    T: FheType + GraphSub<Left = T, Right = T>,
+{
+    type Output = Self;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        T::graph_sub(self, rhs)
+    }
+}
+
+impl<T> Mul for CircuitNode<T>
+where
+    T: FheType + GraphMul<Left = T, Right = T>,
 {
     type Output = Self;
 
@@ -231,8 +276,9 @@ where T: FheType + GraphMul<Left=T, Right=T>
     }
 }
 
-impl <T> Div for CircuitNode<T>
-where T: FheType + GraphDiv<Left=T, Right=T>
+impl<T> Div for CircuitNode<T>
+where
+    T: FheType + GraphDiv<Left = T, Right = T>,
 {
     type Output = Self;
 

@@ -3,17 +3,17 @@
 
 //! This crate contains the frontend compiler for Sunscreen circuits and the types and
 //! algorithms that support it.
-//! 
+//!
 //! # Examples
 //! This example is further annotated in `examples/simple_multiply`.
 //! ```
 //! # use sunscreen_compiler::{circuit, Compiler, types::Unsigned, PlainModulusConstraint, Params, Runtime, Context};
-//! 
+//!
 //! #[circuit(scheme = "bfv")]
 //! fn simple_multiply(a: Unsigned, b: Unsigned) -> Unsigned {
 //!     a * b
 //! }
-//! 
+//!
 //! fn main() {
 //!   let circuit = Compiler::with_circuit(simple_multiply)
 //!       .plain_modulus_constraint(PlainModulusConstraint::Raw(600))
@@ -45,13 +45,13 @@ mod params;
  */
 pub mod types;
 
-use std::cell::{RefCell};
 use petgraph::{
     algo::is_isomorphic_matching,
     stable_graph::{NodeIndex, StableGraph},
     Graph,
 };
 use serde::{Deserialize, Serialize};
+use std::cell::RefCell;
 
 use sunscreen_backend::compile_inplace;
 use sunscreen_circuit::{
@@ -66,8 +66,8 @@ pub use params::PlainModulusConstraint;
 pub use sunscreen_circuit::{SchemeType, SecurityLevel};
 pub use sunscreen_compiler_macros::*;
 pub use sunscreen_runtime::{
-    CallSignature, CircuitMetadata, Error as RuntimeError,
-    Params, PublicKey, RequiredKeys, Runtime, InnerPlaintext, Plaintext
+    CallSignature, CircuitMetadata, Error as RuntimeError, InnerPlaintext, Params, Plaintext,
+    PublicKey, RequiredKeys, Runtime,
 };
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
@@ -95,6 +95,11 @@ pub enum Operation {
      * Addition.
      */
     Add,
+
+    /**
+     * Subtraction.
+     */
+    Sub,
 
     /**
      * Multiplication.
@@ -176,7 +181,10 @@ pub struct FrontendCompilation {
 
 #[derive(Clone, Debug)]
 /**
- * The context under which std::ops:* on Value trait implementors should insert new nodes.
+ * The context for constructing the circuit graph while compiling a circuit.
+ *
+ * This is an implementation detail of the circuit macro, and you shouldn't need
+ * to construct one.
  */
 pub struct Context {
     /**
@@ -210,13 +218,13 @@ impl PartialEq for FrontendCompilation {
 
 thread_local! {
     /**
-     * While constructing a circuit, this refers to the current intermediate 
+     * While constructing a circuit, this refers to the current intermediate
      * representation. An implementation detail of the [`circuit`] macro.
      */
     pub static CURRENT_CTX: RefCell<Option<&'static mut Context>> = RefCell::new(None);
 
     /**
-     * An arena containing slices of indicies. An implementation detail of the 
+     * An arena containing slices of indicies. An implementation detail of the
      * [`circuit`] macro.
      */
     pub static INDEX_ARENA: RefCell<bumpalo::Bump> = RefCell::new(bumpalo::Bump::new());
@@ -230,12 +238,12 @@ where
     F: FnOnce(&mut Context) -> R,
 {
     CURRENT_CTX.with(|ctx| {
-                let mut option = ctx.borrow_mut();
-                let ctx = option
-                    .as_mut()
-                    .expect("Called Ciphertext::new() outside of a context.");
-        
-                f(ctx)
+        let mut option = ctx.borrow_mut();
+        let ctx = option
+            .as_mut()
+            .expect("Called Ciphertext::new() outside of a context.");
+
+        f(ctx)
     })
 }
 
@@ -249,7 +257,7 @@ impl Context {
                 graph: StableGraph::new(),
             },
             params: params.clone(),
-            indicies_store: vec![]
+            indicies_store: vec![],
         }
     }
 
@@ -275,21 +283,28 @@ impl Context {
     }
 
     /**
-     * Add an input this context.
+     * Add an input to this context.
      */
     pub fn add_input(&mut self) -> NodeIndex {
         self.compilation.graph.add_node(Operation::InputCiphertext)
     }
 
     /**
-     * Add an addition this context.
+     * Add a subtraction to this context.
+     */
+    pub fn add_subtraction(&mut self, left: NodeIndex, right: NodeIndex) -> NodeIndex {
+        self.add_2_input(Operation::Sub, left, right)
+    }
+
+    /**
+     * Add an addition to this context.
      */
     pub fn add_addition(&mut self, left: NodeIndex, right: NodeIndex) -> NodeIndex {
         self.add_2_input(Operation::Add, left, right)
     }
 
     /**
-     * Add a multiplication this context.
+     * Add a multiplication to this context.
      */
     pub fn add_multiplication(&mut self, left: NodeIndex, right: NodeIndex) -> NodeIndex {
         self.add_2_input(Operation::Multiply, left, right)
@@ -364,6 +379,7 @@ impl FrontendCompilation {
                 Operation::Literal(Literal::U64(x)) => NodeInfo::new(CircuitOperation::Literal(
                     CircuitOuterLiteral::Scalar(CircuitLiteral::U64(*x)),
                 )),
+                Operation::Sub => NodeInfo::new(CircuitOperation::Sub),
                 Operation::Multiply => NodeInfo::new(CircuitOperation::Multiply),
                 Operation::Output => NodeInfo::new(CircuitOperation::OutputCiphertext),
                 Operation::RotateLeft => NodeInfo::new(CircuitOperation::ShiftLeft),

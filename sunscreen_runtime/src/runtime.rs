@@ -198,7 +198,7 @@ impl Runtime {
                         &public_key.relin_key,
                         &public_key.galois_key,
                     )
-                };
+                }?;
 
                 let mut packed_ciphertexts = vec![];
 

@@ -6,7 +6,39 @@ use petgraph::{stable_graph::NodeIndex, visit::EdgeRef, Direction};
 use std::borrow::Cow;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-use seal::{Ciphertext, Evaluator, GaloisKeys, RelinearizationKeys};
+use seal::{Ciphertext, Evaluator, Error as SealError, GaloisKeys, RelinearizationKeys};
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+/**
+ * An error that occurs while running a circuit.
+ */
+pub enum CircuitRunFailure {
+    /**
+     * An error occurred in a SEAL evaluator.
+     */
+    SealError,
+
+    /**
+     * The circuit needed Galois keys, but none were provided.
+     */
+    MissingGaloisKeys,
+
+    /**
+     * The circuit needed relin keys, but none were provided.
+     */
+    MissingRelinearizationKeys,
+
+    /**
+     * Running the circuit caused a panic unwind.
+     */
+    Panic,
+}
+
+impl From<SealError> for CircuitRunFailure {
+    fn from(_: SealError) -> Self {
+        Self::SealError
+    }
+}
 
 /**
  * You probably should instead use [`Runtime::run()`](crate::Runtime::run).
@@ -38,7 +70,7 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
     evaluator: &E,
     relin_keys: &Option<RelinearizationKeys>,
     galois_keys: &Option<GaloisKeys>,
-) -> Vec<Ciphertext> {
+) -> Result<Vec<Ciphertext>, CircuitRunFailure> {
     fn get_ciphertext<'a>(
         data: &'a [AtomicCell<Option<Cow<Ciphertext>>>],
         index: usize,
@@ -86,8 +118,7 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
                     };
 
                     let c = evaluator
-                        .rotate_rows(a, b, galois_keys.as_ref().unwrap())
-                        .unwrap();
+                        .rotate_rows(a, b, galois_keys.as_ref().ok_or(CircuitRunFailure::MissingGaloisKeys)?)?;
 
                     data[index.index()].store(Some(Cow::Owned(c)));
                 }
@@ -104,8 +135,7 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
                     };
 
                     let c = evaluator
-                        .rotate_rows(a, -b, galois_keys.as_ref().unwrap())
-                        .unwrap();
+                        .rotate_rows(a, -b, galois_keys.as_ref().ok_or(CircuitRunFailure::MissingGaloisKeys)?)?;
 
                     data[index.index()].store(Some(Cow::Owned(c)));
                 }
@@ -115,7 +145,7 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
                     let a = get_ciphertext(&data, left.index());
                     let b = get_ciphertext(&data, right.index());
 
-                    let c = evaluator.add(&a, &b).unwrap();
+                    let c = evaluator.add(&a, &b)?;
 
                     data[index.index()].store(Some(Cow::Owned(c)));
                 }
@@ -125,27 +155,34 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
                     let a = get_ciphertext(&data, left.index());
                     let b = get_ciphertext(&data, right.index());
 
-                    let c = evaluator.multiply(&a, &b).unwrap();
+                    let c = evaluator.multiply(&a, &b)?;
 
                     data[index.index()].store(Some(Cow::Owned(c)));
                 }
                 SwapRows => unimplemented!(),
                 Relinearize => {
-                    let relin_keys = relin_keys.as_ref().expect(
-                        "Fatal error: attempted to relinearize without relinearization keys.",
-                    );
+                    let relin_keys = relin_keys.as_ref().ok_or(CircuitRunFailure::MissingRelinearizationKeys)?;
 
                     let input = get_unary_operand(ir, index);
 
                     let a = get_ciphertext(&data, input.index());
 
-                    let c = evaluator.relinearize(&a, relin_keys).unwrap();
+                    let c = evaluator.relinearize(&a, relin_keys)?;
 
                     data[index.index()].store(Some(Cow::Owned(c)));
                 }
                 Negate => unimplemented!(),
-                Sub => unimplemented!(),
-                Literal(_x) => {}
+                Sub => {
+                    let (left, right) = get_left_right_operands(ir, index);
+
+                    let a = get_ciphertext(&data, left.index());
+                    let b = get_ciphertext(&data, right.index());
+
+                    let c = evaluator.sub(&a, &b)?;
+
+                    data[index.index()].store(Some(Cow::Owned(c)));
+                },
+                Literal(_) => {}
                 OutputCiphertext => {
                     let input = get_unary_operand(ir, index);
 
@@ -154,26 +191,30 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
                     data[index.index()].store(Some(Cow::Borrowed(&a)));
                 }
             };
+
+            Ok(())
         },
         None,
-    );
+    )?;
 
     // Copy ciphertexts to output vector
-    ir.graph
+    let output = ir.graph
         .node_indices()
         .filter_map(|id| match ir.graph[id].operation {
             OutputCiphertext => Some(get_ciphertext(&data, id.index()).clone().into_owned()),
             _ => None,
         })
-        .collect()
+        .collect();
+
+    Ok(output)
 }
 
 /**
  * Traverses the graph in the given
  */
-fn parallel_traverse<F>(ir: &Circuit, callback: F, run_to: Option<NodeIndex>)
+fn parallel_traverse<F>(ir: &Circuit, callback: F, run_to: Option<NodeIndex>) -> Result<(), CircuitRunFailure>
 where
-    F: Fn(NodeIndex) -> () + Sync + Send,
+    F: Fn(NodeIndex) -> Result<(), CircuitRunFailure> + Sync + Send,
 {
     let ir = if let Some(x) = run_to {
         Cow::Owned(ir.prune(&vec![x])) // MOO
@@ -207,10 +248,16 @@ where
         sender.send(r).unwrap();
     }
 
+    let returned_result = AtomicCell::new(Ok(()));
+
     threadpool.scoped(|scope| {
         for _ in 0..num_cpus::get() {
             scope.execute(|| {
                 loop {
+                    if returned_result.load().is_err() {
+                        return;
+                    }
+
                     let mut updated_count = false;
 
                     // Atomically check if the number of items remaining is zero. If it is,
@@ -236,9 +283,33 @@ where
                         }
                     }
 
-                    let node_id = NodeIndex::from(reciever.recv().unwrap() as u32);
+                    // Not sure why we get a warning here. Clearly used on line
+                    // 289.
+                    #[allow(unused_assignments)]
+                    let mut recv_node_id: u32 = 0;
 
-                    callback(node_id);
+                    loop {
+                        if returned_result.load().is_err() {
+                            return;
+                        }
+
+                        let r = reciever.recv_timeout(core::time::Duration::from_millis(100));
+
+                        if let Ok(val) = r {
+                            recv_node_id = val as u32;
+                            break;
+                        }
+                    }
+
+                    let node_id = NodeIndex::from(recv_node_id);
+
+                    
+                    let result = callback(node_id);
+                    
+                    if result.is_err() {
+                        returned_result.store(result);
+                        return;
+                    }
 
                     // Check each child's dependency count and mark it as ready if 0.
                     for e in ir.graph.neighbors_directed(node_id, Direction::Outgoing) {
@@ -253,6 +324,8 @@ where
             });
         }
     });
+
+    returned_result.load()
 }
 
 /**
@@ -374,7 +447,7 @@ mod tests {
         let ct_0 = encryptor.encrypt(&pt_0).unwrap();
         let ct_1 = encryptor.encrypt(&pt_1).unwrap();
 
-        let output = unsafe { run_program_unchecked(&ir, &[ct_0, ct_1], &evaluator, &None, &None) };
+        let output = unsafe { run_program_unchecked(&ir, &[ct_0, ct_1], &evaluator, &None, &None).unwrap() };
 
         assert_eq!(output.len(), 1);
 
@@ -413,7 +486,7 @@ mod tests {
         let ct_1 = encryptor.encrypt(&pt_1).unwrap();
 
         let output = unsafe {
-            run_program_unchecked(&ir, &[ct_0, ct_1], &evaluator, &Some(relin_keys), &None)
+            run_program_unchecked(&ir, &[ct_0, ct_1], &evaluator, &Some(relin_keys), &None).unwrap()
         };
 
         assert_eq!(output.len(), 1);
@@ -454,7 +527,7 @@ mod tests {
         let ct_1 = encryptor.encrypt(&pt_1).unwrap();
 
         let output = unsafe {
-            run_program_unchecked(&ir, &[ct_0, ct_1], &evaluator, &Some(relin_keys), &None)
+            run_program_unchecked(&ir, &[ct_0, ct_1], &evaluator, &Some(relin_keys), &None).unwrap()
         };
 
         assert_eq!(output.len(), 1);
@@ -510,7 +583,7 @@ mod tests {
         let ct_1 = encryptor.encrypt(&pt_1).unwrap();
 
         let output = unsafe {
-            run_program_unchecked(&ir, &[ct_0, ct_1], &evaluator, &Some(relin_keys), &None)
+            run_program_unchecked(&ir, &[ct_0, ct_1], &evaluator, &Some(relin_keys), &None).unwrap()
         };
 
         assert_eq!(output.len(), 1);
@@ -549,7 +622,7 @@ mod tests {
         let ct_0 = encryptor.encrypt(&pt_0).unwrap();
 
         let output =
-            unsafe { run_program_unchecked(&ir, &[ct_0], &evaluator, &None, &Some(galois_keys)) };
+            unsafe { run_program_unchecked(&ir, &[ct_0], &evaluator, &None, &Some(galois_keys)).unwrap() };
 
         assert_eq!(output.len(), 1);
 
@@ -592,7 +665,7 @@ mod tests {
         let ct_0 = encryptor.encrypt(&pt_0).unwrap();
 
         let output =
-            unsafe { run_program_unchecked(&ir, &[ct_0], &evaluator, &None, &Some(galois_keys)) };
+            unsafe { run_program_unchecked(&ir, &[ct_0], &evaluator, &None, &Some(galois_keys)).unwrap() };
 
         assert_eq!(output.len(), 1);
 

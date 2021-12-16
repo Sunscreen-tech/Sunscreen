@@ -100,7 +100,7 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug tests in library 'sunscreen_frontend'",
+            "name": "Debug tests in library 'sunscreen_compiler'",
             "cargo": {
                 "args": [
                     "test",
@@ -109,6 +109,24 @@
                 ],
                 "filter": {
                     "name": "circuit_compilation",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug tests in library 'sunscreen_compiler_macros'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--package=sunscreen_compiler_macros"
+                ],
+                "filter": {
+                    "name": "circuit_tests",
                     "kind": "test"
                 }
             },

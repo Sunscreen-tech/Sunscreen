@@ -88,6 +88,17 @@ pub enum Error {
      * should never produce this error.
      */
     ReturnTypeMetadataError,
+
+    /**
+     * Executing a circuit failed.
+     */
+    CircuitRunError(crate::run::CircuitRunFailure),
+
+    /**
+     * This variant wraps some error specific to the representation of FheTypes. For example,
+     * a type encoding even numbers would return this if you pass an odd number.
+     */
+    FheTypeError(String)
 }
 
 impl From<sunscreen_circuit::Error> for Error {
@@ -99,6 +110,12 @@ impl From<sunscreen_circuit::Error> for Error {
 impl From<seal::Error> for Error {
     fn from(err: seal::Error) -> Self {
         Self::SealError(err)
+    }
+}
+
+impl From<crate::run::CircuitRunFailure> for Error {
+    fn from(err: crate::run::CircuitRunFailure) -> Self {
+        Self::CircuitRunError(err)
     }
 }
 

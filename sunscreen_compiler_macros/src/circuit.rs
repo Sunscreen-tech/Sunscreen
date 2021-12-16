@@ -93,12 +93,12 @@ pub fn circuit_impl(
         #(#attrs)*
         #vis fn #circuit_name() -> (
             sunscreen_compiler::SchemeType,
-            impl Fn(&Params) -> sunscreen_compiler::Result<sunscreen_compiler::FrontendCompilation>,
+            impl Fn(&sunscreen_compiler::Params) -> sunscreen_compiler::Result<sunscreen_compiler::FrontendCompilation>,
             sunscreen_compiler::CallSignature
         ) {
             use std::cell::RefCell;
             use std::mem::transmute;
-            use sunscreen_compiler::{CURRENT_CTX, Context, Error, Result, Params, SchemeType, Value, types::{CircuitNode, NumCiphertexts, Type, TypeName, TypeNameInstance}};
+            use sunscreen_compiler::{CURRENT_CTX, Context, Error, INDEX_ARENA, Result, Params, SchemeType, Value, types::{CircuitNode, NumCiphertexts, Type, TypeName, TypeNameInstance}};
 
             let circuit_builder = |params: &Params| {
                 if SchemeType::Bfv != params.scheme_type {
@@ -124,14 +124,22 @@ pub fn circuit_impl(
                         internal(#(#args),*)
                     });
 
+                    // when panicing or not, we need to collect our indicies arena and
+                    // unset the context reference.
                     match panic_res {
                         Ok(v) => { #catpured_outputs },
                         Err(err) => {
+                            INDEX_ARENA.with(|allocator| {
+                                unsafe { allocator.borrow_mut().reset() }
+                            });
                             ctx.swap(&RefCell::new(None));
                             std::panic::resume_unwind(err)
                         }
                     };
-
+                    
+                    INDEX_ARENA.with(|allocator| {
+                        unsafe { allocator.borrow_mut().reset() }
+                    });
                     ctx.swap(&RefCell::new(None));
                 });
 
@@ -213,7 +221,7 @@ fn create_signature(args: &[&Type], ret: &ReturnType) -> TokenStream {
 
             let return_type_sizes = tuple_inners.iter().map(|t| {
                 quote! {
-                    #t ::num_ciphertexts(),
+                    #t ::NUM_CIPHERTEXTS,
                 }
             });
 

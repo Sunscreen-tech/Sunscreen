@@ -1,28 +1,18 @@
-use std::ops::{Add, Mul};
-
 use seal::Plaintext as SealPlaintext;
 
+use crate::types::{GraphAdd, GraphMul};
 use crate::{
     types::{BfvType, CircuitNode, FheType},
-    Context, TypeName as DeriveTypeName, CURRENT_CTX,
+    with_ctx, Params, TypeName as DeriveTypeName,
 };
+
 use sunscreen_runtime::{
     InnerPlaintext, NumCiphertexts, Plaintext, TryFromPlaintext, TryIntoPlaintext,
 };
 
-impl CircuitNode<Unsigned> {
-    /**
-     * Returns the plain modulus parameter for the given BFV scheme
-     */
-    pub fn get_plain_modulus() -> u64 {
-        with_ctx(|ctx| ctx.params.plain_modulus)
-    }
-}
-
-#[derive(Debug, Clone, Copy, DeriveTypeName, PartialEq)]
+#[derive(Debug, Clone, Copy, DeriveTypeName, PartialEq, Eq)]
 /**
- * Represents a single unsigned integer encrypted as a ciphertext. Suitable for use
- * as an input or output for a Sunscreen circuit.
+ * A single unsigned integer.
  */
 pub struct Unsigned {
     val: u64,
@@ -41,38 +31,43 @@ impl BfvType for Unsigned {}
 
 impl Unsigned {}
 
-impl Add for CircuitNode<Unsigned> {
-    type Output = Self;
+impl GraphAdd for Unsigned {
+    type Left = Unsigned;
+    type Right = Unsigned;
 
-    fn add(self, other: Self) -> Self {
-        with_ctx(|ctx| Self::new(ctx.add_addition(self.id, other.id)))
+    fn graph_add(
+        a: CircuitNode<Self::Left>,
+        b: CircuitNode<Self::Right>,
+    ) -> CircuitNode<Self::Left> {
+        with_ctx(|ctx| {
+            let n = ctx.add_addition(a.ids[0], b.ids[0]);
+
+            CircuitNode::new(&[n])
+        })
     }
 }
 
-impl Mul for CircuitNode<Unsigned> {
-    type Output = Self;
+impl GraphMul for Unsigned {
+    type Left = Unsigned;
+    type Right = Unsigned;
 
-    fn mul(self, other: Self) -> Self {
-        with_ctx(|ctx| Self::new(ctx.add_multiplication(self.id, other.id)))
+    fn graph_mul(
+        a: CircuitNode<Self::Left>,
+        b: CircuitNode<Self::Right>,
+    ) -> CircuitNode<Self::Left> {
+        with_ctx(|ctx| {
+            let n = ctx.add_multiplication(a.ids[0], b.ids[0]);
+
+            CircuitNode::new(&[n])
+        })
     }
-}
-
-fn with_ctx<F, R>(f: F) -> R
-where
-    F: FnOnce(&mut Context) -> R,
-{
-    CURRENT_CTX.with(|ctx| {
-        let mut option = ctx.borrow_mut();
-        let ctx = option
-            .as_mut()
-            .expect("Called Ciphertext::new() outside of a context.");
-
-        f(ctx)
-    })
 }
 
 impl TryIntoPlaintext for Unsigned {
-    fn try_into_plaintext(&self) -> std::result::Result<Plaintext, sunscreen_runtime::Error> {
+    fn try_into_plaintext(
+        &self,
+        _params: &Params,
+    ) -> std::result::Result<Plaintext, sunscreen_runtime::Error> {
         let mut seal_plaintext = SealPlaintext::new()?;
         let bits = std::mem::size_of::<u64>() * 8;
 
@@ -92,6 +87,7 @@ impl TryIntoPlaintext for Unsigned {
 impl TryFromPlaintext for Unsigned {
     fn try_from_plaintext(
         plaintext: &Plaintext,
+        _params: &Params,
     ) -> std::result::Result<Self, sunscreen_runtime::Error> {
         let val = match &plaintext.inner {
             InnerPlaintext::Seal(p) => {
@@ -115,9 +111,7 @@ impl TryFromPlaintext for Unsigned {
 }
 
 impl NumCiphertexts for Unsigned {
-    fn num_ciphertexts() -> usize {
-        1
-    }
+    const NUM_CIPHERTEXTS: usize = 1;
 }
 
 impl From<u64> for Unsigned {
@@ -129,6 +123,144 @@ impl From<u64> for Unsigned {
 impl Into<u64> for Unsigned {
     fn into(self) -> u64 {
         self.val
+    }
+}
+
+#[derive(Debug, Clone, Copy, DeriveTypeName, PartialEq, Eq)]
+/**
+ * A single signed integer.
+ */
+pub struct Signed {
+    val: i64,
+}
+
+impl NumCiphertexts for Signed {
+    const NUM_CIPHERTEXTS: usize = 1;
+}
+
+impl FheType for Signed {}
+
+fn significant_bits(val: u64) -> usize {
+    let bits = std::mem::size_of::<u64>() * 8;
+
+    for i in 0..bits {
+        if (0x1 << (bits - i)) & val != 0 {
+            return bits - i + 1;
+        }
+    }
+
+    0
+}
+
+impl TryIntoPlaintext for Signed {
+    fn try_into_plaintext(
+        &self,
+        params: &Params,
+    ) -> std::result::Result<Plaintext, sunscreen_runtime::Error> {
+        let mut seal_plaintext = SealPlaintext::new()?;
+
+        let unsigned_val = if self.val < 0 { -self.val } else { self.val } as u64;
+
+        let sig_bits = significant_bits(unsigned_val);
+        seal_plaintext.resize(sig_bits);
+
+        for i in 0..sig_bits {
+            let bit_value = (unsigned_val & 0x1 << i) >> i;
+
+            let coeff_value = if self.val < 0 {
+                params.plain_modulus as u64 - bit_value
+            } else {
+                bit_value
+            };
+
+            seal_plaintext.set_coefficient(i, coeff_value);
+        }
+
+        Ok(Plaintext {
+            inner: InnerPlaintext::Seal(vec![seal_plaintext]),
+        })
+    }
+}
+
+impl TryFromPlaintext for Signed {
+    fn try_from_plaintext(
+        plaintext: &Plaintext,
+        params: &Params,
+    ) -> std::result::Result<Self, sunscreen_runtime::Error> {
+        let val = match &plaintext.inner {
+            InnerPlaintext::Seal(p) => {
+                if p.len() != 1 {
+                    return Err(sunscreen_runtime::Error::IncorrectCiphertextCount);
+                }
+
+                let bits = usize::min(
+                    usize::min(std::mem::size_of::<u64>() * 8, p[0].len()),
+                    p[0].len(),
+                );
+
+                let negative_cutoff = (params.plain_modulus + 1) / 2;
+
+                let mut val: i64 = 0;
+
+                for i in 0..bits {
+                    let coeff = p[0].get_coefficient(i);
+
+                    if coeff < negative_cutoff {
+                        val += ((0x1 << i) * coeff) as i64;
+                    } else {
+                        val -= ((0x1 << i) * (params.plain_modulus - coeff)) as i64;
+                    }
+                }
+
+                Self { val }
+            }
+        };
+
+        Ok(val)
+    }
+}
+
+impl From<i64> for Signed {
+    fn from(val: i64) -> Self {
+        Self { val }
+    }
+}
+
+impl Into<i64> for Signed {
+    fn into(self) -> i64 {
+        self.val
+    }
+}
+
+impl GraphAdd for Signed {
+    type Left = Signed;
+    type Right = Signed;
+
+    fn graph_add(
+        a: CircuitNode<Self::Left>,
+        b: CircuitNode<Self::Right>,
+    ) -> CircuitNode<Self::Left> {
+        with_ctx(|ctx| {
+            let n = ctx.add_addition(a.ids[0], b.ids[0]);
+
+            CircuitNode::new(&[n])
+        })
+    }
+}
+
+impl GraphMul for Signed {
+    type Left = Signed;
+    type Right = Signed;
+
+    fn graph_mul(
+        a: CircuitNode<Self::Left>,
+        b: CircuitNode<Self::Right>,
+    ) -> CircuitNode<Self::Left> {
+        with_ctx(|ctx| {
+            let n = ctx.add_multiplication(a.ids[0], b.ids[0]);
+
+            CircuitNode::new(&[n])
+        })
     }
 }
 

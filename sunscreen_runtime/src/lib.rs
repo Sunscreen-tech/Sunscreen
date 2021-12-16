@@ -74,7 +74,7 @@ pub trait TryIntoPlaintext {
     /**
      * Attempts to turn this type into a [`Plaintext`].
      */
-    fn try_into_plaintext(&self) -> Result<Plaintext>;
+    fn try_into_plaintext(&self, params: &Params) -> Result<Plaintext>;
 }
 
 /**
@@ -87,24 +87,24 @@ where
     /**
      * Attempts to turn a [`Plaintext`] into `Self`. On success, returns
      */
-    fn try_from_plaintext(plaintext: &Plaintext) -> Result<Self>;
+    fn try_from_plaintext(plaintext: &Plaintext, params: &Params) -> Result<Self>;
 }
 
 /**
- * The [`NumCiphertexts::num_ciphertexts`] function denotes how many ciphertexts this type
- * decomposes into.
+ * Declare how many ciphertexts an FheType decomposes into. The runtime needs this
+ * to correctly bundle return values from a circuit.
  */
 pub trait NumCiphertexts {
     /**
-     * Returns the number of ciphertexts this type decomposes into.
+     * The number of ciphertexts this type decomposes into.
      */
-    fn num_ciphertexts() -> usize;
+    const NUM_CIPHERTEXTS: usize;
 }
 
 /**
  * Denotes the given rust type is an encoding in an FHE scheme
  */
-pub trait FheType: TypeNameInstance + TryIntoPlaintext {}
+pub trait FheType: TypeNameInstance + TryIntoPlaintext + TryFromPlaintext + NumCiphertexts {}
 
 /**
  * Denotes the given type is valid under the BFV scheme.

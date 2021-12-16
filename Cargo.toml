@@ -2,6 +2,7 @@
 members = [
     "emsdk",
     "examples/simple_multiply",
+    "examples/calculator",
     "seal",
     "sunscreen_backend",
     "sunscreen_compiler",

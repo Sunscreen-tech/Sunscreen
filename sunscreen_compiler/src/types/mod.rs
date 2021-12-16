@@ -12,7 +12,7 @@ pub use sunscreen_runtime::{
 
 pub use integer::{Signed, Unsigned};
 pub use rational::{Rational};
-use std::ops::{Add, Mul};
+use std::ops::{Add, Div, Mul};
 
 #[derive(Clone, Copy, Serialize, Deserialize)]
 /**
@@ -208,7 +208,7 @@ pub trait GraphDiv {
     /**
      * Process the + operation
      */
-    fn graph_mul(a: CircuitNode<Self::Left>, b: CircuitNode<Self::Right>) -> CircuitNode<Self::Left>;
+    fn graph_div(a: CircuitNode<Self::Left>, b: CircuitNode<Self::Right>) -> CircuitNode<Self::Left>;
 }
 
 impl <T> Add for CircuitNode<T> 
@@ -228,6 +228,16 @@ where T: FheType + GraphMul<Left=T, Right=T>
 
     fn mul(self, rhs: Self) -> Self::Output {
         T::graph_mul(self, rhs)
+    }
+}
+
+impl <T> Div for CircuitNode<T>
+where T: FheType + GraphDiv<Left=T, Right=T>
+{
+    type Output = Self;
+
+    fn div(self, rhs: Self) -> Self::Output {
+        T::graph_div(self, rhs)
     }
 }
 

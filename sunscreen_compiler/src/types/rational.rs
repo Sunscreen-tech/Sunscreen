@@ -1,5 +1,5 @@
 use crate::{TypeName, Params, InnerPlaintext, Plaintext, with_ctx};
-use crate::types::{BfvType, FheType, NumCiphertexts, TryIntoPlaintext, TryFromPlaintext, Signed, GraphAdd, GraphMul, CircuitNode};
+use crate::types::{BfvType, FheType, NumCiphertexts, TryIntoPlaintext, TryFromPlaintext, Signed, GraphAdd, GraphMul, GraphDiv, CircuitNode};
 use sunscreen_runtime::{Error};
 use std::cmp::Eq;
 
@@ -130,5 +130,24 @@ impl GraphMul for Rational {
             CircuitNode::new(&ids)
         })
     }
+}
 
+impl GraphDiv for Rational {
+    type Left = Self;
+    type Right = Self;
+
+    fn graph_div(a: CircuitNode<Self::Left>, b: CircuitNode<Self::Right>) -> CircuitNode<Self::Left> {
+        with_ctx(|ctx| {
+            // Scale each numinator by the other's denominator.
+            let mul_num = ctx.add_multiplication(a.ids[0], b.ids[1]);
+            let mul_den = ctx.add_multiplication(a.ids[1], b.ids[0]);
+
+            let ids = [
+                mul_num,
+                mul_den
+            ];
+
+            CircuitNode::new(&ids)
+        })
+    }
 }

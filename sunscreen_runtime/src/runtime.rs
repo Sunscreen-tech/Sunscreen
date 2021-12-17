@@ -4,7 +4,7 @@ use crate::{
     run_program_unchecked, Ciphertext, InnerCiphertext, InnerPlaintext, Plaintext, PublicKey,
     SealCiphertext, SealPlaintext, TryFromPlaintext, TryIntoPlaintext, TypeName,
 };
-use sunscreen_circuit::{SchemeType};
+use sunscreen_circuit::SchemeType;
 
 use seal::{
     BFVEvaluator, BfvEncryptionParametersBuilder, Context as SealContext, Decryptor, Encryptor,
@@ -56,9 +56,12 @@ impl Runtime {
                     .map(|c| decryptor.decrypt(c).map_err(|e| Error::SealError(e)))
                     .collect::<Result<Vec<SealPlaintext>>>()?;
 
-                P::try_from_plaintext(&Plaintext {
-                    inner: InnerPlaintext::Seal(plaintexts),
-                }, &self.params)?
+                P::try_from_plaintext(
+                    &Plaintext {
+                        inner: InnerPlaintext::Seal(plaintexts),
+                    },
+                    &self.params,
+                )?
             }
         };
 
@@ -104,7 +107,7 @@ impl Runtime {
                     .set_plain_modulus_u64(params.plain_modulus)
                     .set_poly_modulus_degree(params.lattice_dimension)
                     .set_coefficient_modulus(
-                            params
+                        params
                             .coeff_modulus
                             .iter()
                             .map(|v| Modulus::new(*v).unwrap())

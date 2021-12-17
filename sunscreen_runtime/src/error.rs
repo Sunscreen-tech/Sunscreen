@@ -98,7 +98,7 @@ pub enum Error {
      * This variant wraps some error specific to the representation of FheTypes. For example,
      * a type encoding even numbers would return this if you pass an odd number.
      */
-    FheTypeError(String)
+    FheTypeError(String),
 }
 
 impl From<sunscreen_circuit::Error> for Error {

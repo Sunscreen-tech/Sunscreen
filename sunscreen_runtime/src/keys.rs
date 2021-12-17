@@ -1,5 +1,6 @@
 use seal::{GaloisKeys, PublicKey as SealPublicKey, RelinearizationKeys};
 
+#[derive(Clone)]
 /**
  * A bundle of public keys. These may be freely shared with other parties without
  * risk of compromising data security.

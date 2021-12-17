@@ -136,7 +136,7 @@ pub fn circuit_impl(
                             std::panic::resume_unwind(err)
                         }
                     };
-                    
+
                     INDEX_ARENA.with(|allocator| {
                         unsafe { allocator.borrow_mut().reset() }
                     });

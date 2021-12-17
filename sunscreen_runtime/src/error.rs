@@ -90,6 +90,11 @@ pub enum Error {
     ReturnTypeMetadataError,
 
     /**
+     * Decryption failed because the cipher text had too much noise.
+     */
+    TooMuchNoise,
+
+    /**
      * Executing a circuit failed.
      */
     CircuitRunError(crate::run::CircuitRunFailure),
@@ -98,7 +103,7 @@ pub enum Error {
      * This variant wraps some error specific to the representation of FheTypes. For example,
      * a type encoding even numbers would return this if you pass an odd number.
      */
-    FheTypeError(String)
+    FheTypeError(String),
 }
 
 impl From<sunscreen_circuit::Error> for Error {

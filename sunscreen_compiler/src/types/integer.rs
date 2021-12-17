@@ -144,7 +144,7 @@ fn significant_bits(val: u64) -> usize {
     let bits = std::mem::size_of::<u64>() * 8;
 
     for i in 0..bits {
-        if (0x1 << (bits - i)) & val != 0 {
+        if (0x1 << (bits - i - 1)) & val != 0 {
             return bits - i + 1;
         }
     }

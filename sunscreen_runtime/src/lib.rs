@@ -41,6 +41,7 @@ pub struct Plaintext {
     pub inner: InnerPlaintext,
 }
 
+#[derive(Clone)]
 /**
  * The underlying backend implementation of a ciphertext (e.g SEAL's [`Ciphertext`](seal::Ciphertext)).
  */
@@ -51,6 +52,7 @@ pub enum InnerCiphertext {
     Seal(Vec<SealCiphertext>),
 }
 
+#[derive(Clone)]
 /**
  * An encryption of the given data type. Note, the data type is stored in plaintext and is considered
  * part of Sunscreen's runtime protocol.

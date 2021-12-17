@@ -133,5 +133,13 @@
             "args": [],
             "cwd": "${workspaceFolder}"
         },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug binary 'calculator'",
+            "args": [],
+            "program": "${workspaceFolder}/target/debug/calculator",
+            "cwd": "${workspaceFolder}"
+        },
     ]
 }

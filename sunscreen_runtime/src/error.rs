@@ -90,6 +90,11 @@ pub enum Error {
     ReturnTypeMetadataError,
 
     /**
+     * Decryption failed because the cipher text had too much noise.
+     */
+    TooMuchNoise,
+
+    /**
      * Executing a circuit failed.
      */
     CircuitRunError(crate::run::CircuitRunFailure),

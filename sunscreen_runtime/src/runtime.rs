@@ -53,7 +53,17 @@ impl Runtime {
 
                 let plaintexts = ciphertexts
                     .iter()
-                    .map(|c| decryptor.decrypt(c).map_err(|e| Error::SealError(e)))
+                    .map(|c| {
+                        if decryptor
+                            .invariant_noise_budget(&c)
+                            .map_err(|e| Error::SealError(e))?
+                            == 0
+                        {
+                            return Err(Error::TooMuchNoise);
+                        }
+
+                        decryptor.decrypt(c).map_err(|e| Error::SealError(e))
+                    })
                     .collect::<Result<Vec<SealPlaintext>>>()?;
 
                 P::try_from_plaintext(

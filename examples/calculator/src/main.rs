@@ -1,7 +1,10 @@
 use std::io::{self, Write};
 use std::sync::mpsc::{Receiver, Sender};
 use std::thread::{self, JoinHandle};
-use sunscreen_compiler::{circuit, Compiler, CompiledCircuit, PlainModulusConstraint, types::Rational, Ciphertext, Params, PublicKey, Runtime};
+use sunscreen_compiler::{
+    circuit, types::Rational, Ciphertext, CompiledCircuit, Compiler, Params,
+    PlainModulusConstraint, PublicKey, Runtime, RuntimeError,
+};
 
 fn help() {
     println!("This is a privacy preserving calculator. You can add, subtract, multiply, divide decimal values. The operation is sent to Bob in cleartext while the operands
@@ -82,8 +85,14 @@ fn parse_input(line: &str) -> Result<ParseResult, Error> {
 fn encrypt_term(runtime: &Runtime, public_key: &PublicKey, input: Term) -> Term {
     match input {
         Term::Ans => Term::Ans,
-        Term::F64(v) => Term::Encrypted(runtime.encrypt(Rational::try_from(v).unwrap(), &public_key).unwrap()),
-        _ => { panic!("This shouldn't happen."); }
+        Term::F64(v) => Term::Encrypted(
+            runtime
+                .encrypt(Rational::try_from(v).unwrap(), &public_key)
+                .unwrap(),
+        ),
+        _ => {
+            panic!("This shouldn't happen.");
+        }
     }
 }
 
@@ -141,11 +150,24 @@ fn alice(
             let encrypt_right = encrypt_term(&runtime, &public, parsed.right);
 
             // Send Bob our encrypted operation.
-            send_calc.send(ParseResult { left: encrypt_left, right: encrypt_right, op: parsed.op }).unwrap();
+            send_calc
+                .send(ParseResult {
+                    left: encrypt_left,
+                    right: encrypt_right,
+                    op: parsed.op,
+                })
+                .unwrap();
 
             // Get our result from Bob and print it.
             let result: Ciphertext = recv_res.recv().unwrap();
-            let result: Rational = runtime.decrypt(&result, &secret).unwrap();
+            let result: Rational = match runtime.decrypt(&result, &secret) {
+                Ok(v) => v,
+                Err(RuntimeError::TooMuchNoise) => {
+                    println!("Decryption failed: too much noise");
+                    continue;
+                },
+                Err(e) => panic!("{:#?}", e)
+            };
             let result: f64 = result.into();
 
             println!("{}", result);
@@ -153,7 +175,12 @@ fn alice(
     })
 }
 
-fn compile_circuits() -> (CompiledCircuit, CompiledCircuit, CompiledCircuit, CompiledCircuit) {
+fn compile_circuits() -> (
+    CompiledCircuit,
+    CompiledCircuit,
+    CompiledCircuit,
+    CompiledCircuit,
+) {
     #[circuit(scheme = "bfv")]
     fn add(a: Rational, b: Rational) -> Rational {
         a + b
@@ -180,7 +207,8 @@ fn compile_circuits() -> (CompiledCircuit, CompiledCircuit, CompiledCircuit, Com
     // To be sure, we compile one of them with the default parameter search, and explicitly
     // pass these parameters when compiling the other circuits so they are compatible.
     let add_circuit = Compiler::with_circuit(add)
-        .noise_margin_bits(30)
+        // We need to make the noise margin large enough so we can do a few repeated calculations.
+        .noise_margin_bits(32)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(1_000_000))
         .compile()
         .unwrap();
@@ -218,7 +246,9 @@ fn bob(
 
         let runtime = Runtime::new(&add.metadata.params).unwrap();
 
-        let mut ans = runtime.encrypt(Rational::try_from(0f64).unwrap(), &public_key).unwrap();
+        let mut ans = runtime
+            .encrypt(Rational::try_from(0f64).unwrap(), &public_key)
+            .unwrap();
 
         loop {
             let calc = recv_calc.recv().unwrap();
@@ -226,31 +256,28 @@ fn bob(
             let left = match calc.left {
                 Term::Ans => ans.clone(),
                 Term::Encrypted(c) => c,
-                _ => panic!("Alice sent us a plaintext!")
+                _ => panic!("Alice sent us a plaintext!"),
             };
 
             let right = match calc.right {
                 Term::Ans => ans.clone(),
                 Term::Encrypted(c) => c,
-                _ => panic!("Alice sent us a plaintext!")
+                _ => panic!("Alice sent us a plaintext!"),
             };
 
             let mut c = match calc.op {
                 Operand::Add => runtime.run(&add, vec![left, right], &public_key).unwrap(),
                 Operand::Sub => runtime.run(&sub, vec![left, right], &public_key).unwrap(),
                 Operand::Mul => runtime.run(&mul, vec![left, right], &public_key).unwrap(),
-                Operand::Div => runtime.run(&div, vec![left, right], &public_key).unwrap()
+                Operand::Div => runtime.run(&div, vec![left, right], &public_key).unwrap(),
             };
 
             // Our circuit produces a single value, so move the value out of the vector.
-            
-            ans = c[0].clone();
-
             let c = c.drain(0..).next().unwrap();
+            ans = c.clone();
 
-            send_res.send(c.clone()).unwrap();
+            send_res.send(c).unwrap();
         }
-
     })
 }
 

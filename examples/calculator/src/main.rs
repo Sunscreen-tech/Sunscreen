@@ -32,10 +32,16 @@ enum Operand {
     Div,
 }
 
-struct ParseResult {
+struct Expression {
     left: Term,
     op: Operand,
     right: Term,
+}
+
+enum ParseResult {
+    Help,
+    Exit,
+    Expression(Expression)
 }
 
 enum Error {
@@ -43,6 +49,12 @@ enum Error {
 }
 
 fn parse_input(line: &str) -> Result<ParseResult, Error> {
+    if line == "help" {
+        return Ok(ParseResult::Help)
+    } else if line == "exit" {
+        return Ok(ParseResult::Exit)
+    }
+
     let mut terms = line.split(" ");
 
     let left = terms.next().ok_or(Error::ParseError)?;
@@ -75,11 +87,11 @@ fn parse_input(line: &str) -> Result<ParseResult, Error> {
         Term::F64(right.parse::<f64>().map_err(|_| Error::ParseError)?)
     };
 
-    Ok(ParseResult {
+    Ok(ParseResult::Expression(Expression {
         left: left_term,
         op: operand,
         right: right_term,
-    })
+    }))
 }
 
 fn encrypt_term(runtime: &Runtime, public_key: &PublicKey, input: Term) -> Term {
@@ -98,7 +110,7 @@ fn encrypt_term(runtime: &Runtime, public_key: &PublicKey, input: Term) -> Term 
 
 fn alice(
     send_pub: Sender<PublicKey>,
-    send_calc: Sender<ParseResult>,
+    send_calc: Sender<Expression>,
     recv_params: Receiver<Params>,
     recv_res: Receiver<Ciphertext>,
 ) -> JoinHandle<()> {
@@ -127,18 +139,16 @@ fn alice(
             stdin.read_line(&mut line).unwrap();
             let line = line.trim();
 
-            if line == "help" {
-                help();
-                continue;
-            } else if line == "exit" {
-                std::process::exit(0);
-            }
-
             // Read the line and parse it into operands and an operator.
             let parsed = parse_input(&line);
 
-            let parsed = match parsed {
-                Ok(val) => val,
+            let Expression {left, right, op} = match parsed {
+                Ok(ParseResult::Expression(val)) => val,
+                Ok(ParseResult::Exit) => std::process::exit(0),
+                Ok(ParseResult::Help) => {
+                    help();
+                    continue;
+                }
                 Err(_) => {
                     println!("Parse error. Try again.");
                     continue;
@@ -146,15 +156,15 @@ fn alice(
             };
 
             // Encrypt the left and right terms.
-            let encrypt_left = encrypt_term(&runtime, &public, parsed.left);
-            let encrypt_right = encrypt_term(&runtime, &public, parsed.right);
+            let encrypt_left = encrypt_term(&runtime, &public, left);
+            let encrypt_right = encrypt_term(&runtime, &public, right);
 
             // Send Bob our encrypted operation.
             send_calc
-                .send(ParseResult {
+                .send(Expression {
                     left: encrypt_left,
                     right: encrypt_right,
-                    op: parsed.op,
+                    op: op,
                 })
                 .unwrap();
 
@@ -233,7 +243,7 @@ fn compile_circuits() -> (
 
 fn bob(
     recv_pub: Receiver<PublicKey>,
-    recv_calc: Receiver<ParseResult>,
+    recv_calc: Receiver<Expression>,
     send_params: Sender<Params>,
     send_res: Sender<Ciphertext>,
 ) -> JoinHandle<()> {
@@ -251,21 +261,21 @@ fn bob(
             .unwrap();
 
         loop {
-            let calc = recv_calc.recv().unwrap();
+            let Expression {left, right, op} = recv_calc.recv().unwrap();
 
-            let left = match calc.left {
+            let left = match left {
                 Term::Ans => ans.clone(),
                 Term::Encrypted(c) => c,
                 _ => panic!("Alice sent us a plaintext!"),
             };
 
-            let right = match calc.right {
+            let right = match right {
                 Term::Ans => ans.clone(),
                 Term::Encrypted(c) => c,
                 _ => panic!("Alice sent us a plaintext!"),
             };
 
-            let mut c = match calc.op {
+            let mut c = match op {
                 Operand::Add => runtime.run(&add, vec![left, right], &public_key).unwrap(),
                 Operand::Sub => runtime.run(&sub, vec![left, right], &public_key).unwrap(),
                 Operand::Mul => runtime.run(&mul, vec![left, right], &public_key).unwrap(),
@@ -286,7 +296,7 @@ fn main() {
     let (send_alice_pub, receive_alice_pub) = std::sync::mpsc::channel::<PublicKey>();
 
     // A channel for Alice to send calculation requests to Bob.
-    let (send_alice_calc, receive_alice_calc) = std::sync::mpsc::channel::<ParseResult>();
+    let (send_alice_calc, receive_alice_calc) = std::sync::mpsc::channel::<Expression>();
 
     // A channel for Bob to send scheme params to Alice
     let (send_bob_params, receive_bob_params) = std::sync::mpsc::channel::<Params>();

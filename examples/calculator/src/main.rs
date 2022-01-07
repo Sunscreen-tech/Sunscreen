@@ -41,7 +41,7 @@ struct Expression {
 enum ParseResult {
     Help,
     Exit,
-    Expression(Expression)
+    Expression(Expression),
 }
 
 enum Error {
@@ -50,9 +50,9 @@ enum Error {
 
 fn parse_input(line: &str) -> Result<ParseResult, Error> {
     if line == "help" {
-        return Ok(ParseResult::Help)
+        return Ok(ParseResult::Help);
     } else if line == "exit" {
-        return Ok(ParseResult::Exit)
+        return Ok(ParseResult::Exit);
     }
 
     let mut terms = line.split(" ");
@@ -142,7 +142,7 @@ fn alice(
             // Read the line and parse it into operands and an operator.
             let parsed = parse_input(&line);
 
-            let Expression {left, right, op} = match parsed {
+            let Expression { left, right, op } = match parsed {
                 Ok(ParseResult::Expression(val)) => val,
                 Ok(ParseResult::Exit) => std::process::exit(0),
                 Ok(ParseResult::Help) => {
@@ -175,8 +175,8 @@ fn alice(
                 Err(RuntimeError::TooMuchNoise) => {
                     println!("Decryption failed: too much noise");
                     continue;
-                },
-                Err(e) => panic!("{:#?}", e)
+                }
+                Err(e) => panic!("{:#?}", e),
             };
             let result: f64 = result.into();
 
@@ -261,7 +261,7 @@ fn bob(
             .unwrap();
 
         loop {
-            let Expression {left, right, op} = recv_calc.recv().unwrap();
+            let Expression { left, right, op } = recv_calc.recv().unwrap();
 
             let left = match left {
                 Term::Ans => ans.clone(),

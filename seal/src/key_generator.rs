@@ -334,7 +334,9 @@ impl Serialize for SecretKey {
     where
         S: Serializer,
     {
-        let data = self.as_bytes().map_err(|e| S::Error::custom(format!("Failed to get secret key bytes: {}", e)))?;
+        let data = self
+            .as_bytes()
+            .map_err(|e| S::Error::custom(format!("Failed to get secret key bytes: {}", e)))?;
 
         serializer.serialize_bytes(&data)
     }
@@ -546,7 +548,6 @@ impl Clone for GaloisKeys {
 pub struct CompactGaloisKeys(GaloisKeys);
 
 impl CompactGaloisKeys {
-
     /**
      * Returns the key as a byte array.
      */
@@ -664,172 +665,4 @@ mod tests {
             serde_json::to_string(&secret_key).unwrap()
         );
     }
-
-    #[test]
-    fn secret_key_size() {
-        let degree = [1024, 2048, 4096, 8192, 16384, 32768];
-
-        for d in degree {
-            let params = BfvEncryptionParametersBuilder::new()
-                .set_poly_modulus_degree(d)
-                .set_coefficient_modulus(
-                    CoefficientModulus::bfv_default(d, SecurityLevel::default()).unwrap(),
-                )
-                .set_plain_modulus_u64(1_000_000)
-                .build()
-                .unwrap();
-
-            let context = Context::new(&params, false, SecurityLevel::default()).unwrap();
-
-            let gen = KeyGenerator::new(&context).unwrap();
-
-            let secret = gen.secret_key();
-
-            println!("\tSecret key size poly_degree={} bytes={}", d, secret.as_bytes().unwrap().len());
-        }
-    }
-
-    #[test]
-    fn public_key_size() {
-        let degree = [1024, 2048, 4096, 8192, 16384, 32768];
-
-        for d in degree {
-            let params = BfvEncryptionParametersBuilder::new()
-                .set_poly_modulus_degree(d)
-                .set_coefficient_modulus(
-                    CoefficientModulus::bfv_default(d, SecurityLevel::default()).unwrap(),
-                )
-                .set_plain_modulus_u64(1_000_000)
-                .build()
-                .unwrap();
-
-            let context = Context::new(&params, false, SecurityLevel::default()).unwrap();
-
-            let gen = KeyGenerator::new(&context).unwrap();
-
-            let public = gen.create_public_key();
-
-            println!("\tPublic key size poly_degree={} bytes={}", d, public.as_bytes().unwrap().len());
-        }
-    }
-
-    #[test]
-    fn compact_public_key_size() {
-        let degree = [1024, 2048, 4096, 8192, 16384, 32768];
-
-        for d in degree {
-            let params = BfvEncryptionParametersBuilder::new()
-                .set_poly_modulus_degree(d)
-                .set_coefficient_modulus(
-                    CoefficientModulus::bfv_default(d, SecurityLevel::default()).unwrap(),
-                )
-                .set_plain_modulus_u64(1_000_000)
-                .build()
-                .unwrap();
-
-            let context = Context::new(&params, false, SecurityLevel::default()).unwrap();
-
-            let gen = KeyGenerator::new(&context).unwrap();
-
-            let public = gen.create_compact_public_key();
-
-            println!("\tCompact public key size poly_degree={} bytes={}", d, public.as_bytes().unwrap().len());
-        }
-    }
-
-    #[test]
-    fn relin_key_size() {
-        let degree = [4096, 8192, 16384, 32768];
-
-        for d in degree {
-            let params = BfvEncryptionParametersBuilder::new()
-                .set_poly_modulus_degree(d)
-                .set_coefficient_modulus(
-                    CoefficientModulus::bfv_default(d, SecurityLevel::default()).unwrap(),
-                )
-                .set_plain_modulus_u64(1_000_000)
-                .build()
-                .unwrap();
-
-            let context = Context::new(&params, false, SecurityLevel::default()).unwrap();
-
-            let gen = KeyGenerator::new(&context).unwrap();
-
-            let relin = gen.create_relinearization_keys().unwrap();
-
-            println!("\tRelin key size poly_degree={} bytes={}", d, relin.as_bytes().unwrap().len());
-        }
-    }
-
-    #[test]
-    fn compact_relin_key_size() {
-        let degree = [4096, 8192, 16384, 32768];
-
-        for d in degree {
-            let params = BfvEncryptionParametersBuilder::new()
-                .set_poly_modulus_degree(d)
-                .set_coefficient_modulus(
-                    CoefficientModulus::bfv_default(d, SecurityLevel::default()).unwrap(),
-                )
-                .set_plain_modulus_u64(1_000_000)
-                .build()
-                .unwrap();
-
-            let context = Context::new(&params, false, SecurityLevel::default()).unwrap();
-
-            let gen = KeyGenerator::new(&context).unwrap();
-
-            let relin = gen.create_compact_relinearization_keys().unwrap();
-
-            println!("\tCompact relin key size poly_degree={} bytes={}", d, relin.as_bytes().unwrap().len());
-        }
-    }
-/*
-    #[test]
-    fn galois_key_size() {
-        let degree = [4096, 8192, 16384, 32768];
-
-        for d in degree {
-            let params = BfvEncryptionParametersBuilder::new()
-                .set_poly_modulus_degree(d)
-                .set_coefficient_modulus(
-                    CoefficientModulus::bfv_default(d, SecurityLevel::default()).unwrap(),
-                )
-                .set_plain_modulus(PlainModulus::batching(d, 20).unwrap())
-                .build()
-                .unwrap();
-
-            let context = Context::new(&params, false, SecurityLevel::default()).unwrap();
-
-            let gen = KeyGenerator::new(&context).unwrap();
-
-            let relin = gen.create_galois_keys().unwrap();
-
-            println!("\tGalois key size poly_degree={} bytes={}", d, relin.as_bytes().unwrap().len());
-        }
-    }
-
-    #[test]
-    fn compact_galois_key_size() {
-        let degree = [8192, 16384, 32768];
-
-        for d in degree {
-            let params = BfvEncryptionParametersBuilder::new()
-                .set_poly_modulus_degree(d)
-                .set_coefficient_modulus(
-                    CoefficientModulus::bfv_default(d, SecurityLevel::default()).unwrap(),
-                )
-                .set_plain_modulus_u64(1_000_000)
-                .build()
-                .unwrap();
-
-            let context = Context::new(&params, false, SecurityLevel::default()).unwrap();
-
-            let gen = KeyGenerator::new(&context).unwrap();
-
-            let relin = gen.create_compact_galois_keys().unwrap();
-
-            println!("\tCompact galois key size poly_degree={} bytes={}", d, relin.as_bytes().unwrap().len());
-        }
-    }*/
 }

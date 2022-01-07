@@ -1,16 +1,8 @@
 use comfy_table::{Cell, Row, Table};
 use seal::*;
-use si_scale::{prelude::*, scale_fn};
 
 use crate::POLY_DEGREE;
-
-scale_fn!(bibytes1,
-    base: B1024,
-    constraint: UnitAndAbove,
-    mantissa_fmt: "{:.2}",
-    groupings: ',',
-    unit: "B"
-);
+use crate::bibytes1;
 
 pub fn key_size_table() -> Table {
     let mut table = Table::new();

@@ -1,6 +1,6 @@
 # Dungeon Master's tables of FHE things
 
-## BFV notes
+## BFV
 
 When using a plain modulus large enough for batching, generating relin keys fails at `N=1024,2048`.
 
@@ -34,3 +34,9 @@ Precise sizes may vary with RNG. Some keys fail to generate for some poly degree
 | compact relin keys  | N/A      | N/A       | 131.21 kiB | 1.03 MiB   | 7.85 MiB     | 56.51 MiB  |
 | Galois keys         | N/A      | N/A       | 5.79 MiB   | 49.65 MiB  | 408.23 MiB   | 3.09 GiB   |
 | compact Galois keys | N/A      | N/A       | N/A        | N/A        | N/A          | N/A        |
+
+### Ciphertext sizes
+Precise sizes may vary with RNG.
+| Poly degree | 1024     | 2048      | 4096      | 8192       | 16384    | 32768    |
+|-------------|----------|-----------|-----------|------------|----------|----------|
+| secret key  | 8.42 kiB | 30.19 kiB | 86.45 kiB | 422.24 kiB | 1.74 MiB | 7.06 MiB |

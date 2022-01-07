@@ -294,6 +294,36 @@ impl Ciphertext {
 
         Ok(Self { handle })
     }
+
+    /**
+     * Returns the ciphertext as a byte array.
+     */
+    pub fn as_bytes(&self) -> Result<Vec<u8>> {
+        let mut num_bytes: i64 = 0;
+
+        convert_seal_error(unsafe {
+            bindgen::Ciphertext_SaveSize(self.handle, CompressionType::ZStd as u8, &mut num_bytes)
+        })?;
+
+        let mut data: Vec<u8> = Vec::with_capacity(num_bytes as usize);
+        let mut bytes_written: i64 = 0;
+
+        convert_seal_error(unsafe {
+            let data_ptr = data.as_mut_ptr();
+
+            bindgen::Ciphertext_Save(
+                self.handle,
+                data_ptr,
+                num_bytes as u64,
+                CompressionType::ZStd as u8,
+                &mut bytes_written,
+            )
+        })?;
+
+        unsafe { data.set_len(bytes_written as usize) };
+
+        Ok(data)
+    }
 }
 
 impl Drop for Ciphertext {

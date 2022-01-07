@@ -208,6 +208,36 @@ impl PublicKey {
     pub fn get_handle(&self) -> *mut c_void {
         self.handle
     }
+
+    /**
+     * Returns the key as a byte array.
+     */
+    pub fn as_bytes(&self) -> Result<Vec<u8>> {
+        let mut num_bytes: i64 = 0;
+
+        convert_seal_error(unsafe {
+            bindgen::PublicKey_SaveSize(self.handle, CompressionType::ZStd as u8, &mut num_bytes)
+        })?;
+
+        let mut data: Vec<u8> = Vec::with_capacity(num_bytes as usize);
+        let mut bytes_written: i64 = 0;
+
+        convert_seal_error(unsafe {
+            let data_ptr = data.as_mut_ptr();
+
+            bindgen::PublicKey_Save(
+                self.handle,
+                data_ptr,
+                num_bytes as u64,
+                CompressionType::ZStd as u8,
+                &mut bytes_written,
+            )
+        })?;
+
+        unsafe { data.set_len(bytes_written as usize) };
+
+        Ok(data)
+    }
 }
 
 impl Drop for PublicKey {
@@ -253,7 +283,7 @@ impl SecretKey {
     }
 
     /**
-     * Copies the secret key into a byte array.
+     * Returns the key as a byte array.
      */
     pub fn as_bytes(&self) -> Result<Vec<u8>> {
         let mut num_bytes: i64 = 0;
@@ -548,7 +578,7 @@ mod tests {
     }
 
     #[test]
-    fn serialized_secret_key_size() {
+    fn secret_key_size() {
         let degree = [1024, 2048, 4096, 8192, 16384, 32768];
 
         for d in degree {
@@ -568,6 +598,30 @@ mod tests {
             let secret = gen.secret_key();
 
             println!("\tSecret key size poly_degree={} bytes={}", d, secret.as_bytes().unwrap().len());
+        }
+    }
+
+    #[test]
+    fn public_key_size() {
+        let degree = [1024, 2048, 4096, 8192, 16384, 32768];
+
+        for d in degree {
+            let params = BfvEncryptionParametersBuilder::new()
+                .set_poly_modulus_degree(d)
+                .set_coefficient_modulus(
+                    CoefficientModulus::bfv_default(d, SecurityLevel::default()).unwrap(),
+                )
+                .set_plain_modulus_u64(1_000_000)
+                .build()
+                .unwrap();
+
+            let context = Context::new(&params, false, SecurityLevel::default()).unwrap();
+
+            let gen = KeyGenerator::new(&context).unwrap();
+
+            let public = gen.create_public_key();
+
+            println!("\tPublic key size poly_degree={} bytes={}", d, public.as_bytes().unwrap().len());
         }
     }
 }

@@ -251,27 +251,15 @@ impl SecretKey {
     pub fn get_handle(&self) -> *mut c_void {
         self.handle
     }
-}
 
-impl Drop for SecretKey {
-    fn drop(&mut self) {
-        convert_seal_error(unsafe { bindgen::SecretKey_Destroy(self.handle) })
-            .expect("Fatal error in PublicKey::drop")
-    }
-}
-
-impl Serialize for SecretKey {
-    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
+    /**
+     * Copies the secret key into a byte array.
+     */
+    pub fn as_bytes(&self) -> Result<Vec<u8>> {
         let mut num_bytes: i64 = 0;
 
         convert_seal_error(unsafe {
             bindgen::SecretKey_SaveSize(self.handle, CompressionType::ZStd as u8, &mut num_bytes)
-        })
-        .map_err(|e| {
-            S::Error::custom(format!("Failed to get secret key serialized size: {}", e))
         })?;
 
         let mut data: Vec<u8> = Vec::with_capacity(num_bytes as usize);
@@ -287,10 +275,27 @@ impl Serialize for SecretKey {
                 CompressionType::ZStd as u8,
                 &mut bytes_written,
             )
-        })
-        .map_err(|e| S::Error::custom(format!("Failed to get secret key bytes: {}", e)))?;
+        })?;
 
         unsafe { data.set_len(bytes_written as usize) };
+
+        Ok(data)
+    }
+}
+
+impl Drop for SecretKey {
+    fn drop(&mut self) {
+        convert_seal_error(unsafe { bindgen::SecretKey_Destroy(self.handle) })
+            .expect("Fatal error in PublicKey::drop")
+    }
+}
+
+impl Serialize for SecretKey {
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let data = self.as_bytes().map_err(|e| S::Error::custom(format!("Failed to get secret key bytes: {}", e)))?;
 
         serializer.serialize_bytes(&data)
     }
@@ -540,5 +545,29 @@ mod tests {
             serde_json::to_string(&secret_key_2).unwrap(),
             serde_json::to_string(&secret_key).unwrap()
         );
+    }
+
+    #[test]
+    fn serialized_secret_key_size() {
+        let degree = [1024, 2048, 4096, 8192, 16384, 32768];
+
+        for d in degree {
+            let params = BfvEncryptionParametersBuilder::new()
+                .set_poly_modulus_degree(d)
+                .set_coefficient_modulus(
+                    CoefficientModulus::bfv_default(d, SecurityLevel::default()).unwrap(),
+                )
+                .set_plain_modulus_u64(1_000_000)
+                .build()
+                .unwrap();
+
+            let context = Context::new(&params, false, SecurityLevel::default()).unwrap();
+
+            let gen = KeyGenerator::new(&context).unwrap();
+
+            let secret = gen.secret_key();
+
+            println!("\tSecret key size poly_degree={} bytes={}", d, secret.as_bytes().unwrap().len());
+        }
     }
 }

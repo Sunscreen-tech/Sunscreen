@@ -4,6 +4,7 @@ members = [
     "examples/simple_multiply",
     "examples/calculator",
     "seal",
+    "seal_bench",
     "sunscreen_backend",
     "sunscreen_compiler",
     "sunscreen_compiler_macros",

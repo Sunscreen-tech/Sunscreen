@@ -21,32 +21,16 @@ When using a plain modulus large enough for batching, generating relin keys fail
 |------|------|------|------|------|-------|-------|
 | bits | N/A  | N/A  | 49   | 149  | 365   | 800   |
 
-### Size of secret key 
+### Key sizes
 
-Actual values may vary slightly with RNG.
+Precise sizes may vary with RNG. Some keys fail to generate for some poly degrees (marked as N/A).
 
-| n     | 1024  | 2048   | 4096   | 8192    | 16384    | 32768    |
-|-------|-------|--------|--------|---------|----------|----------|
-| bytes | ~4282 | ~15496 | ~70230 | ~270701 | ~1028500 | ~3950099 |
-
-### Size of public key
-
-Actual values may vary slightly with RNG. Compact keys are half as large.
-
-| n     | 1024  | 2048   | 4096    | 8192    | 16384    | 32768    |
-|-------|-------|--------|---------|---------|----------|----------|
-| bytes | ~8626 | ~30914 | ~134066 | ~541814 | ~2057003 | ~7900377 |
-
-### Size of relin keys
-Actual values may vary slightly with RNG. Compact keys are half as large.
-
-| n     | 1024  | 2048   | 4096    | 8192     | 16384     | 32768      |
-|-------|-------|--------|---------|----------|-----------|------------|
-| bytes | N/A   | N/A    | ~276854 | ~2168096 | ~16456182 | ~118506143 |
-
-### Size of galois keys
-Actual values may vary slightly with RNG. Compact keys are half as large (currently broken).
-
-| n     | 1024  | 2048   | 4096    | 8192     | 16384   | 32768 |
-|-------|-------|--------|---------|----------|---------|-------|
-| bytes | N/A   | N/A    | ~5.8 MB | ~49.6 MB | ~408 MB | ~3 GB |
+| Poly degree         | 1024    | 2048     | 4096      | 8192      | 16384       | 32768     |
+|---------------------|---------|----------|-----------|-----------|-------------|-----------|
+| secret key          | 4.2 kiB | 15.1 kiB | 68.6 kiB  | 264.4 kiB | 1_004.5 kiB | 3.8 MiB   |
+| public key          | 8.4 kiB | 30.2 kiB | 131.0 kiB | 529.1 kiB | 2.0 MiB     | 7.5 MiB   |
+| compact public key  | 4.3 kiB | 15.2 kiB | 68.7 kiB  | 264.4 kiB | 1_004.5 kiB | 3.8 MiB   |
+| relin keys          | N/A     | N/A      | 270.3 kiB | 2.1 MiB   | 15.7 MiB    | 113.0 MiB |
+| compact relin keys  | N/A     | N/A      | 131.1 kiB | 1.0 MiB   | 7.8 MiB     | 56.5 MiB  |
+| Galois keys         | N/A     | N/A      | 5.8 MiB   | 49.6 MiB  | 408.2 MiB   | 3.1 GiB   |
+| compact Galois keys | N/A     | N/A      | N/A       | N/A       | N/A         | N/A       |

@@ -1,0 +1,11 @@
+[package]
+name = "seal_bench"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+seal = { path = "../seal" }
+comfy-table = "5.0.0"
+si-scale = "0.1.3"

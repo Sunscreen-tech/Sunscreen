@@ -36,3 +36,17 @@ Actual values may vary slightly with RNG. Compact keys are half as large.
 | n     | 1024  | 2048   | 4096    | 8192    | 16384    | 32768    |
 |-------|-------|--------|---------|---------|----------|----------|
 | bytes | ~8626 | ~30914 | ~134066 | ~541814 | ~2057003 | ~7900377 |
+
+### Size of relin keys
+Actual values may vary slightly with RNG. Compact keys are half as large.
+
+| n     | 1024  | 2048   | 4096    | 8192     | 16384     | 32768      |
+|-------|-------|--------|---------|----------|-----------|------------|
+| bytes | N/A   | N/A    | ~276854 | ~2168096 | ~16456182 | ~118506143 |
+
+### Size of galois keys
+Actual values may vary slightly with RNG. Compact keys are half as large (currently broken).
+
+| n     | 1024  | 2048   | 4096    | 8192     | 16384   | 32768 |
+|-------|-------|--------|---------|----------|---------|-------|
+| bytes | N/A   | N/A    | ~5.8 MB | ~49.6 MB | ~408 MB | ~3 GB |

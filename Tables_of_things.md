@@ -31,7 +31,7 @@ Actual values may vary slightly with RNG.
 
 ### Size of public key
 
-Actual values may vary slightly with RNG.
+Actual values may vary slightly with RNG. Compact keys are half as large.
 
 | n     | 1024  | 2048   | 4096    | 8192    | 16384    | 32768    |
 |-------|-------|--------|---------|---------|----------|----------|

@@ -264,6 +264,15 @@ impl Clone for PublicKey {
  */
 pub struct CompactPublicKey(PublicKey);
 
+impl CompactPublicKey {
+    /**
+     * Returns the key as a byte array.
+     */
+    pub fn as_bytes(&self) -> Result<Vec<u8>> {
+        self.0.as_bytes()
+    }
+}
+
 /**
  * Class to store a secret key.
  */
@@ -622,6 +631,30 @@ mod tests {
             let public = gen.create_public_key();
 
             println!("\tPublic key size poly_degree={} bytes={}", d, public.as_bytes().unwrap().len());
+        }
+    }
+
+    #[test]
+    fn compact_public_key_size() {
+        let degree = [1024, 2048, 4096, 8192, 16384, 32768];
+
+        for d in degree {
+            let params = BfvEncryptionParametersBuilder::new()
+                .set_poly_modulus_degree(d)
+                .set_coefficient_modulus(
+                    CoefficientModulus::bfv_default(d, SecurityLevel::default()).unwrap(),
+                )
+                .set_plain_modulus_u64(1_000_000)
+                .build()
+                .unwrap();
+
+            let context = Context::new(&params, false, SecurityLevel::default()).unwrap();
+
+            let gen = KeyGenerator::new(&context).unwrap();
+
+            let public = gen.create_compact_public_key();
+
+            println!("\tCompact public key size poly_degree={} bytes={}", d, public.as_bytes().unwrap().len());
         }
     }
 }

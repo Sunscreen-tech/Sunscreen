@@ -108,8 +108,8 @@
                     "--package=sunscreen_compiler"
                 ],
                 "filter": {
-                    "name": "sunscreen_compiler",
-                    "kind": "lib"
+                    "name": "types",
+                    "kind": "test"
                 }
             },
             "args": [],

@@ -33,7 +33,7 @@ impl <const INT_BITS: usize> NumCiphertexts for Fractional<INT_BITS> {
 
 impl <const INT_BITS: usize> TypeName for Fractional<INT_BITS> {
     fn type_name() -> Type {
-        Type { name: "sunscreen_compiler::types::Fractional".to_owned(), version: Version::parse(crate_version!()).expect("Crate version is not a valid semver") }
+        Type { name: format!("sunscreen_compiler::types::Fractional<{}>", INT_BITS), version: Version::parse(crate_version!()).expect("Crate version is not a valid semver") }
     }
 }
 impl <const INT_BITS: usize> TypeNameInstance for Fractional<INT_BITS> {

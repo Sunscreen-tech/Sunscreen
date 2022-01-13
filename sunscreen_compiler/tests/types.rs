@@ -1,5 +1,5 @@
 use sunscreen_compiler::{
-    circuit, types::Rational, types::Signed, Compiler, PlainModulusConstraint, Runtime,
+    circuit, types::Fractional, types::Rational, types::Signed, Compiler, PlainModulusConstraint, Runtime,
 };
 
 #[test]
@@ -225,6 +225,37 @@ fn can_sub_rational_numbers() {
         .unwrap();
     let b = runtime
         .encrypt(Rational::try_from(3.14).unwrap(), &public)
+        .unwrap();
+
+    let result = runtime.run(&circuit, vec![a, b], &public).unwrap();
+
+    let c: Rational = runtime.decrypt(&result[0], &secret).unwrap();
+
+    assert_eq!(c, (-6.28).try_into().unwrap());
+}
+
+#[test]
+fn can_add_fractional_numbers() {
+    #[circuit(scheme = "bfv")]
+    fn add(a: Fractional::<64>, b: Fractional::<64>) -> Fractional::<64> {
+        a + b
+    }
+
+    let circuit = Compiler::with_circuit(add)
+        .noise_margin_bits(5)
+        .plain_modulus_constraint(PlainModulusConstraint::Raw(500))
+        .compile()
+        .unwrap();
+
+    let runtime = Runtime::new(&circuit.metadata.params).unwrap();
+
+    let (public, secret) = runtime.generate_keys().unwrap();
+
+    let a = runtime
+        .encrypt(Fractional::<64>::try_from(-3.14).unwrap(), &public)
+        .unwrap();
+    let b = runtime
+        .encrypt(Fractional::<64>::try_from(-3.14).unwrap(), &public)
         .unwrap();
 
     let result = runtime.run(&circuit, vec![a, b], &public).unwrap();

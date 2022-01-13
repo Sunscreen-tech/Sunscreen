@@ -70,6 +70,9 @@ pub fn circuit_impl(
         })
         .collect::<Vec<TokenStream>>();
 
+    let catpured_outputs = capture_outputs(ret);
+    let circuit_returns = lift_return_type(ret);
+
     let var_decl = unwrapped_inputs.iter().enumerate().map(|(i, t)| {
         let id = Ident::new(&format!("c_{}", i), Span::call_site());
         let ty = &t.0.ty;
@@ -87,7 +90,6 @@ pub fn circuit_impl(
         }
     });
 
-    let catpured_outputs = capture_outputs(ret);
 
     proc_macro::TokenStream::from(quote! {
         #(#attrs)*
@@ -109,7 +111,7 @@ pub fn circuit_impl(
                 let mut context = Context::new(params);
 
                 CURRENT_CTX.with(|ctx| {
-                    let internal = | #(#circuit_args)* | {
+                    let internal = | #(#circuit_args)* | -> #circuit_returns {
                         #body
                     };
 
@@ -151,6 +153,70 @@ pub fn circuit_impl(
             (#scheme_type, circuit_builder, signature)
         }
     })
+}
+
+/**
+ * Lifts each return type T into CircuitNode<T>.
+ */
+fn lift_return_type(ret: &ReturnType) -> TokenStream {
+    match ret {
+        ReturnType::Type(_, t) => {
+            let tuple_inners = match &**t {
+                Type::Tuple(t) => t.elems.iter().map(|x| {
+                    let inner_type = &*x;
+
+                    quote! {
+                        sunscreen_compiler::types::CircuitNode<#inner_type>
+                    }
+                }).collect::<Vec<TokenStream>>(),
+                Type::Paren(t) => {
+                    let inner_type = &*t.elem;
+                    let inner_type = quote! {
+                        sunscreen_compiler::types::CircuitNode<#inner_type>
+                    };
+
+                    vec![inner_type]
+                }
+                Type::Path(_) => {
+                    let r = &**t;
+                    let r = quote! {
+                        sunscreen_compiler::types::CircuitNode<#r>
+                    };
+
+                    vec![r]
+                }
+                _ => {
+                    return TokenStream::from(quote! {
+                        compile_error!("Circuits must return a single Cipthertext or a tuple of Ciphertexts");
+                    });
+                }
+            };
+
+            if tuple_inners.len() == 1 {
+                let t = &tuple_inners[0];
+
+                quote_spanned! {tuple_inners[0].span() =>
+                    #t
+                }
+            } else {
+                let t: Vec<TokenStream> = tuple_inners
+                    .iter()
+                    .map(|t| {
+                        quote_spanned! {t.span() =>
+                            #t,
+                        }
+                    })
+                    .collect();
+
+                quote_spanned! {ret.span() => 
+                    (#(#t)*)
+                }
+            }
+        }
+        ReturnType::Default => {
+            quote! { () }
+        }
+    }
 }
 
 fn capture_outputs(ret: &ReturnType) -> TokenStream {

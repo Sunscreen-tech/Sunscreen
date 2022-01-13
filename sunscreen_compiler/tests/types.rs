@@ -264,3 +264,45 @@ fn can_add_fractional_numbers() {
 
     assert_eq!(c, (-6.28).try_into().unwrap());
 }
+
+#[test]
+fn can_mul_fractional_numbers() {
+    #[circuit(scheme = "bfv")]
+    fn mul(a: Fractional::<64>, b: Fractional::<64>) -> Fractional::<64> {
+        a * b
+    }
+
+    let circuit = Compiler::with_circuit(mul)
+        .noise_margin_bits(5)
+        .plain_modulus_constraint(PlainModulusConstraint::Raw(100000))
+        .compile()
+        .unwrap();
+
+    let runtime = Runtime::new(&circuit.metadata.params).unwrap();
+
+    let (public, secret) = runtime.generate_keys().unwrap();
+
+    let test_mul = |a: f64, b: f64| {
+        let a_c = runtime
+            .encrypt(Fractional::<64>::try_from(a).unwrap(), &public)
+            .unwrap();
+        let b_c = runtime
+            .encrypt(Fractional::<64>::try_from(b).unwrap(), &public)
+            .unwrap();
+
+        let result = runtime.run(&circuit, vec![a_c, b_c], &public).unwrap();
+
+        let c: Fractional::<64> = runtime.decrypt(&result[0], &secret).unwrap();
+
+        assert_eq!(c, (a * b).try_into().unwrap());
+    };
+    
+    test_mul(-3.14, -3.14);
+    test_mul(1234., 5678.);
+    test_mul(-1234., 5678.);
+    test_mul(0., -3.14);
+    test_mul(0., 0.);
+    test_mul(1., -3.14);
+    test_mul(1., 3.14);
+    test_mul(1e-23, 1.234e-4);
+}

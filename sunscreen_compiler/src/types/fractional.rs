@@ -136,10 +136,21 @@ impl <const INT_BITS: usize> TryIntoPlaintext for Fractional<INT_BITS> {
                 (n as i64 + bit_power) as usize
             };
 
+            // For powers less than 0, we invert the sign.
+            let sign = if bit_power >= 0 {
+                sign
+            } else {
+                !sign & 0x1
+            };
+
             let coeff = if sign == 0 {
                 bit_value
             } else {
-                params.plain_modulus - bit_value
+                if bit_value > 0 {
+                    params.plain_modulus - bit_value
+                } else {
+                    0
+                }
             };
 
             seal_plaintext.set_coefficient(coeff_index as usize, coeff);
@@ -178,13 +189,19 @@ impl <const INT_BITS: usize> TryFromPlaintext for Fractional<INT_BITS> {
 
                     let coeff = p[0].get_coefficient(i);
 
-                    if coeff < negative_cutoff {
-                        val += coeff as f64 * (power as f64).exp2();
+                    // Reverse the sign of negative powers.
+                    let sign = if power >= 0 {
+                        1f64
                     } else {
-                        val -= (params.plain_modulus - coeff) as f64 * (power as f64).exp2();
+                        -1f64
+                    };
+
+                    if coeff < negative_cutoff {
+                        val += sign * coeff as f64 * (power as f64).exp2();
+                    } else {
+                        val -= sign * (params.plain_modulus - coeff) as f64 * (power as f64).exp2();
                     };
                 }
-
 
                 Self { val }
             }
@@ -229,14 +246,16 @@ mod tests {
             assert_eq!(f_1, f_2);
         };
 
-        round_trip(0.0);
-        round_trip(1.0);
+        //round_trip(0.0);
+        //round_trip(1.0);
+        round_trip(5.8125);
         round_trip(6.0);
         round_trip(6.6);
         round_trip(1.2);
         round_trip(1e13);
         round_trip(0.0000000005);
         round_trip(-1.0);
+        round_trip(-5.875);
         round_trip(-6.0);
         round_trip(-6.6);
         round_trip(-1.2);

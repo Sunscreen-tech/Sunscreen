@@ -1,3 +1,4 @@
+mod fractional;
 mod integer;
 mod rational;
 
@@ -12,6 +13,7 @@ pub use sunscreen_runtime::{
 
 pub use integer::{Signed, Unsigned};
 pub use rational::Rational;
+pub use fractional::Fractional;
 use std::ops::{Add, Div, Mul, Sub};
 
 #[derive(Clone, Copy, Serialize, Deserialize)]

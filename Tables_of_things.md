@@ -23,7 +23,10 @@ When using a plain modulus large enough for batching, generating relin keys fail
 
 ### Key sizes
 
-Precise sizes may vary with RNG. Some keys fail to generate for some poly degrees (marked as N/A).
+* Precise sizes may vary with RNG.
+* Some keys fail to generate for some poly degrees (marked as N/A).
+* Coefficient modulus is default for 128-bit security.
+* Plain modulus = 1,000,000. (Should have no effect)
 
 | Poly degree         | 1024     | 2048      | 4096       | 8192       | 16384        | 32768      |
 |---------------------|----------|-----------|------------|------------|--------------|------------|
@@ -36,7 +39,10 @@ Precise sizes may vary with RNG. Some keys fail to generate for some poly degree
 | compact Galois keys | N/A      | N/A       | N/A        | N/A        | N/A          | N/A        |
 
 ### Ciphertext sizes
-Precise sizes may vary with RNG.
+* Precise sizes may vary with RNG.
+* Coefficient modulus is default for 128-bit security.
+* Plain modulus = 1,000,000. (Should have no effect)
+
 | Poly degree | 1024     | 2048      | 4096      | 8192       | 16384    | 32768    |
 |-------------|----------|-----------|-----------|------------|----------|----------|
 | secret key  | 8.42 kiB | 30.19 kiB | 86.45 kiB | 422.24 kiB | 1.74 MiB | 7.06 MiB |

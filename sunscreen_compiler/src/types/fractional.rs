@@ -120,6 +120,7 @@ impl <const INT_BITS: usize> TryIntoPlaintext for Fractional<INT_BITS> {
         let mantissa = as_u64 & mantissa_mask | (mantissa_mask + 1);
         let exp = as_u64 & exp_mask;
         let power = (exp >> (f64::MANTISSA_DIGITS - 1)) as i64 - 1023;
+        let sign = (as_u64 & sign_mask) >> 63;
 
         if power > INT_BITS as i64 {
             return Err(sunscreen_runtime::Error::FheTypeError("Out of range".to_owned()));
@@ -135,7 +136,13 @@ impl <const INT_BITS: usize> TryIntoPlaintext for Fractional<INT_BITS> {
                 (n as i64 + bit_power) as usize
             };
 
-            seal_plaintext.set_coefficient(coeff_index as usize, bit_value);
+            let coeff = if sign == 0 {
+                bit_value
+            } else {
+                params.plain_modulus - bit_value
+            };
+
+            seal_plaintext.set_coefficient(coeff_index as usize, coeff);
         }
 
         Ok(Plaintext {
@@ -158,14 +165,24 @@ impl <const INT_BITS: usize> TryFromPlaintext for Fractional<INT_BITS> {
                 let mut val = 0.0f64;
                 let n = params.lattice_dimension as usize;
 
-                for i in 0..n {
+                let len = p[0].len();
+
+                let negative_cutoff = (params.plain_modulus + 1) / 2;
+
+                for i in 0..usize::min(n, len) {
                     let power = if i < INT_BITS {
                         i as i64
                     } else {
                         i as i64 - n as i64
                     };
 
-                    val += p[0].get_coefficient(i) as f64 * (power as f64).exp2();
+                    let coeff = p[0].get_coefficient(i);
+
+                    if coeff < negative_cutoff {
+                        val += coeff as f64 * (power as f64).exp2();
+                    } else {
+                        val -= (params.plain_modulus - coeff) as f64 * (power as f64).exp2();
+                    };
                 }
 
 
@@ -219,5 +236,11 @@ mod tests {
         round_trip(1.2);
         round_trip(1e13);
         round_trip(0.0000000005);
+        round_trip(-1.0);
+        round_trip(-6.0);
+        round_trip(-6.6);
+        round_trip(-1.2);
+        round_trip(-1e13);
+        round_trip(-0.0000000005);
     }
 }

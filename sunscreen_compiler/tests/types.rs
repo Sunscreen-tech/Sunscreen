@@ -260,7 +260,7 @@ fn can_add_fractional_numbers() {
 
     let result = runtime.run(&circuit, vec![a, b], &public).unwrap();
 
-    let c: Rational = runtime.decrypt(&result[0], &secret).unwrap();
+    let c: Fractional::<64> = runtime.decrypt(&result[0], &secret).unwrap();
 
     assert_eq!(c, (-6.28).try_into().unwrap());
 }

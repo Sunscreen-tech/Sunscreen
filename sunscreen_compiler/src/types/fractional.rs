@@ -1,6 +1,6 @@
 use seal::Plaintext as SealPlaintext;
 
-use crate::types::{GraphAdd, GraphMul};
+use crate::types::{GraphAdd, GraphMul, GraphSub};
 use crate::{
     crate_version,
     types::{BfvType, CircuitNode, FheType, Type, Version},
@@ -192,6 +192,22 @@ impl<const INT_BITS: usize> GraphAdd for Fractional<INT_BITS> {
     ) -> CircuitNode<Self::Left> {
         with_ctx(|ctx| {
             let n = ctx.add_addition(a.ids[0], b.ids[0]);
+
+            CircuitNode::new(&[n])
+        })
+    }
+}
+
+impl<const INT_BITS: usize> GraphSub for Fractional<INT_BITS> {
+    type Left = Fractional<INT_BITS>;
+    type Right = Fractional<INT_BITS>;
+
+    fn graph_sub(
+        a: CircuitNode<Self::Left>,
+        b: CircuitNode<Self::Right>,
+    ) -> CircuitNode<Self::Left> {
+        with_ctx(|ctx| {
+            let n = ctx.add_subtraction(a.ids[0], b.ids[0]);
 
             CircuitNode::new(&[n])
         })

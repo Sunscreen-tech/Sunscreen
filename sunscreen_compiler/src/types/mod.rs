@@ -11,7 +11,7 @@ pub use sunscreen_runtime::{
     TypeNameInstance, Version,
 };
 
-pub use fractional::Fractional;
+pub use fractional::{Fractional};
 pub use integer::{Signed, Unsigned};
 pub use rational::Rational;
 use std::ops::{Add, Div, Mul, Sub};

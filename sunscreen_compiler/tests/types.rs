@@ -252,18 +252,32 @@ fn can_add_fractional_numbers() {
 
     let (public, secret) = runtime.generate_keys().unwrap();
 
-    let a = runtime
-        .encrypt(Fractional::<64>::try_from(-3.14).unwrap(), &public)
-        .unwrap();
-    let b = runtime
-        .encrypt(Fractional::<64>::try_from(-3.14).unwrap(), &public)
-        .unwrap();
+    let add = |a: f64, b: f64| {
+        let a_c = runtime
+            .encrypt(Fractional::<64>::try_from(a).unwrap(), &public)
+            .unwrap();
+        let b_c = runtime
+            .encrypt(Fractional::<64>::try_from(b).unwrap(), &public)
+            .unwrap();
 
-    let result = runtime.run(&circuit, vec![a, b], &public).unwrap();
+        let result = runtime.run(&circuit, vec![a_c, b_c], &public).unwrap();
 
-    let c: Fractional<64> = runtime.decrypt(&result[0], &secret).unwrap();
+        let c: Fractional<64> = runtime.decrypt(&result[0], &secret).unwrap();
 
-    assert_eq!(c, (-6.28).try_into().unwrap());
+        assert_eq!(c, (a + b).try_into().unwrap());
+    };
+
+    add(3.14, 3.14);
+    add(-3.14, 3.14);
+    add(0., 0.);
+    add(7., 3.);
+    add(1e9, 1e9);
+    add(1e-8, 1e-7);
+    add(-3.14, -3.14);
+    add(3.14, -3.14);
+    add(-7., -3.);
+    add(-1e9, -1e9);
+    add(-1e-8, -1e-7);
 }
 
 #[test]

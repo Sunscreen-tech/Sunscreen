@@ -46,6 +46,9 @@ mod params;
  * from your circuits.
  * 
  * # BFV Scheme types
+ * The BFV scheme is a good choice for exactly and quickly computing a small
+ * number of simple operations. 
+ * 
  * Plaintexts under the BFV scheme are polynomials with `N` terms, where
  * `N` is the `poly_degree` scheme paramter. This parameter is (by default)
  * automatically configured on circuit compilation based on its noise budget
@@ -90,6 +93,11 @@ mod params;
  * | Rational   | 2             | moderate            | signed decimal    | 2 muls + 1 sub | 2 muls  | 2 muls + 1 sub | 1 neg   | 2 muls  |
  * 
  * `* Plaintext division only.`
+ * 
+ * The set of feasible computations under FHE with BFV is fairly limited. For
+ * example, comparisons, modulus, transcendentals, are generally very difficult
+ * and are often infeasible depending on scheme parameters and noise budget.
+ * One can sometimes *approximate* operations using Lagrange interpolation.
  */
 pub mod types;
 

@@ -305,4 +305,7 @@ fn can_mul_fractional_numbers() {
     test_mul(1., -3.14);
     test_mul(1., 3.14);
     test_mul(1e-23, 1.234e-4);
+    // 4294967296 is 2^32. This should be about the largest multiplication we
+    // can do with 64-bits of precision for the integer.
+    test_mul(4294967295., 4294967296.);
 }

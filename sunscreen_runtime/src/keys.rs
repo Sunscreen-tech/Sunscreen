@@ -1,4 +1,25 @@
+//use crate::Params;
 use seal::{GaloisKeys, PublicKey as SealPublicKey, RelinearizationKeys};
+//use serde::{Deserialize, Serialize, ser::Serializer};
+
+#[derive(Clone)]
+/**
+ * TODO
+ */
+pub struct PublicEncryptionKey {
+//    params: Params, 
+
+//    key: SealPublicKey,
+}
+
+/*
+impl Serialize for PublicEncryptionKey {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer
+    {
+    }
+}*/
 
 #[derive(Clone)]
 /**

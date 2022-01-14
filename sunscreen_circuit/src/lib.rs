@@ -1227,4 +1227,14 @@ mod tests {
 
         assert_eq!(pruned, expected_ir);
     }
+
+    #[test]
+    fn can_roundtrip_scheme_type() {
+        for s in [SchemeType::Bfv, SchemeType::Ckks, SchemeType::Tfhe] {
+            let s_2: u8 = s.into();
+            let s_2 = SchemeType::try_from(s_2).unwrap();
+
+            assert_eq!(s, s_2);
+        }
+    }
 }

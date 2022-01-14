@@ -308,4 +308,15 @@ mod tests {
         assert_eq!(modulus[3].value(), 1125899906629633);
         assert_eq!(modulus[4].value(), 1125899906826241);
     }
+
+    #[test]
+    fn can_roundtrip_security_level() {
+        for sec in [SecurityLevel::TC128, SecurityLevel::TC192, SecurityLevel::TC256] {
+            let sec_2: i32 = sec.into();
+            let sec_2 = SecurityLevel::try_from(sec_2).unwrap();
+
+            assert_eq!(sec, sec_2);
+        }
+
+    }
 }

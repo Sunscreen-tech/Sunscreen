@@ -238,7 +238,7 @@ fn can_sub_rational_numbers() {
 #[test]
 fn can_add_fractional_numbers() {
     #[circuit(scheme = "bfv")]
-    fn add(a: Fractional<64>, b: Fractional<64>) -> Fractional<64> {
+    fn add(a: Fractional::<64>, b: Fractional::<64>) -> Fractional::<64> {
         a + b
     }
 
@@ -269,7 +269,7 @@ fn can_add_fractional_numbers() {
 #[test]
 fn can_mul_fractional_numbers() {
     #[circuit(scheme = "bfv")]
-    fn mul(a: Fractional<64>, b: Fractional<64>) -> Fractional<64> {
+    fn mul(a: Fractional::<64>, b: Fractional::<64>) -> Fractional::<64> {
         a * b
     }
 

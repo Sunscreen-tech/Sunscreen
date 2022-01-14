@@ -14,6 +14,70 @@ use sunscreen_runtime::{
 /**
  * A quasi fixed-point representation capable of representing values with
  * both integer and fractional components.
+ * 
+ * # Remarks
+ * This type is capable of addition, subtraction, and multiplication with no
+ * more overhead than the [`Signed`](crate::types::Signed) type.
+ * That is, addition and multiplication each take exactly one operation.
+ * 
+ * ## Representation
+ * See [SEAL v2.1 documentation](https://eprint.iacr.org/2017/224.pdf) for
+ * details.
+ * 
+ * Recall that in BFV, the plaintext consists of 2 polynomials, each with
+ * `poly_degree` terms. `poly_degree` is a BFV scheme parameter that
+ * suncreen assigns for you depending on your circuit's noise requirements.
+ * This type packs the value into the first polynomial and doesn't use the
+ * second.
+ * 
+ * This type represents values with both an integer and fractional component.
+ * The generic argument `INT_BITS` defines how many bits are reserved for the
+ * integer portion and the remaining `poly_degree - INT_BITS` bits store the
+ * fraction.
+ * 
+ * Internally, this has a fairly funky representation.
+ * 
+ * The integer bits map to the low order plaintext polynomial coefficients
+ * with the following relation:
+ * 
+ * ```text
+ * int(x) = sum_{i=0..INT_BITS}(c_i * 2^i)
+ * ```
+ * 
+ * where `c_i` is the coefficient for the `x^i` term of the polynomial.
+ * 
+ * Then, the fractional parts follow:
+ * 
+ * ```text
+ * frac(x) = sum_{i=INT_BITS..n}(-c_i * 2^(n-i))
+ * ```
+ * 
+ * where `n` is the `poly_degree`.
+ * 
+ * Note that the sign of the polynomial coefficient for fractional terms are
+ * inverted.
+ * 
+ * ## Limitations
+ * When encrypting a Fractional type, encoding will fail if:
+ * * The underlying [`f64`] is infinite.
+ * * The underlying [`f64`] is NaN
+ * * The integer portion of the underlying [`f64`] exceeds the precision for
+ * `INT_BITS`
+ * 
+ * Subnormals flush to 0, while normals are represented without precision loss.
+ * 
+ * While the numbers are binary, addition and multiplication are carryless.
+ * That is, carries don't propagate but instead increase the digit (i.e. 
+ * polynomial coefficiens) beyond radix 2. However, they're still subject to 
+ * the scheme's `plain_modulus` specified during circuit compilation.
+ * Repeated operations on an encrypted Fractional value will result in garbled
+ * values if *any* digit overflows the `plain_modulus`.
+ * 
+ * Additionally numbers can experience more traditional overflow if the integer
+ * portion exceeds `2^INT_BITS`. Finally, repeated multiplications of
+ * numbers with decimal components introduce new decmal digits. If more than
+ * `2^(n-INT_BITS)` decimals appear, they will overflow into the integer 
+ * portion and garble the number.
  */
 pub struct Fractional<const INT_BITS: usize> {
     val: f64,

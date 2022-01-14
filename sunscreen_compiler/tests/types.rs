@@ -1,5 +1,6 @@
 use sunscreen_compiler::{
-    circuit, types::Fractional, types::Rational, types::Signed, Compiler, PlainModulusConstraint, Runtime,
+    circuit, types::Fractional, types::Rational, types::Signed, Compiler, PlainModulusConstraint,
+    Runtime,
 };
 
 #[test]
@@ -237,7 +238,7 @@ fn can_sub_rational_numbers() {
 #[test]
 fn can_add_fractional_numbers() {
     #[circuit(scheme = "bfv")]
-    fn add(a: Fractional::<64>, b: Fractional::<64>) -> Fractional::<64> {
+    fn add(a: Fractional<64>, b: Fractional<64>) -> Fractional<64> {
         a + b
     }
 
@@ -260,7 +261,7 @@ fn can_add_fractional_numbers() {
 
     let result = runtime.run(&circuit, vec![a, b], &public).unwrap();
 
-    let c: Fractional::<64> = runtime.decrypt(&result[0], &secret).unwrap();
+    let c: Fractional<64> = runtime.decrypt(&result[0], &secret).unwrap();
 
     assert_eq!(c, (-6.28).try_into().unwrap());
 }
@@ -268,7 +269,7 @@ fn can_add_fractional_numbers() {
 #[test]
 fn can_mul_fractional_numbers() {
     #[circuit(scheme = "bfv")]
-    fn mul(a: Fractional::<64>, b: Fractional::<64>) -> Fractional::<64> {
+    fn mul(a: Fractional<64>, b: Fractional<64>) -> Fractional<64> {
         a * b
     }
 
@@ -292,11 +293,11 @@ fn can_mul_fractional_numbers() {
 
         let result = runtime.run(&circuit, vec![a_c, b_c], &public).unwrap();
 
-        let c: Fractional::<64> = runtime.decrypt(&result[0], &secret).unwrap();
+        let c: Fractional<64> = runtime.decrypt(&result[0], &secret).unwrap();
 
         assert_eq!(c, (a * b).try_into().unwrap());
     };
-    
+
     test_mul(-3.14, -3.14);
     test_mul(1234., 5678.);
     test_mul(-1234., 5678.);

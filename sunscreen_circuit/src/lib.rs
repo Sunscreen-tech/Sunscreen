@@ -178,6 +178,35 @@ pub enum SchemeType {
     Tfhe,
 }
 
+impl Into<u8> for SchemeType {
+    /**
+     * Creates a serializable byte representation of the scheme type.
+     */
+    fn into(self) -> u8 {
+        match self {
+            Self::Bfv => 0,
+            Self::Ckks => 1,
+            Self::Tfhe => 2,
+        }
+    }
+}
+
+impl TryFrom<u8> for SchemeType {
+    type Error = Error;
+
+    /**
+     * Converts a serialized scheme type back into a [`SchemeType`].
+     */
+    fn try_from(val: u8) -> Result<Self> {
+        Ok(match val {
+            0 => Self::Bfv,
+            1 => Self::Ckks,
+            2 => Self::Tfhe,
+            _ => Err(Error::InvalidSchemeType)?,
+        })
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 /**
  * Contains information about a node in the circuit graph.
@@ -1197,5 +1226,15 @@ mod tests {
         let expected_ir = Circuit::new(SchemeType::Bfv);
 
         assert_eq!(pruned, expected_ir);
+    }
+
+    #[test]
+    fn can_roundtrip_scheme_type() {
+        for s in [SchemeType::Bfv, SchemeType::Ckks, SchemeType::Tfhe] {
+            let s_2: u8 = s.into();
+            let s_2 = SchemeType::try_from(s_2).unwrap();
+
+            assert_eq!(s, s_2);
+        }
     }
 }

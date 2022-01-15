@@ -1,8 +1,8 @@
 use comfy_table::{Cell, Row, Table};
 use seal::*;
 
-use crate::POLY_DEGREE;
 use crate::bibytes1;
+use crate::POLY_DEGREE;
 
 pub fn key_size_table() -> Table {
     let mut table = Table::new();

@@ -2,7 +2,7 @@ use crate::error::*;
 use crate::metadata::*;
 use crate::{
     run_program_unchecked, Ciphertext, InnerCiphertext, InnerPlaintext, Plaintext, PublicKey,
-    SealCiphertext, SealPlaintext, TryFromPlaintext, TryIntoPlaintext, TypeName,
+    SealCiphertext, SealPlaintext, TryFromPlaintext, TryIntoPlaintext, TypeName, WithContext,
 };
 use sunscreen_circuit::SchemeType;
 
@@ -94,10 +94,26 @@ impl Runtime {
             Context::Seal(context) => {
                 let keygen = KeyGenerator::new(&context)?;
 
+                let galois_keys = keygen.create_galois_keys().ok().map(|v| WithContext {
+                    params: self.params.clone(),
+                    data: v,
+                });
+
+                let relin_keys = keygen
+                    .create_relinearization_keys()
+                    .ok()
+                    .map(|v| WithContext {
+                        params: self.params.clone(),
+                        data: v,
+                    });
+
                 let public_keys = PublicKey {
-                    public_key: keygen.create_public_key(),
-                    galois_key: keygen.create_galois_keys().ok(),
-                    relin_key: keygen.create_relinearization_keys().ok(),
+                    public_key: WithContext {
+                        params: self.params.clone(),
+                        data: keygen.create_public_key(),
+                    },
+                    galois_key: galois_keys,
+                    relin_key: relin_keys,
                 };
 
                 (public_keys, keygen.secret_key())
@@ -203,13 +219,16 @@ impl Runtime {
                     }
                 }
 
+                let relin_key = public_key.relin_key.as_ref().map(|p| &p.data);
+                let galois_key = public_key.galois_key.as_ref().map(|p| &p.data);
+
                 let mut raw_ciphertexts = unsafe {
                     run_program_unchecked(
                         &circuit.circuit,
                         &inputs,
                         &evaluator,
-                        &public_key.relin_key,
-                        &public_key.galois_key,
+                        &relin_key,
+                        &galois_key,
                     )
                 }?;
 
@@ -249,7 +268,7 @@ impl Runtime {
 
         let ciphertext = match (&self.context, plaintext.inner) {
             (Context::Seal(context), InnerPlaintext::Seal(inner_plain)) => {
-                let encryptor = Encryptor::with_public_key(context, &public_key.public_key)?;
+                let encryptor = Encryptor::with_public_key(context, &public_key.public_key.data)?;
 
                 let ciphertexts = inner_plain
                     .iter()

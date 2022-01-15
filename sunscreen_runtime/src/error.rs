@@ -104,6 +104,11 @@ pub enum Error {
      * a type encoding even numbers would return this if you pass an odd number.
      */
     FheTypeError(String),
+
+    /**
+     * Failed to deserialize bytes as a [`Params`](crate::Params) object.
+     */
+    ParamDeserializationError,
 }
 
 impl From<sunscreen_circuit::Error> for Error {

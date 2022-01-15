@@ -199,8 +199,14 @@ where
         // We already checked for errors at the start of this function. This should be
         // well-behaved.
         let outputs = unsafe {
-            run_program_unchecked(&ir, &inputs, &evaluator, &relin_keys, &galois_keys)
-                .map_err(|e| sunscreen_runtime::Error::from(e))?
+            run_program_unchecked(
+                &ir,
+                &inputs,
+                &evaluator,
+                &relin_keys.as_ref(),
+                &galois_keys.as_ref(),
+            )
+            .map_err(|e| sunscreen_runtime::Error::from(e))?
         };
 
         for (i, o) in outputs.iter().enumerate() {

@@ -64,3 +64,26 @@ pub use evaluator::Evaluator;
 pub use key_generator::{GaloisKeys, KeyGenerator, PublicKey, RelinearizationKeys, SecretKey};
 pub use modulus::{CoefficientModulus, Modulus, PlainModulus, SecurityLevel};
 pub use plaintext_ciphertext::{Ciphertext, Plaintext};
+
+/**
+ * A trait for converting objects into byte arrays.
+ */
+pub trait ToBytes {
+    /**
+     * Returns the object as a byte array.
+     */
+    fn as_bytes(&self) -> Result<Vec<u8>>;
+}
+
+/**
+ * A trait for converting data from a byte slice under a given SEAL context.
+ */
+pub trait FromBytes {
+    /**
+     * Deserialize an object from the given bytes using the given
+     * context.
+     */
+    fn from_bytes(context: &Context, bytes: &[u8]) -> Result<Self>
+    where
+        Self: Sized;
+}

@@ -68,8 +68,8 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
     ir: &Circuit,
     inputs: &[Ciphertext],
     evaluator: &E,
-    relin_keys: &Option<RelinearizationKeys>,
-    galois_keys: &Option<GaloisKeys>,
+    relin_keys: &Option<&RelinearizationKeys>,
+    galois_keys: &Option<&GaloisKeys>,
 ) -> Result<Vec<Ciphertext>, CircuitRunFailure> {
     fn get_ciphertext<'a>(
         data: &'a [AtomicCell<Option<Cow<Ciphertext>>>],
@@ -503,7 +503,8 @@ mod tests {
         let ct_1 = encryptor.encrypt(&pt_1).unwrap();
 
         let output = unsafe {
-            run_program_unchecked(&ir, &[ct_0, ct_1], &evaluator, &Some(relin_keys), &None).unwrap()
+            run_program_unchecked(&ir, &[ct_0, ct_1], &evaluator, &Some(&relin_keys), &None)
+                .unwrap()
         };
 
         assert_eq!(output.len(), 1);
@@ -544,7 +545,8 @@ mod tests {
         let ct_1 = encryptor.encrypt(&pt_1).unwrap();
 
         let output = unsafe {
-            run_program_unchecked(&ir, &[ct_0, ct_1], &evaluator, &Some(relin_keys), &None).unwrap()
+            run_program_unchecked(&ir, &[ct_0, ct_1], &evaluator, &Some(&relin_keys), &None)
+                .unwrap()
         };
 
         assert_eq!(output.len(), 1);
@@ -600,7 +602,8 @@ mod tests {
         let ct_1 = encryptor.encrypt(&pt_1).unwrap();
 
         let output = unsafe {
-            run_program_unchecked(&ir, &[ct_0, ct_1], &evaluator, &Some(relin_keys), &None).unwrap()
+            run_program_unchecked(&ir, &[ct_0, ct_1], &evaluator, &Some(&relin_keys), &None)
+                .unwrap()
         };
 
         assert_eq!(output.len(), 1);
@@ -639,7 +642,7 @@ mod tests {
         let ct_0 = encryptor.encrypt(&pt_0).unwrap();
 
         let output = unsafe {
-            run_program_unchecked(&ir, &[ct_0], &evaluator, &None, &Some(galois_keys)).unwrap()
+            run_program_unchecked(&ir, &[ct_0], &evaluator, &None, &Some(&galois_keys)).unwrap()
         };
 
         assert_eq!(output.len(), 1);
@@ -683,7 +686,7 @@ mod tests {
         let ct_0 = encryptor.encrypt(&pt_0).unwrap();
 
         let output = unsafe {
-            run_program_unchecked(&ir, &[ct_0], &evaluator, &None, &Some(galois_keys)).unwrap()
+            run_program_unchecked(&ir, &[ct_0], &evaluator, &None, &Some(&galois_keys)).unwrap()
         };
 
         assert_eq!(output.len(), 1);

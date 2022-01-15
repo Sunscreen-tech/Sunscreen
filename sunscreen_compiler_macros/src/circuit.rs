@@ -90,7 +90,6 @@ pub fn circuit_impl(
         }
     });
 
-
     proc_macro::TokenStream::from(quote! {
         #(#attrs)*
         #vis fn #circuit_name() -> (
@@ -162,13 +161,17 @@ fn lift_return_type(ret: &ReturnType) -> TokenStream {
     match ret {
         ReturnType::Type(_, t) => {
             let tuple_inners = match &**t {
-                Type::Tuple(t) => t.elems.iter().map(|x| {
-                    let inner_type = &*x;
+                Type::Tuple(t) => t
+                    .elems
+                    .iter()
+                    .map(|x| {
+                        let inner_type = &*x;
 
-                    quote! {
-                        sunscreen_compiler::types::CircuitNode<#inner_type>
-                    }
-                }).collect::<Vec<TokenStream>>(),
+                        quote! {
+                            sunscreen_compiler::types::CircuitNode<#inner_type>
+                        }
+                    })
+                    .collect::<Vec<TokenStream>>(),
                 Type::Paren(t) => {
                     let inner_type = &*t.elem;
                     let inner_type = quote! {
@@ -208,7 +211,7 @@ fn lift_return_type(ret: &ReturnType) -> TokenStream {
                     })
                     .collect();
 
-                quote_spanned! {ret.span() => 
+                quote_spanned! {ret.span() =>
                     (#(#t)*)
                 }
             }

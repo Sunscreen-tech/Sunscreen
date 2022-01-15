@@ -17,6 +17,11 @@ pub enum Error {
      * one or more errors. The inner value is the list of errors.
      */
     IRError(Vec<IRError>),
+
+    /**
+     * Attempted to deserialize and unknown scheme type.
+     */
+    InvalidSchemeType,
 }
 
 /**

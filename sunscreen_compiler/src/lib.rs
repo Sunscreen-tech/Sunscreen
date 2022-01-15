@@ -44,56 +44,56 @@ mod params;
 /**
  * This module contains build-in types you can use as inputs and outputs
  * from your circuits.
- * 
+ *
  * # BFV Scheme types
  * The BFV scheme is a good choice for exactly and quickly computing a small
- * number of simple operations. 
- * 
+ * number of simple operations.
+ *
  * Plaintexts under the BFV scheme are polynomials with `N` terms, where
  * `N` is the `poly_degree` scheme paramter. This parameter is (by default)
  * automatically configured on circuit compilation based on its noise budget
  * requirements. Addition and multiplication imply adding and multiplying
  * polynomials.
- * 
+ *
  * However, working with polynomials directly is difficult, so Sunscreen
  * provides types that transparently encode data you might actually want
  * to use into and out of polynomials. These include:
- * * The [`Signed`](crate::types::Signed) type represents a signed integer that 
+ * * The [`Signed`](crate::types::Signed) type represents a signed integer that
  * encodes a binary value decomposed into a number of digits. This encoding
  * allows for somewhat efficiently representing integers, but has unusual
  * overflow semantics developers need to understand. This type supports
  * addition, subtraction, multiplication, and negation.
  * * The [`Unsigned`](crate::types::Unsigned) type represents and unsigned
- * integer. This type has the same benefits and caveats as 
+ * integer. This type has the same benefits and caveats as
  * [`Signed`](crate::types::Signed) types, but is unsigned.
  * * The [`Fractional`](crate::types::Fractional) type is a quasi fixed-point
  * value. It allows you to homomorphically compute decimal values as
- * efficiently as [`Signed`](crate::types::Signed) and 
+ * efficiently as [`Signed`](crate::types::Signed) and
  * [`Unsigned`](crate::types::Unsigned) types. This type has complex overflow
  * conditions. This type intrinsically supports homomorphic addition
- * multiplication, and negation. Dividing by plaintext is possible by 
+ * multiplication, and negation. Dividing by plaintext is possible by
  * computing the divisor's reciprical and multiplying. Dividing by ciphertext
  * is not possible.
  * * The [`Rational`](crate::types::Rational) type allows quasi fixed-point
  * representation. This type interally uses 2 ciphertexts, and is thus requires
  * twice as much space as other types. Its overflow semantics are effectively
  * those of two [`Signed`](crate::types::Signed) values. However, this type is
- * less efficient than [`Fractional`](crate::types::Fractional), as it 
+ * less efficient than [`Fractional`](crate::types::Fractional), as it
  * requires 2 multiplications for addition and subtraction. Unlike other types,
- * [`Rational`](crate::types::Rational) supports ciphertext-ciphertext 
+ * [`Rational`](crate::types::Rational) supports ciphertext-ciphertext
  * division.
- * 
+ *
  * Type comparison:
- * 
+ *
  * | Type       | # ciphertexts | overflow conditions | values            | ops/add        | ops/mul | ops/sub        | ops/neg | ops/div |
  * |------------|---------------|---------------------|-------------------|----------------|---------|----------------|---------|---------|
  * | Signed     | 1             | moderate            | signed integral   | 1 add          | 1 mul   | 1 sub          | 1 neg   | -       |
  * | Unsigned   | 1             | moderate            | unsigned integral | 1 add          | 1 mul   | 1 sub          | 1 neg   | -       |
  * | Fractional | 1             | complex             | signed decimal    | 1 add          | 1 mul   | 1 sub          | 1 neg   | 1 mul*  |
  * | Rational   | 2             | moderate            | signed decimal    | 2 muls + 1 sub | 2 muls  | 2 muls + 1 sub | 1 neg   | 2 muls  |
- * 
+ *
  * `* Plaintext division only.`
- * 
+ *
  * The set of feasible computations under FHE with BFV is fairly limited. For
  * example, comparisons, modulus, transcendentals, are generally very difficult
  * and are often infeasible depending on scheme parameters and noise budget.

@@ -43,7 +43,7 @@ use crate::SecurityLevel;
  * The chain is a doubly linked list and is referred to as the modulus switching chain.
 */
 pub struct Context {
-    handle: *mut c_void,
+    pub(crate) handle: *mut c_void,
 }
 
 unsafe impl Sync for Context {}

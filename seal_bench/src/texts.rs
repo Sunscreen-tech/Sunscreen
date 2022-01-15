@@ -1,8 +1,8 @@
 use comfy_table::{Cell, Row, Table};
 use seal::*;
 
-use crate::POLY_DEGREE;
 use crate::bibytes1;
+use crate::POLY_DEGREE;
 
 pub fn texts_table() -> Table {
     let mut table = Table::new();
@@ -47,9 +47,9 @@ fn ciphertext() -> Row {
         let plaintext = Plaintext::from_hex_string("0").unwrap();
         let ciphertext = encryptor.encrypt(&plaintext).unwrap();
 
-        row.add_cell(Cell::from(
-            bibytes1(ciphertext.as_bytes().unwrap().len() as f64),
-        ));
+        row.add_cell(Cell::from(bibytes1(
+            ciphertext.as_bytes().unwrap().len() as f64
+        )));
     }
 
     row

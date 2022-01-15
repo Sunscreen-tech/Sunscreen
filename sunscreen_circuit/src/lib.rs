@@ -202,7 +202,7 @@ impl TryFrom<u8> for SchemeType {
             0 => Self::Bfv,
             1 => Self::Ckks,
             2 => Self::Tfhe,
-            _ => Err(Error::InvalidSchemeType)?
+            _ => Err(Error::InvalidSchemeType)?,
         })
     }
 }

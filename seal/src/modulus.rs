@@ -63,7 +63,10 @@ impl TryFrom<i32> for SecurityLevel {
             128 => SecurityLevel::TC128,
             192 => SecurityLevel::TC192,
             256 => SecurityLevel::TC256,
-            _ => Err(Error::SerializationError(format!("Invalid security level: {}", val)))?
+            _ => Err(Error::SerializationError(format!(
+                "Invalid security level: {}",
+                val
+            )))?,
         })
     }
 }
@@ -73,7 +76,7 @@ impl Into<i32> for SecurityLevel {
         match self {
             SecurityLevel::TC128 => 128,
             SecurityLevel::TC192 => 192,
-            SecurityLevel::TC256 => 256
+            SecurityLevel::TC256 => 256,
         }
     }
 }
@@ -311,12 +314,15 @@ mod tests {
 
     #[test]
     fn can_roundtrip_security_level() {
-        for sec in [SecurityLevel::TC128, SecurityLevel::TC192, SecurityLevel::TC256] {
+        for sec in [
+            SecurityLevel::TC128,
+            SecurityLevel::TC192,
+            SecurityLevel::TC256,
+        ] {
             let sec_2: i32 = sec.into();
             let sec_2 = SecurityLevel::try_from(sec_2).unwrap();
 
             assert_eq!(sec, sec_2);
         }
-
     }
 }

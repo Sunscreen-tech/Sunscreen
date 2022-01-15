@@ -2,7 +2,7 @@ use crate::error::*;
 use crate::metadata::*;
 use crate::{
     run_program_unchecked, Ciphertext, InnerCiphertext, InnerPlaintext, Plaintext, PublicKey,
-    SealCiphertext, SealPlaintext, TryFromPlaintext, TryIntoPlaintext, TypeName,
+    SealCiphertext, SealPlaintext, TryFromPlaintext, TryIntoPlaintext, TypeName, WithContext
 };
 use sunscreen_circuit::SchemeType;
 
@@ -95,7 +95,10 @@ impl Runtime {
                 let keygen = KeyGenerator::new(&context)?;
 
                 let public_keys = PublicKey {
-                    public_key: keygen.create_public_key(),
+                    public_key: WithContext {
+                        params: self.params.clone(),
+                        data: keygen.create_public_key()
+                    },
                     galois_key: keygen.create_galois_keys().ok(),
                     relin_key: keygen.create_relinearization_keys().ok(),
                 };
@@ -249,7 +252,7 @@ impl Runtime {
 
         let ciphertext = match (&self.context, plaintext.inner) {
             (Context::Seal(context), InnerPlaintext::Seal(inner_plain)) => {
-                let encryptor = Encryptor::with_public_key(context, &public_key.public_key)?;
+                let encryptor = Encryptor::with_public_key(context, &public_key.public_key.data)?;
 
                 let ciphertexts = inner_plain
                     .iter()

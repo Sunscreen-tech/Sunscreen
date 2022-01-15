@@ -173,7 +173,7 @@ impl Params {
 
         bytes.extend_from_slice(&self.lattice_dimension.to_be_bytes());
         bytes.extend_from_slice(&self.plain_modulus.to_be_bytes());
-        
+
         let scheme_type: u8 = self.scheme_type.into();
         bytes.push(scheme_type);
 
@@ -190,7 +190,7 @@ impl Params {
     pub fn try_from_bytes(bytes: &[u8]) -> Result<Self> {
         let (lattice_dimension, rest) = Self::read_u64(bytes)?;
         let (plain_modulus, rest) = Self::read_u64(rest)?;
-        
+
         let (scheme_type, rest) = Self::read_u8(rest)?;
         let scheme_type: SchemeType = scheme_type.try_into()?;
 
@@ -204,28 +204,39 @@ impl Params {
             plain_modulus,
             scheme_type,
             security_level,
-            coeff_modulus
+            coeff_modulus,
         })
     }
-    
 
     fn read_u64(bytes: &[u8]) -> Result<(u64, &[u8])> {
         let (int_bytes, rest) = bytes.split_at(std::mem::size_of::<u64>());
-        let val = u64::from_be_bytes(int_bytes.try_into().map_err(|_| Error::ParamDeserializationError)?);
+        let val = u64::from_be_bytes(
+            int_bytes
+                .try_into()
+                .map_err(|_| Error::ParamDeserializationError)?,
+        );
 
         Ok((val, rest))
     }
 
     fn read_i32(bytes: &[u8]) -> Result<(i32, &[u8])> {
         let (int_bytes, rest) = bytes.split_at(std::mem::size_of::<i32>());
-        let val = i32::from_be_bytes(int_bytes.try_into().map_err(|_| Error::ParamDeserializationError)?);
+        let val = i32::from_be_bytes(
+            int_bytes
+                .try_into()
+                .map_err(|_| Error::ParamDeserializationError)?,
+        );
 
         Ok((val, rest))
     }
 
     fn read_u8(bytes: &[u8]) -> Result<(u8, &[u8])> {
         let (int_bytes, rest) = bytes.split_at(std::mem::size_of::<u8>());
-        let val = u8::from_be_bytes(int_bytes.try_into().map_err(|_| Error::ParamDeserializationError)?);
+        let val = u8::from_be_bytes(
+            int_bytes
+                .try_into()
+                .map_err(|_| Error::ParamDeserializationError)?,
+        );
 
         Ok((val, rest))
     }
@@ -281,7 +292,7 @@ mod tests {
             security_level: SecurityLevel::TC192,
             scheme_type: SchemeType::Ckks,
         };
-        
+
         let params_2 = Params::try_from_bytes(&params.to_bytes()).unwrap();
 
         assert_eq!(params, params_2);

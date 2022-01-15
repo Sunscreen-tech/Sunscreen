@@ -21,7 +21,7 @@ pub enum Error {
     /**
      * Attempted to deserialize and unknown scheme type.
      */
-    InvalidSchemeType
+    InvalidSchemeType,
 }
 
 /**

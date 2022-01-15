@@ -4,7 +4,7 @@ use std::ptr::null_mut;
 use crate::bindgen;
 use crate::error::*;
 use crate::serialization::CompressionType;
-use crate::Context;
+use crate::{Context, FromBytes, ToBytes};
 
 use serde::ser::Error;
 use serde::{Serialize, Serializer};
@@ -201,18 +201,8 @@ pub struct PublicKey {
 unsafe impl Sync for PublicKey {}
 unsafe impl Send for PublicKey {}
 
-impl PublicKey {
-    /**
-     * Returns the handle to the underlying SEAL object.
-     */
-    pub fn get_handle(&self) -> *mut c_void {
-        self.handle
-    }
-
-    /**
-     * Returns the key as a byte array.
-     */
-    pub fn as_bytes(&self) -> Result<Vec<u8>> {
+impl ToBytes for PublicKey {
+    fn as_bytes(&self) -> Result<Vec<u8>> {
         let mut num_bytes: i64 = 0;
 
         convert_seal_error(unsafe {
@@ -237,6 +227,42 @@ impl PublicKey {
         unsafe { data.set_len(bytes_written as usize) };
 
         Ok(data)
+    }
+}
+
+impl FromBytes for PublicKey {
+    fn from_bytes(context: &Context, bytes: &[u8]) -> Result<Self> {
+        let key = PublicKey::new()?;
+        let mut bytes_read = 0;
+
+        convert_seal_error(unsafe {
+            bindgen::PublicKey_Load(
+                key.handle,
+                context.handle,
+                bytes.as_ptr() as *mut u8,
+                bytes.len() as u64,
+                &mut bytes_read,
+            )
+        })?;
+
+        Ok(key)
+    }
+}
+
+impl PublicKey {
+    fn new() -> Result<Self> {
+        let mut handle: *mut c_void = null_mut();
+
+        convert_seal_error(unsafe { bindgen::PublicKey_Create1(&mut handle) })?;
+
+        Ok(Self { handle })
+    }
+
+    /**
+     * Returns the handle to the underlying SEAL object.
+     */
+    pub fn get_handle(&self) -> *mut c_void {
+        self.handle
     }
 }
 

@@ -62,31 +62,31 @@ use sunscreen_runtime::{
  *
  * For example:
  * `5.8125 =`
- * 
+ *
  * | Coefficient index | 0   | 1   | 2   | ... | N-4  | N-3  | N-2  | N-1  |
  * |-------------------|-----|-----|-----|-----|------|------|------|------|
  * | 2^N               | 2^0 | 2^1 | 2^2 | ... | 2^-4 | 2^-3 | 2^-2 | 2^-1 |
  * | Value             | 1   | 0   | 1   | ... | -1   | 0    | -1   | -1   |
- * 
+ *
  * Negative values encode every digit as negative, where a negative
  * coefficient is any value above `(plain_modulus + 1) / 2` up to
  * `plain_modulus - 1`. The former is the most negative value, while the
  * latter is the value `-1`. This is analogous to how 2's complement
- * defines values above `0x80..00` to be negative with `0x80..00` 
+ * defines values above `0x80..00` to be negative with `0x80..00`
  * being `INT_MIN` and `0xFF..FF` being `-1`.
- * 
+ *
  * For example, if plain modulus is `14`, the value `-1` encodes as the
  * unsigned value `13`, `-6` encodes as `8`, and the values `0..7` are simply
  * `0..7` respectively.
  *
  * A full example of encoding a negative value:
  * `-5.8125 =`
- * 
+ *
  * | Coefficient index | 0   | 1   | 2   | ... | N-4  | N-3  | N-2  | N-1  |
  * |-------------------|-----|-----|-----|-----|------|------|------|------|
  * | 2^N               | 2^0 | 2^1 | 2^2 | ... | 2^-4 | 2^-3 | 2^-2 | 2^-1 |
  * | Value             | -1  | 0   | -1  | ... | 1    | 0    |  1   | 1    |
- * 
+ *
  * See [SEAL v2.1 documentation](https://eprint.iacr.org/2017/224.pdf) for
  * full details.
  *
@@ -136,13 +136,13 @@ use sunscreen_runtime::{
  *   let val: Fractional::<64> = runtime.decrypt(&ciphertext, &secret_key)?;
  *   let val: f64 = val.into();
  *   let val = Fractional::<64>::from(val);
- * 
+ *
  *   Ok(runtime.encrypt(val, &public_key)?)
  * }
  * ```
- * 
+ *
  * Overflow aside, decryption can result in more acceptable and exprected precision loss:
- * * If `INT_BITS > 1024`, the [`Fractional`]'s int can exceed [`f64::MAX`], 
+ * * If `INT_BITS > 1024`, the [`Fractional`]'s int can exceed [`f64::MAX`],
  * resulting in [`f64::INFINITY`].
  * * Decrypion will truncate precision beyond the 53 floating point mantissa bits (52 for subnormals). As previously mentioned, encrypting a subnormal
  *  flushes to 0.

@@ -83,5 +83,7 @@ pub trait FromBytes {
      * Deserialize an object from the given bytes using the given
      * context.
      */
-    fn from_bytes(context: &Context, bytes: &[u8]) -> Result<Self> where Self: Sized;
+    fn from_bytes(context: &Context, bytes: &[u8]) -> Result<Self>
+    where
+        Self: Sized;
 }

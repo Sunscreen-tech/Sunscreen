@@ -408,6 +408,14 @@ impl RelinearizationKeys {
         self.handle
     }
 
+    fn new() -> Result<RelinearizationKeys> {
+        let mut handle: *mut c_void = null_mut();
+
+        convert_seal_error(unsafe { bindgen::KSwitchKeys_Create1(&mut handle) })?;
+
+        Ok(Self { handle })
+    }
+
     /**
      * Returns the key as a byte array.
      */
@@ -436,6 +444,54 @@ impl RelinearizationKeys {
         unsafe { data.set_len(bytes_written as usize) };
 
         Ok(data)
+    }
+}
+
+impl ToBytes for RelinearizationKeys {
+    fn as_bytes(&self) -> Result<Vec<u8>> {
+        let mut num_bytes: i64 = 0;
+
+        convert_seal_error(unsafe {
+            bindgen::KSwitchKeys_SaveSize(self.handle, CompressionType::ZStd as u8, &mut num_bytes)
+        })?;
+
+        let mut data: Vec<u8> = Vec::with_capacity(num_bytes as usize);
+        let mut bytes_written: i64 = 0;
+
+        convert_seal_error(unsafe {
+            let data_ptr = data.as_mut_ptr();
+
+            bindgen::KSwitchKeys_Save(
+                self.handle,
+                data_ptr,
+                num_bytes as u64,
+                CompressionType::ZStd as u8,
+                &mut bytes_written,
+            )
+        })?;
+
+        unsafe { data.set_len(bytes_written as usize) };
+
+        Ok(data)
+    }
+}
+
+impl FromBytes for RelinearizationKeys {
+    fn from_bytes(context: &Context, bytes: &[u8]) -> Result<Self> {
+        let keys = RelinearizationKeys::new()?;
+        let mut write_bytes: i64 = 0;
+
+        convert_seal_error(unsafe {
+            bindgen::KSwitchKeys_Load(
+                keys.handle,
+                context.handle,
+                bytes.as_ptr() as *mut u8,
+                bytes.len() as u64,
+                &mut write_bytes,
+            )
+        })?;
+
+        Ok(keys)
     }
 }
 
@@ -509,10 +565,17 @@ impl GaloisKeys {
         self.handle
     }
 
-    /**
-     * Returns the key as a byte array.
-     */
-    pub fn as_bytes(&self) -> Result<Vec<u8>> {
+    fn new() -> Result<GaloisKeys> {
+        let mut handle: *mut c_void = null_mut();
+
+        convert_seal_error(unsafe { bindgen::KSwitchKeys_Create1(&mut handle) })?;
+
+        Ok(Self { handle })
+    }
+}
+
+impl ToBytes for GaloisKeys {
+    fn as_bytes(&self) -> Result<Vec<u8>> {
         let mut num_bytes: i64 = 0;
 
         convert_seal_error(unsafe {
@@ -537,6 +600,25 @@ impl GaloisKeys {
         unsafe { data.set_len(bytes_written as usize) };
 
         Ok(data)
+    }
+}
+
+impl FromBytes for GaloisKeys {
+    fn from_bytes(context: &Context, bytes: &[u8]) -> Result<Self> {
+        let keys = GaloisKeys::new()?;
+        let mut write_bytes: i64 = 0;
+
+        convert_seal_error(unsafe {
+            bindgen::KSwitchKeys_Load(
+                keys.handle,
+                context.handle,
+                bytes.as_ptr() as *mut u8,
+                bytes.len() as u64,
+                &mut write_bytes,
+            )
+        })?;
+
+        Ok(keys)
     }
 }
 

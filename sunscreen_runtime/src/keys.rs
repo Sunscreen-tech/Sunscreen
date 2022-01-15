@@ -92,7 +92,7 @@ where
                             } else {
                                 return Err(serde::de::Error::missing_field("params"));
                             }
-                        },
+                        }
                         "data" => {
                             let val: Option<Vec<u8>> = map.next_value()?;
 
@@ -101,7 +101,7 @@ where
                             } else {
                                 return Err(serde::de::Error::missing_field("data"));
                             }
-                        },
+                        }
                         x => {
                             return Err(serde::de::Error::unknown_field(x, &["params", "data"]));
                         }
@@ -127,9 +127,10 @@ where
 
                     let seal_context =
                         Context::new(&encryption_params, false, params.security_level)
-                        .map_err(|e| serde::de::Error::custom(format!("{}", e)))?;
+                            .map_err(|e| serde::de::Error::custom(format!("{}", e)))?;
 
-                    let data = T::from_bytes(&seal_context, &data).map_err(|e| serde::de::Error::custom(format!("{}", e)))?;
+                    let data = T::from_bytes(&seal_context, &data)
+                        .map_err(|e| serde::de::Error::custom(format!("{}", e)))?;
 
                     Ok(WithContext::<T> { params, data })
                 } else {
@@ -143,11 +144,17 @@ where
         }
 
         const FIELDS: &'static [&'static str] = &["params", "key"];
-        deserializer.deserialize_struct("WithContext", FIELDS, WithContextVisitor { marker: std::marker::PhantomData::default() })
+        deserializer.deserialize_struct(
+            "WithContext",
+            FIELDS,
+            WithContextVisitor {
+                marker: std::marker::PhantomData::default(),
+            },
+        )
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Deserialize, Serialize)]
 /**
  * A bundle of public keys. These may be freely shared with other parties without
  * risk of compromising data security.
@@ -175,7 +182,7 @@ pub struct PublicKey {
      *
      * Circuits that don't feature rotations have no use for these keys.
      */
-    pub galois_key: Option<GaloisKeys>,
+    pub galois_key: Option<WithContext<GaloisKeys>>,
 
     /**
      * Relinearization keys are used in the BFV and CKKS schemes during relinearization
@@ -185,15 +192,15 @@ pub struct PublicKey {
      *
      * Circuits without multiplications don't have relinearizations and thus don't need these keys.
      */
-    pub relin_key: Option<RelinearizationKeys>,
+    pub relin_key: Option<WithContext<RelinearizationKeys>>,
 }
 
-#[cfg(test)] 
+#[cfg(test)]
 mod tests {
-    use crate::*;
     use super::*;
-    use seal::{CoefficientModulus, SecurityLevel};
-    use sunscreen_circuit::{SchemeType};
+    use crate::*;
+    use seal::{CoefficientModulus, PlainModulus, SecurityLevel};
+    use sunscreen_circuit::SchemeType;
 
     #[test]
     fn can_roundtrip_seal_public_key() {
@@ -202,8 +209,13 @@ mod tests {
             security_level: SecurityLevel::TC128,
             plain_modulus: 1234,
             scheme_type: SchemeType::Bfv,
-            coeff_modulus: CoefficientModulus::bfv_default(8192, SecurityLevel::TC128).unwrap().iter().map(|x| x.value()).collect(),
-        }).unwrap();
+            coeff_modulus: CoefficientModulus::bfv_default(8192, SecurityLevel::TC128)
+                .unwrap()
+                .iter()
+                .map(|x| x.value())
+                .collect(),
+        })
+        .unwrap();
 
         let (public, _) = runtime.generate_keys().unwrap();
 
@@ -215,6 +227,105 @@ mod tests {
             ..public
         };
 
-        assert_eq!(public.public_key.data.as_bytes(), public_2.public_key.data.as_bytes());
+        assert_eq!(
+            public.public_key.data.as_bytes(),
+            public_2.public_key.data.as_bytes()
+        );
+    }
+
+    #[test]
+    fn can_roundtrip_seal_galois_keys() {
+        let runtime = Runtime::new(&Params {
+            lattice_dimension: 8192,
+            security_level: SecurityLevel::TC128,
+            plain_modulus: PlainModulus::batching(8192, 20).unwrap().value(),
+            scheme_type: SchemeType::Bfv,
+            coeff_modulus: CoefficientModulus::bfv_default(8192, SecurityLevel::TC128)
+                .unwrap()
+                .iter()
+                .map(|x| x.value())
+                .collect(),
+        })
+        .unwrap();
+
+        let (public, _) = runtime.generate_keys().unwrap();
+
+        let data = serde_json::to_string(&public.galois_key.as_ref().unwrap()).unwrap();
+        let galois_key: WithContext<GaloisKeys> = serde_json::from_str(&data).unwrap();
+
+        let public_2 = PublicKey {
+            galois_key: Some(galois_key),
+            ..public
+        };
+
+        assert_eq!(
+            public.galois_key.unwrap().data.as_bytes(),
+            public_2.galois_key.unwrap().data.as_bytes()
+        );
+    }
+
+    #[test]
+    fn can_roundtrip_seal_relin_keys() {
+        let runtime = Runtime::new(&Params {
+            lattice_dimension: 8192,
+            security_level: SecurityLevel::TC128,
+            plain_modulus: PlainModulus::batching(8192, 20).unwrap().value(),
+            scheme_type: SchemeType::Bfv,
+            coeff_modulus: CoefficientModulus::bfv_default(8192, SecurityLevel::TC128)
+                .unwrap()
+                .iter()
+                .map(|x| x.value())
+                .collect(),
+        })
+        .unwrap();
+
+        let (public, _) = runtime.generate_keys().unwrap();
+
+        let data = serde_json::to_string(&public.relin_key.as_ref().unwrap()).unwrap();
+        let relin_keys: WithContext<RelinearizationKeys> = serde_json::from_str(&data).unwrap();
+
+        let public_2 = PublicKey {
+            relin_key: Some(relin_keys),
+            ..public
+        };
+
+        assert_eq!(
+            public.relin_key.unwrap().data.as_bytes(),
+            public_2.relin_key.unwrap().data.as_bytes()
+        );
+    }
+
+    #[test]
+    fn can_roundtrip_all_keys() {
+        let runtime = Runtime::new(&Params {
+            lattice_dimension: 8192,
+            security_level: SecurityLevel::TC128,
+            plain_modulus: PlainModulus::batching(8192, 20).unwrap().value(),
+            scheme_type: SchemeType::Bfv,
+            coeff_modulus: CoefficientModulus::bfv_default(8192, SecurityLevel::TC128)
+                .unwrap()
+                .iter()
+                .map(|x| x.value())
+                .collect(),
+        })
+        .unwrap();
+
+        let (public, _) = runtime.generate_keys().unwrap();
+
+        let data = serde_json::to_string(&public).unwrap();
+        let public_2: PublicKey = serde_json::from_str(&data).unwrap();
+
+        assert_eq!(
+            public.relin_key.unwrap().data.as_bytes(),
+            public_2.relin_key.unwrap().data.as_bytes()
+        );
+        assert_eq!(
+            public.galois_key.unwrap().data.as_bytes(),
+            public_2.galois_key.unwrap().data.as_bytes()
+        );
+        assert_eq!(
+            public.public_key.data.as_bytes(),
+            public_2.public_key.data.as_bytes()
+        );
     }
 }

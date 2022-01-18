@@ -2,7 +2,7 @@ use std::ffi::{c_void, CString};
 use std::ptr::null_mut;
 
 use crate::error::*;
-use crate::{bindgen, serialization::CompressionType, Context};
+use crate::{ToBytes, FromBytes, bindgen, serialization::CompressionType, Context};
 
 use serde::ser::Error;
 use serde::{Serialize, Serializer};
@@ -294,11 +294,10 @@ impl Ciphertext {
 
         Ok(Self { handle })
     }
+}
 
-    /**
-     * Returns the ciphertext as a byte array.
-     */
-    pub fn as_bytes(&self) -> Result<Vec<u8>> {
+impl ToBytes for Ciphertext {
+    fn as_bytes(&self) -> Result<Vec<u8>> {
         let mut num_bytes: i64 = 0;
 
         convert_seal_error(unsafe {
@@ -323,6 +322,19 @@ impl Ciphertext {
         unsafe { data.set_len(bytes_written as usize) };
 
         Ok(data)
+    }
+}
+
+impl FromBytes for Ciphertext {
+    fn from_bytes(context: &Context, bytes: &[u8]) -> Result<Self> {
+        let ciphertext = Self::new()?;
+        let mut bytes_read = 0i64;
+        
+        convert_seal_error(unsafe {
+            bindgen::Ciphertext_Load(ciphertext.handle, context.handle, bytes.as_ptr() as *mut u8, bytes.len() as u64, &mut bytes_read)
+        })?;
+
+        Ok(ciphertext)
     }
 }
 

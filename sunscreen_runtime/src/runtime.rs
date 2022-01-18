@@ -2,7 +2,7 @@ use crate::error::*;
 use crate::metadata::*;
 use crate::{
     run_program_unchecked, Ciphertext, InnerCiphertext, InnerPlaintext, Plaintext, PublicKey,
-    SealCiphertext, SealPlaintext, TryFromPlaintext, TryIntoPlaintext, TypeName, WithContext,
+    SealCiphertext, SealPlaintext, TryFromPlaintext, TryIntoPlaintext, TypeName, serialization::WithContext,
 };
 use sunscreen_circuit::SchemeType;
 
@@ -213,7 +213,7 @@ impl Runtime {
                     match i.inner {
                         InnerCiphertext::Seal(mut c) => {
                             for j in c.drain(0..) {
-                                inputs.push(j)
+                                inputs.push(j.data)
                             }
                         }
                     }
@@ -244,7 +244,12 @@ impl Runtime {
                     packed_ciphertexts.push(Ciphertext {
                         data_type: circuit.metadata.signature.returns[i].clone(),
                         inner: InnerCiphertext::Seal(
-                            raw_ciphertexts.drain(0..*ciphertext_count).collect(),
+                            raw_ciphertexts.drain(0..*ciphertext_count)
+                            .map(|c| WithContext {
+                                params: self.params.clone(),
+                                data: c
+                            })
+                            .collect(),
                         ),
                     });
                 }
@@ -273,7 +278,13 @@ impl Runtime {
                 let ciphertexts = inner_plain
                     .iter()
                     .map(|p| encryptor.encrypt(p).map_err(|e| Error::SealError(e)))
-                    .collect::<Result<Vec<SealCiphertext>>>()?;
+                    .collect::<Result<Vec<SealCiphertext>>>()?
+                    .drain(0..)
+                    .map(|c| WithContext {
+                        params: self.params.clone(),
+                        data: c
+                    })
+                    .collect();
 
                 Ciphertext {
                     data_type: P::type_name(),

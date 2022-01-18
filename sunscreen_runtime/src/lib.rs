@@ -9,15 +9,17 @@ mod keys;
 mod metadata;
 mod run;
 mod runtime;
+mod serialization;
 
 pub use crate::error::*;
 pub use crate::keys::*;
 pub use crate::metadata::*;
 pub use run::*;
 pub use runtime::*;
+use serialization::WithContext;
 
 use seal::{Ciphertext as SealCiphertext, Plaintext as SealPlaintext};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize)]
 /**
@@ -41,7 +43,7 @@ pub struct Plaintext {
     pub inner: InnerPlaintext,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Deserialize, Serialize)]
 /**
  * The underlying backend implementation of a ciphertext (e.g SEAL's [`Ciphertext`](seal::Ciphertext)).
  */
@@ -49,10 +51,10 @@ pub enum InnerCiphertext {
     /**
      * A set of ciphertexts in SEAL's runtime.
      */
-    Seal(Vec<SealCiphertext>),
+    Seal(Vec<WithContext<SealCiphertext>>),
 }
 
-#[derive(Clone)]
+#[derive(Clone, Deserialize, Serialize)]
 /**
  * An encryption of the given data type. Note, the data type is stored in plaintext and is considered
  * part of Sunscreen's runtime protocol.

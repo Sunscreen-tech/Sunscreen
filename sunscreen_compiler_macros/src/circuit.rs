@@ -14,7 +14,6 @@ pub fn circuit_impl(
     let circuit_name = &input_fn.sig.ident;
     let vis = &input_fn.vis;
     let body = &input_fn.block;
-    let attrs = &input_fn.attrs;
     let inputs = &input_fn.sig.inputs;
     let ret = &input_fn.sig.output;
 
@@ -90,18 +89,19 @@ pub fn circuit_impl(
         }
     });
 
-    proc_macro::TokenStream::from(quote! {
-        #(#attrs)*
-        #vis fn #circuit_name() -> (
-            sunscreen_compiler::SchemeType,
-            impl Fn(&sunscreen_compiler::Params) -> sunscreen_compiler::Result<sunscreen_compiler::FrontendCompilation>,
-            sunscreen_compiler::CallSignature
-        ) {
-            use std::cell::RefCell;
-            use std::mem::transmute;
-            use sunscreen_compiler::{CURRENT_CTX, Context, Error, INDEX_ARENA, Result, Params, SchemeType, Value, types::{CircuitNode, NumCiphertexts, Type, TypeName, TypeNameInstance}};
+    let circuit_struct_name = Ident::new(&format!("{}_struct", circuit_name), Span::call_site());
 
-            let circuit_builder = |params: &Params| {
+    let circuit = proc_macro::TokenStream::from(quote! {
+        #[allow(non_camel_case_types)]
+        #vis struct #circuit_struct_name {
+        }
+
+        impl sunscreen_compiler::CircuitFn for #circuit_struct_name {
+            fn build(&self, params: &Params) -> sunscreen_compiler::Result<sunscreen_compiler::FrontendCompilation> {  
+                use std::cell::RefCell;
+                use std::mem::transmute;
+                use sunscreen_compiler::{CURRENT_CTX, Context, Error, INDEX_ARENA, Result, Params, SchemeType, Value, types::{CircuitNode, NumCiphertexts, Type, TypeName, TypeNameInstance}};  
+
                 if SchemeType::Bfv != params.scheme_type {
                     return Err(Error::IncorrectScheme)
                 }
@@ -110,9 +110,9 @@ pub fn circuit_impl(
                 let mut context = Context::new(params);
 
                 CURRENT_CTX.with(|ctx| {
-                    let internal = | #(#circuit_args)* | -> #circuit_returns {
+                    let internal = | #(#circuit_args)* | -> #circuit_returns
                         #body
-                    };
+                    ;
 
                     // Transmute away the lifetime to 'static. So long as we are careful with internal()
                     // panicing, this is safe because we set the context back to none before the funtion
@@ -145,13 +145,25 @@ pub fn circuit_impl(
                 });
 
                 Ok(context.compilation)
-            };
+            }
 
-            #signature;
+            fn signature(&self) -> sunscreen_compiler::CallSignature {
+                use sunscreen_compiler::types::NumCiphertexts;
 
-            (#scheme_type, circuit_builder, signature)
+                #signature
+            }
+
+            fn scheme_type(&self) -> sunscreen_compiler::SchemeType {
+                #scheme_type
+            }
         }
-    })
+
+        #[allow(non_upper_case_globals)]
+        const #circuit_name: #circuit_struct_name = #circuit_struct_name { };
+    });
+
+    //panic!("{}", circuit);
+    circuit
 }
 
 /**
@@ -265,11 +277,13 @@ fn capture_outputs(ret: &ReturnType) -> TokenStream {
 }
 
 fn create_signature(args: &[&Type], ret: &ReturnType) -> TokenStream {
-    let arg_type_names = args.iter().map(|t| {
+    let arg_type_names = args.iter().enumerate().map(|(i, t)| {
+        let type_id = Ident::new(&format!("T{}", i), Span::call_site());
+
         quote! {
-            #t ::type_name(),
+            type #type_id = #t;
         }
-    });
+    }).collect::<Vec<TokenStream>>();
 
     let (return_type_names, return_type_sizes) = match ret {
         ReturnType::Type(_, t) => {
@@ -316,11 +330,21 @@ fn create_signature(args: &[&Type], ret: &ReturnType) -> TokenStream {
         ReturnType::Default => (quote! { vec![] }, quote! { vec![] }),
     };
 
+    let arg_get_types = arg_type_names.iter().enumerate().map(|(i, _)| {
+        let ident = Ident::new(&format!("T{}", i), Span::call_site());
+
+        quote! {
+            #ident::type_name(),
+        }
+    });
+
     quote! {
-        let signature = sunscreen_compiler::CallSignature {
-            arguments: vec![#(#arg_type_names)*],
+        #(#arg_type_names)*
+
+        sunscreen_compiler::CallSignature {
+            arguments: vec![#(#arg_get_types)*],
             returns: #return_type_names,
             num_ciphertexts: #return_type_sizes,
-        };
+        }
     }
 }

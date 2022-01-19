@@ -1,5 +1,5 @@
 use crate::types::{
-    BfvType, CircuitNode, FheType, GraphAdd, GraphDiv, GraphMul, GraphSub, NumCiphertexts, Signed,
+    BfvType, CircuitNode, Cipher, FheType, GraphCipherAdd, GraphDiv, GraphCipherMul, GraphSub, NumCiphertexts, Signed,
     TryFromPlaintext, TryIntoPlaintext,
 };
 use crate::{with_ctx, InnerPlaintext, Params, Plaintext, TypeName};
@@ -96,14 +96,14 @@ impl Into<f64> for Rational {
     }
 }
 
-impl GraphAdd for Rational {
+impl GraphCipherAdd for Rational {
     type Left = Self;
     type Right = Self;
 
-    fn graph_add(
-        a: CircuitNode<Self::Left>,
-        b: CircuitNode<Self::Right>,
-    ) -> CircuitNode<Self::Left> {
+    fn graph_cipher_add(
+        a: CircuitNode<Cipher<Self::Left>>,
+        b: CircuitNode<Cipher<Self::Right>>,
+    ) -> CircuitNode<Cipher<Self::Left>> {
         with_ctx(|ctx| {
             // Scale each numinator by the other's denominator.
             let num_a_2 = ctx.add_multiplication(a.ids[0], b.ids[1]);
@@ -142,14 +142,14 @@ impl GraphSub for Rational {
     }
 }
 
-impl GraphMul for Rational {
+impl GraphCipherMul for Rational {
     type Left = Self;
     type Right = Self;
 
-    fn graph_mul(
-        a: CircuitNode<Self::Left>,
-        b: CircuitNode<Self::Right>,
-    ) -> CircuitNode<Self::Left> {
+    fn graph_cipher_mul(
+        a: CircuitNode<Cipher<Self::Left>>,
+        b: CircuitNode<Cipher<Self::Right>>,
+    ) -> CircuitNode<Cipher<Self::Left>> {
         with_ctx(|ctx| {
             // Scale each numinator by the other's denominator.
             let mul_num = ctx.add_multiplication(a.ids[0], b.ids[0]);

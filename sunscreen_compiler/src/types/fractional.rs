@@ -1,6 +1,6 @@
 use seal::Plaintext as SealPlaintext;
 
-use crate::types::{GraphAdd, GraphMul, GraphSub};
+use crate::types::{GraphCipherAdd, GraphCipherPlainAdd, GraphCipherMul, GraphSub, Cipher};
 use crate::{
     crate_version,
     types::{BfvType, CircuitNode, FheType, Type, Version},
@@ -182,14 +182,30 @@ impl<const INT_BITS: usize> BfvType for Fractional<INT_BITS> {}
 
 impl<const INT_BITS: usize> Fractional<INT_BITS> {}
 
-impl<const INT_BITS: usize> GraphAdd for Fractional<INT_BITS> {
+impl<const INT_BITS: usize> GraphCipherAdd for Fractional<INT_BITS> {
     type Left = Fractional<INT_BITS>;
     type Right = Fractional<INT_BITS>;
 
-    fn graph_add(
-        a: CircuitNode<Self::Left>,
+    fn graph_cipher_add(
+        a: CircuitNode<Cipher<Self::Left>>,
+        b: CircuitNode<Cipher<Self::Right>>,
+    ) -> CircuitNode<Cipher<Self::Left>> {
+        with_ctx(|ctx| {
+            let n = ctx.add_addition(a.ids[0], b.ids[0]);
+
+            CircuitNode::new(&[n])
+        })
+    }
+}
+
+impl<const INT_BITS: usize> GraphCipherPlainAdd for Fractional<INT_BITS> {
+    type Left = Fractional<INT_BITS>;
+    type Right = Fractional<INT_BITS>;
+
+    fn graph_cipher_plain_add(
+        a: CircuitNode<Cipher<Self::Left>>,
         b: CircuitNode<Self::Right>,
-    ) -> CircuitNode<Self::Left> {
+    ) -> CircuitNode<Cipher<Self::Left>> {
         with_ctx(|ctx| {
             let n = ctx.add_addition(a.ids[0], b.ids[0]);
 
@@ -214,14 +230,14 @@ impl<const INT_BITS: usize> GraphSub for Fractional<INT_BITS> {
     }
 }
 
-impl<const INT_BITS: usize> GraphMul for Fractional<INT_BITS> {
+impl<const INT_BITS: usize> GraphCipherMul for Fractional<INT_BITS> {
     type Left = Fractional<INT_BITS>;
     type Right = Fractional<INT_BITS>;
 
-    fn graph_mul(
-        a: CircuitNode<Self::Left>,
-        b: CircuitNode<Self::Right>,
-    ) -> CircuitNode<Self::Left> {
+    fn graph_cipher_mul(
+        a: CircuitNode<Cipher<Self::Left>>,
+        b: CircuitNode<Cipher<Self::Right>>,
+    ) -> CircuitNode<Cipher<Self::Left>> {
         with_ctx(|ctx| {
             let n = ctx.add_multiplication(a.ids[0], b.ids[0]);
 

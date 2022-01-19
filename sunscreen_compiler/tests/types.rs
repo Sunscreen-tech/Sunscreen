@@ -1,12 +1,14 @@
 use sunscreen_compiler::{
-    circuit, types::Fractional, types::Rational, types::Signed, Compiler, PlainModulusConstraint,
+    circuit, types::{Cipher, Fractional, Rational, Signed}, Compiler, PlainModulusConstraint,
     Runtime,
 };
+
+type CipherSigned = Cipher<Signed>;
 
 #[test]
 fn can_encode_signed() {
     #[circuit(scheme = "bfv")]
-    fn add(a: Signed) -> Signed {
+    fn add(a: CipherSigned) -> CipherSigned {
         a
     }
 
@@ -32,7 +34,7 @@ fn can_encode_signed() {
 #[test]
 fn can_add_signed_numbers() {
     #[circuit(scheme = "bfv")]
-    fn add(a: Signed, b: Signed) -> Signed {
+    fn add(a: CipherSigned, b: CipherSigned) -> CipherSigned {
         a + b
     }
 
@@ -111,10 +113,12 @@ fn can_encode_rational_numbers() {
     assert_eq!(c, (-3.14).try_into().unwrap());
 }
 
+type CipherRational = Cipher<Rational>;
+
 #[test]
 fn can_add_rational_numbers() {
     #[circuit(scheme = "bfv")]
-    fn add(a: Rational, b: Rational) -> Rational {
+    fn add(a: CipherRational, b: CipherRational) -> CipherRational {
         a + b
     }
 
@@ -235,10 +239,12 @@ fn can_sub_rational_numbers() {
     assert_eq!(c, (-6.28).try_into().unwrap());
 }
 
+type CipherFractional = Cipher<Fractional::<64>>;
+
 #[test]
 fn can_add_fractional_numbers() {
     #[circuit(scheme = "bfv")]
-    fn add(a: Fractional::<64>, b: Fractional::<64>) -> Fractional::<64> {
+    fn add(a: CipherFractional, b: CipherFractional) -> CipherFractional {
         a + b
     }
 

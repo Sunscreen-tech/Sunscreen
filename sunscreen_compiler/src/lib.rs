@@ -116,7 +116,7 @@ use sunscreen_circuit::{
 };
 
 pub use clap::crate_version;
-pub use compiler::Compiler;
+pub use compiler::{CircuitFn, Compiler};
 pub use error::{Error, Result};
 pub use params::PlainModulusConstraint;
 pub use sunscreen_circuit::{SchemeType, SecurityLevel};

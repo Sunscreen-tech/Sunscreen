@@ -12,31 +12,49 @@ enum ParamsMode {
 }
 
 /**
+ * The operations supported by a #[circuit] function.
+ */
+pub trait CircuitFn {
+    /**
+     * Get the call signature of the function
+     */
+    fn signature(&self) -> CallSignature;
+
+    /**
+     * Compile the circuit.
+     */
+    fn build(&self, params: &Params) -> Result<FrontendCompilation>;
+
+    /**
+     * Get the scheme type.
+     */
+    fn scheme_type(&self) -> SchemeType;
+}
+
+/**
  * A frontend circuit compiler for Sunscreen circuits.
  */
-pub struct Compiler<F, G>
+pub struct Compiler<F>
 where
-    G: Fn(&Params) -> Result<FrontendCompilation>,
-    F: Fn() -> (SchemeType, G, CallSignature),
+    F: CircuitFn,
 {
-    circuit: F,
+    circuit_fn: F,
     params_mode: ParamsMode,
     plain_modulus_constraint: Option<PlainModulusConstraint>,
     security_level: SecurityLevel,
     noise_margin: u32,
 }
 
-impl<F, G> Compiler<F, G>
+impl<F> Compiler<F>
 where
-    G: Fn(&Params) -> Result<FrontendCompilation>,
-    F: Fn() -> (SchemeType, G, CallSignature),
+    F: CircuitFn,
 {
     /**
      * Create a new compiler with the given circuit.
      */
-    pub fn with_circuit(circuit: F) -> Self {
+    pub fn with_circuit(circuit_fn: F) -> Self {
         Self {
-            circuit,
+            circuit_fn,
             params_mode: ParamsMode::Search,
             plain_modulus_constraint: None,
             security_level: SecurityLevel::TC128,
@@ -92,23 +110,25 @@ where
      * for running it.
      */
     pub fn compile(self) -> Result<CompiledCircuit> {
-        let (scheme, circuit_fn, signature) = (self.circuit)();
+        let scheme = self.circuit_fn.scheme_type();
+        let signature = self.circuit_fn.signature();
+
         let (circuit, params) = match self.params_mode {
-            ParamsMode::Manual(p) => (circuit_fn(&p), p.clone()),
+            ParamsMode::Manual(p) => (self.circuit_fn.build(&p), p.clone()),
             ParamsMode::Search => {
                 let constraint = self
                     .plain_modulus_constraint
                     .ok_or(Error::MissingPlainModulusConstraint)?;
 
-                let params = determine_params(
-                    &circuit_fn,
+                let params = determine_params::<F>(
+                    &self.circuit_fn,
                     constraint,
                     self.security_level,
                     self.noise_margin,
                     scheme,
                 )?;
 
-                (circuit_fn(&params), params.clone())
+                (self.circuit_fn.build(&params), params.clone())
             }
         };
 

@@ -2,7 +2,7 @@ use std::io::{self, Write};
 use std::sync::mpsc::{Receiver, Sender};
 use std::thread::{self, JoinHandle};
 use sunscreen_compiler::{
-    circuit, types::Rational, Ciphertext, CompiledCircuit, Compiler, Params,
+    circuit, types::{Cipher, Rational}, Ciphertext, CompiledCircuit, Compiler, Params,
     PlainModulusConstraint, PublicKey, Runtime, RuntimeError,
 };
 
@@ -192,22 +192,22 @@ fn compile_circuits() -> (
     CompiledCircuit,
 ) {
     #[circuit(scheme = "bfv")]
-    fn add(a: Rational, b: Rational) -> Rational {
+    fn add(a: Cipher<Rational>, b: Cipher<Rational>) -> Cipher<Rational> {
         a + b
     }
 
     #[circuit(scheme = "bfv")]
-    fn sub(a: Rational, b: Rational) -> Rational {
+    fn sub(a: Cipher<Rational>, b: Cipher<Rational>) -> Cipher<Rational> {
         a - b
     }
 
     #[circuit(scheme = "bfv")]
-    fn mul(a: Rational, b: Rational) -> Rational {
+    fn mul(a: Cipher<Rational>, b: Cipher<Rational>) -> Cipher<Rational> {
         a * b
     }
 
     #[circuit(scheme = "bfv")]
-    fn div(a: Rational, b: Rational) -> Rational {
+    fn div(a: Cipher<Rational>, b: Cipher<Rational>) -> Cipher<Rational> {
         a / b
     }
 

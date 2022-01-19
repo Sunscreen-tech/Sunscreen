@@ -2,7 +2,6 @@ use sunscreen_compiler::{types::*, *};
 
 type CipherUnsigned = Cipher<Unsigned>;
 
-/*
 #[test]
 fn can_encrypt_decrypt() {
     #[circuit(scheme = "bfv")]
@@ -29,4 +28,3 @@ fn can_encrypt_decrypt() {
 
     assert_eq!(c, 20.into());
 }
-*/

@@ -226,7 +226,7 @@ pub trait GraphCipherPlainAdd {
 }
 
 /**
- * Called when a circuit encounters a - operation.
+ * Called when a circuit encounters a - operation on two encrypted types.
  */
 pub trait GraphCipherSub {
     /**
@@ -249,7 +249,7 @@ pub trait GraphCipherSub {
 }
 
 /**
- * Called when a circuit encounters a * operation.
+ * Called when a circuit encounters a * operation on two encrypted types.
  */
 pub trait GraphCipherMul {
     /**
@@ -272,9 +272,9 @@ pub trait GraphCipherMul {
 }
 
 /**
- * Called when a circuit encounters a / operation.
+ * Called when a circuit encounters a / operation on two encrypted types.
  */
-pub trait GraphDiv {
+pub trait GraphCipherDiv {
     /**
      * The type of the left operand
      */
@@ -288,10 +288,10 @@ pub trait GraphDiv {
     /**
      * Process the + operation
      */
-    fn graph_div(
-        a: CircuitNode<Self::Left>,
-        b: CircuitNode<Self::Right>,
-    ) -> CircuitNode<Self::Left>;
+    fn graph_cipher_div(
+        a: CircuitNode<Cipher<Self::Left>>,
+        b: CircuitNode<Cipher<Self::Right>>,
+    ) -> CircuitNode<Cipher<Self::Left>>;
 }
 
 // cipher + cipher
@@ -341,14 +341,14 @@ where
     }
 }
 
-impl<T> Div for CircuitNode<T>
+impl<T> Div for CircuitNode<Cipher<T>>
 where
-    T: FheType + GraphDiv<Left = T, Right = T>,
+    T: FheType + GraphCipherDiv<Left = T, Right = T>,
 {
     type Output = Self;
 
     fn div(self, rhs: Self) -> Self::Output {
-        T::graph_div(self, rhs)
+        T::graph_cipher_div(self, rhs)
     }
 }
 

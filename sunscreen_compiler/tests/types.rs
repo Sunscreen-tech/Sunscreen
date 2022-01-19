@@ -180,7 +180,7 @@ fn can_mul_rational_numbers() {
 #[test]
 fn can_div_rational_numbers() {
     #[circuit(scheme = "bfv")]
-    fn add(a: Rational, b: Rational) -> Rational {
+    fn add(a: Cipher<Rational>, b: Cipher<Rational>) -> Cipher<Rational> {
         a / b
     }
 

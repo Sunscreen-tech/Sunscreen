@@ -1,6 +1,6 @@
 use seal::Plaintext as SealPlaintext;
 
-use crate::types::{GraphAdd, GraphMul};
+use crate::types::{GraphCipherAdd, GraphCipherMul, Cipher};
 use crate::{
     types::{BfvType, CircuitNode, FheType},
     with_ctx, Params, TypeName as DeriveTypeName,
@@ -31,14 +31,14 @@ impl BfvType for Unsigned {}
 
 impl Unsigned {}
 
-impl GraphAdd for Unsigned {
+impl GraphCipherAdd for Unsigned {
     type Left = Unsigned;
     type Right = Unsigned;
 
-    fn graph_add(
-        a: CircuitNode<Self::Left>,
-        b: CircuitNode<Self::Right>,
-    ) -> CircuitNode<Self::Left> {
+    fn graph_cipher_add(
+        a: CircuitNode<Cipher<Self::Left>>,
+        b: CircuitNode<Cipher<Self::Right>>,
+    ) -> CircuitNode<Cipher<Self::Left>> {
         with_ctx(|ctx| {
             let n = ctx.add_addition(a.ids[0], b.ids[0]);
 
@@ -47,14 +47,14 @@ impl GraphAdd for Unsigned {
     }
 }
 
-impl GraphMul for Unsigned {
+impl GraphCipherMul for Unsigned {
     type Left = Unsigned;
     type Right = Unsigned;
 
-    fn graph_mul(
-        a: CircuitNode<Self::Left>,
-        b: CircuitNode<Self::Right>,
-    ) -> CircuitNode<Self::Left> {
+    fn graph_cipher_mul(
+        a: CircuitNode<Cipher<Self::Left>>,
+        b: CircuitNode<Cipher<Self::Right>>,
+    ) -> CircuitNode<Cipher<Self::Left>> {
         with_ctx(|ctx| {
             let n = ctx.add_multiplication(a.ids[0], b.ids[0]);
 
@@ -232,14 +232,14 @@ impl Into<i64> for Signed {
     }
 }
 
-impl GraphAdd for Signed {
+impl GraphCipherAdd for Signed {
     type Left = Signed;
     type Right = Signed;
 
-    fn graph_add(
-        a: CircuitNode<Self::Left>,
-        b: CircuitNode<Self::Right>,
-    ) -> CircuitNode<Self::Left> {
+    fn graph_cipher_add(
+        a: CircuitNode<Cipher<Self::Left>>,
+        b: CircuitNode<Cipher<Self::Right>>,
+    ) -> CircuitNode<Cipher<Self::Left>> {
         with_ctx(|ctx| {
             let n = ctx.add_addition(a.ids[0], b.ids[0]);
 
@@ -248,14 +248,14 @@ impl GraphAdd for Signed {
     }
 }
 
-impl GraphMul for Signed {
+impl GraphCipherMul for Signed {
     type Left = Signed;
     type Right = Signed;
 
-    fn graph_mul(
-        a: CircuitNode<Self::Left>,
-        b: CircuitNode<Self::Right>,
-    ) -> CircuitNode<Self::Left> {
+    fn graph_cipher_mul(
+        a: CircuitNode<Cipher<Self::Left>>,
+        b: CircuitNode<Cipher<Self::Right>>,
+    ) -> CircuitNode<Cipher<Self::Left>> {
         with_ctx(|ctx| {
             let n = ctx.add_multiplication(a.ids[0], b.ids[0]);
 

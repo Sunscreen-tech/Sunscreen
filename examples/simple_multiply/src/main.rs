@@ -1,4 +1,4 @@
-use sunscreen_compiler::{circuit, types::Unsigned, Compiler, PlainModulusConstraint};
+use sunscreen_compiler::{circuit, types::{Cipher, Unsigned}, Compiler, PlainModulusConstraint};
 use sunscreen_runtime::Runtime;
 
 /**
@@ -7,14 +7,17 @@ use sunscreen_runtime::Runtime;
  * the result. Circuits may take any number of parameters and return either a single result
  * or a tuple of results.
  *
- * The unsigned type refers to an unsigned integer modulo the plaintext
+ * The [`Unsigned`] type refers to an unsigned integer modulo the plaintext
  * modulus (p). p is passed to the compiler via plain_modulus_constraint.
- *
+ * 
+ * A `Cipher` type indicates the type is encrypted. Thus, a `Cipher<Unsigned>`
+ * refers to an encrypted [`Unsigned`] value.
+ * 
  * One takes a circuit and passes them to the compiler, which transforms it into a form
  * suitable for execution.
  */
 #[circuit(scheme = "bfv")]
-fn simple_multiply(a: Unsigned, b: Unsigned) -> Unsigned {
+fn simple_multiply(a: Cipher<Unsigned>, b: Cipher<Unsigned>) -> Cipher<Unsigned> {
     a * b
 }
 

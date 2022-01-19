@@ -1,9 +1,11 @@
 use sunscreen_compiler::{types::*, *};
 
+type CipherUnsigned = Cipher<Unsigned>;
+
 #[test]
 fn can_encrypt_decrypt() {
     #[circuit(scheme = "bfv")]
-    fn foo(a: Unsigned, b: Unsigned) -> Unsigned {
+    fn foo(a: CipherUnsigned, b: CipherUnsigned) -> CipherUnsigned {
         a + b
     }
 

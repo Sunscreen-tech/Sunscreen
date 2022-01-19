@@ -60,7 +60,7 @@ impl U64LiteralRef {
  * Violating any of these condicitions may result in memory corruption or
  * use-after-free.
  */
-pub struct CircuitNode<T: FheType> {
+pub struct CircuitNode<T: NumCiphertexts> {
     /**
      * The ids on this node. The 'static lifetime on this slice is a lie. The sunscreen
      * compiler must ensure that no CircuitNode exists after circuit construction.
@@ -70,7 +70,7 @@ pub struct CircuitNode<T: FheType> {
     _phantom: std::marker::PhantomData<T>,
 }
 
-impl<T: FheType> CircuitNode<T> {
+impl<T: NumCiphertexts> CircuitNode<T> {
     /**
      * Creates a new circuit node with the given node index.
      *
@@ -153,10 +153,35 @@ impl<T: FheType> CircuitNode<T> {
     }
 }
 
+#[derive(Copy, Clone)]
 /**
- * Called when a circuit encounters a + operation.
+ * Declares a type T as being encrypted in a circuit.
  */
-pub trait GraphAdd {
+pub struct Cipher<T>
+    where T: FheType
+{
+    _val: T,
+}
+
+impl <T> NumCiphertexts for Cipher<T> 
+    where T: FheType
+{
+    const NUM_CIPHERTEXTS: usize = T::NUM_CIPHERTEXTS;
+}
+
+impl <T> TypeName for Cipher<T> 
+    where T: FheType + TypeName
+{
+    fn type_name() -> Type {
+        T::type_name()
+    }
+}
+
+/**
+ * Called when a circuit encounters a + operation on two encrypted 
+ * types.
+ */
+pub trait GraphCipherAdd {
     /**
      * The type of the left operand
      */
@@ -170,16 +195,17 @@ pub trait GraphAdd {
     /**
      * Process the + operation
      */
-    fn graph_add(
-        a: CircuitNode<Self::Left>,
-        b: CircuitNode<Self::Right>,
-    ) -> CircuitNode<Self::Left>;
+    fn graph_cipher_add(
+        a: CircuitNode<Cipher<Self::Left>>,
+        b: CircuitNode<Cipher<Self::Right>>,
+    ) -> CircuitNode<Cipher<Self::Left>>;
 }
 
 /**
- * Called when a circuit encounters a + operation.
+ * Called when a circuit encounters a + operation on one encrypted 
+ * and one unencrypted type.
  */
-pub trait GraphSub {
+pub trait GraphCipherPlainAdd {
     /**
      * The type of the left operand
      */
@@ -193,16 +219,39 @@ pub trait GraphSub {
     /**
      * Process the + operation
      */
-    fn graph_sub(
-        a: CircuitNode<Self::Left>,
+    fn graph_cipher_plain_add(
+        a: CircuitNode<Cipher<Self::Left>>,
         b: CircuitNode<Self::Right>,
-    ) -> CircuitNode<Self::Left>;
+    ) -> CircuitNode<Cipher<Self::Left>>;
 }
 
 /**
- * Called when a circuit encounters a * operation.
+ * Called when a circuit encounters a - operation on two encrypted types.
  */
-pub trait GraphMul {
+pub trait GraphCipherSub {
+    /**
+     * The type of the left operand
+     */
+    type Left: FheType;
+
+    /**
+     * The type of the right operand
+     */
+    type Right: FheType;
+
+    /**
+     * Process the + operation
+     */
+    fn graph_cipher_sub(
+        a: CircuitNode<Cipher<Self::Left>>,
+        b: CircuitNode<Cipher<Self::Right>>,
+    ) -> CircuitNode<Cipher<Self::Left>>;
+}
+
+/**
+ * Called when a circuit encounters a * operation on two encrypted types.
+ */
+pub trait GraphCipherMul {
     /**
      * The type of the left operand
      */
@@ -216,16 +265,16 @@ pub trait GraphMul {
     /**
      * Process the * operation
      */
-    fn graph_mul(
-        a: CircuitNode<Self::Left>,
-        b: CircuitNode<Self::Right>,
-    ) -> CircuitNode<Self::Left>;
+    fn graph_cipher_mul(
+        a: CircuitNode<Cipher<Self::Left>>,
+        b: CircuitNode<Cipher<Self::Right>>,
+    ) -> CircuitNode<Cipher<Self::Left>>;
 }
 
 /**
- * Called when a circuit encounters a / operation.
+ * Called when a circuit encounters a / operation on two encrypted types.
  */
-pub trait GraphDiv {
+pub trait GraphCipherDiv {
     /**
      * The type of the left operand
      */
@@ -239,53 +288,67 @@ pub trait GraphDiv {
     /**
      * Process the + operation
      */
-    fn graph_div(
-        a: CircuitNode<Self::Left>,
-        b: CircuitNode<Self::Right>,
-    ) -> CircuitNode<Self::Left>;
+    fn graph_cipher_div(
+        a: CircuitNode<Cipher<Self::Left>>,
+        b: CircuitNode<Cipher<Self::Right>>,
+    ) -> CircuitNode<Cipher<Self::Left>>;
 }
 
-impl<T> Add for CircuitNode<T>
+// cipher + cipher
+impl<T> Add for CircuitNode<Cipher<T>>
 where
-    T: FheType + GraphAdd<Left = T, Right = T>,
+    T: FheType + GraphCipherAdd<Left = T, Right = T>,
 {
     type Output = Self;
 
     fn add(self, rhs: Self) -> Self::Output {
-        T::graph_add(self, rhs)
+        T::graph_cipher_add(self, rhs)
     }
 }
 
-impl<T> Sub for CircuitNode<T>
+// cipher + plain
+impl<T> Add<CircuitNode<T>> for CircuitNode<Cipher<T>>
 where
-    T: FheType + GraphSub<Left = T, Right = T>,
+    T: FheType + GraphCipherPlainAdd<Left = T, Right = T>,
+{
+    type Output = Self;
+
+    fn add(self, rhs: CircuitNode<T>) -> Self::Output {
+        T::graph_cipher_plain_add(self, rhs)
+    }
+}
+
+// cipher - cipher
+impl<T> Sub for CircuitNode<Cipher<T>>
+where
+    T: FheType + GraphCipherSub<Left = T, Right = T>,
 {
     type Output = Self;
 
     fn sub(self, rhs: Self) -> Self::Output {
-        T::graph_sub(self, rhs)
+        T::graph_cipher_sub(self, rhs)
     }
 }
 
-impl<T> Mul for CircuitNode<T>
+impl<T> Mul for CircuitNode<Cipher<T>>
 where
-    T: FheType + GraphMul<Left = T, Right = T>,
+    T: FheType + GraphCipherMul<Left = T, Right = T>,
 {
     type Output = Self;
 
     fn mul(self, rhs: Self) -> Self::Output {
-        T::graph_mul(self, rhs)
+        T::graph_cipher_mul(self, rhs)
     }
 }
 
-impl<T> Div for CircuitNode<T>
+impl<T> Div for CircuitNode<Cipher<T>>
 where
-    T: FheType + GraphDiv<Left = T, Right = T>,
+    T: FheType + GraphCipherDiv<Left = T, Right = T>,
 {
     type Output = Self;
 
     fn div(self, rhs: Self) -> Self::Output {
-        T::graph_div(self, rhs)
+        T::graph_cipher_div(self, rhs)
     }
 }
 

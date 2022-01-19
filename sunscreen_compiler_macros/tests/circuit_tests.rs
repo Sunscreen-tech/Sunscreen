@@ -1,6 +1,6 @@
 use sunscreen_compiler::{
-    types::{TypeName, Unsigned},
-    CallSignature, FrontendCompilation, Params, SchemeType, SecurityLevel, CURRENT_CTX,
+    types::{TypeName, Cipher, Unsigned},
+    CallSignature, FrontendCompilation, Params, SchemeType, SecurityLevel, CURRENT_CTX, CircuitFn
 };
 use sunscreen_compiler_macros::circuit;
 
@@ -16,6 +16,8 @@ fn get_params() -> Params {
     }
 }
 
+type CipherUnsigned = Cipher<Unsigned>;
+
 #[test]
 fn circuit_gets_called() {
     static mut FOO: u32 = 0;
@@ -27,18 +29,16 @@ fn circuit_gets_called() {
         };
     }
 
-    let (scheme, compile_fn, signature) = simple_circuit();
-
     let expected_signature = CallSignature {
         arguments: vec![],
         returns: vec![],
         num_ciphertexts: vec![],
     };
 
-    assert_eq!(signature, expected_signature);
-    assert_eq!(scheme, SchemeType::Bfv);
+    assert_eq!(simple_circuit.signature(), expected_signature);
+    assert_eq!(simple_circuit.scheme_type(), SchemeType::Bfv);
 
-    let _context = compile_fn(&get_params()).unwrap();
+    let _context = simple_circuit.build(&get_params()).unwrap();
 
     assert_eq!(unsafe { FOO }, 20);
 }
@@ -58,18 +58,16 @@ fn panicing_circuit_clears_ctx() {
     }
 
     let panic_result = std::panic::catch_unwind(|| {
-        let (scheme, compile_fn, signature) = panic_circuit();
-
         let expected_signature = CallSignature {
             arguments: vec![],
             returns: vec![],
             num_ciphertexts: vec![],
         };
 
-        assert_eq!(signature, expected_signature);
-        assert_eq!(scheme, SchemeType::Bfv);
+        assert_eq!(panic_circuit.signature(), expected_signature);
+        assert_eq!(panic_circuit.scheme_type(), SchemeType::Bfv);
 
-        let _context = compile_fn(&get_params()).unwrap();
+        let _context = panic_circuit.build(&get_params()).unwrap();
     });
 
     assert_eq!(panic_result.is_err(), true);
@@ -93,9 +91,7 @@ fn capture_circuit_input_args() {
     #[circuit(scheme = "bfv")]
     fn circuit_with_args(_a: Unsigned, _b: Unsigned, _c: Unsigned, _d: Unsigned) {}
 
-    let (scheme, compile_fn, signature) = circuit_with_args();
-
-    assert_eq!(scheme, SchemeType::Bfv);
+    assert_eq!(circuit_with_args.scheme_type(), SchemeType::Bfv);
 
     let type_name = Unsigned::type_name();
 
@@ -110,9 +106,9 @@ fn capture_circuit_input_args() {
         num_ciphertexts: vec![],
     };
 
-    assert_eq!(expected_signature, signature);
+    assert_eq!(expected_signature, circuit_with_args.signature());
 
-    let context = compile_fn(&get_params()).unwrap();
+    let context = circuit_with_args.build(&get_params()).unwrap();
 
     assert_eq!(context.graph.node_count(), 4);
 }
@@ -120,11 +116,9 @@ fn capture_circuit_input_args() {
 #[test]
 fn can_add() {
     #[circuit(scheme = "bfv")]
-    fn circuit_with_args(a: Unsigned, b: Unsigned, c: Unsigned) {
+    fn circuit_with_args(a: CipherUnsigned, b: CipherUnsigned, c: CipherUnsigned) {
         let _ = a + b + c;
     }
-
-    let (scheme, compile_fn, signature) = circuit_with_args();
 
     let type_name = Unsigned::type_name();
 
@@ -133,10 +127,10 @@ fn can_add() {
         returns: vec![],
         num_ciphertexts: vec![],
     };
-    assert_eq!(signature, expected_signature);
-    assert_eq!(scheme, SchemeType::Bfv);
+    assert_eq!(circuit_with_args.signature(), expected_signature);
+    assert_eq!(circuit_with_args.scheme_type(), SchemeType::Bfv);
 
-    let context: FrontendCompilation = compile_fn(&get_params()).unwrap();
+    let context: FrontendCompilation = circuit_with_args.build(&get_params()).unwrap();
 
     let expected = json!({
 
@@ -184,11 +178,9 @@ fn can_add() {
 #[test]
 fn can_mul() {
     #[circuit(scheme = "bfv")]
-    fn circuit_with_args(a: Unsigned, b: Unsigned, c: Unsigned) {
+    fn circuit_with_args(a: CipherUnsigned, b: CipherUnsigned, c: CipherUnsigned) {
         let _ = a * b * c;
     }
-
-    let (scheme, compile_fn, signature) = circuit_with_args();
 
     let type_name = Unsigned::type_name();
 
@@ -197,10 +189,10 @@ fn can_mul() {
         returns: vec![],
         num_ciphertexts: vec![],
     };
-    assert_eq!(signature, expected_signature);
-    assert_eq!(scheme, SchemeType::Bfv);
+    assert_eq!(circuit_with_args.signature(), expected_signature);
+    assert_eq!(circuit_with_args.scheme_type(), SchemeType::Bfv);
 
-    let context = compile_fn(&get_params()).unwrap();
+    let context = circuit_with_args.build(&get_params()).unwrap();
 
     let expected = json!({
         "graph": {
@@ -247,11 +239,9 @@ fn can_mul() {
 #[test]
 fn can_collect_output() {
     #[circuit(scheme = "bfv")]
-    fn circuit_with_args(a: Unsigned, b: Unsigned) -> Unsigned {
+    fn circuit_with_args(a: Cipher<Unsigned>, b: CipherUnsigned) -> CipherUnsigned {
         a + b * a
     }
-
-    let (scheme, compile_fn, signature) = circuit_with_args();
 
     let type_name = Unsigned::type_name();
 
@@ -260,10 +250,10 @@ fn can_collect_output() {
         returns: vec![type_name.clone()],
         num_ciphertexts: vec![1],
     };
-    assert_eq!(signature, expected_signature);
-    assert_eq!(scheme, SchemeType::Bfv);
+    assert_eq!(circuit_with_args.signature(), expected_signature);
+    assert_eq!(circuit_with_args.scheme_type(), SchemeType::Bfv);
 
-    let context = compile_fn(&get_params()).unwrap();
+    let context = circuit_with_args.build(&get_params()).unwrap();
 
     let expected = json!({
       "graph": {
@@ -315,11 +305,9 @@ fn can_collect_output() {
 #[test]
 fn can_collect_multiple_outputs() {
     #[circuit(scheme = "bfv")]
-    fn circuit_with_args(a: Unsigned, b: Unsigned) -> (Unsigned, Unsigned) {
+    fn circuit_with_args(a: Cipher<Unsigned>, b: CipherUnsigned) -> (Cipher<Unsigned>, Cipher<Unsigned>) {
         (a + b * a, a)
     }
-
-    let (scheme, compile_fn, signature) = circuit_with_args();
 
     let type_name = Unsigned::type_name();
 
@@ -328,10 +316,10 @@ fn can_collect_multiple_outputs() {
         returns: vec![type_name.clone(), type_name.clone()],
         num_ciphertexts: vec![1, 1],
     };
-    assert_eq!(signature, expected_signature);
-    assert_eq!(scheme, SchemeType::Bfv);
+    assert_eq!(circuit_with_args.signature(), expected_signature);
+    assert_eq!(circuit_with_args.scheme_type(), SchemeType::Bfv);
 
-    let context = compile_fn(&get_params()).unwrap();
+    let context = circuit_with_args.build(&get_params()).unwrap();
 
     let expected = json!({
         "graph": {

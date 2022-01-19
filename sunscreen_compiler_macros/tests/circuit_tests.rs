@@ -17,7 +17,7 @@ fn get_params() -> Params {
 }
 
 type CipherUnsigned = Cipher<Unsigned>;
-/*
+
 #[test]
 fn circuit_gets_called() {
     static mut FOO: u32 = 0;
@@ -302,12 +302,10 @@ fn can_collect_output() {
     );
 }
 
-*/
-
 #[test]
 fn can_collect_multiple_outputs() {
     #[circuit(scheme = "bfv")]
-    fn circuit_with_args(a: Cipher<Unsigned>, b: CipherUnsigned) -> (CipherUnsigned, CipherUnsigned) {
+    fn circuit_with_args(a: Cipher<Unsigned>, b: CipherUnsigned) -> (Cipher<Unsigned>, Cipher<Unsigned>) {
         (a + b * a, a)
     }
 
@@ -375,78 +373,3 @@ fn can_collect_multiple_outputs() {
         serde_json::from_value::<FrontendCompilation>(expected).unwrap()
     );
 }
-
-#[allow(non_camel_case_types)] struct circuit_with_args_struct { } impl
-            sunscreen_compiler :: CircuitFn for circuit_with_args_struct
-            {
-                fn build(& self, params : & Params) -> sunscreen_compiler :: Result <
-                sunscreen_compiler :: FrontendCompilation >
-                {
-                    use std :: cell :: RefCell ; use std :: mem :: transmute ; use
-                    sunscreen_compiler ::
-                    {
-                        CURRENT_CTX, Context, Error, INDEX_ARENA, Result, Params,
-                        SchemeType, Value, types ::
-                        { CircuitNode, NumCiphertexts, Type, TypeName, TypeNameInstance }
-                    } ; if SchemeType :: Bfv != params.scheme_type
-                    { return Err(Error :: IncorrectScheme) } let mut context = Context ::
-                    new(params) ;
-                    CURRENT_CTX.with(| ctx |
-                                     {
-                                         let internal = | a : CircuitNode < Cipher <
-                                         Unsigned > >, b : CircuitNode < CipherUnsigned >,
-                                         | ->
-                                         (sunscreen_compiler :: types :: CircuitNode <
-                                          CipherUnsigned >, sunscreen_compiler :: types ::
-                                          CircuitNode < CipherUnsigned >,)
-                                         { { (a + b * a, a) } } ;
-                                         ctx.swap(& RefCell ::
-                                                  new(Some(unsafe
-                                                           { transmute(& mut context) })))
-                                         ; let c_0 : CircuitNode < Cipher < Unsigned > > =
-                                         CircuitNode :: input() ; let c_1 : CircuitNode <
-                                         CipherUnsigned > = CircuitNode :: input() ; let
-                                         panic_res = std :: panic ::
-                                         catch_unwind(|| { internal(c_0, c_1) }) ; match
-                                         panic_res
-                                         {
-                                             Ok(v) => { v.0.output() ; v.1.output() ; },
-                                             Err(err) =>
-                                             {
-                                                 INDEX_ARENA.with(| allocator |
-                                                                  {
-                                                                      unsafe
-                                                                      {
-                                                                          allocator.borrow_mut().reset()
-                                                                      }
-                                                                  }) ;
-                                                 ctx.swap(& RefCell :: new(None)) ; std ::
-                                                 panic :: resume_unwind(err)
-                                             }
-                                         } ;
-                                         INDEX_ARENA.with(| allocator |
-                                                          {
-                                                              unsafe
-                                                              {
-                                                                  allocator.borrow_mut().reset()
-                                                              }
-                                                          }) ;
-                                         ctx.swap(& RefCell :: new(None)) ;
-                                     }) ; Ok(context.compilation)
-                } fn signature(& self) -> sunscreen_compiler :: CallSignature
-                {
-                    use sunscreen_compiler :: types :: NumCiphertexts ; type T0 = Cipher <
-                    Unsigned > ; type T1 = CipherUnsigned ; sunscreen_compiler ::
-                    CallSignature
-                    {
-                        arguments : vec! [T0 :: type_name(), T1 :: type_name(),], returns
-                        : vec!
-                        [CipherUnsigned :: type_name(), CipherUnsigned :: type_name(),],
-                        num_ciphertexts : vec!
-                        [CipherUnsigned :: NUM_CIPHERTEXTS, CipherUnsigned ::
-                         NUM_CIPHERTEXTS,],
-                    }
-                } fn scheme_type(& self) -> sunscreen_compiler :: SchemeType
-                { SchemeType :: Bfv }
-            } #[allow(non_upper_case_globals)] const circuit_with_args :
-            circuit_with_args_struct = circuit_with_args_struct { } ;

@@ -24,7 +24,7 @@ pub fn circuit_impl(
     let scheme_type = match attr_params.scheme {
         Scheme::Bfv => {
             quote! {
-                SchemeType::Bfv
+                sunscreen_compiler::SchemeType::Bfv
             }
         }
     };
@@ -131,7 +131,7 @@ pub fn circuit_impl(
                         Ok(v) => { #catpured_outputs },
                         Err(err) => {
                             INDEX_ARENA.with(|allocator| {
-                                unsafe { allocator.borrow_mut().reset() }
+                                allocator.borrow_mut().reset()
                             });
                             ctx.swap(&RefCell::new(None));
                             std::panic::resume_unwind(err)
@@ -139,7 +139,7 @@ pub fn circuit_impl(
                     };
 
                     INDEX_ARENA.with(|allocator| {
-                        unsafe { allocator.borrow_mut().reset() }
+                        allocator.borrow_mut().reset()
                     });
                     ctx.swap(&RefCell::new(None));
                 });
@@ -277,15 +277,28 @@ fn capture_outputs(ret: &ReturnType) -> TokenStream {
 }
 
 fn create_signature(args: &[&Type], ret: &ReturnType) -> TokenStream {
+    // We have to type alias arguments and returns because they might
+    // be generic and cause an error during invocation.
+    // E.g. Foo<Bar> causes an error when doing Foo<Bar>::func()
+    // because you need :: after Foo.
+    // So we make type aliases and invoke the function on the alias.
     let arg_type_names = args.iter().enumerate().map(|(i, t)| {
-        let type_id = Ident::new(&format!("T{}", i), Span::call_site());
+        let alias = ident("T", i);
 
         quote! {
-            type #type_id = #t;
+            type #alias = #t;
         }
     }).collect::<Vec<TokenStream>>();
 
-    let (return_type_names, return_type_sizes) = match ret {
+    let arg_get_types = arg_type_names.iter().enumerate().map(|(i, _)| {
+        let alias = ident("T", i);
+
+        quote! {
+            #alias::type_name(),
+        }
+    });
+
+    let (return_type_aliases, return_type_names, return_type_sizes) = match ret {
         ReturnType::Type(_, t) => {
             let tuple_inners = match &**t {
                 Type::Tuple(t) => t.elems.iter().map(|x| &*x).collect::<Vec<&Type>>(),
@@ -302,19 +315,37 @@ fn create_signature(args: &[&Type], ret: &ReturnType) -> TokenStream {
                 }
             };
 
-            let return_type_sizes = tuple_inners.iter().map(|t| {
+            let return_type_aliases = tuple_inners
+                .iter()
+                .enumerate()
+                .map(|(i, t)| {
+                    let alias = ident("R", i);
+
+                    quote! {
+                        type #alias = #t;
+                    }
+                });
+
+            let return_type_sizes = tuple_inners.iter().enumerate().map(|(i, _)| {
+                let alias = ident("R", i);
+
                 quote! {
-                    #t ::NUM_CIPHERTEXTS,
+                    #alias ::NUM_CIPHERTEXTS,
                 }
             });
 
-            let type_names = tuple_inners.iter().map(|t| {
+            let type_names = tuple_inners.iter().enumerate().map(|(i, _)| {
+                let alias = ident("R", i);
+
                 quote! {
-                    #t ::type_name(),
+                    #alias ::type_name(),
                 }
             });
 
             (
+                quote! {
+                    #(#return_type_aliases)*
+                },
                 quote! {
                     vec![
                         #(#type_names)*
@@ -327,19 +358,14 @@ fn create_signature(args: &[&Type], ret: &ReturnType) -> TokenStream {
                 },
             )
         }
-        ReturnType::Default => (quote! { vec![] }, quote! { vec![] }),
+        ReturnType::Default => (quote! { }, quote! { vec![] }, quote! { vec![] }),
     };
 
-    let arg_get_types = arg_type_names.iter().enumerate().map(|(i, _)| {
-        let ident = Ident::new(&format!("T{}", i), Span::call_site());
-
-        quote! {
-            #ident::type_name(),
-        }
-    });
-
     quote! {
+        use sunscreen_compiler::types::TypeName;
+
         #(#arg_type_names)*
+        #return_type_aliases
 
         sunscreen_compiler::CallSignature {
             arguments: vec![#(#arg_get_types)*],
@@ -347,4 +373,8 @@ fn create_signature(args: &[&Type], ret: &ReturnType) -> TokenStream {
             num_ciphertexts: #return_type_sizes,
         }
     }
+}
+
+fn ident(prefix: &str, i: usize) -> Ident {
+    Ident::new(&format!("{}{}", prefix, i), Span::call_site())
 }

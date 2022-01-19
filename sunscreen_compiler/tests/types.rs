@@ -61,7 +61,7 @@ fn can_add_signed_numbers() {
 #[test]
 fn can_multiply_signed_numbers() {
     #[circuit(scheme = "bfv")]
-    fn mul(a: Signed, b: Signed) -> Signed {
+    fn mul(a: Cipher<Signed>, b: Cipher<Signed>) -> Cipher<Signed> {
         a * b
     }
 
@@ -88,7 +88,7 @@ fn can_multiply_signed_numbers() {
 #[test]
 fn can_encode_rational_numbers() {
     #[circuit(scheme = "bfv")]
-    fn add(a: Rational) -> Rational {
+    fn add(a: Cipher<Rational>) -> Cipher<Rational> {
         a
     }
 
@@ -149,7 +149,7 @@ fn can_add_rational_numbers() {
 #[test]
 fn can_mul_rational_numbers() {
     #[circuit(scheme = "bfv")]
-    fn add(a: Rational, b: Rational) -> Rational {
+    fn add(a: Cipher<Rational>, b: Cipher<Rational>) -> Cipher<Rational> {
         a * b
     }
 
@@ -211,7 +211,7 @@ fn can_div_rational_numbers() {
 #[test]
 fn can_sub_rational_numbers() {
     #[circuit(scheme = "bfv")]
-    fn add(a: Rational, b: Rational) -> Rational {
+    fn add(a: Cipher<Rational>, b: Cipher<Rational>) -> Cipher<Rational> {
         a - b
     }
 
@@ -258,7 +258,7 @@ fn can_add_fractional_numbers() {
 
     let (public, secret) = runtime.generate_keys().unwrap();
 
-    let add = |a: f64, b: f64| {
+    let do_add = |a: f64, b: f64| {
         let a_c = runtime
             .encrypt(Fractional::<64>::try_from(a).unwrap(), &public)
             .unwrap();
@@ -273,27 +273,27 @@ fn can_add_fractional_numbers() {
         assert_eq!(c, (a + b).try_into().unwrap());
     };
 
-    add(3.14, 3.14);
-    add(-3.14, 3.14);
-    add(0., 0.);
-    add(7., 3.);
-    add(1e9, 1e9);
-    add(1e-8, 1e-7);
-    add(-3.14, -3.14);
-    add(3.14, -3.14);
-    add(-7., -3.);
-    add(-1e9, -1e9);
-    add(-1e-8, -1e-7);
+    do_add(3.14, 3.14);
+    do_add(-3.14, 3.14);
+    do_add(0., 0.);
+    do_add(7., 3.);
+    do_add(1e9, 1e9);
+    do_add(1e-8, 1e-7);
+    do_add(-3.14, -3.14);
+    do_add(3.14, -3.14);
+    do_add(-7., -3.);
+    do_add(-1e9, -1e9);
+    do_add(-1e-8, -1e-7);
 }
 
 #[test]
 fn can_sub_fractional_numbers() {
     #[circuit(scheme = "bfv")]
-    fn add(a: Fractional::<64>, b: Fractional::<64>) -> Fractional::<64> {
+    fn sub(a: Cipher<Fractional<64>>, b: Cipher<Fractional<64>>) -> Cipher<Fractional<64>> {
         a - b
     }
 
-    let circuit = Compiler::with_circuit(add)
+    let circuit = Compiler::with_circuit(sub)
         .noise_margin_bits(5)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(500))
         .compile()
@@ -303,7 +303,7 @@ fn can_sub_fractional_numbers() {
 
     let (public, secret) = runtime.generate_keys().unwrap();
 
-    let add = |a: f64, b: f64| {
+    let do_sub = |a: f64, b: f64| {
         let a_c = runtime
             .encrypt(Fractional::<64>::try_from(a).unwrap(), &public)
             .unwrap();
@@ -318,23 +318,23 @@ fn can_sub_fractional_numbers() {
         assert_eq!(c, (a - b).try_into().unwrap());
     };
 
-    add(3.14, 3.14);
-    add(-3.14, 3.14);
-    add(0., 0.);
-    add(7., 3.);
-    add(1e9, 1e9);
-    add(1e-8, 1e-7);
-    add(-3.14, -3.14);
-    add(3.14, -3.14);
-    add(-7., -3.);
-    add(-1e9, -1e9);
-    add(-1e-8, -1e-7);
+    do_sub(3.14, 3.14);
+    do_sub(-3.14, 3.14);
+    do_sub(0., 0.);
+    do_sub(7., 3.);
+    do_sub(1e9, 1e9);
+    do_sub(1e-8, 1e-7);
+    do_sub(-3.14, -3.14);
+    do_sub(3.14, -3.14);
+    do_sub(-7., -3.);
+    do_sub(-1e9, -1e9);
+    do_sub(-1e-8, -1e-7);
 }
 
 #[test]
 fn can_mul_fractional_numbers() {
     #[circuit(scheme = "bfv")]
-    fn mul(a: Fractional::<64>, b: Fractional::<64>) -> Fractional::<64> {
+    fn mul(a: Cipher<Fractional<64>>, b: Cipher<Fractional<64>>) -> Cipher<Fractional<64>> {
         a * b
     }
 

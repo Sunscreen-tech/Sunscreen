@@ -1,6 +1,6 @@
 use seal::Plaintext as SealPlaintext;
 
-use crate::types::{GraphCipherAdd, GraphCipherPlainAdd, GraphCipherMul, GraphSub, Cipher};
+use crate::types::{GraphCipherAdd, GraphCipherPlainAdd, GraphCipherMul, GraphCipherSub, Cipher};
 use crate::{
     crate_version,
     types::{BfvType, CircuitNode, FheType, Type, Version},
@@ -214,14 +214,14 @@ impl<const INT_BITS: usize> GraphCipherPlainAdd for Fractional<INT_BITS> {
     }
 }
 
-impl<const INT_BITS: usize> GraphSub for Fractional<INT_BITS> {
+impl<const INT_BITS: usize> GraphCipherSub for Fractional<INT_BITS> {
     type Left = Fractional<INT_BITS>;
     type Right = Fractional<INT_BITS>;
 
-    fn graph_sub(
-        a: CircuitNode<Self::Left>,
-        b: CircuitNode<Self::Right>,
-    ) -> CircuitNode<Self::Left> {
+    fn graph_cipher_sub(
+        a: CircuitNode<Cipher<Self::Left>>,
+        b: CircuitNode<Cipher<Self::Right>>,
+    ) -> CircuitNode<Cipher<Self::Left>> {
         with_ctx(|ctx| {
             let n = ctx.add_subtraction(a.ids[0], b.ids[0]);
 

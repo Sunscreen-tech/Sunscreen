@@ -1,5 +1,5 @@
 use crate::types::{
-    BfvType, CircuitNode, Cipher, FheType, GraphCipherAdd, GraphDiv, GraphCipherMul, GraphSub, NumCiphertexts, Signed,
+    BfvType, CircuitNode, Cipher, FheType, GraphCipherAdd, GraphDiv, GraphCipherMul, GraphCipherSub, NumCiphertexts, Signed,
     TryFromPlaintext, TryIntoPlaintext,
 };
 use crate::{with_ctx, InnerPlaintext, Params, Plaintext, TypeName};
@@ -119,14 +119,14 @@ impl GraphCipherAdd for Rational {
     }
 }
 
-impl GraphSub for Rational {
+impl GraphCipherSub for Rational {
     type Left = Self;
     type Right = Self;
 
-    fn graph_sub(
-        a: CircuitNode<Self::Left>,
-        b: CircuitNode<Self::Right>,
-    ) -> CircuitNode<Self::Left> {
+    fn graph_cipher_sub(
+        a: CircuitNode<Cipher<Self::Left>>,
+        b: CircuitNode<Cipher<Self::Right>>,
+    ) -> CircuitNode<Cipher<Self::Left>> {
         with_ctx(|ctx| {
             // Scale each numinator by the other's denominator.
             let num_a_2 = ctx.add_multiplication(a.ids[0], b.ids[1]);

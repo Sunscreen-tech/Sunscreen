@@ -7,10 +7,10 @@
 //! # Examples
 //! This example is further annotated in `examples/simple_multiply`.
 //! ```
-//! # use sunscreen_compiler::{circuit, Compiler, types::Unsigned, PlainModulusConstraint, Params, Runtime, Context};
+//! # use sunscreen_compiler::{circuit, Compiler, types::{Cipher, Unsigned}, PlainModulusConstraint, Params, Runtime, Context};
 //!
 //! #[circuit(scheme = "bfv")]
-//! fn simple_multiply(a: Unsigned, b: Unsigned) -> Unsigned {
+//! fn simple_multiply(a: Cipher<Unsigned>, b: Cipher<Unsigned>) -> Cipher<Unsigned> {
 //!     a * b
 //! }
 //!

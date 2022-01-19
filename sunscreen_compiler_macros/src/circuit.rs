@@ -97,7 +97,7 @@ pub fn circuit_impl(
         }
 
         impl sunscreen_compiler::CircuitFn for #circuit_struct_name {
-            fn build(&self, params: &Params) -> sunscreen_compiler::Result<sunscreen_compiler::FrontendCompilation> {  
+            fn build(&self, params: &sunscreen_compiler::Params) -> sunscreen_compiler::Result<sunscreen_compiler::FrontendCompilation> {  
                 use std::cell::RefCell;
                 use std::mem::transmute;
                 use sunscreen_compiler::{CURRENT_CTX, Context, Error, INDEX_ARENA, Result, Params, SchemeType, Value, types::{CircuitNode, NumCiphertexts, Type, TypeName, TypeNameInstance}};  

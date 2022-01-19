@@ -228,7 +228,7 @@ pub trait GraphCipherPlainAdd {
 /**
  * Called when a circuit encounters a - operation.
  */
-pub trait GraphSub {
+pub trait GraphCipherSub {
     /**
      * The type of the left operand
      */
@@ -242,10 +242,10 @@ pub trait GraphSub {
     /**
      * Process the + operation
      */
-    fn graph_sub(
-        a: CircuitNode<Self::Left>,
-        b: CircuitNode<Self::Right>,
-    ) -> CircuitNode<Self::Left>;
+    fn graph_cipher_sub(
+        a: CircuitNode<Cipher<Self::Left>>,
+        b: CircuitNode<Cipher<Self::Right>>,
+    ) -> CircuitNode<Cipher<Self::Left>>;
 }
 
 /**
@@ -306,7 +306,7 @@ where
     }
 }
 
-// plain + cipher
+// cipher + plain
 impl<T> Add<CircuitNode<T>> for CircuitNode<Cipher<T>>
 where
     T: FheType + GraphCipherPlainAdd<Left = T, Right = T>,
@@ -318,14 +318,15 @@ where
     }
 }
 
-impl<T> Sub for CircuitNode<T>
+// cipher - cipher
+impl<T> Sub for CircuitNode<Cipher<T>>
 where
-    T: FheType + GraphSub<Left = T, Right = T>,
+    T: FheType + GraphCipherSub<Left = T, Right = T>,
 {
     type Output = Self;
 
     fn sub(self, rhs: Self) -> Self::Output {
-        T::graph_sub(self, rhs)
+        T::graph_cipher_sub(self, rhs)
     }
 }
 

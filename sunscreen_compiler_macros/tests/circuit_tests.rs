@@ -120,7 +120,7 @@ fn can_add() {
         let _ = a + b + c;
     }
 
-    let type_name = Unsigned::type_name();
+    let type_name = Cipher::<Unsigned>::type_name();
 
     let expected_signature = CallSignature {
         arguments: vec![type_name.clone(), type_name.clone(), type_name.clone()],
@@ -182,7 +182,7 @@ fn can_mul() {
         let _ = a * b * c;
     }
 
-    let type_name = Unsigned::type_name();
+    let type_name = Cipher::<Unsigned>::type_name();
 
     let expected_signature = CallSignature {
         arguments: vec![type_name.clone(), type_name.clone(), type_name.clone()],
@@ -243,7 +243,7 @@ fn can_collect_output() {
         a + b * a
     }
 
-    let type_name = Unsigned::type_name();
+    let type_name = Cipher::<Unsigned>::type_name();
 
     let expected_signature = CallSignature {
         arguments: vec![type_name.clone(), type_name.clone()],
@@ -307,12 +307,12 @@ fn can_collect_multiple_outputs() {
     #[circuit(scheme = "bfv")]
     fn circuit_with_args(
         a: Cipher<Unsigned>,
-        b: CipherUnsigned,
+        b: Cipher<Unsigned>,
     ) -> (Cipher<Unsigned>, Cipher<Unsigned>) {
         (a + b * a, a)
     }
 
-    let type_name = Unsigned::type_name();
+    let type_name = Cipher::<Unsigned>::type_name();
 
     let expected_signature = CallSignature {
         arguments: vec![type_name.clone(), type_name.clone()],

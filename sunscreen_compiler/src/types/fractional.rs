@@ -168,6 +168,7 @@ impl<const INT_BITS: usize> TypeName for Fractional<INT_BITS> {
         Type {
             name: format!("sunscreen_compiler::types::Fractional<{}>", INT_BITS),
             version: Version::parse(crate_version!()).expect("Crate version is not a valid semver"),
+            is_encrypted: false,
         }
     }
 }

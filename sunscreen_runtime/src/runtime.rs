@@ -39,7 +39,10 @@ impl Runtime {
     where
         P: TryFromPlaintext + TypeName,
     {
-        let expected_type = P::type_name();
+        let expected_type = Type {
+            is_encrypted: true,
+            ..P::type_name()
+        };
 
         if expected_type != ciphertext.data_type {
             return Err(Error::TypeMismatch {
@@ -289,7 +292,7 @@ impl Runtime {
                     .collect();
 
                 Ciphertext {
-                    data_type: P::type_name(),
+                    data_type: Type { is_encrypted: true, ..P::type_name() },
                     inner: InnerCiphertext::Seal(ciphertexts),
                 }
             }

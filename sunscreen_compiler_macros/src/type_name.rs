@@ -29,6 +29,7 @@ fn derive_typename_inner(parse_stream: DeriveInput) -> TokenStream {
                 #sunscreen_path ::types::Type {
                     name: format!(#name_contents, module_path!()),
                     version: #sunscreen_path ::types::Version ::parse(#sunscreen_path ::crate_version!()).expect("Crate version is not a valid semver"),
+                    is_encrypted: false
                 }
             }
         }
@@ -38,6 +39,7 @@ fn derive_typename_inner(parse_stream: DeriveInput) -> TokenStream {
                 #sunscreen_path ::types::Type {
                     name: format!(#name_contents, module_path!()),
                     version: #sunscreen_path ::types::Version ::parse(#sunscreen_path ::crate_version!()).expect("Crate version is not a valid semver"),
+                    is_encrypted: false,
                 }
             }
         }

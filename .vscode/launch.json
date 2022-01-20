@@ -100,7 +100,7 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug tests in library 'sunscreen_compiler'",
+            "name": "Debug unit tests in library 'sunscreen_compiler'",
             "cargo": {
                 "args": [
                     "test",
@@ -110,6 +110,25 @@
                 "filter": {
                     "name": "sunscreen_compiler",
                     "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug types integration tests in library 'sunscreen_compiler'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--package=sunscreen_compiler",
+                    "can_encode_signed"
+                ],
+                "filter": {
+                    "name": "types",
+                    "kind": "test"
                 }
             },
             "args": [],

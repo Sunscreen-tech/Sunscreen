@@ -176,7 +176,10 @@ where
     T: FheType + TypeName,
 {
     fn type_name() -> Type {
-        T::type_name()
+        Type {
+            is_encrypted: true,
+            ..T::type_name()
+        }
     }
 }
 
@@ -352,24 +355,5 @@ where
 
     fn div(self, rhs: Self) -> Self::Output {
         T::graph_cipher_div(self, rhs)
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn can_serialize_deserialize_typename() {
-        let typename = Type {
-            name: "foo::Bar".to_owned(),
-            version: Version::new(42, 24, 6),
-        };
-
-        let serialized = serde_json::to_string(&typename).unwrap();
-        let deserialized: Type = serde_json::from_str(&serialized).unwrap();
-
-        assert_eq!(deserialized.name, typename.name);
-        assert_eq!(deserialized.version, typename.version);
     }
 }

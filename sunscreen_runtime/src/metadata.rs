@@ -2,12 +2,14 @@ use rlp::encode_list;
 use seal::SecurityLevel;
 pub use semver::Version;
 use serde::{
-    de::{self, Visitor},
+    de::{self, Error as DeError, Visitor},
     Deserialize, Deserializer, Serialize, Serializer,
 };
 use sunscreen_circuit::{Circuit, SchemeType};
 
 use crate::{Error, Result};
+
+use std::str::FromStr;
 
 /**
  * A type which represents the fully qualified name and version of a datatype.
@@ -23,6 +25,11 @@ pub struct Type {
      * The semantic version of this type.
      */
     pub version: Version,
+
+    /**
+     * Whether or not the type is encrypted.
+     */
+    pub is_encrypted: bool,
 }
 
 impl Serialize for Type {
@@ -30,7 +37,7 @@ impl Serialize for Type {
     where
         S: Serializer,
     {
-        let type_string = format!("{},{}", self.name, self.version);
+        let type_string = format!("{},{},{}", self.name, self.version, self.is_encrypted);
 
         serializer.serialize_str(&type_string)
     }
@@ -42,17 +49,31 @@ impl<'de> Visitor<'de> for TypeNameVisitor {
     type Value = String;
 
     fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(formatter, "A string of the form foo::bar::Baz,1.2.3")
+        write!(formatter, "A string of the form foo::bar::Baz,1.2.3,false")
     }
 
     fn visit_str<E>(self, s: &str) -> std::result::Result<Self::Value, E>
     where
         E: de::Error,
     {
-        if s.split(",").count() != 2 {
+        let splits: Vec<&str> = s.split(",").collect();
+
+        if splits.len() != 3 {
             Err(de::Error::invalid_value(de::Unexpected::Str(s), &self))
         } else {
-            Ok(s.to_owned())
+            if let Err(_) = Version::parse(splits[1]) {
+                Err(de::Error::invalid_value(
+                    de::Unexpected::Str(splits[1]),
+                    &self,
+                ))
+            } else if let Err(_) = bool::from_str(splits[2]) {
+                Err(de::Error::invalid_value(
+                    de::Unexpected::Str(splits[2]),
+                    &self,
+                ))
+            } else {
+                Ok(s.to_owned())
+            }
         }
     }
 }
@@ -66,13 +87,17 @@ impl<'de> Deserialize<'de> for Type {
 
         let mut splits = type_string.split(",");
 
-        let typename = splits.next().unwrap();
-        let version = Version::parse(splits.next().unwrap())
+        let typename = splits.next().ok_or(D::Error::custom(""))?;
+        let version = Version::parse(splits.next().ok_or(D::Error::custom(""))?)
             .map_err(|e| de::Error::custom(format!("Failed to parse version: {}", e)))?;
+
+        let is_encrypted = bool::from_str(splits.next().ok_or(D::Error::custom(""))?)
+            .map_err(|e| de::Error::custom(format!("Failed to parse boolean: {}", e)))?;
 
         Ok(Self {
             name: typename.to_owned(),
             version,
+            is_encrypted,
         })
     }
 }
@@ -296,5 +321,20 @@ mod tests {
         let params_2 = Params::try_from_bytes(&params.to_bytes()).unwrap();
 
         assert_eq!(params, params_2);
+    }
+
+    #[test]
+    fn can_serialize_deserialize_typename() {
+        let typename = Type {
+            name: "foo::Bar".to_owned(),
+            version: Version::new(42, 24, 6),
+            is_encrypted: false
+        };
+
+        let serialized = serde_json::to_string(&typename).unwrap();
+        let deserialized: Type = serde_json::from_str(&serialized).unwrap();
+
+        assert_eq!(deserialized.name, typename.name);
+        assert_eq!(deserialized.version, typename.version);
     }
 }

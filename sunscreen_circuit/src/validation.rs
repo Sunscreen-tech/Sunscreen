@@ -30,34 +30,54 @@ pub(crate) fn validate_nodes(ir: &Circuit) -> Vec<IRError> {
         match ir.graph[i].operation {
             Add => {
                 errors.append(
-                    &mut validate_binary_op_has_correct_operands(ir, i, OutputType::Ciphertext, OutputType::Ciphertext)
-                        .iter()
-                        .map(|e| IRError::NodeError(i, node_info.to_string(), *e))
-                        .collect(),
+                    &mut validate_binary_op_has_correct_operands(
+                        ir,
+                        i,
+                        OutputType::Ciphertext,
+                        OutputType::Ciphertext,
+                    )
+                    .iter()
+                    .map(|e| IRError::NodeError(i, node_info.to_string(), *e))
+                    .collect(),
                 );
             }
             Sub => {
                 errors.append(
-                    &mut validate_binary_op_has_correct_operands(ir, i, OutputType::Ciphertext, OutputType::Ciphertext)
-                        .iter()
-                        .map(|e| IRError::NodeError(i, node_info.to_string(), *e))
-                        .collect(),
+                    &mut validate_binary_op_has_correct_operands(
+                        ir,
+                        i,
+                        OutputType::Ciphertext,
+                        OutputType::Ciphertext,
+                    )
+                    .iter()
+                    .map(|e| IRError::NodeError(i, node_info.to_string(), *e))
+                    .collect(),
                 );
             }
             Multiply => {
                 errors.append(
-                    &mut validate_binary_op_has_correct_operands(ir, i, OutputType::Ciphertext, OutputType::Ciphertext)
-                        .iter()
-                        .map(|e| IRError::NodeError(i, node_info.to_string(), *e))
-                        .collect(),
+                    &mut validate_binary_op_has_correct_operands(
+                        ir,
+                        i,
+                        OutputType::Ciphertext,
+                        OutputType::Ciphertext,
+                    )
+                    .iter()
+                    .map(|e| IRError::NodeError(i, node_info.to_string(), *e))
+                    .collect(),
                 );
             }
             AddPlaintext => {
                 errors.append(
-                    &mut validate_binary_op_has_correct_operands(ir, i, OutputType::Ciphertext, OutputType::Plaintext)
-                        .iter()
-                        .map(|e| IRError::NodeError(i, node_info.to_string(), *e))
-                        .collect(),
+                    &mut validate_binary_op_has_correct_operands(
+                        ir,
+                        i,
+                        OutputType::Ciphertext,
+                        OutputType::Plaintext,
+                    )
+                    .iter()
+                    .map(|e| IRError::NodeError(i, node_info.to_string(), *e))
+                    .collect(),
                 );
             }
             ShiftLeft => {}
@@ -134,15 +154,15 @@ fn validate_binary_op_has_correct_operands(
             errors.push(NodeError::MissingOperand(EdgeInfo::RightOperand));
         }
         Some(x) => {
-          if !ir.graph.contains_node(x) {
-              errors.push(NodeError::MissingParent(x))
-          } else if ir.graph[x].output_type() != expected_right_output {
-              errors.push(NodeError::ParentHasIncorrectOutputType(
-                  EdgeInfo::RightOperand,
-                  ir.graph[x].output_type(),
-                  expected_right_output,
-              ));
-          }
+            if !ir.graph.contains_node(x) {
+                errors.push(NodeError::MissingParent(x))
+            } else if ir.graph[x].output_type() != expected_right_output {
+                errors.push(NodeError::ParentHasIncorrectOutputType(
+                    EdgeInfo::RightOperand,
+                    ir.graph[x].output_type(),
+                    expected_right_output,
+                ));
+            }
         }
     };
 

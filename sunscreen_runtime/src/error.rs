@@ -123,7 +123,7 @@ pub enum Error {
     /**
      * The given [`Plaintext`](crate::Plaintext) had no data.
      */
-    NoPlaintextData
+    NoPlaintextData,
 }
 
 impl From<sunscreen_circuit::Error> for Error {

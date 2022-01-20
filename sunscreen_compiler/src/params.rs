@@ -3,12 +3,12 @@ use crate::{CircuitFn, Error, Result, SecurityLevel};
 use log::{debug, trace};
 
 use seal::{
-    BFVEvaluator, BFVScalarEncoder, BfvEncryptionParametersBuilder, Ciphertext, CoefficientModulus,
+    BFVEvaluator, BFVScalarEncoder, BfvEncryptionParametersBuilder, CoefficientModulus,
     Context as SealContext, Decryptor, Encryptor, KeyGenerator, PlainModulus,
 };
 use sunscreen_circuit::{Operation, SchemeType};
-use sunscreen_runtime::run_program_unchecked;
 pub use sunscreen_runtime::Params;
+use sunscreen_runtime::{run_program_unchecked, SealData};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 /**
@@ -146,31 +146,31 @@ where
 
         let ir = circuit_fn.build(&params)?.compile();
 
-        let num_inputs = ir
+        // From a noise standpoint, it doesn't matter what is in the plaintext or if the output
+        // is meaningful or not. Just run a bunch of 0 values through the circuit and measure the
+        // noise.
+        let inputs = ir
             .graph
             .node_weights()
             .filter(|n| match n.operation {
                 Operation::InputCiphertext(_) => true,
+                Operation::InputPlaintext(_) => true,
                 _ => false,
             })
-            .count();
+            .map(|n| match n.operation {
+                Operation::InputCiphertext(_) => {
+                    let p = encoder.encode_unsigned(0)?;
+                    Ok(encryptor.encrypt(&p)?.into())
+                }
+                Operation::InputPlaintext(_) => Ok(encoder.encode_unsigned(0)?.into()),
+                _ => unreachable!(),
+            })
+            .collect::<Result<Vec<SealData>>>()?;
 
         let evaluator = match ir.scheme {
             SchemeType::Bfv => BFVEvaluator::new(&context).unwrap(),
             _ => unimplemented!(),
         };
-
-        // From a noise standpoint, it doesn't matter what is in the plaintext or if the output
-        // is meaningful or not. Just run a bunch of 0 values through the circuit and measure the
-        // noise.
-        let inputs = (0..num_inputs)
-            .map(|_| encoder.encode_unsigned(0).unwrap())
-            .map(|p| encryptor.encrypt(&p).unwrap())
-            .collect::<Vec<Ciphertext>>();
-
-        let initial_noise_budget = decryptor.invariant_noise_budget(&inputs[0]).unwrap();
-
-        trace!("Initial noise budget (n={}): {}", n, initial_noise_budget);
 
         let relin_keys = if ir.requires_relin_keys() {
             match keygen.create_relinearization_keys() {
@@ -216,10 +216,6 @@ where
                 "Output {} has {} bits of noise budget remaining",
                 i,
                 noise_budget
-            );
-            trace!(
-                "Circuit consumes {} bits of noise budget.",
-                initial_noise_budget - noise_budget
             );
 
             if noise_budget < noise_margin_bits {

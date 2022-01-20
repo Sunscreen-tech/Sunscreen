@@ -123,7 +123,8 @@ pub use sunscreen_circuit::{SchemeType, SecurityLevel};
 pub use sunscreen_compiler_macros::*;
 pub use sunscreen_runtime::{
     CallSignature, Ciphertext, CircuitMetadata, CompiledCircuit, Error as RuntimeError,
-    InnerCiphertext, InnerPlaintext, Params, Plaintext, PublicKey, RequiredKeys, Runtime, WithContext
+    InnerCiphertext, InnerPlaintext, Params, Plaintext, PublicKey, RequiredKeys, Runtime,
+    WithContext,
 };
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]

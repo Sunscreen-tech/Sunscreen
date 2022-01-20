@@ -1,6 +1,6 @@
 use crate::types::{
     BfvType, Cipher, CircuitNode, FheType, GraphCipherAdd, GraphCipherDiv, GraphCipherMul,
-    GraphCipherSub, NumCiphertexts, Signed, TryFromPlaintext, TryIntoPlaintext,
+    GraphCipherSub, NumCiphertexts, Signed, TryFromPlaintext, TryIntoPlaintext, TypeName,
 };
 use crate::{with_ctx, InnerPlaintext, Params, Plaintext, TypeName};
 use std::cmp::Eq;
@@ -37,9 +37,11 @@ impl TryFromPlaintext for Rational {
         let (num, den) = match &plaintext.inner {
             InnerPlaintext::Seal(p) => {
                 let num = Plaintext {
+                    data_type: Self::type_name(),
                     inner: InnerPlaintext::Seal(vec![p[0].clone()]),
                 };
                 let den = Plaintext {
+                    data_type: Self::type_name(),
                     inner: InnerPlaintext::Seal(vec![p[1].clone()]),
                 };
 
@@ -64,6 +66,7 @@ impl TryIntoPlaintext for Rational {
         };
 
         Ok(Plaintext {
+            data_type: Self::type_name(),
             inner: InnerPlaintext::Seal(vec![num, den]),
         })
     }

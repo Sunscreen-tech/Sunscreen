@@ -1,9 +1,9 @@
 use seal::Plaintext as SealPlaintext;
 
-use crate::types::{Cipher, GraphCipherAdd, GraphCipherMul, GraphCipherPlainAdd, };
+use crate::types::{Cipher, GraphCipherAdd, GraphCipherMul, GraphCipherPlainAdd};
 use crate::{
-    types::{BfvType, CircuitNode, FheType},
-    with_ctx, Params, TypeName as DeriveTypeName, WithContext
+    types::{BfvType, CircuitNode, FheType, TypeNameInstance},
+    with_ctx, Params, TypeName as DeriveTypeName, WithContext,
 };
 
 use sunscreen_runtime::{
@@ -96,9 +96,10 @@ impl TryIntoPlaintext for Unsigned {
         }
 
         Ok(Plaintext {
+            data_type: self.type_name_instance(),
             inner: InnerPlaintext::Seal(vec![WithContext {
                 params: params.clone(),
-                data: seal_plaintext
+                data: seal_plaintext,
             }]),
         })
     }
@@ -197,9 +198,10 @@ impl TryIntoPlaintext for Signed {
         }
 
         Ok(Plaintext {
+            data_type: self.type_name_instance(),
             inner: InnerPlaintext::Seal(vec![WithContext {
                 params: params.clone(),
-                data: seal_plaintext
+                data: seal_plaintext,
             }]),
         })
     }

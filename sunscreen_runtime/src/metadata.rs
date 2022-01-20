@@ -328,7 +328,7 @@ mod tests {
         let typename = Type {
             name: "foo::Bar".to_owned(),
             version: Version::new(42, 24, 6),
-            is_encrypted: false
+            is_encrypted: false,
         };
 
         let serialized = serde_json::to_string(&typename).unwrap();

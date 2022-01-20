@@ -12,7 +12,7 @@ enum ParamsMode {
 }
 
 /**
- * The operations supported by a #[circuit] function.
+ * The operations supported by a #\[circuit\] function.
  */
 pub trait CircuitFn {
     /**

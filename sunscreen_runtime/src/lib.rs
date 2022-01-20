@@ -16,12 +16,12 @@ pub use crate::keys::*;
 pub use crate::metadata::*;
 pub use run::*;
 pub use runtime::*;
-use serialization::WithContext;
+pub use serialization::WithContext;
 
 use seal::{Ciphertext as SealCiphertext, Plaintext as SealPlaintext};
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Serialize)]
+#[derive(Clone, Serialize, Deserialize)]
 /**
  * The underlying backend implementation of a plaintext (e.g. SEAL's [`Plaintext`](seal::Plaintext)).
  */
@@ -29,14 +29,47 @@ pub enum InnerPlaintext {
     /**
      * This plaintext wraps a SEAL [`Plaintext`](seal::Plaintext).
      */
-    Seal(Vec<SealPlaintext>),
+    Seal(Vec<WithContext<SealPlaintext>>),
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Clone)]
+/**
+ * A type that can be either a SEAL plaintext or a ciphertext.
+ */
+pub enum SealData {
+    /**
+     * The underlying ciphertext.
+     */
+    Ciphertext(SealCiphertext),
+
+    /**
+     * The underlying plaintext.
+     */
+    Plaintext(SealPlaintext),
+}
+
+impl From<SealCiphertext> for SealData {
+    fn from(val: SealCiphertext) -> Self {
+        Self::Ciphertext(val)
+    }
+}
+
+impl From<SealPlaintext> for SealData {
+    fn from(val: SealPlaintext) -> Self {
+        Self::Plaintext(val)
+    }
+}
+
+#[derive(Clone, Serialize, Deserialize)]
 /**
  * Represents an encoded plaintext suitable for use in the underlying scheme.
  */
 pub struct Plaintext {
+    /**
+     * The data type contained in this ciphertext. Note, this type metadata is stored in the clear.
+     */
+    pub data_type: Type,
+
     /**
      * The scheme and backend-specific plaintext.
      */
@@ -56,8 +89,9 @@ pub enum InnerCiphertext {
 
 #[derive(Clone, Deserialize, Serialize)]
 /**
- * An encryption of the given data type. Note, the data type is stored in plaintext and is considered
- * part of Sunscreen's runtime protocol.
+ * An encryption of the given data type. Note, the data type is
+ * stored in plaintext and is considered part of Sunscreen's runtime
+ * protocol.
  */
 pub struct Ciphertext {
     /**
@@ -69,6 +103,50 @@ pub struct Ciphertext {
      * The scheme and backend-specific plaintext.
      */
     pub inner: InnerCiphertext,
+}
+
+/**
+ *
+ */
+pub trait CircuitInputTrait: TryIntoPlaintext + TypeNameInstance {}
+
+/**
+ * An input argument to a circuit. See [`crate::Runtime::run`].
+ */
+pub enum CircuitInput {
+    /**
+     * The argument is a ciphertext.
+     */
+    Ciphertext(Ciphertext),
+
+    /**
+     * The argument is a plaintext.
+     */
+    Plaintext(Box<dyn CircuitInputTrait>),
+}
+
+impl TypeNameInstance for CircuitInput {
+    fn type_name_instance(&self) -> Type {
+        match self {
+            Self::Ciphertext(c) => c.data_type.clone(),
+            Self::Plaintext(p) => p.type_name_instance(),
+        }
+    }
+}
+
+impl From<Ciphertext> for CircuitInput {
+    fn from(val: Ciphertext) -> Self {
+        Self::Ciphertext(val)
+    }
+}
+
+impl<T> From<T> for CircuitInput
+where
+    T: CircuitInputTrait + 'static,
+{
+    fn from(val: T) -> Self {
+        Self::Plaintext(Box::new(val))
+    }
 }
 
 /**

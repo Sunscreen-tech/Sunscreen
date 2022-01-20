@@ -158,27 +158,33 @@ impl<T: NumCiphertexts> CircuitNode<T> {
  * Declares a type T as being encrypted in a circuit.
  */
 pub struct Cipher<T>
-    where T: FheType
+where
+    T: FheType,
 {
     _val: T,
 }
 
-impl <T> NumCiphertexts for Cipher<T> 
-    where T: FheType
+impl<T> NumCiphertexts for Cipher<T>
+where
+    T: FheType,
 {
     const NUM_CIPHERTEXTS: usize = T::NUM_CIPHERTEXTS;
 }
 
-impl <T> TypeName for Cipher<T> 
-    where T: FheType + TypeName
+impl<T> TypeName for Cipher<T>
+where
+    T: FheType + TypeName,
 {
     fn type_name() -> Type {
-        T::type_name()
+        Type {
+            is_encrypted: true,
+            ..T::type_name()
+        }
     }
 }
 
 /**
- * Called when a circuit encounters a + operation on two encrypted 
+ * Called when a circuit encounters a + operation on two encrypted
  * types.
  */
 pub trait GraphCipherAdd {
@@ -202,7 +208,7 @@ pub trait GraphCipherAdd {
 }
 
 /**
- * Called when a circuit encounters a + operation on one encrypted 
+ * Called when a circuit encounters a + operation on one encrypted
  * and one unencrypted type.
  */
 pub trait GraphCipherPlainAdd {
@@ -349,24 +355,5 @@ where
 
     fn div(self, rhs: Self) -> Self::Output {
         T::graph_cipher_div(self, rhs)
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn can_serialize_deserialize_typename() {
-        let typename = Type {
-            name: "foo::Bar".to_owned(),
-            version: Version::new(42, 24, 6),
-        };
-
-        let serialized = serde_json::to_string(&typename).unwrap();
-        let deserialized: Type = serde_json::from_str(&serialized).unwrap();
-
-        assert_eq!(deserialized.name, typename.name);
-        assert_eq!(deserialized.version, typename.version);
     }
 }

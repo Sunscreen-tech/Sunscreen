@@ -1,5 +1,5 @@
 use crate::Operation::*;
-use crate::{Circuit, EdgeInfo, IRError, NodeError};
+use crate::{Circuit, EdgeInfo, IRError, NodeError, OutputType};
 use petgraph::{algo::greedy_feedback_arc_set, stable_graph::NodeIndex, visit::EdgeRef, Direction};
 
 pub(crate) fn validate_ir(ir: &Circuit) -> Vec<IRError> {
@@ -30,26 +30,54 @@ pub(crate) fn validate_nodes(ir: &Circuit) -> Vec<IRError> {
         match ir.graph[i].operation {
             Add => {
                 errors.append(
-                    &mut validate_binary_op_has_correct_operands(ir, i)
-                        .iter()
-                        .map(|e| IRError::NodeError(i, node_info.to_string(), *e))
-                        .collect(),
+                    &mut validate_binary_op_has_correct_operands(
+                        ir,
+                        i,
+                        OutputType::Ciphertext,
+                        OutputType::Ciphertext,
+                    )
+                    .iter()
+                    .map(|e| IRError::NodeError(i, node_info.to_string(), *e))
+                    .collect(),
                 );
             }
             Sub => {
                 errors.append(
-                    &mut validate_binary_op_has_correct_operands(ir, i)
-                        .iter()
-                        .map(|e| IRError::NodeError(i, node_info.to_string(), *e))
-                        .collect(),
+                    &mut validate_binary_op_has_correct_operands(
+                        ir,
+                        i,
+                        OutputType::Ciphertext,
+                        OutputType::Ciphertext,
+                    )
+                    .iter()
+                    .map(|e| IRError::NodeError(i, node_info.to_string(), *e))
+                    .collect(),
                 );
             }
             Multiply => {
                 errors.append(
-                    &mut validate_binary_op_has_correct_operands(ir, i)
-                        .iter()
-                        .map(|e| IRError::NodeError(i, node_info.to_string(), *e))
-                        .collect(),
+                    &mut validate_binary_op_has_correct_operands(
+                        ir,
+                        i,
+                        OutputType::Ciphertext,
+                        OutputType::Ciphertext,
+                    )
+                    .iter()
+                    .map(|e| IRError::NodeError(i, node_info.to_string(), *e))
+                    .collect(),
+                );
+            }
+            AddPlaintext => {
+                errors.append(
+                    &mut validate_binary_op_has_correct_operands(
+                        ir,
+                        i,
+                        OutputType::Ciphertext,
+                        OutputType::Plaintext,
+                    )
+                    .iter()
+                    .map(|e| IRError::NodeError(i, node_info.to_string(), *e))
+                    .collect(),
                 );
             }
             ShiftLeft => {}
@@ -63,6 +91,7 @@ pub(crate) fn validate_nodes(ir: &Circuit) -> Vec<IRError> {
                 );
             }
             InputCiphertext(_) => {}
+            InputPlaintext(_) => {}
             OutputCiphertext => {
                 errors.append(
                     &mut validate_unary_op_has_correct_operands(ir, i)
@@ -87,7 +116,12 @@ pub(crate) fn validate_nodes(ir: &Circuit) -> Vec<IRError> {
     errors
 }
 
-fn validate_binary_op_has_correct_operands(ir: &Circuit, index: NodeIndex) -> Vec<NodeError> {
+fn validate_binary_op_has_correct_operands(
+    ir: &Circuit,
+    index: NodeIndex,
+    expected_left_output: OutputType,
+    expected_right_output: OutputType,
+) -> Vec<NodeError> {
     let operand_count = ir.graph.edges_directed(index, Direction::Incoming).count();
 
     if operand_count != 2 {
@@ -102,14 +136,34 @@ fn validate_binary_op_has_correct_operands(ir: &Circuit, index: NodeIndex) -> Ve
         None => {
             errors.push(NodeError::MissingOperand(EdgeInfo::LeftOperand));
         }
-        _ => {}
+        Some(x) => {
+            if !ir.graph.contains_node(x) {
+                errors.push(NodeError::MissingParent(x))
+            } else if ir.graph[x].output_type() != expected_left_output {
+                errors.push(NodeError::ParentHasIncorrectOutputType(
+                    EdgeInfo::LeftOperand,
+                    ir.graph[x].output_type(),
+                    expected_left_output,
+                ));
+            }
+        }
     };
 
     match right {
         None => {
             errors.push(NodeError::MissingOperand(EdgeInfo::RightOperand));
         }
-        _ => {}
+        Some(x) => {
+            if !ir.graph.contains_node(x) {
+                errors.push(NodeError::MissingParent(x))
+            } else if ir.graph[x].output_type() != expected_right_output {
+                errors.push(NodeError::ParentHasIncorrectOutputType(
+                    EdgeInfo::RightOperand,
+                    ir.graph[x].output_type(),
+                    expected_right_output,
+                ));
+            }
+        }
     };
 
     errors

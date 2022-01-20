@@ -124,6 +124,7 @@ pub use sunscreen_compiler_macros::*;
 pub use sunscreen_runtime::{
     CallSignature, Ciphertext, CircuitMetadata, CompiledCircuit, Error as RuntimeError,
     InnerCiphertext, InnerPlaintext, Params, Plaintext, PublicKey, RequiredKeys, Runtime,
+    WithContext,
 };
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
@@ -151,6 +152,11 @@ pub enum Operation {
      * Addition.
      */
     Add,
+
+    /**
+     * Add a ciphertext and plaintext value.
+     */
+    AddPlaintext,
 
     /**
      * Subtraction.
@@ -360,6 +366,13 @@ impl Context {
     }
 
     /**
+     * Adds an addition to a plaintext.
+     */
+    pub fn add_addition_plaintext(&mut self, left: NodeIndex, right: NodeIndex) -> NodeIndex {
+        self.add_2_input(Operation::AddPlaintext, left, right)
+    }
+
+    /**
      * Add a multiplication to this context.
      */
     pub fn add_multiplication(&mut self, left: NodeIndex, right: NodeIndex) -> NodeIndex {
@@ -441,6 +454,7 @@ impl FrontendCompilation {
                 Operation::RotateLeft => NodeInfo::new(CircuitOperation::ShiftLeft),
                 Operation::RotateRight => NodeInfo::new(CircuitOperation::ShiftRight),
                 Operation::SwapRows => NodeInfo::new(CircuitOperation::SwapRows),
+                Operation::AddPlaintext => NodeInfo::new(CircuitOperation::AddPlaintext),
             },
             |_, e| match e {
                 OperandInfo::Left => EdgeInfo::LeftOperand,

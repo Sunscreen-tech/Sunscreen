@@ -1,8 +1,9 @@
 use crate::error::*;
 use crate::metadata::*;
 use crate::{
-    run_program_unchecked, Ciphertext, InnerCiphertext, InnerPlaintext, Plaintext, PublicKey,
-    SealCiphertext, SealPlaintext, TryFromPlaintext, TryIntoPlaintext, TypeName, serialization::WithContext,
+    run_program_unchecked, serialization::WithContext, Ciphertext, CircuitInput, InnerCiphertext,
+    InnerPlaintext, Plaintext, PublicKey, SealCiphertext, SealData, SealPlaintext,
+    TryFromPlaintext, TryIntoPlaintext, TypeName, TypeNameInstance,
 };
 use sunscreen_circuit::SchemeType;
 
@@ -38,7 +39,10 @@ impl Runtime {
     where
         P: TryFromPlaintext + TypeName,
     {
-        let expected_type = P::type_name();
+        let expected_type = Type {
+            is_encrypted: true,
+            ..P::type_name()
+        };
 
         if expected_type != ciphertext.data_type {
             return Err(Error::TypeMismatch {
@@ -64,10 +68,17 @@ impl Runtime {
 
                         decryptor.decrypt(c).map_err(|e| Error::SealError(e))
                     })
-                    .collect::<Result<Vec<SealPlaintext>>>()?;
+                    .collect::<Result<Vec<SealPlaintext>>>()?
+                    .drain(0..)
+                    .map(|p| WithContext {
+                        params: self.params.clone(),
+                        data: p,
+                    })
+                    .collect();
 
                 P::try_from_plaintext(
                     &Plaintext {
+                        data_type: P::type_name(),
                         inner: InnerPlaintext::Seal(plaintexts),
                     },
                     &self.params,
@@ -163,12 +174,15 @@ impl Runtime {
      * Validates and runs the given circuit. Unless you can guarantee your circuit is valid,
      * you should use this method rather than [`run_program_unchecked`].
      */
-    pub fn run(
+    pub fn run<I>(
         &self,
         circuit: &CompiledCircuit,
-        mut arguments: Vec<Ciphertext>,
+        mut arguments: Vec<I>,
         public_key: &PublicKey,
-    ) -> Result<Vec<Ciphertext>> {
+    ) -> Result<Vec<Ciphertext>>
+    where
+        I: Into<CircuitInput>,
+    {
         circuit.circuit.validate()?;
 
         // Aside from circuit correctness, check that the required keys are given.
@@ -180,20 +194,27 @@ impl Runtime {
             return Err(Error::MissingGaloisKeys);
         }
 
+        let mut arguments: Vec<CircuitInput> = arguments.drain(0..).map(|a| a.into()).collect();
+
         let expected_args = &circuit.metadata.signature.arguments;
 
+        // Check the arguments match the signature.
         if expected_args.len() != arguments.len() {
             return Err(Error::IncorrectCiphertextCount);
         }
 
+        // Check the passed arguments' types match the signature.
         if arguments
             .iter()
             .enumerate()
-            .any(|(i, a)| a.data_type != expected_args[i])
+            .any(|(i, a)| a.type_name_instance() != expected_args[i])
         {
             return Err(Error::ArgumentMismatch {
                 expected: expected_args.clone(),
-                actual: arguments.iter().map(|a| a.data_type.clone()).collect(),
+                actual: arguments
+                    .iter()
+                    .map(|a| a.type_name_instance().clone())
+                    .collect(),
             });
         }
 
@@ -207,13 +228,26 @@ impl Runtime {
             Context::Seal(context) => {
                 let evaluator = BFVEvaluator::new(&context)?;
 
-                let mut inputs: Vec<SealCiphertext> = vec![];
+                let mut inputs: Vec<SealData> = vec![];
 
                 for i in arguments.drain(0..) {
-                    match i.inner {
-                        InnerCiphertext::Seal(mut c) => {
-                            for j in c.drain(0..) {
-                                inputs.push(j.data)
+                    match i {
+                        CircuitInput::Ciphertext(c) => match c.inner {
+                            InnerCiphertext::Seal(mut c) => {
+                                for j in c.drain(0..) {
+                                    inputs.push(SealData::Ciphertext(j.data));
+                                }
+                            }
+                        },
+                        CircuitInput::Plaintext(p) => {
+                            let p = p.try_into_plaintext(&self.params)?;
+
+                            match p.inner {
+                                InnerPlaintext::Seal(mut p) => {
+                                    for j in p.drain(0..) {
+                                        inputs.push(SealData::Plaintext(j.data));
+                                    }
+                                }
                             }
                         }
                     }
@@ -244,12 +278,13 @@ impl Runtime {
                     packed_ciphertexts.push(Ciphertext {
                         data_type: circuit.metadata.signature.returns[i].clone(),
                         inner: InnerCiphertext::Seal(
-                            raw_ciphertexts.drain(0..*ciphertext_count)
-                            .map(|c| WithContext {
-                                params: self.params.clone(),
-                                data: c
-                            })
-                            .collect(),
+                            raw_ciphertexts
+                                .drain(0..*ciphertext_count)
+                                .map(|c| WithContext {
+                                    params: self.params.clone(),
+                                    data: c,
+                                })
+                                .collect(),
                         ),
                     });
                 }
@@ -282,12 +317,15 @@ impl Runtime {
                     .drain(0..)
                     .map(|c| WithContext {
                         params: self.params.clone(),
-                        data: c
+                        data: c,
                     })
                     .collect();
 
                 Ciphertext {
-                    data_type: P::type_name(),
+                    data_type: Type {
+                        is_encrypted: true,
+                        ..P::type_name()
+                    },
                     inner: InnerCiphertext::Seal(ciphertexts),
                 }
             }

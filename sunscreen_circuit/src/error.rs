@@ -1,6 +1,6 @@
 use petgraph::stable_graph::NodeIndex;
 
-use crate::EdgeInfo;
+use crate::{EdgeInfo, OutputType};
 
 /**
  * The name of an [`Operation`](crate::Operation)
@@ -49,6 +49,18 @@ pub enum NodeError {
      * The node is missing an expected operand of the contained type.
      */
     MissingOperand(EdgeInfo),
+
+    /**
+     * The parent node specified at the given [`EdgeInfo`] does not exist.
+     */
+    MissingParent(NodeIndex),
+
+    /**
+     * For the parent at EdgeInfo (first argument), the expected
+     * output type (second argument) does not match the actual
+     * (third argument) output type.
+     */
+    ParentHasIncorrectOutputType(EdgeInfo, OutputType, OutputType),
 
     /**
      * The node has expects a specific number of input operands (first argument),

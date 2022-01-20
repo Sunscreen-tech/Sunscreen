@@ -1,8 +1,5 @@
 use crate::Params;
-use seal::{
-    BfvEncryptionParametersBuilder, Context, FromBytes, Modulus,
-    ToBytes,
-};
+use seal::{BfvEncryptionParametersBuilder, Context, FromBytes, Modulus, ToBytes};
 use serde::{
     de::{Deserializer, MapAccess, SeqAccess, Visitor},
     ser::{Error, SerializeStruct, Serializer},
@@ -29,7 +26,7 @@ where
     pub data: T,
 }
 
-impl <T> std::ops::Deref for WithContext<T>
+impl<T> std::ops::Deref for WithContext<T>
 where
     T: ToBytes + FromBytes,
 {
@@ -90,20 +87,19 @@ where
             where
                 V: SeqAccess<'de>,
             {
-                let params = seq.next_element()?
+                let params = seq
+                    .next_element()?
                     .ok_or_else(|| serde::de::Error::invalid_length(0, &self))?;
-                let data: Vec<u8> = seq.next_element()?
+                let data: Vec<u8> = seq
+                    .next_element()?
                     .ok_or_else(|| serde::de::Error::invalid_length(1, &self))?;
 
                 let data = deserialize_with_params(&params, &data)
                     .map_err(|e| serde::de::Error::custom(format!("{}", e)))?;
 
-                Ok(Self::Value {
-                    params,
-                    data
-                })
+                Ok(Self::Value { params, data })
             }
-            
+
             fn visit_map<A>(self, mut map: A) -> Result<Self::Value, A::Error>
             where
                 A: MapAccess<'de>,
@@ -165,9 +161,9 @@ where
     }
 }
 
-fn deserialize_with_params<'de, T>(params: &Params, data: &[u8]) -> Result<T, seal::Error> 
-    where 
-        T: FromBytes
+fn deserialize_with_params<'de, T>(params: &Params, data: &[u8]) -> Result<T, seal::Error>
+where
+    T: FromBytes,
 {
     let coeffs = params
         .coeff_modulus
@@ -181,10 +177,9 @@ fn deserialize_with_params<'de, T>(params: &Params, data: &[u8]) -> Result<T, se
         .set_poly_modulus_degree(params.lattice_dimension)
         .build()?;
 
-    let seal_context =
-        Context::new(&encryption_params, false, params.security_level)?;
+    let seal_context = Context::new(&encryption_params, false, params.security_level)?;
 
     let data = T::from_bytes(&seal_context, &data)?;
-    
+
     Ok(data)
 }

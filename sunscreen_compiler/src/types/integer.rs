@@ -1,9 +1,9 @@
 use seal::Plaintext as SealPlaintext;
 
-use crate::types::{GraphCipherAdd, GraphCipherMul, Cipher};
+use crate::types::{Cipher, GraphCipherAdd, GraphCipherMul, GraphCipherPlainAdd};
 use crate::{
-    types::{BfvType, CircuitNode, FheType},
-    with_ctx, Params, TypeName as DeriveTypeName,
+    types::{BfvType, CircuitNode, FheType, TypeNameInstance},
+    with_ctx, Params, TypeName as DeriveTypeName, WithContext,
 };
 
 use sunscreen_runtime::{
@@ -47,6 +47,22 @@ impl GraphCipherAdd for Unsigned {
     }
 }
 
+impl GraphCipherPlainAdd for Unsigned {
+    type Left = Unsigned;
+    type Right = Unsigned;
+
+    fn graph_cipher_plain_add(
+        a: CircuitNode<Cipher<Self::Left>>,
+        b: CircuitNode<Self::Right>,
+    ) -> CircuitNode<Cipher<Self::Left>> {
+        with_ctx(|ctx| {
+            let n = ctx.add_addition_plaintext(a.ids[0], b.ids[0]);
+
+            CircuitNode::new(&[n])
+        })
+    }
+}
+
 impl GraphCipherMul for Unsigned {
     type Left = Unsigned;
     type Right = Unsigned;
@@ -66,9 +82,10 @@ impl GraphCipherMul for Unsigned {
 impl TryIntoPlaintext for Unsigned {
     fn try_into_plaintext(
         &self,
-        _params: &Params,
+        params: &Params,
     ) -> std::result::Result<Plaintext, sunscreen_runtime::Error> {
         let mut seal_plaintext = SealPlaintext::new()?;
+
         let bits = std::mem::size_of::<u64>() * 8;
 
         seal_plaintext.resize(bits);
@@ -79,7 +96,11 @@ impl TryIntoPlaintext for Unsigned {
         }
 
         Ok(Plaintext {
-            inner: InnerPlaintext::Seal(vec![seal_plaintext]),
+            data_type: self.type_name_instance(),
+            inner: InnerPlaintext::Seal(vec![WithContext {
+                params: params.clone(),
+                data: seal_plaintext,
+            }]),
         })
     }
 }
@@ -177,7 +198,11 @@ impl TryIntoPlaintext for Signed {
         }
 
         Ok(Plaintext {
-            inner: InnerPlaintext::Seal(vec![seal_plaintext]),
+            data_type: self.type_name_instance(),
+            inner: InnerPlaintext::Seal(vec![WithContext {
+                params: params.clone(),
+                data: seal_plaintext,
+            }]),
         })
     }
 }

@@ -1,10 +1,10 @@
 use seal::Plaintext as SealPlaintext;
 
-use crate::types::{GraphCipherAdd, GraphCipherPlainAdd, GraphCipherMul, GraphCipherSub, Cipher};
+use crate::types::{Cipher, GraphCipherAdd, GraphCipherMul, GraphCipherPlainAdd, GraphCipherSub};
 use crate::{
     crate_version,
     types::{BfvType, CircuitNode, FheType, Type, Version},
-    with_ctx, Params,
+    with_ctx, Params, WithContext,
 };
 
 use sunscreen_runtime::{
@@ -168,6 +168,7 @@ impl<const INT_BITS: usize> TypeName for Fractional<INT_BITS> {
         Type {
             name: format!("sunscreen_compiler::types::Fractional<{}>", INT_BITS),
             version: Version::parse(crate_version!()).expect("Crate version is not a valid semver"),
+            is_encrypted: false,
         }
     }
 }
@@ -270,7 +271,11 @@ impl<const INT_BITS: usize> TryIntoPlaintext for Fractional<INT_BITS> {
         // Just flush subnormals, as they're tiny and annoying.
         if self.val.is_subnormal() || self.val == 0.0 {
             return Ok(Plaintext {
-                inner: InnerPlaintext::Seal(vec![seal_plaintext]),
+                data_type: self.type_name_instance(),
+                inner: InnerPlaintext::Seal(vec![WithContext {
+                    params: params.clone(),
+                    data: seal_plaintext,
+                }]),
             });
         }
 
@@ -326,7 +331,11 @@ impl<const INT_BITS: usize> TryIntoPlaintext for Fractional<INT_BITS> {
         }
 
         Ok(Plaintext {
-            inner: InnerPlaintext::Seal(vec![seal_plaintext]),
+            data_type: self.type_name_instance(),
+            inner: InnerPlaintext::Seal(vec![WithContext {
+                params: params.clone(),
+                data: seal_plaintext,
+            }]),
         })
     }
 }

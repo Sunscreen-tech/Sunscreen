@@ -1,6 +1,7 @@
 use sunscreen_compiler::{
-    circuit, types::{Cipher, Fractional, Rational, Signed}, Compiler, PlainModulusConstraint,
-    Runtime,
+    circuit,
+    types::{Cipher, Fractional, Rational, Signed},
+    Compiler, PlainModulusConstraint, Runtime,
 };
 
 type CipherSigned = Cipher<Signed>;
@@ -239,7 +240,7 @@ fn can_sub_rational_numbers() {
     assert_eq!(c, (-6.28).try_into().unwrap());
 }
 
-type CipherFractional = Cipher<Fractional::<64>>;
+type CipherFractional = Cipher<Fractional<64>>;
 
 #[test]
 fn can_add_fractional_numbers() {

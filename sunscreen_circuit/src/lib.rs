@@ -207,6 +207,22 @@ impl TryFrom<u8> for SchemeType {
     }
 }
 
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+/**
+ * The type of output from a circuit's graph node.
+ */
+pub enum OutputType {
+    /**
+     * The output is a plaintext.
+     */
+    Plaintext,
+
+    /**
+     * The output is a ciphertext.
+     */
+    Ciphertext,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 /**
  * Contains information about a node in the circuit graph.
@@ -230,6 +246,16 @@ impl NodeInfo {
      */
     pub fn new(operation: Operation) -> Self {
         Self { operation }
+    }
+
+    /**
+     * Gets the output type for the current node.
+     */
+    pub fn output_type(&self) -> OutputType {
+        match self.operation {
+            Operation::InputPlaintext(_) => OutputType::Plaintext,
+            _ => OutputType::Ciphertext,
+        }
     }
 }
 

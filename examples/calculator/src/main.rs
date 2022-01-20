@@ -2,8 +2,10 @@ use std::io::{self, Write};
 use std::sync::mpsc::{Receiver, Sender};
 use std::thread::{self, JoinHandle};
 use sunscreen_compiler::{
-    circuit, types::{Cipher, Rational}, Ciphertext, CompiledCircuit, Compiler, Params,
-    PlainModulusConstraint, PublicKey, Runtime, RuntimeError,
+    circuit,
+    types::{Cipher, Rational},
+    Ciphertext, CompiledCircuit, Compiler, Params, PlainModulusConstraint, PublicKey, Runtime,
+    RuntimeError,
 };
 
 fn help() {

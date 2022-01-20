@@ -1,4 +1,4 @@
-use crate::{Error, Result, SecurityLevel, CircuitFn};
+use crate::{CircuitFn, Error, Result, SecurityLevel};
 
 use log::{debug, trace};
 

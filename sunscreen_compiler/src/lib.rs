@@ -153,6 +153,11 @@ pub enum Operation {
     Add,
 
     /**
+     * Add a ciphertext and plaintext value.
+     */
+    AddPlaintext,
+
+    /**
      * Subtraction.
      */
     Sub,
@@ -360,6 +365,13 @@ impl Context {
     }
 
     /**
+     * Adds an addition to a plaintext.
+     */
+    pub fn add_addition_plaintext(&mut self, left: NodeIndex, right: NodeIndex) -> NodeIndex {
+        self.add_2_input(Operation::AddPlaintext, left, right)
+    }
+
+    /**
      * Add a multiplication to this context.
      */
     pub fn add_multiplication(&mut self, left: NodeIndex, right: NodeIndex) -> NodeIndex {
@@ -441,6 +453,7 @@ impl FrontendCompilation {
                 Operation::RotateLeft => NodeInfo::new(CircuitOperation::ShiftLeft),
                 Operation::RotateRight => NodeInfo::new(CircuitOperation::ShiftRight),
                 Operation::SwapRows => NodeInfo::new(CircuitOperation::SwapRows),
+                Operation::AddPlaintext => NodeInfo::new(CircuitOperation::AddPlaintext),
             },
             |_, e| match e {
                 OperandInfo::Left => EdgeInfo::LeftOperand,

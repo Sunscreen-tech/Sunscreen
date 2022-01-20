@@ -1,6 +1,6 @@
 use sunscreen_compiler::{
-    types::{TypeName, Cipher, Unsigned},
-    CallSignature, FrontendCompilation, Params, SchemeType, SecurityLevel, CURRENT_CTX, CircuitFn
+    types::{Cipher, TypeName, Unsigned},
+    CallSignature, CircuitFn, FrontendCompilation, Params, SchemeType, SecurityLevel, CURRENT_CTX,
 };
 use sunscreen_compiler_macros::circuit;
 
@@ -305,7 +305,10 @@ fn can_collect_output() {
 #[test]
 fn can_collect_multiple_outputs() {
     #[circuit(scheme = "bfv")]
-    fn circuit_with_args(a: Cipher<Unsigned>, b: CipherUnsigned) -> (Cipher<Unsigned>, Cipher<Unsigned>) {
+    fn circuit_with_args(
+        a: Cipher<Unsigned>,
+        b: CipherUnsigned,
+    ) -> (Cipher<Unsigned>, Cipher<Unsigned>) {
         (a + b * a, a)
     }
 

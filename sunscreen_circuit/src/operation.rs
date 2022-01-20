@@ -45,6 +45,11 @@ pub enum Operation {
     Add,
 
     /**
+     * Add a plaintext to a ciphertext.
+     */
+    AddPlaintext,
+
+    /**
      * Computes the additive inverse of a plaintext or ciphertext.
      */
     Negate,
@@ -59,6 +64,11 @@ pub enum Operation {
      * Represents an input ciphertext for the circuit.
      */
     InputCiphertext(usize),
+
+    /**
+     * Represents an input plaintext for the current circuit.
+     */
+    InputPlaintext(usize),
 
     /**
      * Represents a literal value.

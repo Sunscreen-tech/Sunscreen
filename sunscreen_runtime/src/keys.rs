@@ -1,12 +1,7 @@
 use crate::serialization::WithContext;
 
-use seal::{
-    GaloisKeys,
-    PublicKey as SealPublicKey, RelinearizationKeys
-};
-use serde::{
-    Deserialize, Serialize,
-};
+use seal::{GaloisKeys, PublicKey as SealPublicKey, RelinearizationKeys};
+use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Deserialize, Serialize)]
 /**

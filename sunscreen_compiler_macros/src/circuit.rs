@@ -97,10 +97,10 @@ pub fn circuit_impl(
         }
 
         impl sunscreen_compiler::CircuitFn for #circuit_struct_name {
-            fn build(&self, params: &sunscreen_compiler::Params) -> sunscreen_compiler::Result<sunscreen_compiler::FrontendCompilation> {  
+            fn build(&self, params: &sunscreen_compiler::Params) -> sunscreen_compiler::Result<sunscreen_compiler::FrontendCompilation> {
                 use std::cell::RefCell;
                 use std::mem::transmute;
-                use sunscreen_compiler::{CURRENT_CTX, Context, Error, INDEX_ARENA, Result, Params, SchemeType, Value, types::{CircuitNode, NumCiphertexts, Type, TypeName, TypeNameInstance}};  
+                use sunscreen_compiler::{CURRENT_CTX, Context, Error, INDEX_ARENA, Result, Params, SchemeType, Value, types::{CircuitNode, NumCiphertexts, Type, TypeName, TypeNameInstance}};
 
                 if SchemeType::Bfv != params.scheme_type {
                     return Err(Error::IncorrectScheme)
@@ -282,13 +282,17 @@ fn create_signature(args: &[&Type], ret: &ReturnType) -> TokenStream {
     // E.g. Foo<Bar> causes an error when doing Foo<Bar>::func()
     // because you need :: after Foo.
     // So we make type aliases and invoke the function on the alias.
-    let arg_type_names = args.iter().enumerate().map(|(i, t)| {
-        let alias = ident("T", i);
+    let arg_type_names = args
+        .iter()
+        .enumerate()
+        .map(|(i, t)| {
+            let alias = ident("T", i);
 
-        quote! {
-            type #alias = #t;
-        }
-    }).collect::<Vec<TokenStream>>();
+            quote! {
+                type #alias = #t;
+            }
+        })
+        .collect::<Vec<TokenStream>>();
 
     let arg_get_types = arg_type_names.iter().enumerate().map(|(i, _)| {
         let alias = ident("T", i);
@@ -315,16 +319,13 @@ fn create_signature(args: &[&Type], ret: &ReturnType) -> TokenStream {
                 }
             };
 
-            let return_type_aliases = tuple_inners
-                .iter()
-                .enumerate()
-                .map(|(i, t)| {
-                    let alias = ident("R", i);
+            let return_type_aliases = tuple_inners.iter().enumerate().map(|(i, t)| {
+                let alias = ident("R", i);
 
-                    quote! {
-                        type #alias = #t;
-                    }
-                });
+                quote! {
+                    type #alias = #t;
+                }
+            });
 
             let return_type_sizes = tuple_inners.iter().enumerate().map(|(i, _)| {
                 let alias = ident("R", i);
@@ -358,7 +359,7 @@ fn create_signature(args: &[&Type], ret: &ReturnType) -> TokenStream {
                 },
             )
         }
-        ReturnType::Default => (quote! { }, quote! { vec![] }, quote! { vec![] }),
+        ReturnType::Default => (quote! {}, quote! { vec![] }, quote! { vec![] }),
     };
 
     quote! {

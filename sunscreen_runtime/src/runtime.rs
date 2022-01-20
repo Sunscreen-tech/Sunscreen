@@ -1,8 +1,9 @@
 use crate::error::*;
 use crate::metadata::*;
 use crate::{
-    run_program_unchecked, Ciphertext, InnerCiphertext, InnerPlaintext, Plaintext, PublicKey,
-    SealCiphertext, SealPlaintext, TryFromPlaintext, TryIntoPlaintext, TypeName, serialization::WithContext,
+    run_program_unchecked, serialization::WithContext, Ciphertext, InnerCiphertext, InnerPlaintext,
+    Plaintext, PublicKey, SealCiphertext, SealPlaintext, TryFromPlaintext, TryIntoPlaintext,
+    TypeName,
 };
 use sunscreen_circuit::SchemeType;
 
@@ -244,12 +245,13 @@ impl Runtime {
                     packed_ciphertexts.push(Ciphertext {
                         data_type: circuit.metadata.signature.returns[i].clone(),
                         inner: InnerCiphertext::Seal(
-                            raw_ciphertexts.drain(0..*ciphertext_count)
-                            .map(|c| WithContext {
-                                params: self.params.clone(),
-                                data: c
-                            })
-                            .collect(),
+                            raw_ciphertexts
+                                .drain(0..*ciphertext_count)
+                                .map(|c| WithContext {
+                                    params: self.params.clone(),
+                                    data: c,
+                                })
+                                .collect(),
                         ),
                     });
                 }
@@ -282,7 +284,7 @@ impl Runtime {
                     .drain(0..)
                     .map(|c| WithContext {
                         params: self.params.clone(),
-                        data: c
+                        data: c,
                     })
                     .collect();
 

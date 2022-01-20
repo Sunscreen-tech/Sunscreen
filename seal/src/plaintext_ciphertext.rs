@@ -2,7 +2,7 @@ use std::ffi::{c_void, CString};
 use std::ptr::null_mut;
 
 use crate::error::*;
-use crate::{ToBytes, FromBytes, bindgen, serialization::CompressionType, Context};
+use crate::{bindgen, serialization::CompressionType, Context, FromBytes, ToBytes};
 
 use serde::ser::Error;
 use serde::{Serialize, Serializer};
@@ -329,9 +329,15 @@ impl FromBytes for Ciphertext {
     fn from_bytes(context: &Context, bytes: &[u8]) -> Result<Self> {
         let ciphertext = Self::new()?;
         let mut bytes_read = 0i64;
-        
+
         convert_seal_error(unsafe {
-            bindgen::Ciphertext_Load(ciphertext.handle, context.handle, bytes.as_ptr() as *mut u8, bytes.len() as u64, &mut bytes_read)
+            bindgen::Ciphertext_Load(
+                ciphertext.handle,
+                context.handle,
+                bytes.as_ptr() as *mut u8,
+                bytes.len() as u64,
+                &mut bytes_read,
+            )
         })?;
 
         Ok(ciphertext)

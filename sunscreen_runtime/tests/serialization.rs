@@ -1,17 +1,22 @@
-use sunscreen_compiler::types::Signed;
-use sunscreen_circuit::SchemeType;
-use sunscreen_runtime::{Ciphertext, Params, Runtime};
 use seal::{CoefficientModulus, SecurityLevel};
+use sunscreen_circuit::SchemeType;
+use sunscreen_compiler::types::Signed;
+use sunscreen_runtime::{Ciphertext, Params, Runtime};
 
 #[test]
 fn can_roundtrip_ciphertexts_bincode() {
     let runtime = Runtime::new(&Params {
         lattice_dimension: 8192,
         plain_modulus: 1024,
-        coeff_modulus: CoefficientModulus::bfv_default(8192, SecurityLevel::TC128).unwrap().iter().map(|c| c.value()).collect(),
+        coeff_modulus: CoefficientModulus::bfv_default(8192, SecurityLevel::TC128)
+            .unwrap()
+            .iter()
+            .map(|c| c.value())
+            .collect(),
         security_level: SecurityLevel::TC128,
         scheme_type: SchemeType::Bfv,
-    }).unwrap();
+    })
+    .unwrap();
 
     let (public, private) = runtime.generate_keys().unwrap();
 
@@ -22,7 +27,7 @@ fn can_roundtrip_ciphertexts_bincode() {
 
     let v: Signed = runtime.decrypt(&c, &private).unwrap();
 
-    let actual: i64 = v.into(); 
+    let actual: i64 = v.into();
     assert_eq!(actual, expected);
 }
 
@@ -31,10 +36,15 @@ fn can_roundtrip_ciphertexts_json() {
     let runtime = Runtime::new(&Params {
         lattice_dimension: 8192,
         plain_modulus: 1024,
-        coeff_modulus: CoefficientModulus::bfv_default(8192, SecurityLevel::TC128).unwrap().iter().map(|c| c.value()).collect(),
+        coeff_modulus: CoefficientModulus::bfv_default(8192, SecurityLevel::TC128)
+            .unwrap()
+            .iter()
+            .map(|c| c.value())
+            .collect(),
         security_level: SecurityLevel::TC128,
         scheme_type: SchemeType::Bfv,
-    }).unwrap();
+    })
+    .unwrap();
 
     let (public, private) = runtime.generate_keys().unwrap();
 
@@ -45,6 +55,6 @@ fn can_roundtrip_ciphertexts_json() {
 
     let v: Signed = runtime.decrypt(&c, &private).unwrap();
 
-    let actual: i64 = v.into(); 
+    let actual: i64 = v.into();
     assert_eq!(actual, expected);
 }

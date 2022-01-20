@@ -1,6 +1,6 @@
 use seal::Plaintext as SealPlaintext;
 
-use crate::types::{GraphCipherAdd, GraphCipherMul, Cipher};
+use crate::types::{Cipher, GraphCipherAdd, GraphCipherMul, GraphCipherPlainAdd};
 use crate::{
     types::{BfvType, CircuitNode, FheType},
     with_ctx, Params, TypeName as DeriveTypeName,
@@ -41,6 +41,22 @@ impl GraphCipherAdd for Unsigned {
     ) -> CircuitNode<Cipher<Self::Left>> {
         with_ctx(|ctx| {
             let n = ctx.add_addition(a.ids[0], b.ids[0]);
+
+            CircuitNode::new(&[n])
+        })
+    }
+}
+
+impl GraphCipherPlainAdd for Unsigned {
+    type Left = Unsigned;
+    type Right = Unsigned;
+
+    fn graph_cipher_plain_add(
+        a: CircuitNode<Cipher<Self::Left>>,
+        b: CircuitNode<Self::Right>,
+    ) -> CircuitNode<Cipher<Self::Left>> {
+        with_ctx(|ctx| {
+            let n = ctx.add_addition_plaintext(a.ids[0], b.ids[0]);
 
             CircuitNode::new(&[n])
         })

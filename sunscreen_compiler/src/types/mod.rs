@@ -158,19 +158,22 @@ impl<T: NumCiphertexts> CircuitNode<T> {
  * Declares a type T as being encrypted in a circuit.
  */
 pub struct Cipher<T>
-    where T: FheType
+where
+    T: FheType,
 {
     _val: T,
 }
 
-impl <T> NumCiphertexts for Cipher<T> 
-    where T: FheType
+impl<T> NumCiphertexts for Cipher<T>
+where
+    T: FheType,
 {
     const NUM_CIPHERTEXTS: usize = T::NUM_CIPHERTEXTS;
 }
 
-impl <T> TypeName for Cipher<T> 
-    where T: FheType + TypeName
+impl<T> TypeName for Cipher<T>
+where
+    T: FheType + TypeName,
 {
     fn type_name() -> Type {
         T::type_name()
@@ -178,7 +181,7 @@ impl <T> TypeName for Cipher<T>
 }
 
 /**
- * Called when a circuit encounters a + operation on two encrypted 
+ * Called when a circuit encounters a + operation on two encrypted
  * types.
  */
 pub trait GraphCipherAdd {
@@ -202,7 +205,7 @@ pub trait GraphCipherAdd {
 }
 
 /**
- * Called when a circuit encounters a + operation on one encrypted 
+ * Called when a circuit encounters a + operation on one encrypted
  * and one unencrypted type.
  */
 pub trait GraphCipherPlainAdd {

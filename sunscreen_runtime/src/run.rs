@@ -105,6 +105,7 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
                     data[index.index()].store(Some(Cow::Borrowed(&inputs[*id])));
                     // moo
                 }
+                InputPlaintext(_id) => { unimplemented!(); }
                 ShiftLeft => {
                     let (left, right) = get_left_right_operands(ir, index);
 
@@ -158,6 +159,9 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
                     let c = evaluator.add(&a, &b)?;
 
                     data[index.index()].store(Some(Cow::Owned(c)));
+                }
+                AddPlaintext => {
+                    unimplemented!();
                 }
                 Multiply => {
                     let (left, right) = get_left_right_operands(ir, index);

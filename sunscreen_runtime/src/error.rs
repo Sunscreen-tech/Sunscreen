@@ -109,6 +109,21 @@ pub enum Error {
      * Failed to deserialize bytes as a [`Params`](crate::Params) object.
      */
     ParamDeserializationError,
+
+    /**
+     * The [`CircuitOutput`](crate::CircuitOutput) was not a [`Ciphertext`](crate::Ciphertext).
+     */
+    NotACiphertext,
+
+    /**
+     * The [`CircuitOutput`](crate::CircuitOutput) was not a [`Plaintext`](crate::Plaintext).
+     */
+    NotAPlaintext,
+
+    /**
+     * The given [`Plaintext`](crate::Plaintext) had no data.
+     */
+    NoPlaintextData
 }
 
 impl From<sunscreen_circuit::Error> for Error {

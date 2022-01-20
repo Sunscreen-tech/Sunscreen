@@ -4,7 +4,7 @@ use crate::types::{Cipher, GraphCipherAdd, GraphCipherMul, GraphCipherPlainAdd, 
 use crate::{
     crate_version,
     types::{BfvType, CircuitNode, FheType, Type, Version},
-    with_ctx, Params,
+    with_ctx, Params, WithContext
 };
 
 use sunscreen_runtime::{
@@ -271,7 +271,10 @@ impl<const INT_BITS: usize> TryIntoPlaintext for Fractional<INT_BITS> {
         // Just flush subnormals, as they're tiny and annoying.
         if self.val.is_subnormal() || self.val == 0.0 {
             return Ok(Plaintext {
-                inner: InnerPlaintext::Seal(vec![seal_plaintext]),
+                inner: InnerPlaintext::Seal(vec![WithContext {
+                    params: params.clone(),
+                    data: seal_plaintext
+                }]),
             });
         }
 
@@ -327,7 +330,10 @@ impl<const INT_BITS: usize> TryIntoPlaintext for Fractional<INT_BITS> {
         }
 
         Ok(Plaintext {
-            inner: InnerPlaintext::Seal(vec![seal_plaintext]),
+            inner: InnerPlaintext::Seal(vec![WithContext {
+                params: params.clone(),
+                data: seal_plaintext
+            }]),
         })
     }
 }

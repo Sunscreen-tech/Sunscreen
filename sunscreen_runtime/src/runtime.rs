@@ -68,7 +68,13 @@ impl Runtime {
 
                         decryptor.decrypt(c).map_err(|e| Error::SealError(e))
                     })
-                    .collect::<Result<Vec<SealPlaintext>>>()?;
+                    .collect::<Result<Vec<SealPlaintext>>>()?
+                    .drain(0..)
+                    .map(|p| WithContext {
+                        params: self.params.clone(),
+                        data: p
+                    })
+                    .collect();
 
                 P::try_from_plaintext(
                     &Plaintext {

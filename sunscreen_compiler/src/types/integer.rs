@@ -1,9 +1,9 @@
 use seal::Plaintext as SealPlaintext;
 
-use crate::types::{Cipher, GraphCipherAdd, GraphCipherMul, GraphCipherPlainAdd};
+use crate::types::{Cipher, GraphCipherAdd, GraphCipherMul, GraphCipherPlainAdd, };
 use crate::{
     types::{BfvType, CircuitNode, FheType},
-    with_ctx, Params, TypeName as DeriveTypeName,
+    with_ctx, Params, TypeName as DeriveTypeName, WithContext
 };
 
 use sunscreen_runtime::{
@@ -82,9 +82,10 @@ impl GraphCipherMul for Unsigned {
 impl TryIntoPlaintext for Unsigned {
     fn try_into_plaintext(
         &self,
-        _params: &Params,
+        params: &Params,
     ) -> std::result::Result<Plaintext, sunscreen_runtime::Error> {
         let mut seal_plaintext = SealPlaintext::new()?;
+
         let bits = std::mem::size_of::<u64>() * 8;
 
         seal_plaintext.resize(bits);
@@ -95,7 +96,10 @@ impl TryIntoPlaintext for Unsigned {
         }
 
         Ok(Plaintext {
-            inner: InnerPlaintext::Seal(vec![seal_plaintext]),
+            inner: InnerPlaintext::Seal(vec![WithContext {
+                params: params.clone(),
+                data: seal_plaintext
+            }]),
         })
     }
 }
@@ -193,7 +197,10 @@ impl TryIntoPlaintext for Signed {
         }
 
         Ok(Plaintext {
-            inner: InnerPlaintext::Seal(vec![seal_plaintext]),
+            inner: InnerPlaintext::Seal(vec![WithContext {
+                params: params.clone(),
+                data: seal_plaintext
+            }]),
         })
     }
 }

@@ -86,18 +86,20 @@ impl Serialize for Plaintext {
     }
 }
 
-impl Plaintext {
+impl FromBytes for Plaintext {
     /**
      * Deserializes a byte stream into a plaintext. This requires a context, which is why
      * Plaintext doesn't `impl Deserialize`.
      */
-    pub fn from_bytes(&mut self, context: Context, data: &[u8]) -> Result<()> {
+    fn from_bytes(context: &Context, data: &[u8]) -> Result<Self> {
         let mut bytes_read = 0;
+
+        let plaintext = Plaintext::new()?;
 
         convert_seal_error(unsafe {
             // While the interface marks data as mut, SEAL doesn't actually modify it, so we're okay.
             bindgen::Plaintext_Load(
-                self.handle,
+                plaintext.handle,
                 context.get_handle(),
                 data.as_ptr() as *mut u8,
                 data.len() as u64,
@@ -105,9 +107,40 @@ impl Plaintext {
             )
         })?;
 
-        Ok(())
+        Ok(plaintext)
     }
+}
 
+impl ToBytes for Plaintext {
+    fn as_bytes(&self) -> Result<Vec<u8>> {
+        let mut num_bytes: i64 = 0;
+
+        convert_seal_error(unsafe {
+            bindgen::Plaintext_SaveSize(self.handle, CompressionType::ZStd as u8, &mut num_bytes)
+        })?;
+
+        let mut data: Vec<u8> = Vec::with_capacity(num_bytes as usize);
+        let mut bytes_written: i64 = 0;
+
+        convert_seal_error(unsafe {
+            let data_ptr = data.as_mut_ptr();
+
+            bindgen::Plaintext_Save(
+                self.handle,
+                data_ptr,
+                num_bytes as u64,
+                CompressionType::ZStd as u8,
+                &mut bytes_written,
+            )
+        })?;
+
+        unsafe { data.set_len(bytes_written as usize) };
+
+        Ok(data)
+    }
+}
+
+impl Plaintext {
     /**
      * Returns the handle to the underlying SEAL object.
      */

@@ -41,7 +41,7 @@ impl U64LiteralRef {
  * # Remarks
  * This type serves as an anchor so users can apply +, *, -, /, <<, and >> operators
  * on types inside a circuit function. If the underlying type `T` implements the
- * [`GraphAdd`], [`GraphMul`], etc trait, then `CircuitNode<T>` implements
+ * [`GraphCipherAdd`], [`GraphCipherMul`], etc trait, then `CircuitNode<T>` implements
  * [`std::ops::Add`], [`std::ops::Mul`], etc and proxies to T's underlying
  * implementation.
  *

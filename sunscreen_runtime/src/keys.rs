@@ -68,8 +68,8 @@ mod tests {
 
         let (public, _) = runtime.generate_keys().unwrap();
 
-        let data = serde_json::to_string_pretty(&public.public_key).unwrap();
-        let enc_key: WithContext<SealPublicKey> = serde_json::from_str(&data).unwrap();
+        let data = bincode::serialize(&public.public_key).unwrap();
+        let enc_key: WithContext<SealPublicKey> = bincode::deserialize(&data).unwrap();
 
         let public_2 = PublicKey {
             public_key: enc_key,
@@ -99,8 +99,8 @@ mod tests {
 
         let (public, _) = runtime.generate_keys().unwrap();
 
-        let data = serde_json::to_string(&public.galois_key.as_ref().unwrap()).unwrap();
-        let galois_key: WithContext<GaloisKeys> = serde_json::from_str(&data).unwrap();
+        let data = bincode::serialize(&public.galois_key.as_ref().unwrap()).unwrap();
+        let galois_key: WithContext<GaloisKeys> = bincode::deserialize(&data).unwrap();
 
         let public_2 = PublicKey {
             galois_key: Some(galois_key),

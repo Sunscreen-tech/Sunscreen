@@ -1,5 +1,5 @@
 use sunscreen_compiler::{
-    types::{Cipher, TypeName, Unsigned},
+    types::{Cipher, TypeName, bfv::Unsigned},
     CallSignature, CircuitFn, FrontendCompilation, Params, SchemeType, SecurityLevel, CURRENT_CTX,
 };
 use sunscreen_compiler_macros::circuit;

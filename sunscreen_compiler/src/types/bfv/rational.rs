@@ -1,6 +1,7 @@
 use crate::types::{
-    BfvType, Cipher, CircuitNode, FheType, GraphCipherAdd, GraphCipherDiv, GraphCipherMul,
-    GraphCipherSub, NumCiphertexts, Signed, TryFromPlaintext, TryIntoPlaintext, TypeName,
+    bfv::{Signed},
+    BfvType, Cipher, FheType, GraphCipherAdd, GraphCipherDiv, GraphCipherMul,
+    GraphCipherSub, intern::{CircuitNode}, NumCiphertexts, TryFromPlaintext, TryIntoPlaintext, TypeName,
 };
 use crate::{with_ctx, CircuitInputTrait, InnerPlaintext, Params, Plaintext, TypeName};
 use std::cmp::Eq;

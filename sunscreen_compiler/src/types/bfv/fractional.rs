@@ -1,9 +1,9 @@
 use seal::Plaintext as SealPlaintext;
 
-use crate::types::{Cipher, GraphCipherAdd, GraphCipherMul, GraphCipherPlainAdd, GraphCipherSub};
+use crate::types::{Cipher, GraphCipherMul, GraphCipherSub, ops::{GraphCipherAdd, GraphCipherPlainAdd}};
 use crate::{
     crate_version,
-    types::{BfvType, CircuitNode, FheType, Type, Version},
+    types::{BfvType, FheType, intern::{CircuitNode}, Type, Version},
     with_ctx, CircuitInputTrait, Params, WithContext,
 };
 
@@ -19,7 +19,7 @@ use sunscreen_runtime::{
  *
  * # Remarks
  * This type is capable of addition, subtraction, and multiplication with no
- * more overhead than the [`Signed`](crate::types::Signed) type.
+ * more overhead than the [`Signed`](crate::types::bfv::Signed) type.
  * That is, addition and multiplication each take exactly one operation.
  *
  * ## Representation
@@ -123,7 +123,7 @@ use sunscreen_runtime::{
  * places (radix 2).
  *
  * ```rust
- * # use sunscreen_compiler::types::Fractional;
+ * # use sunscreen_compiler::types::bfv::Fractional;
  * # use sunscreen_compiler::{Ciphertext, PublicKey, Runtime, Result};
  * # use seal::{SecretKey};
  *

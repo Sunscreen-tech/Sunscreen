@@ -100,7 +100,7 @@ pub fn circuit_impl(
             fn build(&self, params: &sunscreen_compiler::Params) -> sunscreen_compiler::Result<sunscreen_compiler::FrontendCompilation> {
                 use std::cell::RefCell;
                 use std::mem::transmute;
-                use sunscreen_compiler::{CURRENT_CTX, Context, Error, INDEX_ARENA, Result, Params, SchemeType, Value, types::{CircuitNode, Input, NumCiphertexts, Type, TypeName, TypeNameInstance}};
+                use sunscreen_compiler::{CURRENT_CTX, Context, Error, INDEX_ARENA, Result, Params, SchemeType, Value, types::{intern::{CircuitNode, Input}, NumCiphertexts, Type, TypeName, TypeNameInstance}};
 
                 if SchemeType::Bfv != params.scheme_type {
                     return Err(Error::IncorrectScheme)
@@ -180,14 +180,14 @@ fn lift_return_type(ret: &ReturnType) -> TokenStream {
                         let inner_type = &*x;
 
                         quote! {
-                            sunscreen_compiler::types::CircuitNode<#inner_type>
+                            sunscreen_compiler::types::intern::CircuitNode<#inner_type>
                         }
                     })
                     .collect::<Vec<TokenStream>>(),
                 Type::Paren(t) => {
                     let inner_type = &*t.elem;
                     let inner_type = quote! {
-                        sunscreen_compiler::types::CircuitNode<#inner_type>
+                        sunscreen_compiler::types::intern::CircuitNode<#inner_type>
                     };
 
                     vec![inner_type]
@@ -195,7 +195,7 @@ fn lift_return_type(ret: &ReturnType) -> TokenStream {
                 Type::Path(_) => {
                     let r = &**t;
                     let r = quote! {
-                        sunscreen_compiler::types::CircuitNode<#r>
+                        sunscreen_compiler::types::intern::CircuitNode<#r>
                     };
 
                     vec![r]

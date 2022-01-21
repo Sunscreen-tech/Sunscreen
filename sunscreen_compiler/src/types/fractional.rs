@@ -4,7 +4,7 @@ use crate::types::{Cipher, GraphCipherAdd, GraphCipherMul, GraphCipherPlainAdd, 
 use crate::{
     crate_version,
     types::{BfvType, CircuitNode, FheType, Type, Version},
-    with_ctx, Params, WithContext,
+    with_ctx, CircuitInputTrait, Params, WithContext,
 };
 
 use sunscreen_runtime::{
@@ -162,6 +162,8 @@ impl<const INT_BITS: usize> std::ops::Deref for Fractional<INT_BITS> {
 impl<const INT_BITS: usize> NumCiphertexts for Fractional<INT_BITS> {
     const NUM_CIPHERTEXTS: usize = 1;
 }
+
+impl<const INT_BITS: usize> CircuitInputTrait for Fractional<INT_BITS> {}
 
 impl<const INT_BITS: usize> TypeName for Fractional<INT_BITS> {
     fn type_name() -> Type {

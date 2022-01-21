@@ -7,7 +7,7 @@ use petgraph::{stable_graph::NodeIndex, visit::EdgeRef, Direction};
 use std::borrow::Cow;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-use seal::{Ciphertext, Error as SealError, Evaluator, GaloisKeys, RelinearizationKeys};
+use seal::{Ciphertext, Error as SealError, Evaluator, GaloisKeys, Plaintext, RelinearizationKeys};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 /**
@@ -116,6 +116,18 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
         }
     }
 
+    fn get_plaintext<'a>(
+        data: &'a [AtomicCell<Option<Cow<SealData>>>],
+        index: usize,
+    ) -> Result<&'a Plaintext, CircuitRunFailure> {
+        let val = get_data(data, index)?;
+
+        match val {
+            SealData::Plaintext(ref c) => Ok(c),
+            _ => Err(CircuitRunFailure::ExpectedPlaintext),
+        }
+    }
+
     let mut data: Vec<AtomicCell<Option<Cow<SealData>>>> =
         Vec::with_capacity(ir.graph.node_count());
 
@@ -133,8 +145,8 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
                     data[index.index()].store(Some(Cow::Borrowed(&inputs[*id])));
                     // moo
                 }
-                InputPlaintext(_id) => {
-                    unimplemented!();
+                InputPlaintext(id) => {
+                    data[index.index()].store(Some(Cow::Borrowed(&inputs[*id])));
                 }
                 ShiftLeft => {
                     let (left, right) = get_left_right_operands(ir, index);
@@ -191,7 +203,14 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
                     data[index.index()].store(Some(Cow::Owned(c.into())));
                 }
                 AddPlaintext => {
-                    unimplemented!();
+                    let (left, right) = get_left_right_operands(ir, index);
+
+                    let a = get_ciphertext(&data, left.index())?;
+                    let b = get_plaintext(&data, right.index())?;
+
+                    let c = evaluator.add_plain(&a, &b)?;
+
+                    data[index.index()].store(Some(Cow::Owned(c.into())));
                 }
                 Multiply => {
                     let (left, right) = get_left_right_operands(ir, index);

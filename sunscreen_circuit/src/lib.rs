@@ -391,6 +391,13 @@ impl Circuit {
     }
 
     /**
+     * Appends an input plaintext with the given name.
+     */
+    pub fn append_input_plaintext(&mut self, id: usize) -> NodeIndex {
+        self.append_0_input_node(Operation::InputPlaintext(id))
+    }
+
+    /**
      * Appends a constant literal unencrypted.
      *
      * * `value`: The integer or floating-point value in the literal.
@@ -766,6 +773,11 @@ pub enum IRTransform {
     AppendInputCiphertext(usize),
 
     /**
+     * Appends an input plaintext
+     */
+    AppendInputPlaintext(usize),
+
+    /**
      * Appends an output ciphertext node.
      */
     AppendOutputCiphertext(TransformNodeIndex),
@@ -891,6 +903,7 @@ impl TransformList {
                     self.apply_2_input(ir, *x, *y, |ir, x, y| Some(ir.append_multiply(x, y)))
                 }
                 AppendInputCiphertext(id) => Some(ir.append_input_ciphertext(*id)),
+                AppendInputPlaintext(id) => Some(ir.append_input_plaintext(*id)),
                 AppendOutputCiphertext(x) => {
                     self.apply_1_input(ir, *x, |ir, x| Some(ir.append_output_ciphertext(x)))
                 }

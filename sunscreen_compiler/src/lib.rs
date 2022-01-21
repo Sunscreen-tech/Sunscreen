@@ -122,9 +122,9 @@ pub use params::PlainModulusConstraint;
 pub use sunscreen_circuit::{SchemeType, SecurityLevel};
 pub use sunscreen_compiler_macros::*;
 pub use sunscreen_runtime::{
-    CallSignature, Ciphertext, CircuitMetadata, CompiledCircuit, Error as RuntimeError,
-    InnerCiphertext, InnerPlaintext, Params, Plaintext, PublicKey, RequiredKeys, Runtime,
-    WithContext,
+    CallSignature, Ciphertext, CircuitInput, CircuitInputTrait, CircuitMetadata, CompiledCircuit,
+    Error as RuntimeError, InnerCiphertext, InnerPlaintext, Params, Plaintext, PublicKey,
+    RequiredKeys, Runtime, WithContext,
 };
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
@@ -147,6 +147,11 @@ pub enum Operation {
      * This node indicates loading a cipher text from an input.
      */
     InputCiphertext,
+
+    /**
+     * This node indicates loading a plaintext from an input.
+     */
+    InputPlaintext,
 
     /**
      * Addition.
@@ -347,8 +352,15 @@ impl Context {
     /**
      * Add an input to this context.
      */
-    pub fn add_input(&mut self) -> NodeIndex {
+    pub fn add_ciphertext_input(&mut self) -> NodeIndex {
         self.compilation.graph.add_node(Operation::InputCiphertext)
+    }
+
+    /**
+     * Add an input to this context.
+     */
+    pub fn add_plaintext_input(&mut self) -> NodeIndex {
+        self.compilation.graph.add_node(Operation::InputPlaintext)
     }
 
     /**
@@ -444,6 +456,11 @@ impl FrontendCompilation {
                     // HACKHACK: Input nodes are always added first to the graph in the order
                     // they're specified as function arguments. We should not depend on this.
                     NodeInfo::new(CircuitOperation::InputCiphertext(id.index()))
+                }
+                Operation::InputPlaintext => {
+                    // HACKHACK: Input nodes are always added first to the graph in the order
+                    // they're specified as function arguments. We should not depend on this.
+                    NodeInfo::new(CircuitOperation::InputPlaintext(id.index()))
                 }
                 Operation::Literal(Literal::U64(x)) => NodeInfo::new(CircuitOperation::Literal(
                     CircuitOuterLiteral::Scalar(CircuitLiteral::U64(*x)),

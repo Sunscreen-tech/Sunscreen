@@ -33,7 +33,7 @@ pub fn derive_typename(input: proc_macro::TokenStream) -> proc_macro::TokenStrea
  *
  * # Examples
  * ```rust
- * # use sunscreen_compiler::{circuit, types::{Cipher, Unsigned}, Params, Context};
+ * # use sunscreen_compiler::{circuit, types::{bfv::Unsigned, Cipher}, Params, Context};
  *
  * #[circuit(scheme = "bfv")]
  * fn multiply_add(
@@ -46,7 +46,7 @@ pub fn derive_typename(input: proc_macro::TokenStream) -> proc_macro::TokenStrea
  * ```
  *
  * ```rust
- * # use sunscreen_compiler::{circuit, types::{Cipher, Unsigned}, Params, Context};
+ * # use sunscreen_compiler::{circuit, types::{bfv::Unsigned, Cipher}, Params, Context};
  *
  * #[circuit(scheme = "bfv")]
  * fn multi_out(

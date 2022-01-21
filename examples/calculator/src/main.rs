@@ -3,7 +3,7 @@ use std::sync::mpsc::{Receiver, Sender};
 use std::thread::{self, JoinHandle};
 use sunscreen_compiler::{
     circuit,
-    types::{Cipher, Rational},
+    types::{bfv::{Rational}, Cipher},
     Ciphertext, CompiledCircuit, Compiler, Params, PlainModulusConstraint, PublicKey, Runtime,
     RuntimeError,
 };

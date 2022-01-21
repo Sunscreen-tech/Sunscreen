@@ -254,6 +254,7 @@ impl NodeInfo {
     pub fn output_type(&self) -> OutputType {
         match self.operation {
             Operation::InputPlaintext(_) => OutputType::Plaintext,
+            Operation::Literal(_) => OutputType::Plaintext,
             _ => OutputType::Ciphertext,
         }
     }
@@ -402,7 +403,7 @@ impl Circuit {
      *
      * * `value`: The integer or floating-point value in the literal.
      */
-    pub fn append_input_literal(&mut self, value: OuterLiteral) -> NodeIndex {
+    pub fn append_input_literal(&mut self, value: Literal) -> NodeIndex {
         self.append_0_input_node(Operation::Literal(value))
     }
 
@@ -994,9 +995,9 @@ mod tests {
         let mut ir = Circuit::new(SchemeType::Bfv);
 
         let ct = ir.append_input_ciphertext(0);
-        let l1 = ir.append_input_literal(OuterLiteral::from(7i64));
+        let l1 = ir.append_input_literal(Literal::from(7i64));
         let add = ir.append_add(ct, l1);
-        let l2 = ir.append_input_literal(OuterLiteral::from(5u64));
+        let l2 = ir.append_input_literal(Literal::from(5u64));
         ir.append_multiply(add, l2);
 
         ir
@@ -1017,12 +1018,12 @@ mod tests {
         assert_eq!(nodes[0].1.operation, Operation::InputCiphertext(0));
         assert_eq!(
             nodes[1].1.operation,
-            Operation::Literal(OuterLiteral::from(7i64))
+            Operation::Literal(Literal::from(7i64))
         );
         assert_eq!(nodes[2].1.operation, Operation::Add);
         assert_eq!(
             nodes[3].1.operation,
-            Operation::Literal(OuterLiteral::from(5u64))
+            Operation::Literal(Literal::from(5u64))
         );
         assert_eq!(nodes[4].1.operation, Operation::Multiply);
 
@@ -1177,16 +1178,16 @@ mod tests {
         let mut ir = Circuit::new(SchemeType::Bfv);
 
         let ct = ir.append_input_ciphertext(0);
-        let l1 = ir.append_input_literal(OuterLiteral::from(7i64));
+        let l1 = ir.append_input_literal(Literal::from(7i64));
         let add = ir.append_add(ct, l1);
-        let l2 = ir.append_input_literal(OuterLiteral::from(5u64));
+        let l2 = ir.append_input_literal(Literal::from(5u64));
         ir.append_multiply(add, l2);
 
         let pruned = ir.prune(&vec![add]);
 
         let mut expected_ir = Circuit::new(SchemeType::Bfv);
         let ct = expected_ir.append_input_ciphertext(0);
-        let l1 = expected_ir.append_input_literal(OuterLiteral::from(7i64));
+        let l1 = expected_ir.append_input_literal(Literal::from(7i64));
         expected_ir.append_add(ct, l1);
 
         assert_eq!(pruned, expected_ir);
@@ -1199,13 +1200,13 @@ mod tests {
         let ct = ir.append_input_ciphertext(0);
         let rem = ir.append_input_ciphertext(1);
         ir.remove_node(rem);
-        let l1 = ir.append_input_literal(OuterLiteral::from(7i64));
+        let l1 = ir.append_input_literal(Literal::from(7i64));
         let rem = ir.append_input_ciphertext(1);
         ir.remove_node(rem);
         let add = ir.append_add(ct, l1);
         let rem = ir.append_input_ciphertext(1);
         ir.remove_node(rem);
-        let l2 = ir.append_input_literal(OuterLiteral::from(5u64));
+        let l2 = ir.append_input_literal(Literal::from(5u64));
         ir.append_multiply(add, l2);
         let rem = ir.append_input_ciphertext(1);
         ir.remove_node(rem);
@@ -1214,7 +1215,7 @@ mod tests {
 
         let mut expected_ir = Circuit::new(SchemeType::Bfv);
         let ct = expected_ir.append_input_ciphertext(0);
-        let l1 = expected_ir.append_input_literal(OuterLiteral::from(7i64));
+        let l1 = expected_ir.append_input_literal(Literal::from(7i64));
         expected_ir.append_add(ct, l1);
 
         assert_eq!(pruned, expected_ir);

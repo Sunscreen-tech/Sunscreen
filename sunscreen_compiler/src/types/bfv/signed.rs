@@ -1,8 +1,8 @@
 use seal::Plaintext as SealPlaintext;
 
-use crate::types::{Cipher, GraphCipherMul, ops::{GraphCipherAdd}};
+use crate::types::{ops::GraphCipherAdd, Cipher, GraphCipherMul};
 use crate::{
-    types::{BfvType, FheType, intern::{CircuitNode}, TypeNameInstance},
+    types::{intern::CircuitNode, BfvType, FheType, TypeNameInstance},
     with_ctx, CircuitInputTrait, Params, TypeName as DeriveTypeName, WithContext,
 };
 

@@ -230,6 +230,12 @@ impl ToBytes for PublicKey {
     }
 }
 
+impl PartialEq for PublicKey {
+    fn eq(&self, other: &Self) -> bool {
+        self.as_bytes() == other.as_bytes()
+    }
+}
+
 impl FromBytes for PublicKey {
     fn from_bytes(context: &Context, bytes: &[u8]) -> Result<Self> {
         let key = PublicKey::new()?;
@@ -447,6 +453,12 @@ impl RelinearizationKeys {
     }
 }
 
+impl PartialEq for RelinearizationKeys {
+    fn eq(&self, other: &Self) -> bool {
+        self.as_bytes() == other.as_bytes()
+    }
+}
+
 impl ToBytes for RelinearizationKeys {
     fn as_bytes(&self) -> Result<Vec<u8>> {
         let mut num_bytes: i64 = 0;
@@ -522,6 +534,7 @@ impl Clone for RelinearizationKeys {
     }
 }
 
+#[derive(PartialEq)]
 /**
  * A relinearization key that stores a random number seed to generate the rest of the key.
  * This form isn't directly usable, but serializes in a compact representation.
@@ -571,6 +584,12 @@ impl GaloisKeys {
         convert_seal_error(unsafe { bindgen::KSwitchKeys_Create1(&mut handle) })?;
 
         Ok(Self { handle })
+    }
+}
+
+impl PartialEq for GaloisKeys {
+    fn eq(&self, other: &Self) -> bool {
+        self.as_bytes() == other.as_bytes()
     }
 }
 
@@ -649,6 +668,7 @@ impl Clone for GaloisKeys {
     }
 }
 
+#[derive(PartialEq)]
 /**
  * A galois key set that stores a random number seed to generate the rest of the key.
  * This form isn't directly usable, but serializes in a compact representation.

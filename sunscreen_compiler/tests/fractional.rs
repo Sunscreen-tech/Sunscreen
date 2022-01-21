@@ -1,6 +1,6 @@
 use sunscreen_compiler::{
     circuit,
-    types::{bfv::{Fractional}, Cipher},
+    types::{bfv::Fractional, Cipher},
     Compiler, PlainModulusConstraint, Runtime,
 };
 

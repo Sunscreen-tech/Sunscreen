@@ -114,6 +114,17 @@ pub enum Error {
      * The given [`Plaintext`](crate::Plaintext) had no data.
      */
     NoPlaintextData,
+
+    /**
+     * An error occurred when serializing/deserializing with bincode.
+     */
+    BincodeError(String),
+}
+
+impl From<bincode::Error> for Error {
+    fn from(err: bincode::Error) -> Self {
+        Self::BincodeError(format!("{}", err))
+    }
 }
 
 impl From<sunscreen_circuit::Error> for Error {

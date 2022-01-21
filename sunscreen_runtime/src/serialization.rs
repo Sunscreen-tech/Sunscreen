@@ -6,14 +6,14 @@ use serde::{
     Deserialize, Serialize,
 };
 
-#[derive(Clone)]
+#[derive(Debug, PartialEq, Clone)]
 /**
  * A data type that contains parameters for reconstructing a context
  * during deserialization (needed by SEAL).
  */
 pub struct WithContext<T>
 where
-    T: ToBytes + FromBytes,
+    T: ToBytes + FromBytes + PartialEq,
 {
     /**
      * The scheme parameters under which this key is valid.
@@ -28,7 +28,7 @@ where
 
 impl<T> std::ops::Deref for WithContext<T>
 where
-    T: ToBytes + FromBytes,
+    T: ToBytes + FromBytes + PartialEq,
 {
     type Target = T;
 
@@ -39,7 +39,7 @@ where
 
 impl<T> Serialize for WithContext<T>
 where
-    T: ToBytes + FromBytes,
+    T: ToBytes + FromBytes + PartialEq,
 {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -60,7 +60,7 @@ where
 
 impl<'de, T> Deserialize<'de> for WithContext<T>
 where
-    T: ToBytes + FromBytes,
+    T: ToBytes + FromBytes + PartialEq,
 {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
@@ -68,14 +68,14 @@ where
     {
         struct WithContextVisitor<T>
         where
-            T: ToBytes + FromBytes,
+            T: ToBytes + FromBytes + PartialEq,
         {
             marker: std::marker::PhantomData<T>,
         }
 
         impl<'de, T> Visitor<'de> for WithContextVisitor<T>
         where
-            T: ToBytes + FromBytes,
+            T: ToBytes + FromBytes + PartialEq,
         {
             type Value = WithContext<T>;
 

@@ -43,13 +43,13 @@ mod params;
 
 /**
  * This module contains types used during circuit construction.
- * 
- * * The [`crate::types::bfv`] module contains data types used for 
+ *
+ * * The [`crate::types::bfv`] module contains data types used for
  * BFV circuit inputs and outputs.
  * * The [`crate::types::intern`] module contains implementation details needed
  * for circuit construction. You shouldn't need to use these, as the `#[circuit]`
  * macro will automatically insert them for you as needed.
- * 
+ *
  * The root of the module contains:
  * * [`Cipher`](crate::types::Cipher) is a paramterized type used to
  * denote a circuit input parameter as encrypted.
@@ -67,13 +67,13 @@ use std::cell::RefCell;
 use sunscreen_backend::compile_inplace;
 use sunscreen_circuit::{
     Circuit, EdgeInfo, Literal as CircuitLiteral, NodeInfo, Operation as CircuitOperation,
-    OuterLiteral as CircuitOuterLiteral,
 };
 
 pub use clap::crate_version;
 pub use compiler::{CircuitFn, Compiler};
 pub use error::{Error, Result};
 pub use params::PlainModulusConstraint;
+pub use seal::Plaintext as SealPlaintext;
 pub use sunscreen_circuit::{SchemeType, SecurityLevel};
 pub use sunscreen_compiler_macros::*;
 pub use sunscreen_runtime::{
@@ -91,6 +91,11 @@ pub enum Literal {
      * An unsigned 64-bit integer.
      */
     U64(u64),
+
+    /**
+     * An encoded plaintext value.
+     */
+    Plaintext(InnerPlaintext),
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
@@ -319,6 +324,15 @@ impl Context {
     }
 
     /**
+     * Adds a plaintext literal to the circuit graph.
+     */
+    pub fn add_plaintext_literal(&mut self, plaintext: InnerPlaintext) -> NodeIndex {
+        self.compilation
+            .graph
+            .add_node(Operation::Literal(Literal::Plaintext(plaintext)))
+    }
+
+    /**
      * Add a subtraction to this context.
      */
     pub fn add_subtraction(&mut self, left: NodeIndex, right: NodeIndex) -> NodeIndex {
@@ -417,9 +431,16 @@ impl FrontendCompilation {
                     // they're specified as function arguments. We should not depend on this.
                     NodeInfo::new(CircuitOperation::InputPlaintext(id.index()))
                 }
-                Operation::Literal(Literal::U64(x)) => NodeInfo::new(CircuitOperation::Literal(
-                    CircuitOuterLiteral::Scalar(CircuitLiteral::U64(*x)),
-                )),
+                Operation::Literal(Literal::U64(x)) => {
+                    NodeInfo::new(CircuitOperation::Literal(CircuitLiteral::U64(*x)))
+                }
+                Operation::Literal(Literal::Plaintext(x)) => {
+                    // It's okay to unwrap here because circuit compilation will
+                    // catch the panic and return a compilation error.
+                    NodeInfo::new(CircuitOperation::Literal(CircuitLiteral::Plaintext(
+                        x.to_bytes().expect("Failed to serialize plaintext."),
+                    )))
+                }
                 Operation::Sub => NodeInfo::new(CircuitOperation::Sub),
                 Operation::Multiply => NodeInfo::new(CircuitOperation::Multiply),
                 Operation::Output => NodeInfo::new(CircuitOperation::OutputCiphertext),

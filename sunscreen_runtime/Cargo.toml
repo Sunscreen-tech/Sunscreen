@@ -6,6 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+bincode = "1.3.3"
 crossbeam = "0.8.1"
 log = "0.4.14"
 seal = { path = "../seal" }
@@ -19,5 +20,4 @@ semver = "1.0.4"
 
 [dev-dependencies]
 serde_json = "1.0.74"
-bincode = "1.3.3"
 sunscreen_compiler = { path = "../sunscreen_compiler" }

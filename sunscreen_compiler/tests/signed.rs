@@ -1,6 +1,7 @@
 use sunscreen_compiler::{
     circuit,
-    types::{bfv::Signed, Cipher}, Compiler, PlainModulusConstraint, Runtime,
+    types::{bfv::Signed, Cipher},
+    Compiler, PlainModulusConstraint, Runtime,
 };
 
 #[test]

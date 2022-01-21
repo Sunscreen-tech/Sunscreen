@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::OuterLiteral;
+use crate::Literal;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 /**
@@ -73,7 +73,7 @@ pub enum Operation {
     /**
      * Represents a literal value.
      */
-    Literal(OuterLiteral),
+    Literal(Literal),
 
     /**
      * Represents a ciphertext output for the circuit.

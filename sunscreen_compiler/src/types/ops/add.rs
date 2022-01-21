@@ -1,4 +1,7 @@
-use crate::types::{FheType, intern::CircuitNode, Cipher};
+use crate::types::{
+    intern::{CircuitNode, FheLiteral},
+    Cipher, FheType,
+};
 
 /**
  * Called when a circuit encounters a + operation on two encrypted
@@ -56,12 +59,12 @@ pub trait GraphCipherConstAdd {
     /**
      * The type of the left operand
      */
-    type Left: FheType;
+    type Left: FheType + From<Self::Right>;
 
     /**
      * The type of the right operand
      */
-    type Right: From<Self::Left>;
+    type Right: FheLiteral;
 
     /**
      * Process the + operation

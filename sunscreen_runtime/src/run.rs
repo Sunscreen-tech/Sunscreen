@@ -1,5 +1,5 @@
-use crate::SealData;
-use sunscreen_circuit::{Circuit, EdgeInfo, Literal, Operation::*, OuterLiteral};
+use crate::{InnerPlaintext, SealData};
+use sunscreen_circuit::{Circuit, EdgeInfo, Literal, Operation::*};
 
 use crossbeam::atomic::AtomicCell;
 use petgraph::{stable_graph::NodeIndex, visit::EdgeRef, Direction};
@@ -45,6 +45,11 @@ pub enum CircuitRunFailure {
      * it wasn't.
      */
     ExpectedPlaintext,
+
+    /**
+     * A plaintext literal was malformed.
+     */
+    MalformedPlaintext,
 
     /**
      * Internal error: no data found for a parent node.
@@ -153,7 +158,7 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
 
                     let a = get_ciphertext(&data, left.index())?;
                     let b = match ir.graph[right].operation {
-                        Literal(OuterLiteral::Scalar(Literal::U64(v))) => v as i32,
+                        Literal(Literal::U64(v)) => v as i32,
                         _ => panic!(
                             "Illegal right operand for ShiftLeft: {:#?}",
                             ir.graph[right].operation
@@ -175,7 +180,7 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
 
                     let a = get_ciphertext(&data, left.index())?;
                     let b = match ir.graph[right].operation {
-                        Literal(OuterLiteral::Scalar(Literal::U64(v))) => v as i32,
+                        Literal(Literal::U64(v)) => v as i32,
                         _ => panic!(
                             "Illegal right operand for ShiftLeft: {:#?}",
                             ir.graph[right].operation
@@ -247,7 +252,27 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
 
                     data[index.index()].store(Some(Cow::Owned(c.into())));
                 }
-                Literal(_) => {}
+                Literal(x) => {
+                    match x {
+                        Literal::Plaintext(p) => {
+                            let p = InnerPlaintext::from_bytes(&p)
+                                .map_err(|_| CircuitRunFailure::MalformedPlaintext)?;
+
+                            match p {
+                                InnerPlaintext::Seal(p) => {
+                                    // Plaintext literals should always have exactly one plaintext.
+                                    if p.len() != 1 {
+                                        return Err(CircuitRunFailure::MalformedPlaintext);
+                                    }
+
+                                    data[index.index()]
+                                        .store(Some(Cow::Owned(p[0].data.clone().into())))
+                                }
+                            };
+                        }
+                        _ => {}
+                    }
+                }
                 OutputCiphertext => {
                     let input = get_unary_operand(ir, index);
 
@@ -697,7 +722,7 @@ mod tests {
         let mut ir = Circuit::new(SchemeType::Bfv);
 
         let a = ir.append_input_ciphertext(0);
-        let l = ir.append_input_literal(OuterLiteral::Scalar(Literal::U64(3)));
+        let l = ir.append_input_literal(Literal::U64(3));
 
         let res = ir.append_rotate_left(a, l);
 
@@ -742,7 +767,7 @@ mod tests {
         let mut ir = Circuit::new(SchemeType::Bfv);
 
         let a = ir.append_input_ciphertext(0);
-        let l = ir.append_input_literal(OuterLiteral::Scalar(Literal::U64(3)));
+        let l = ir.append_input_literal(Literal::U64(3));
 
         let res = ir.append_rotate_right(a, l);
 

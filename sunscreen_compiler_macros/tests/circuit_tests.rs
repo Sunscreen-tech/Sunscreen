@@ -176,6 +176,54 @@ fn can_add() {
 }
 
 #[test]
+fn can_add_plaintext() {
+    #[circuit(scheme = "bfv")]
+    fn circuit_with_args(a: Cipher<Unsigned>, b: Unsigned) {
+        let _ = a + b;
+    }
+
+    let expected_signature = CallSignature {
+        arguments: vec![Cipher::<Unsigned>::type_name(), Unsigned::type_name()],
+        returns: vec![],
+        num_ciphertexts: vec![],
+    };
+    assert_eq!(circuit_with_args.signature(), expected_signature);
+    assert_eq!(circuit_with_args.scheme_type(), SchemeType::Bfv);
+
+    let context: FrontendCompilation = circuit_with_args.build(&get_params()).unwrap();
+
+    let expected = json!({
+
+        "graph": {
+            "nodes": [
+                "InputCiphertext",
+                "InputPlaintext",
+                "AddPlaintext",
+            ],
+            "node_holes": [],
+            "edge_property": "directed",
+            "edges": [
+                [
+                    0,
+                    2,
+                    "Left"
+                ],
+                [
+                    1,
+                    2,
+                    "Right"
+                ],
+            ]
+        },
+    });
+
+    assert_eq!(
+        context,
+        serde_json::from_value::<FrontendCompilation>(expected).unwrap()
+    );
+}
+
+#[test]
 fn can_mul() {
     #[circuit(scheme = "bfv")]
     fn circuit_with_args(a: CipherUnsigned, b: CipherUnsigned, c: CipherUnsigned) {

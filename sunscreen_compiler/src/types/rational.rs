@@ -2,7 +2,7 @@ use crate::types::{
     BfvType, Cipher, CircuitNode, FheType, GraphCipherAdd, GraphCipherDiv, GraphCipherMul,
     GraphCipherSub, NumCiphertexts, Signed, TryFromPlaintext, TryIntoPlaintext, TypeName,
 };
-use crate::{with_ctx, InnerPlaintext, Params, Plaintext, TypeName};
+use crate::{with_ctx, CircuitInputTrait, InnerPlaintext, Params, Plaintext, TypeName};
 use std::cmp::Eq;
 use sunscreen_runtime::Error;
 
@@ -72,6 +72,7 @@ impl TryIntoPlaintext for Rational {
     }
 }
 
+impl CircuitInputTrait for Rational {}
 impl FheType for Rational {}
 impl BfvType for Rational {}
 

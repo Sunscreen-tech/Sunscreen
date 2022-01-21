@@ -186,7 +186,10 @@ pub trait NumCiphertexts {
 /**
  * Denotes the given rust type is an encoding in an FHE scheme
  */
-pub trait FheType: TypeNameInstance + TryIntoPlaintext + TryFromPlaintext + NumCiphertexts {}
+pub trait FheType:
+    TypeNameInstance + TryIntoPlaintext + TryFromPlaintext + CircuitInputTrait + NumCiphertexts
+{
+}
 
 /**
  * Denotes the given type is valid under the BFV scheme.

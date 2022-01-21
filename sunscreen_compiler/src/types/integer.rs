@@ -3,7 +3,7 @@ use seal::Plaintext as SealPlaintext;
 use crate::types::{Cipher, GraphCipherAdd, GraphCipherMul, GraphCipherPlainAdd};
 use crate::{
     types::{BfvType, CircuitNode, FheType, TypeNameInstance},
-    with_ctx, Params, TypeName as DeriveTypeName, WithContext,
+    with_ctx, CircuitInputTrait, Params, TypeName as DeriveTypeName, WithContext,
 };
 
 use sunscreen_runtime::{
@@ -26,6 +26,7 @@ impl std::ops::Deref for Unsigned {
     }
 }
 
+impl CircuitInputTrait for Unsigned {}
 impl FheType for Unsigned {}
 impl BfvType for Unsigned {}
 
@@ -159,6 +160,7 @@ impl NumCiphertexts for Signed {
     const NUM_CIPHERTEXTS: usize = 1;
 }
 
+impl CircuitInputTrait for Signed {}
 impl FheType for Signed {}
 
 fn significant_bits(val: u64) -> usize {

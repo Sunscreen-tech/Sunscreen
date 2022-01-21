@@ -1,5 +1,8 @@
+use crate::{
+    types::{intern::FheLiteral, ops::*, Cipher, FheType, NumCiphertexts},
+    with_ctx, INDEX_ARENA,
+};
 use petgraph::stable_graph::NodeIndex;
-use crate::{types::{Cipher, FheType, intern::{FheLiteral}, NumCiphertexts, ops::*}, INDEX_ARENA, with_ctx};
 
 use std::ops::{Add, Div, Mul, Sub};
 
@@ -104,7 +107,6 @@ impl<T: NumCiphertexts> CircuitNode<T> {
     }
 }
 
-
 // cipher + cipher
 impl<T> Add for CircuitNode<Cipher<T>>
 where
@@ -132,7 +134,7 @@ where
 impl<T, U> Add<T> for CircuitNode<Cipher<U>>
 where
     U: FheType + GraphCipherConstAdd<Left = U, Right = T>,
-    T: FheLiteral
+    T: FheLiteral,
 {
     type Output = Self;
 

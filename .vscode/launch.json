@@ -118,7 +118,7 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug types integration tests in library 'sunscreen_compiler'",
+            "name": "Debug unsigned integration tests in library 'sunscreen_compiler'",
             "cargo": {
                 "args": [
                     "test",
@@ -127,7 +127,7 @@
                     "can_encode_signed"
                 ],
                 "filter": {
-                    "name": "types",
+                    "name": "unsigned",
                     "kind": "test"
                 }
             },

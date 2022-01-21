@@ -21,7 +21,7 @@ pub use serialization::WithContext;
 use seal::{Ciphertext as SealCiphertext, Plaintext as SealPlaintext};
 use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 /**
  * The underlying backend implementation of a plaintext (e.g. SEAL's [`Plaintext`](seal::Plaintext)).
  */
@@ -30,6 +30,48 @@ pub enum InnerPlaintext {
      * This plaintext wraps a SEAL [`Plaintext`](seal::Plaintext).
      */
     Seal(Vec<WithContext<SealPlaintext>>),
+}
+
+impl InnerPlaintext {
+    /**
+     * Returns how many plaintexts are inside this wrapper.
+     */
+    pub fn len(&self) -> usize {
+        match self {
+            Self::Seal(d) => d.len(),
+        }
+    }
+
+    /**
+     * Decompose the N plaintexts inside this wrapper into N wrappers
+     * with 1 plaintext each. Useful for creating plaintext constants
+     * in circuits.
+     */
+    pub fn scatter(&self) -> Vec<InnerPlaintext> {
+        match self {
+            Self::Seal(d) => d.iter().map(|p| Self::Seal(vec![p.clone()])).collect(),
+        }
+    }
+
+    /**
+     * Serialize this object into bytes.
+     *
+     * # Remarks
+     * This function internally uses bincode for serialization.
+     */
+    pub fn to_bytes(&self) -> Result<Vec<u8>> {
+        Ok(bincode::serialize(&self)?)
+    }
+
+    /**
+     * Deserialize an inner plaintext object from bytes.
+     *
+     * # Remarks
+     * This function internally uses bincode for serialization.
+     */
+    pub fn from_bytes(data: &[u8]) -> Result<Self> {
+        Ok(bincode::deserialize(data)?)
+    }
 }
 
 #[derive(Clone)]

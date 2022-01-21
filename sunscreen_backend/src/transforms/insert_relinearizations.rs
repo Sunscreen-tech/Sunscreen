@@ -26,15 +26,15 @@ pub fn apply_insert_relinearizations(ir: &mut Circuit) {
 mod tests {
     use super::*;
     use petgraph::stable_graph::NodeIndex;
-    use sunscreen_circuit::*;
+    use sunscreen_circuit::{Literal as CircuitLiteral, SchemeType, GraphQuery, Operation};
 
     fn create_test_dag() -> Circuit {
         let mut ir = Circuit::new(SchemeType::Bfv);
 
         let ct = ir.append_input_ciphertext(0);
-        let l1 = ir.append_input_literal(OuterLiteral::from(7i64));
+        let l1 = ir.append_input_literal(CircuitLiteral::from(7i64));
         let add = ir.append_add(ct, l1);
-        let l2 = ir.append_input_literal(OuterLiteral::from(5u64));
+        let l2 = ir.append_input_literal(CircuitLiteral::from(5u64));
         let mul = ir.append_multiply(add, l2);
         let add_2 = ir.append_add(mul, l2);
         ir.append_multiply(add_2, ct);

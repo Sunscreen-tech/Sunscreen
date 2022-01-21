@@ -3,7 +3,7 @@ use crate::serialization::WithContext;
 use seal::{GaloisKeys, PublicKey as SealPublicKey, RelinearizationKeys};
 use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Deserialize, Serialize)]
+#[derive(Clone, Deserialize, PartialEq, Serialize)]
 /**
  * A bundle of public keys. These may be freely shared with other parties without
  * risk of compromising data security.

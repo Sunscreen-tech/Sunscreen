@@ -1,6 +1,6 @@
 use sunscreen_compiler::{
     circuit,
-    types::{bfv::{Unsigned}, Cipher},
+    types::{bfv::Unsigned, Cipher},
     Compiler, PlainModulusConstraint,
 };
 use sunscreen_runtime::Runtime;

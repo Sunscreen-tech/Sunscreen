@@ -71,7 +71,7 @@ pub mod intern;
  */
 mod ops;
 
-use crate::{types::ops::*};
+use crate::types::ops::*;
 
 pub use sunscreen_runtime::{
     BfvType, FheType, NumCiphertexts, TryFromPlaintext, TryIntoPlaintext, Type, TypeName,

@@ -1,5 +1,5 @@
+use crate::{with_ctx, Literal};
 use petgraph::stable_graph::NodeIndex;
-use crate::{Literal, with_ctx};
 
 #[derive(Clone, Copy)]
 /**

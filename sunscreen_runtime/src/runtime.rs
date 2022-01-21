@@ -210,7 +210,7 @@ impl Runtime {
             .any(|(i, a)| a.type_name_instance() != expected_args[i])
         {
             return Err(Error::ArgumentMismatch {
-                expected:  expected_args.clone(),
+                expected: expected_args.clone(),
                 actual: arguments
                     .iter()
                     .map(|a| a.type_name_instance().clone())

@@ -1,4 +1,4 @@
-use crate::types::{Cipher, FheType, intern::{CircuitNode}};
+use crate::types::{intern::CircuitNode, Cipher, FheType};
 
 /**
  * Called when a circuit encounters a / operation on two encrypted types.

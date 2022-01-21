@@ -50,6 +50,22 @@ impl Clone for Plaintext {
     }
 }
 
+impl PartialEq for Plaintext {
+    fn eq(&self, other: &Self) -> bool {
+        if self.len() == other.len() {
+            for i in 0..self.len() {
+                if self.get_coefficient(i) != other.get_coefficient(i) {
+                    return false;
+                }
+            }
+
+            true
+        } else {
+            false
+        }
+    }
+}
+
 impl Serialize for Plaintext {
     fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
     where
@@ -64,25 +80,11 @@ impl Serialize for Plaintext {
             S::Error::custom(format!("Failed to get secret key serialized size: {}", e))
         })?;
 
-        let mut data: Vec<u8> = Vec::with_capacity(num_bytes as usize);
-        let mut bytes_written: i64 = 0;
+        let bytes = self
+            .as_bytes()
+            .map_err(|e| S::Error::custom(format!("Failed to serialize bytes: {}", e)))?;
 
-        convert_seal_error(unsafe {
-            let data_ptr = data.as_mut_ptr();
-
-            bindgen::Plaintext_Save(
-                self.handle,
-                data_ptr,
-                num_bytes as u64,
-                CompressionType::ZStd as u8,
-                &mut bytes_written,
-            )
-        })
-        .map_err(|e| S::Error::custom(format!("Failed to get secret key bytes: {}", e)))?;
-
-        unsafe { data.set_len(bytes_written as usize) };
-
-        serializer.serialize_bytes(&data)
+        serializer.serialize_bytes(&bytes)
     }
 }
 
@@ -326,6 +328,12 @@ impl Ciphertext {
         convert_seal_error(unsafe { bindgen::Ciphertext_Create1(null_mut(), &mut handle) })?;
 
         Ok(Self { handle })
+    }
+}
+
+impl PartialEq for Ciphertext {
+    fn eq(&self, other: &Self) -> bool {
+        self.as_bytes() == other.as_bytes()
     }
 }
 

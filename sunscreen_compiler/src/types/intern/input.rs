@@ -1,4 +1,7 @@
-pub use crate::{types::{FheType, Cipher, intern::CircuitNode}, with_ctx};
+pub use crate::{
+    types::{intern::CircuitNode, Cipher, FheType},
+    with_ctx,
+};
 
 /**
  * Create an input node from a circuit input argument.

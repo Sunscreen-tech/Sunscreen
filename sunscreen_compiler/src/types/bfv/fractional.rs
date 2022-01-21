@@ -1,9 +1,12 @@
 use seal::Plaintext as SealPlaintext;
 
-use crate::types::{Cipher, GraphCipherMul, GraphCipherSub, ops::{GraphCipherAdd, GraphCipherPlainAdd}};
+use crate::types::{
+    ops::{GraphCipherAdd, GraphCipherPlainAdd},
+    Cipher, GraphCipherMul, GraphCipherSub,
+};
 use crate::{
     crate_version,
-    types::{BfvType, FheType, intern::{CircuitNode}, Type, Version},
+    types::{intern::CircuitNode, BfvType, FheType, Type, Version},
     with_ctx, CircuitInputTrait, Params, WithContext,
 };
 

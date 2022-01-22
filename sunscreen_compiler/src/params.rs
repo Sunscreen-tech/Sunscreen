@@ -149,7 +149,7 @@ where
         // From a noise standpoint, it doesn't matter what is in the plaintext or if the output
         // is meaningful or not. Just run a bunch of 1 values through the circuit and measure the
         // noise. We choose 1, as it avoids transparent ciphertexts when
-        // multiplying.
+        // multiplying plaintexts.
         let inputs = ir
             .graph
             .node_weights()

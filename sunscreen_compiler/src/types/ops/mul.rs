@@ -22,3 +22,27 @@ pub trait GraphCipherMul {
         b: CircuitNode<Cipher<Self::Right>>,
     ) -> CircuitNode<Cipher<Self::Left>>;
 }
+
+/**
+ * Called when a circuit encounters a * operation on an encrypted
+ * and plaintext data type.
+ */
+pub trait GraphCipherPlainMul {
+    /**
+     * The type of the left operand
+     */
+    type Left: FheType;
+
+    /**
+     * The type of the right operand
+     */
+    type Right: FheType;
+
+    /**
+     * Process the * operation
+     */
+    fn graph_cipher_plain_mul(
+        a: CircuitNode<Cipher<Self::Left>>,
+        b: CircuitNode<Self::Right>,
+    ) -> CircuitNode<Cipher<Self::Left>>;
+}

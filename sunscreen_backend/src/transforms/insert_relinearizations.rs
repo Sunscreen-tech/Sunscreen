@@ -26,7 +26,7 @@ pub fn apply_insert_relinearizations(ir: &mut Circuit) {
 mod tests {
     use super::*;
     use petgraph::stable_graph::NodeIndex;
-    use sunscreen_circuit::{Literal as CircuitLiteral, SchemeType, GraphQuery, Operation};
+    use sunscreen_circuit::{GraphQuery, Literal as CircuitLiteral, Operation, SchemeType};
 
     fn create_test_dag() -> Circuit {
         let mut ir = Circuit::new(SchemeType::Bfv);

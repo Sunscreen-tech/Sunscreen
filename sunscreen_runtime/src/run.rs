@@ -226,7 +226,17 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
                     let c = evaluator.multiply(&a, &b)?;
 
                     data[index.index()].store(Some(Cow::Owned(c.into())));
-                }
+                },
+                MultiplyPlaintext => {
+                    let (left, right) = get_left_right_operands(ir, index);
+
+                    let a = get_ciphertext(&data, left.index())?;
+                    let b = get_plaintext(&data, right.index())?;
+
+                    let c = evaluator.multiply_plain(&a, &b)?;
+
+                    data[index.index()].store(Some(Cow::Owned(c.into())));
+                },
                 SwapRows => unimplemented!(),
                 Relinearize => {
                     let relin_keys = relin_keys

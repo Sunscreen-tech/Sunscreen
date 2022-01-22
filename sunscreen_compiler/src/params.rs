@@ -147,8 +147,9 @@ where
         let ir = circuit_fn.build(&params)?.compile();
 
         // From a noise standpoint, it doesn't matter what is in the plaintext or if the output
-        // is meaningful or not. Just run a bunch of 0 values through the circuit and measure the
-        // noise.
+        // is meaningful or not. Just run a bunch of 1 values through the circuit and measure the
+        // noise. We choose 1, as it avoids transparent ciphertexts when
+        // multiplying plaintexts.
         let inputs = ir
             .graph
             .node_weights()
@@ -159,10 +160,10 @@ where
             })
             .map(|n| match n.operation {
                 Operation::InputCiphertext(_) => {
-                    let p = encoder.encode_unsigned(0)?;
+                    let p = encoder.encode_unsigned(1)?;
                     Ok(encryptor.encrypt(&p)?.into())
                 }
-                Operation::InputPlaintext(_) => Ok(encoder.encode_unsigned(0)?.into()),
+                Operation::InputPlaintext(_) => Ok(encoder.encode_unsigned(1)?.into()),
                 _ => unreachable!(),
             })
             .collect::<Result<Vec<SealData>>>()?;

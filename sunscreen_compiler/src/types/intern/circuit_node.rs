@@ -131,6 +131,19 @@ where
     }
 }
 
+// plain + cipher
+impl<T> Add<CircuitNode<Cipher<T>>> for CircuitNode<T>
+where
+    T: FheType + GraphCipherPlainAdd<Left = T, Right = T>,
+{
+    type Output = CircuitNode<Cipher<T>>;
+
+    fn add(self, rhs: CircuitNode<Cipher<T>>) -> Self::Output {
+        T::graph_cipher_plain_add(rhs, self)
+    }
+}
+
+// cipher + literal
 impl<T, U> Add<T> for CircuitNode<Cipher<U>>
 where
     U: FheType + GraphCipherConstAdd<Left = U, Right = T>,
@@ -140,6 +153,42 @@ where
 
     fn add(self, rhs: T) -> Self::Output {
         U::graph_cipher_const_add(self, rhs)
+    }
+}
+
+// literal + cipher
+impl<T> Add<CircuitNode<Cipher<T>>> for u64
+where
+    T: FheType + GraphCipherConstAdd<Left = T, Right = u64> + From<u64>,
+{
+    type Output = CircuitNode<Cipher<T>>;
+
+    fn add(self, rhs: CircuitNode<Cipher<T>>) -> Self::Output {
+        T::graph_cipher_const_add(rhs, self)
+    }
+}
+
+// literal + cipher
+impl<T> Add<CircuitNode<Cipher<T>>> for i64
+where
+    T: FheType + GraphCipherConstAdd<Left = T, Right = i64> + From<i64>,
+{
+    type Output = CircuitNode<Cipher<T>>;
+
+    fn add(self, rhs: CircuitNode<Cipher<T>>) -> Self::Output {
+        T::graph_cipher_const_add(rhs, self)
+    }
+}
+
+// literal + cipher
+impl<T> Add<CircuitNode<Cipher<T>>> for f64
+where
+    T: FheType + GraphCipherConstAdd<Left = T, Right = f64> + From<f64>,
+{
+    type Output = CircuitNode<Cipher<T>>;
+
+    fn add(self, rhs: CircuitNode<Cipher<T>>) -> Self::Output {
+        T::graph_cipher_const_add(rhs, self)
     }
 }
 
@@ -155,6 +204,7 @@ where
     }
 }
 
+// cipher * cipher
 impl<T> Mul for CircuitNode<Cipher<T>>
 where
     T: FheType + GraphCipherMul<Left = T, Right = T>,
@@ -163,6 +213,67 @@ where
 
     fn mul(self, rhs: Self) -> Self::Output {
         T::graph_cipher_mul(self, rhs)
+    }
+}
+
+// cipher * plain
+impl<T> Mul<CircuitNode<T>> for CircuitNode<Cipher<T>>
+where
+    T: FheType + GraphCipherPlainMul<Left = T, Right = T>,
+{
+    type Output = Self;
+
+    fn mul(self, rhs: CircuitNode<T>) -> Self::Output {
+        T::graph_cipher_plain_mul(self, rhs)
+    }
+}
+
+// cipher * literal
+impl<T, U> Mul<T> for CircuitNode<Cipher<U>>
+where
+    U: FheType + GraphCipherConstMul<Left = U, Right = T>,
+    T: FheLiteral,
+{
+    type Output = Self;
+
+    fn mul(self, rhs: T) -> Self::Output {
+        U::graph_cipher_const_mul(self, rhs)
+    }
+}
+
+// literal * cipher
+impl<T> Mul<CircuitNode<Cipher<T>>> for u64
+where
+    T: FheType + GraphCipherConstMul<Left = T, Right = u64> + From<u64>,
+{
+    type Output = CircuitNode<Cipher<T>>;
+
+    fn mul(self, rhs: CircuitNode<Cipher<T>>) -> Self::Output {
+        T::graph_cipher_const_mul(rhs, self)
+    }
+}
+
+// literal * cipher
+impl<T> Mul<CircuitNode<Cipher<T>>> for i64
+where
+    T: FheType + GraphCipherConstMul<Left = T, Right = i64> + From<i64>,
+{
+    type Output = CircuitNode<Cipher<T>>;
+
+    fn mul(self, rhs: CircuitNode<Cipher<T>>) -> Self::Output {
+        T::graph_cipher_const_mul(rhs, self)
+    }
+}
+
+// literal * cipher
+impl<T> Mul<CircuitNode<Cipher<T>>> for f64
+where
+    T: FheType + GraphCipherConstMul<Left = T, Right = f64> + From<f64>,
+{
+    type Output = CircuitNode<Cipher<T>>;
+
+    fn mul(self, rhs: CircuitNode<Cipher<T>>) -> Self::Output {
+        T::graph_cipher_const_mul(rhs, self)
     }
 }
 

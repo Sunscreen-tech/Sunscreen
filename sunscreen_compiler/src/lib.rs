@@ -134,6 +134,11 @@ pub enum Operation {
     Multiply,
 
     /**
+     * Multiply a ciphertext by a plaintext.
+     */
+    MultiplyPlaintext,
+
+    /**
      * A literal that serves as an operand to other operations.
      */
     Literal(Literal),
@@ -361,6 +366,13 @@ impl Context {
     }
 
     /**
+     * Add a multiplication to this context.
+     */
+    pub fn add_multiplication_plaintext(&mut self, left: NodeIndex, right: NodeIndex) -> NodeIndex {
+        self.add_2_input(Operation::MultiplyPlaintext, left, right)
+    }
+
+    /**
      * Adds a literal to this context.
      */
     pub fn add_literal(&mut self, literal: Literal) -> NodeIndex {
@@ -443,6 +455,7 @@ impl FrontendCompilation {
                 }
                 Operation::Sub => NodeInfo::new(CircuitOperation::Sub),
                 Operation::Multiply => NodeInfo::new(CircuitOperation::Multiply),
+                Operation::MultiplyPlaintext => NodeInfo::new(CircuitOperation::MultiplyPlaintext),
                 Operation::Output => NodeInfo::new(CircuitOperation::OutputCiphertext),
                 Operation::RotateLeft => NodeInfo::new(CircuitOperation::ShiftLeft),
                 Operation::RotateRight => NodeInfo::new(CircuitOperation::ShiftRight),

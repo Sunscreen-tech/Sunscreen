@@ -35,12 +35,17 @@ pub enum Operation {
     Relinearize,
 
     /**
-     * Multiply two values. Either operand may be a literal or a ciphertext.
+     * Multiply two ciphertext values.
      */
     Multiply,
 
     /**
-     * Add two values. Either operand may be a literal or a ciphertext.
+     * Multiply a ciphertext and a plaintext
+     */
+    MultiplyPlaintext,
+
+    /**
+     * Add two ciphertext values.
      */
     Add,
 
@@ -50,13 +55,12 @@ pub enum Operation {
     AddPlaintext,
 
     /**
-     * Computes the additive inverse of a plaintext or ciphertext.
+     * Computes the additive inverse of a ciphertext.
      */
     Negate,
 
     /**
-     * Subtracts the right operand from the left. Either operand may be a
-     * literal or a ciphertext.
+     * Subtracts the right ciphertext from the left ciphertext.
      */
     Sub,
 

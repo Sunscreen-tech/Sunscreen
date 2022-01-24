@@ -228,6 +228,18 @@ where
     }
 }
 
+// plain * cipher
+impl<T> Mul<CircuitNode<Cipher<T>>> for CircuitNode<T>
+where
+    T: FheType + GraphCipherPlainMul<Left = T, Right = T>,
+{
+    type Output = CircuitNode<Cipher<T>>;
+
+    fn mul(self, rhs: CircuitNode<Cipher<T>>) -> Self::Output {
+        T::graph_cipher_plain_mul(rhs, self)
+    }
+}
+
 // cipher * literal
 impl<T, U> Mul<T> for CircuitNode<Cipher<U>>
 where

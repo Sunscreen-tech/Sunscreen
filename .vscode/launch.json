@@ -154,6 +154,24 @@
         {
             "type": "lldb",
             "request": "launch",
+            "name": "Debug fractional integration tests in library 'sunscreen_compiler'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--package=sunscreen_compiler",
+                ],
+                "filter": {
+                    "name": "fractional",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
             "name": "Debug tests in library 'sunscreen_compiler_macros'",
             "cargo": {
                 "args": [

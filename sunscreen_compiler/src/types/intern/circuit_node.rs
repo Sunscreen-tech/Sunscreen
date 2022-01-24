@@ -299,3 +299,15 @@ where
         T::graph_cipher_div(self, rhs)
     }
 }
+
+impl<T, U> Div<U> for CircuitNode<Cipher<T>>
+where
+    U: FheLiteral,
+    T: FheType + GraphCipherConstDiv<Left = T, Right = U>,
+{
+    type Output = Self;
+
+    fn div(self, rhs: U) -> Self::Output {
+        T::graph_cipher_const_div(self, rhs)
+    }
+}

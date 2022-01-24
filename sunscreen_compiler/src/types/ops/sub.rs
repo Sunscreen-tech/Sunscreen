@@ -27,7 +27,7 @@ pub trait GraphCipherSub {
 }
 
 /**
- * Called when a circuit encounters a - operation on two encrypted types.
+ * Called when a circuit encounters a - operation on a ciphertext and a plaintext.
  */
 pub trait GraphCipherPlainSub {
     /**
@@ -46,6 +46,29 @@ pub trait GraphCipherPlainSub {
     fn graph_cipher_plain_sub(
         a: CircuitNode<Cipher<Self::Left>>,
         b: CircuitNode<Self::Right>,
+    ) -> CircuitNode<Cipher<Self::Left>>;
+}
+
+/**
+ * Called when a circuit encounters a - operation on a plaintext and a ciphertext.
+ */
+pub trait GraphPlainCipherSub {
+    /**
+     * The type of the left operand
+     */
+    type Left: FheType;
+
+    /**
+     * The type of the right operand
+     */
+    type Right: FheType;
+
+    /**
+     * Process the + operation
+     */
+    fn graph_plain_cipher_sub(
+        a: CircuitNode<Self::Left>,
+        b: CircuitNode<Cipher<Self::Right>>,
     ) -> CircuitNode<Cipher<Self::Left>>;
 }
 

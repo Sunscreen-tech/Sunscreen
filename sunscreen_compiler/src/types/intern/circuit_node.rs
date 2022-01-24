@@ -4,7 +4,7 @@ use crate::{
 };
 use petgraph::stable_graph::NodeIndex;
 
-use std::ops::{Add, Div, Mul, Sub};
+use std::ops::{Add, Div, Mul, Sub, Neg};
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 /**
@@ -216,6 +216,19 @@ where
     }
 }
 
+// plaintext - cipher
+impl<T> Sub<CircuitNode<Cipher<T>>> for CircuitNode<T>
+where
+    T: FheType + GraphPlainCipherSub<Left = T, Right = T>,
+{
+    type Output = CircuitNode<Cipher<T>>;
+
+    fn sub(self, rhs: CircuitNode<Cipher<T>>) -> Self::Output {
+        T::graph_plain_cipher_sub(self, rhs)
+    }
+}
+
+
 // cipher - literal
 impl<T, U> Sub<T> for CircuitNode<Cipher<U>>
 where
@@ -334,5 +347,16 @@ where
 
     fn div(self, rhs: U) -> Self::Output {
         T::graph_cipher_const_div(self, rhs)
+    }
+}
+
+impl<T> Neg for CircuitNode<Cipher<T>>
+where
+    T: FheType + GraphCipherNeg<Val = T>
+{
+    type Output = Self;
+
+    fn neg(self) -> Self::Output {
+        T::graph_cipher_neg(self)
     }
 }

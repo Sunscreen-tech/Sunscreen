@@ -251,7 +251,15 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
 
                     data[index.index()].store(Some(Cow::Owned(c.into())));
                 }
-                Negate => unimplemented!(),
+                Negate => {
+                    let x_id = get_unary_operand(ir, index);
+
+                    let x = get_ciphertext(&data, x_id.index())?;
+
+                    let y = evaluator.negate(&x)?;
+
+                    data[index.index()].store(Some(Cow::Owned(y.into())));
+                },
                 Sub => {
                     let (left, right) = get_left_right_operands(ir, index);
 

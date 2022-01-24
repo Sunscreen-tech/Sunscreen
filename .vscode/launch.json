@@ -124,10 +124,27 @@
                     "test",
                     "--no-run",
                     "--package=sunscreen_compiler",
-                    "can_encode_signed"
                 ],
                 "filter": {
                     "name": "unsigned",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug signed integration tests in library 'sunscreen_compiler'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--package=sunscreen_compiler",
+                ],
+                "filter": {
+                    "name": "signed",
                     "kind": "test"
                 }
             },

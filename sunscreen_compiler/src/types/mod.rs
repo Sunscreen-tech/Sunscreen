@@ -28,9 +28,8 @@
  * efficiently as [`Signed`](crate::types::bfv::Signed) and
  * [`Unsigned`](crate::types::bfv::Unsigned) types. This type has complex overflow
  * conditions. This type intrinsically supports homomorphic addition
- * multiplication, and negation. Dividing by plaintext is possible by
- * computing the divisor's reciprical and multiplying. Dividing by ciphertext
- * is not possible.
+ * multiplication, and negation. Dividing by an [`f64`] constant is supported.
+ * Dividing by ciphertext is not possible.
  * * The [`Rational`](crate::types::bfv::Rational) type allows quasi fixed-point
  * representation. This type interally uses 2 ciphertexts, and is thus requires
  * twice as much space as other types. Its overflow semantics are effectively
@@ -49,7 +48,7 @@
  * | Fractional | 1             | complex             | signed decimal    | 1 add          | 1 mul   | 1 sub          | 1 neg   | 1 mul*  |
  * | Rational   | 2             | moderate            | signed decimal    | 2 muls + 1 sub | 2 muls  | 2 muls + 1 sub | 1 neg   | 2 muls  |
  *
- * `* Plaintext division only.`
+ * `* Division by constant only.`
  *
  * The set of feasible computations under FHE with BFV is fairly limited. For
  * example, comparisons, modulus, transcendentals, are generally very difficult

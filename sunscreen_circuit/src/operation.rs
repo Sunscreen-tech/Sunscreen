@@ -65,6 +65,11 @@ pub enum Operation {
     Sub,
 
     /**
+     * Subtracts a plaintext from a ciphertext.
+     */
+    SubPlaintext,
+
+    /**
      * Represents an input ciphertext for the circuit.
      */
     InputCiphertext(usize),

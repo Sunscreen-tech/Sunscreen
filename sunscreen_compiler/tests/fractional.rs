@@ -348,7 +348,7 @@ fn can_mul_cipher_plain() {
     test_mul(1234., 5678.);
     test_mul(-1234., 5678.);
     test_mul(0., -3.14);
-    // Can't multiply by 0 plaintext as this will result in a transparent 
+    // Can't multiply by 0 plaintext as this will result in a transparent
     // ciphetext.
     test_mul(0., 1.);
     test_mul(1., -3.14);
@@ -395,7 +395,7 @@ fn can_mul_plain_cipher() {
     test_mul(1234., 5678.);
     test_mul(-1234., 5678.);
     test_mul(0., -3.14);
-    // Can't multiply by 0 plaintext as this will result in a transparent 
+    // Can't multiply by 0 plaintext as this will result in a transparent
     // ciphetext.
     test_mul(0., 1.);
     test_mul(1., -3.14);
@@ -442,7 +442,7 @@ fn can_mul_cipher_literal() {
     test_mul(1234.);
     test_mul(-1234.);
     test_mul(0.);
-    // Can't multiply by 0 plaintext as this will result in a transparent 
+    // Can't multiply by 0 plaintext as this will result in a transparent
     // ciphetext.
     test_mul(1.);
     test_mul(1e-23);
@@ -485,7 +485,7 @@ fn can_mul_literal_cipher() {
     test_mul(1234.);
     test_mul(-1234.);
     test_mul(0.);
-    // Can't multiply by 0 plaintext as this will result in a transparent 
+    // Can't multiply by 0 plaintext as this will result in a transparent
     // ciphetext.
     test_mul(1.);
     test_mul(1e-23);

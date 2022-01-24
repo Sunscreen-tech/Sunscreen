@@ -2,8 +2,9 @@ use seal::Plaintext as SealPlaintext;
 
 use crate::types::{
     ops::{
-        GraphCipherAdd, GraphCipherConstAdd, GraphCipherConstMul, GraphCipherMul,
-        GraphCipherPlainAdd, GraphCipherPlainMul,
+        GraphCipherAdd, GraphCipherConstAdd, GraphCipherConstMul, GraphCipherConstSub,
+        GraphCipherMul, GraphCipherPlainAdd, GraphCipherPlainMul, GraphCipherPlainSub,
+        GraphCipherSub,
     },
     Cipher,
 };
@@ -174,6 +175,57 @@ impl GraphCipherConstAdd for Signed {
             let add = ctx.add_addition_plaintext(a.ids[0], lit);
 
             CircuitNode::new(&[add])
+        })
+    }
+}
+
+impl GraphCipherSub for Signed {
+    type Left = Signed;
+    type Right = Signed;
+
+    fn graph_cipher_sub(
+        a: CircuitNode<Cipher<Self::Left>>,
+        b: CircuitNode<Cipher<Self::Right>>,
+    ) -> CircuitNode<Cipher<Self::Left>> {
+        with_ctx(|ctx| {
+            let n = ctx.add_subtraction(a.ids[0], b.ids[0]);
+
+            CircuitNode::new(&[n])
+        })
+    }
+}
+
+impl GraphCipherPlainSub for Signed {
+    type Left = Signed;
+    type Right = Signed;
+
+    fn graph_cipher_plain_sub(
+        a: CircuitNode<Cipher<Self::Left>>,
+        b: CircuitNode<Self::Right>,
+    ) -> CircuitNode<Cipher<Self::Left>> {
+        with_ctx(|ctx| {
+            let n = ctx.add_subtraction_plaintext(a.ids[0], b.ids[0]);
+
+            CircuitNode::new(&[n])
+        })
+    }
+}
+
+impl GraphCipherConstSub for Signed {
+    type Left = Signed;
+    type Right = i64;
+
+    fn graph_cipher_const_sub(
+        a: CircuitNode<Cipher<Self::Left>>,
+        b: Self::Right,
+    ) -> CircuitNode<Cipher<Self::Left>> {
+        with_ctx(|ctx| {
+            let b = Self::from(b).try_into_plaintext(&ctx.params).unwrap();
+
+            let lit = ctx.add_plaintext_literal(b.inner);
+            let n = ctx.add_subtraction_plaintext(a.ids[0], lit);
+
+            CircuitNode::new(&[n])
         })
     }
 }

@@ -2,7 +2,8 @@ use seal::Plaintext as SealPlaintext;
 
 use crate::types::{
     ops::{
-        GraphCipherAdd, GraphCipherConstAdd, GraphCipherMul, GraphCipherPlainMul, GraphCipherPlainAdd, GraphCipherSub, GraphCipherConstMul, GraphCipherConstDiv
+        GraphCipherAdd, GraphCipherConstAdd, GraphCipherConstDiv, GraphCipherConstMul,
+        GraphCipherMul, GraphCipherPlainAdd, GraphCipherPlainMul, GraphCipherSub,
     },
     Cipher,
 };
@@ -317,7 +318,10 @@ impl<const INT_BITS: usize> GraphCipherConstDiv for Fractional<INT_BITS> {
         b: f64,
     ) -> CircuitNode<Cipher<Self::Left>> {
         with_ctx(|ctx| {
-            let b = Self::try_from(1. / b).unwrap().try_into_plaintext(&ctx.params).unwrap();
+            let b = Self::try_from(1. / b)
+                .unwrap()
+                .try_into_plaintext(&ctx.params)
+                .unwrap();
 
             let lit = ctx.add_plaintext_literal(b.inner);
 

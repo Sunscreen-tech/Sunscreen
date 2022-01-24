@@ -261,6 +261,16 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
                     let c = evaluator.sub(&a, &b)?;
 
                     data[index.index()].store(Some(Cow::Owned(c.into())));
+                },
+                SubPlaintext => {
+                    let (left, right) = get_left_right_operands(ir, index);
+
+                    let a = get_ciphertext(&data, left.index())?;
+                    let b = get_plaintext(&data, right.index())?;
+
+                    let c = evaluator.sub_plain(&a, &b)?;
+
+                    data[index.index()].store(Some(Cow::Owned(c.into())));
                 }
                 Literal(x) => {
                     match x {

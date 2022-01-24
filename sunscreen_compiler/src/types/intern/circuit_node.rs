@@ -204,6 +204,31 @@ where
     }
 }
 
+// cipher - plaintext
+impl<T> Sub<CircuitNode<T>> for CircuitNode<Cipher<T>>
+where
+    T: FheType + GraphCipherPlainSub<Left = T, Right = T>,
+{
+    type Output = Self;
+
+    fn sub(self, rhs: CircuitNode<T>) -> Self::Output {
+        T::graph_cipher_plain_sub(self, rhs)
+    }
+}
+
+// cipher - literal
+impl<T, U> Sub<T> for CircuitNode<Cipher<U>>
+where
+    U: FheType + GraphCipherConstSub<Left = U, Right = T>,
+    T: FheLiteral,
+{
+    type Output = Self;
+
+    fn sub(self, rhs: T) -> Self::Output {
+        U::graph_cipher_const_sub(self, rhs)
+    }
+}
+
 // cipher * cipher
 impl<T> Mul for CircuitNode<Cipher<T>>
 where

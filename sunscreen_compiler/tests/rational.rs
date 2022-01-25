@@ -313,13 +313,13 @@ fn can_mul_cipher_literal() {
 }
 
 #[test]
-fn can_div_rational_numbers() {
+fn can_div_cipher_cipher() {
     #[circuit(scheme = "bfv")]
-    fn add(a: Cipher<Rational>, b: Cipher<Rational>) -> Cipher<Rational> {
+    fn div(a: Cipher<Rational>, b: Cipher<Rational>) -> Cipher<Rational> {
         a / b
     }
 
-    let circuit = Compiler::with_circuit(add)
+    let circuit = Compiler::with_circuit(div)
         .noise_margin_bits(5)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(500))
         .compile()
@@ -337,6 +337,97 @@ fn can_div_rational_numbers() {
         .unwrap();
 
     let result = runtime.run(&circuit, vec![a, b], &public).unwrap();
+
+    let c: Rational = runtime.decrypt(&result[0], &secret).unwrap();
+
+    assert_eq!(c, (-1.).try_into().unwrap());
+}
+
+#[test]
+fn can_div_cipher_plain() {
+    #[circuit(scheme = "bfv")]
+    fn div(a: Cipher<Rational>, b: Rational) -> Cipher<Rational> {
+        a / b
+    }
+
+    let circuit = Compiler::with_circuit(div)
+        .noise_margin_bits(5)
+        .plain_modulus_constraint(PlainModulusConstraint::Raw(500))
+        .compile()
+        .unwrap();
+
+    let runtime = Runtime::new(&circuit.metadata.params).unwrap();
+
+    let (public, secret) = runtime.generate_keys().unwrap();
+
+    let a = runtime
+        .encrypt(Rational::try_from(-3.14).unwrap(), &public)
+        .unwrap();
+    let b = Rational::try_from(3.14).unwrap();
+
+    let args: Vec<CircuitInput> = vec![a.into(), b.into()];
+
+    let result = runtime.run(&circuit, args, &public).unwrap();
+
+    let c: Rational = runtime.decrypt(&result[0], &secret).unwrap();
+
+    assert_eq!(c, (-1.).try_into().unwrap());
+}
+
+#[test]
+fn can_div_cipher_const() {
+    #[circuit(scheme = "bfv")]
+    fn div(a: Cipher<Rational>) -> Cipher<Rational> {
+        a / 3.14
+    }
+
+    let circuit = Compiler::with_circuit(div)
+        .noise_margin_bits(5)
+        .plain_modulus_constraint(PlainModulusConstraint::Raw(500))
+        .compile()
+        .unwrap();
+
+    let runtime = Runtime::new(&circuit.metadata.params).unwrap();
+
+    let (public, secret) = runtime.generate_keys().unwrap();
+
+    let a = runtime
+        .encrypt(Rational::try_from(-3.14).unwrap(), &public)
+        .unwrap();
+
+    let args: Vec<CircuitInput> = vec![a.into()];
+
+    let result = runtime.run(&circuit, args, &public).unwrap();
+
+    let c: Rational = runtime.decrypt(&result[0], &secret).unwrap();
+
+    assert_eq!(c, (-1.).try_into().unwrap());
+}
+
+#[test]
+fn can_div_const_cipher() {
+    #[circuit(scheme = "bfv")]
+    fn div(a: Cipher<Rational>) -> Cipher<Rational> {
+        3.14 / a
+    }
+
+    let circuit = Compiler::with_circuit(div)
+        .noise_margin_bits(5)
+        .plain_modulus_constraint(PlainModulusConstraint::Raw(500))
+        .compile()
+        .unwrap();
+
+    let runtime = Runtime::new(&circuit.metadata.params).unwrap();
+
+    let (public, secret) = runtime.generate_keys().unwrap();
+
+    let a = runtime
+        .encrypt(Rational::try_from(-3.14).unwrap(), &public)
+        .unwrap();
+
+    let args: Vec<CircuitInput> = vec![a.into()];
+
+    let result = runtime.run(&circuit, args, &public).unwrap();
 
     let c: Rational = runtime.decrypt(&result[0], &secret).unwrap();
 

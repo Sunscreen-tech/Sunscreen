@@ -374,6 +374,30 @@ where
     }
 }
 
+// ciphertext / ciphertext
+impl<T> Div<CircuitNode<T>> for CircuitNode<Cipher<T>>
+where
+    T: FheType + GraphCipherPlainDiv<Left = T, Right = T>,
+{
+    type Output = Self;
+
+    fn div(self, rhs: CircuitNode<T>) -> Self::Output {
+        T::graph_cipher_plain_div(self, rhs)
+    }
+}
+
+// ciphertext / ciphertext
+impl<T> Div<CircuitNode<Cipher<T>>> for CircuitNode<T>
+where
+    T: FheType + GraphPlainCipherDiv<Left = T, Right = T>,
+{
+    type Output = CircuitNode<Cipher<T>>;
+
+    fn div(self, rhs: CircuitNode<Cipher<T>>) -> Self::Output {
+        T::graph_plain_cipher_div(self, rhs)
+    }
+}
+
 // ciphertext / literal
 impl<T, U> Div<U> for CircuitNode<Cipher<T>>
 where
@@ -384,6 +408,43 @@ where
 
     fn div(self, rhs: U) -> Self::Output {
         T::graph_cipher_const_div(self, rhs)
+    }
+}
+
+
+// literal / cipher
+impl<T> Div<CircuitNode<Cipher<T>>> for f64
+where
+    T: FheType + GraphConstCipherDiv<Left = f64, Right = T> + TryFrom<f64>,
+{
+    type Output = CircuitNode<Cipher<T>>;
+
+    fn div(self, rhs: CircuitNode<Cipher<T>>) -> Self::Output {
+        T::graph_const_cipher_div(self, rhs)
+    }
+}
+
+// literal / cipher
+impl<T> Div<CircuitNode<Cipher<T>>> for i64
+where
+    T: FheType + GraphConstCipherDiv<Left = i64, Right = T> + TryFrom<f64>,
+{
+    type Output = CircuitNode<Cipher<T>>;
+
+    fn div(self, rhs: CircuitNode<Cipher<T>>) -> Self::Output {
+        T::graph_const_cipher_div(self, rhs)
+    }
+}
+
+// literal / cipher
+impl<T> Div<CircuitNode<Cipher<T>>> for u64
+where
+    T: FheType + GraphConstCipherDiv<Left = u64, Right = T> + TryFrom<f64>,
+{
+    type Output = CircuitNode<Cipher<T>>;
+
+    fn div(self, rhs: CircuitNode<Cipher<T>>) -> Self::Output {
+        T::graph_const_cipher_div(self, rhs)
     }
 }
 

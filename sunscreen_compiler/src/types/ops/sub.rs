@@ -84,7 +84,7 @@ pub trait GraphCipherConstSub {
     /**
      * The type of the right operand
      */
-    type Right: FheLiteral;
+    type Right: FheLiteral + TryFrom<Self::Left>;
 
     /**
      * Process the + operation
@@ -102,7 +102,7 @@ pub trait GraphConstCipherSub {
     /**
      * The type of the left operand
      */
-    type Left: FheLiteral;
+    type Left: FheLiteral + TryFrom<Self::Right>;
 
     /**
      * The type of the right operand

@@ -268,6 +268,176 @@ fn can_sub_cipher_cipher() {
 }
 
 #[test]
+fn can_sub_cipher_plain() {
+    #[circuit(scheme = "bfv")]
+    fn sub(a: Cipher<Fractional<64>>, b: Fractional<64>) -> Cipher<Fractional<64>> {
+        a - b
+    }
+
+    let circuit = Compiler::with_circuit(sub)
+        .noise_margin_bits(5)
+        .plain_modulus_constraint(PlainModulusConstraint::Raw(500))
+        .compile()
+        .unwrap();
+
+    let runtime = Runtime::new(&circuit.metadata.params).unwrap();
+
+    let (public, secret) = runtime.generate_keys().unwrap();
+
+    let do_sub = |a: f64, b: f64| {
+        let a_c = runtime
+            .encrypt(Fractional::<64>::try_from(a).unwrap(), &public)
+            .unwrap();
+        let b_p = Fractional::<64>::try_from(b).unwrap();
+
+        let args: Vec<CircuitInput> = vec![a_c.into(), b_p.into()];
+
+        let result = runtime.run(&circuit, args, &public).unwrap();
+
+        let c: Fractional<64> = runtime.decrypt(&result[0], &secret).unwrap();
+
+        assert_eq!(c, (a - b).try_into().unwrap());
+    };
+
+    do_sub(3.14, 3.14);
+    do_sub(-3.14, 3.14);
+    do_sub(0., 0.);
+    do_sub(7., 3.);
+    do_sub(1e9, 1e9);
+    do_sub(1e-8, 1e-7);
+    do_sub(-3.14, -3.14);
+    do_sub(3.14, -3.14);
+    do_sub(-7., -3.);
+    do_sub(-1e9, -1e9);
+    do_sub(-1e-8, -1e-7);
+}
+
+#[test]
+fn can_sub_plain_cipher() {
+    #[circuit(scheme = "bfv")]
+    fn sub(a: Cipher<Fractional<64>>, b: Fractional<64>) -> Cipher<Fractional<64>> {
+        b - a
+    }
+
+    let circuit = Compiler::with_circuit(sub)
+        .noise_margin_bits(5)
+        .plain_modulus_constraint(PlainModulusConstraint::Raw(500))
+        .compile()
+        .unwrap();
+
+    let runtime = Runtime::new(&circuit.metadata.params).unwrap();
+
+    let (public, secret) = runtime.generate_keys().unwrap();
+
+    let do_sub = |a: f64, b: f64| {
+        let a_c = runtime
+            .encrypt(Fractional::<64>::try_from(a).unwrap(), &public)
+            .unwrap();
+        let b_p = Fractional::<64>::try_from(b).unwrap();
+
+        let args: Vec<CircuitInput> = vec![a_c.into(), b_p.into()];
+
+        let result = runtime.run(&circuit, args, &public).unwrap();
+
+        let c: Fractional<64> = runtime.decrypt(&result[0], &secret).unwrap();
+
+        assert_eq!(c, (b - a).try_into().unwrap());
+    };
+
+    do_sub(3.14, 3.14);
+    do_sub(-3.14, 3.14);
+    do_sub(0., 0.);
+    do_sub(7., 3.);
+    do_sub(1e9, 1e9);
+    do_sub(1e-8, 1e-7);
+    do_sub(-3.14, -3.14);
+    do_sub(3.14, -3.14);
+    do_sub(-7., -3.);
+    do_sub(-1e9, -1e9);
+    do_sub(-1e-8, -1e-7);
+}
+
+#[test]
+fn can_sub_cipher_literal() {
+    #[circuit(scheme = "bfv")]
+    fn sub(a: CipherFractional) -> CipherFractional {
+        a - 3.14
+    }
+
+    let circuit = Compiler::with_circuit(sub)
+        .noise_margin_bits(5)
+        .plain_modulus_constraint(PlainModulusConstraint::Raw(500))
+        .compile()
+        .unwrap();
+
+    let runtime = Runtime::new(&circuit.metadata.params).unwrap();
+
+    let (public, secret) = runtime.generate_keys().unwrap();
+
+    let do_add = |a: f64| {
+        let a_c = runtime
+            .encrypt(Fractional::<64>::try_from(a).unwrap(), &public)
+            .unwrap();
+
+        let args: Vec<CircuitInput> = vec![a_c.into()];
+
+        let result = runtime.run(&circuit, args, &public).unwrap();
+
+        let c: Fractional<64> = runtime.decrypt(&result[0], &secret).unwrap();
+
+        // Allow up to 1 ULP of error
+        assert!(c.approx_eq((a - 3.14).try_into().unwrap(), (0.0, 1)));
+    };
+
+    do_add(3.14);
+    do_add(-3.14);
+    do_add(0.);
+    do_add(7.);
+    do_add(1e9);
+    do_add(1e-8);
+}
+
+#[test]
+fn can_sub_literal_cipher() {
+    #[circuit(scheme = "bfv")]
+    fn sub(a: CipherFractional) -> CipherFractional {
+        3.14 - a
+    }
+
+    let circuit = Compiler::with_circuit(sub)
+        .noise_margin_bits(5)
+        .plain_modulus_constraint(PlainModulusConstraint::Raw(500))
+        .compile()
+        .unwrap();
+
+    let runtime = Runtime::new(&circuit.metadata.params).unwrap();
+
+    let (public, secret) = runtime.generate_keys().unwrap();
+
+    let do_add = |a: f64| {
+        let a_c = runtime
+            .encrypt(Fractional::<64>::try_from(a).unwrap(), &public)
+            .unwrap();
+
+        let args: Vec<CircuitInput> = vec![a_c.into()];
+
+        let result = runtime.run(&circuit, args, &public).unwrap();
+
+        let c: Fractional<64> = runtime.decrypt(&result[0], &secret).unwrap();
+
+        // Allow up to 1 ULP of error
+        assert!(c.approx_eq((3.14 - a).try_into().unwrap(), (0.0, 1)));
+    };
+
+    do_add(3.14);
+    do_add(-3.14);
+    do_add(0.);
+    do_add(7.);
+    do_add(1e9);
+    do_add(1e-8);
+}
+
+#[test]
 fn can_mul_cipher_cipher() {
     #[circuit(scheme = "bfv")]
     fn mul(a: Cipher<Fractional<64>>, b: Cipher<Fractional<64>>) -> Cipher<Fractional<64>> {

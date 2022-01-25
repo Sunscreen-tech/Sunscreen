@@ -159,7 +159,7 @@ where
 // literal + cipher
 impl<T> Add<CircuitNode<Cipher<T>>> for u64
 where
-    T: FheType + GraphCipherConstAdd<Left = T, Right = u64> + From<u64>,
+    T: FheType + GraphCipherConstAdd<Left = T, Right = u64> + TryFrom<u64>,
 {
     type Output = CircuitNode<Cipher<T>>;
 
@@ -171,7 +171,7 @@ where
 // literal + cipher
 impl<T> Add<CircuitNode<Cipher<T>>> for i64
 where
-    T: FheType + GraphCipherConstAdd<Left = T, Right = i64> + From<i64>,
+    T: FheType + GraphCipherConstAdd<Left = T, Right = i64> + TryFrom<i64>,
 {
     type Output = CircuitNode<Cipher<T>>;
 
@@ -183,7 +183,7 @@ where
 // literal + cipher
 impl<T> Add<CircuitNode<Cipher<T>>> for f64
 where
-    T: FheType + GraphCipherConstAdd<Left = T, Right = f64> + From<f64>,
+    T: FheType + GraphCipherConstAdd<Left = T, Right = f64> + TryFrom<f64>,
 {
     type Output = CircuitNode<Cipher<T>>;
 
@@ -316,7 +316,7 @@ where
 // cipher * literal
 impl<T, U> Mul<T> for CircuitNode<Cipher<U>>
 where
-    U: FheType + GraphCipherConstMul<Left = U, Right = T>,
+    U: FheType + GraphCipherConstMul<Left = U, Right = T> + TryFrom<T>,
     T: FheLiteral,
 {
     type Output = Self;
@@ -329,7 +329,7 @@ where
 // literal * cipher
 impl<T> Mul<CircuitNode<Cipher<T>>> for u64
 where
-    T: FheType + GraphCipherConstMul<Left = T, Right = u64> + From<u64>,
+    T: FheType + GraphCipherConstMul<Left = T, Right = u64> + TryFrom<u64>,
 {
     type Output = CircuitNode<Cipher<T>>;
 
@@ -341,7 +341,7 @@ where
 // literal * cipher
 impl<T> Mul<CircuitNode<Cipher<T>>> for i64
 where
-    T: FheType + GraphCipherConstMul<Left = T, Right = i64> + From<i64>,
+    T: FheType + GraphCipherConstMul<Left = T, Right = i64> + TryFrom<i64>,
 {
     type Output = CircuitNode<Cipher<T>>;
 
@@ -353,7 +353,7 @@ where
 // literal * cipher
 impl<T> Mul<CircuitNode<Cipher<T>>> for f64
 where
-    T: FheType + GraphCipherConstMul<Left = T, Right = f64> + From<f64>,
+    T: FheType + GraphCipherConstMul<Left = T, Right = f64> + TryFrom<f64>,
 {
     type Output = CircuitNode<Cipher<T>>;
 

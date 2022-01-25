@@ -58,7 +58,7 @@ pub trait GraphCipherConstMul {
     /**
      * The type of the left operand
      */
-    type Left: FheType + From<Self::Right>;
+    type Left: FheType + TryFrom<Self::Right>;
 
     /**
      * The type of the right operand

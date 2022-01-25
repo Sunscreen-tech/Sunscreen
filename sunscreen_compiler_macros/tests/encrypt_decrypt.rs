@@ -1,11 +1,9 @@
-use sunscreen_compiler::{types::bfv::Unsigned, types::Cipher, *};
-
-type CipherUnsigned = Cipher<Unsigned>;
+use sunscreen_compiler::{types::bfv::Signed, types::Cipher, *};
 
 #[test]
 fn can_encrypt_decrypt() {
     #[circuit(scheme = "bfv")]
-    fn foo(a: CipherUnsigned, b: CipherUnsigned) -> CipherUnsigned {
+    fn foo(a: Cipher<Signed>, b: Cipher<Signed>) -> Cipher<Signed> {
         a + b
     }
 
@@ -19,12 +17,12 @@ fn can_encrypt_decrypt() {
 
     let (public, secret) = runtime.generate_keys().unwrap();
 
-    let a = runtime.encrypt(Unsigned::from(15), &public).unwrap();
-    let b = runtime.encrypt(Unsigned::from(5), &public).unwrap();
+    let a = runtime.encrypt(Signed::from(15), &public).unwrap();
+    let b = runtime.encrypt(Signed::from(5), &public).unwrap();
 
     let result = runtime.run(&circuit, vec![a, b], &public).unwrap();
 
-    let c: Unsigned = runtime.decrypt(&result[0], &secret).unwrap();
+    let c: Signed = runtime.decrypt(&result[0], &secret).unwrap();
 
     assert_eq!(c, 20.into());
 }

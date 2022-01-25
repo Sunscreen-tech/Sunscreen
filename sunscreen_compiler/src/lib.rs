@@ -7,10 +7,10 @@
 //! # Examples
 //! This example is further annotated in `examples/simple_multiply`.
 //! ```
-//! # use sunscreen_compiler::{circuit, Compiler, types::{bfv::Unsigned, Cipher}, PlainModulusConstraint, Params, Runtime, Context};
+//! # use sunscreen_compiler::{circuit, Compiler, types::{bfv::Signed, Cipher}, PlainModulusConstraint, Params, Runtime, Context};
 //!
 //! #[circuit(scheme = "bfv")]
-//! fn simple_multiply(a: Cipher<Unsigned>, b: Cipher<Unsigned>) -> Cipher<Unsigned> {
+//! fn simple_multiply(a: Cipher<Signed>, b: Cipher<Signed>) -> Cipher<Signed> {
 //!     a * b
 //! }
 //!
@@ -25,12 +25,12 @@
 //!
 //!   let (public, secret) = runtime.generate_keys().unwrap();
 //!
-//!   let a = runtime.encrypt(Unsigned::from(15), &public).unwrap();
-//!   let b = runtime.encrypt(Unsigned::from(5), &public).unwrap();
+//!   let a = runtime.encrypt(Signed::from(15), &public).unwrap();
+//!   let b = runtime.encrypt(Signed::from(5), &public).unwrap();
 //!
 //!   let results = runtime.run(&circuit, vec![a, b], &public).unwrap();
 //!
-//!   let c: Unsigned = runtime.decrypt(&results[0], &secret).unwrap();
+//!   let c: Signed = runtime.decrypt(&results[0], &secret).unwrap();
 //!
 //!   assert_eq!(c, 75.into());
 //! }

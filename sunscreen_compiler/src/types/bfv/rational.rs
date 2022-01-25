@@ -1,6 +1,6 @@
 use crate::types::{
     bfv::Signed, intern::CircuitNode, BfvType, Cipher, FheType, GraphCipherAdd, GraphCipherDiv,
-    GraphCipherMul, GraphCipherSub, NumCiphertexts, TryFromPlaintext, TryIntoPlaintext, TypeName,
+    GraphCipherMul, GraphCipherSub, NumCiphertexts, TryFromPlaintext, TryIntoPlaintext, TypeName, ops::*,
 };
 use crate::{with_ctx, CircuitInputTrait, InnerPlaintext, Params, Plaintext, TypeName};
 use std::cmp::Eq;
@@ -123,6 +123,58 @@ impl GraphCipherAdd for Rational {
     }
 }
 
+impl GraphCipherPlainAdd for Rational {
+    type Left = Self;
+    type Right = Self;
+
+    fn graph_cipher_plain_add(
+        a: CircuitNode<Cipher<Self::Left>>,
+        b: CircuitNode<Self::Right>,
+    ) -> CircuitNode<Cipher<Self::Left>> {
+        with_ctx(|ctx| {
+            // Scale each numinator by the other's denominator.
+            let num_a_2 = ctx.add_multiplication_plaintext(a.ids[0], b.ids[1]);
+            let num_b_2 = ctx.add_multiplication_plaintext(a.ids[1], b.ids[0]);
+
+            // Get denominators to have the same scale
+            let den_2 = ctx.add_multiplication_plaintext(a.ids[1], b.ids[1]);
+
+            let ids = [ctx.add_addition(num_a_2, num_b_2), den_2];
+
+            CircuitNode::new(&ids)
+        })
+    }
+}
+
+impl GraphCipherConstAdd for Rational {
+    type Left = Self;
+    type Right = f64;
+
+    fn graph_cipher_const_add(
+        a: CircuitNode<Cipher<Self::Left>>,
+        b: Self::Right,
+    ) -> CircuitNode<Cipher<Self::Left>> {
+        with_ctx(|ctx| {
+            let b = Self::try_from(b).unwrap();
+
+            let b_num = ctx.add_plaintext_literal(b.num.try_into_plaintext(&ctx.params).unwrap().inner);
+
+            let b_den = ctx.add_plaintext_literal(b.den.try_into_plaintext(&ctx.params).unwrap().inner);
+
+            // Scale each numinator by the other's denominator.
+            let num_a_2 = ctx.add_multiplication_plaintext(a.ids[0], b_den);
+            let num_b_2 = ctx.add_multiplication_plaintext(a.ids[1], b_num);
+
+            // Get denominators to have the same scale
+            let den_2 = ctx.add_multiplication_plaintext(a.ids[1], b_den);
+
+            let ids = [ctx.add_addition(num_a_2, num_b_2), den_2];
+
+            CircuitNode::new(&ids)
+        })
+    }
+}
+
 impl GraphCipherSub for Rational {
     type Left = Self;
     type Right = Self;
@@ -138,6 +190,108 @@ impl GraphCipherSub for Rational {
 
             // Get denominators to have the same scale
             let den_2 = ctx.add_multiplication(a.ids[1], b.ids[1]);
+
+            let ids = [ctx.add_subtraction(num_a_2, num_b_2), den_2];
+
+            CircuitNode::new(&ids)
+        })
+    }
+}
+
+impl GraphCipherPlainSub for Rational {
+    type Left = Self;
+    type Right = Self;
+
+    fn graph_cipher_plain_sub(
+        a: CircuitNode<Cipher<Self::Left>>,
+        b: CircuitNode<Self::Right>,
+    ) -> CircuitNode<Cipher<Self::Left>> {
+        with_ctx(|ctx| {
+            // Scale each numinator by the other's denominator.
+            let num_a_2 = ctx.add_multiplication_plaintext(a.ids[0], b.ids[1]);
+            let num_b_2 = ctx.add_multiplication_plaintext(a.ids[1], b.ids[0]);
+
+            // Get denominators to have the same scale
+            let den_2 = ctx.add_multiplication_plaintext(a.ids[1], b.ids[1]);
+
+            let ids = [ctx.add_subtraction(num_a_2, num_b_2), den_2];
+
+            CircuitNode::new(&ids)
+        })
+    }
+}
+
+impl GraphPlainCipherSub for Rational {
+    type Left = Self;
+    type Right = Self;
+
+    fn graph_plain_cipher_sub(
+        a: CircuitNode<Self::Left>,
+        b: CircuitNode<Cipher<Self::Right>>,
+    ) -> CircuitNode<Cipher<Self::Left>> {
+        with_ctx(|ctx| {
+            // Scale each numinator by the other's denominator.
+            let num_a_2 = ctx.add_multiplication_plaintext(b.ids[0], a.ids[1]);
+            let num_b_2 = ctx.add_multiplication_plaintext(b.ids[1], a.ids[0]);
+
+            // Get denominators to have the same scale
+            let den_2 = ctx.add_multiplication_plaintext(b.ids[1], a.ids[1]);
+
+            let ids = [ctx.add_subtraction(num_a_2, num_b_2), den_2];
+
+            CircuitNode::new(&ids)
+        })
+    }
+}
+
+impl GraphCipherConstSub for Rational {
+    type Left = Self;
+    type Right = f64;
+
+    fn graph_cipher_const_sub(
+        a: CircuitNode<Cipher<Self::Left>>,
+        b: Self::Right
+    ) -> CircuitNode<Cipher<Self::Left>> {
+        with_ctx(|ctx| {
+            let b = Self::try_from(b).unwrap();
+
+            let b_num = ctx.add_plaintext_literal(b.num.try_into_plaintext(&ctx.params).unwrap().inner);
+            let b_den = ctx.add_plaintext_literal(b.den.try_into_plaintext(&ctx.params).unwrap().inner);
+
+            // Scale each numinator by the other's denominator.
+            let num_a_2 = ctx.add_multiplication_plaintext(a.ids[0], b_den);
+            let num_b_2 = ctx.add_multiplication_plaintext(a.ids[1], b_num);
+
+            // Get denominators to have the same scale
+            let den_2 = ctx.add_multiplication_plaintext(a.ids[1], b_den);
+
+            let ids = [ctx.add_subtraction(num_a_2, num_b_2), den_2];
+
+            CircuitNode::new(&ids)
+        })
+    }
+}
+
+impl GraphConstCipherSub for Rational {
+    type Left = f64;
+    type Right = Self;
+
+    fn graph_const_cipher_sub(
+        a: Self::Left,
+        b: CircuitNode<Cipher<Self::Right>>,
+    ) -> CircuitNode<Cipher<Self::Right>> {
+        with_ctx(|ctx| {
+            let a = Self::try_from(a).unwrap();
+
+            let a_num = ctx.add_plaintext_literal(a.num.try_into_plaintext(&ctx.params).unwrap().inner);
+            let a_den = ctx.add_plaintext_literal(a.den.try_into_plaintext(&ctx.params).unwrap().inner);
+
+            // Scale each numinator by the other's denominator.
+            let num_b_2 = ctx.add_multiplication_plaintext(b.ids[0], a_den);
+            let num_a_2 = ctx.add_multiplication_plaintext(b.ids[1], a_num);
+
+            // Get denominators to have the same scale
+            let den_2 = ctx.add_multiplication_plaintext(b.ids[1], a_den);
 
             let ids = [ctx.add_subtraction(num_a_2, num_b_2), den_2];
 
@@ -166,6 +320,51 @@ impl GraphCipherMul for Rational {
     }
 }
 
+impl GraphCipherPlainMul for Rational {
+    type Left = Self;
+    type Right = Self;
+
+    fn graph_cipher_plain_mul(
+        a: CircuitNode<Cipher<Self::Left>>,
+        b: CircuitNode<Self::Right>,
+    ) -> CircuitNode<Cipher<Self::Left>> {
+        with_ctx(|ctx| {
+            // Scale each numinator by the other's denominator.
+            let mul_num = ctx.add_multiplication_plaintext(a.ids[0], b.ids[0]);
+            let mul_den = ctx.add_multiplication_plaintext(a.ids[1], b.ids[1]);
+
+            let ids = [mul_num, mul_den];
+
+            CircuitNode::new(&ids)
+        })
+    }
+}
+
+impl GraphCipherConstMul for Rational {
+    type Left = Self;
+    type Right = f64;
+
+    fn graph_cipher_const_mul(
+        a: CircuitNode<Cipher<Self::Left>>,
+        b: Self::Right,
+    ) -> CircuitNode<Cipher<Self::Left>> {
+        with_ctx(|ctx| {
+            let b = Self::try_from(b).unwrap();
+
+            let num_b = ctx.add_plaintext_literal(b.num.try_into_plaintext(&ctx.params).unwrap().inner);
+            let den_b = ctx.add_plaintext_literal(b.den.try_into_plaintext(&ctx.params).unwrap().inner);
+
+            // Scale each numinator by the other's denominator.
+            let mul_num = ctx.add_multiplication_plaintext(a.ids[0], num_b);
+            let mul_den = ctx.add_multiplication_plaintext(a.ids[1], den_b);
+
+            let ids = [mul_num, mul_den];
+
+            CircuitNode::new(&ids)
+        })
+    }
+}
+
 impl GraphCipherDiv for Rational {
     type Left = Self;
     type Right = Self;
@@ -178,6 +377,96 @@ impl GraphCipherDiv for Rational {
             // Scale each numinator by the other's denominator.
             let mul_num = ctx.add_multiplication(a.ids[0], b.ids[1]);
             let mul_den = ctx.add_multiplication(a.ids[1], b.ids[0]);
+
+            let ids = [mul_num, mul_den];
+
+            CircuitNode::new(&ids)
+        })
+    }
+}
+
+impl GraphCipherPlainDiv for Rational {
+    type Left = Self;
+    type Right = Self;
+
+    fn graph_cipher_plain_div(
+        a: CircuitNode<Cipher<Self::Left>>,
+        b: CircuitNode<Self::Right>,
+    ) -> CircuitNode<Cipher<Self::Left>> {
+        with_ctx(|ctx| {
+            // Scale each numinator by the other's denominator.
+            let mul_num = ctx.add_multiplication_plaintext(a.ids[0], b.ids[1]);
+            let mul_den = ctx.add_multiplication_plaintext(a.ids[1], b.ids[0]);
+
+            let ids = [mul_num, mul_den];
+
+            CircuitNode::new(&ids)
+        })
+    }
+}
+
+impl GraphPlainCipherDiv for Rational {
+    type Left = Self;
+    type Right = Self;
+
+    fn graph_plain_cipher_div(
+        a: CircuitNode<Self::Left>,
+        b: CircuitNode<Cipher<Self::Right>>,
+    ) -> CircuitNode<Cipher<Self::Left>> {
+        with_ctx(|ctx| {
+            // Scale each numinator by the other's denominator.
+            let mul_num = ctx.add_multiplication_plaintext(a.ids[0], b.ids[1]);
+            let mul_den = ctx.add_multiplication_plaintext(a.ids[1], b.ids[0]);
+
+            let ids = [mul_num, mul_den];
+
+            CircuitNode::new(&ids)
+        })
+    }
+}
+
+impl GraphCipherConstDiv for Rational {
+    type Left = Self;
+    type Right = f64;
+
+    fn graph_cipher_const_div(
+        a: CircuitNode<Cipher<Self::Left>>,
+        b: Self::Right,
+    ) -> CircuitNode<Cipher<Self::Left>> {
+        with_ctx(|ctx| {
+            let b = Self::try_from(b).unwrap();
+
+            let num_b = ctx.add_plaintext_literal(b.num.try_into_plaintext(&ctx.params).unwrap().inner);
+            let den_b = ctx.add_plaintext_literal(b.den.try_into_plaintext(&ctx.params).unwrap().inner);
+
+            // Scale each numinator by the other's denominator.
+            let mul_num = ctx.add_multiplication_plaintext(a.ids[0], den_b);
+            let mul_den = ctx.add_multiplication_plaintext(a.ids[1], num_b);
+
+            let ids = [mul_num, mul_den];
+
+            CircuitNode::new(&ids)
+        })
+    }
+}
+
+impl GraphConstCipherDiv for Rational {
+    type Left = f64;
+    type Right = Self;
+
+    fn graph_const_cipher_div(
+        a: Self::Left,
+        b: CircuitNode<Cipher<Self::Right>>,
+    ) -> CircuitNode<Cipher<Self::Right>> {
+        with_ctx(|ctx| {
+            let a = Self::try_from(a).unwrap();
+
+            let num_a = ctx.add_plaintext_literal(a.num.try_into_plaintext(&ctx.params).unwrap().inner);
+            let den_a = ctx.add_plaintext_literal(a.den.try_into_plaintext(&ctx.params).unwrap().inner);
+
+            // Scale each numinator by the other's denominator.
+            let mul_num = ctx.add_multiplication_plaintext(b.ids[0], den_a);
+            let mul_den = ctx.add_multiplication_plaintext(b.ids[1], num_a);
 
             let ids = [mul_num, mul_den];
 

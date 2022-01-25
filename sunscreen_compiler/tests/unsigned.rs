@@ -5,7 +5,7 @@ use sunscreen_compiler::{
 };
 
 #[test]
-fn can_add_unsigned_cipher_plain() {
+fn can_add_cipher_plain() {
     #[circuit(scheme = "bfv")]
     fn add(a: Cipher<Unsigned>, b: Unsigned) -> Cipher<Unsigned> {
         a + b
@@ -34,7 +34,7 @@ fn can_add_unsigned_cipher_plain() {
 }
 
 #[test]
-fn can_add_unsigned_plain_cipher() {
+fn can_add_plain_cipher() {
     #[circuit(scheme = "bfv")]
     fn add(a: Unsigned, b: Cipher<Unsigned>) -> Cipher<Unsigned> {
         b + a
@@ -63,7 +63,7 @@ fn can_add_unsigned_plain_cipher() {
 }
 
 #[test]
-fn can_add_unsigned_cipher_literal() {
+fn can_add_cipher_literal() {
     #[circuit(scheme = "bfv")]
     fn add(a: Cipher<Unsigned>) -> Cipher<Unsigned> {
         a + 4
@@ -90,7 +90,7 @@ fn can_add_unsigned_cipher_literal() {
 }
 
 #[test]
-fn can_add_unsigned_literal_cipher() {
+fn can_add_literal_cipher() {
     #[circuit(scheme = "bfv")]
     fn add(a: Cipher<Unsigned>) -> Cipher<Unsigned> {
         4 + a
@@ -117,7 +117,7 @@ fn can_add_unsigned_literal_cipher() {
 }
 
 #[test]
-fn can_add_multiply_cipher_plain() {
+fn can_mul_cipher_plain() {
     #[circuit(scheme = "bfv")]
     fn add(a: Cipher<Unsigned>, b: Unsigned) -> Cipher<Unsigned> {
         a * b
@@ -146,7 +146,7 @@ fn can_add_multiply_cipher_plain() {
 }
 
 #[test]
-fn can_add_multiply_plain_cipher() {
+fn can_mul_plain_cipher() {
     #[circuit(scheme = "bfv")]
     fn add(a: Unsigned, b: Cipher<Unsigned>) -> Cipher<Unsigned> {
         a * b
@@ -175,7 +175,7 @@ fn can_add_multiply_plain_cipher() {
 }
 
 #[test]
-fn can_add_multiply_cipher_literal() {
+fn can_mul_cipher_literal() {
     #[circuit(scheme = "bfv")]
     fn add(a: Cipher<Unsigned>) -> Cipher<Unsigned> {
         a * 3
@@ -203,7 +203,7 @@ fn can_add_multiply_cipher_literal() {
 }
 
 #[test]
-fn can_add_multiply_literal_cipher() {
+fn can_mul_literal_cipher() {
     #[circuit(scheme = "bfv")]
     fn add(a: Cipher<Unsigned>) -> Cipher<Unsigned> {
         3 * a

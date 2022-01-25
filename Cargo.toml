@@ -2,7 +2,8 @@
 members = [
     "emsdk",
     "examples/simple_multiply",
-    "examples/calculator",
+    "examples/calculator_rational",
+    "examples/calculator_fractional",
     "seal",
     "seal_bench",
     "sunscreen_backend",

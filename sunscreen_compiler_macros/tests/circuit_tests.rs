@@ -1,5 +1,5 @@
 use sunscreen_compiler::{
-    types::{bfv::Unsigned, Cipher, TypeName},
+    types::{bfv::Signed, Cipher, TypeName},
     CallSignature, CircuitFn, FrontendCompilation, Params, SchemeType, SecurityLevel, CURRENT_CTX,
 };
 use sunscreen_compiler_macros::circuit;
@@ -15,8 +15,6 @@ fn get_params() -> Params {
         scheme_type: SchemeType::Bfv,
     }
 }
-
-type CipherUnsigned = Cipher<Unsigned>;
 
 #[test]
 fn circuit_gets_called() {
@@ -89,11 +87,11 @@ fn compile_failures() {
 #[test]
 fn capture_circuit_input_args() {
     #[circuit(scheme = "bfv")]
-    fn circuit_with_args(_a: Unsigned, _b: Unsigned, _c: Unsigned, _d: Unsigned) {}
+    fn circuit_with_args(_a: Signed, _b: Signed, _c: Signed, _d: Signed) {}
 
     assert_eq!(circuit_with_args.scheme_type(), SchemeType::Bfv);
 
-    let type_name = Unsigned::type_name();
+    let type_name = Signed::type_name();
 
     let expected_signature = CallSignature {
         arguments: vec![
@@ -116,11 +114,11 @@ fn capture_circuit_input_args() {
 #[test]
 fn can_add() {
     #[circuit(scheme = "bfv")]
-    fn circuit_with_args(a: CipherUnsigned, b: CipherUnsigned, c: CipherUnsigned) {
+    fn circuit_with_args(a: Cipher<Signed>, b: Cipher<Signed>, c: Cipher<Signed>) {
         let _ = a + b + c;
     }
 
-    let type_name = Cipher::<Unsigned>::type_name();
+    let type_name = Cipher::<Signed>::type_name();
 
     let expected_signature = CallSignature {
         arguments: vec![type_name.clone(), type_name.clone(), type_name.clone()],
@@ -178,12 +176,12 @@ fn can_add() {
 #[test]
 fn can_add_plaintext() {
     #[circuit(scheme = "bfv")]
-    fn circuit_with_args(a: Cipher<Unsigned>, b: Unsigned) {
+    fn circuit_with_args(a: Cipher<Signed>, b: Signed) {
         let _ = a + b;
     }
 
     let expected_signature = CallSignature {
-        arguments: vec![Cipher::<Unsigned>::type_name(), Unsigned::type_name()],
+        arguments: vec![Cipher::<Signed>::type_name(), Signed::type_name()],
         returns: vec![],
         num_ciphertexts: vec![],
     };
@@ -226,11 +224,11 @@ fn can_add_plaintext() {
 #[test]
 fn can_mul() {
     #[circuit(scheme = "bfv")]
-    fn circuit_with_args(a: CipherUnsigned, b: CipherUnsigned, c: CipherUnsigned) {
+    fn circuit_with_args(a: Cipher<Signed>, b: Cipher<Signed>, c: Cipher<Signed>) {
         let _ = a * b * c;
     }
 
-    let type_name = Cipher::<Unsigned>::type_name();
+    let type_name = Cipher::<Signed>::type_name();
 
     let expected_signature = CallSignature {
         arguments: vec![type_name.clone(), type_name.clone(), type_name.clone()],
@@ -287,11 +285,11 @@ fn can_mul() {
 #[test]
 fn can_collect_output() {
     #[circuit(scheme = "bfv")]
-    fn circuit_with_args(a: Cipher<Unsigned>, b: CipherUnsigned) -> CipherUnsigned {
+    fn circuit_with_args(a: Cipher<Signed>, b: Cipher<Signed>) -> Cipher<Signed> {
         a + b * a
     }
 
-    let type_name = Cipher::<Unsigned>::type_name();
+    let type_name = Cipher::<Signed>::type_name();
 
     let expected_signature = CallSignature {
         arguments: vec![type_name.clone(), type_name.clone()],
@@ -354,13 +352,13 @@ fn can_collect_output() {
 fn can_collect_multiple_outputs() {
     #[circuit(scheme = "bfv")]
     fn circuit_with_args(
-        a: Cipher<Unsigned>,
-        b: Cipher<Unsigned>,
-    ) -> (Cipher<Unsigned>, Cipher<Unsigned>) {
+        a: Cipher<Signed>,
+        b: Cipher<Signed>,
+    ) -> (Cipher<Signed>, Cipher<Signed>) {
         (a + b * a, a)
     }
 
-    let type_name = Cipher::<Unsigned>::type_name();
+    let type_name = Cipher::<Signed>::type_name();
 
     let expected_signature = CallSignature {
         arguments: vec![type_name.clone(), type_name.clone()],

@@ -20,13 +20,9 @@
  * allows for somewhat efficiently representing integers, but has unusual
  * overflow semantics developers need to understand. This type supports
  * addition, subtraction, multiplication, and negation.
- * * The [`Unsigned`](crate::types::bfv::Unsigned) type represents and unsigned
- * integer. This type has the same benefits and caveats as
- * [`Signed`](crate::types::bfv::Signed) types, but is unsigned.
  * * The [`Fractional`](crate::types::bfv::Fractional) type is a quasi fixed-point
  * value. It allows you to homomorphically compute decimal values as
- * efficiently as [`Signed`](crate::types::bfv::Signed) and
- * [`Unsigned`](crate::types::bfv::Unsigned) types. This type has complex overflow
+ * efficiently as the [`Signed`](crate::types::bfv::Signed) type. This type has complex overflow
  * conditions. This type intrinsically supports homomorphic addition
  * multiplication, and negation. Dividing by an [`f64`] constant is supported.
  * Dividing by ciphertext is not possible.
@@ -44,7 +40,6 @@
  * | Type       | # ciphertexts | overflow conditions | values            | ops/add        | ops/mul | ops/sub        | ops/neg | ops/div |
  * |------------|---------------|---------------------|-------------------|----------------|---------|----------------|---------|---------|
  * | Signed     | 1             | moderate            | signed integral   | 1 add          | 1 mul   | 1 sub          | 1 neg   | -       |
- * | Unsigned   | 1             | moderate            | unsigned integral | 1 add          | 1 mul   | 1 sub          | 1 neg   | -       |
  * | Fractional | 1             | complex             | signed decimal    | 1 add          | 1 mul   | 1 sub          | 1 neg   | 1 mul*  |
  * | Rational   | 2             | moderate            | signed decimal    | 2 muls + 1 sub | 2 muls  | 2 muls + 1 sub | 1 neg   | 2 muls  |
  *

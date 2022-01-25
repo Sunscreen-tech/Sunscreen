@@ -1,6 +1,6 @@
 use sunscreen_compiler::{
     circuit,
-    types::{bfv::Unsigned, Cipher},
+    types::{bfv::Signed, Cipher},
     Compiler, PlainModulusConstraint,
 };
 use sunscreen_runtime::Runtime;
@@ -11,17 +11,17 @@ use sunscreen_runtime::Runtime;
  * the result. Circuits may take any number of parameters and return either a single result
  * or a tuple of results.
  *
- * The [`Unsigned`] type refers to an unsigned integer modulo the plaintext
+ * The [`Signed`] type refers to an unsigned integer modulo the plaintext
  * modulus (p). p is passed to the compiler via plain_modulus_constraint.
  *
- * A `Cipher` type indicates the type is encrypted. Thus, a `Cipher<Unsigned>`
- * refers to an encrypted [`Unsigned`] value.
+ * A `Cipher` type indicates the type is encrypted. Thus, a `Cipher<Signed>`
+ * refers to an encrypted [`Signed`] value.
  *
  * One takes a circuit and passes them to the compiler, which transforms it into a form
  * suitable for execution.
  */
 #[circuit(scheme = "bfv")]
-fn simple_multiply(a: Cipher<Unsigned>, b: Cipher<Unsigned>) -> Cipher<Unsigned> {
+fn simple_multiply(a: Cipher<Signed>, b: Cipher<Signed>) -> Cipher<Signed> {
     a * b
 }
 
@@ -66,8 +66,8 @@ fn main() {
      */
     let (public, secret) = runtime.generate_keys().unwrap();
 
-    let a = runtime.encrypt(Unsigned::from(15), &public).unwrap();
-    let b = runtime.encrypt(Unsigned::from(5), &public).unwrap();
+    let a = runtime.encrypt(Signed::from(15), &public).unwrap();
+    let b = runtime.encrypt(Signed::from(5), &public).unwrap();
 
     /*
      * Run the circuit with our arguments. This produces a results
@@ -76,9 +76,9 @@ fn main() {
     let results = runtime.run(&circuit, vec![a, b], &public).unwrap();
 
     /*
-     * Our circuit outputs a Unsigned single value as the result. Decrypt it.
+     * Our circuit outputs a Signed single value as the result. Decrypt it.
      */
-    let c: Unsigned = runtime.decrypt(&results[0], &secret).unwrap();
+    let c: Signed = runtime.decrypt(&results[0], &secret).unwrap();
 
     /*
      * Yay, 5 * 15 indeed equals 75.

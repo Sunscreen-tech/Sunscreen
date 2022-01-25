@@ -54,6 +54,19 @@ pub(crate) fn validate_nodes(ir: &Circuit) -> Vec<IRError> {
                     .collect(),
                 );
             }
+            SubPlaintext => {
+              errors.append(
+                &mut validate_binary_op_has_correct_operands(
+                    ir,
+                    i,
+                    OutputType::Ciphertext,
+                    OutputType::Plaintext,
+                )
+                .iter()
+                .map(|e| IRError::NodeError(i, node_info.to_string(), *e))
+                .collect(),
+              );
+            }
             Multiply => {
                 errors.append(
                     &mut validate_binary_op_has_correct_operands(

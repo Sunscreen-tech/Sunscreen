@@ -251,7 +251,15 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
 
                     data[index.index()].store(Some(Cow::Owned(c.into())));
                 }
-                Negate => unimplemented!(),
+                Negate => {
+                    let x_id = get_unary_operand(ir, index);
+
+                    let x = get_ciphertext(&data, x_id.index())?;
+
+                    let y = evaluator.negate(&x)?;
+
+                    data[index.index()].store(Some(Cow::Owned(y.into())));
+                },
                 Sub => {
                     let (left, right) = get_left_right_operands(ir, index);
 
@@ -259,6 +267,16 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
                     let b = get_ciphertext(&data, right.index())?;
 
                     let c = evaluator.sub(&a, &b)?;
+
+                    data[index.index()].store(Some(Cow::Owned(c.into())));
+                },
+                SubPlaintext => {
+                    let (left, right) = get_left_right_operands(ir, index);
+
+                    let a = get_ciphertext(&data, left.index())?;
+                    let b = get_plaintext(&data, right.index())?;
+
+                    let c = evaluator.sub_plain(&a, &b)?;
 
                     data[index.index()].store(Some(Cow::Owned(c.into())));
                 }

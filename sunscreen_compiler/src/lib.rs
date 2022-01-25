@@ -129,6 +129,16 @@ pub enum Operation {
     Sub,
 
     /**
+     * Subtract a plaintext.
+     */
+    SubPlaintext,
+
+    /**
+     * Unary negation (i.e. given x, compute -x)
+     */
+    Negate,
+
+    /**
      * Multiplication.
      */
     Multiply,
@@ -345,6 +355,20 @@ impl Context {
     }
 
     /**
+     * Add a subtraction to this context.
+     */
+    pub fn add_subtraction_plaintext(&mut self, left: NodeIndex, right: NodeIndex) -> NodeIndex {
+        self.add_2_input(Operation::SubPlaintext, left, right)
+    }
+
+    /**
+     * Adds a negation to this context.
+     */
+    pub fn add_negate(&mut self, x: NodeIndex) -> NodeIndex {
+        self.add_1_input(Operation::Negate, x)
+    }
+
+    /**
      * Add an addition to this context.
      */
     pub fn add_addition(&mut self, left: NodeIndex, right: NodeIndex) -> NodeIndex {
@@ -454,6 +478,8 @@ impl FrontendCompilation {
                     )))
                 }
                 Operation::Sub => NodeInfo::new(CircuitOperation::Sub),
+                Operation::SubPlaintext => NodeInfo::new(CircuitOperation::SubPlaintext),
+                Operation::Negate => NodeInfo::new(CircuitOperation::Negate),
                 Operation::Multiply => NodeInfo::new(CircuitOperation::Multiply),
                 Operation::MultiplyPlaintext => NodeInfo::new(CircuitOperation::MultiplyPlaintext),
                 Operation::Output => NodeInfo::new(CircuitOperation::OutputCiphertext),

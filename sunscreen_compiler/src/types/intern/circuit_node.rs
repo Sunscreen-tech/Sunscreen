@@ -4,7 +4,7 @@ use crate::{
 };
 use petgraph::stable_graph::NodeIndex;
 
-use std::ops::{Add, Div, Mul, Sub, Neg};
+use std::ops::{Add, Div, Mul, Neg, Sub};
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 /**
@@ -228,7 +228,6 @@ where
     }
 }
 
-
 // cipher - literal
 impl<T, U> Sub<T> for CircuitNode<Cipher<U>>
 where
@@ -239,6 +238,42 @@ where
 
     fn sub(self, rhs: T) -> Self::Output {
         U::graph_cipher_const_sub(self, rhs)
+    }
+}
+
+// literal - ciphertext
+impl<T> Sub<CircuitNode<Cipher<T>>> for u64
+where
+    T: FheType + GraphConstCipherSub<Left = u64, Right = T>,
+{
+    type Output = CircuitNode<Cipher<T>>;
+
+    fn sub(self, rhs: CircuitNode<Cipher<T>>) -> Self::Output {
+        T::graph_const_cipher_sub(self, rhs)
+    }
+}
+
+// literal - ciphertext
+impl<T> Sub<CircuitNode<Cipher<T>>> for f64
+where
+    T: FheType + GraphConstCipherSub<Left = f64, Right = T>,
+{
+    type Output = CircuitNode<Cipher<T>>;
+
+    fn sub(self, rhs: CircuitNode<Cipher<T>>) -> Self::Output {
+        T::graph_const_cipher_sub(self, rhs)
+    }
+}
+
+// literal - ciphertext
+impl<T> Sub<CircuitNode<Cipher<T>>> for i64
+where
+    T: FheType + GraphConstCipherSub<Left = i64, Right = T>,
+{
+    type Output = CircuitNode<Cipher<T>>;
+
+    fn sub(self, rhs: CircuitNode<Cipher<T>>) -> Self::Output {
+        T::graph_const_cipher_sub(self, rhs)
     }
 }
 
@@ -327,6 +362,7 @@ where
     }
 }
 
+// ciphertext / ciphertext
 impl<T> Div for CircuitNode<Cipher<T>>
 where
     T: FheType + GraphCipherDiv<Left = T, Right = T>,
@@ -338,6 +374,7 @@ where
     }
 }
 
+// ciphertext / literal
 impl<T, U> Div<U> for CircuitNode<Cipher<T>>
 where
     U: FheLiteral,
@@ -350,9 +387,10 @@ where
     }
 }
 
+// -ciphertext
 impl<T> Neg for CircuitNode<Cipher<T>>
 where
-    T: FheType + GraphCipherNeg<Val = T>
+    T: FheType + GraphCipherNeg<Val = T>,
 {
     type Output = Self;
 

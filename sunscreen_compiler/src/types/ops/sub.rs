@@ -94,3 +94,26 @@ pub trait GraphCipherConstSub {
         b: Self::Right,
     ) -> CircuitNode<Cipher<Self::Left>>;
 }
+
+/**
+ * Called when a circuit encounters a - operation on two encrypted types.
+ */
+pub trait GraphConstCipherSub {
+    /**
+     * The type of the left operand
+     */
+    type Left: FheLiteral;
+
+    /**
+     * The type of the right operand
+     */
+    type Right: FheType;
+
+    /**
+     * Process the + operation
+     */
+    fn graph_const_cipher_sub(
+        a: Self::Left,
+        b: CircuitNode<Cipher<Self::Right>>,
+    ) -> CircuitNode<Cipher<Self::Right>>;
+}

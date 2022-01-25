@@ -1,4 +1,7 @@
-use crate::{types::{intern::{CircuitNode, FheType}, Cipher}};
+use crate::types::{
+    intern::{CircuitNode, FheType},
+    Cipher,
+};
 
 /**
  * Called when the user performs unary negation (-) on a ciphertext.

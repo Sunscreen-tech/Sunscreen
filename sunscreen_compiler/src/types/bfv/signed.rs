@@ -3,8 +3,8 @@ use seal::Plaintext as SealPlaintext;
 use crate::types::{
     ops::{
         GraphCipherAdd, GraphCipherConstAdd, GraphCipherConstMul, GraphCipherConstSub,
-        GraphCipherMul, GraphCipherPlainAdd, GraphCipherPlainMul, GraphCipherPlainSub,
-        GraphCipherSub, GraphCipherNeg, GraphPlainCipherSub
+        GraphCipherMul, GraphCipherNeg, GraphCipherPlainAdd, GraphCipherPlainMul,
+        GraphCipherPlainSub, GraphCipherSub, GraphConstCipherSub, GraphPlainCipherSub,
     },
     Cipher,
 };
@@ -241,6 +241,26 @@ impl GraphCipherConstSub for Signed {
 
             let lit = ctx.add_plaintext_literal(b.inner);
             let n = ctx.add_subtraction_plaintext(a.ids[0], lit);
+
+            CircuitNode::new(&[n])
+        })
+    }
+}
+
+impl GraphConstCipherSub for Signed {
+    type Left = i64;
+    type Right = Signed;
+
+    fn graph_const_cipher_sub(
+        a: i64,
+        b: CircuitNode<Cipher<Self::Right>>,
+    ) -> CircuitNode<Cipher<Self::Right>> {
+        with_ctx(|ctx| {
+            let a = Self::from(a).try_into_plaintext(&ctx.params).unwrap();
+
+            let lit = ctx.add_plaintext_literal(a.inner);
+            let n = ctx.add_subtraction_plaintext(b.ids[0], lit);
+            let n = ctx.add_negate(n);
 
             CircuitNode::new(&[n])
         })

@@ -237,7 +237,19 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
 
                     data[index.index()].store(Some(Cow::Owned(c.into())));
                 }
-                SwapRows => unimplemented!(),
+                SwapRows => {
+                    let galois_keys = galois_keys
+                        .as_ref()
+                        .ok_or(CircuitRunFailure::MissingGaloisKeys)?;
+
+                    let input = get_unary_operand(ir, index);
+
+                    let x = get_ciphertext(&data, input.index())?;
+
+                    let y = evaluator.rotate_columns(&x, galois_keys)?;
+
+                    data[index.index()].store(Some(Cow::Owned(y.into())));
+                }
                 Relinearize => {
                     let relin_keys = relin_keys
                         .as_ref()

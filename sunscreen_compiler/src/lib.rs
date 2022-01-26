@@ -439,6 +439,13 @@ impl Context {
     }
 
     /**
+     * Adds a row swap.
+     */
+    pub fn add_swap_rows(&mut self, x: NodeIndex) -> NodeIndex {
+        self.add_1_input(Operation::SwapRows, x)
+    }
+
+    /**
      * Add a node that captures the previous node as an output.
      */
     pub fn add_output(&mut self, i: NodeIndex) -> NodeIndex {

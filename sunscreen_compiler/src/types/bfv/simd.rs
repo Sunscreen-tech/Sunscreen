@@ -1,10 +1,12 @@
 use crate::{
     crate_version,
     types::{
+        intern::{Cipher, CircuitNode},
+        ops::*,
         BfvType, FheType, NumCiphertexts, TryFromPlaintext, TryIntoPlaintext, Type, TypeName,
         TypeNameInstance, Version,
     },
-    CircuitInputTrait, InnerPlaintext, Params, Plaintext, WithContext,
+    with_ctx, CircuitInputTrait, InnerPlaintext, Literal, Params, Plaintext, WithContext,
 };
 use seal::{
     BFVEncoder, BfvEncryptionParametersBuilder, Context as SealContext, Modulus,
@@ -200,6 +202,89 @@ impl<const LANES: usize> TryFrom<[Vec<i64>; 2]> for Simd<LANES> {
 impl<const LANES: usize> Into<[Vec<i64>; 2]> for Simd<LANES> {
     fn into(self) -> [Vec<i64>; 2] {
         self.data
+    }
+}
+
+impl<const LANES: usize> GraphCipherAdd for Simd<LANES> {
+    type Left = Self;
+    type Right = Self;
+
+    fn graph_cipher_add(
+        a: CircuitNode<Cipher<Self::Left>>,
+        b: CircuitNode<Cipher<Self::Right>>,
+    ) -> CircuitNode<Cipher<Self::Left>> {
+        with_ctx(|ctx| {
+            let n = ctx.add_addition(a.ids[0], b.ids[0]);
+
+            CircuitNode::new(&[n])
+        })
+    }
+}
+
+impl<const LANES: usize> GraphCipherSub for Simd<LANES> {
+    type Left = Self;
+    type Right = Self;
+
+    fn graph_cipher_sub(
+        a: CircuitNode<Cipher<Self::Left>>,
+        b: CircuitNode<Cipher<Self::Right>>,
+    ) -> CircuitNode<Cipher<Self::Left>> {
+        with_ctx(|ctx| {
+            let n = ctx.add_subtraction(a.ids[0], b.ids[0]);
+
+            CircuitNode::new(&[n])
+        })
+    }
+}
+
+impl<const LANES: usize> GraphCipherMul for Simd<LANES> {
+    type Left = Self;
+    type Right = Self;
+
+    fn graph_cipher_mul(
+        a: CircuitNode<Cipher<Self::Left>>,
+        b: CircuitNode<Cipher<Self::Right>>,
+    ) -> CircuitNode<Cipher<Self::Left>> {
+        with_ctx(|ctx| {
+            let n = ctx.add_multiplication(a.ids[0], b.ids[0]);
+
+            CircuitNode::new(&[n])
+        })
+    }
+}
+
+impl<const LANES: usize> GraphCipherSwapRows for Simd<LANES> {
+    fn graph_cipher_swap_rows(x: CircuitNode<Cipher<Self>>) -> CircuitNode<Cipher<Self>> {
+        with_ctx(|ctx| {
+            let n = ctx.add_swap_rows(x.ids[0]);
+
+            CircuitNode::new(&[n])
+        })
+    }
+}
+
+impl<const LANES: usize> GraphCipherRotateLeft for Simd<LANES> {
+    fn graph_cipher_rotate_left(x: CircuitNode<Cipher<Self>>, y: u64) -> CircuitNode<Cipher<Self>> {
+        with_ctx(|ctx| {
+            let y = ctx.add_literal(Literal::U64(y));
+            let n = ctx.add_rotate_left(x.ids[0], y);
+
+            CircuitNode::new(&[n])
+        })
+    }
+}
+
+impl<const LANES: usize> GraphCipherRotateRight for Simd<LANES> {
+    fn graph_cipher_rotate_right(
+        x: CircuitNode<Cipher<Self>>,
+        y: u64,
+    ) -> CircuitNode<Cipher<Self>> {
+        with_ctx(|ctx| {
+            let y = ctx.add_literal(Literal::U64(y));
+            let n = ctx.add_rotate_right(x.ids[0], y);
+
+            CircuitNode::new(&[n])
+        })
     }
 }
 

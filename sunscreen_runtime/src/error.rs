@@ -121,7 +121,7 @@ pub enum Error {
     BincodeError(String),
 
     /**
-     * Called [`inner_as_seal_plaintext`](crate::InnerPlaintext::inner_as_seal_plaintext)
+     * Called [`inner_as_seal_plaintext`](crate::InnerPlaintext.inner_as_seal_plaintext)
      * on non-Seal plaintext.
      */
     NotASealPlaintext,

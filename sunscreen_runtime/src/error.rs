@@ -119,6 +119,12 @@ pub enum Error {
      * An error occurred when serializing/deserializing with bincode.
      */
     BincodeError(String),
+
+    /**
+     * Called [`inner_as_seal_plaintext`](crate::InnerPlaintext.inner_as_seal_plaintext)
+     * on non-Seal plaintext.
+     */
+    NotASealPlaintext,
 }
 
 impl From<bincode::Error> for Error {

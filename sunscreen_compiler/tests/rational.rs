@@ -1,7 +1,7 @@
 use sunscreen_compiler::{
     circuit,
     types::{bfv::Rational, Cipher},
-    Compiler, PlainModulusConstraint, Runtime, CircuitInput
+    CircuitInput, Compiler, PlainModulusConstraint, Runtime,
 };
 
 #[test]
@@ -157,7 +157,6 @@ fn can_add_cipher_literal() {
     assert_eq!(c, (-3.14).try_into().unwrap());
 }
 
-
 #[test]
 fn can_add_literal_cipher() {
     #[circuit(scheme = "bfv")]
@@ -187,7 +186,6 @@ fn can_add_literal_cipher() {
 
     assert_eq!(c, (-3.14).try_into().unwrap());
 }
-
 
 #[test]
 fn can_mul_cipher_cipher() {

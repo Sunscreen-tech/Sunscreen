@@ -72,6 +72,16 @@ impl InnerPlaintext {
     pub fn from_bytes(data: &[u8]) -> Result<Self> {
         Ok(bincode::deserialize(data)?)
     }
+
+    /**
+     * Unwraps the enum and returns the underlying seal plaintexts, or
+     * returns an error if this plaintext isn't a Seal plaintext.
+     */
+    pub fn as_seal_plaintext(&self) -> Result<&[WithContext<SealPlaintext>]> {
+        match self {
+            Self::Seal(d) => Ok(&d),
+        }
+    }
 }
 
 #[derive(Clone)]
@@ -116,6 +126,16 @@ pub struct Plaintext {
      * The scheme and backend-specific plaintext.
      */
     pub inner: InnerPlaintext,
+}
+
+impl Plaintext {
+    /**
+     * Unwraps the inner plaintext as a Seal plaintext variant. Returns an
+     * error if the inner plaintext is not a Seal plaintext.
+     */
+    pub fn inner_as_seal_plaintext(&self) -> Result<&[WithContext<SealPlaintext>]> {
+        Ok(self.inner.as_seal_plaintext()?)
+    }
 }
 
 #[derive(Clone, Deserialize, Serialize)]

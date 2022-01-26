@@ -118,24 +118,6 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug unsigned integration tests in library 'sunscreen_compiler'",
-            "cargo": {
-                "args": [
-                    "test",
-                    "--no-run",
-                    "--package=sunscreen_compiler",
-                ],
-                "filter": {
-                    "name": "unsigned",
-                    "kind": "test"
-                }
-            },
-            "args": [],
-            "cwd": "${workspaceFolder}"
-        },
-        {
-            "type": "lldb",
-            "request": "launch",
             "name": "Debug signed integration tests in library 'sunscreen_compiler'",
             "cargo": {
                 "args": [
@@ -163,6 +145,24 @@
                 ],
                 "filter": {
                     "name": "fractional",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug simd integration tests in library 'sunscreen_compiler'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--package=sunscreen_compiler",
+                ],
+                "filter": {
+                    "name": "simd",
                     "kind": "test"
                 }
             },

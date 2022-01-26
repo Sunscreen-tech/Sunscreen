@@ -226,7 +226,7 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
                     let c = evaluator.multiply(&a, &b)?;
 
                     data[index.index()].store(Some(Cow::Owned(c.into())));
-                },
+                }
                 MultiplyPlaintext => {
                     let (left, right) = get_left_right_operands(ir, index);
 
@@ -236,8 +236,20 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
                     let c = evaluator.multiply_plain(&a, &b)?;
 
                     data[index.index()].store(Some(Cow::Owned(c.into())));
-                },
-                SwapRows => unimplemented!(),
+                }
+                SwapRows => {
+                    let galois_keys = galois_keys
+                        .as_ref()
+                        .ok_or(CircuitRunFailure::MissingGaloisKeys)?;
+
+                    let input = get_unary_operand(ir, index);
+
+                    let x = get_ciphertext(&data, input.index())?;
+
+                    let y = evaluator.rotate_columns(&x, galois_keys)?;
+
+                    data[index.index()].store(Some(Cow::Owned(y.into())));
+                }
                 Relinearize => {
                     let relin_keys = relin_keys
                         .as_ref()
@@ -259,7 +271,7 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
                     let y = evaluator.negate(&x)?;
 
                     data[index.index()].store(Some(Cow::Owned(y.into())));
-                },
+                }
                 Sub => {
                     let (left, right) = get_left_right_operands(ir, index);
 
@@ -269,7 +281,7 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
                     let c = evaluator.sub(&a, &b)?;
 
                     data[index.index()].store(Some(Cow::Owned(c.into())));
-                },
+                }
                 SubPlaintext => {
                     let (left, right) = get_left_right_operands(ir, index);
 

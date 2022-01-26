@@ -59,7 +59,7 @@ pub mod bfv;
  */
 pub mod intern;
 
-/*
+/**
  * Contains the set of ops traits that dictate legal operations
  * for FHE data types.
  */

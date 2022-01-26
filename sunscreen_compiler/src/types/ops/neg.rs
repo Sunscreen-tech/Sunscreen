@@ -12,5 +12,8 @@ pub trait GraphCipherNeg {
      */
     type Val: FheType;
 
+    /**
+     * Negates the given ciphertext (e.g. -x).
+     */
     fn graph_cipher_neg(a: CircuitNode<Cipher<Self::Val>>) -> CircuitNode<Cipher<Self::Val>>;
 }

@@ -3,7 +3,8 @@ use seal::Plaintext as SealPlaintext;
 use crate::types::{
     ops::{
         GraphCipherAdd, GraphCipherConstAdd, GraphCipherConstDiv, GraphCipherConstMul,
-        GraphCipherMul, GraphCipherPlainAdd, GraphCipherPlainMul, GraphCipherSub, GraphCipherPlainSub, GraphPlainCipherSub, GraphCipherConstSub, GraphConstCipherSub
+        GraphCipherConstSub, GraphCipherMul, GraphCipherPlainAdd, GraphCipherPlainMul,
+        GraphCipherPlainSub, GraphCipherSub, GraphConstCipherSub, GraphPlainCipherSub,
     },
     Cipher,
 };

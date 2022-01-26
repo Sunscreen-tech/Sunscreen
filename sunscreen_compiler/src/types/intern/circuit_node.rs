@@ -4,7 +4,7 @@ use crate::{
 };
 use petgraph::stable_graph::NodeIndex;
 
-use std::ops::{Add, Div, Mul, Neg, Sub};
+use std::ops::{Add, Div, Mul, Neg, Shl, Shr, Sub};
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 /**
@@ -411,7 +411,6 @@ where
     }
 }
 
-
 // literal / cipher
 impl<T> Div<CircuitNode<Cipher<T>>> for f64
 where
@@ -457,5 +456,54 @@ where
 
     fn neg(self) -> Self::Output {
         T::graph_cipher_neg(self)
+    }
+}
+
+/**
+ * A trait that allows data types to swap_rows. E.g. [`Simd`](crate::types::bfv::Simd)
+ */
+pub trait SwapRows {
+    /**
+     * The result type. Typically, this should just be `Self`.
+     */
+    type Output;
+
+    /**
+     * Performs a row swap.
+     */
+    fn swap_rows(self) -> Self::Output;
+}
+
+// ciphertext
+impl<T> SwapRows for CircuitNode<Cipher<T>>
+where
+    T: FheType + GraphCipherSwapRows,
+{
+    type Output = Self;
+
+    fn swap_rows(self) -> Self::Output {
+        T::graph_cipher_swap_rows(self)
+    }
+}
+
+impl<T> Shl<u64> for CircuitNode<Cipher<T>>
+where
+    T: FheType + GraphCipherRotateLeft,
+{
+    type Output = Self;
+
+    fn shl(self, x: u64) -> Self {
+        T::graph_cipher_rotate_left(self, x)
+    }
+}
+
+impl<T> Shr<u64> for CircuitNode<Cipher<T>>
+where
+    T: FheType + GraphCipherRotateRight,
+{
+    type Output = Self;
+
+    fn shr(self, x: u64) -> Self {
+        T::graph_cipher_rotate_right(self, x)
     }
 }

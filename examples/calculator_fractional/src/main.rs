@@ -205,11 +205,7 @@ fn alice(
     })
 }
 
-fn compile_circuits() -> (
-    CompiledCircuit,
-    CompiledCircuit,
-    CompiledCircuit,
-) {
+fn compile_circuits() -> (CompiledCircuit, CompiledCircuit, CompiledCircuit) {
     #[circuit(scheme = "bfv")]
     fn add(a: Cipher<Fractional<64>>, b: Cipher<Fractional<64>>) -> Cipher<Fractional<64>> {
         a + b

@@ -411,7 +411,6 @@ where
     }
 }
 
-
 // literal / cipher
 impl<T> Div<CircuitNode<Cipher<T>>> for f64
 where

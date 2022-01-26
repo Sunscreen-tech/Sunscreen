@@ -1,6 +1,7 @@
 use crate::types::{
-    bfv::Signed, intern::CircuitNode, BfvType, Cipher, FheType, GraphCipherAdd, GraphCipherDiv,
-    GraphCipherMul, GraphCipherSub, NumCiphertexts, TryFromPlaintext, TryIntoPlaintext, TypeName, ops::*,
+    bfv::Signed, intern::CircuitNode, ops::*, BfvType, Cipher, FheType, GraphCipherAdd,
+    GraphCipherDiv, GraphCipherMul, GraphCipherSub, NumCiphertexts, TryFromPlaintext,
+    TryIntoPlaintext, TypeName,
 };
 use crate::{with_ctx, CircuitInputTrait, InnerPlaintext, Params, Plaintext, TypeName};
 use std::cmp::Eq;
@@ -157,9 +158,11 @@ impl GraphCipherConstAdd for Rational {
         with_ctx(|ctx| {
             let b = Self::try_from(b).unwrap();
 
-            let b_num = ctx.add_plaintext_literal(b.num.try_into_plaintext(&ctx.params).unwrap().inner);
+            let b_num =
+                ctx.add_plaintext_literal(b.num.try_into_plaintext(&ctx.params).unwrap().inner);
 
-            let b_den = ctx.add_plaintext_literal(b.den.try_into_plaintext(&ctx.params).unwrap().inner);
+            let b_den =
+                ctx.add_plaintext_literal(b.den.try_into_plaintext(&ctx.params).unwrap().inner);
 
             // Scale each numinator by the other's denominator.
             let num_a_2 = ctx.add_multiplication_plaintext(a.ids[0], b_den);
@@ -250,13 +253,15 @@ impl GraphCipherConstSub for Rational {
 
     fn graph_cipher_const_sub(
         a: CircuitNode<Cipher<Self::Left>>,
-        b: Self::Right
+        b: Self::Right,
     ) -> CircuitNode<Cipher<Self::Left>> {
         with_ctx(|ctx| {
             let b = Self::try_from(b).unwrap();
 
-            let b_num = ctx.add_plaintext_literal(b.num.try_into_plaintext(&ctx.params).unwrap().inner);
-            let b_den = ctx.add_plaintext_literal(b.den.try_into_plaintext(&ctx.params).unwrap().inner);
+            let b_num =
+                ctx.add_plaintext_literal(b.num.try_into_plaintext(&ctx.params).unwrap().inner);
+            let b_den =
+                ctx.add_plaintext_literal(b.den.try_into_plaintext(&ctx.params).unwrap().inner);
 
             // Scale each numinator by the other's denominator.
             let num_a_2 = ctx.add_multiplication_plaintext(a.ids[0], b_den);
@@ -283,8 +288,10 @@ impl GraphConstCipherSub for Rational {
         with_ctx(|ctx| {
             let a = Self::try_from(a).unwrap();
 
-            let a_num = ctx.add_plaintext_literal(a.num.try_into_plaintext(&ctx.params).unwrap().inner);
-            let a_den = ctx.add_plaintext_literal(a.den.try_into_plaintext(&ctx.params).unwrap().inner);
+            let a_num =
+                ctx.add_plaintext_literal(a.num.try_into_plaintext(&ctx.params).unwrap().inner);
+            let a_den =
+                ctx.add_plaintext_literal(a.den.try_into_plaintext(&ctx.params).unwrap().inner);
 
             // Scale each numinator by the other's denominator.
             let num_b_2 = ctx.add_multiplication_plaintext(b.ids[0], a_den);
@@ -351,8 +358,10 @@ impl GraphCipherConstMul for Rational {
         with_ctx(|ctx| {
             let b = Self::try_from(b).unwrap();
 
-            let num_b = ctx.add_plaintext_literal(b.num.try_into_plaintext(&ctx.params).unwrap().inner);
-            let den_b = ctx.add_plaintext_literal(b.den.try_into_plaintext(&ctx.params).unwrap().inner);
+            let num_b =
+                ctx.add_plaintext_literal(b.num.try_into_plaintext(&ctx.params).unwrap().inner);
+            let den_b =
+                ctx.add_plaintext_literal(b.den.try_into_plaintext(&ctx.params).unwrap().inner);
 
             // Scale each numinator by the other's denominator.
             let mul_num = ctx.add_multiplication_plaintext(a.ids[0], num_b);
@@ -436,8 +445,10 @@ impl GraphCipherConstDiv for Rational {
         with_ctx(|ctx| {
             let b = Self::try_from(b).unwrap();
 
-            let num_b = ctx.add_plaintext_literal(b.num.try_into_plaintext(&ctx.params).unwrap().inner);
-            let den_b = ctx.add_plaintext_literal(b.den.try_into_plaintext(&ctx.params).unwrap().inner);
+            let num_b =
+                ctx.add_plaintext_literal(b.num.try_into_plaintext(&ctx.params).unwrap().inner);
+            let den_b =
+                ctx.add_plaintext_literal(b.den.try_into_plaintext(&ctx.params).unwrap().inner);
 
             // Scale each numinator by the other's denominator.
             let mul_num = ctx.add_multiplication_plaintext(a.ids[0], den_b);
@@ -461,8 +472,10 @@ impl GraphConstCipherDiv for Rational {
         with_ctx(|ctx| {
             let a = Self::try_from(a).unwrap();
 
-            let num_a = ctx.add_plaintext_literal(a.num.try_into_plaintext(&ctx.params).unwrap().inner);
-            let den_a = ctx.add_plaintext_literal(a.den.try_into_plaintext(&ctx.params).unwrap().inner);
+            let num_a =
+                ctx.add_plaintext_literal(a.num.try_into_plaintext(&ctx.params).unwrap().inner);
+            let den_a =
+                ctx.add_plaintext_literal(a.den.try_into_plaintext(&ctx.params).unwrap().inner);
 
             // Scale each numinator by the other's denominator.
             let mul_num = ctx.add_multiplication_plaintext(b.ids[0], den_a);

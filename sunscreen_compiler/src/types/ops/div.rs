@@ -51,7 +51,7 @@ pub trait GraphCipherPlainDiv {
 }
 
 /**
- * Called when a circuit encounters a / operation with a 
+ * Called when a circuit encounters a / operation with a
  * plaintext numerator and ciphertext denominator.
  */
 pub trait GraphPlainCipherDiv {
@@ -98,7 +98,7 @@ pub trait GraphCipherConstDiv {
 }
 
 /**
- * Called when a circuit encounters a / operation on a 
+ * Called when a circuit encounters a / operation on a
  * literal numerator and encrypted denominator.
  */
 pub trait GraphConstCipherDiv {

@@ -351,10 +351,7 @@ fn can_collect_output() {
 #[test]
 fn can_collect_multiple_outputs() {
     #[circuit(scheme = "bfv")]
-    fn circuit_with_args(
-        a: Cipher<Signed>,
-        b: Cipher<Signed>,
-    ) -> (Cipher<Signed>, Cipher<Signed>) {
+    fn circuit_with_args(a: Cipher<Signed>, b: Cipher<Signed>) -> (Cipher<Signed>, Cipher<Signed>) {
         (a + b * a, a)
     }
 

@@ -377,12 +377,13 @@ where
 
     let (sender, reciever) = crossbeam::channel::unbounded();
 
-    for r in deps
-        .iter()
-        .filter(|count| count.load(Ordering::Relaxed) == 0)
-        .enumerate()
-        .map(|(id, _)| id)
-    {
+    for r in deps.iter().enumerate().filter_map(|(id, count)| {
+        if count.load(Ordering::Relaxed) == 0 {
+            Some(id)
+        } else {
+            None
+        }
+    }) {
         sender.send(r).unwrap();
     }
 

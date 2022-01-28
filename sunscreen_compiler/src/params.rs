@@ -207,7 +207,13 @@ where
                 &relin_keys.as_ref(),
                 &galois_keys.as_ref(),
             )
-            .map_err(|e| sunscreen_runtime::Error::from(e))?
+        };
+
+        let outputs = match outputs {
+            Ok(x) => x,
+            Err(_) => {
+                continue;
+            }
         };
 
         for (i, o) in outputs.iter().enumerate() {

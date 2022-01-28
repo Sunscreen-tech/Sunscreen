@@ -3,8 +3,9 @@ use seal::Plaintext as SealPlaintext;
 use crate::types::{
     ops::{
         GraphCipherAdd, GraphCipherConstAdd, GraphCipherConstDiv, GraphCipherConstMul,
-        GraphCipherConstSub, GraphCipherMul, GraphCipherPlainAdd, GraphCipherPlainMul,
-        GraphCipherPlainSub, GraphCipherSub, GraphConstCipherSub, GraphPlainCipherSub, GraphCipherNeg
+        GraphCipherConstSub, GraphCipherMul, GraphCipherNeg, GraphCipherPlainAdd,
+        GraphCipherPlainMul, GraphCipherPlainSub, GraphCipherSub, GraphConstCipherSub,
+        GraphPlainCipherSub,
     },
     Cipher,
 };
@@ -410,9 +411,7 @@ impl<const INT_BITS: usize> GraphCipherConstDiv for Fractional<INT_BITS> {
 impl<const INT_BITS: usize> GraphCipherNeg for Fractional<INT_BITS> {
     type Val = Fractional<INT_BITS>;
 
-    fn graph_cipher_neg(
-        a: CircuitNode<Cipher<Self>>
-    ) -> CircuitNode<Cipher<Self::Val>> {
+    fn graph_cipher_neg(a: CircuitNode<Cipher<Self>>) -> CircuitNode<Cipher<Self::Val>> {
         with_ctx(|ctx| {
             let n = ctx.add_negate(a.ids[0]);
 

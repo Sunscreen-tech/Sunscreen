@@ -92,6 +92,12 @@ impl Runtime {
     /**
      * Returns the amount of noise budget (in bits) remaining in the
      * given ciphertext.
+     *
+     * # Remarks
+     * Internally, the [`Ciphertext`] object may contain more
+     * than one ciphertext. This function returns the
+     * *minimum* noise budget remaining of all the enclosed
+     * ciphertexts.
      */
     pub fn measure_noise_budget(&self, c: &Ciphertext, secret_key: &SecretKey) -> Result<u32> {
         match (&self.context, &c.inner) {

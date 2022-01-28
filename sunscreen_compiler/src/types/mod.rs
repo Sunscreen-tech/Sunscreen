@@ -72,6 +72,31 @@ pub use sunscreen_runtime::{
     TypeNameInstance, Version,
 };
 
+/**
+ * A trait that allows data types to swap_rows. E.g. [`Simd`](crate::types::bfv::Simd)
+ */
+pub trait SwapRows {
+    /**
+     * The result type. Typically, this should just be `Self`.
+     */
+    type Output;
+
+    /**
+     * Performs a row swap.
+     */
+    fn swap_rows(self) -> Self::Output;
+}
+
+/**
+ * On SIMD types, returns the number of SIMD lanes.
+ */
+pub trait LaneCount {
+    /**
+     * The number of lanes.
+     */
+    fn lane_count() -> usize;
+}
+
 #[derive(Copy, Clone)]
 /**
  * Declares a type T as being encrypted in a circuit.

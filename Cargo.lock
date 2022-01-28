@@ -277,6 +277,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "dot_prod"
+version = "0.1.0"
+
+[[package]]
 name = "emsdk"
 version = "0.1.0"
 

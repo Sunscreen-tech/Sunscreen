@@ -371,6 +371,13 @@ impl Circuit {
     }
 
     /**
+     * Appends a multiply operation that depends on the operands `x` and `y`.
+     */
+    pub fn append_multiply_plaintext(&mut self, x: NodeIndex, y: NodeIndex) -> NodeIndex {
+        self.append_2_input_node(Operation::MultiplyPlaintext, x, y)
+    }
+
+    /**
      * Appends an add operation that depends on the operands `x` and `y`.
      */
     pub fn append_add(&mut self, x: NodeIndex, y: NodeIndex) -> NodeIndex {

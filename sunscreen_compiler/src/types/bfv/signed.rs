@@ -16,6 +16,9 @@ use crate::{
 use sunscreen_runtime::{
     InnerPlaintext, NumCiphertexts, Plaintext, TryFromPlaintext, TryIntoPlaintext,
 };
+
+use std::ops::*;
+
 #[derive(Debug, Clone, Copy, DeriveTypeName, PartialEq, Eq)]
 /**
  * A single signed integer.
@@ -125,6 +128,106 @@ impl From<i64> for Signed {
 impl Into<i64> for Signed {
     fn into(self) -> i64 {
         self.val
+    }
+}
+
+impl Add for Signed {
+    type Output = Self;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        Self::Output {
+            val: self.val + rhs.val
+        }
+    }
+}
+
+impl Add<i64> for Signed {
+    type Output = Self;
+
+    fn add(self, rhs: i64) -> Self::Output {
+        Self {
+            val: self.val + rhs
+        }
+    }
+}
+
+impl Add<Signed> for i64 {
+    type Output = Signed;
+
+    fn add(self, rhs: Signed) -> Self::Output {
+        Self::Output {
+            val: self + rhs.val
+        }
+    }
+}
+
+impl Mul for Signed {
+    type Output = Self;
+
+    fn mul(self, rhs: Self) -> Self::Output {
+        Self::Output {
+            val: self.val * rhs.val
+        }
+    }
+}
+
+impl Mul<i64> for Signed {
+    type Output = Self;
+
+    fn mul(self, rhs: i64) -> Self::Output {
+        Self {
+            val: self.val * rhs
+        }
+    }
+}
+
+impl Mul<Signed> for i64 {
+    type Output = Signed;
+
+    fn mul(self, rhs: Signed) -> Self::Output {
+        Self::Output {
+            val: self * rhs.val
+        }
+    }
+}
+
+impl Sub for Signed {
+    type Output = Self;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        Self::Output {
+            val: self.val - rhs.val
+        }
+    }
+}
+
+impl Sub<i64> for Signed {
+    type Output = Self;
+
+    fn sub(self, rhs: i64) -> Self::Output {
+        Self {
+            val: self.val - rhs
+        }
+    }
+}
+
+impl Sub<Signed> for i64 {
+    type Output = Signed;
+
+    fn sub(self, rhs: Signed) -> Self::Output {
+        Self::Output {
+            val: self - rhs.val
+        }
+    }
+}
+
+impl Neg for Signed {
+    type Output = Self;
+
+    fn neg(self) -> Self::Output {
+        Self::Output {
+            val: -self.val
+        }
     }
 }
 
@@ -327,5 +430,47 @@ impl GraphCipherPlainMul for Signed {
 
             CircuitNode::new(&[n])
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn can_add_non_fhe() {
+        let a = Signed::from(5);
+        let b = Signed::from(10);
+
+        assert_eq!(a + b, 15.into());
+        assert_eq!(a + 10, 15.into());
+        assert_eq!(10 + a, 15.into());
+    }
+
+    #[test]
+    fn can_mul_non_fhe() {
+        let a = Signed::from(5);
+        let b = Signed::from(10);
+
+        assert_eq!(a * b, 50.into());
+        assert_eq!(a * 10, 50.into());
+        assert_eq!(10 * a, 50.into());
+    }
+
+    #[test]
+    fn can_sub_non_fhe() {
+        let a = Signed::from(5);
+        let b = Signed::from(10);
+
+        assert_eq!(a - b, (-5).into());
+        assert_eq!(a - 10, (-5).into());
+        assert_eq!(10 - a, (5).into());
+    }
+
+    #[test]
+    fn can_neg_non_fhe() {
+        let a = Signed::from(5);
+
+        assert_eq!(-a, (-5).into());
     }
 }

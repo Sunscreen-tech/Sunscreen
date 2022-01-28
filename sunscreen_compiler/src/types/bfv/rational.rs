@@ -6,6 +6,7 @@ use crate::types::{
 use crate::{with_ctx, CircuitInputTrait, InnerPlaintext, Params, Plaintext, TypeName};
 use std::cmp::Eq;
 use sunscreen_runtime::Error;
+use std::ops::*;
 
 use num::Rational64;
 
@@ -98,6 +99,165 @@ impl Into<f64> for Rational {
         let den: i64 = self.den.into();
 
         num as f64 / den as f64
+    }
+}
+
+impl Add for Rational {
+    type Output = Self;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        Self::Output {
+            num: self.num * rhs.den + rhs.num * self.den,
+            den: self.den * rhs.den
+        }
+    }
+}
+
+impl Add<f64> for Rational {
+    type Output = Self;
+
+    fn add(self, rhs: f64) -> Self::Output {
+        let rhs = Rational::try_from(rhs).unwrap();
+
+        Self::Output {
+            num: self.num * rhs.den + rhs.num * self.den,
+            den: self.den * rhs.den
+        }
+    }
+}
+
+impl Add<Rational> for f64 {
+    type Output = Rational;
+
+    fn add(self, rhs: Rational) -> Self::Output {
+        let lhs = Rational::try_from(self).unwrap();
+
+        Self::Output {
+            num: lhs.num * rhs.den + rhs.num * lhs.den,
+            den: lhs.den * rhs.den
+        }
+    }
+}
+
+impl Mul for Rational {
+    type Output = Self;
+
+    fn mul(self, rhs: Self) -> Self::Output {
+        Self::Output {
+            num: self.num * rhs.num,
+            den: self.den * rhs.den
+        }
+    }
+}
+
+impl Mul<f64> for Rational {
+    type Output = Self;
+
+    fn mul(self, rhs: f64) -> Self::Output {
+        let rhs = Rational::try_from(rhs).unwrap();
+
+        Self {
+            num: self.num * rhs.num,
+            den: self.den * rhs.den,
+        }
+    }
+}
+
+impl Mul<Rational> for f64 {
+    type Output = Rational;
+
+    fn mul(self, rhs: Rational) -> Self::Output {
+        let lhs = Rational::try_from(self).unwrap();
+
+        Self::Output {
+            num: lhs.num * rhs.num,
+            den: lhs.den * rhs.den,
+        }
+    }
+}
+
+impl Sub for Rational {
+    type Output = Self;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        Self::Output {
+            num: self.num * rhs.den - rhs.num * self.den,
+            den: self.den * rhs.den
+        }
+    }
+}
+
+impl Sub<f64> for Rational {
+    type Output = Self;
+
+    fn sub(self, rhs: f64) -> Self::Output {
+        let rhs = Rational::try_from(rhs).unwrap();
+
+        Self::Output {
+            num: self.num * rhs.den - rhs.num * self.den,
+            den: self.den * rhs.den
+        }
+    }
+}
+
+impl Sub<Rational> for f64 {
+    type Output = Rational;
+
+    fn sub(self, rhs: Rational) -> Self::Output {
+        let lhs = Rational::try_from(self).unwrap();
+
+        Self::Output {
+            num: lhs.num * rhs.den - rhs.num * lhs.den,
+            den: lhs.den * rhs.den
+        }
+    }
+}
+
+impl Div for Rational {
+    type Output = Self;
+
+    fn div(self, rhs: Self) -> Self::Output {
+        Self::Output {
+            num: self.num * rhs.den,
+            den: self.den * rhs.num
+        }
+    }
+}
+
+impl Div<f64> for Rational {
+    type Output = Self;
+
+    fn div(self, rhs: f64) -> Self::Output {
+        let rhs = Rational::try_from(rhs).unwrap();
+
+        Self::Output {
+            num: self.num * rhs.den,
+            den: self.den * rhs.num
+        }
+    }
+}
+
+impl Div<Rational> for f64 {
+    type Output = Rational;
+
+    fn div(self, rhs: Rational) -> Self::Output {
+        let lhs = Rational::try_from(self).unwrap();
+
+        Self::Output {
+            num: lhs.num * rhs.den,
+            den: lhs.den * rhs.num
+        }
+    }
+}
+
+impl Neg for Rational {
+    type Output = Self;
+
+    fn neg(self) -> Self::Output {
+        Self::Output {
+            num: -self.num,
+            den: self.den
+        }
     }
 }
 
@@ -485,5 +645,72 @@ impl GraphConstCipherDiv for Rational {
 
             CircuitNode::new(&ids)
         })
+    }
+}
+
+impl GraphCipherNeg for Rational {
+    type Val = Self;
+
+    fn graph_cipher_neg(
+        a: CircuitNode<Cipher<Self::Val>>,
+    ) -> CircuitNode<Cipher<Self::Val>> {
+        with_ctx(|ctx| {
+            let neg = ctx.add_negate(a.ids[0]);
+            let ids = [neg, a.ids[1]];
+
+            CircuitNode::new(&ids)
+        })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn can_add_non_fhe() {
+        let a = Rational::try_from(5.).unwrap();
+        let b = Rational::try_from(10.).unwrap();
+
+        assert_eq!(a + b, 15f64.try_into().unwrap());
+        assert_eq!(a + 10., 15f64.try_into().unwrap());
+        assert_eq!(10. + a, 15f64.try_into().unwrap());
+    }
+
+    #[test]
+    fn can_mul_non_fhe() {
+        let a = Rational::try_from(5.).unwrap();
+        let b = Rational::try_from(10.).unwrap();
+
+        assert_eq!(a * b, 50f64.try_into().unwrap());
+        assert_eq!(a * 10., 50f64.try_into().unwrap());
+        assert_eq!(10. * a, 50f64.try_into().unwrap());
+    }
+
+    #[test]
+    fn can_sub_non_fhe() {
+        let a = Rational::try_from(5.).unwrap();
+        let b = Rational::try_from(10.).unwrap();
+
+        assert_eq!(a - b, (-5.).try_into().unwrap());
+        assert_eq!(a - 10., (-5.).try_into().unwrap());
+        assert_eq!(10. - a, (5.).try_into().unwrap());
+    }
+
+    #[test]
+    fn can_div_non_fhe() {
+        let a = Rational::try_from(5.).unwrap();
+        let b = Rational::try_from(10.).unwrap();
+
+        assert_eq!(a / b, (0.5).try_into().unwrap());
+        assert_eq!(a / 10., (0.5).try_into().unwrap());
+        assert_eq!(10. / a, (2.).try_into().unwrap());
+    }
+
+    #[test]
+    fn can_neg_non_fhe() {
+        let a = Rational::try_from(5.).unwrap();
+
+        assert_eq!(-a, (-5.).try_into().unwrap());
     }
 }

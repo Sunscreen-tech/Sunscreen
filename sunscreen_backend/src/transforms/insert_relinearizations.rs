@@ -49,20 +49,6 @@ mod tests {
         ir
     }
 
-    fn create_plaintext_test_dag() -> Circuit {
-        let mut ir = Circuit::new(SchemeType::Bfv);
-
-        let ct = ir.append_input_ciphertext(0);
-        let l1 = ir.append_input_literal(CircuitLiteral::from(7i64));
-        let add = ir.append_add(ct, l1);
-        let l2 = ir.append_input_literal(CircuitLiteral::from(5u64));
-        let mul = ir.append_multiply_plaintext(add, l2);
-        let add_2 = ir.append_add(mul, l2);
-        ir.append_multiply_plaintext(add_2, ct);
-
-        ir
-    }
-
     #[test]
     fn inserts_relinearizations() {
         let mut ir = create_test_dag();

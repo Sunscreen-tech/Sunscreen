@@ -90,6 +90,24 @@ impl Runtime {
     }
 
     /**
+     * Returns the amount of noise budget (in bits) remaining in the
+     * given ciphertext.
+     */
+    pub fn measure_noise_budget(&self, c: &Ciphertext, secret_key: &SecretKey) -> Result<u32> {
+        match (&self.context, &c.inner) {
+            (Context::Seal(ctx), InnerCiphertext::Seal(ciphertexts)) => {
+                let decryptor = Decryptor::new(&ctx, secret_key)?;
+
+                Ok(ciphertexts
+                    .iter()
+                    .fold(Ok(u32::MAX), |min: Result<u32>, c| {
+                        Ok(u32::min(min?, decryptor.invariant_noise_budget(&c.data)?))
+                    })?)
+            }
+        }
+    }
+
+    /**
      * Generates a tuple of public/private keys for the encapsulated scheme and parameters.
      *
      * # Remarks

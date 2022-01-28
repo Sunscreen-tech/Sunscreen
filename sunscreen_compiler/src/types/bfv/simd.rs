@@ -401,7 +401,7 @@ impl<const LANES: usize> Shr<u64> for Simd<LANES> {
                 .collect::<Vec<i64>>(),
             self.data[1]
                 .iter()
-                .take(LANES -x as usize)
+                .take(LANES - x as usize)
                 .map(|x| *x)
                 .collect::<Vec<i64>>(),
         ]
@@ -418,10 +418,7 @@ impl<const LANES: usize> SwapRows for Simd<LANES> {
 
     fn swap_rows(self) -> Self::Output {
         Self {
-            data: [
-                self.data[1],
-                self.data[0]
-            ]
+            data: [self.data[1], self.data[0]],
         }
     }
 }
@@ -512,9 +509,7 @@ impl<const LANES: usize> GraphCipherRotateRight for Simd<LANES> {
 impl<const LANES: usize> GraphCipherNeg for Simd<LANES> {
     type Val = Self;
 
-    fn graph_cipher_neg(
-        x: CircuitNode<Cipher<Self>>,
-    ) -> CircuitNode<Cipher<Self::Val>> {
+    fn graph_cipher_neg(x: CircuitNode<Cipher<Self>>) -> CircuitNode<Cipher<Self::Val>> {
         with_ctx(|ctx| {
             let n = ctx.add_negate(x.ids[0]);
 

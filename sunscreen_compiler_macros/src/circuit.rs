@@ -110,6 +110,7 @@ pub fn circuit_impl(
                 let mut context = Context::new(params);
 
                 CURRENT_CTX.with(|ctx| {
+                    #[forbid(unused_variables)]
                     let internal = | #(#circuit_args)* | -> #circuit_returns
                         #body
                     ;

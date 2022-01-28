@@ -4,7 +4,7 @@ use crate::types::{
     ops::{
         GraphCipherAdd, GraphCipherConstAdd, GraphCipherConstDiv, GraphCipherConstMul,
         GraphCipherConstSub, GraphCipherMul, GraphCipherPlainAdd, GraphCipherPlainMul,
-        GraphCipherPlainSub, GraphCipherSub, GraphConstCipherSub, GraphPlainCipherSub,
+        GraphCipherPlainSub, GraphCipherSub, GraphConstCipherSub, GraphPlainCipherSub, GraphCipherNeg
     },
     Cipher,
 };
@@ -18,6 +18,8 @@ use sunscreen_runtime::{
     InnerPlaintext, NumCiphertexts, Plaintext, TryFromPlaintext, TryIntoPlaintext, TypeName,
     TypeNameInstance,
 };
+
+use std::ops::*;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 /**
@@ -405,6 +407,20 @@ impl<const INT_BITS: usize> GraphCipherConstDiv for Fractional<INT_BITS> {
     }
 }
 
+impl<const INT_BITS: usize> GraphCipherNeg for Fractional<INT_BITS> {
+    type Val = Fractional<INT_BITS>;
+
+    fn graph_cipher_neg(
+        a: CircuitNode<Cipher<Self>>
+    ) -> CircuitNode<Cipher<Self::Val>> {
+        with_ctx(|ctx| {
+            let n = ctx.add_negate(a.ids[0]);
+
+            CircuitNode::new(&[n])
+        })
+    }
+}
+
 impl<const INT_BITS: usize> TryIntoPlaintext for Fractional<INT_BITS> {
     fn try_into_plaintext(
         &self,
@@ -555,10 +571,119 @@ impl<const INT_BITS: usize> Into<f64> for Fractional<INT_BITS> {
     }
 }
 
+impl<const INT_BITS: usize> Add for Fractional<INT_BITS> {
+    type Output = Self;
+
+    fn add(self, rhs: Self) -> Self {
+        Self {
+            val: self.val + rhs.val,
+        }
+    }
+}
+
+impl<const INT_BITS: usize> Add<f64> for Fractional<INT_BITS> {
+    type Output = Self;
+
+    fn add(self, rhs: f64) -> Self {
+        Self {
+            val: self.val + rhs,
+        }
+    }
+}
+
+impl<const INT_BITS: usize> Add<Fractional<INT_BITS>> for f64 {
+    type Output = Fractional<INT_BITS>;
+
+    fn add(self, rhs: Fractional<INT_BITS>) -> Self::Output {
+        Fractional {
+            val: self + rhs.val,
+        }
+    }
+}
+
+impl<const INT_BITS: usize> Mul for Fractional<INT_BITS> {
+    type Output = Self;
+
+    fn mul(self, rhs: Self) -> Self {
+        Self {
+            val: self.val * rhs.val,
+        }
+    }
+}
+
+impl<const INT_BITS: usize> Mul<f64> for Fractional<INT_BITS> {
+    type Output = Self;
+
+    fn mul(self, rhs: f64) -> Self {
+        Self {
+            val: self.val * rhs,
+        }
+    }
+}
+
+impl<const INT_BITS: usize> Mul<Fractional<INT_BITS>> for f64 {
+    type Output = Fractional<INT_BITS>;
+
+    fn mul(self, rhs: Fractional<INT_BITS>) -> Self::Output {
+        Fractional {
+            val: self * rhs.val,
+        }
+    }
+}
+
+impl<const INT_BITS: usize> Sub for Fractional<INT_BITS> {
+    type Output = Self;
+
+    fn sub(self, rhs: Self) -> Self {
+        Self {
+            val: self.val - rhs.val,
+        }
+    }
+}
+
+impl<const INT_BITS: usize> Sub<f64> for Fractional<INT_BITS> {
+    type Output = Self;
+
+    fn sub(self, rhs: f64) -> Self {
+        Self {
+            val: self.val - rhs,
+        }
+    }
+}
+
+impl<const INT_BITS: usize> Sub<Fractional<INT_BITS>> for f64 {
+    type Output = Fractional<INT_BITS>;
+
+    fn sub(self, rhs: Fractional<INT_BITS>) -> Self::Output {
+        Fractional {
+            val: self - rhs.val,
+        }
+    }
+}
+
+impl<const INT_BITS: usize> Div<f64> for Fractional<INT_BITS> {
+    type Output = Self;
+
+    fn div(self, rhs: f64) -> Self {
+        Self {
+            val: self.val / rhs,
+        }
+    }
+}
+
+impl<const INT_BITS: usize> Neg for Fractional<INT_BITS> {
+    type Output = Self;
+
+    fn neg(self) -> Self {
+        Self { val: -self.val }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::{SchemeType, SecurityLevel};
+    use float_cmp::ApproxEq;
 
     #[test]
     fn can_encode_decode_fractional() {
@@ -578,8 +703,9 @@ mod tests {
             assert_eq!(f_1, f_2);
         };
 
-        //round_trip(0.0);
-        //round_trip(1.0);
+        round_trip(3.14);
+        round_trip(0.0);
+        round_trip(1.0);
         round_trip(5.8125);
         round_trip(6.0);
         round_trip(6.6);
@@ -593,5 +719,54 @@ mod tests {
         round_trip(-1.2);
         round_trip(-1e13);
         round_trip(-0.0000000005);
+    }
+
+    #[test]
+    fn can_add_non_fhe() {
+        let a = Fractional::<64>::from(3.14);
+        let b = Fractional::<64>::from(1.5);
+
+        // Allow 1 ULP of error
+        assert!((a + b).approx_eq(4.64.into(), (0.0, 1)));
+        assert!((3.14 + b).approx_eq(4.64.into(), (0.0, 1)));
+        assert!((a + 1.5).approx_eq(4.64.into(), (0.0, 1)));
+    }
+
+    #[test]
+    fn can_mul_non_fhe() {
+        let a = Fractional::<64>::from(3.14);
+        let b = Fractional::<64>::from(1.5);
+
+        // Allow 1 ULP of error
+        assert!((a * b).approx_eq(4.71.into(), (0.0, 1)));
+        assert!((3.14 * b).approx_eq(4.71.into(), (0.0, 1)));
+        assert!((a * 1.5).approx_eq(4.71.into(), (0.0, 1)));
+    }
+
+    #[test]
+    fn can_sub_non_fhe() {
+        let a = Fractional::<64>::from(3.14);
+        let b = Fractional::<64>::from(1.5);
+
+        // Allow 1 ULP of error
+        assert!((a - b).approx_eq(1.64.into(), (0.0, 1)));
+        assert!((3.14 - b).approx_eq(1.64.into(), (0.0, 1)));
+        assert!((a - 1.5).approx_eq(1.64.into(), (0.0, 1)));
+    }
+
+    #[test]
+    fn can_div_non_fhe() {
+        let a = Fractional::<64>::from(3.14);
+
+        // Allow 1 ULP of error
+        assert!((a / 1.5).approx_eq((3.14 / 1.5).into(), (0.0, 1)));
+    }
+
+    #[test]
+    fn can_neg_non_fhe() {
+        let a = Fractional::<64>::from(3.14);
+
+        // Allow 1 ULP of error
+        assert_eq!(-a, (-3.14).into());
     }
 }

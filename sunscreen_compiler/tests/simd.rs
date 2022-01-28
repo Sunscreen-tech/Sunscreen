@@ -1,17 +1,26 @@
 use sunscreen_compiler::{
     circuit,
-    types::{bfv::Simd, Cipher},
+    types::{bfv::Simd, Cipher,     intern::SwapRows,
+    },
     CircuitInput, Compiler, PlainModulusConstraint, Runtime,
 };
 
+use std::ops::*;
+
 #[test]
 fn can_swap_rows_cipher() {
-    #[circuit(scheme = "bfv")]
-    fn add(a: Cipher<Simd<4>>) -> Cipher<Simd<4>> {
+    fn swap_impl<T>(a: T) -> T
+        where T: SwapRows<Output = T>
+    {
         a.swap_rows()
     }
 
-    let circuit = Compiler::with_circuit(add)
+    #[circuit(scheme = "bfv")]
+    fn swap_rows(a: Cipher<Simd<4>>) -> Cipher<Simd<4>> {
+        swap_impl(a)
+    }
+
+    let circuit = Compiler::with_circuit(swap_rows)
         .noise_margin_bits(5)
         .plain_modulus_constraint(PlainModulusConstraint::BatchingMinimum(0))
         .compile()
@@ -23,11 +32,12 @@ fn can_swap_rows_cipher() {
 
     let data = [vec![1, 2, 3, 4], vec![5, 6, 7, 8]];
 
-    let a = runtime
-        .encrypt(Simd::<4>::try_from(data).unwrap(), &public)
+    let a = Simd::<4>::try_from(data).unwrap();
+    let a_c = runtime
+        .encrypt(a, &public)
         .unwrap();
 
-    let args: Vec<CircuitInput> = vec![a.into()];
+    let args: Vec<CircuitInput> = vec![a_c.into()];
 
     let result = runtime.run(&circuit, args, &public).unwrap();
 
@@ -35,14 +45,21 @@ fn can_swap_rows_cipher() {
 
     let expected = [vec![5, 6, 7, 8], vec![1, 2, 3, 4]];
 
+    assert_eq!(c, swap_impl(a));
     assert_eq!(c, expected.try_into().unwrap());
 }
 
 #[test]
 fn can_rotate_left_cipher() {
+    fn shl_impl<T>(x: T, y: u64) -> T
+    where T: Shl<u64, Output = T>
+    {
+        x << y
+    }
+
     #[circuit(scheme = "bfv")]
     fn add(a: Cipher<Simd<4>>) -> Cipher<Simd<4>> {
-        a << 1
+        shl_impl(a, 1)
     }
 
     let circuit = Compiler::with_circuit(add)
@@ -57,26 +74,31 @@ fn can_rotate_left_cipher() {
 
     let data = [vec![1, 2, 3, 4], vec![5, 6, 7, 8]];
 
-    let a = runtime
-        .encrypt(Simd::<4>::try_from(data).unwrap(), &public)
+    let a = Simd::<4>::try_from(data).unwrap();
+    let a_c = runtime
+        .encrypt(a, &public)
         .unwrap();
 
-    let args: Vec<CircuitInput> = vec![a.into()];
+    let args: Vec<CircuitInput> = vec![a_c.into()];
 
     let result = runtime.run(&circuit, args, &public).unwrap();
 
     let c: Simd<4> = runtime.decrypt(&result[0], &secret).unwrap();
 
-    let expected = [vec![2, 3, 4, 1], vec![6, 7, 8, 5]];
-
-    assert_eq!(c, expected.try_into().unwrap());
+    assert_eq!(c, shl_impl(a, 1));
 }
 
 #[test]
 fn can_rotate_right_cipher() {
+    fn shr_impl<T>(x: T, y: u64) -> T
+    where T: Shr<u64, Output = T>
+    {
+        x >> y
+    }
+
     #[circuit(scheme = "bfv")]
     fn add(a: Cipher<Simd<4>>) -> Cipher<Simd<4>> {
-        a >> 1
+        shr_impl(a, 1)
     }
 
     let circuit = Compiler::with_circuit(add)
@@ -91,26 +113,31 @@ fn can_rotate_right_cipher() {
 
     let data = [vec![1, 2, 3, 4], vec![5, 6, 7, 8]];
 
-    let a = runtime
-        .encrypt(Simd::<4>::try_from(data).unwrap(), &public)
+    let a = Simd::<4>::try_from(data).unwrap();
+    let a_c = runtime
+        .encrypt(a, &public)
         .unwrap();
 
-    let args: Vec<CircuitInput> = vec![a.into()];
+    let args: Vec<CircuitInput> = vec![a_c.into()];
 
     let result = runtime.run(&circuit, args, &public).unwrap();
 
     let c: Simd<4> = runtime.decrypt(&result[0], &secret).unwrap();
 
-    let expected = [vec![4, 1, 2, 3], vec![8, 5, 6, 7]];
-
-    assert_eq!(c, expected.try_into().unwrap());
+    assert_eq!(c, shr_impl(a, 1));
 }
 
 #[test]
 fn can_add_cipher_cipher() {
+    fn add_impl<T>(a: T, b: T) -> T
+    where T: Add<T, Output = T>
+    {
+        a + b
+    }
+    
     #[circuit(scheme = "bfv")]
     fn add(a: Cipher<Simd<4>>, b: Cipher<Simd<4>>) -> Cipher<Simd<4>> {
-        a + b
+        add_impl(a, b)
     }
 
     let circuit = Compiler::with_circuit(add)
@@ -125,32 +152,39 @@ fn can_add_cipher_cipher() {
 
     let data = [vec![1, 2, 3, 4], vec![5, 6, 7, 8]];
 
-    let a = runtime
-        .encrypt(Simd::<4>::try_from(data.clone()).unwrap(), &public)
+    let a = Simd::<4>::try_from(data.clone()).unwrap();
+    let a_c = runtime
+        .encrypt(a, &public)
         .unwrap();
-    let b = runtime
-        .encrypt(Simd::<4>::try_from(data).unwrap(), &public)
+    let b = Simd::<4>::try_from(data).unwrap();
+    let b_c = runtime
+        .encrypt(b, &public)
         .unwrap();
 
-    let args: Vec<CircuitInput> = vec![a.into(), b.into()];
+    let args: Vec<CircuitInput> = vec![a_c.into(), b_c.into()];
 
     let result = runtime.run(&circuit, args, &public).unwrap();
 
     let c: Simd<4> = runtime.decrypt(&result[0], &secret).unwrap();
 
-    let expected = [vec![2, 4, 6, 8], vec![10, 12, 14, 16]];
-
-    assert_eq!(c, expected.try_into().unwrap());
+    assert_eq!(c, add_impl(a, b));
 }
 
 #[test]
 fn can_sub_cipher_cipher() {
-    #[circuit(scheme = "bfv")]
-    fn add(a: Cipher<Simd<4>>, b: Cipher<Simd<4>>) -> Cipher<Simd<4>> {
+    fn sub_impl<T>(a: T, b: T) -> T
+    where
+        T: Sub<T, Output = T>
+    {
         a - b
     }
 
-    let circuit = Compiler::with_circuit(add)
+    #[circuit(scheme = "bfv")]
+    fn sub(a: Cipher<Simd<4>>, b: Cipher<Simd<4>>) -> Cipher<Simd<4>> {
+        sub_impl(a, b)
+    }
+
+    let circuit = Compiler::with_circuit(sub)
         .noise_margin_bits(5)
         .plain_modulus_constraint(PlainModulusConstraint::BatchingMinimum(0))
         .compile()
@@ -162,29 +196,35 @@ fn can_sub_cipher_cipher() {
 
     let data = [vec![1, 2, 3, 4], vec![5, 6, 7, 8]];
 
-    let a = runtime
-        .encrypt(Simd::<4>::try_from(data.clone()).unwrap(), &public)
+    let a = Simd::<4>::try_from(data.clone()).unwrap();
+    let a_c = runtime
+        .encrypt(a, &public)
         .unwrap();
-    let b = runtime
-        .encrypt(Simd::<4>::try_from(data).unwrap(), &public)
+    let b = Simd::<4>::try_from(data.clone()).unwrap();
+    let b_c = runtime
+        .encrypt(b, &public)
         .unwrap();
 
-    let args: Vec<CircuitInput> = vec![a.into(), b.into()];
+    let args: Vec<CircuitInput> = vec![a_c.into(), b_c.into()];
 
     let result = runtime.run(&circuit, args, &public).unwrap();
 
     let c: Simd<4> = runtime.decrypt(&result[0], &secret).unwrap();
 
-    let expected = [vec![0, 0, 0, 0], vec![0, 0, 0, 0]];
-
-    assert_eq!(c, expected.try_into().unwrap());
+    assert_eq!(c, sub_impl(a, b));
 }
 
 #[test]
 fn can_mul_cipher_cipher() {
+    fn mul_impl<T>(a: T, b: T) -> T
+    where T: Mul<T, Output = T>
+    {
+        a * b
+    }
+
     #[circuit(scheme = "bfv")]
     fn mul(a: Cipher<Simd<4>>, b: Cipher<Simd<4>>) -> Cipher<Simd<4>> {
-        a * b
+        mul_impl(a, b)
     }
 
     let circuit = Compiler::with_circuit(mul)
@@ -199,20 +239,59 @@ fn can_mul_cipher_cipher() {
 
     let data = [vec![1, 2, 3, 4], vec![5, 6, 7, 8]];
 
-    let a = runtime
-        .encrypt(Simd::<4>::try_from(data.clone()).unwrap(), &public)
+    let a = Simd::<4>::try_from(data.clone()).unwrap();
+    let a_c = runtime
+        .encrypt(a, &public)
         .unwrap();
-    let b = runtime
-        .encrypt(Simd::<4>::try_from(data).unwrap(), &public)
+    let b = Simd::<4>::try_from(data).unwrap();
+    let b_c = runtime
+        .encrypt(b, &public)
         .unwrap();
 
-    let args: Vec<CircuitInput> = vec![a.into(), b.into()];
+    let args: Vec<CircuitInput> = vec![a_c.into(), b_c.into()];
 
     let result = runtime.run(&circuit, args, &public).unwrap();
 
     let c: Simd<4> = runtime.decrypt(&result[0], &secret).unwrap();
 
-    let expected = [vec![1, 4, 9, 16], vec![25, 36, 49, 64]];
+    assert_eq!(c, mul_impl(a, b));
+}
 
-    assert_eq!(c, expected.try_into().unwrap());
+#[test]
+fn can_neg_cipher_cipher() {
+    fn neg_impl<T>(a: T) -> T
+    where T: Neg<Output = T>
+    {
+        -a
+    }
+
+    #[circuit(scheme = "bfv")]
+    fn mul(a: Cipher<Simd<4>>) -> Cipher<Simd<4>> {
+        neg_impl(a)
+    }
+
+    let circuit = Compiler::with_circuit(mul)
+        .noise_margin_bits(5)
+        .plain_modulus_constraint(PlainModulusConstraint::BatchingMinimum(0))
+        .compile()
+        .unwrap();
+
+    let runtime = Runtime::new(&circuit.metadata.params).unwrap();
+
+    let (public, secret) = runtime.generate_keys().unwrap();
+
+    let data = [vec![1, 2, 3, 4], vec![5, 6, 7, 8]];
+
+    let a = Simd::<4>::try_from(data.clone()).unwrap();
+    let a_c = runtime
+        .encrypt(a, &public)
+        .unwrap();
+
+    let args: Vec<CircuitInput> = vec![a_c.into()];
+
+    let result = runtime.run(&circuit, args, &public).unwrap();
+
+    let c: Simd<4> = runtime.decrypt(&result[0], &secret).unwrap();
+
+    assert_eq!(c, neg_impl(a));
 }

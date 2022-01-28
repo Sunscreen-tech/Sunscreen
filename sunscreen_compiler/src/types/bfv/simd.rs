@@ -1,7 +1,7 @@
 use crate::{
     crate_version,
     types::{
-        intern::{Cipher, CircuitNode},
+        intern::{Cipher, CircuitNode, SwapRows},
         ops::*,
         BfvType, FheType, NumCiphertexts, TryFromPlaintext, TryIntoPlaintext, Type, TypeName,
         TypeNameInstance, Version,
@@ -333,6 +333,99 @@ impl<const LANES: usize> Neg for Simd<LANES> {
     }
 }
 
+impl<const LANES: usize> Shl<u64> for Simd<LANES> {
+    type Output = Self;
+
+    fn shl(self, x: u64) -> Self::Output {
+        let r_0: [i64; LANES] = [
+            self.data[0]
+                .iter()
+                .skip(x as usize)
+                .map(|x| *x)
+                .collect::<Vec<i64>>(),
+            self.data[0]
+                .iter()
+                .take(x as usize)
+                .map(|x| *x)
+                .collect::<Vec<i64>>(),
+        ]
+        .concat()
+        .try_into()
+        .unwrap();
+
+        let r_1: [i64; LANES] = [
+            self.data[1]
+                .iter()
+                .skip(x as usize)
+                .map(|x| *x)
+                .collect::<Vec<i64>>(),
+            self.data[1]
+                .iter()
+                .take(x as usize)
+                .map(|x| *x)
+                .collect::<Vec<i64>>(),
+        ]
+        .concat()
+        .try_into()
+        .unwrap();
+
+        Self { data: [r_0, r_1] }
+    }
+}
+
+impl<const LANES: usize> Shr<u64> for Simd<LANES> {
+    type Output = Self;
+
+    fn shr(self, x: u64) -> Self::Output {
+        let r_0: [i64; LANES] = [
+            self.data[0]
+                .iter()
+                .skip(LANES - x as usize)
+                .map(|x| *x)
+                .collect::<Vec<i64>>(),
+            self.data[0]
+                .iter()
+                .take(LANES - x as usize)
+                .map(|x| *x)
+                .collect::<Vec<i64>>(),
+        ]
+        .concat()
+        .try_into()
+        .unwrap();
+
+        let r_1: [i64; LANES] = [
+            self.data[1]
+                .iter()
+                .skip(LANES - x as usize)
+                .map(|x| *x)
+                .collect::<Vec<i64>>(),
+            self.data[1]
+                .iter()
+                .take(LANES -x as usize)
+                .map(|x| *x)
+                .collect::<Vec<i64>>(),
+        ]
+        .concat()
+        .try_into()
+        .unwrap();
+
+        Self { data: [r_0, r_1] }
+    }
+}
+
+impl<const LANES: usize> SwapRows for Simd<LANES> {
+    type Output = Self;
+
+    fn swap_rows(self) -> Self::Output {
+        Self {
+            data: [
+                self.data[1],
+                self.data[0]
+            ]
+        }
+    }
+}
+
 impl<const LANES: usize> GraphCipherAdd for Simd<LANES> {
     type Left = Self;
     type Right = Self;
@@ -416,6 +509,19 @@ impl<const LANES: usize> GraphCipherRotateRight for Simd<LANES> {
     }
 }
 
+impl<const LANES: usize> GraphCipherNeg for Simd<LANES> {
+    type Val = Self;
+
+    fn graph_cipher_neg(
+        x: CircuitNode<Cipher<Self>>,
+    ) -> CircuitNode<Cipher<Self::Val>> {
+        with_ctx(|ctx| {
+            let n = ctx.add_negate(x.ids[0]);
+
+            CircuitNode::new(&[n])
+        })
+    }
+}
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -478,5 +584,26 @@ mod tests {
         let a = Simd::<4>::try_from(A_VEC).unwrap();
 
         assert_eq!(-a, [[-1, -2, -3, -4], [-5, -6, -7, -8]].into());
+    }
+
+    #[test]
+    fn can_shl_non_fhe() {
+        let a = Simd::<4>::try_from(A_VEC).unwrap();
+
+        assert_eq!(a << 3, [[4, 1, 2, 3], [8, 5, 6, 7]].into());
+    }
+
+    #[test]
+    fn can_shr_non_fhe() {
+        let a = Simd::<4>::try_from(A_VEC).unwrap();
+
+        assert_eq!(a >> 3, [[2, 3, 4, 1], [6, 7, 8, 5]].into());
+    }
+
+    #[test]
+    fn can_swap_rows_non_fhe() {
+        let a = Simd::<4>::try_from(A_VEC).unwrap();
+
+        assert_eq!(a.swap_rows(), [[5, 6, 7, 8], [1, 2, 3, 4]].into());
     }
 }

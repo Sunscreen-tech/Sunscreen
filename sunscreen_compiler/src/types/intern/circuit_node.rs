@@ -1,5 +1,5 @@
 use crate::{
-    types::{intern::FheLiteral, ops::*, Cipher, FheType, NumCiphertexts},
+    types::{intern::FheLiteral, ops::*, Cipher, FheType, LaneCount, NumCiphertexts, SwapRows},
     with_ctx, INDEX_ARENA,
 };
 use petgraph::stable_graph::NodeIndex;
@@ -459,21 +459,6 @@ where
     }
 }
 
-/**
- * A trait that allows data types to swap_rows. E.g. [`Simd`](crate::types::bfv::Simd)
- */
-pub trait SwapRows {
-    /**
-     * The result type. Typically, this should just be `Self`.
-     */
-    type Output;
-
-    /**
-     * Performs a row swap.
-     */
-    fn swap_rows(self) -> Self::Output;
-}
-
 // ciphertext
 impl<T> SwapRows for CircuitNode<Cipher<T>>
 where
@@ -483,6 +468,15 @@ where
 
     fn swap_rows(self) -> Self::Output {
         T::graph_cipher_swap_rows(self)
+    }
+}
+
+impl<T> LaneCount for CircuitNode<Cipher<T>>
+where
+    T: FheType + LaneCount,
+{
+    fn lane_count() -> usize {
+        T::lane_count()
     }
 }
 

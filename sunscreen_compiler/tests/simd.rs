@@ -1,6 +1,6 @@
 use sunscreen_compiler::{
     circuit,
-    types::{bfv::Simd, intern::SwapRows, Cipher},
+    types::{bfv::Simd, Cipher, SwapRows},
     CircuitInput, Compiler, PlainModulusConstraint, Runtime,
 };
 

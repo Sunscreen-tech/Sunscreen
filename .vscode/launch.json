@@ -195,5 +195,19 @@
             "program": "${workspaceFolder}/target/debug/calculator",
             "cwd": "${workspaceFolder}"
         },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug binary 'dot_prod'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--package=dot_prod"
+                ],
+            },
+            "args": [],
+            "program": "${workspaceFolder}/target/debug/dot_prod",
+            "cwd": "${workspaceFolder}"
+        },
     ]
 }

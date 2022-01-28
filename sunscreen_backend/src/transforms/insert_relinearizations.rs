@@ -1,6 +1,6 @@
-use sunscreen_circuit::{Circuit, IRTransform::*, Operation::*, TransformList, GraphQuery};
+use sunscreen_circuit::{Circuit, GraphQuery, IRTransform::*, Operation::*, TransformList};
 
-use petgraph::{visit::EdgeRef, stable_graph::NodeIndex, Direction};
+use petgraph::{stable_graph::NodeIndex, visit::EdgeRef, Direction};
 
 pub fn apply_insert_relinearizations(ir: &mut Circuit) {
     let insert_relin = |id: NodeIndex, query: GraphQuery| {
@@ -19,12 +19,8 @@ pub fn apply_insert_relinearizations(ir: &mut Circuit) {
     };
 
     ir.forward_traverse(|query, id| match query.get_node(id).operation {
-        Multiply => {
-            insert_relin(id, query)
-        },
-        MultiplyPlaintext => {
-            insert_relin(id, query)
-        }
+        Multiply => insert_relin(id, query),
+        MultiplyPlaintext => insert_relin(id, query),
         _ => TransformList::default(),
     });
 }

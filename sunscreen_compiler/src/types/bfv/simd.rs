@@ -1,10 +1,10 @@
 use crate::{
     crate_version,
     types::{
-        intern::{Cipher, CircuitNode, SwapRows},
+        intern::{Cipher, CircuitNode},
         ops::*,
-        BfvType, FheType, NumCiphertexts, TryFromPlaintext, TryIntoPlaintext, Type, TypeName,
-        TypeNameInstance, Version,
+        BfvType, FheType, LaneCount, NumCiphertexts, SwapRows, TryFromPlaintext, TryIntoPlaintext,
+        Type, TypeName, TypeNameInstance, Version,
     },
     with_ctx, CircuitInputTrait, InnerPlaintext, Literal, Params, Plaintext, WithContext,
 };
@@ -423,6 +423,20 @@ impl<const LANES: usize> SwapRows for Simd<LANES> {
     }
 }
 
+impl<const LANES: usize> Index<(usize, usize)> for Simd<LANES> {
+    type Output = i64;
+
+    fn index(&self, index: (usize, usize)) -> &Self::Output {
+        let (row, col) = index;
+
+        if row != 0 && row != 1 {
+            panic!("Out of range [0, 1]");
+        }
+
+        &self.data[row][col]
+    }
+}
+
 impl<const LANES: usize> GraphCipherAdd for Simd<LANES> {
     type Left = Self;
     type Right = Self;
@@ -517,6 +531,13 @@ impl<const LANES: usize> GraphCipherNeg for Simd<LANES> {
         })
     }
 }
+
+impl<const LANES: usize> LaneCount for Simd<LANES> {
+    fn lane_count() -> usize {
+        LANES
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

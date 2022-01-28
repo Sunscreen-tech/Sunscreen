@@ -1,3 +1,7 @@
+//! This example demonstrates how to use batching (i.e. the [`Simd`] data type)
+//! as well as how build circuits that can be run non-homomorphically.
+//! To illustrate these features, we implement a
+//! [dot product](https://en.wikipedia.org/wiki/Dot_product#Algebraic_definition)
 use sunscreen_compiler::{
     circuit,
     types::{bfv::Simd, Cipher, LaneCount, SwapRows},
@@ -9,6 +13,16 @@ use std::time::Instant;
 
 const VECLENDIV2: usize = 4096;
 
+/**
+ * A generic dot product implementation for `2xN/2` vector types. This
+ * implementation is optimized for fast execution in the BFV scheme.
+ *
+ * Writing the implementation generically allows us to:
+ * * Run it without using FHE.
+ * * Share the implementation for different data types. Imagine we
+ * had another encryption scheme that supported SIMD, this implementation
+ * would work for that as well!
+ */
 fn dot_product_impl<T>(a: T, b: T) -> T
 where
     T: Mul<Output = T>
@@ -19,9 +33,28 @@ where
         + LaneCount
         + Copy,
 {
+    // Each SIMD lane is an entry in the vector. Multiply every lane in a
+    // by every lane in b.
     let mut c = a * b;
     let mut shift_amount = 1;
 
+    // Now, we need to perform a reduction, summing all the lanes with
+    // each other. Recall that Bfv SIMD vectors are 2xN.
+    // A simple example to illustate how this adds all the columns:
+    // suppose c =
+    //   [[01, 02, 03, 04, 05, 06, 07, 08], [09, 10, 11, 12, 13, 14, 15, 16]]
+    // c = c + c << 1
+    //   [[01, 02, 03, 04, 05, 06, 07, 08], [09, 10, 11, 12, 13, 14, 15, 16]]
+    // + [[02, 03, 04, 05, 06, 07, 08, 01], [10, 11, 12, 13, 14, 15, 16, 09]]
+    // = [[03, 05, 07, 09, 11, 13, 15, 09], [19, 21, 23, 25, 27, 29, 31, 25]]
+    // c = c + c << 2
+    //   [[03, 05, 07, 09, 11, 13, 15, 09], [19, 21, 23, 25, 27, 29, 31, 25]]
+    // + [[07, 09, 11, 13, 15, 09, 03, 05], [23, 25, 27, 29, 31, 25, 19, 21]]
+    // = [[10, 14, 18, 22, 26, 22, 18, 14], [42, 46, 50, 54, 58, 54, 50, 46]]
+    // c = c + c << 4
+    //   [[10, 14, 18, 22, 26, 22, 18, 14], [042, 046, 050, 054, 058, 054, 050, 046]]
+    // + [[26, 22, 18, 14, 10, 14, 18, 22], [058, 054, 050, 046, 042, 046, 050, 054]]
+    // = [[36, 36, 36, 36, 36, 36, 36, 36], [100, 100, 100, 100, 100, 100, 100, 100]]
     loop {
         if shift_amount >= T::lane_count() {
             break;
@@ -32,6 +65,12 @@ where
         shift_amount *= 2;
     }
 
+    // Now, we need to add the rows together, so we add c to itself with the rows
+    // swapped. Continuing our above example:
+    // c = c + c.swapRows()
+    //   [[036, 036, 036, 036, 036, 036, 036, 036], [100, 100, 100, 100, 100, 100, 100, 100]]
+    // + [[100, 100, 100, 100, 100, 100, 100, 100], [036, 036, 036, 036, 036, 036, 036, 036]]
+    // = [[136, 136, 136, 136, 136, 136, 136, 136], [136, 136, 136, 136, 136, 136, 136, 136]]
     c + c.swap_rows()
 }
 
@@ -70,8 +109,8 @@ fn is_power_of_2(value: usize) -> bool {
 }
 
 /**
- * Creates a math vector and returns it represented as both a Vec and a
- * Simd type.
+ * Creates a math vector and returns it represented as both a [`Vec`] and a
+ * [`Simd`] type.
  */
 fn make_vector<const LENDIV2: usize>() -> (Vec<i64>, Simd<LENDIV2>) {
     if !is_power_of_2(LENDIV2) {
@@ -93,12 +132,14 @@ fn make_vector<const LENDIV2: usize>() -> (Vec<i64>, Simd<LENDIV2>) {
 fn main() {
     let (a_vec, a_simd) = make_vector::<VECLENDIV2>();
 
+    // Run our naive implementation of dot product we know to be correct.
     let start = Instant::now();
     let c = dot_product_naive(&a_vec, &a_vec);
     let end = start.elapsed();
 
     println!("Naive dot product: {} Time: {}s", c, end.as_secs_f64());
 
+    // Run our optimized dot product, but non-homomorphically.
     let start = Instant::now();
     let non_fhe_dot = dot_product_impl(a_simd, a_simd);
     let end = start.elapsed();
@@ -110,6 +151,11 @@ fn main() {
     );
 
     let start = Instant::now();
+
+    // When using batching, we need to use the PlainModulusConstraint::BatchingMinimum
+    // plaintext modulus constraint. This chooses a prime number for our plain modulus
+    // suitable for use with SIMD types. The 24 denotes the minimum precision of the plain
+    // modulus.
     let circuit = Compiler::with_circuit(dot_product)
         .noise_margin_bits(30)
         .plain_modulus_constraint(PlainModulusConstraint::BatchingMinimum(24))
@@ -126,6 +172,7 @@ fn main() {
 
     let args: Vec<CircuitInput> = vec![a_enc.clone().into(), a_enc.clone().into()];
 
+    // Run our dot product homomorphically, decrypt and verify the result.
     let start = Instant::now();
     let results = runtime.run(&circuit, args, &public).unwrap();
     let end = start.elapsed();

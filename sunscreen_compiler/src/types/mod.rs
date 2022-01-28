@@ -101,3 +101,8 @@ where
         }
     }
 }
+
+trait Foo {}
+
+impl<T> Foo for T
+    where T: FheType { }

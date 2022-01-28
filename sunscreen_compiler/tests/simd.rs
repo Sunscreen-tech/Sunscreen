@@ -183,11 +183,11 @@ fn can_sub_cipher_cipher() {
 #[test]
 fn can_mul_cipher_cipher() {
     #[circuit(scheme = "bfv")]
-    fn add(a: Cipher<Simd<4>>, b: Cipher<Simd<4>>) -> Cipher<Simd<4>> {
+    fn mul(a: Cipher<Simd<4>>, b: Cipher<Simd<4>>) -> Cipher<Simd<4>> {
         a * b
     }
 
-    let circuit = Compiler::with_circuit(add)
+    let circuit = Compiler::with_circuit(mul)
         .noise_margin_bits(5)
         .plain_modulus_constraint(PlainModulusConstraint::BatchingMinimum(0))
         .compile()

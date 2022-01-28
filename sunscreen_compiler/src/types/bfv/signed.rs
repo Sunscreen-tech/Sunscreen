@@ -136,7 +136,7 @@ impl Add for Signed {
 
     fn add(self, rhs: Self) -> Self::Output {
         Self::Output {
-            val: self.val + rhs.val
+            val: self.val + rhs.val,
         }
     }
 }
@@ -146,7 +146,7 @@ impl Add<i64> for Signed {
 
     fn add(self, rhs: i64) -> Self::Output {
         Self {
-            val: self.val + rhs
+            val: self.val + rhs,
         }
     }
 }
@@ -156,7 +156,7 @@ impl Add<Signed> for i64 {
 
     fn add(self, rhs: Signed) -> Self::Output {
         Self::Output {
-            val: self + rhs.val
+            val: self + rhs.val,
         }
     }
 }
@@ -166,7 +166,7 @@ impl Mul for Signed {
 
     fn mul(self, rhs: Self) -> Self::Output {
         Self::Output {
-            val: self.val * rhs.val
+            val: self.val * rhs.val,
         }
     }
 }
@@ -176,7 +176,7 @@ impl Mul<i64> for Signed {
 
     fn mul(self, rhs: i64) -> Self::Output {
         Self {
-            val: self.val * rhs
+            val: self.val * rhs,
         }
     }
 }
@@ -186,7 +186,7 @@ impl Mul<Signed> for i64 {
 
     fn mul(self, rhs: Signed) -> Self::Output {
         Self::Output {
-            val: self * rhs.val
+            val: self * rhs.val,
         }
     }
 }
@@ -196,7 +196,7 @@ impl Sub for Signed {
 
     fn sub(self, rhs: Self) -> Self::Output {
         Self::Output {
-            val: self.val - rhs.val
+            val: self.val - rhs.val,
         }
     }
 }
@@ -206,7 +206,7 @@ impl Sub<i64> for Signed {
 
     fn sub(self, rhs: i64) -> Self::Output {
         Self {
-            val: self.val - rhs
+            val: self.val - rhs,
         }
     }
 }
@@ -216,7 +216,7 @@ impl Sub<Signed> for i64 {
 
     fn sub(self, rhs: Signed) -> Self::Output {
         Self::Output {
-            val: self - rhs.val
+            val: self - rhs.val,
         }
     }
 }
@@ -225,9 +225,7 @@ impl Neg for Signed {
     type Output = Self;
 
     fn neg(self) -> Self::Output {
-        Self::Output {
-            val: -self.val
-        }
+        Self::Output { val: -self.val }
     }
 }
 

@@ -6,7 +6,8 @@ use sunscreen_compiler::{
 
 use std::ops::*;
 
-fn add_fn<T, U, R>(a: T, b: U) -> R where
+fn add_fn<T, U, R>(a: T, b: U) -> R
+where
     T: Add<U, Output = R>,
 {
     a + b
@@ -128,7 +129,8 @@ fn can_add_literal_cipher() {
     assert_eq!(c, add_fn(-4, a));
 }
 
-fn sub_fn<T, U, R>(a: T, b: U) -> R where
+fn sub_fn<T, U, R>(a: T, b: U) -> R
+where
     T: Sub<U, Output = R>,
 {
     a - b
@@ -250,7 +252,8 @@ fn can_sub_literal_cipher() {
     assert_eq!(c, sub_fn(-4, a));
 }
 
-fn mul_fn<T, U, R>(a: T, b: U) -> R where
+fn mul_fn<T, U, R>(a: T, b: U) -> R
+where
     T: Mul<U, Output = R>,
 {
     a * b

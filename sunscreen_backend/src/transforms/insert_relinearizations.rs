@@ -19,8 +19,12 @@ pub fn apply_insert_relinearizations(ir: &mut Circuit) {
     };
 
     ir.forward_traverse(|query, id| match query.get_node(id).operation {
+        // We only need to insert relinearizations for ciphertext
+        // multiplications. Plaintext multiplications don't increase
+        // the number of polynomials (see
+        // multiply_plaintext_does_not_increase_polynomials) test in
+        // assumptions.rs
         Multiply => insert_relin(id, query),
-        MultiplyPlaintext => insert_relin(id, query),
         _ => TransformList::default(),
     });
 }
@@ -57,82 +61,6 @@ mod tests {
         ir.append_multiply_plaintext(add_2, ct);
 
         ir
-    }
-
-    #[test]
-    fn inserts_relinearizations_after_mul_plaintext() {
-        let mut ir = create_plaintext_test_dag();
-
-        assert_eq!(ir.graph.node_count(), 7);
-
-        apply_insert_relinearizations(&mut ir);
-
-        assert_eq!(ir.graph.node_count(), 9);
-
-        let query = GraphQuery::new(&ir);
-
-        let relin_nodes = ir
-            .graph
-            .node_indices()
-            .filter(|i| match query.get_node(*i).operation {
-                Operation::Relinearize => true,
-                _ => false,
-            })
-            .collect::<Vec<NodeIndex>>();
-
-        // Should have 2 relin nodes added.
-        assert_eq!(relin_nodes.len(), 2);
-
-        // Every relin should have 1 predacessor.
-        assert_eq!(
-            relin_nodes
-                .iter()
-                .all(|id| { query.neighbors_directed(*id, Direction::Incoming).count() == 1 }),
-            true
-        );
-
-        // Every relin's predacessor should be a multiply
-        assert_eq!(
-            relin_nodes.iter().all(|id| {
-                query
-                    .neighbors_directed(*id, Direction::Incoming)
-                    .map(|id| query.get_node(id))
-                    .all(|node| match node.operation {
-                        Operation::MultiplyPlaintext => true,
-                        _ => false,
-                    })
-            }),
-            true
-        );
-
-        // The first relin node should point to add_2
-        assert_eq!(
-            query
-                .neighbors_directed(relin_nodes[0], Direction::Outgoing)
-                .count(),
-            1
-        );
-
-        // The second relin node should point to nothing.
-        assert_eq!(
-            query
-                .neighbors_directed(relin_nodes[1], Direction::Outgoing)
-                .count(),
-            0
-        );
-
-        // The first relin node should point to add_2
-        assert_eq!(
-            query
-                .neighbors_directed(relin_nodes[0], Direction::Outgoing)
-                .all(|i| {
-                    match query.get_node(i).operation {
-                        Operation::Add => true,
-                        _ => false,
-                    }
-                }),
-            true
-        );
     }
 
     #[test]

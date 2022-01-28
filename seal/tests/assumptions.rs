@@ -34,6 +34,54 @@ fn overflow_does_not_bleed_into_other_lanes() {
 }
 
 #[test]
+fn multiply_ciphertext_increases_terms() {
+    test_common::run_bfv_test(17, 8192, |_, encoder, encryptor, eval, _| {
+        let mut data = Vec::with_capacity(8192);
+
+        for i in 0..8192 {
+            if i == 1 {
+                data.push(10_000);
+            } else {
+                data.push(100);
+            }
+        }
+
+        let p = encoder.encode_unsigned(&data).unwrap();
+        let c = encryptor.encrypt(&p).unwrap();
+
+        assert_eq!(c.num_polynomials(), 2);
+
+        let c_2 = eval.multiply(&c, &c).unwrap();
+
+        assert_eq!(c_2.num_polynomials(), 3);
+    })
+}
+
+#[test]
+fn multiply_plaintext_does_not_increase_polynomials() {
+    test_common::run_bfv_test(17, 8192, |_, encoder, encryptor, eval, _| {
+        let mut data = Vec::with_capacity(8192);
+
+        for i in 0..8192 {
+            if i == 1 {
+                data.push(10_000);
+            } else {
+                data.push(100);
+            }
+        }
+
+        let p = encoder.encode_unsigned(&data).unwrap();
+        let c = encryptor.encrypt(&p).unwrap();
+
+        assert_eq!(c.num_polynomials(), 2);
+
+        let c_2 = eval.multiply_plain(&c, &p).unwrap();
+
+        assert_eq!(c_2.num_polynomials(), 2);
+    })
+}
+
+#[test]
 fn lanes_have_same_modulus() {
     test_common::run_bfv_test(17, 8192, |decryptor, encoder, encryptor, eval, _| {
         let mut data = Vec::with_capacity(8192);

@@ -12,6 +12,7 @@ use seal::{
     BFVEncoder, BfvEncryptionParametersBuilder, Context as SealContext, Modulus,
     Result as SealResult,
 };
+use std::ops::*;
 use sunscreen_runtime::{Error as RuntimeError, Result as RuntimeResult};
 
 /**
@@ -63,9 +64,9 @@ use sunscreen_runtime::{Error as RuntimeError, Result as RuntimeResult};
  * value equal to half the polynomial degree needed to accomodate the
  * circuit's noise budget constraint.
  */
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Simd<const LANES: usize> {
-    data: [Vec<i64>; 2],
+    data: [[i64; LANES]; 2],
 }
 
 impl<const LANES: usize> NumCiphertexts for Simd<LANES> {
@@ -178,8 +179,30 @@ impl<const LANES: usize> TryFromPlaintext for Simd<LANES> {
 
         Ok(Self {
             data: [
-                row_0.iter().take(LANES).map(|x| *x).collect(),
-                row_1.iter().take(LANES).map(|x| *x).collect(),
+                row_0
+                    .iter()
+                    .take(LANES)
+                    .map(|x| *x)
+                    .collect::<Vec<i64>>()
+                    .try_into()
+                    .map_err(|_| {
+                        RuntimeError::FheTypeError(format!(
+                            "Failed to convert Vec to [i64;{}]",
+                            LANES
+                        ))
+                    })?,
+                row_1
+                    .iter()
+                    .take(LANES)
+                    .map(|x| *x)
+                    .collect::<Vec<i64>>()
+                    .try_into()
+                    .map_err(|_| {
+                        RuntimeError::FheTypeError(format!(
+                            "Failed to convert Vec to [i64;{}]",
+                            LANES
+                        ))
+                    })?,
             ],
         })
     }
@@ -189,19 +212,124 @@ impl<const LANES: usize> TryFrom<[Vec<i64>; 2]> for Simd<LANES> {
     type Error = RuntimeError;
 
     fn try_from(data: [Vec<i64>; 2]) -> RuntimeResult<Self> {
-        if data[0].len() != data[1].len() || data[0].len() != LANES {
-            return Err(RuntimeError::FheTypeError(
-                format!("Invalid SIMD shape. Expected a 2x{} matrix", LANES).to_owned(),
-            ));
-        }
-
-        Ok(Self { data })
+        Ok(Self {
+            data: [
+                data[0].clone().try_into().map_err(|_| {
+                    RuntimeError::FheTypeError(format!("Failed to convert Vec to [i64;{}]", LANES))
+                })?,
+                data[1].clone().try_into().map_err(|_| {
+                    RuntimeError::FheTypeError(format!("Failed to convert Vec to [i64;{}]", LANES))
+                })?,
+            ],
+        })
     }
 }
 
 impl<const LANES: usize> Into<[Vec<i64>; 2]> for Simd<LANES> {
     fn into(self) -> [Vec<i64>; 2] {
-        self.data
+        [self.data[0].into(), self.data[1].into()]
+    }
+}
+
+impl<const LANES: usize> From<[[i64; LANES]; 2]> for Simd<LANES> {
+    fn from(data: [[i64; LANES]; 2]) -> Self {
+        Self { data }
+    }
+}
+
+impl<const LANES: usize> Into<[[i64; LANES]; 2]> for Simd<LANES> {
+    fn into(self) -> [[i64; LANES]; 2] {
+        [self.data[0], self.data[1]]
+    }
+}
+
+impl<const LANES: usize> Add for Simd<LANES> {
+    type Output = Self;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        let r_0: [i64; LANES] = self.data[0]
+            .iter()
+            .zip(rhs.data[0].iter())
+            .map(|(x, y)| x + y)
+            .collect::<Vec<i64>>()
+            .try_into()
+            .unwrap();
+        let r_1: [i64; LANES] = self.data[1]
+            .iter()
+            .zip(rhs.data[1].iter())
+            .map(|(x, y)| x + y)
+            .collect::<Vec<i64>>()
+            .try_into()
+            .unwrap();
+
+        Self { data: [r_0, r_1] }
+    }
+}
+
+impl<const LANES: usize> Sub for Simd<LANES> {
+    type Output = Self;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        let r_0: [i64; LANES] = self.data[0]
+            .iter()
+            .zip(rhs.data[0].iter())
+            .map(|(x, y)| x - y)
+            .collect::<Vec<i64>>()
+            .try_into()
+            .unwrap();
+        let r_1: [i64; LANES] = self.data[1]
+            .iter()
+            .zip(rhs.data[1].iter())
+            .map(|(x, y)| x - y)
+            .collect::<Vec<i64>>()
+            .try_into()
+            .unwrap();
+
+        Self { data: [r_0, r_1] }
+    }
+}
+
+impl<const LANES: usize> Mul for Simd<LANES> {
+    type Output = Self;
+
+    fn mul(self, rhs: Self) -> Self::Output {
+        let r_0: [i64; LANES] = self.data[0]
+            .iter()
+            .zip(rhs.data[0].iter())
+            .map(|(x, y)| x * y)
+            .collect::<Vec<i64>>()
+            .try_into()
+            .unwrap();
+        let r_1: [i64; LANES] = self.data[1]
+            .iter()
+            .zip(rhs.data[1].iter())
+            .map(|(x, y)| x * y)
+            .collect::<Vec<i64>>()
+            .try_into()
+            .unwrap();
+
+        Self { data: [r_0, r_1] }
+    }
+}
+
+impl<const LANES: usize> Neg for Simd<LANES> {
+    type Output = Self;
+
+    fn neg(self) -> Self::Output {
+        let r_0: [i64; LANES] = self.data[0]
+            .iter()
+            .map(|x| -x)
+            .collect::<Vec<i64>>()
+            .try_into()
+            .unwrap();
+        let r_1: [i64; LANES] = self.data[1]
+            .iter()
+            .map(|x| -x)
+            .collect::<Vec<i64>>()
+            .try_into()
+            .unwrap();
+
+        Self { data: [r_0, r_1] }
     }
 }
 
@@ -316,5 +444,39 @@ mod tests {
         let y = Simd::<4>::try_from_plaintext(&plaintext, &params).unwrap();
 
         assert_eq!(x, y);
+    }
+
+    const A_VEC: [[i64; 4]; 2] = [[1, 2, 3, 4], [5, 6, 7, 8]];
+    const B_VEC: [[i64; 4]; 2] = [[5, 6, 7, 8], [1, 2, 3, 4]];
+
+    #[test]
+    fn can_add_non_fhe() {
+        let a = Simd::<4>::try_from(A_VEC).unwrap();
+        let b = Simd::<4>::try_from(B_VEC).unwrap();
+
+        assert_eq!(a + b, [[6, 8, 10, 12], [6, 8, 10, 12]].into());
+    }
+
+    #[test]
+    fn can_mul_non_fhe() {
+        let a = Simd::<4>::try_from(A_VEC).unwrap();
+        let b = Simd::<4>::try_from(B_VEC).unwrap();
+
+        assert_eq!(a * b, [[5, 12, 21, 32], [5, 12, 21, 32]].into());
+    }
+
+    #[test]
+    fn can_sub_non_fhe() {
+        let a = Simd::<4>::try_from(A_VEC).unwrap();
+        let b = Simd::<4>::try_from(B_VEC).unwrap();
+
+        assert_eq!(a - b, [[-4, -4, -4, -4], [4, 4, 4, 4]].into());
+    }
+
+    #[test]
+    fn can_neg_non_fhe() {
+        let a = Simd::<4>::try_from(A_VEC).unwrap();
+
+        assert_eq!(-a, [[-1, -2, -3, -4], [-5, -6, -7, -8]].into());
     }
 }

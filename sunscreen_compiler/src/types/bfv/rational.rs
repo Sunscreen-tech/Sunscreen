@@ -5,8 +5,8 @@ use crate::types::{
 };
 use crate::{with_ctx, CircuitInputTrait, InnerPlaintext, Params, Plaintext, TypeName};
 use std::cmp::Eq;
-use sunscreen_runtime::Error;
 use std::ops::*;
+use sunscreen_runtime::Error;
 
 use num::Rational64;
 
@@ -108,7 +108,7 @@ impl Add for Rational {
     fn add(self, rhs: Self) -> Self::Output {
         Self::Output {
             num: self.num * rhs.den + rhs.num * self.den,
-            den: self.den * rhs.den
+            den: self.den * rhs.den,
         }
     }
 }
@@ -121,7 +121,7 @@ impl Add<f64> for Rational {
 
         Self::Output {
             num: self.num * rhs.den + rhs.num * self.den,
-            den: self.den * rhs.den
+            den: self.den * rhs.den,
         }
     }
 }
@@ -134,7 +134,7 @@ impl Add<Rational> for f64 {
 
         Self::Output {
             num: lhs.num * rhs.den + rhs.num * lhs.den,
-            den: lhs.den * rhs.den
+            den: lhs.den * rhs.den,
         }
     }
 }
@@ -145,7 +145,7 @@ impl Mul for Rational {
     fn mul(self, rhs: Self) -> Self::Output {
         Self::Output {
             num: self.num * rhs.num,
-            den: self.den * rhs.den
+            den: self.den * rhs.den,
         }
     }
 }
@@ -182,7 +182,7 @@ impl Sub for Rational {
     fn sub(self, rhs: Self) -> Self::Output {
         Self::Output {
             num: self.num * rhs.den - rhs.num * self.den,
-            den: self.den * rhs.den
+            den: self.den * rhs.den,
         }
     }
 }
@@ -195,7 +195,7 @@ impl Sub<f64> for Rational {
 
         Self::Output {
             num: self.num * rhs.den - rhs.num * self.den,
-            den: self.den * rhs.den
+            den: self.den * rhs.den,
         }
     }
 }
@@ -208,7 +208,7 @@ impl Sub<Rational> for f64 {
 
         Self::Output {
             num: lhs.num * rhs.den - rhs.num * lhs.den,
-            den: lhs.den * rhs.den
+            den: lhs.den * rhs.den,
         }
     }
 }
@@ -219,7 +219,7 @@ impl Div for Rational {
     fn div(self, rhs: Self) -> Self::Output {
         Self::Output {
             num: self.num * rhs.den,
-            den: self.den * rhs.num
+            den: self.den * rhs.num,
         }
     }
 }
@@ -232,7 +232,7 @@ impl Div<f64> for Rational {
 
         Self::Output {
             num: self.num * rhs.den,
-            den: self.den * rhs.num
+            den: self.den * rhs.num,
         }
     }
 }
@@ -245,7 +245,7 @@ impl Div<Rational> for f64 {
 
         Self::Output {
             num: lhs.num * rhs.den,
-            den: lhs.den * rhs.num
+            den: lhs.den * rhs.num,
         }
     }
 }
@@ -256,7 +256,7 @@ impl Neg for Rational {
     fn neg(self) -> Self::Output {
         Self::Output {
             num: -self.num,
-            den: self.den
+            den: self.den,
         }
     }
 }
@@ -651,9 +651,7 @@ impl GraphConstCipherDiv for Rational {
 impl GraphCipherNeg for Rational {
     type Val = Self;
 
-    fn graph_cipher_neg(
-        a: CircuitNode<Cipher<Self::Val>>,
-    ) -> CircuitNode<Cipher<Self::Val>> {
+    fn graph_cipher_neg(a: CircuitNode<Cipher<Self::Val>>) -> CircuitNode<Cipher<Self::Val>> {
         with_ctx(|ctx| {
             let neg = ctx.add_negate(a.ids[0]);
             let ids = [neg, a.ids[1]];

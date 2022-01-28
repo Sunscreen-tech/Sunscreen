@@ -36,9 +36,9 @@ fn can_encode_rational_numbers() {
 
 type CipherRational = Cipher<Rational>;
 
-fn add_impl<T, U, R>(a: T, b: U) -> R 
+fn add_impl<T, U, R>(a: T, b: U) -> R
 where
-    T: Add<U, Output = R>
+    T: Add<U, Output = R>,
 {
     a + b
 }
@@ -61,13 +61,9 @@ fn can_add_cipher_cipher() {
     let (public, secret) = runtime.generate_keys().unwrap();
 
     let a = Rational::try_from(-3.14).unwrap();
-    let a_c = runtime
-        .encrypt(a, &public)
-        .unwrap();
+    let a_c = runtime.encrypt(a, &public).unwrap();
     let b = Rational::try_from(6.28).unwrap();
-    let b_c = runtime
-        .encrypt(b, &public)
-        .unwrap();
+    let b_c = runtime.encrypt(b, &public).unwrap();
 
     let result = runtime.run(&circuit, vec![a_c, b_c], &public).unwrap();
 
@@ -94,9 +90,7 @@ fn can_add_cipher_plain() {
     let (public, secret) = runtime.generate_keys().unwrap();
 
     let a = Rational::try_from(-3.14).unwrap();
-    let a_c = runtime
-        .encrypt(a, &public)
-        .unwrap();
+    let a_c = runtime.encrypt(a, &public).unwrap();
     let b = Rational::try_from(6.28).unwrap();
 
     let args: Vec<CircuitInput> = vec![a_c.into(), b.into()];
@@ -126,9 +120,7 @@ fn can_add_plain_cipher() {
     let (public, secret) = runtime.generate_keys().unwrap();
 
     let a = Rational::try_from(-3.14).unwrap();
-    let a_c = runtime
-        .encrypt(a, &public)
-        .unwrap();
+    let a_c = runtime.encrypt(a, &public).unwrap();
     let b = Rational::try_from(6.28).unwrap();
 
     let args: Vec<CircuitInput> = vec![a_c.into(), b.into()];
@@ -158,9 +150,7 @@ fn can_add_cipher_literal() {
     let (public, secret) = runtime.generate_keys().unwrap();
 
     let a = Rational::try_from(-6.28).unwrap();
-    let a_c = runtime
-        .encrypt(a, &public)
-        .unwrap();
+    let a_c = runtime.encrypt(a, &public).unwrap();
 
     let args: Vec<CircuitInput> = vec![a_c.into()];
 
@@ -189,9 +179,7 @@ fn can_add_literal_cipher() {
     let (public, secret) = runtime.generate_keys().unwrap();
 
     let a = Rational::try_from(-6.28).unwrap();
-    let a_c = runtime
-        .encrypt(a, &public)
-        .unwrap();
+    let a_c = runtime.encrypt(a, &public).unwrap();
 
     let args: Vec<CircuitInput> = vec![a_c.into()];
 
@@ -202,9 +190,9 @@ fn can_add_literal_cipher() {
     assert_eq!(c, add_impl(3.14, a));
 }
 
-fn sub_impl<T, U, R>(a: T, b: U) -> R 
+fn sub_impl<T, U, R>(a: T, b: U) -> R
 where
-    T: Sub<U, Output = R>
+    T: Sub<U, Output = R>,
 {
     a - b
 }
@@ -227,13 +215,9 @@ fn can_sub_cipher_cipher() {
     let (public, secret) = runtime.generate_keys().unwrap();
 
     let a = Rational::try_from(-3.14).unwrap();
-    let a_c = runtime
-        .encrypt(a, &public)
-        .unwrap();
+    let a_c = runtime.encrypt(a, &public).unwrap();
     let b = Rational::try_from(6.28).unwrap();
-    let b_c = runtime
-        .encrypt(b, &public)
-        .unwrap();
+    let b_c = runtime.encrypt(b, &public).unwrap();
 
     let result = runtime.run(&circuit, vec![a_c, b_c], &public).unwrap();
 
@@ -260,9 +244,7 @@ fn can_sub_cipher_plain() {
     let (public, secret) = runtime.generate_keys().unwrap();
 
     let a = Rational::try_from(-3.14).unwrap();
-    let a_c = runtime
-        .encrypt(a, &public)
-        .unwrap();
+    let a_c = runtime.encrypt(a, &public).unwrap();
     let b = Rational::try_from(6.28).unwrap();
 
     let args: Vec<CircuitInput> = vec![a_c.into(), b.into()];
@@ -292,11 +274,9 @@ fn can_sub_plain_cipher() {
     let (public, secret) = runtime.generate_keys().unwrap();
 
     let a = Rational::try_from(-3.14).unwrap();
-    
+
     let b = Rational::try_from(6.28).unwrap();
-    let b_c = runtime
-        .encrypt(b, &public)
-        .unwrap();
+    let b_c = runtime.encrypt(b, &public).unwrap();
 
     let args: Vec<CircuitInput> = vec![a.into(), b_c.into()];
 
@@ -325,9 +305,7 @@ fn can_sub_cipher_literal() {
     let (public, secret) = runtime.generate_keys().unwrap();
 
     let a = Rational::try_from(-6.28).unwrap();
-    let a_c = runtime
-        .encrypt(a, &public)
-        .unwrap();
+    let a_c = runtime.encrypt(a, &public).unwrap();
 
     let args: Vec<CircuitInput> = vec![a_c.into()];
 
@@ -356,9 +334,7 @@ fn can_sub_literal_cipher() {
     let (public, secret) = runtime.generate_keys().unwrap();
 
     let a = Rational::try_from(-6.28).unwrap();
-    let a_c = runtime
-        .encrypt(a, &public)
-        .unwrap();
+    let a_c = runtime.encrypt(a, &public).unwrap();
 
     let args: Vec<CircuitInput> = vec![a_c.into()];
 
@@ -369,9 +345,9 @@ fn can_sub_literal_cipher() {
     assert_eq!(c, sub_impl(3.14, a));
 }
 
-fn mul_impl<T, U, R>(a: T, b: U) -> R 
+fn mul_impl<T, U, R>(a: T, b: U) -> R
 where
-    T: Mul<U, Output = R>
+    T: Mul<U, Output = R>,
 {
     a * b
 }
@@ -394,13 +370,9 @@ fn can_mul_cipher_cipher() {
     let (public, secret) = runtime.generate_keys().unwrap();
 
     let a = Rational::try_from(-3.14).unwrap();
-    let a_c = runtime
-        .encrypt(a, &public)
-        .unwrap();
+    let a_c = runtime.encrypt(a, &public).unwrap();
     let b = Rational::try_from(6.28).unwrap();
-    let b_c = runtime
-        .encrypt(b, &public)
-        .unwrap();
+    let b_c = runtime.encrypt(b, &public).unwrap();
 
     let result = runtime.run(&circuit, vec![a_c, b_c], &public).unwrap();
 
@@ -427,9 +399,7 @@ fn can_mul_cipher_plain() {
     let (public, secret) = runtime.generate_keys().unwrap();
 
     let a = Rational::try_from(-3.14).unwrap();
-    let a_c = runtime
-        .encrypt(a, &public)
-        .unwrap();
+    let a_c = runtime.encrypt(a, &public).unwrap();
     let b = Rational::try_from(6.28).unwrap();
 
     let args: Vec<CircuitInput> = vec![a_c.into(), b.into()];
@@ -459,11 +429,9 @@ fn can_mul_plain_cipher() {
     let (public, secret) = runtime.generate_keys().unwrap();
 
     let a = Rational::try_from(-3.14).unwrap();
-    
+
     let b = Rational::try_from(6.28).unwrap();
-    let b_c = runtime
-        .encrypt(b, &public)
-        .unwrap();
+    let b_c = runtime.encrypt(b, &public).unwrap();
 
     let args: Vec<CircuitInput> = vec![a.into(), b_c.into()];
 
@@ -492,9 +460,7 @@ fn can_mul_cipher_literal() {
     let (public, secret) = runtime.generate_keys().unwrap();
 
     let a = Rational::try_from(-6.28).unwrap();
-    let a_c = runtime
-        .encrypt(a, &public)
-        .unwrap();
+    let a_c = runtime.encrypt(a, &public).unwrap();
 
     let args: Vec<CircuitInput> = vec![a_c.into()];
 
@@ -523,9 +489,7 @@ fn can_mul_literal_cipher() {
     let (public, secret) = runtime.generate_keys().unwrap();
 
     let a = Rational::try_from(-6.28).unwrap();
-    let a_c = runtime
-        .encrypt(a, &public)
-        .unwrap();
+    let a_c = runtime.encrypt(a, &public).unwrap();
 
     let args: Vec<CircuitInput> = vec![a_c.into()];
 
@@ -536,9 +500,9 @@ fn can_mul_literal_cipher() {
     assert_eq!(c, mul_impl(3.14, a));
 }
 
-fn div_impl<T, U, R>(a: T, b: U) -> R 
+fn div_impl<T, U, R>(a: T, b: U) -> R
 where
-    T: Mul<U, Output = R>
+    T: Mul<U, Output = R>,
 {
     a * b
 }
@@ -561,13 +525,9 @@ fn can_div_cipher_cipher() {
     let (public, secret) = runtime.generate_keys().unwrap();
 
     let a = Rational::try_from(-3.14).unwrap();
-    let a_c = runtime
-        .encrypt(a, &public)
-        .unwrap();
+    let a_c = runtime.encrypt(a, &public).unwrap();
     let b = Rational::try_from(6.28).unwrap();
-    let b_c = runtime
-        .encrypt(b, &public)
-        .unwrap();
+    let b_c = runtime.encrypt(b, &public).unwrap();
 
     let result = runtime.run(&circuit, vec![a_c, b_c], &public).unwrap();
 
@@ -594,9 +554,7 @@ fn can_div_cipher_plain() {
     let (public, secret) = runtime.generate_keys().unwrap();
 
     let a = Rational::try_from(-3.14).unwrap();
-    let a_c = runtime
-        .encrypt(a, &public)
-        .unwrap();
+    let a_c = runtime.encrypt(a, &public).unwrap();
     let b = Rational::try_from(6.28).unwrap();
 
     let args: Vec<CircuitInput> = vec![a_c.into(), b.into()];
@@ -626,11 +584,9 @@ fn can_div_plain_cipher() {
     let (public, secret) = runtime.generate_keys().unwrap();
 
     let a = Rational::try_from(-3.14).unwrap();
-    
+
     let b = Rational::try_from(6.28).unwrap();
-    let b_c = runtime
-        .encrypt(b, &public)
-        .unwrap();
+    let b_c = runtime.encrypt(b, &public).unwrap();
 
     let args: Vec<CircuitInput> = vec![a.into(), b_c.into()];
 
@@ -659,9 +615,7 @@ fn can_div_cipher_literal() {
     let (public, secret) = runtime.generate_keys().unwrap();
 
     let a = Rational::try_from(-6.28).unwrap();
-    let a_c = runtime
-        .encrypt(a, &public)
-        .unwrap();
+    let a_c = runtime.encrypt(a, &public).unwrap();
 
     let args: Vec<CircuitInput> = vec![a_c.into()];
 
@@ -690,9 +644,7 @@ fn can_div_literal_cipher() {
     let (public, secret) = runtime.generate_keys().unwrap();
 
     let a = Rational::try_from(-6.28).unwrap();
-    let a_c = runtime
-        .encrypt(a, &public)
-        .unwrap();
+    let a_c = runtime.encrypt(a, &public).unwrap();
 
     let args: Vec<CircuitInput> = vec![a_c.into()];
 
@@ -705,9 +657,9 @@ fn can_div_literal_cipher() {
 
 #[test]
 fn can_neg_cipher() {
-    fn neg_impl<T>(x: T) -> T 
+    fn neg_impl<T>(x: T) -> T
     where
-        T: Neg<Output = T>
+        T: Neg<Output = T>,
     {
         -x
     }
@@ -728,9 +680,7 @@ fn can_neg_cipher() {
     let (public, secret) = runtime.generate_keys().unwrap();
 
     let a = Rational::try_from(-6.28).unwrap();
-    let a_c = runtime
-        .encrypt(a, &public)
-        .unwrap();
+    let a_c = runtime.encrypt(a, &public).unwrap();
 
     let args: Vec<CircuitInput> = vec![a_c.into()];
 

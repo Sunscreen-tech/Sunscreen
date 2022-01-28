@@ -329,6 +329,19 @@ impl Ciphertext {
 
         Ok(Self { handle })
     }
+
+    /**
+     * Returns the number of polynomials in this ciphertext.
+     */
+    pub fn num_polynomials(&self) -> u64 {
+        let mut size: u64 = 0;
+
+        convert_seal_error(unsafe { 
+            bindgen::Ciphertext_Size(self.handle, &mut size) 
+        }).unwrap();
+
+        size
+    }
 }
 
 impl PartialEq for Ciphertext {

@@ -209,5 +209,19 @@
             "program": "${workspaceFolder}/target/debug/dot_prod",
             "cwd": "${workspaceFolder}"
         },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug binary 'chi_sq'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--package=chi_sq"
+                ],
+            },
+            "args": [],
+            "program": "${workspaceFolder}/target/debug/chi_sq",
+            "cwd": "${workspaceFolder}"
+        }
     ]
 }

@@ -13,6 +13,7 @@ use petgraph::{
     algo::is_isomorphic_matching,
     algo::toposort,
     algo::tred::*,
+    dot::Dot,
     graph::{Graph, NodeIndex},
     stable_graph::{Edges, Neighbors, StableGraph},
     visit::{IntoNeighbors, IntoNodeIdentifiers},
@@ -326,6 +327,19 @@ impl Circuit {
             scheme,
             graph: StableGraph::new(),
         }
+    }
+
+    /**
+     * Write this graph into graphviz dot format. The returned
+     * string contains the file's contents.
+     */
+    pub fn render(&self) -> String {
+        let data = Dot::with_config(
+            &self.graph,
+            &[],
+        );
+
+        format!("{:?}", data)
     }
 
     fn append_2_input_node(
@@ -945,7 +959,7 @@ impl TransformList {
                     let x = self.materialize_index(*x);
                     let y = self.materialize_index(*y);
 
-                    ir.graph.update_edge(x, y, *edge_info);
+                    ir.graph.add_edge(x, y, *edge_info);
 
                     None
                 }

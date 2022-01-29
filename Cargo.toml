@@ -4,6 +4,7 @@ members = [
     "examples/simple_multiply",
     "examples/calculator_rational",
     "examples/calculator_fractional",
+    "examples/chi_sq",
     "examples/dot_prod",
     "seal",
     "seal_bench",

@@ -336,9 +336,7 @@ impl Ciphertext {
     pub fn num_polynomials(&self) -> u64 {
         let mut size: u64 = 0;
 
-        convert_seal_error(unsafe { 
-            bindgen::Ciphertext_Size(self.handle, &mut size) 
-        }).unwrap();
+        convert_seal_error(unsafe { bindgen::Ciphertext_Size(self.handle, &mut size) }).unwrap();
 
         size
     }

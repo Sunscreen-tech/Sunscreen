@@ -6,11 +6,19 @@ use emsdk::Config as EmConfig;
 use std::path::{Path, PathBuf};
 
 fn compile_native(profile: &str, out_path: &Path) {
+    let hexl = if std::env::var("CARGO_CFG_TARGET_ARCH").unwrap() == "x86_64" {
+        panic!();
+        "ON"
+    } else {
+        "OFF"
+    };
+
     let dst = Config::new("SEAL")
         .define("CMAKE_BUILD_TYPE", profile)
-        .define("CMAKE_CXX_FLAGS_RELEASE", "-DNDEBUG -flto -O3")
-        .define("CMAKE_C_FLAGS_RELEASE", "-DNDEBUG -flto -O3")
+        .define("CMAKE_CXX_FLAGS_RELEASE", "-DNDEBUG -O3")
+        .define("CMAKE_C_FLAGS_RELEASE", "-DNDEBUG -O3")
         .define("SEAL_BUILD_STATIC_SEAL_C", "ON")
+        .define("SEAL_USE_INTEL_HEXL", hexl) 
         .define("SEAL_BUILD_DEPS", "ON")
         .define("SEAL_BUILD_SEAL_C", "ON")
         .define("SEAL_BUILD_BENCH", "OFF")

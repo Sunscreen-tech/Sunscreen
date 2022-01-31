@@ -7,7 +7,6 @@ use std::path::{Path, PathBuf};
 
 fn compile_native(profile: &str, out_path: &Path) {
     let hexl = if std::env::var("CARGO_CFG_TARGET_ARCH").unwrap() == "x86_64" {
-        panic!();
         "ON"
     } else {
         "OFF"

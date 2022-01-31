@@ -334,9 +334,22 @@ impl Circuit {
      * string contains the file's contents.
      */
     pub fn render(&self) -> String {
-        let data = Dot::with_config(
+        let data = Dot::with_attr_getters(
             &self.graph,
-            &[],
+            &[petgraph::dot::Config::NodeNoLabel, petgraph::dot::Config::EdgeNoLabel],
+            &|g, e| { format!("label=\"{:?}\"", e.weight()) },
+            &|g, n| {
+                let (index, info) =n;
+
+                match info.operation {
+                    Operation::Literal(Literal::Plaintext(_)) => {
+                        format!("label=\"Id: {} Op: Plaintext literal\"", index.index())
+                    },
+                    _ => {
+                        format!("label=\"Id: {} Op: {:?}\"", index.index(), info)
+                    }
+                }
+            }
         );
 
         format!("{:?}", data)

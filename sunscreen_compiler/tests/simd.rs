@@ -20,7 +20,7 @@ fn can_swap_rows_cipher() {
         swap_impl(a)
     }
 
-    let circuit = Compiler::with_circuit(swap_rows)
+    let circuit = Compiler::with_fhe_program(swap_rows)
         .noise_margin_bits(5)
         .plain_modulus_constraint(PlainModulusConstraint::BatchingMinimum(0))
         .compile()
@@ -61,7 +61,7 @@ fn can_rotate_left_cipher() {
         shl_impl(a, 1)
     }
 
-    let circuit = Compiler::with_circuit(add)
+    let circuit = Compiler::with_fhe_program(add)
         .noise_margin_bits(5)
         .plain_modulus_constraint(PlainModulusConstraint::BatchingMinimum(0))
         .compile()
@@ -99,7 +99,7 @@ fn can_rotate_right_cipher() {
         shr_impl(a, 1)
     }
 
-    let circuit = Compiler::with_circuit(add)
+    let circuit = Compiler::with_fhe_program(add)
         .noise_margin_bits(5)
         .plain_modulus_constraint(PlainModulusConstraint::BatchingMinimum(0))
         .compile()
@@ -137,7 +137,7 @@ fn can_add_cipher_cipher() {
         add_impl(a, b)
     }
 
-    let circuit = Compiler::with_circuit(add)
+    let circuit = Compiler::with_fhe_program(add)
         .noise_margin_bits(5)
         .plain_modulus_constraint(PlainModulusConstraint::BatchingMinimum(0))
         .compile()
@@ -177,7 +177,7 @@ fn can_sub_cipher_cipher() {
         sub_impl(a, b)
     }
 
-    let circuit = Compiler::with_circuit(sub)
+    let circuit = Compiler::with_fhe_program(sub)
         .noise_margin_bits(5)
         .plain_modulus_constraint(PlainModulusConstraint::BatchingMinimum(0))
         .compile()
@@ -217,7 +217,7 @@ fn can_mul_cipher_cipher() {
         mul_impl(a, b)
     }
 
-    let circuit = Compiler::with_circuit(mul)
+    let circuit = Compiler::with_fhe_program(mul)
         .noise_margin_bits(5)
         .plain_modulus_constraint(PlainModulusConstraint::BatchingMinimum(0))
         .compile()
@@ -257,7 +257,7 @@ fn can_neg_cipher_cipher() {
         neg_impl(a)
     }
 
-    let circuit = Compiler::with_circuit(mul)
+    let circuit = Compiler::with_fhe_program(mul)
         .noise_margin_bits(5)
         .plain_modulus_constraint(PlainModulusConstraint::BatchingMinimum(0))
         .compile()

@@ -20,7 +20,7 @@ fn can_add_cipher_plain() {
         add_fn(a, b)
     }
 
-    let circuit = Compiler::with_circuit(add)
+    let circuit = Compiler::with_fhe_program(add)
         .noise_margin_bits(5)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(500))
         .compile()
@@ -50,7 +50,7 @@ fn can_add_plain_cipher() {
         add_fn(a, b)
     }
 
-    let circuit = Compiler::with_circuit(add)
+    let circuit = Compiler::with_fhe_program(add)
         .noise_margin_bits(5)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(500))
         .compile()
@@ -80,7 +80,7 @@ fn can_add_cipher_literal() {
         add_fn(a, -4)
     }
 
-    let circuit = Compiler::with_circuit(add)
+    let circuit = Compiler::with_fhe_program(add)
         .noise_margin_bits(5)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(500))
         .compile()
@@ -108,7 +108,7 @@ fn can_add_literal_cipher() {
         add_fn(-4, a)
     }
 
-    let circuit = Compiler::with_circuit(add)
+    let circuit = Compiler::with_fhe_program(add)
         .noise_margin_bits(5)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(500))
         .compile()
@@ -143,7 +143,7 @@ fn can_sub_cipher_plain() {
         sub_fn(a, b)
     }
 
-    let circuit = Compiler::with_circuit(sub)
+    let circuit = Compiler::with_fhe_program(sub)
         .noise_margin_bits(5)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(500))
         .compile()
@@ -173,7 +173,7 @@ fn can_sub_plain_cipher() {
         sub_fn(a, b)
     }
 
-    let circuit = Compiler::with_circuit(sub)
+    let circuit = Compiler::with_fhe_program(sub)
         .noise_margin_bits(5)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(500))
         .compile()
@@ -203,7 +203,7 @@ fn can_sub_cipher_literal() {
         sub_fn(a, -4)
     }
 
-    let circuit = Compiler::with_circuit(sub)
+    let circuit = Compiler::with_fhe_program(sub)
         .noise_margin_bits(5)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(500))
         .compile()
@@ -231,7 +231,7 @@ fn can_sub_literal_cipher() {
         sub_fn(-4, a)
     }
 
-    let circuit = Compiler::with_circuit(sub)
+    let circuit = Compiler::with_fhe_program(sub)
         .noise_margin_bits(5)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(500))
         .compile()
@@ -266,7 +266,7 @@ fn can_mul_cipher_plain() {
         mul_fn(a, b)
     }
 
-    let circuit = Compiler::with_circuit(mul)
+    let circuit = Compiler::with_fhe_program(mul)
         .noise_margin_bits(5)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(500))
         .compile()
@@ -296,7 +296,7 @@ fn can_mul_plain_cipher() {
         mul_fn(a, b)
     }
 
-    let circuit = Compiler::with_circuit(mul)
+    let circuit = Compiler::with_fhe_program(mul)
         .noise_margin_bits(5)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(500))
         .compile()
@@ -326,7 +326,7 @@ fn can_mul_cipher_literal() {
         mul_fn(a, -4)
     }
 
-    let circuit = Compiler::with_circuit(mul)
+    let circuit = Compiler::with_fhe_program(mul)
         .noise_margin_bits(5)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(500))
         .compile()
@@ -354,7 +354,7 @@ fn can_mul_literal_cipher() {
         mul_fn(-4, a)
     }
 
-    let circuit = Compiler::with_circuit(mul)
+    let circuit = Compiler::with_fhe_program(mul)
         .noise_margin_bits(5)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(500))
         .compile()

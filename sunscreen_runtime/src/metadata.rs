@@ -295,7 +295,7 @@ pub struct CompiledCircuit {
     /**
      * The underlying FHE circuit.
      */
-    pub circuit: Circuit,
+    pub fhe_program_fn: Circuit,
 
     /**
      * Information about the circuit, including its call signature and the scheme

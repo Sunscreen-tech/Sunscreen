@@ -1,5 +1,5 @@
 //! A simple chi squared computation that demonstrates how to
-//! optimize circuits. This example shows the parts of chi 
+//! optimize [`fhe_program`]s. This example shows the parts of chi 
 //! squared computed homomorphically. The problem can be summized
 //! as given integers `n_0`, `n_1`, `n_2`, compute:
 //! * `alpha` = `(4 * n_0 * n_2 - n_1^2)^2`
@@ -162,7 +162,7 @@ fn run_fhe<F, T, U>(c: F, _u: PhantomData<U>, n_0: T, n_1: T, n_2: T, plain_modu
         U: From<T> + FheType + TypeName + std::fmt::Display
 {
     let start = Instant::now();
-    let circuit = Compiler::with_circuit(c)
+    let circuit = Compiler::with_fhe_program(c)
         .noise_margin_bits(20)
         .plain_modulus_constraint(plain_modulus)
         .compile()

@@ -10,7 +10,7 @@ use std::ops::*;
 type CipherFractional = Cipher<Fractional<64>>;
 
 fn compile<F: CircuitFn>(c: F) -> CompiledCircuit {
-    Compiler::with_circuit(c)
+    Compiler::with_fhe_program(c)
         .noise_margin_bits(30)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(500))
         .compile()
@@ -18,7 +18,7 @@ fn compile<F: CircuitFn>(c: F) -> CompiledCircuit {
 }
 
 fn compile_with_params<F: CircuitFn>(c: F, params: &Params) -> CompiledCircuit {
-    Compiler::with_circuit(c)
+    Compiler::with_fhe_program(c)
         .with_params(params)
         .compile()
         .unwrap()
@@ -316,7 +316,7 @@ fn can_div_cipher_const() {
         a / 3.14
     }
 
-    let circuit = Compiler::with_circuit(mul)
+    let circuit = Compiler::with_fhe_program(mul)
         .noise_margin_bits(5)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(100000))
         .compile()
@@ -357,7 +357,7 @@ fn can_negate() {
         -a
     }
 
-    let circuit = Compiler::with_circuit(neg)
+    let circuit = Compiler::with_fhe_program(neg)
         .noise_margin_bits(5)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(100000))
         .compile()

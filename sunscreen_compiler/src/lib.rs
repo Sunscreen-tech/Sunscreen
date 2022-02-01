@@ -15,7 +15,7 @@
 //! }
 //!
 //! fn main() {
-//!   let fhe_program = Compiler::with_circuit(simple_multiply)
+//!   let fhe_program = Compiler::with_fhe_program(simple_multiply)
 //!       .plain_modulus_constraint(PlainModulusConstraint::Raw(600))
 //!       .noise_margin_bits(5)
 //!       .compile()

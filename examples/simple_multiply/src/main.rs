@@ -48,7 +48,7 @@ fn main() {
      * Afterwards, we simply compile and assert the compilation succeeds by calling unwrap. Compilation
      * returns the compiled circuit and parameters.
      */
-    let circuit = Compiler::with_circuit(simple_multiply)
+    let circuit = Compiler::with_fhe_program(simple_multiply)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(600))
         .noise_margin_bits(5)
         .compile()

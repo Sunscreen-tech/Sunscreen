@@ -7,7 +7,7 @@ fn can_encrypt_decrypt() {
         a + b
     }
 
-    let circuit = Compiler::with_circuit(foo)
+    let circuit = Compiler::with_fhe_program(foo)
         .noise_margin_bits(5)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(500))
         .compile()

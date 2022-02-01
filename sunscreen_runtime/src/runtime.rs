@@ -207,14 +207,14 @@ impl Runtime {
     where
         I: Into<CircuitInput>,
     {
-        circuit.circuit.validate()?;
+        circuit.fhe_program_fn.validate()?;
 
         // Aside from circuit correctness, check that the required keys are given.
-        if public_key.relin_key.is_none() && circuit.circuit.requires_relin_keys() {
+        if public_key.relin_key.is_none() && circuit.fhe_program_fn.requires_relin_keys() {
             return Err(Error::MissingRelinearizationKeys);
         }
 
-        if public_key.galois_key.is_none() && circuit.circuit.requires_galois_keys() {
+        if public_key.galois_key.is_none() && circuit.fhe_program_fn.requires_galois_keys() {
             return Err(Error::MissingGaloisKeys);
         }
 
@@ -282,7 +282,7 @@ impl Runtime {
 
                 let mut raw_ciphertexts = unsafe {
                     run_program_unchecked(
-                        &circuit.circuit,
+                        &circuit.fhe_program_fn,
                         &inputs,
                         &evaluator,
                         &relin_key,

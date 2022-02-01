@@ -156,7 +156,7 @@ fn main() {
     // plaintext modulus constraint. This chooses a prime number for our plain modulus
     // suitable for use with SIMD types. The 24 denotes the minimum precision of the plain
     // modulus.
-    let circuit = Compiler::with_circuit(dot_product)
+    let circuit = Compiler::with_fhe_program(dot_product)
         .noise_margin_bits(30)
         .plain_modulus_constraint(PlainModulusConstraint::BatchingMinimum(24))
         .compile()

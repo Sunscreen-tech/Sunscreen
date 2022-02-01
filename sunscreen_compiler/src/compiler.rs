@@ -38,7 +38,7 @@ pub struct Compiler<F>
 where
     F: CircuitFn,
 {
-    circuit_fn: F,
+    fhe_program_fn: F,
     params_mode: ParamsMode,
     plain_modulus_constraint: Option<PlainModulusConstraint>,
     security_level: SecurityLevel,
@@ -52,9 +52,9 @@ where
     /**
      * Create a new compiler with the given circuit.
      */
-    pub fn with_circuit(circuit_fn: F) -> Self {
+    pub fn with_fhe_program(fhe_program_fn: F) -> Self {
         Self {
-            circuit_fn,
+            fhe_program_fn,
             params_mode: ParamsMode::Search,
             plain_modulus_constraint: None,
             security_level: SecurityLevel::TC128,
@@ -110,37 +110,37 @@ where
      * for running it.
      */
     pub fn compile(self) -> Result<CompiledCircuit> {
-        let scheme = self.circuit_fn.scheme_type();
-        let signature = self.circuit_fn.signature();
+        let scheme = self.fhe_program_fn.scheme_type();
+        let signature = self.fhe_program_fn.signature();
 
-        let (circuit, params) = match self.params_mode {
-            ParamsMode::Manual(p) => (self.circuit_fn.build(&p), p.clone()),
+        let (fhe_program_fn, params) = match self.params_mode {
+            ParamsMode::Manual(p) => (self.fhe_program_fn.build(&p), p.clone()),
             ParamsMode::Search => {
                 let constraint = self
                     .plain_modulus_constraint
                     .ok_or(Error::MissingPlainModulusConstraint)?;
 
                 let params = determine_params::<F>(
-                    &self.circuit_fn,
+                    &self.fhe_program_fn,
                     constraint,
                     self.security_level,
                     self.noise_margin,
                     scheme,
                 )?;
 
-                (self.circuit_fn.build(&params), params.clone())
+                (self.fhe_program_fn.build(&params), params.clone())
             }
         };
 
         let mut required_keys = vec![];
 
-        let circuit = circuit?.compile();
+        let fhe_program_fn = fhe_program_fn?.compile();
 
-        if circuit.requires_relin_keys() {
+        if fhe_program_fn.requires_relin_keys() {
             required_keys.push(RequiredKeys::Relin);
         }
 
-        if circuit.requires_galois_keys() {
+        if fhe_program_fn.requires_galois_keys() {
             required_keys.push(RequiredKeys::Galois);
         }
 
@@ -150,6 +150,6 @@ where
             signature,
         };
 
-        Ok(CompiledCircuit { circuit, metadata })
+        Ok(CompiledCircuit { fhe_program_fn, metadata })
     }
 }

@@ -3,7 +3,7 @@
 //! To illustrate these features, we implement a
 //! [dot product](https://en.wikipedia.org/wiki/Dot_product#Algebraic_definition)
 use sunscreen_compiler::{
-    circuit,
+    fhe_program,
     types::{bfv::Simd, Cipher, LaneCount, SwapRows},
     CircuitInput, Compiler, PlainModulusConstraint, Runtime,
 };
@@ -93,7 +93,7 @@ fn dot_product_naive(a: &[i64], b: &[i64]) -> i64 {
     sum
 }
 
-#[circuit(scheme = "bfv")]
+#[fhe_program(scheme = "bfv")]
 fn dot_product(
     a: Cipher<Simd<VECLENDIV2>>,
     b: Cipher<Simd<VECLENDIV2>>,

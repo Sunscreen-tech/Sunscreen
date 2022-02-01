@@ -55,7 +55,7 @@ pub mod bfv;
 /**
  * This module contains implementation details used to support
  * Sunscreen's domain specific language under the
- * [`#[circuit]`](sunscreen_compiler_macros::circuit) macro.
+ * [`#[fhe_program]`](sunscreen_compiler_macros::circuit) macro.
  */
 pub mod intern;
 

@@ -12,7 +12,7 @@
 //! [SoK: Fully Homomorphic Encryption Compilers](https://arxiv.org/abs/2101.07078).
 
 use sunscreen_compiler::{
-    circuit,
+    fhe_program,
     types::{bfv::{Signed, Simd}, Cipher, FheType, TypeName},
     CircuitFn, CircuitInput, Compiler, PlainModulusConstraint, Runtime,
 };
@@ -84,7 +84,7 @@ where
     (alpha, b_1, b_2, b_3)
 }
 
-#[circuit(scheme = "bfv")]
+#[fhe_program(scheme = "bfv")]
 fn chi_sq_circuit(
     n_0: Cipher<Signed>,
     n_1: Cipher<Signed>,
@@ -98,7 +98,7 @@ fn chi_sq_circuit(
     chi_sq_impl(n_0, n_1, n_2)
 }
 
-#[circuit(scheme = "bfv")]
+#[fhe_program(scheme = "bfv")]
 fn chi_sq_optimized_circuit(
     n_0: Cipher<Signed>,
     n_1: Cipher<Signed>,
@@ -112,7 +112,7 @@ fn chi_sq_optimized_circuit(
     chi_sq_optimized_impl(n_0, n_1, n_2)
 }
 
-#[circuit(scheme = "bfv")]
+#[fhe_program(scheme = "bfv")]
 fn chi_sq_batched_circuit(
     n_0: Cipher<Simd<4096>>,
     n_1: Cipher<Simd<4096>>,
@@ -153,7 +153,7 @@ where F: Fn(i64, i64, i64) -> (i64, i64, i64, i64)
  * The [`PhantomData`] argument allows us to tell Rust what the type
  * of U. This is preferable than passing an explicit type for F
  * using turbofish, since the concrete type of F is is an
- * implementation detail of the `#[circuit]` macro and could
+ * implementation detail of the `#[fhe_program]` macro and could
  * change in the future.
  */
 fn run_fhe<F, T, U>(c: F, _u: PhantomData<U>, n_0: T, n_1: T, n_2: T, plain_modulus: PlainModulusConstraint)

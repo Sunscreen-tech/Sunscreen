@@ -2,7 +2,7 @@ use std::io::{self, Write};
 use std::sync::mpsc::{Receiver, Sender};
 use std::thread::{self, JoinHandle};
 use sunscreen_compiler::{
-    circuit,
+    fhe_program,
     types::{bfv::Fractional, Cipher},
     Ciphertext, CompiledCircuit, Compiler, Params, PlainModulusConstraint, PublicKey, Runtime,
     RuntimeError,
@@ -206,17 +206,17 @@ fn alice(
 }
 
 fn compile_circuits() -> (CompiledCircuit, CompiledCircuit, CompiledCircuit) {
-    #[circuit(scheme = "bfv")]
+    #[fhe_program(scheme = "bfv")]
     fn add(a: Cipher<Fractional<64>>, b: Cipher<Fractional<64>>) -> Cipher<Fractional<64>> {
         a + b
     }
 
-    #[circuit(scheme = "bfv")]
+    #[fhe_program(scheme = "bfv")]
     fn sub(a: Cipher<Fractional<64>>, b: Cipher<Fractional<64>>) -> Cipher<Fractional<64>> {
         a - b
     }
 
-    #[circuit(scheme = "bfv")]
+    #[fhe_program(scheme = "bfv")]
     fn mul(a: Cipher<Fractional<64>>, b: Cipher<Fractional<64>>) -> Cipher<Fractional<64>> {
         a * b
     }

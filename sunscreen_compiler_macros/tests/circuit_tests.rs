@@ -1,8 +1,7 @@
 use sunscreen_compiler::{
     types::{bfv::Signed, Cipher, TypeName},
-    CallSignature, CircuitFn, FrontendCompilation, Params, SchemeType, SecurityLevel, CURRENT_CTX,
+    CallSignature, CircuitFn, FrontendCompilation, Params, SchemeType, SecurityLevel, CURRENT_CTX, fhe_program,
 };
-use sunscreen_compiler_macros::circuit;
 
 use serde_json::json;
 
@@ -20,7 +19,7 @@ fn get_params() -> Params {
 fn circuit_gets_called() {
     static mut FOO: u32 = 0;
 
-    #[circuit(scheme = "bfv")]
+    #[fhe_program(scheme = "bfv")]
     fn simple_circuit() {
         unsafe {
             FOO = 20;
@@ -43,7 +42,7 @@ fn circuit_gets_called() {
 
 #[test]
 fn panicing_circuit_clears_ctx() {
-    #[circuit(scheme = "bfv")]
+    #[fhe_program(scheme = "bfv")]
     fn panic_circuit() {
         CURRENT_CTX.with(|ctx| {
             let old = ctx.take();
@@ -86,7 +85,7 @@ fn compile_failures() {
 
 #[test]
 fn capture_circuit_input_args() {
-    #[circuit(scheme = "bfv")]
+    #[fhe_program(scheme = "bfv")]
     fn circuit_with_args(_a: Signed, _b: Signed, _c: Signed, _d: Signed) {}
 
     assert_eq!(circuit_with_args.scheme_type(), SchemeType::Bfv);
@@ -113,7 +112,7 @@ fn capture_circuit_input_args() {
 
 #[test]
 fn can_add() {
-    #[circuit(scheme = "bfv")]
+    #[fhe_program(scheme = "bfv")]
     fn circuit_with_args(a: Cipher<Signed>, b: Cipher<Signed>, c: Cipher<Signed>) {
         let _ = a + b + c;
     }
@@ -175,7 +174,7 @@ fn can_add() {
 
 #[test]
 fn can_add_plaintext() {
-    #[circuit(scheme = "bfv")]
+    #[fhe_program(scheme = "bfv")]
     fn circuit_with_args(a: Cipher<Signed>, b: Signed) {
         let _ = a + b;
     }
@@ -223,7 +222,7 @@ fn can_add_plaintext() {
 
 #[test]
 fn can_mul() {
-    #[circuit(scheme = "bfv")]
+    #[fhe_program(scheme = "bfv")]
     fn circuit_with_args(a: Cipher<Signed>, b: Cipher<Signed>, c: Cipher<Signed>) {
         let _ = a * b * c;
     }
@@ -284,7 +283,7 @@ fn can_mul() {
 
 #[test]
 fn can_collect_output() {
-    #[circuit(scheme = "bfv")]
+    #[fhe_program(scheme = "bfv")]
     fn circuit_with_args(a: Cipher<Signed>, b: Cipher<Signed>) -> Cipher<Signed> {
         a + b * a
     }
@@ -350,7 +349,7 @@ fn can_collect_output() {
 
 #[test]
 fn can_collect_multiple_outputs() {
-    #[circuit(scheme = "bfv")]
+    #[fhe_program(scheme = "bfv")]
     fn circuit_with_args(a: Cipher<Signed>, b: Cipher<Signed>) -> (Cipher<Signed>, Cipher<Signed>) {
         (a + b * a, a)
     }

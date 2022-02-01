@@ -1,6 +1,6 @@
 use float_cmp::ApproxEq;
 use sunscreen_compiler::{
-    circuit,
+    fhe_program,
     types::{bfv::Fractional, Cipher},
     CircuitFn, CircuitInput, CompiledCircuit, Compiler, Params, PlainModulusConstraint, Runtime,
 };
@@ -33,27 +33,27 @@ fn can_add() {
         a + b
     }
 
-    #[circuit(scheme = "bfv")]
+    #[fhe_program(scheme = "bfv")]
     fn add_c_c(a: CipherFractional, b: CipherFractional) -> CipherFractional {
         add_fn(a, b)
     }
 
-    #[circuit(scheme = "bfv")]
+    #[fhe_program(scheme = "bfv")]
     fn add_c_p(a: CipherFractional, b: Fractional<64>) -> CipherFractional {
         add_fn(a, b)
     }
 
-    #[circuit(scheme = "bfv")]
+    #[fhe_program(scheme = "bfv")]
     fn add_p_c(a: Fractional<64>, b: CipherFractional) -> CipherFractional {
         add_fn(a, b)
     }
 
-    #[circuit(scheme = "bfv")]
+    #[fhe_program(scheme = "bfv")]
     fn add_c_l(a: CipherFractional, _b: CipherFractional) -> CipherFractional {
         add_fn(a, 3.14)
     }
 
-    #[circuit(scheme = "bfv")]
+    #[fhe_program(scheme = "bfv")]
     fn add_l_c(a: CipherFractional, _b: CipherFractional) -> CipherFractional {
         add_fn(3.14, a)
     }
@@ -126,27 +126,27 @@ fn can_mul() {
         a * b
     }
 
-    #[circuit(scheme = "bfv")]
+    #[fhe_program(scheme = "bfv")]
     fn mul_c_c(a: CipherFractional, b: CipherFractional) -> CipherFractional {
         mul_fn(a, b)
     }
 
-    #[circuit(scheme = "bfv")]
+    #[fhe_program(scheme = "bfv")]
     fn mul_c_p(a: CipherFractional, b: Fractional<64>) -> CipherFractional {
         mul_fn(a, b)
     }
 
-    #[circuit(scheme = "bfv")]
+    #[fhe_program(scheme = "bfv")]
     fn mul_p_c(a: Fractional<64>, b: CipherFractional) -> CipherFractional {
         mul_fn(a, b)
     }
 
-    #[circuit(scheme = "bfv")]
+    #[fhe_program(scheme = "bfv")]
     fn mul_c_l(a: CipherFractional) -> CipherFractional {
         mul_fn(a, 3.14)
     }
 
-    #[circuit(scheme = "bfv")]
+    #[fhe_program(scheme = "bfv")]
     fn mul_l_c(a: CipherFractional) -> CipherFractional {
         mul_fn(3.14, a)
     }
@@ -225,27 +225,27 @@ fn can_sub() {
         a - b
     }
 
-    #[circuit(scheme = "bfv")]
+    #[fhe_program(scheme = "bfv")]
     fn sub_c_c(a: CipherFractional, b: CipherFractional) -> CipherFractional {
         sub_fn(a, b)
     }
 
-    #[circuit(scheme = "bfv")]
+    #[fhe_program(scheme = "bfv")]
     fn sub_c_p(a: CipherFractional, b: Fractional<64>) -> CipherFractional {
         sub_fn(a, b)
     }
 
-    #[circuit(scheme = "bfv")]
+    #[fhe_program(scheme = "bfv")]
     fn sub_p_c(a: Fractional<64>, b: CipherFractional) -> CipherFractional {
         sub_fn(a, b)
     }
 
-    #[circuit(scheme = "bfv")]
+    #[fhe_program(scheme = "bfv")]
     fn sub_c_l(a: CipherFractional, _b: CipherFractional) -> CipherFractional {
         sub_fn(a, 3.14)
     }
 
-    #[circuit(scheme = "bfv")]
+    #[fhe_program(scheme = "bfv")]
     fn sub_l_c(a: CipherFractional, _b: CipherFractional) -> CipherFractional {
         sub_fn(3.14, a)
     }
@@ -311,7 +311,7 @@ fn can_sub() {
 
 #[test]
 fn can_div_cipher_const() {
-    #[circuit(scheme = "bfv")]
+    #[fhe_program(scheme = "bfv")]
     fn mul(a: Cipher<Fractional<64>>) -> Cipher<Fractional<64>> {
         a / 3.14
     }
@@ -352,7 +352,7 @@ fn can_div_cipher_const() {
 
 #[test]
 fn can_negate() {
-    #[circuit(scheme = "bfv")]
+    #[fhe_program(scheme = "bfv")]
     fn neg(a: Cipher<Fractional<64>>) -> Cipher<Fractional<64>> {
         -a
     }

@@ -1,5 +1,5 @@
 use sunscreen_compiler::{
-    circuit,
+    fhe_program,
     types::{bfv::Rational, Cipher},
     CircuitInput, Compiler, PlainModulusConstraint, Runtime,
 };
@@ -8,7 +8,7 @@ use std::ops::*;
 
 #[test]
 fn can_encode_rational_numbers() {
-    #[circuit(scheme = "bfv")]
+    #[fhe_program(scheme = "bfv")]
     fn add(a: Cipher<Rational>) -> Cipher<Rational> {
         a
     }
@@ -45,7 +45,7 @@ where
 
 #[test]
 fn can_add_cipher_cipher() {
-    #[circuit(scheme = "bfv")]
+    #[fhe_program(scheme = "bfv")]
     fn add(a: CipherRational, b: CipherRational) -> CipherRational {
         add_impl(a, b)
     }
@@ -74,7 +74,7 @@ fn can_add_cipher_cipher() {
 
 #[test]
 fn can_add_cipher_plain() {
-    #[circuit(scheme = "bfv")]
+    #[fhe_program(scheme = "bfv")]
     fn add(a: Cipher<Rational>, b: Rational) -> Cipher<Rational> {
         add_impl(a, b)
     }
@@ -104,7 +104,7 @@ fn can_add_cipher_plain() {
 
 #[test]
 fn can_add_plain_cipher() {
-    #[circuit(scheme = "bfv")]
+    #[fhe_program(scheme = "bfv")]
     fn add(a: Cipher<Rational>, b: Rational) -> Cipher<Rational> {
         add_impl(b, a)
     }
@@ -134,7 +134,7 @@ fn can_add_plain_cipher() {
 
 #[test]
 fn can_add_cipher_literal() {
-    #[circuit(scheme = "bfv")]
+    #[fhe_program(scheme = "bfv")]
     fn add(a: Cipher<Rational>) -> Cipher<Rational> {
         add_impl(a, 3.14)
     }
@@ -163,7 +163,7 @@ fn can_add_cipher_literal() {
 
 #[test]
 fn can_add_literal_cipher() {
-    #[circuit(scheme = "bfv")]
+    #[fhe_program(scheme = "bfv")]
     fn add(a: Cipher<Rational>) -> Cipher<Rational> {
         add_impl(3.14, a)
     }
@@ -199,7 +199,7 @@ where
 
 #[test]
 fn can_sub_cipher_cipher() {
-    #[circuit(scheme = "bfv")]
+    #[fhe_program(scheme = "bfv")]
     fn sub(a: CipherRational, b: CipherRational) -> CipherRational {
         sub_impl(a, b)
     }
@@ -228,7 +228,7 @@ fn can_sub_cipher_cipher() {
 
 #[test]
 fn can_sub_cipher_plain() {
-    #[circuit(scheme = "bfv")]
+    #[fhe_program(scheme = "bfv")]
     fn sub(a: Cipher<Rational>, b: Rational) -> Cipher<Rational> {
         sub_impl(a, b)
     }
@@ -258,7 +258,7 @@ fn can_sub_cipher_plain() {
 
 #[test]
 fn can_sub_plain_cipher() {
-    #[circuit(scheme = "bfv")]
+    #[fhe_program(scheme = "bfv")]
     fn sub(a: Rational, b: Cipher<Rational>) -> Cipher<Rational> {
         sub_impl(a, b)
     }
@@ -289,7 +289,7 @@ fn can_sub_plain_cipher() {
 
 #[test]
 fn can_sub_cipher_literal() {
-    #[circuit(scheme = "bfv")]
+    #[fhe_program(scheme = "bfv")]
     fn sub(a: Cipher<Rational>) -> Cipher<Rational> {
         sub_impl(a, 3.14)
     }
@@ -318,7 +318,7 @@ fn can_sub_cipher_literal() {
 
 #[test]
 fn can_sub_literal_cipher() {
-    #[circuit(scheme = "bfv")]
+    #[fhe_program(scheme = "bfv")]
     fn sub(a: Cipher<Rational>) -> Cipher<Rational> {
         sub_impl(3.14, a)
     }
@@ -354,7 +354,7 @@ where
 
 #[test]
 fn can_mul_cipher_cipher() {
-    #[circuit(scheme = "bfv")]
+    #[fhe_program(scheme = "bfv")]
     fn mul(a: CipherRational, b: CipherRational) -> CipherRational {
         mul_impl(a, b)
     }
@@ -383,7 +383,7 @@ fn can_mul_cipher_cipher() {
 
 #[test]
 fn can_mul_cipher_plain() {
-    #[circuit(scheme = "bfv")]
+    #[fhe_program(scheme = "bfv")]
     fn mul(a: Cipher<Rational>, b: Rational) -> Cipher<Rational> {
         mul_impl(a, b)
     }
@@ -413,7 +413,7 @@ fn can_mul_cipher_plain() {
 
 #[test]
 fn can_mul_plain_cipher() {
-    #[circuit(scheme = "bfv")]
+    #[fhe_program(scheme = "bfv")]
     fn mul(a: Rational, b: Cipher<Rational>) -> Cipher<Rational> {
         mul_impl(a, b)
     }
@@ -444,7 +444,7 @@ fn can_mul_plain_cipher() {
 
 #[test]
 fn can_mul_cipher_literal() {
-    #[circuit(scheme = "bfv")]
+    #[fhe_program(scheme = "bfv")]
     fn mul(a: Cipher<Rational>) -> Cipher<Rational> {
         mul_impl(a, 3.14)
     }
@@ -473,7 +473,7 @@ fn can_mul_cipher_literal() {
 
 #[test]
 fn can_mul_literal_cipher() {
-    #[circuit(scheme = "bfv")]
+    #[fhe_program(scheme = "bfv")]
     fn mul(a: Cipher<Rational>) -> Cipher<Rational> {
         mul_impl(3.14, a)
     }
@@ -509,7 +509,7 @@ where
 
 #[test]
 fn can_div_cipher_cipher() {
-    #[circuit(scheme = "bfv")]
+    #[fhe_program(scheme = "bfv")]
     fn div(a: CipherRational, b: CipherRational) -> CipherRational {
         div_impl(a, b)
     }
@@ -538,7 +538,7 @@ fn can_div_cipher_cipher() {
 
 #[test]
 fn can_div_cipher_plain() {
-    #[circuit(scheme = "bfv")]
+    #[fhe_program(scheme = "bfv")]
     fn div(a: Cipher<Rational>, b: Rational) -> Cipher<Rational> {
         div_impl(a, b)
     }
@@ -568,7 +568,7 @@ fn can_div_cipher_plain() {
 
 #[test]
 fn can_div_plain_cipher() {
-    #[circuit(scheme = "bfv")]
+    #[fhe_program(scheme = "bfv")]
     fn div(a: Rational, b: Cipher<Rational>) -> Cipher<Rational> {
         div_impl(a, b)
     }
@@ -599,7 +599,7 @@ fn can_div_plain_cipher() {
 
 #[test]
 fn can_div_cipher_literal() {
-    #[circuit(scheme = "bfv")]
+    #[fhe_program(scheme = "bfv")]
     fn div(a: Cipher<Rational>) -> Cipher<Rational> {
         div_impl(a, 3.14)
     }
@@ -628,7 +628,7 @@ fn can_div_cipher_literal() {
 
 #[test]
 fn can_div_literal_cipher() {
-    #[circuit(scheme = "bfv")]
+    #[fhe_program(scheme = "bfv")]
     fn div(a: Cipher<Rational>) -> Cipher<Rational> {
         div_impl(3.14, a)
     }
@@ -664,7 +664,7 @@ fn can_neg_cipher() {
         -x
     }
 
-    #[circuit(scheme = "bfv")]
+    #[fhe_program(scheme = "bfv")]
     fn neg(x: Cipher<Rational>) -> Cipher<Rational> {
         neg_impl(x)
     }

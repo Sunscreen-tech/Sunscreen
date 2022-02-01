@@ -1,5 +1,5 @@
 use sunscreen_compiler::{
-    circuit,
+    fhe_program,
     types::{bfv::Signed, Cipher},
     CircuitInput, Compiler, PlainModulusConstraint, Runtime,
 };
@@ -15,7 +15,7 @@ where
 
 #[test]
 fn can_add_cipher_plain() {
-    #[circuit(scheme = "bfv")]
+    #[fhe_program(scheme = "bfv")]
     fn add(a: Cipher<Signed>, b: Signed) -> Cipher<Signed> {
         add_fn(a, b)
     }
@@ -45,7 +45,7 @@ fn can_add_cipher_plain() {
 
 #[test]
 fn can_add_plain_cipher() {
-    #[circuit(scheme = "bfv")]
+    #[fhe_program(scheme = "bfv")]
     fn add(a: Signed, b: Cipher<Signed>) -> Cipher<Signed> {
         add_fn(a, b)
     }
@@ -75,7 +75,7 @@ fn can_add_plain_cipher() {
 
 #[test]
 fn can_add_cipher_literal() {
-    #[circuit(scheme = "bfv")]
+    #[fhe_program(scheme = "bfv")]
     fn add(a: Cipher<Signed>) -> Cipher<Signed> {
         add_fn(a, -4)
     }
@@ -103,7 +103,7 @@ fn can_add_cipher_literal() {
 
 #[test]
 fn can_add_literal_cipher() {
-    #[circuit(scheme = "bfv")]
+    #[fhe_program(scheme = "bfv")]
     fn add(a: Cipher<Signed>) -> Cipher<Signed> {
         add_fn(-4, a)
     }
@@ -138,7 +138,7 @@ where
 
 #[test]
 fn can_sub_cipher_plain() {
-    #[circuit(scheme = "bfv")]
+    #[fhe_program(scheme = "bfv")]
     fn sub(a: Cipher<Signed>, b: Signed) -> Cipher<Signed> {
         sub_fn(a, b)
     }
@@ -168,7 +168,7 @@ fn can_sub_cipher_plain() {
 
 #[test]
 fn can_sub_plain_cipher() {
-    #[circuit(scheme = "bfv")]
+    #[fhe_program(scheme = "bfv")]
     fn sub(a: Signed, b: Cipher<Signed>) -> Cipher<Signed> {
         sub_fn(a, b)
     }
@@ -198,7 +198,7 @@ fn can_sub_plain_cipher() {
 
 #[test]
 fn can_sub_cipher_literal() {
-    #[circuit(scheme = "bfv")]
+    #[fhe_program(scheme = "bfv")]
     fn sub(a: Cipher<Signed>) -> Cipher<Signed> {
         sub_fn(a, -4)
     }
@@ -226,7 +226,7 @@ fn can_sub_cipher_literal() {
 
 #[test]
 fn can_sub_literal_cipher() {
-    #[circuit(scheme = "bfv")]
+    #[fhe_program(scheme = "bfv")]
     fn sub(a: Cipher<Signed>) -> Cipher<Signed> {
         sub_fn(-4, a)
     }
@@ -261,7 +261,7 @@ where
 
 #[test]
 fn can_mul_cipher_plain() {
-    #[circuit(scheme = "bfv")]
+    #[fhe_program(scheme = "bfv")]
     fn mul(a: Cipher<Signed>, b: Signed) -> Cipher<Signed> {
         mul_fn(a, b)
     }
@@ -291,7 +291,7 @@ fn can_mul_cipher_plain() {
 
 #[test]
 fn can_mul_plain_cipher() {
-    #[circuit(scheme = "bfv")]
+    #[fhe_program(scheme = "bfv")]
     fn mul(a: Signed, b: Cipher<Signed>) -> Cipher<Signed> {
         mul_fn(a, b)
     }
@@ -321,7 +321,7 @@ fn can_mul_plain_cipher() {
 
 #[test]
 fn can_mul_cipher_literal() {
-    #[circuit(scheme = "bfv")]
+    #[fhe_program(scheme = "bfv")]
     fn mul(a: Cipher<Signed>) -> Cipher<Signed> {
         mul_fn(a, -4)
     }
@@ -349,7 +349,7 @@ fn can_mul_cipher_literal() {
 
 #[test]
 fn can_mul_literal_cipher() {
-    #[circuit(scheme = "bfv")]
+    #[fhe_program(scheme = "bfv")]
     fn mul(a: Cipher<Signed>) -> Cipher<Signed> {
         mul_fn(-4, a)
     }

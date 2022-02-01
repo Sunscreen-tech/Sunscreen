@@ -1,34 +1,34 @@
 #![deny(missing_docs)]
 #![deny(rustdoc::broken_intra_doc_links)]
 
-//! This crate contains the frontend compiler for Sunscreen circuits and the types and
+//! This crate contains the frontend compiler for Sunscreen [`fhe_program`] and the types and
 //! algorithms that support it.
 //!
 //! # Examples
 //! This example is further annotated in `examples/simple_multiply`.
 //! ```
-//! # use sunscreen_compiler::{circuit, Compiler, types::{bfv::Signed, Cipher}, PlainModulusConstraint, Params, Runtime, Context};
+//! # use sunscreen_compiler::{fhe_program, Compiler, types::{bfv::Signed, Cipher}, PlainModulusConstraint, Params, Runtime, Context};
 //!
-//! #[circuit(scheme = "bfv")]
+//! #[fhe_program(scheme = "bfv")]
 //! fn simple_multiply(a: Cipher<Signed>, b: Cipher<Signed>) -> Cipher<Signed> {
 //!     a * b
 //! }
 //!
 //! fn main() {
-//!   let circuit = Compiler::with_circuit(simple_multiply)
+//!   let fhe_program = Compiler::with_circuit(simple_multiply)
 //!       .plain_modulus_constraint(PlainModulusConstraint::Raw(600))
 //!       .noise_margin_bits(5)
 //!       .compile()
 //!       .unwrap();
 //!
-//!   let runtime = Runtime::new(&circuit.metadata.params).unwrap();
+//!   let runtime = Runtime::new(&fhe_program.metadata.params).unwrap();
 //!
 //!   let (public, secret) = runtime.generate_keys().unwrap();
 //!
 //!   let a = runtime.encrypt(Signed::from(15), &public).unwrap();
 //!   let b = runtime.encrypt(Signed::from(5), &public).unwrap();
 //!
-//!   let results = runtime.run(&circuit, vec![a, b], &public).unwrap();
+//!   let results = runtime.run(&fhe_program, vec![a, b], &public).unwrap();
 //!
 //!   let c: Signed = runtime.decrypt(&results[0], &secret).unwrap();
 //!
@@ -42,17 +42,17 @@ mod error;
 mod params;
 
 /**
- * This module contains types used during circuit construction.
+ * This module contains types used during [`fhe_program`] construction.
  *
  * * The [`crate::types::bfv`] module contains data types used for
- * BFV circuit inputs and outputs.
+ * BFV [`fhe_program`] inputs and outputs.
  * * The [`crate::types::intern`] module contains implementation details needed
- * for circuit construction. You shouldn't need to use these, as the `#[circuit]`
+ * for [`fhe_program`] construction. You shouldn't need to use these, as the `#[fhe_program]`
  * macro will automatically insert them for you as needed.
  *
  * The root of the module contains:
  * * [`Cipher`](crate::types::Cipher) is a paramterized type used to
- * denote a circuit input parameter as encrypted.
+ * denote an [`fhe_program`] input parameter as encrypted.
  */
 pub mod types;
 
@@ -169,7 +169,7 @@ pub enum Operation {
     SwapRows,
 
     /**
-     * This node indicates the previous node's result should be a result of the circuit.
+     * This node indicates the previous node's result should be a result of the [`fhe_program`].
      */
     Output,
 }
@@ -196,7 +196,7 @@ pub enum OperandInfo {
 }
 
 /**
- * This trait specifies a type as being able to be used as an input or output of a circuit.
+ * This trait specifies a type as being able to be used as an input or output of an [`fhe_program`].
  */
 pub trait Value {
     /**
@@ -216,16 +216,16 @@ pub trait Value {
  */
 pub struct FrontendCompilation {
     /**
-     * The dependency graph of the frontend's intermediate representation (IR) that backs a circuit.
+     * The dependency graph of the frontend's intermediate representation (IR) that backs an [`fhe_program`].
      */
     pub graph: StableGraph<Operation, OperandInfo>,
 }
 
 #[derive(Clone, Debug)]
 /**
- * The context for constructing the circuit graph while compiling a circuit.
+ * The context for constructing the [`fhe_program`] graph during compilation.
  *
- * This is an implementation detail of the circuit macro, and you shouldn't need
+ * This is an implementation detail of the [`fhe_program`] macro, and you shouldn't need
  * to construct one.
  */
 pub struct Context {
@@ -260,20 +260,20 @@ impl PartialEq for FrontendCompilation {
 
 thread_local! {
     /**
-     * While constructing a circuit, this refers to the current intermediate
-     * representation. An implementation detail of the [`circuit`] macro.
+     * While constructing an [`fhe_program`], this refers to the current intermediate
+     * representation. An implementation detail of the [`fhe_program`] macro.
      */
     pub static CURRENT_CTX: RefCell<Option<&'static mut Context>> = RefCell::new(None);
 
     /**
      * An arena containing slices of indicies. An implementation detail of the
-     * [`circuit`] macro.
+     * [`fhe_program`] macro.
      */
     pub static INDEX_ARENA: RefCell<bumpalo::Bump> = RefCell::new(bumpalo::Bump::new());
 }
 
 /**
- * Runs the specified closure, injecting the current circuit context.
+ * Runs the specified closure, injecting the current [`fhe_program`] context.
  */
 pub fn with_ctx<F, R>(f: F) -> R
 where
@@ -339,7 +339,7 @@ impl Context {
     }
 
     /**
-     * Adds a plaintext literal to the circuit graph.
+     * Adds a plaintext literal to the [`fhe_program`] graph.
      */
     pub fn add_plaintext_literal(&mut self, plaintext: InnerPlaintext) -> NodeIndex {
         self.compilation
@@ -459,7 +459,7 @@ impl FrontendCompilation {
      * then perform backend compilation and return the result.
      */
     pub fn compile(&self) -> Circuit {
-        let mut circuit = Circuit::new(SchemeType::Bfv);
+        let mut fhe_program = Circuit::new(SchemeType::Bfv);
 
         let mapped_graph = self.graph.map(
             |id, n| match n {
@@ -478,7 +478,7 @@ impl FrontendCompilation {
                     NodeInfo::new(CircuitOperation::Literal(CircuitLiteral::U64(*x)))
                 }
                 Operation::Literal(Literal::Plaintext(x)) => {
-                    // It's okay to unwrap here because circuit compilation will
+                    // It's okay to unwrap here because fhe_program compilation will
                     // catch the panic and return a compilation error.
                     NodeInfo::new(CircuitOperation::Literal(CircuitLiteral::Plaintext(
                         x.to_bytes().expect("Failed to serialize plaintext."),
@@ -502,8 +502,8 @@ impl FrontendCompilation {
             },
         );
 
-        circuit.graph = StableGraph::from(mapped_graph);
+        fhe_program.graph = StableGraph::from(mapped_graph);
 
-        compile_inplace(circuit)
+        compile_inplace(fhe_program)
     }
 }

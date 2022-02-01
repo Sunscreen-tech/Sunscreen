@@ -1,5 +1,5 @@
 use sunscreen_compiler::{
-    circuit,
+    fhe_program,
     types::{bfv::Simd, Cipher, SwapRows},
     CircuitInput, Compiler, PlainModulusConstraint, Runtime,
 };
@@ -15,7 +15,7 @@ fn can_swap_rows_cipher() {
         a.swap_rows()
     }
 
-    #[circuit(scheme = "bfv")]
+    #[fhe_program(scheme = "bfv")]
     fn swap_rows(a: Cipher<Simd<4>>) -> Cipher<Simd<4>> {
         swap_impl(a)
     }
@@ -56,7 +56,7 @@ fn can_rotate_left_cipher() {
         x << y
     }
 
-    #[circuit(scheme = "bfv")]
+    #[fhe_program(scheme = "bfv")]
     fn add(a: Cipher<Simd<4>>) -> Cipher<Simd<4>> {
         shl_impl(a, 1)
     }
@@ -94,7 +94,7 @@ fn can_rotate_right_cipher() {
         x >> y
     }
 
-    #[circuit(scheme = "bfv")]
+    #[fhe_program(scheme = "bfv")]
     fn add(a: Cipher<Simd<4>>) -> Cipher<Simd<4>> {
         shr_impl(a, 1)
     }
@@ -132,7 +132,7 @@ fn can_add_cipher_cipher() {
         a + b
     }
 
-    #[circuit(scheme = "bfv")]
+    #[fhe_program(scheme = "bfv")]
     fn add(a: Cipher<Simd<4>>, b: Cipher<Simd<4>>) -> Cipher<Simd<4>> {
         add_impl(a, b)
     }
@@ -172,7 +172,7 @@ fn can_sub_cipher_cipher() {
         a - b
     }
 
-    #[circuit(scheme = "bfv")]
+    #[fhe_program(scheme = "bfv")]
     fn sub(a: Cipher<Simd<4>>, b: Cipher<Simd<4>>) -> Cipher<Simd<4>> {
         sub_impl(a, b)
     }
@@ -212,7 +212,7 @@ fn can_mul_cipher_cipher() {
         a * b
     }
 
-    #[circuit(scheme = "bfv")]
+    #[fhe_program(scheme = "bfv")]
     fn mul(a: Cipher<Simd<4>>, b: Cipher<Simd<4>>) -> Cipher<Simd<4>> {
         mul_impl(a, b)
     }
@@ -252,7 +252,7 @@ fn can_neg_cipher_cipher() {
         -a
     }
 
-    #[circuit(scheme = "bfv")]
+    #[fhe_program(scheme = "bfv")]
     fn mul(a: Cipher<Simd<4>>) -> Cipher<Simd<4>> {
         neg_impl(a)
     }

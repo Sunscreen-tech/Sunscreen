@@ -1,12 +1,12 @@
 use sunscreen_compiler::{
-    circuit,
+    fhe_program,
     types::{bfv::Signed, Cipher},
     Compiler, PlainModulusConstraint,
 };
 use sunscreen_runtime::Runtime;
 
 /**
- * The #[circuit] macro indicates this function represents a homomorphic encryption
+ * The #[fhe_program] macro indicates this function represents a homomorphic encryption
  * circuit. This particular example simply multiplies the two operands together and returns
  * the result. Circuits may take any number of parameters and return either a single result
  * or a tuple of results.
@@ -20,7 +20,7 @@ use sunscreen_runtime::Runtime;
  * One takes a circuit and passes them to the compiler, which transforms it into a form
  * suitable for execution.
  */
-#[circuit(scheme = "bfv")]
+#[fhe_program(scheme = "bfv")]
 fn simple_multiply(a: Cipher<Signed>, b: Cipher<Signed>) -> Cipher<Signed> {
     a * b
 }

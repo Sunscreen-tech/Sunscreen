@@ -2,7 +2,7 @@ use sunscreen_compiler::{types::bfv::Signed, types::Cipher, *};
 
 #[test]
 fn can_encrypt_decrypt() {
-    #[circuit(scheme = "bfv")]
+    #[fhe_program(scheme = "bfv")]
     fn foo(a: Cipher<Signed>, b: Cipher<Signed>) -> Cipher<Signed> {
         a + b
     }

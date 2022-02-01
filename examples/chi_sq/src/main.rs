@@ -1,12 +1,33 @@
+//! A simple chi squared computation that demonstrates how to
+//! optimize circuits. This example shows the parts of chi 
+//! squared computed homomorphically. The problem can be summized
+//! as given integers `n_0`, `n_1`, `n_2`, compute:
+//! * `alpha` = `(4 * n_0 * n_2 - n_1^2)^2`
+//! * `b_1` = `2(2n_0 + n_1)^2`
+//! * `b_2` = `(2n_0 + n_1) * (2n_2 + n_1)`
+//! * `b_3` = `2(2n_2 + n_1)^2`
+//! 
+//! For more details on this algorithm and to compare
+//! Sunscreen's results with other FHE compilers, see 
+//! [SoK: Fully Homomorphic Encryption Compilers](https://arxiv.org/abs/2101.07078).
+
 use sunscreen_compiler::{
     circuit,
-    types::{bfv::Signed, Cipher},
+    types::{bfv::{Signed, Simd}, Cipher, FheType, TypeName},
     CircuitFn, CircuitInput, Compiler, PlainModulusConstraint, Runtime,
 };
 
+use std::marker::PhantomData;
 use std::ops::*;
 use std::time::Instant;
 
+/**
+ * The naive implementation of chi squared. More or less a
+ * transliteration of the problem statement.
+ * 
+ * Defining the implementation generically this way allows us
+ * to use both the Signed and Batched data types.
+ */
 fn chi_sq_impl<T>(n_0: T, n_1: T, n_2: T) -> (T, T, T, T)
 where
     T: Add<T, Output = T> + Mul<T, Output = T> + Sub<T, Output = T> + Copy,
@@ -18,14 +39,20 @@ where
     let b_1 = 2 * n_0 + n_1;
     let b_1_sq = 2 * b_1 * b_1;
 
-    let x = 2 * n_2 + n_1;
-
-    let b_2 = (2 * n_0 + n_1) * x;
-    let b_3 = 2 * x * x;
+    let b_2 = (2 * n_0 + n_1) * (2 * n_2 + n_1);
+    let b_3 = 2 * (2 * n_2 + n_1) * (2 * n_2 + n_1);
 
     (a_sq, b_1_sq, b_2, b_3)
 }
 
+/**
+ * This implementation features the following optimizations:
+ * * Replace multiplication by constant with additions.
+ * * Common subexpression elimination. I.e. reuse temporaries multiple times to avoid recomputation.
+ * 
+ * On a first gen M1 Mac, this implementation is over 6x
+ * faster than the naive implementation.
+ */
 fn chi_sq_optimized_impl<T>(n_0: T, n_1: T, n_2: T) -> (T, T, T, T)
 where
     T: Add<T, Output = T> + Mul<T, Output = T> + Sub<T, Output = T> + Copy,
@@ -85,8 +112,25 @@ fn chi_sq_optimized_circuit(
     chi_sq_optimized_impl(n_0, n_1, n_2)
 }
 
+#[circuit(scheme = "bfv")]
+fn chi_sq_batched_circuit(
+    n_0: Cipher<Simd<4096>>,
+    n_1: Cipher<Simd<4096>>,
+    n_2: Cipher<Simd<4096>>,
+) -> (
+    Cipher<Simd<4096>>,
+    Cipher<Simd<4096>>,
+    Cipher<Simd<4096>>,
+    Cipher<Simd<4096>>,
+) {
+    chi_sq_optimized_impl(n_0, n_1, n_2)
+}
+
 /**
- * Compute chi squared without encryption
+ * Compute chi squared without encryption. This function may report 
+ * as taking 0 seconds due to being faster than the clock
+ * resolution, but a typical time on a first gen M1 mac under
+ * 40ns.
  */
 fn run_native<F>(f: F, n_0: i64, n_1: i64, n_2: i64)
 where F: Fn(i64, i64, i64) -> (i64, i64, i64, i64)
@@ -101,11 +145,26 @@ where F: Fn(i64, i64, i64) -> (i64, i64, i64, i64)
     );
 }
 
-fn run_fhe<F: CircuitFn>(c: F, n_0: i64, n_1: i64, n_2: i64) {
+/**
+ * Compile the given circuit, encrypt some data, homomorphically
+ * run the circuit, decrypt the result, and report timings on
+ * each step.
+ * 
+ * The [`PhantomData`] argument allows us to tell Rust what the type
+ * of U. This is preferable than passing an explicit type for F
+ * using turbofish, since the concrete type of F is is an
+ * implementation detail of the `#[circuit]` macro and could
+ * change in the future.
+ */
+fn run_fhe<F, T, U>(c: F, _u: PhantomData<U>, n_0: T, n_1: T, n_2: T, plain_modulus: PlainModulusConstraint)
+    where
+        F: CircuitFn,
+        U: From<T> + FheType + TypeName + std::fmt::Display
+{
     let start = Instant::now();
     let circuit = Compiler::with_circuit(c)
         .noise_margin_bits(20)
-        .plain_modulus_constraint(PlainModulusConstraint::Raw(1_000))
+        .plain_modulus_constraint(plain_modulus)
         .compile()
         .unwrap();
     let elapsed = start.elapsed().as_secs_f64();
@@ -114,9 +173,9 @@ fn run_fhe<F: CircuitFn>(c: F, n_0: i64, n_1: i64, n_2: i64) {
 
     let runtime = Runtime::new(&circuit.metadata.params).unwrap();
 
-    let n_0 = Signed::from(n_0);
-    let n_1 = Signed::from(n_1);
-    let n_2 = Signed::from(n_2);
+    let n_0 = U::from(n_0);
+    let n_1 = U::from(n_1);
+    let n_2 = U::from(n_2);
 
     let start = Instant::now();
     let (public, secret) = runtime.generate_keys().unwrap();
@@ -141,21 +200,16 @@ fn run_fhe<F: CircuitFn>(c: F, n_0: i64, n_1: i64, n_2: i64) {
     println!("\t\tRun time {}s", elapsed);
 
     let start = Instant::now();
-    let a: Signed = runtime.decrypt(&result[0], &secret).unwrap();
-    let b_1: Signed = runtime.decrypt(&result[1], &secret).unwrap();
-    let b_2: Signed = runtime.decrypt(&result[2], &secret).unwrap();
-    let b_3: Signed = runtime.decrypt(&result[3], &secret).unwrap();
+    let a: U = runtime.decrypt(&result[0], &secret).unwrap();
+    let b_1: U = runtime.decrypt(&result[1], &secret).unwrap();
+    let b_2: U = runtime.decrypt(&result[2], &secret).unwrap();
+    let b_3: U = runtime.decrypt(&result[3], &secret).unwrap();
     let elapsed = start.elapsed().as_secs_f64();
 
     println!("\t\tDecryption time {}s", elapsed);
 
-    let a: i64 = a.into();
-    let b_1: i64 = b_1.into();
-    let b_2: i64 = b_2.into();
-    let b_3: i64 = b_3.into();
-
     println!(
-        "\t\tchi_sq (fhe) alpha {}, beta_1 {}, beta_2 {}, beta_3 {}",
+        "\t\tchi_sq (fhe) alpha {:40}, beta_1 {:40}, beta_2 {:40}, beta_3 {:40}",
         a, b_1, b_2, b_3
     );
 }
@@ -165,14 +219,37 @@ fn main() {
     let n_1 = 7;
     let n_2 = 9;
 
+    let plain_modulus = PlainModulusConstraint::Raw(1024);
+
     println!("**********Naive**************");
     println!("\t**********Native************");
     run_native(chi_sq_impl, n_0, n_1, n_2);
     println!("\t**********FHE************");
-    run_fhe(chi_sq_circuit, n_0, n_1, n_2);
+    run_fhe(chi_sq_circuit, PhantomData::<Signed>::default(), n_0, n_1, n_2, plain_modulus);
     println!("**********Optimized************");
     println!("\t**********Native************");
     run_native(chi_sq_optimized_impl, n_0, n_1, n_2);
     println!("\t**********FHE************");
-    run_fhe(chi_sq_optimized_circuit, n_0, n_1, n_2);
+    // On a first-gen M1 mac, the optimized circuit is around 6
+    // orders of magnitude slower than running natively, taking
+    // just under 50ms...
+    run_fhe(chi_sq_optimized_circuit, PhantomData::<Signed>::default(), n_0, n_1, n_2, plain_modulus);
+
+    // Pack repetitions of n_0, n_1, n_2 into 2x4096 vectors
+    // to demonstrate batching.
+    let n_0 = [[n_0; 4096], [n_0; 4096]];
+    let n_1 = [[n_1; 4096], [n_1; 4096]];
+    let n_2 = [[n_2; 4096], [n_2; 4096]];
+
+    let plain_modulus = PlainModulusConstraint::BatchingMinimum(16);
+
+    // Using batching, we get a circuit
+    // that runs with the same latency, but rather than computing
+    // 1 instance of the chi squared function, we can compute
+    // 16_384 values concurrently. This would result in an
+    // amortized throughput only 1-2 orders of magnitude
+    // slower than native!
+    println!("**********Batched************");
+    println!("\t**********FHE************");
+    run_fhe(chi_sq_batched_circuit, PhantomData::<Simd<4096>>, n_0, n_1, n_2, plain_modulus);
 }

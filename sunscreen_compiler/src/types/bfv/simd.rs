@@ -93,6 +93,57 @@ impl<const LANES: usize> CircuitInputTrait for Simd<LANES> {}
 impl<const LANES: usize> FheType for Simd<LANES> {}
 impl<const LANES: usize> BfvType for Simd<LANES> {}
 
+impl<const LANES: usize> std::fmt::Display for Simd<LANES> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let prefix = "[[";
+        let middle = "], [";
+        let suffix = "]]";
+
+        let chars_remaining = f.width().unwrap_or(usize::MAX);
+        let chars_per_row = usize::max(
+            usize::saturating_sub(chars_remaining / 2, prefix.len() + middle.len() + suffix.len())
+            , 2
+        );
+
+        if chars_remaining > "[[..], [..]]".len() {
+            write!(f, "{}", prefix)?;
+
+            for i in 0..self.data.len() {
+                let mut row_chars = chars_per_row;
+    
+                for (j, val) in self.data[i].iter().enumerate() {
+                    let val = if j < self.data[i].len() {
+                        format!("{}, ", val)
+                    } else {
+                        format!("{}", val)
+                    };
+    
+                    if val.len() > row_chars + 2 {
+                        write!(f, "..", )?;
+                        break;
+                    } else {
+                        write!(f, "{}", val)?;
+                    }
+
+                    row_chars -= val.len();
+                }
+
+                if i == 0 {
+                    write!(f, "{}", middle)?;
+                } else {
+                    write!(f, "{}", suffix)?;
+                }
+            }
+
+            Ok(())
+        } else if chars_remaining >= "[..]".len() {
+            write!(f, "[..]")
+        } else {
+            write!(f, "")
+        }
+    }
+}
+
 impl<const LANES: usize> TryIntoPlaintext for Simd<LANES> {
     fn try_into_plaintext(
         &self,
@@ -240,6 +291,13 @@ impl<const LANES: usize> From<[[i64; LANES]; 2]> for Simd<LANES> {
 impl<const LANES: usize> Into<[[i64; LANES]; 2]> for Simd<LANES> {
     fn into(self) -> [[i64; LANES]; 2] {
         [self.data[0], self.data[1]]
+    }
+}
+
+impl<const LANES: usize> From<i64> for Simd<LANES> {
+    fn from(data: i64) -> Self {
+        // Splat the input across all the lanes.
+        Self { data: [[data; LANES], [data; LANES]] }
     }
 }
 
@@ -479,6 +537,24 @@ impl<const LANES: usize> GraphCipherMul for Simd<LANES> {
     ) -> CircuitNode<Cipher<Self::Left>> {
         with_ctx(|ctx| {
             let n = ctx.add_multiplication(a.ids[0], b.ids[0]);
+
+            CircuitNode::new(&[n])
+        })
+    }
+}
+
+impl <const LANES: usize> GraphCipherConstMul for Simd<LANES> {
+    type Left = Self;
+    type Right = i64;
+
+    fn graph_cipher_const_mul(
+        a: CircuitNode<Cipher<Self::Left>>,
+        b: Self::Right
+    ) -> CircuitNode<Cipher<Self::Left>> {
+        with_ctx(|ctx| {
+            let b = Self::from(b).try_into_plaintext(&ctx.params).unwrap();
+            let l = ctx.add_plaintext_literal(b.inner);
+            let n = ctx.add_multiplication_plaintext(a.ids[0], l);
 
             CircuitNode::new(&[n])
         })

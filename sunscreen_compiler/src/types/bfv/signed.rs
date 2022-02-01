@@ -35,6 +35,12 @@ impl CircuitInputTrait for Signed {}
 impl FheType for Signed {}
 impl BfvType for Signed {}
 
+impl std::fmt::Display for Signed {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.val)
+    }
+}
+
 fn significant_bits(val: u64) -> usize {
     let bits = std::mem::size_of::<u64>() * 8;
 

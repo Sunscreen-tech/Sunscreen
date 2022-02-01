@@ -85,32 +85,23 @@ fn chi_sq_optimized_circuit(
     chi_sq_optimized_impl(n_0, n_1, n_2)
 }
 
-fn chi_sq(n: i64, a: i64, b_1: i64, b_2: i64, b_3: i64) -> f64 {
-    (a as f64 / n as f64) * (1. / b_1 as f64 + 1. / b_2 as f64 + 1. / b_3 as f64)
-}
-
 /**
  * Compute chi squared without encryption
  */
 fn run_native<F>(f: F, n_0: i64, n_1: i64, n_2: i64)
 where F: Fn(i64, i64, i64) -> (i64, i64, i64, i64)
 {
-    let n = n_0 + n_1 + n_2;
-
     let start = Instant::now();
     let (a, b_1, b_2, b_3) = f(n_0, n_1, n_2);
     let elapsed = start.elapsed().as_secs_f64();
 
     println!(
-        "\t\tchi_sq (non-fhe) {} ({}s)",
-        chi_sq(n, a, b_1, b_2, b_3),
-        elapsed
+        "\t\tchi_sq (non-fhe) alpha {}, beta_1 {}, beta_2 {}, beta_3 {}, ({}s)",
+        a, b_1, b_2, b_3, elapsed
     );
 }
 
 fn run_fhe<F: CircuitFn>(c: F, n_0: i64, n_1: i64, n_2: i64) {
-    let n = n_0 + n_1 + n_2;
-
     let start = Instant::now();
     let circuit = Compiler::with_circuit(c)
         .noise_margin_bits(20)
@@ -158,16 +149,21 @@ fn run_fhe<F: CircuitFn>(c: F, n_0: i64, n_1: i64, n_2: i64) {
 
     println!("\t\tDecryption time {}s", elapsed);
 
+    let a: i64 = a.into();
+    let b_1: i64 = b_1.into();
+    let b_2: i64 = b_2.into();
+    let b_3: i64 = b_3.into();
+
     println!(
-        "\t\tchi_sq (fhe) {}",
-        chi_sq(n, a.into(), b_1.into(), b_2.into(), b_3.into()),
+        "\t\tchi_sq (fhe) alpha {}, beta_1 {}, beta_2 {}, beta_3 {}",
+        a, b_1, b_2, b_3
     );
 }
 
 fn main() {
-    let n_0 = 15;
-    let n_1 = 44;
-    let n_2 = 16;
+    let n_0 = 2;
+    let n_1 = 7;
+    let n_2 = 9;
 
     println!("**********Naive**************");
     println!("\t**********Native************");

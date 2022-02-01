@@ -337,8 +337,8 @@ impl Circuit {
         let data = Dot::with_attr_getters(
             &self.graph,
             &[petgraph::dot::Config::NodeNoLabel, petgraph::dot::Config::EdgeNoLabel],
-            &|g, e| { format!("label=\"{:?}\"", e.weight()) },
-            &|g, n| {
+            &|_, e| { format!("label=\"{:?}\"", e.weight()) },
+            &|_, n| {
                 let (index, info) =n;
 
                 match info.operation {

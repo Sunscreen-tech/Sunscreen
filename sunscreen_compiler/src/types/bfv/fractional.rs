@@ -134,16 +134,15 @@ use std::ops::*;
  *
  * ```rust
  * # use sunscreen_compiler::types::bfv::Fractional;
- * # use sunscreen_compiler::{Ciphertext, PublicKey, Runtime, Result};
- * # use seal::{SecretKey};
+ * # use sunscreen_compiler::{Ciphertext, PublicKey, PrivateKey, Runtime, Result};
  *
  * fn normalize(
  *   runtime: &Runtime,
  *   ciphertext: &Ciphertext,
- *   secret_key: &SecretKey,
+ *   private_key: &PrivateKey,
  *   public_key: &PublicKey
  * ) -> Result<Ciphertext> {
- *   let val: Fractional::<64> = runtime.decrypt(&ciphertext, &secret_key)?;
+ *   let val: Fractional::<64> = runtime.decrypt(&ciphertext, &private_key)?;
  *   let val: f64 = val.into();
  *   let val = Fractional::<64>::from(val);
  *

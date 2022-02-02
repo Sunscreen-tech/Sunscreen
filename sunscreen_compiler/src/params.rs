@@ -123,11 +123,11 @@ where
 
         let keygen = KeyGenerator::new(&context).unwrap();
         let public_key = keygen.create_public_key();
-        let secret_key = keygen.secret_key();
+        let private_key = keygen.secret_key();
 
         let encryptor =
-            Encryptor::with_public_and_secret_key(&context, &public_key, &secret_key).unwrap();
-        let decryptor = Decryptor::new(&context, &secret_key).unwrap();
+            Encryptor::with_public_and_secret_key(&context, &public_key, &private_key).unwrap();
+        let decryptor = Decryptor::new(&context, &private_key).unwrap();
         let encoder = BFVScalarEncoder::new();
 
         let coeff = CoefficientModulus::bfv_default(*n, security_level).unwrap();

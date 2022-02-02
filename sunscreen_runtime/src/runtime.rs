@@ -2,14 +2,14 @@ use crate::error::*;
 use crate::metadata::*;
 use crate::{
     run_program_unchecked, serialization::WithContext, Ciphertext, FheProgramInput,
-    InnerCiphertext, InnerPlaintext, Plaintext, PublicKey, SealCiphertext, SealData, SealPlaintext,
-    TryFromPlaintext, TryIntoPlaintext, TypeName, TypeNameInstance,
+    InnerCiphertext, InnerPlaintext, Plaintext, PrivateKey, PublicKey, SealCiphertext, SealData,
+    SealPlaintext, TryFromPlaintext, TryIntoPlaintext, TypeName, TypeNameInstance,
 };
 use sunscreen_fhe_program::SchemeType;
 
 use seal::{
     BFVEvaluator, BfvEncryptionParametersBuilder, Context as SealContext, Decryptor, Encryptor,
-    KeyGenerator, Modulus, SecretKey,
+    KeyGenerator, Modulus,
 };
 
 enum Context {
@@ -35,7 +35,7 @@ impl Runtime {
     /**
      * Decrypts the given ciphertext into the type P.
      */
-    pub fn decrypt<P>(&self, ciphertext: &Ciphertext, secret_key: &SecretKey) -> Result<P>
+    pub fn decrypt<P>(&self, ciphertext: &Ciphertext, private_key: &PrivateKey) -> Result<P>
     where
         P: TryFromPlaintext + TypeName,
     {
@@ -53,7 +53,7 @@ impl Runtime {
 
         let val = match (&self.context, &ciphertext.inner) {
             (Context::Seal(context), InnerCiphertext::Seal(ciphertexts)) => {
-                let decryptor = Decryptor::new(&context, secret_key)?;
+                let decryptor = Decryptor::new(&context, &private_key.0)?;
 
                 let plaintexts = ciphertexts
                     .iter()
@@ -99,10 +99,10 @@ impl Runtime {
      * *minimum* noise budget remaining of all the enclosed
      * ciphertexts.
      */
-    pub fn measure_noise_budget(&self, c: &Ciphertext, secret_key: &SecretKey) -> Result<u32> {
+    pub fn measure_noise_budget(&self, c: &Ciphertext, private_key: &PrivateKey) -> Result<u32> {
         match (&self.context, &c.inner) {
             (Context::Seal(ctx), InnerCiphertext::Seal(ciphertexts)) => {
-                let decryptor = Decryptor::new(&ctx, secret_key)?;
+                let decryptor = Decryptor::new(&ctx, &private_key.0)?;
 
                 Ok(ciphertexts
                     .iter()
@@ -124,7 +124,7 @@ impl Runtime {
      *
      * See [`PublicKey`] for more information.
      */
-    pub fn generate_keys(&self) -> Result<(PublicKey, SecretKey)> {
+    pub fn generate_keys(&self) -> Result<(PublicKey, PrivateKey)> {
         let keys = match &self.context {
             Context::Seal(context) => {
                 let keygen = KeyGenerator::new(&context)?;
@@ -151,7 +151,7 @@ impl Runtime {
                     relin_key: relin_keys,
                 };
 
-                (public_keys, keygen.secret_key())
+                (public_keys, PrivateKey(keygen.secret_key()))
             }
         };
 

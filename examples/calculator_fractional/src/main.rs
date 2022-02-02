@@ -138,17 +138,17 @@ fn alice(
         let stdin = io::stdin();
         let mut stdout = io::stdout();
 
-        println!("Bob's secret calculator. Type `help` for help.");
+        println!("Bob's private calculator. Type `help` for help.");
 
         // Bob needs to send us the scheme parameters compatible with his FHE programs.
         let params = recv_params.recv().unwrap();
 
         let runtime = Runtime::new(&params).unwrap();
 
-        let (public, secret) = runtime.generate_keys().unwrap();
+        let (public_key, private_key) = runtime.generate_keys().unwrap();
 
         // Send Bob a copy of our public keys.
-        send_pub.send(public.clone()).unwrap();
+        send_pub.send(public_key.clone()).unwrap();
 
         loop {
             print!(">> ");
@@ -176,8 +176,8 @@ fn alice(
             };
 
             // Encrypt the left and right terms.
-            let encrypt_left = encrypt_term(&runtime, &public, left);
-            let encrypt_right = encrypt_term(&runtime, &public, right);
+            let encrypt_left = encrypt_term(&runtime, &public_key, left);
+            let encrypt_right = encrypt_term(&runtime, &public_key, right);
 
             // Send Bob our encrypted operation.
             send_calc
@@ -190,7 +190,7 @@ fn alice(
 
             // Get our result from Bob and print it.
             let result: Ciphertext = recv_res.recv().unwrap();
-            let result: Fractional<64> = match runtime.decrypt(&result, &secret) {
+            let result: Fractional<64> = match runtime.decrypt(&result, &private_key) {
                 Ok(v) => v,
                 Err(RuntimeError::TooMuchNoise) => {
                     println!("Decryption failed: too much noise");

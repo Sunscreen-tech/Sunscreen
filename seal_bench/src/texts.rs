@@ -24,7 +24,7 @@ pub fn texts_table() -> Table {
 fn ciphertext() -> Row {
     let mut row = Row::new();
 
-    row.add_cell(Cell::from("secret key"));
+    row.add_cell(Cell::from("private key"));
 
     for d in POLY_DEGREE {
         let d = *d;
@@ -41,9 +41,9 @@ fn ciphertext() -> Row {
 
         let gen = KeyGenerator::new(&context).unwrap();
 
-        let public = gen.create_public_key();
+        let public_key = gen.create_public_key();
 
-        let encryptor = Encryptor::with_public_key(&context, &public).unwrap();
+        let encryptor = Encryptor::with_public_key(&context, &public_key).unwrap();
         let plaintext = Plaintext::from_hex_string("0").unwrap();
         let ciphertext = encryptor.encrypt(&plaintext).unwrap();
 

@@ -18,14 +18,16 @@ fn can_roundtrip_ciphertexts_bincode() {
     })
     .unwrap();
 
-    let (public, private) = runtime.generate_keys().unwrap();
+    let (public_key, private_key) = runtime.generate_keys().unwrap();
 
     let expected: i64 = 42;
 
-    let c = runtime.encrypt(Signed::from(expected), &public).unwrap();
+    let c = runtime
+        .encrypt(Signed::from(expected), &public_key)
+        .unwrap();
     let c: Ciphertext = bincode::deserialize(&bincode::serialize(&c).unwrap()).unwrap();
 
-    let v: Signed = runtime.decrypt(&c, &private).unwrap();
+    let v: Signed = runtime.decrypt(&c, &private_key).unwrap();
 
     let actual: i64 = v.into();
     assert_eq!(actual, expected);
@@ -46,14 +48,16 @@ fn can_roundtrip_ciphertexts_json() {
     })
     .unwrap();
 
-    let (public, private) = runtime.generate_keys().unwrap();
+    let (public_key, private_key) = runtime.generate_keys().unwrap();
 
     let expected: i64 = 42;
 
-    let c = runtime.encrypt(Signed::from(expected), &public).unwrap();
+    let c = runtime
+        .encrypt(Signed::from(expected), &public_key)
+        .unwrap();
     let c: Ciphertext = serde_json::from_str(&serde_json::to_string(&c).unwrap()).unwrap();
 
-    let v: Signed = runtime.decrypt(&c, &private).unwrap();
+    let v: Signed = runtime.decrypt(&c, &private_key).unwrap();
 
     let actual: i64 = v.into();
     assert_eq!(actual, expected);

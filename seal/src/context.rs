@@ -28,7 +28,7 @@ use crate::SecurityLevel;
  *
  * By default, SEALContext creates a chain of SEALContext.ContextData instances. The
  * first one in the chain corresponds to special encryption parameters that are reserved
- * to be used by the various key classes (SecretKey, PublicKey, etc.). These are the
+ * to be used by the various key classes (PrivateKey, PublicKey, etc.). These are the
  * exact same encryption parameters that are created by the user and passed to the
  * constructor of SEALContext. The properties KeyContextData and KeyParmsId return the
  * ContextData and the ParmsId corresponding to these special parameters. The rest of the

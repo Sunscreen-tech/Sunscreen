@@ -28,18 +28,18 @@ fn can_swap_rows_cipher() {
 
     let runtime = Runtime::new(&fhe_program.metadata.params).unwrap();
 
-    let (public, secret) = runtime.generate_keys().unwrap();
+    let (public_key, private_key) = runtime.generate_keys().unwrap();
 
     let data = [vec![1, 2, 3, 4], vec![5, 6, 7, 8]];
 
     let a = Batched::<4>::try_from(data).unwrap();
-    let a_c = runtime.encrypt(a, &public).unwrap();
+    let a_c = runtime.encrypt(a, &public_key).unwrap();
 
     let args: Vec<FheProgramInput> = vec![a_c.into()];
 
-    let result = runtime.run(&fhe_program, args, &public).unwrap();
+    let result = runtime.run(&fhe_program, args, &public_key).unwrap();
 
-    let c: Batched<4> = runtime.decrypt(&result[0], &secret).unwrap();
+    let c: Batched<4> = runtime.decrypt(&result[0], &private_key).unwrap();
 
     let expected = [vec![5, 6, 7, 8], vec![1, 2, 3, 4]];
 
@@ -69,18 +69,18 @@ fn can_rotate_left_cipher() {
 
     let runtime = Runtime::new(&fhe_program.metadata.params).unwrap();
 
-    let (public, secret) = runtime.generate_keys().unwrap();
+    let (public_key, private_key) = runtime.generate_keys().unwrap();
 
     let data = [vec![1, 2, 3, 4], vec![5, 6, 7, 8]];
 
     let a = Batched::<4>::try_from(data).unwrap();
-    let a_c = runtime.encrypt(a, &public).unwrap();
+    let a_c = runtime.encrypt(a, &public_key).unwrap();
 
     let args: Vec<FheProgramInput> = vec![a_c.into()];
 
-    let result = runtime.run(&fhe_program, args, &public).unwrap();
+    let result = runtime.run(&fhe_program, args, &public_key).unwrap();
 
-    let c: Batched<4> = runtime.decrypt(&result[0], &secret).unwrap();
+    let c: Batched<4> = runtime.decrypt(&result[0], &private_key).unwrap();
 
     assert_eq!(c, shl_impl(a, 1));
 }
@@ -107,18 +107,18 @@ fn can_rotate_right_cipher() {
 
     let runtime = Runtime::new(&fhe_program.metadata.params).unwrap();
 
-    let (public, secret) = runtime.generate_keys().unwrap();
+    let (public_key, private_key) = runtime.generate_keys().unwrap();
 
     let data = [vec![1, 2, 3, 4], vec![5, 6, 7, 8]];
 
     let a = Batched::<4>::try_from(data).unwrap();
-    let a_c = runtime.encrypt(a, &public).unwrap();
+    let a_c = runtime.encrypt(a, &public_key).unwrap();
 
     let args: Vec<FheProgramInput> = vec![a_c.into()];
 
-    let result = runtime.run(&fhe_program, args, &public).unwrap();
+    let result = runtime.run(&fhe_program, args, &public_key).unwrap();
 
-    let c: Batched<4> = runtime.decrypt(&result[0], &secret).unwrap();
+    let c: Batched<4> = runtime.decrypt(&result[0], &private_key).unwrap();
 
     assert_eq!(c, shr_impl(a, 1));
 }
@@ -145,20 +145,20 @@ fn can_add_cipher_cipher() {
 
     let runtime = Runtime::new(&fhe_program.metadata.params).unwrap();
 
-    let (public, secret) = runtime.generate_keys().unwrap();
+    let (public_key, private_key) = runtime.generate_keys().unwrap();
 
     let data = [vec![1, 2, 3, 4], vec![5, 6, 7, 8]];
 
     let a = Batched::<4>::try_from(data.clone()).unwrap();
-    let a_c = runtime.encrypt(a, &public).unwrap();
+    let a_c = runtime.encrypt(a, &public_key).unwrap();
     let b = Batched::<4>::try_from(data).unwrap();
-    let b_c = runtime.encrypt(b, &public).unwrap();
+    let b_c = runtime.encrypt(b, &public_key).unwrap();
 
     let args: Vec<FheProgramInput> = vec![a_c.into(), b_c.into()];
 
-    let result = runtime.run(&fhe_program, args, &public).unwrap();
+    let result = runtime.run(&fhe_program, args, &public_key).unwrap();
 
-    let c: Batched<4> = runtime.decrypt(&result[0], &secret).unwrap();
+    let c: Batched<4> = runtime.decrypt(&result[0], &private_key).unwrap();
 
     assert_eq!(c, add_impl(a, b));
 }
@@ -185,20 +185,20 @@ fn can_sub_cipher_cipher() {
 
     let runtime = Runtime::new(&fhe_program.metadata.params).unwrap();
 
-    let (public, secret) = runtime.generate_keys().unwrap();
+    let (public_key, private_key) = runtime.generate_keys().unwrap();
 
     let data = [vec![1, 2, 3, 4], vec![5, 6, 7, 8]];
 
     let a = Batched::<4>::try_from(data.clone()).unwrap();
-    let a_c = runtime.encrypt(a, &public).unwrap();
+    let a_c = runtime.encrypt(a, &public_key).unwrap();
     let b = Batched::<4>::try_from(data.clone()).unwrap();
-    let b_c = runtime.encrypt(b, &public).unwrap();
+    let b_c = runtime.encrypt(b, &public_key).unwrap();
 
     let args: Vec<FheProgramInput> = vec![a_c.into(), b_c.into()];
 
-    let result = runtime.run(&fhe_program, args, &public).unwrap();
+    let result = runtime.run(&fhe_program, args, &public_key).unwrap();
 
-    let c: Batched<4> = runtime.decrypt(&result[0], &secret).unwrap();
+    let c: Batched<4> = runtime.decrypt(&result[0], &private_key).unwrap();
 
     assert_eq!(c, sub_impl(a, b));
 }
@@ -225,20 +225,20 @@ fn can_mul_cipher_cipher() {
 
     let runtime = Runtime::new(&fhe_program.metadata.params).unwrap();
 
-    let (public, secret) = runtime.generate_keys().unwrap();
+    let (public_key, private_key) = runtime.generate_keys().unwrap();
 
     let data = [vec![1, 2, 3, 4], vec![5, 6, 7, 8]];
 
     let a = Batched::<4>::try_from(data.clone()).unwrap();
-    let a_c = runtime.encrypt(a, &public).unwrap();
+    let a_c = runtime.encrypt(a, &public_key).unwrap();
     let b = Batched::<4>::try_from(data).unwrap();
-    let b_c = runtime.encrypt(b, &public).unwrap();
+    let b_c = runtime.encrypt(b, &public_key).unwrap();
 
     let args: Vec<FheProgramInput> = vec![a_c.into(), b_c.into()];
 
-    let result = runtime.run(&fhe_program, args, &public).unwrap();
+    let result = runtime.run(&fhe_program, args, &public_key).unwrap();
 
-    let c: Batched<4> = runtime.decrypt(&result[0], &secret).unwrap();
+    let c: Batched<4> = runtime.decrypt(&result[0], &private_key).unwrap();
 
     assert_eq!(c, mul_impl(a, b));
 }
@@ -265,18 +265,18 @@ fn can_neg_cipher_cipher() {
 
     let runtime = Runtime::new(&fhe_program.metadata.params).unwrap();
 
-    let (public, secret) = runtime.generate_keys().unwrap();
+    let (public_key, private_key) = runtime.generate_keys().unwrap();
 
     let data = [vec![1, 2, 3, 4], vec![5, 6, 7, 8]];
 
     let a = Batched::<4>::try_from(data.clone()).unwrap();
-    let a_c = runtime.encrypt(a, &public).unwrap();
+    let a_c = runtime.encrypt(a, &public_key).unwrap();
 
     let args: Vec<FheProgramInput> = vec![a_c.into()];
 
-    let result = runtime.run(&fhe_program, args, &public).unwrap();
+    let result = runtime.run(&fhe_program, args, &public_key).unwrap();
 
-    let c: Batched<4> = runtime.decrypt(&result[0], &secret).unwrap();
+    let c: Batched<4> = runtime.decrypt(&result[0], &private_key).unwrap();
 
     assert_eq!(c, neg_impl(a));
 }

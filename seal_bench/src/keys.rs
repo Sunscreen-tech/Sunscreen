@@ -16,7 +16,7 @@ pub fn key_size_table() -> Table {
 
     table.set_header(header);
 
-    table.add_row(secret_key_size());
+    table.add_row(private_key_size());
     table.add_row(public_key_size());
     table.add_row(compact_public_key_size());
     table.add_row(relin_key_size());
@@ -27,10 +27,10 @@ pub fn key_size_table() -> Table {
     table
 }
 
-fn secret_key_size() -> Row {
+fn private_key_size() -> Row {
     let mut row = Row::new();
 
-    row.add_cell(Cell::from("secret key"));
+    row.add_cell(Cell::from("private key"));
 
     for d in POLY_DEGREE {
         let d = *d;
@@ -47,11 +47,11 @@ fn secret_key_size() -> Row {
 
         let gen = KeyGenerator::new(&context).unwrap();
 
-        let secret = gen.secret_key();
+        let private = gen.secret_key();
 
-        row.add_cell(Cell::from(
-            bibytes1(secret.as_bytes().unwrap().len() as f64),
-        ));
+        row.add_cell(Cell::from(bibytes1(
+            private.as_bytes().unwrap().len() as f64
+        )));
     }
 
     row

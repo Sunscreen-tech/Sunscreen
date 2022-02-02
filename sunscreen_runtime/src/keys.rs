@@ -1,6 +1,8 @@
 use crate::serialization::WithContext;
 
-use seal::{GaloisKeys, PublicKey as SealPublicKey, RelinearizationKeys};
+use seal::{
+    GaloisKeys, PublicKey as SealPublicKey, RelinearizationKeys, SecretKey as SealSecretKey,
+};
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Deserialize, PartialEq, Serialize)]
@@ -10,7 +12,7 @@ use serde::{Deserialize, Serialize};
  *
  * # Remarks
  * In traditional asymmetric cryptography (e.g. RSA, ECC), schemes contain only public
- * and secret keys. The public key is used for encryption and the secret key is used to
+ * and private keys. The public key is used for encryption and the private key is used to
  * decrypt data.
  *
  * In addition to the tradtional public key, homomorphic cryptographic schemes may have
@@ -44,6 +46,11 @@ pub struct PublicKey {
     pub relin_key: Option<WithContext<RelinearizationKeys>>,
 }
 
+/**
+ * The private key used to decrypt ciphertexts.
+ */
+pub struct PrivateKey(pub(crate) SealSecretKey);
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -66,18 +73,18 @@ mod tests {
         })
         .unwrap();
 
-        let (public, _) = runtime.generate_keys().unwrap();
+        let (public_key, _) = runtime.generate_keys().unwrap();
 
-        let data = bincode::serialize(&public.public_key).unwrap();
+        let data = bincode::serialize(&public_key.public_key).unwrap();
         let enc_key: WithContext<SealPublicKey> = bincode::deserialize(&data).unwrap();
 
         let public_2 = PublicKey {
             public_key: enc_key,
-            ..public
+            ..public_key
         };
 
         assert_eq!(
-            public.public_key.data.as_bytes(),
+            public_key.public_key.data.as_bytes(),
             public_2.public_key.data.as_bytes()
         );
     }
@@ -97,18 +104,18 @@ mod tests {
         })
         .unwrap();
 
-        let (public, _) = runtime.generate_keys().unwrap();
+        let (public_key, _) = runtime.generate_keys().unwrap();
 
-        let data = bincode::serialize(&public.galois_key.as_ref().unwrap()).unwrap();
+        let data = bincode::serialize(&public_key.galois_key.as_ref().unwrap()).unwrap();
         let galois_key: WithContext<GaloisKeys> = bincode::deserialize(&data).unwrap();
 
         let public_2 = PublicKey {
             galois_key: Some(galois_key),
-            ..public
+            ..public_key
         };
 
         assert_eq!(
-            public.galois_key.unwrap().data.as_bytes(),
+            public_key.galois_key.unwrap().data.as_bytes(),
             public_2.galois_key.unwrap().data.as_bytes()
         );
     }
@@ -128,18 +135,18 @@ mod tests {
         })
         .unwrap();
 
-        let (public, _) = runtime.generate_keys().unwrap();
+        let (public_key, _) = runtime.generate_keys().unwrap();
 
-        let data = serde_json::to_string(&public.relin_key.as_ref().unwrap()).unwrap();
+        let data = serde_json::to_string(&public_key.relin_key.as_ref().unwrap()).unwrap();
         let relin_keys: WithContext<RelinearizationKeys> = serde_json::from_str(&data).unwrap();
 
         let public_2 = PublicKey {
             relin_key: Some(relin_keys),
-            ..public
+            ..public_key
         };
 
         assert_eq!(
-            public.relin_key.unwrap().data.as_bytes(),
+            public_key.relin_key.unwrap().data.as_bytes(),
             public_2.relin_key.unwrap().data.as_bytes()
         );
     }
@@ -159,21 +166,21 @@ mod tests {
         })
         .unwrap();
 
-        let (public, _) = runtime.generate_keys().unwrap();
+        let (public_key, _) = runtime.generate_keys().unwrap();
 
-        let data = serde_json::to_string(&public).unwrap();
+        let data = serde_json::to_string(&public_key).unwrap();
         let public_2: PublicKey = serde_json::from_str(&data).unwrap();
 
         assert_eq!(
-            public.relin_key.unwrap().data.as_bytes(),
+            public_key.relin_key.unwrap().data.as_bytes(),
             public_2.relin_key.unwrap().data.as_bytes()
         );
         assert_eq!(
-            public.galois_key.unwrap().data.as_bytes(),
+            public_key.galois_key.unwrap().data.as_bytes(),
             public_2.galois_key.unwrap().data.as_bytes()
         );
         assert_eq!(
-            public.public_key.data.as_bytes(),
+            public_key.public_key.data.as_bytes(),
             public_2.public_key.data.as_bytes()
         );
     }

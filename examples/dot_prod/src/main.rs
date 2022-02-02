@@ -167,17 +167,17 @@ fn main() {
 
     let runtime = Runtime::new(&fhe_program.metadata.params).unwrap();
 
-    let (public, secret) = runtime.generate_keys().unwrap();
-    let a_enc = runtime.encrypt(a_batched, &public).unwrap();
+    let (public_key, private_key) = runtime.generate_keys().unwrap();
+    let a_enc = runtime.encrypt(a_batched, &public_key).unwrap();
 
     let args: Vec<FheProgramInput> = vec![a_enc.clone().into(), a_enc.clone().into()];
 
     // Run our dot product homomorphically, decrypt and verify the result.
     let start = Instant::now();
-    let results = runtime.run(&fhe_program, args, &public).unwrap();
+    let results = runtime.run(&fhe_program, args, &public_key).unwrap();
     let end = start.elapsed();
 
-    let fhe_dot: Batched<VECLENDIV2> = runtime.decrypt(&results[0], &secret).unwrap();
+    let fhe_dot: Batched<VECLENDIV2> = runtime.decrypt(&results[0], &private_key).unwrap();
 
     println!(
         "FHE dot product = {} Time: {}s",

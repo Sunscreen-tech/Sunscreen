@@ -11,7 +11,7 @@ use seal::{Ciphertext, Error as SealError, Evaluator, GaloisKeys, Plaintext, Rel
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 /**
- * An error that occurs while running a circuit.
+ * An error that occurs while running an Fhe Program.
  */
 pub enum FheProgramRunFailure {
     /**
@@ -20,28 +20,28 @@ pub enum FheProgramRunFailure {
     SealError,
 
     /**
-     * The circuit needed Galois keys, but none were provided.
+     * The FHE program needed Galois keys, but none were provided.
      */
     MissingGaloisKeys,
 
     /**
-     * The circuit needed relin keys, but none were provided.
+     * The FHE program needed relin keys, but none were provided.
      */
     MissingRelinearizationKeys,
 
     /**
-     * Running the circuit caused a panic unwind.
+     * Running the FHE program caused a panic unwind.
      */
     Panic,
 
     /**
-     * Expected the output of a circuit node to be a ciphertext, but
+     * Expected the output of an Fhe Program node to be a ciphertext, but
      * it wasn't.
      */
     ExpectedCiphertext,
 
     /**
-     * Expected the output of a circuit node to be a plaintext, but
+     * Expected the output of an Fhe Program node to be a plaintext, but
      * it wasn't.
      */
     ExpectedPlaintext,

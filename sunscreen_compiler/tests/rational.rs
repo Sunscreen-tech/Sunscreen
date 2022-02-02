@@ -13,13 +13,13 @@ fn can_encode_rational_numbers() {
         a
     }
 
-    let circuit = Compiler::with_fhe_program(add)
+    let fhe_program = Compiler::with_fhe_program(add)
         .noise_margin_bits(5)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(500))
         .compile()
         .unwrap();
 
-    let runtime = Runtime::new(&circuit.metadata.params).unwrap();
+    let runtime = Runtime::new(&fhe_program.metadata.params).unwrap();
 
     let (public, secret) = runtime.generate_keys().unwrap();
 
@@ -27,7 +27,7 @@ fn can_encode_rational_numbers() {
         .encrypt(Rational::try_from(-3.14).unwrap(), &public)
         .unwrap();
 
-    let result = runtime.run(&circuit, vec![a], &public).unwrap();
+    let result = runtime.run(&fhe_program, vec![a], &public).unwrap();
 
     let c: Rational = runtime.decrypt(&result[0], &secret).unwrap();
 
@@ -50,13 +50,13 @@ fn can_add_cipher_cipher() {
         add_impl(a, b)
     }
 
-    let circuit = Compiler::with_fhe_program(add)
+    let fhe_program = Compiler::with_fhe_program(add)
         .noise_margin_bits(5)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(500))
         .compile()
         .unwrap();
 
-    let runtime = Runtime::new(&circuit.metadata.params).unwrap();
+    let runtime = Runtime::new(&fhe_program.metadata.params).unwrap();
 
     let (public, secret) = runtime.generate_keys().unwrap();
 
@@ -65,7 +65,7 @@ fn can_add_cipher_cipher() {
     let b = Rational::try_from(6.28).unwrap();
     let b_c = runtime.encrypt(b, &public).unwrap();
 
-    let result = runtime.run(&circuit, vec![a_c, b_c], &public).unwrap();
+    let result = runtime.run(&fhe_program, vec![a_c, b_c], &public).unwrap();
 
     let c: Rational = runtime.decrypt(&result[0], &secret).unwrap();
 
@@ -79,13 +79,13 @@ fn can_add_cipher_plain() {
         add_impl(a, b)
     }
 
-    let circuit = Compiler::with_fhe_program(add)
+    let fhe_program = Compiler::with_fhe_program(add)
         .noise_margin_bits(5)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(500))
         .compile()
         .unwrap();
 
-    let runtime = Runtime::new(&circuit.metadata.params).unwrap();
+    let runtime = Runtime::new(&fhe_program.metadata.params).unwrap();
 
     let (public, secret) = runtime.generate_keys().unwrap();
 
@@ -95,7 +95,7 @@ fn can_add_cipher_plain() {
 
     let args: Vec<FheProgramInput> = vec![a_c.into(), b.into()];
 
-    let result = runtime.run(&circuit, args, &public).unwrap();
+    let result = runtime.run(&fhe_program, args, &public).unwrap();
 
     let c: Rational = runtime.decrypt(&result[0], &secret).unwrap();
 
@@ -109,13 +109,13 @@ fn can_add_plain_cipher() {
         add_impl(b, a)
     }
 
-    let circuit = Compiler::with_fhe_program(add)
+    let fhe_program = Compiler::with_fhe_program(add)
         .noise_margin_bits(5)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(500))
         .compile()
         .unwrap();
 
-    let runtime = Runtime::new(&circuit.metadata.params).unwrap();
+    let runtime = Runtime::new(&fhe_program.metadata.params).unwrap();
 
     let (public, secret) = runtime.generate_keys().unwrap();
 
@@ -125,7 +125,7 @@ fn can_add_plain_cipher() {
 
     let args: Vec<FheProgramInput> = vec![a_c.into(), b.into()];
 
-    let result = runtime.run(&circuit, args, &public).unwrap();
+    let result = runtime.run(&fhe_program, args, &public).unwrap();
 
     let c: Rational = runtime.decrypt(&result[0], &secret).unwrap();
 
@@ -139,13 +139,13 @@ fn can_add_cipher_literal() {
         add_impl(a, 3.14)
     }
 
-    let circuit = Compiler::with_fhe_program(add)
+    let fhe_program = Compiler::with_fhe_program(add)
         .noise_margin_bits(5)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(500))
         .compile()
         .unwrap();
 
-    let runtime = Runtime::new(&circuit.metadata.params).unwrap();
+    let runtime = Runtime::new(&fhe_program.metadata.params).unwrap();
 
     let (public, secret) = runtime.generate_keys().unwrap();
 
@@ -154,7 +154,7 @@ fn can_add_cipher_literal() {
 
     let args: Vec<FheProgramInput> = vec![a_c.into()];
 
-    let result = runtime.run(&circuit, args, &public).unwrap();
+    let result = runtime.run(&fhe_program, args, &public).unwrap();
 
     let c: Rational = runtime.decrypt(&result[0], &secret).unwrap();
 
@@ -168,13 +168,13 @@ fn can_add_literal_cipher() {
         add_impl(3.14, a)
     }
 
-    let circuit = Compiler::with_fhe_program(add)
+    let fhe_program = Compiler::with_fhe_program(add)
         .noise_margin_bits(5)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(500))
         .compile()
         .unwrap();
 
-    let runtime = Runtime::new(&circuit.metadata.params).unwrap();
+    let runtime = Runtime::new(&fhe_program.metadata.params).unwrap();
 
     let (public, secret) = runtime.generate_keys().unwrap();
 
@@ -183,7 +183,7 @@ fn can_add_literal_cipher() {
 
     let args: Vec<FheProgramInput> = vec![a_c.into()];
 
-    let result = runtime.run(&circuit, args, &public).unwrap();
+    let result = runtime.run(&fhe_program, args, &public).unwrap();
 
     let c: Rational = runtime.decrypt(&result[0], &secret).unwrap();
 
@@ -204,13 +204,13 @@ fn can_sub_cipher_cipher() {
         sub_impl(a, b)
     }
 
-    let circuit = Compiler::with_fhe_program(sub)
+    let fhe_program = Compiler::with_fhe_program(sub)
         .noise_margin_bits(5)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(500))
         .compile()
         .unwrap();
 
-    let runtime = Runtime::new(&circuit.metadata.params).unwrap();
+    let runtime = Runtime::new(&fhe_program.metadata.params).unwrap();
 
     let (public, secret) = runtime.generate_keys().unwrap();
 
@@ -219,7 +219,7 @@ fn can_sub_cipher_cipher() {
     let b = Rational::try_from(6.28).unwrap();
     let b_c = runtime.encrypt(b, &public).unwrap();
 
-    let result = runtime.run(&circuit, vec![a_c, b_c], &public).unwrap();
+    let result = runtime.run(&fhe_program, vec![a_c, b_c], &public).unwrap();
 
     let c: Rational = runtime.decrypt(&result[0], &secret).unwrap();
 
@@ -233,13 +233,13 @@ fn can_sub_cipher_plain() {
         sub_impl(a, b)
     }
 
-    let circuit = Compiler::with_fhe_program(sub)
+    let fhe_program = Compiler::with_fhe_program(sub)
         .noise_margin_bits(5)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(500))
         .compile()
         .unwrap();
 
-    let runtime = Runtime::new(&circuit.metadata.params).unwrap();
+    let runtime = Runtime::new(&fhe_program.metadata.params).unwrap();
 
     let (public, secret) = runtime.generate_keys().unwrap();
 
@@ -249,7 +249,7 @@ fn can_sub_cipher_plain() {
 
     let args: Vec<FheProgramInput> = vec![a_c.into(), b.into()];
 
-    let result = runtime.run(&circuit, args, &public).unwrap();
+    let result = runtime.run(&fhe_program, args, &public).unwrap();
 
     let c: Rational = runtime.decrypt(&result[0], &secret).unwrap();
 
@@ -263,13 +263,13 @@ fn can_sub_plain_cipher() {
         sub_impl(a, b)
     }
 
-    let circuit = Compiler::with_fhe_program(sub)
+    let fhe_program = Compiler::with_fhe_program(sub)
         .noise_margin_bits(5)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(500))
         .compile()
         .unwrap();
 
-    let runtime = Runtime::new(&circuit.metadata.params).unwrap();
+    let runtime = Runtime::new(&fhe_program.metadata.params).unwrap();
 
     let (public, secret) = runtime.generate_keys().unwrap();
 
@@ -280,7 +280,7 @@ fn can_sub_plain_cipher() {
 
     let args: Vec<FheProgramInput> = vec![a.into(), b_c.into()];
 
-    let result = runtime.run(&circuit, args, &public).unwrap();
+    let result = runtime.run(&fhe_program, args, &public).unwrap();
 
     let c: Rational = runtime.decrypt(&result[0], &secret).unwrap();
 
@@ -294,13 +294,13 @@ fn can_sub_cipher_literal() {
         sub_impl(a, 3.14)
     }
 
-    let circuit = Compiler::with_fhe_program(sub)
+    let fhe_program = Compiler::with_fhe_program(sub)
         .noise_margin_bits(5)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(500))
         .compile()
         .unwrap();
 
-    let runtime = Runtime::new(&circuit.metadata.params).unwrap();
+    let runtime = Runtime::new(&fhe_program.metadata.params).unwrap();
 
     let (public, secret) = runtime.generate_keys().unwrap();
 
@@ -309,7 +309,7 @@ fn can_sub_cipher_literal() {
 
     let args: Vec<FheProgramInput> = vec![a_c.into()];
 
-    let result = runtime.run(&circuit, args, &public).unwrap();
+    let result = runtime.run(&fhe_program, args, &public).unwrap();
 
     let c: Rational = runtime.decrypt(&result[0], &secret).unwrap();
 
@@ -323,13 +323,13 @@ fn can_sub_literal_cipher() {
         sub_impl(3.14, a)
     }
 
-    let circuit = Compiler::with_fhe_program(sub)
+    let fhe_program = Compiler::with_fhe_program(sub)
         .noise_margin_bits(5)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(500))
         .compile()
         .unwrap();
 
-    let runtime = Runtime::new(&circuit.metadata.params).unwrap();
+    let runtime = Runtime::new(&fhe_program.metadata.params).unwrap();
 
     let (public, secret) = runtime.generate_keys().unwrap();
 
@@ -338,7 +338,7 @@ fn can_sub_literal_cipher() {
 
     let args: Vec<FheProgramInput> = vec![a_c.into()];
 
-    let result = runtime.run(&circuit, args, &public).unwrap();
+    let result = runtime.run(&fhe_program, args, &public).unwrap();
 
     let c: Rational = runtime.decrypt(&result[0], &secret).unwrap();
 
@@ -359,13 +359,13 @@ fn can_mul_cipher_cipher() {
         mul_impl(a, b)
     }
 
-    let circuit = Compiler::with_fhe_program(mul)
+    let fhe_program = Compiler::with_fhe_program(mul)
         .noise_margin_bits(5)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(500))
         .compile()
         .unwrap();
 
-    let runtime = Runtime::new(&circuit.metadata.params).unwrap();
+    let runtime = Runtime::new(&fhe_program.metadata.params).unwrap();
 
     let (public, secret) = runtime.generate_keys().unwrap();
 
@@ -374,7 +374,7 @@ fn can_mul_cipher_cipher() {
     let b = Rational::try_from(6.28).unwrap();
     let b_c = runtime.encrypt(b, &public).unwrap();
 
-    let result = runtime.run(&circuit, vec![a_c, b_c], &public).unwrap();
+    let result = runtime.run(&fhe_program, vec![a_c, b_c], &public).unwrap();
 
     let c: Rational = runtime.decrypt(&result[0], &secret).unwrap();
 
@@ -388,13 +388,13 @@ fn can_mul_cipher_plain() {
         mul_impl(a, b)
     }
 
-    let circuit = Compiler::with_fhe_program(mul)
+    let fhe_program = Compiler::with_fhe_program(mul)
         .noise_margin_bits(5)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(500))
         .compile()
         .unwrap();
 
-    let runtime = Runtime::new(&circuit.metadata.params).unwrap();
+    let runtime = Runtime::new(&fhe_program.metadata.params).unwrap();
 
     let (public, secret) = runtime.generate_keys().unwrap();
 
@@ -404,7 +404,7 @@ fn can_mul_cipher_plain() {
 
     let args: Vec<FheProgramInput> = vec![a_c.into(), b.into()];
 
-    let result = runtime.run(&circuit, args, &public).unwrap();
+    let result = runtime.run(&fhe_program, args, &public).unwrap();
 
     let c: Rational = runtime.decrypt(&result[0], &secret).unwrap();
 
@@ -418,13 +418,13 @@ fn can_mul_plain_cipher() {
         mul_impl(a, b)
     }
 
-    let circuit = Compiler::with_fhe_program(mul)
+    let fhe_program = Compiler::with_fhe_program(mul)
         .noise_margin_bits(5)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(500))
         .compile()
         .unwrap();
 
-    let runtime = Runtime::new(&circuit.metadata.params).unwrap();
+    let runtime = Runtime::new(&fhe_program.metadata.params).unwrap();
 
     let (public, secret) = runtime.generate_keys().unwrap();
 
@@ -435,7 +435,7 @@ fn can_mul_plain_cipher() {
 
     let args: Vec<FheProgramInput> = vec![a.into(), b_c.into()];
 
-    let result = runtime.run(&circuit, args, &public).unwrap();
+    let result = runtime.run(&fhe_program, args, &public).unwrap();
 
     let c: Rational = runtime.decrypt(&result[0], &secret).unwrap();
 
@@ -449,13 +449,13 @@ fn can_mul_cipher_literal() {
         mul_impl(a, 3.14)
     }
 
-    let circuit = Compiler::with_fhe_program(mul)
+    let fhe_program = Compiler::with_fhe_program(mul)
         .noise_margin_bits(5)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(500))
         .compile()
         .unwrap();
 
-    let runtime = Runtime::new(&circuit.metadata.params).unwrap();
+    let runtime = Runtime::new(&fhe_program.metadata.params).unwrap();
 
     let (public, secret) = runtime.generate_keys().unwrap();
 
@@ -464,7 +464,7 @@ fn can_mul_cipher_literal() {
 
     let args: Vec<FheProgramInput> = vec![a_c.into()];
 
-    let result = runtime.run(&circuit, args, &public).unwrap();
+    let result = runtime.run(&fhe_program, args, &public).unwrap();
 
     let c: Rational = runtime.decrypt(&result[0], &secret).unwrap();
 
@@ -478,13 +478,13 @@ fn can_mul_literal_cipher() {
         mul_impl(3.14, a)
     }
 
-    let circuit = Compiler::with_fhe_program(mul)
+    let fhe_program = Compiler::with_fhe_program(mul)
         .noise_margin_bits(5)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(500))
         .compile()
         .unwrap();
 
-    let runtime = Runtime::new(&circuit.metadata.params).unwrap();
+    let runtime = Runtime::new(&fhe_program.metadata.params).unwrap();
 
     let (public, secret) = runtime.generate_keys().unwrap();
 
@@ -493,7 +493,7 @@ fn can_mul_literal_cipher() {
 
     let args: Vec<FheProgramInput> = vec![a_c.into()];
 
-    let result = runtime.run(&circuit, args, &public).unwrap();
+    let result = runtime.run(&fhe_program, args, &public).unwrap();
 
     let c: Rational = runtime.decrypt(&result[0], &secret).unwrap();
 
@@ -514,13 +514,13 @@ fn can_div_cipher_cipher() {
         div_impl(a, b)
     }
 
-    let circuit = Compiler::with_fhe_program(div)
+    let fhe_program = Compiler::with_fhe_program(div)
         .noise_margin_bits(5)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(500))
         .compile()
         .unwrap();
 
-    let runtime = Runtime::new(&circuit.metadata.params).unwrap();
+    let runtime = Runtime::new(&fhe_program.metadata.params).unwrap();
 
     let (public, secret) = runtime.generate_keys().unwrap();
 
@@ -529,7 +529,7 @@ fn can_div_cipher_cipher() {
     let b = Rational::try_from(6.28).unwrap();
     let b_c = runtime.encrypt(b, &public).unwrap();
 
-    let result = runtime.run(&circuit, vec![a_c, b_c], &public).unwrap();
+    let result = runtime.run(&fhe_program, vec![a_c, b_c], &public).unwrap();
 
     let c: Rational = runtime.decrypt(&result[0], &secret).unwrap();
 
@@ -543,13 +543,13 @@ fn can_div_cipher_plain() {
         div_impl(a, b)
     }
 
-    let circuit = Compiler::with_fhe_program(div)
+    let fhe_program = Compiler::with_fhe_program(div)
         .noise_margin_bits(5)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(500))
         .compile()
         .unwrap();
 
-    let runtime = Runtime::new(&circuit.metadata.params).unwrap();
+    let runtime = Runtime::new(&fhe_program.metadata.params).unwrap();
 
     let (public, secret) = runtime.generate_keys().unwrap();
 
@@ -559,7 +559,7 @@ fn can_div_cipher_plain() {
 
     let args: Vec<FheProgramInput> = vec![a_c.into(), b.into()];
 
-    let result = runtime.run(&circuit, args, &public).unwrap();
+    let result = runtime.run(&fhe_program, args, &public).unwrap();
 
     let c: Rational = runtime.decrypt(&result[0], &secret).unwrap();
 
@@ -573,13 +573,13 @@ fn can_div_plain_cipher() {
         div_impl(a, b)
     }
 
-    let circuit = Compiler::with_fhe_program(div)
+    let fhe_program = Compiler::with_fhe_program(div)
         .noise_margin_bits(5)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(500))
         .compile()
         .unwrap();
 
-    let runtime = Runtime::new(&circuit.metadata.params).unwrap();
+    let runtime = Runtime::new(&fhe_program.metadata.params).unwrap();
 
     let (public, secret) = runtime.generate_keys().unwrap();
 
@@ -590,7 +590,7 @@ fn can_div_plain_cipher() {
 
     let args: Vec<FheProgramInput> = vec![a.into(), b_c.into()];
 
-    let result = runtime.run(&circuit, args, &public).unwrap();
+    let result = runtime.run(&fhe_program, args, &public).unwrap();
 
     let c: Rational = runtime.decrypt(&result[0], &secret).unwrap();
 
@@ -604,13 +604,13 @@ fn can_div_cipher_literal() {
         div_impl(a, 3.14)
     }
 
-    let circuit = Compiler::with_fhe_program(div)
+    let fhe_program = Compiler::with_fhe_program(div)
         .noise_margin_bits(5)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(500))
         .compile()
         .unwrap();
 
-    let runtime = Runtime::new(&circuit.metadata.params).unwrap();
+    let runtime = Runtime::new(&fhe_program.metadata.params).unwrap();
 
     let (public, secret) = runtime.generate_keys().unwrap();
 
@@ -619,7 +619,7 @@ fn can_div_cipher_literal() {
 
     let args: Vec<FheProgramInput> = vec![a_c.into()];
 
-    let result = runtime.run(&circuit, args, &public).unwrap();
+    let result = runtime.run(&fhe_program, args, &public).unwrap();
 
     let c: Rational = runtime.decrypt(&result[0], &secret).unwrap();
 
@@ -633,13 +633,13 @@ fn can_div_literal_cipher() {
         div_impl(3.14, a)
     }
 
-    let circuit = Compiler::with_fhe_program(div)
+    let fhe_program = Compiler::with_fhe_program(div)
         .noise_margin_bits(5)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(500))
         .compile()
         .unwrap();
 
-    let runtime = Runtime::new(&circuit.metadata.params).unwrap();
+    let runtime = Runtime::new(&fhe_program.metadata.params).unwrap();
 
     let (public, secret) = runtime.generate_keys().unwrap();
 
@@ -648,7 +648,7 @@ fn can_div_literal_cipher() {
 
     let args: Vec<FheProgramInput> = vec![a_c.into()];
 
-    let result = runtime.run(&circuit, args, &public).unwrap();
+    let result = runtime.run(&fhe_program, args, &public).unwrap();
 
     let c: Rational = runtime.decrypt(&result[0], &secret).unwrap();
 
@@ -669,13 +669,13 @@ fn can_neg_cipher() {
         neg_impl(x)
     }
 
-    let circuit = Compiler::with_fhe_program(neg)
+    let fhe_program = Compiler::with_fhe_program(neg)
         .noise_margin_bits(5)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(500))
         .compile()
         .unwrap();
 
-    let runtime = Runtime::new(&circuit.metadata.params).unwrap();
+    let runtime = Runtime::new(&fhe_program.metadata.params).unwrap();
 
     let (public, secret) = runtime.generate_keys().unwrap();
 
@@ -684,7 +684,7 @@ fn can_neg_cipher() {
 
     let args: Vec<FheProgramInput> = vec![a_c.into()];
 
-    let result = runtime.run(&circuit, args, &public).unwrap();
+    let result = runtime.run(&fhe_program, args, &public).unwrap();
 
     let c: Rational = runtime.decrypt(&result[0], &secret).unwrap();
 

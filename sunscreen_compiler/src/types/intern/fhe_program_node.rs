@@ -14,7 +14,7 @@ use std::ops::{Add, Div, Mul, Neg, Shl, Shr, Sub};
  *
  * # Remarks
  * This type serves as an anchor so users can apply +, *, -, /, <<, and >> operators
- * on types inside a circuit function. If the underlying type `T` implements the
+ * on types inside an FHE program function. If the underlying type `T` implements the
  * `GraphCipherAdd`, `GraphCipherMul`, etc trait, then `FheProgramNode<T>` implements
  * [`std::ops::Add`], [`std::ops::Mul`], etc and proxies to T's underlying
  * implementation.
@@ -25,8 +25,8 @@ use std::ops::{Add, Div, Mul, Neg, Shl, Shr, Sub};
  * cannot exist in this type. To circumvent this limitation, we use a threadlocal
  * arena of [`NodeIndex`](petgraph::stable_graph::NodeIndex) to allocate and copy
  * slices. This requires we lie about the lifetime of ids, which isn't actually 'static,
- * but rather until we clear the arena. We clean the arena in the circuit macro after
- * circuit construction and thus after all FheProgramNodes have gone out of scope.
+ * but rather until we clear the arena. We clean the arena in the FHE program macro after
+ * FHE program construction and thus after all FheProgramNodes have gone out of scope.
  *
  * # Undefined behavior
  * These types must be constructed while a [`crate::CURRENT_CTX`] refers to a valid
@@ -37,7 +37,7 @@ use std::ops::{Add, Div, Mul, Neg, Shl, Shr, Sub};
 pub struct FheProgramNode<T: NumCiphertexts> {
     /**
      * The ids on this node. The 'static lifetime on this slice is a lie. The sunscreen
-     * compiler must ensure that no FheProgramNode exists after circuit construction.
+     * compiler must ensure that no FheProgramNode exists after FHE program construction.
      */
     pub ids: &'static [NodeIndex],
 
@@ -46,15 +46,15 @@ pub struct FheProgramNode<T: NumCiphertexts> {
 
 impl<T: NumCiphertexts> FheProgramNode<T> {
     /**
-     * Creates a new circuit node with the given node index.
+     * Creates a new FHE program node with the given node index.
      *
-     * These are an implementation detail needed while constructing the circuit graph
+     * These are an implementation detail needed while constructing the FHE program graph
      * and should not be constructed at any other time. Thus, you should never
      * directly create a [`FheProgramNode`].
      *
      * # Remarks
      * This type internally captures a slice rather than directly storing its own Vec. We do this
-     * so the type can impl Copy and composing circuits is natural without the user needing to call
+     * so the type can impl Copy and composing FHE programs is natural without the user needing to call
      * clone() all the time.
      *
      * # Undefined behavior
@@ -70,7 +70,7 @@ impl<T: NumCiphertexts> FheProgramNode<T> {
             ids_dest.copy_from_slice(ids);
 
             // The memory in the bump allocator is valid until we call reset, which
-            // we do after creating the circuit. At this time, no FheProgramNodes should
+            // we do after creating the FHE program. At this time, no FheProgramNodes should
             // remain.
             Self {
                 ids: unsafe { std::mem::transmute(ids_dest) },
@@ -80,7 +80,7 @@ impl<T: NumCiphertexts> FheProgramNode<T> {
     }
 
     /**
-     * Denote this node as an output by appending an output circuit node.
+     * Denote this node as an output by appending an output FHE program node.
      *
      * You should not call this, but rather allow the [`fhe_program`](crate::fhe_program) macro to do this on your behalf.
      *

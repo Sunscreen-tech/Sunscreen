@@ -4,11 +4,11 @@ pub use crate::{
 };
 
 /**
- * Create an input node from a circuit input argument.
+ * Create an input node from an Fhe Program input argument.
  */
 pub trait Input {
     /**
-     * Creates a new FheProgramNode denoted as an input to a circuit graph.
+     * Creates a new FheProgramNode denoted as an input to an Fhe Program graph.
      *
      * You should not call this, but rather allow the [`fhe_program`](crate::fhe_program) macro to do this on your behalf.
      *

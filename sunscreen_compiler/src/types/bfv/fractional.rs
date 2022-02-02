@@ -35,7 +35,7 @@ use std::ops::*;
  * ## Representation
  * Recall that in BFV, the plaintext consists of a polynomial with
  * `poly_degree` terms. `poly_degree` is a BFV scheme parameter that (by
- * default) suncreen assigns for you depending on your circuit's noise
+ * default) suncreen assigns for you depending on your FHE program's noise
  * requirements.
  *
  * This type represents values with both an integer and fractional component.
@@ -112,7 +112,7 @@ use std::ops::*;
  * While the numbers are binary, addition and multiplication are carryless.
  * That is, carries don't propagate but instead increase the digit (i.e.
  * polynomial coefficients) beyond radix 2. However, they're still subject to
- * the scheme's `plain_modulus` specified during circuit compilation.
+ * the scheme's `plain_modulus` specified during FHE program compilation.
  * Repeated operations on an encrypted Fractional value will result in garbled
  * values if *any* digit overflows the `plain_modulus`.
  *
@@ -124,7 +124,7 @@ use std::ops::*;
  *
  * To mitigate these issues, you should do some mix of the following:
  * * Ensure inputs never result in either of these scenarios. Inputs to a
- * circuit need to have small enough digits to avoid digit overflow, values
+ * FHE program need to have small enough digits to avoid digit overflow, values
  * are small enough to avoid integer underflow, and have few enough decimal
  * places to avoid decimal underflow.
  * * Alice can periodically decrypt values, call turn the [`Fractional`] into

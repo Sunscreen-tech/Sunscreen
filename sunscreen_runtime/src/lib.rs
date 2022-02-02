@@ -1,7 +1,7 @@
 #![deny(missing_docs)]
 #![deny(rustdoc::broken_intra_doc_links)]
 
-//! This crate contains the types and functions for executing a Sunscreen circuit
+//! This crate contains the types and functions for executing a Sunscreen FHE program
 //! (i.e. an [`FheProgram`](sunscreen_fhe_program::FheProgram)).
 
 mod error;
@@ -45,7 +45,7 @@ impl InnerPlaintext {
     /**
      * Decompose the N plaintexts inside this wrapper into N wrappers
      * with 1 plaintext each. Useful for creating plaintext constants
-     * in circuits.
+     * in FHE programs.
      */
     pub fn scatter(&self) -> Vec<InnerPlaintext> {
         match self {
@@ -173,7 +173,7 @@ pub struct Ciphertext {
 pub trait FheProgramInputTrait: TryIntoPlaintext + TypeNameInstance {}
 
 /**
- * An input argument to a circuit. See [`crate::Runtime::run`].
+ * An input argument to an Fhe Program. See [`crate::Runtime::run`].
  */
 pub enum FheProgramInput {
     /**
@@ -236,7 +236,7 @@ where
 
 /**
  * Declare how many ciphertexts an FheType decomposes into. The runtime needs this
- * to correctly bundle return values from a circuit.
+ * to correctly bundle return values from an Fhe Program.
  */
 pub trait NumCiphertexts {
     /**

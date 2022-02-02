@@ -4,7 +4,7 @@ struct Foo {}
 
 impl Foo {
     #[fhe_program(scheme = "bfv")]
-    fn panic_circuit(&self) {
+    fn panic_fhe_program(&self) {
     }
 }
 

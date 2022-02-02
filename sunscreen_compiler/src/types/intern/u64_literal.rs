@@ -3,7 +3,7 @@ use petgraph::stable_graph::NodeIndex;
 
 #[derive(Clone, Copy)]
 /**
- * A reference to a u64 literal in a circuit graph.
+ * A reference to a u64 literal in an Fhe Program graph.
  */
 pub struct U64LiteralRef {}
 

@@ -316,13 +316,13 @@ fn can_div_cipher_const() {
         a / 3.14
     }
 
-    let circuit = Compiler::with_fhe_program(mul)
+    let fhe_program = Compiler::with_fhe_program(mul)
         .noise_margin_bits(5)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(100000))
         .compile()
         .unwrap();
 
-    let runtime = Runtime::new(&circuit.metadata.params).unwrap();
+    let runtime = Runtime::new(&fhe_program.metadata.params).unwrap();
 
     let (public, secret) = runtime.generate_keys().unwrap();
 
@@ -333,7 +333,7 @@ fn can_div_cipher_const() {
 
         let args: Vec<FheProgramInput> = vec![a_c.into()];
 
-        let result = runtime.run(&circuit, args, &public).unwrap();
+        let result = runtime.run(&fhe_program, args, &public).unwrap();
 
         let c: Fractional<64> = runtime.decrypt(&result[0], &secret).unwrap();
 
@@ -357,13 +357,13 @@ fn can_negate() {
         -a
     }
 
-    let circuit = Compiler::with_fhe_program(neg)
+    let fhe_program = Compiler::with_fhe_program(neg)
         .noise_margin_bits(5)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(100000))
         .compile()
         .unwrap();
 
-    let runtime = Runtime::new(&circuit.metadata.params).unwrap();
+    let runtime = Runtime::new(&fhe_program.metadata.params).unwrap();
 
     let (public, secret) = runtime.generate_keys().unwrap();
 
@@ -374,7 +374,7 @@ fn can_negate() {
 
         let args: Vec<FheProgramInput> = vec![a_c.into()];
 
-        let result = runtime.run(&circuit, args, &public).unwrap();
+        let result = runtime.run(&fhe_program, args, &public).unwrap();
 
         let c: Fractional<64> = runtime.decrypt(&result[0], &secret).unwrap();
 

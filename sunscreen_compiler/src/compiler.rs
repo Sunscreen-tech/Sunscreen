@@ -12,7 +12,7 @@ enum ParamsMode {
 }
 
 /**
- * The operations supported by a #\[circuit\] function.
+ * The operations supported by an `#[fhe_program]` function.
  */
 pub trait FheProgramFn {
     /**
@@ -21,7 +21,7 @@ pub trait FheProgramFn {
     fn signature(&self) -> CallSignature;
 
     /**
-     * Compile the circuit.
+     * Compile the `#[fhe_program]`.
      */
     fn build(&self, params: &Params) -> Result<FrontendCompilation>;
 
@@ -32,7 +32,7 @@ pub trait FheProgramFn {
 }
 
 /**
- * A frontend circuit compiler for Sunscreen circuits.
+ * A frontend compiler for Sunscreen FHE programs.
  */
 pub struct Compiler<F>
 where
@@ -50,7 +50,7 @@ where
     F: FheProgramFn,
 {
     /**
-     * Create a new compiler with the given circuit.
+     * Create a new compiler with the given FHE program.
      */
     pub fn with_fhe_program(fhe_program_fn: F) -> Self {
         Self {
@@ -63,7 +63,7 @@ where
     }
 
     /**
-     * Set the compiler to search for suitable encryption scheme parameters for the circuit.
+     * Set the compiler to search for suitable encryption scheme parameters for the FHE program.
      */
     pub fn find_params(mut self) -> Self {
         self.params_mode = ParamsMode::Search;
@@ -106,7 +106,7 @@ where
     }
 
     /**
-     * Comile the circuit. If successful, returns a tuple of the [`FheProgram`](crate::FheProgram) and the [`Params`] suitable
+     * Comile the FHE program. If successful, returns a tuple of the [`FheProgram`](crate::FheProgram) and the [`Params`] suitable
      * for running it.
      */
     pub fn compile(self) -> Result<CompiledFheProgram> {

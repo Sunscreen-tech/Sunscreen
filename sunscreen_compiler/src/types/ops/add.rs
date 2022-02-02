@@ -4,7 +4,7 @@ use crate::types::{
 };
 
 /**
- * Called when a circuit encounters a + operation on two encrypted
+ * Called when an Fhe Program encounters a + operation on two encrypted
  * types.
  */
 pub trait GraphCipherAdd {
@@ -28,7 +28,7 @@ pub trait GraphCipherAdd {
 }
 
 /**
- * Called when a circuit encounters a + operation on one encrypted
+ * Called when an Fhe Program encounters a + operation on one encrypted
  * and one unencrypted type.
  */
 pub trait GraphCipherPlainAdd {
@@ -52,7 +52,7 @@ pub trait GraphCipherPlainAdd {
 }
 
 /**
- * Called when a circuit encounters a + operation on one encrypted
+ * Called when an Fhe Program encounters a + operation on one encrypted
  * and a literal.
  */
 pub trait GraphCipherConstAdd {

@@ -180,7 +180,7 @@
                     "--package=sunscreen_compiler_macros"
                 ],
                 "filter": {
-                    "name": "circuit_tests",
+                    "name": "fhe_program_tests",
                     "kind": "test"
                 }
             },

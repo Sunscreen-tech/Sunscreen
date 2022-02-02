@@ -60,9 +60,9 @@ use sunscreen_runtime::{Error as RuntimeError, Result as RuntimeResult};
  * each operation is faster. Additionally, a smaller polynomial degree
  * results in fewer SIMD lanes in a plaintext.
  *
- * To maximally utilize circuit throughput, one should choose a `LANES`
+ * To maximally utilize FHE program throughput, one should choose a `LANES`
  * value equal to half the polynomial degree needed to accomodate the
- * circuit's noise budget constraint.
+ * FHE program's noise budget constraint.
  */
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Simd<const LANES: usize> {

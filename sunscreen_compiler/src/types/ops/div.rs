@@ -4,7 +4,7 @@ use crate::types::{
 };
 
 /**
- * Called when a circuit encounters a / operation on two encrypted types.
+ * Called when an Fhe Program encounters a / operation on two encrypted types.
  */
 pub trait GraphCipherDiv {
     /**
@@ -27,7 +27,7 @@ pub trait GraphCipherDiv {
 }
 
 /**
- * Called when a circuit encounters a / operation with a
+ * Called when an Fhe Program encounters a / operation with a
  * ciphertext numerator and plaintext denominator.
  */
 pub trait GraphCipherPlainDiv {
@@ -51,7 +51,7 @@ pub trait GraphCipherPlainDiv {
 }
 
 /**
- * Called when a circuit encounters a / operation with a
+ * Called when an Fhe Program encounters a / operation with a
  * plaintext numerator and ciphertext denominator.
  */
 pub trait GraphPlainCipherDiv {
@@ -75,7 +75,7 @@ pub trait GraphPlainCipherDiv {
 }
 
 /**
- * Called when a circuit encounters a / operation on an encrypted numerator and literal denominator.
+ * Called when an Fhe Program encounters a / operation on an encrypted numerator and literal denominator.
  */
 pub trait GraphCipherConstDiv {
     /**
@@ -98,7 +98,7 @@ pub trait GraphCipherConstDiv {
 }
 
 /**
- * Called when a circuit encounters a / operation on a
+ * Called when an Fhe Program encounters a / operation on a
  * literal numerator and encrypted denominator.
  */
 pub trait GraphConstCipherDiv {

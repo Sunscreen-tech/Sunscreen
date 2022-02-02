@@ -4,18 +4,18 @@
  */
 pub enum Error {
     /**
-     * When compiling a circuit with the ParamsMode::Search option, you must specify a
+     * When compiling an FHE program with the ParamsMode::Search option, you must specify a
      * PlainModulusConstraint.
      */
     MissingPlainModulusConstraint,
 
     /**
-     * No parameters were found that satisfy the given circuit.
+     * No parameters were found that satisfy the given FHE program.
      */
     NoParams,
 
     /**
-     * Attempted to compile the given circuit with the wrong scheme.
+     * Attempted to compile the given FHE program with the wrong scheme.
      */
     IncorrectScheme,
 

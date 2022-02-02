@@ -1,8 +1,8 @@
 #![deny(missing_docs)]
 #![deny(rustdoc::broken_intra_doc_links)]
 
-//! This crate contains the types and functions for executing a Sunscreen circuit
-//! (i.e. an [`Circuit`](sunscreen_circuit::Circuit)).
+//! This crate contains the types and functions for executing a Sunscreen FHE program
+//! (i.e. an [`FheProgram`](sunscreen_fhe_program::FheProgram)).
 
 mod error;
 mod keys;
@@ -45,7 +45,7 @@ impl InnerPlaintext {
     /**
      * Decompose the N plaintexts inside this wrapper into N wrappers
      * with 1 plaintext each. Useful for creating plaintext constants
-     * in circuits.
+     * in FHE programs.
      */
     pub fn scatter(&self) -> Vec<InnerPlaintext> {
         match self {
@@ -170,12 +170,12 @@ pub struct Ciphertext {
 /**
  *
  */
-pub trait CircuitInputTrait: TryIntoPlaintext + TypeNameInstance {}
+pub trait FheProgramInputTrait: TryIntoPlaintext + TypeNameInstance {}
 
 /**
- * An input argument to a circuit. See [`crate::Runtime::run`].
+ * An input argument to an Fhe Program. See [`crate::Runtime::run`].
  */
-pub enum CircuitInput {
+pub enum FheProgramInput {
     /**
      * The argument is a ciphertext.
      */
@@ -184,10 +184,10 @@ pub enum CircuitInput {
     /**
      * The argument is a plaintext.
      */
-    Plaintext(Box<dyn CircuitInputTrait>),
+    Plaintext(Box<dyn FheProgramInputTrait>),
 }
 
-impl TypeNameInstance for CircuitInput {
+impl TypeNameInstance for FheProgramInput {
     fn type_name_instance(&self) -> Type {
         match self {
             Self::Ciphertext(c) => c.data_type.clone(),
@@ -196,15 +196,15 @@ impl TypeNameInstance for CircuitInput {
     }
 }
 
-impl From<Ciphertext> for CircuitInput {
+impl From<Ciphertext> for FheProgramInput {
     fn from(val: Ciphertext) -> Self {
         Self::Ciphertext(val)
     }
 }
 
-impl<T> From<T> for CircuitInput
+impl<T> From<T> for FheProgramInput
 where
-    T: CircuitInputTrait + 'static,
+    T: FheProgramInputTrait + 'static,
 {
     fn from(val: T) -> Self {
         Self::Plaintext(Box::new(val))
@@ -236,7 +236,7 @@ where
 
 /**
  * Declare how many ciphertexts an FheType decomposes into. The runtime needs this
- * to correctly bundle return values from a circuit.
+ * to correctly bundle return values from an Fhe Program.
  */
 pub trait NumCiphertexts {
     /**
@@ -249,7 +249,7 @@ pub trait NumCiphertexts {
  * Denotes the given rust type is an encoding in an FHE scheme
  */
 pub trait FheType:
-    TypeNameInstance + TryIntoPlaintext + TryFromPlaintext + CircuitInputTrait + NumCiphertexts
+    TypeNameInstance + TryIntoPlaintext + TryFromPlaintext + FheProgramInputTrait + NumCiphertexts
 {
 }
 

@@ -1,9 +1,9 @@
 use crate::params::{determine_params, PlainModulusConstraint};
 use crate::{
-    CallSignature, CircuitMetadata, Error, FrontendCompilation, Params, RequiredKeys, Result,
+    CallSignature, Error, FheProgramMetadata, FrontendCompilation, Params, RequiredKeys, Result,
     SchemeType, SecurityLevel,
 };
-use sunscreen_runtime::CompiledCircuit;
+use sunscreen_runtime::CompiledFheProgram;
 
 #[derive(Debug, Clone)]
 enum ParamsMode {
@@ -12,16 +12,16 @@ enum ParamsMode {
 }
 
 /**
- * The operations supported by a #\[circuit\] function.
+ * The operations supported by an `#[fhe_program]` function.
  */
-pub trait CircuitFn {
+pub trait FheProgramFn {
     /**
      * Get the call signature of the function
      */
     fn signature(&self) -> CallSignature;
 
     /**
-     * Compile the circuit.
+     * Compile the `#[fhe_program]`.
      */
     fn build(&self, params: &Params) -> Result<FrontendCompilation>;
 
@@ -32,13 +32,13 @@ pub trait CircuitFn {
 }
 
 /**
- * A frontend circuit compiler for Sunscreen circuits.
+ * A frontend compiler for Sunscreen FHE programs.
  */
 pub struct Compiler<F>
 where
-    F: CircuitFn,
+    F: FheProgramFn,
 {
-    circuit_fn: F,
+    fhe_program_fn: F,
     params_mode: ParamsMode,
     plain_modulus_constraint: Option<PlainModulusConstraint>,
     security_level: SecurityLevel,
@@ -47,14 +47,14 @@ where
 
 impl<F> Compiler<F>
 where
-    F: CircuitFn,
+    F: FheProgramFn,
 {
     /**
-     * Create a new compiler with the given circuit.
+     * Create a new compiler with the given FHE program.
      */
-    pub fn with_circuit(circuit_fn: F) -> Self {
+    pub fn with_fhe_program(fhe_program_fn: F) -> Self {
         Self {
-            circuit_fn,
+            fhe_program_fn,
             params_mode: ParamsMode::Search,
             plain_modulus_constraint: None,
             security_level: SecurityLevel::TC128,
@@ -63,7 +63,7 @@ where
     }
 
     /**
-     * Set the compiler to search for suitable encryption scheme parameters for the circuit.
+     * Set the compiler to search for suitable encryption scheme parameters for the FHE program.
      */
     pub fn find_params(mut self) -> Self {
         self.params_mode = ParamsMode::Search;
@@ -106,50 +106,53 @@ where
     }
 
     /**
-     * Comile the circuit. If successful, returns a tuple of the [`Circuit`](crate::Circuit) and the [`Params`] suitable
+     * Comile the FHE program. If successful, returns a tuple of the [`FheProgram`](crate::FheProgram) and the [`Params`] suitable
      * for running it.
      */
-    pub fn compile(self) -> Result<CompiledCircuit> {
-        let scheme = self.circuit_fn.scheme_type();
-        let signature = self.circuit_fn.signature();
+    pub fn compile(self) -> Result<CompiledFheProgram> {
+        let scheme = self.fhe_program_fn.scheme_type();
+        let signature = self.fhe_program_fn.signature();
 
-        let (circuit, params) = match self.params_mode {
-            ParamsMode::Manual(p) => (self.circuit_fn.build(&p), p.clone()),
+        let (fhe_program_fn, params) = match self.params_mode {
+            ParamsMode::Manual(p) => (self.fhe_program_fn.build(&p), p.clone()),
             ParamsMode::Search => {
                 let constraint = self
                     .plain_modulus_constraint
                     .ok_or(Error::MissingPlainModulusConstraint)?;
 
                 let params = determine_params::<F>(
-                    &self.circuit_fn,
+                    &self.fhe_program_fn,
                     constraint,
                     self.security_level,
                     self.noise_margin,
                     scheme,
                 )?;
 
-                (self.circuit_fn.build(&params), params.clone())
+                (self.fhe_program_fn.build(&params), params.clone())
             }
         };
 
         let mut required_keys = vec![];
 
-        let circuit = circuit?.compile();
+        let fhe_program_fn = fhe_program_fn?.compile();
 
-        if circuit.requires_relin_keys() {
+        if fhe_program_fn.requires_relin_keys() {
             required_keys.push(RequiredKeys::Relin);
         }
 
-        if circuit.requires_galois_keys() {
+        if fhe_program_fn.requires_galois_keys() {
             required_keys.push(RequiredKeys::Galois);
         }
 
-        let metadata = CircuitMetadata {
+        let metadata = FheProgramMetadata {
             params: params,
             required_keys,
             signature,
         };
 
-        Ok(CompiledCircuit { circuit, metadata })
+        Ok(CompiledFheProgram {
+            fhe_program_fn,
+            metadata,
+        })
     }
 }

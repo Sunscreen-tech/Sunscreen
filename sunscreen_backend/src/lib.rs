@@ -1,9 +1,9 @@
 #![deny(missing_docs)]
 #![deny(rustdoc::broken_intra_doc_links)]
 
-//! This crate contains the backend compiler for sunscreen circuits. It includes the
+//! This crate contains the backend compiler for sunscreen FHE programs. It includes the
 //! following useful operations:
-//! * [`compile`] takes either a circuit from the compiler frontend and applies a set
+//! * [`compile`] takes either an FHE program from the compiler frontend and applies a set
 //! of transformations.
 
 mod error;
@@ -11,14 +11,14 @@ mod transforms;
 
 pub use error::*;
 
-use sunscreen_circuit::Circuit;
+use sunscreen_fhe_program::FheProgram;
 
 use transforms::transform_intermediate_represenation;
 
 /**
- * Clones the given [`Circuit`] and compiles it.
+ * Clones the given [`FheProgram`] and compiles it.
  */
-pub fn compile(ir: &Circuit) -> Circuit {
+pub fn compile(ir: &FheProgram) -> FheProgram {
     let mut clone = ir.clone();
 
     transform_intermediate_represenation(&mut clone);
@@ -27,9 +27,9 @@ pub fn compile(ir: &Circuit) -> Circuit {
 }
 
 /**
- * Consumes the given [`Circuit`] and compiles it.
+ * Consumes the given [`FheProgram`] and compiles it.
  */
-pub fn compile_inplace(mut ir: Circuit) -> Circuit {
+pub fn compile_inplace(mut ir: FheProgram) -> FheProgram {
     transform_intermediate_represenation(&mut ir);
 
     ir

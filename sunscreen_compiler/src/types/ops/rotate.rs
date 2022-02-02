@@ -1,4 +1,4 @@
-use crate::types::{intern::CircuitNode, Cipher, FheType};
+use crate::types::{intern::FheProgramNode, Cipher, FheType};
 
 /**
  * Swaps the rows of the given ciphertext.
@@ -10,7 +10,7 @@ where
     /**
      * Swap the rows in the given ciphertext.
      */
-    fn graph_cipher_swap_rows(x: CircuitNode<Cipher<Self>>) -> CircuitNode<Cipher<Self>>;
+    fn graph_cipher_swap_rows(x: FheProgramNode<Cipher<Self>>) -> FheProgramNode<Cipher<Self>>;
 }
 
 pub trait GraphCipherRotateLeft
@@ -18,9 +18,9 @@ where
     Self: FheType,
 {
     fn graph_cipher_rotate_left(
-        x: CircuitNode<Cipher<Self>>,
+        x: FheProgramNode<Cipher<Self>>,
         amount: u64,
-    ) -> CircuitNode<Cipher<Self>>;
+    ) -> FheProgramNode<Cipher<Self>>;
 }
 
 pub trait GraphCipherRotateRight
@@ -28,7 +28,7 @@ where
     Self: FheType,
 {
     fn graph_cipher_rotate_right(
-        x: CircuitNode<Cipher<Self>>,
+        x: FheProgramNode<Cipher<Self>>,
         amount: u64,
-    ) -> CircuitNode<Cipher<Self>>;
+    ) -> FheProgramNode<Cipher<Self>>;
 }

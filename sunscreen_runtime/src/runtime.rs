@@ -1,11 +1,11 @@
 use crate::error::*;
 use crate::metadata::*;
 use crate::{
-    run_program_unchecked, serialization::WithContext, Ciphertext, CircuitInput, InnerCiphertext,
-    InnerPlaintext, Plaintext, PublicKey, SealCiphertext, SealData, SealPlaintext,
+    run_program_unchecked, serialization::WithContext, Ciphertext, FheProgramInput,
+    InnerCiphertext, InnerPlaintext, Plaintext, PublicKey, SealCiphertext, SealData, SealPlaintext,
     TryFromPlaintext, TryIntoPlaintext, TypeName, TypeNameInstance,
 };
-use sunscreen_circuit::SchemeType;
+use sunscreen_fhe_program::SchemeType;
 
 use seal::{
     BFVEvaluator, BfvEncryptionParametersBuilder, Context as SealContext, Decryptor, Encryptor,
@@ -17,7 +17,7 @@ enum Context {
 }
 
 /**
- * Contains all the elements needed to encrypt, decrypt, generate keys, and evaluate circuits.
+ * Contains all the elements needed to encrypt, decrypt, generate keys, and evaluate FHE programs.
  */
 pub struct Runtime {
     /**
@@ -118,8 +118,8 @@ impl Runtime {
      *
      * # Remarks
      * For some parameters, generating some public key types may fail. For example, Galois
-     * keys tend to fail creation for small parameter values. Circuits with small parameters
-     * can't require these associated keys and so long as the circuit was compiled using the
+     * keys tend to fail creation for small parameter values. FhePrograms with small parameters
+     * can't require these associated keys and so long as the FHE program was compiled using the
      * search algorithm, it won't.
      *
      * See [`PublicKey`] for more information.
@@ -183,44 +183,43 @@ impl Runtime {
                     params: params.clone(),
                 })
             }
-            _ => unimplemented!(),
         }
     }
 
     /**
-     * Returns the metadata for this runtime's associated circuit.
+     * Returns the metadata for this runtime's associated FHE program.
      */
     pub fn params(&self) -> &Params {
         &self.params
     }
 
     /**
-     * Validates and runs the given circuit. Unless you can guarantee your circuit is valid,
+     * Validates and runs the given FHE program. Unless you can guarantee your FHE program is valid,
      * you should use this method rather than [`run_program_unchecked`].
      */
     pub fn run<I>(
         &self,
-        circuit: &CompiledCircuit,
+        fhe_program: &CompiledFheProgram,
         mut arguments: Vec<I>,
         public_key: &PublicKey,
     ) -> Result<Vec<Ciphertext>>
     where
-        I: Into<CircuitInput>,
+        I: Into<FheProgramInput>,
     {
-        circuit.circuit.validate()?;
+        fhe_program.fhe_program_fn.validate()?;
 
-        // Aside from circuit correctness, check that the required keys are given.
-        if public_key.relin_key.is_none() && circuit.circuit.requires_relin_keys() {
+        // Aside from FHE program correctness, check that the required keys are given.
+        if public_key.relin_key.is_none() && fhe_program.fhe_program_fn.requires_relin_keys() {
             return Err(Error::MissingRelinearizationKeys);
         }
 
-        if public_key.galois_key.is_none() && circuit.circuit.requires_galois_keys() {
+        if public_key.galois_key.is_none() && fhe_program.fhe_program_fn.requires_galois_keys() {
             return Err(Error::MissingGaloisKeys);
         }
 
-        let mut arguments: Vec<CircuitInput> = arguments.drain(0..).map(|a| a.into()).collect();
+        let mut arguments: Vec<FheProgramInput> = arguments.drain(0..).map(|a| a.into()).collect();
 
-        let expected_args = &circuit.metadata.signature.arguments;
+        let expected_args = &fhe_program.metadata.signature.arguments;
 
         // Check the arguments match the signature.
         if expected_args.len() != arguments.len() {
@@ -242,8 +241,8 @@ impl Runtime {
             });
         }
 
-        if circuit.metadata.signature.num_ciphertexts.len()
-            != circuit.metadata.signature.returns.len()
+        if fhe_program.metadata.signature.num_ciphertexts.len()
+            != fhe_program.metadata.signature.returns.len()
         {
             return Err(Error::ReturnTypeMetadataError);
         }
@@ -256,14 +255,14 @@ impl Runtime {
 
                 for i in arguments.drain(0..) {
                     match i {
-                        CircuitInput::Ciphertext(c) => match c.inner {
+                        FheProgramInput::Ciphertext(c) => match c.inner {
                             InnerCiphertext::Seal(mut c) => {
                                 for j in c.drain(0..) {
                                     inputs.push(SealData::Ciphertext(j.data));
                                 }
                             }
                         },
-                        CircuitInput::Plaintext(p) => {
+                        FheProgramInput::Plaintext(p) => {
                             let p = p.try_into_plaintext(&self.params)?;
 
                             match p.inner {
@@ -282,7 +281,7 @@ impl Runtime {
 
                 let mut raw_ciphertexts = unsafe {
                     run_program_unchecked(
-                        &circuit.circuit,
+                        &fhe_program.fhe_program_fn,
                         &inputs,
                         &evaluator,
                         &relin_key,
@@ -292,7 +291,7 @@ impl Runtime {
 
                 let mut packed_ciphertexts = vec![];
 
-                for (i, ciphertext_count) in circuit
+                for (i, ciphertext_count) in fhe_program
                     .metadata
                     .signature
                     .num_ciphertexts
@@ -300,7 +299,7 @@ impl Runtime {
                     .enumerate()
                 {
                     packed_ciphertexts.push(Ciphertext {
-                        data_type: circuit.metadata.signature.returns[i].clone(),
+                        data_type: fhe_program.metadata.signature.returns[i].clone(),
                         inner: InnerCiphertext::Seal(
                             raw_ciphertexts
                                 .drain(0..*ciphertext_count)

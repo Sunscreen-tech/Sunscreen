@@ -1,4 +1,4 @@
-use crate::{CircuitFn, Error, Result, SecurityLevel};
+use crate::{Error, FheProgramFn, Result, SecurityLevel};
 
 use log::{debug, trace};
 
@@ -6,7 +6,7 @@ use seal::{
     BFVEvaluator, BFVScalarEncoder, BfvEncryptionParametersBuilder, CoefficientModulus,
     Context as SealContext, Decryptor, Encryptor, KeyGenerator, PlainModulus,
 };
-use sunscreen_circuit::{Operation, SchemeType};
+use sunscreen_fhe_program::{Operation, SchemeType};
 pub use sunscreen_runtime::Params;
 use sunscreen_runtime::{run_program_unchecked, SealData};
 
@@ -37,17 +37,17 @@ const BATCHING_MIN_BITS: &[u32] = &[14, 14, 16, 17, 17, 17];
 
 /**
  * Determines the minimal parameters required to satisfy the noise constraint for
- * the given circuit and plaintext modulo and security level.
+ * the given FHE program and plaintext modulo and security level.
  */
 pub fn determine_params<F>(
-    circuit_fn: &F,
+    fhe_program_fn: &F,
     plaintext_constraint: PlainModulusConstraint,
     security_level: SecurityLevel,
     noise_margin_bits: u32,
     scheme_type: SchemeType,
 ) -> Result<Params>
 where
-    F: CircuitFn,
+    F: FheProgramFn,
 {
     'order_loop: for (i, n) in LATTICE_DIMENSIONS.iter().enumerate() {
         let plaintext_modulus = match plaintext_constraint {
@@ -103,9 +103,6 @@ where
 
                 scheme
             }
-            _ => {
-                unimplemented!();
-            }
         };
 
         trace!("Successfully created parameters.");
@@ -135,7 +132,7 @@ where
 
         let coeff = CoefficientModulus::bfv_default(*n, security_level).unwrap();
 
-        // Compile the given circuit.
+        // Compile the given fhe_program.
         let params = Params {
             coeff_modulus: coeff.iter().map(|v| v.value()).collect(),
             lattice_dimension: *n,
@@ -144,10 +141,10 @@ where
             scheme_type: scheme_type,
         };
 
-        let ir = circuit_fn.build(&params)?.compile();
+        let ir = fhe_program_fn.build(&params)?.compile();
 
         // From a noise standpoint, it doesn't matter what is in the plaintext or if the output
-        // is meaningful or not. Just run a bunch of 1 values through the circuit and measure the
+        // is meaningful or not. Just run a bunch of 1 values through the fhe_program and measure the
         // noise. We choose 1, as it avoids transparent ciphertexts when
         // multiplying plaintexts.
         let inputs = ir
@@ -170,7 +167,6 @@ where
 
         let evaluator = match ir.scheme {
             SchemeType::Bfv => BFVEvaluator::new(&context).unwrap(),
-            _ => unimplemented!(),
         };
 
         let relin_keys = if ir.requires_relin_keys() {

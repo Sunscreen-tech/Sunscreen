@@ -1,11 +1,11 @@
 //! This example demonstrates how to use batching (i.e. the [`Simd`] data type)
-//! as well as how build circuits that can be run non-homomorphically.
+//! as well as how build fhe_programs that can be run non-homomorphically.
 //! To illustrate these features, we implement a
 //! [dot product](https://en.wikipedia.org/wiki/Dot_product#Algebraic_definition)
 use sunscreen_compiler::{
-    circuit,
+    fhe_program,
     types::{bfv::Simd, Cipher, LaneCount, SwapRows},
-    CircuitInput, Compiler, PlainModulusConstraint, Runtime,
+    Compiler, FheProgramInput, PlainModulusConstraint, Runtime,
 };
 
 use std::ops::*;
@@ -93,7 +93,7 @@ fn dot_product_naive(a: &[i64], b: &[i64]) -> i64 {
     sum
 }
 
-#[circuit(scheme = "bfv")]
+#[fhe_program(scheme = "bfv")]
 fn dot_product(
     a: Cipher<Simd<VECLENDIV2>>,
     b: Cipher<Simd<VECLENDIV2>>,
@@ -156,7 +156,7 @@ fn main() {
     // plaintext modulus constraint. This chooses a prime number for our plain modulus
     // suitable for use with SIMD types. The 24 denotes the minimum precision of the plain
     // modulus.
-    let circuit = Compiler::with_circuit(dot_product)
+    let fhe_program = Compiler::with_fhe_program(dot_product)
         .noise_margin_bits(30)
         .plain_modulus_constraint(PlainModulusConstraint::BatchingMinimum(24))
         .compile()
@@ -165,16 +165,16 @@ fn main() {
 
     println!("Compiled in {}s", end.as_secs_f64());
 
-    let runtime = Runtime::new(&circuit.metadata.params).unwrap();
+    let runtime = Runtime::new(&fhe_program.metadata.params).unwrap();
 
     let (public, secret) = runtime.generate_keys().unwrap();
     let a_enc = runtime.encrypt(a_simd, &public).unwrap();
 
-    let args: Vec<CircuitInput> = vec![a_enc.clone().into(), a_enc.clone().into()];
+    let args: Vec<FheProgramInput> = vec![a_enc.clone().into(), a_enc.clone().into()];
 
     // Run our dot product homomorphically, decrypt and verify the result.
     let start = Instant::now();
-    let results = runtime.run(&circuit, args, &public).unwrap();
+    let results = runtime.run(&fhe_program, args, &public).unwrap();
     let end = start.elapsed();
 
     let fhe_dot: Simd<VECLENDIV2> = runtime.decrypt(&results[0], &secret).unwrap();

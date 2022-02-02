@@ -6,9 +6,9 @@ use crate::Type;
  */
 pub enum Error {
     /**
-     * An issue with an [`Circuit`](sunscreen_circuit::Circuit).
+     * An issue with an [`FheProgram`](sunscreen_fhe_program::FheProgram).
      */
-    IRError(sunscreen_circuit::Error),
+    IRError(sunscreen_fhe_program::Error),
 
     /**
      * An error occurred in the SEAL library.
@@ -16,19 +16,19 @@ pub enum Error {
     SealError(seal::Error),
 
     /**
-     * Tried to run a circuit that requires relinearization keys, but didn't provide any.
+     * Tried to run an Fhe Program that requires relinearization keys, but didn't provide any.
      */
     MissingRelinearizationKeys,
 
     /**
-     * Tried to run a circuit that requires Galois keys, but didn't provide any.
+     * Tried to run an Fhe Program that requires Galois keys, but didn't provide any.
      */
     MissingGaloisKeys,
 
     /**
      * Returned when:
-     * * The wrong number of ciphertexts were provided as parameters to a circuit.
-     * * The wrong number of ciphertexts were returned from a circuit.
+     * * The wrong number of ciphertexts were provided as parameters to an Fhe Program.
+     * * The wrong number of ciphertexts were returned from an Fhe Program.
      */
     IncorrectCiphertextCount,
 
@@ -38,11 +38,11 @@ pub enum Error {
     ParameterMismatch,
 
     /**
-     * The given arguments do not match the call signature of the circuit.
+     * The given arguments do not match the call signature of the FHE program.
      */
     ArgumentMismatch {
         /**
-         * The arguments in the call signature of the circuit.
+         * The arguments in the call signature of the FHE program.
          */
         expected: Vec<Type>,
 
@@ -53,11 +53,11 @@ pub enum Error {
     },
 
     /**
-     * The given return types do not match the circuit interface.
+     * The given return types do not match the FHE program interface.
      */
     ReturnMismatch {
         /**
-         * The return types in the call signature of the circuit.
+         * The return types in the call signature of the FHE program.
          */
         expected: Vec<Type>,
 
@@ -84,7 +84,7 @@ pub enum Error {
 
     /**
      * The vector indicating the number of ciphertexts in the return types isn't the same length
-     * as the signature's return type. Running valid circuits created by the Sunscreen compiler
+     * as the signature's return type. Running valid FHE programs created by the Sunscreen compiler
      * should never produce this error.
      */
     ReturnTypeMetadataError,
@@ -95,9 +95,9 @@ pub enum Error {
     TooMuchNoise,
 
     /**
-     * Executing a circuit failed.
+     * Executing an Fhe Program failed.
      */
-    CircuitRunError(crate::run::CircuitRunFailure),
+    FheProgramRunError(crate::run::FheProgramRunFailure),
 
     /**
      * This variant wraps some error specific to the representation of FheTypes. For example,
@@ -133,8 +133,8 @@ impl From<bincode::Error> for Error {
     }
 }
 
-impl From<sunscreen_circuit::Error> for Error {
-    fn from(err: sunscreen_circuit::Error) -> Self {
+impl From<sunscreen_fhe_program::Error> for Error {
+    fn from(err: sunscreen_fhe_program::Error) -> Self {
         Self::IRError(err)
     }
 }
@@ -145,9 +145,9 @@ impl From<seal::Error> for Error {
     }
 }
 
-impl From<crate::run::CircuitRunFailure> for Error {
-    fn from(err: crate::run::CircuitRunFailure) -> Self {
-        Self::CircuitRunError(err)
+impl From<crate::run::FheProgramRunFailure> for Error {
+    fn from(err: crate::run::FheProgramRunFailure) -> Self {
+        Self::FheProgramRunError(err)
     }
 }
 

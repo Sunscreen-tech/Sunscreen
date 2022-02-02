@@ -6,8 +6,8 @@
 
 extern crate proc_macro;
 
-mod circuit;
 mod error;
+mod fhe_program;
 mod internals;
 mod type_name;
 
@@ -21,21 +21,21 @@ pub fn derive_typename(input: proc_macro::TokenStream) -> proc_macro::TokenStrea
 
 #[proc_macro_attribute]
 /**
- * Specifies a function to be a circuit. A circuit has any number of inputs that impl the
+ * Specifies a function to be an [`fhe_program`](macro@fhe_program). An [`fhe_program`](macro@fhe_program) has any number of inputs that impl the
  * `FheType` trait and returns either a single type implementing `FheType` or a tuple of
  * types implementing `FheType`.
  *
- * This function gets run by the compiler to build up the circuit you specify and does not
+ * This function gets run by the compiler to build up the [`fhe_program`](macro@fhe_program) you specify and does not
  * directly or eagerly perform homomorphic operations.
  *
  * # Parameters
- * * `scheme` (required): Designates the scheme this circuit uses. Today, this must be `"bfv"`.
+ * * `scheme` (required): Designates the scheme this [`fhe_program`](macro@fhe_program) uses. Today, this must be `"bfv"`.
  *
  * # Examples
  * ```rust
- * # use sunscreen_compiler::{circuit, types::{bfv::Signed, Cipher}, Params, Context};
+ * # use sunscreen_compiler::{fhe_program, types::{bfv::Signed, Cipher}, Params, Context};
  *
- * #[circuit(scheme = "bfv")]
+ * #[fhe_program(scheme = "bfv")]
  * fn multiply_add(
  *   a: Cipher<Signed>,
  *   b: Cipher<Signed>,
@@ -46,9 +46,9 @@ pub fn derive_typename(input: proc_macro::TokenStream) -> proc_macro::TokenStrea
  * ```
  *
  * ```rust
- * # use sunscreen_compiler::{circuit, types::{bfv::Signed, Cipher}, Params, Context};
+ * # use sunscreen_compiler::{fhe_program, types::{bfv::Signed, Cipher}, Params, Context};
  *
- * #[circuit(scheme = "bfv")]
+ * #[fhe_program(scheme = "bfv")]
  * fn multi_out(
  *   a: Cipher<Signed>,
  *   b: Cipher<Signed>,
@@ -58,9 +58,9 @@ pub fn derive_typename(input: proc_macro::TokenStream) -> proc_macro::TokenStrea
  * }
  * ```
  */
-pub fn circuit(
+pub fn fhe_program(
     metadata: proc_macro::TokenStream,
     input: proc_macro::TokenStream,
 ) -> proc_macro::TokenStream {
-    circuit::circuit_impl(metadata, input)
+    fhe_program::fhe_program_impl(metadata, input)
 }

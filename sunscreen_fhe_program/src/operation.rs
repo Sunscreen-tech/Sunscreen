@@ -70,12 +70,12 @@ pub enum Operation {
     SubPlaintext,
 
     /**
-     * Represents an input ciphertext for the circuit.
+     * Represents an input ciphertext for the FHE program.
      */
     InputCiphertext(usize),
 
     /**
-     * Represents an input plaintext for the current circuit.
+     * Represents an input plaintext for the current FHE program.
      */
     InputPlaintext(usize),
 
@@ -85,7 +85,7 @@ pub enum Operation {
     Literal(Literal),
 
     /**
-     * Represents a ciphertext output for the circuit.
+     * Represents a ciphertext output for the FHE program.
      */
     OutputCiphertext,
 }

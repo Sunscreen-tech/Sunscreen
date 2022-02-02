@@ -1,8 +1,9 @@
 use sunscreen_compiler::{
+    fhe_program,
     types::{bfv::Signed, Cipher, TypeName},
-    CallSignature, CircuitFn, FrontendCompilation, Params, SchemeType, SecurityLevel, CURRENT_CTX,
+    CallSignature, FheProgramFn, FrontendCompilation, Params, SchemeType, SecurityLevel,
+    CURRENT_CTX,
 };
-use sunscreen_compiler_macros::circuit;
 
 use serde_json::json;
 
@@ -17,11 +18,11 @@ fn get_params() -> Params {
 }
 
 #[test]
-fn circuit_gets_called() {
+fn fhe_program_gets_called() {
     static mut FOO: u32 = 0;
 
-    #[circuit(scheme = "bfv")]
-    fn simple_circuit() {
+    #[fhe_program(scheme = "bfv")]
+    fn simple_fhe_program() {
         unsafe {
             FOO = 20;
         };
@@ -33,18 +34,18 @@ fn circuit_gets_called() {
         num_ciphertexts: vec![],
     };
 
-    assert_eq!(simple_circuit.signature(), expected_signature);
-    assert_eq!(simple_circuit.scheme_type(), SchemeType::Bfv);
+    assert_eq!(simple_fhe_program.signature(), expected_signature);
+    assert_eq!(simple_fhe_program.scheme_type(), SchemeType::Bfv);
 
-    let _context = simple_circuit.build(&get_params()).unwrap();
+    let _context = simple_fhe_program.build(&get_params()).unwrap();
 
     assert_eq!(unsafe { FOO }, 20);
 }
 
 #[test]
-fn panicing_circuit_clears_ctx() {
-    #[circuit(scheme = "bfv")]
-    fn panic_circuit() {
+fn panicing_fhe_program_clears_ctx() {
+    #[fhe_program(scheme = "bfv")]
+    fn panic_fhe_program() {
         CURRENT_CTX.with(|ctx| {
             let old = ctx.take();
 
@@ -62,10 +63,10 @@ fn panicing_circuit_clears_ctx() {
             num_ciphertexts: vec![],
         };
 
-        assert_eq!(panic_circuit.signature(), expected_signature);
-        assert_eq!(panic_circuit.scheme_type(), SchemeType::Bfv);
+        assert_eq!(panic_fhe_program.signature(), expected_signature);
+        assert_eq!(panic_fhe_program.scheme_type(), SchemeType::Bfv);
 
-        let _context = panic_circuit.build(&get_params()).unwrap();
+        let _context = panic_fhe_program.build(&get_params()).unwrap();
     });
 
     assert_eq!(panic_result.is_err(), true);
@@ -85,11 +86,11 @@ fn compile_failures() {
 }
 
 #[test]
-fn capture_circuit_input_args() {
-    #[circuit(scheme = "bfv")]
-    fn circuit_with_args(_a: Signed, _b: Signed, _c: Signed, _d: Signed) {}
+fn capture_fhe_program_input_args() {
+    #[fhe_program(scheme = "bfv")]
+    fn fhe_program_with_args(_a: Signed, _b: Signed, _c: Signed, _d: Signed) {}
 
-    assert_eq!(circuit_with_args.scheme_type(), SchemeType::Bfv);
+    assert_eq!(fhe_program_with_args.scheme_type(), SchemeType::Bfv);
 
     let type_name = Signed::type_name();
 
@@ -104,17 +105,17 @@ fn capture_circuit_input_args() {
         num_ciphertexts: vec![],
     };
 
-    assert_eq!(expected_signature, circuit_with_args.signature());
+    assert_eq!(expected_signature, fhe_program_with_args.signature());
 
-    let context = circuit_with_args.build(&get_params()).unwrap();
+    let context = fhe_program_with_args.build(&get_params()).unwrap();
 
     assert_eq!(context.graph.node_count(), 4);
 }
 
 #[test]
 fn can_add() {
-    #[circuit(scheme = "bfv")]
-    fn circuit_with_args(a: Cipher<Signed>, b: Cipher<Signed>, c: Cipher<Signed>) {
+    #[fhe_program(scheme = "bfv")]
+    fn fhe_program_with_args(a: Cipher<Signed>, b: Cipher<Signed>, c: Cipher<Signed>) {
         let _ = a + b + c;
     }
 
@@ -125,10 +126,10 @@ fn can_add() {
         returns: vec![],
         num_ciphertexts: vec![],
     };
-    assert_eq!(circuit_with_args.signature(), expected_signature);
-    assert_eq!(circuit_with_args.scheme_type(), SchemeType::Bfv);
+    assert_eq!(fhe_program_with_args.signature(), expected_signature);
+    assert_eq!(fhe_program_with_args.scheme_type(), SchemeType::Bfv);
 
-    let context: FrontendCompilation = circuit_with_args.build(&get_params()).unwrap();
+    let context: FrontendCompilation = fhe_program_with_args.build(&get_params()).unwrap();
 
     let expected = json!({
 
@@ -175,8 +176,8 @@ fn can_add() {
 
 #[test]
 fn can_add_plaintext() {
-    #[circuit(scheme = "bfv")]
-    fn circuit_with_args(a: Cipher<Signed>, b: Signed) {
+    #[fhe_program(scheme = "bfv")]
+    fn fhe_program_with_args(a: Cipher<Signed>, b: Signed) {
         let _ = a + b;
     }
 
@@ -185,10 +186,10 @@ fn can_add_plaintext() {
         returns: vec![],
         num_ciphertexts: vec![],
     };
-    assert_eq!(circuit_with_args.signature(), expected_signature);
-    assert_eq!(circuit_with_args.scheme_type(), SchemeType::Bfv);
+    assert_eq!(fhe_program_with_args.signature(), expected_signature);
+    assert_eq!(fhe_program_with_args.scheme_type(), SchemeType::Bfv);
 
-    let context: FrontendCompilation = circuit_with_args.build(&get_params()).unwrap();
+    let context: FrontendCompilation = fhe_program_with_args.build(&get_params()).unwrap();
 
     let expected = json!({
 
@@ -223,8 +224,8 @@ fn can_add_plaintext() {
 
 #[test]
 fn can_mul() {
-    #[circuit(scheme = "bfv")]
-    fn circuit_with_args(a: Cipher<Signed>, b: Cipher<Signed>, c: Cipher<Signed>) {
+    #[fhe_program(scheme = "bfv")]
+    fn fhe_program_with_args(a: Cipher<Signed>, b: Cipher<Signed>, c: Cipher<Signed>) {
         let _ = a * b * c;
     }
 
@@ -235,10 +236,10 @@ fn can_mul() {
         returns: vec![],
         num_ciphertexts: vec![],
     };
-    assert_eq!(circuit_with_args.signature(), expected_signature);
-    assert_eq!(circuit_with_args.scheme_type(), SchemeType::Bfv);
+    assert_eq!(fhe_program_with_args.signature(), expected_signature);
+    assert_eq!(fhe_program_with_args.scheme_type(), SchemeType::Bfv);
 
-    let context = circuit_with_args.build(&get_params()).unwrap();
+    let context = fhe_program_with_args.build(&get_params()).unwrap();
 
     let expected = json!({
         "graph": {
@@ -284,8 +285,8 @@ fn can_mul() {
 
 #[test]
 fn can_collect_output() {
-    #[circuit(scheme = "bfv")]
-    fn circuit_with_args(a: Cipher<Signed>, b: Cipher<Signed>) -> Cipher<Signed> {
+    #[fhe_program(scheme = "bfv")]
+    fn fhe_program_with_args(a: Cipher<Signed>, b: Cipher<Signed>) -> Cipher<Signed> {
         a + b * a
     }
 
@@ -296,10 +297,10 @@ fn can_collect_output() {
         returns: vec![type_name.clone()],
         num_ciphertexts: vec![1],
     };
-    assert_eq!(circuit_with_args.signature(), expected_signature);
-    assert_eq!(circuit_with_args.scheme_type(), SchemeType::Bfv);
+    assert_eq!(fhe_program_with_args.signature(), expected_signature);
+    assert_eq!(fhe_program_with_args.scheme_type(), SchemeType::Bfv);
 
-    let context = circuit_with_args.build(&get_params()).unwrap();
+    let context = fhe_program_with_args.build(&get_params()).unwrap();
 
     let expected = json!({
       "graph": {
@@ -350,8 +351,11 @@ fn can_collect_output() {
 
 #[test]
 fn can_collect_multiple_outputs() {
-    #[circuit(scheme = "bfv")]
-    fn circuit_with_args(a: Cipher<Signed>, b: Cipher<Signed>) -> (Cipher<Signed>, Cipher<Signed>) {
+    #[fhe_program(scheme = "bfv")]
+    fn fhe_program_with_args(
+        a: Cipher<Signed>,
+        b: Cipher<Signed>,
+    ) -> (Cipher<Signed>, Cipher<Signed>) {
         (a + b * a, a)
     }
 
@@ -362,10 +366,10 @@ fn can_collect_multiple_outputs() {
         returns: vec![type_name.clone(), type_name.clone()],
         num_ciphertexts: vec![1, 1],
     };
-    assert_eq!(circuit_with_args.signature(), expected_signature);
-    assert_eq!(circuit_with_args.scheme_type(), SchemeType::Bfv);
+    assert_eq!(fhe_program_with_args.signature(), expected_signature);
+    assert_eq!(fhe_program_with_args.scheme_type(), SchemeType::Bfv);
 
-    let context = circuit_with_args.build(&get_params()).unwrap();
+    let context = fhe_program_with_args.build(&get_params()).unwrap();
 
     let expected = json!({
         "graph": {

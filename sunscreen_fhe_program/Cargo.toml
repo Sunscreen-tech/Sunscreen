@@ -1,5 +1,5 @@
 [package]
-name = "sunscreen_circuit"
+name = "sunscreen_fhe_program"
 version = "0.1.0"
 edition = "2021"
 

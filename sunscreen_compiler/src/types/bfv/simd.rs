@@ -1,12 +1,12 @@
 use crate::{
     crate_version,
     types::{
-        intern::{Cipher, CircuitNode},
+        intern::{Cipher, FheProgramNode},
         ops::*,
         BfvType, FheType, LaneCount, NumCiphertexts, SwapRows, TryFromPlaintext, TryIntoPlaintext,
         Type, TypeName, TypeNameInstance, Version,
     },
-    with_ctx, CircuitInputTrait, InnerPlaintext, Literal, Params, Plaintext, WithContext,
+    with_ctx, FheProgramInputTrait, InnerPlaintext, Literal, Params, Plaintext, WithContext,
 };
 use seal::{
     BFVEncoder, BfvEncryptionParametersBuilder, Context as SealContext, Modulus,
@@ -60,9 +60,9 @@ use sunscreen_runtime::{Error as RuntimeError, Result as RuntimeResult};
  * each operation is faster. Additionally, a smaller polynomial degree
  * results in fewer SIMD lanes in a plaintext.
  *
- * To maximally utilize circuit throughput, one should choose a `LANES`
+ * To maximally utilize FHE program throughput, one should choose a `LANES`
  * value equal to half the polynomial degree needed to accomodate the
- * circuit's noise budget constraint.
+ * FHE program's noise budget constraint.
  */
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Simd<const LANES: usize> {
@@ -89,7 +89,7 @@ impl<const LANES: usize> TypeNameInstance for Simd<LANES> {
     }
 }
 
-impl<const LANES: usize> CircuitInputTrait for Simd<LANES> {}
+impl<const LANES: usize> FheProgramInputTrait for Simd<LANES> {}
 impl<const LANES: usize> FheType for Simd<LANES> {}
 impl<const LANES: usize> BfvType for Simd<LANES> {}
 
@@ -101,8 +101,11 @@ impl<const LANES: usize> std::fmt::Display for Simd<LANES> {
 
         let chars_remaining = f.width().unwrap_or(usize::MAX);
         let chars_per_row = usize::max(
-            usize::saturating_sub(chars_remaining / 2, prefix.len() + middle.len() + suffix.len())
-            , 2
+            usize::saturating_sub(
+                chars_remaining / 2,
+                prefix.len() + middle.len() + suffix.len(),
+            ),
+            2,
         );
 
         if chars_remaining > "[[..], [..]]".len() {
@@ -110,16 +113,16 @@ impl<const LANES: usize> std::fmt::Display for Simd<LANES> {
 
             for i in 0..self.data.len() {
                 let mut row_chars = chars_per_row;
-    
+
                 for (j, val) in self.data[i].iter().enumerate() {
                     let val = if j < self.data[i].len() {
                         format!("{}, ", val)
                     } else {
                         format!("{}", val)
                     };
-    
+
                     if val.len() > row_chars + 2 {
-                        write!(f, "..", )?;
+                        write!(f, "..",)?;
                         break;
                     } else {
                         write!(f, "{}", val)?;
@@ -297,7 +300,9 @@ impl<const LANES: usize> Into<[[i64; LANES]; 2]> for Simd<LANES> {
 impl<const LANES: usize> From<i64> for Simd<LANES> {
     fn from(data: i64) -> Self {
         // Splat the input across all the lanes.
-        Self { data: [[data; LANES], [data; LANES]] }
+        Self {
+            data: [[data; LANES], [data; LANES]],
+        }
     }
 }
 
@@ -500,13 +505,13 @@ impl<const LANES: usize> GraphCipherAdd for Simd<LANES> {
     type Right = Self;
 
     fn graph_cipher_add(
-        a: CircuitNode<Cipher<Self::Left>>,
-        b: CircuitNode<Cipher<Self::Right>>,
-    ) -> CircuitNode<Cipher<Self::Left>> {
+        a: FheProgramNode<Cipher<Self::Left>>,
+        b: FheProgramNode<Cipher<Self::Right>>,
+    ) -> FheProgramNode<Cipher<Self::Left>> {
         with_ctx(|ctx| {
             let n = ctx.add_addition(a.ids[0], b.ids[0]);
 
-            CircuitNode::new(&[n])
+            FheProgramNode::new(&[n])
         })
     }
 }
@@ -516,13 +521,13 @@ impl<const LANES: usize> GraphCipherSub for Simd<LANES> {
     type Right = Self;
 
     fn graph_cipher_sub(
-        a: CircuitNode<Cipher<Self::Left>>,
-        b: CircuitNode<Cipher<Self::Right>>,
-    ) -> CircuitNode<Cipher<Self::Left>> {
+        a: FheProgramNode<Cipher<Self::Left>>,
+        b: FheProgramNode<Cipher<Self::Right>>,
+    ) -> FheProgramNode<Cipher<Self::Left>> {
         with_ctx(|ctx| {
             let n = ctx.add_subtraction(a.ids[0], b.ids[0]);
 
-            CircuitNode::new(&[n])
+            FheProgramNode::new(&[n])
         })
     }
 }
@@ -532,66 +537,69 @@ impl<const LANES: usize> GraphCipherMul for Simd<LANES> {
     type Right = Self;
 
     fn graph_cipher_mul(
-        a: CircuitNode<Cipher<Self::Left>>,
-        b: CircuitNode<Cipher<Self::Right>>,
-    ) -> CircuitNode<Cipher<Self::Left>> {
+        a: FheProgramNode<Cipher<Self::Left>>,
+        b: FheProgramNode<Cipher<Self::Right>>,
+    ) -> FheProgramNode<Cipher<Self::Left>> {
         with_ctx(|ctx| {
             let n = ctx.add_multiplication(a.ids[0], b.ids[0]);
 
-            CircuitNode::new(&[n])
+            FheProgramNode::new(&[n])
         })
     }
 }
 
-impl <const LANES: usize> GraphCipherConstMul for Simd<LANES> {
+impl<const LANES: usize> GraphCipherConstMul for Simd<LANES> {
     type Left = Self;
     type Right = i64;
 
     fn graph_cipher_const_mul(
-        a: CircuitNode<Cipher<Self::Left>>,
-        b: Self::Right
-    ) -> CircuitNode<Cipher<Self::Left>> {
+        a: FheProgramNode<Cipher<Self::Left>>,
+        b: Self::Right,
+    ) -> FheProgramNode<Cipher<Self::Left>> {
         with_ctx(|ctx| {
             let b = Self::from(b).try_into_plaintext(&ctx.params).unwrap();
             let l = ctx.add_plaintext_literal(b.inner);
             let n = ctx.add_multiplication_plaintext(a.ids[0], l);
 
-            CircuitNode::new(&[n])
+            FheProgramNode::new(&[n])
         })
     }
 }
 
 impl<const LANES: usize> GraphCipherSwapRows for Simd<LANES> {
-    fn graph_cipher_swap_rows(x: CircuitNode<Cipher<Self>>) -> CircuitNode<Cipher<Self>> {
+    fn graph_cipher_swap_rows(x: FheProgramNode<Cipher<Self>>) -> FheProgramNode<Cipher<Self>> {
         with_ctx(|ctx| {
             let n = ctx.add_swap_rows(x.ids[0]);
 
-            CircuitNode::new(&[n])
+            FheProgramNode::new(&[n])
         })
     }
 }
 
 impl<const LANES: usize> GraphCipherRotateLeft for Simd<LANES> {
-    fn graph_cipher_rotate_left(x: CircuitNode<Cipher<Self>>, y: u64) -> CircuitNode<Cipher<Self>> {
+    fn graph_cipher_rotate_left(
+        x: FheProgramNode<Cipher<Self>>,
+        y: u64,
+    ) -> FheProgramNode<Cipher<Self>> {
         with_ctx(|ctx| {
             let y = ctx.add_literal(Literal::U64(y));
             let n = ctx.add_rotate_left(x.ids[0], y);
 
-            CircuitNode::new(&[n])
+            FheProgramNode::new(&[n])
         })
     }
 }
 
 impl<const LANES: usize> GraphCipherRotateRight for Simd<LANES> {
     fn graph_cipher_rotate_right(
-        x: CircuitNode<Cipher<Self>>,
+        x: FheProgramNode<Cipher<Self>>,
         y: u64,
-    ) -> CircuitNode<Cipher<Self>> {
+    ) -> FheProgramNode<Cipher<Self>> {
         with_ctx(|ctx| {
             let y = ctx.add_literal(Literal::U64(y));
             let n = ctx.add_rotate_right(x.ids[0], y);
 
-            CircuitNode::new(&[n])
+            FheProgramNode::new(&[n])
         })
     }
 }
@@ -599,11 +607,11 @@ impl<const LANES: usize> GraphCipherRotateRight for Simd<LANES> {
 impl<const LANES: usize> GraphCipherNeg for Simd<LANES> {
     type Val = Self;
 
-    fn graph_cipher_neg(x: CircuitNode<Cipher<Self>>) -> CircuitNode<Cipher<Self::Val>> {
+    fn graph_cipher_neg(x: FheProgramNode<Cipher<Self>>) -> FheProgramNode<Cipher<Self::Val>> {
         with_ctx(|ctx| {
             let n = ctx.add_negate(x.ids[0]);
 
-            CircuitNode::new(&[n])
+            FheProgramNode::new(&[n])
         })
     }
 }

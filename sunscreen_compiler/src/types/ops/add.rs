@@ -1,10 +1,10 @@
 use crate::types::{
-    intern::{CircuitNode, FheLiteral},
+    intern::{FheLiteral, FheProgramNode},
     Cipher, FheType,
 };
 
 /**
- * Called when a circuit encounters a + operation on two encrypted
+ * Called when an Fhe Program encounters a + operation on two encrypted
  * types.
  */
 pub trait GraphCipherAdd {
@@ -22,13 +22,13 @@ pub trait GraphCipherAdd {
      * Process the + operation
      */
     fn graph_cipher_add(
-        a: CircuitNode<Cipher<Self::Left>>,
-        b: CircuitNode<Cipher<Self::Right>>,
-    ) -> CircuitNode<Cipher<Self::Left>>;
+        a: FheProgramNode<Cipher<Self::Left>>,
+        b: FheProgramNode<Cipher<Self::Right>>,
+    ) -> FheProgramNode<Cipher<Self::Left>>;
 }
 
 /**
- * Called when a circuit encounters a + operation on one encrypted
+ * Called when an Fhe Program encounters a + operation on one encrypted
  * and one unencrypted type.
  */
 pub trait GraphCipherPlainAdd {
@@ -46,13 +46,13 @@ pub trait GraphCipherPlainAdd {
      * Process the + operation
      */
     fn graph_cipher_plain_add(
-        a: CircuitNode<Cipher<Self::Left>>,
-        b: CircuitNode<Self::Right>,
-    ) -> CircuitNode<Cipher<Self::Left>>;
+        a: FheProgramNode<Cipher<Self::Left>>,
+        b: FheProgramNode<Self::Right>,
+    ) -> FheProgramNode<Cipher<Self::Left>>;
 }
 
 /**
- * Called when a circuit encounters a + operation on one encrypted
+ * Called when an Fhe Program encounters a + operation on one encrypted
  * and a literal.
  */
 pub trait GraphCipherConstAdd {
@@ -70,7 +70,7 @@ pub trait GraphCipherConstAdd {
      * Process the + operation
      */
     fn graph_cipher_const_add(
-        a: CircuitNode<Cipher<Self::Left>>,
+        a: FheProgramNode<Cipher<Self::Left>>,
         b: Self::Right,
-    ) -> CircuitNode<Cipher<Self::Left>>;
+    ) -> FheProgramNode<Cipher<Self::Left>>;
 }

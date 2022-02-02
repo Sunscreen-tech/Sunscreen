@@ -13,7 +13,7 @@ num = "0.4.0"
 petgraph = "0.6.0"
 sunscreen_compiler_macros = { path = "../sunscreen_compiler_macros" }
 sunscreen_backend = { path = "../sunscreen_backend" }
-sunscreen_circuit = { path = "../sunscreen_circuit" }
+sunscreen_fhe_program = { path = "../sunscreen_fhe_program" }
 sunscreen_runtime = { path = "../sunscreen_runtime" }
 seal = { path = "../seal" }
 serde = { version = "1.0.130", features = ["derive"] }

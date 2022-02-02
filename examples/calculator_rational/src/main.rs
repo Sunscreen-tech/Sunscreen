@@ -2,15 +2,15 @@ use std::io::{self, Write};
 use std::sync::mpsc::{Receiver, Sender};
 use std::thread::{self, JoinHandle};
 use sunscreen_compiler::{
-    circuit,
+    fhe_program,
     types::{bfv::Rational, Cipher},
-    Ciphertext, CompiledCircuit, Compiler, Params, PlainModulusConstraint, PublicKey, Runtime,
+    Ciphertext, CompiledFheProgram, Compiler, Params, PlainModulusConstraint, PublicKey, Runtime,
     RuntimeError,
 };
 
 fn help() {
     println!("This is a privacy preserving calculator. You can add, subtract, multiply, divide decimal values. The operation is sent to Bob in cleartext while the operands
-    are encrypted. Bob chooses a circuit corresponding to the selected operation and computes the result. Additionally, Bob saves the last computed value as `ans`, which you may use as either operand.");
+    are encrypted. Bob chooses an FHE program corresponding to the selected operation and computes the result. Additionally, Bob saves the last computed value as `ans`, which you may use as either operand.");
     println!("Since this example is to demo encryption, not parsing, you must insert exactly one space between the operand and values.");
     println!("Type exit to quit.");
     println!("Example:");
@@ -122,7 +122,7 @@ fn alice(
 
         println!("Bob's secret calculator. Type `help` for help.");
 
-        // Bob needs to send us the scheme parameters compatible with his circuits.
+        // Bob needs to send us the scheme parameters compatible with his FHE program.
         let params = recv_params.recv().unwrap();
 
         let runtime = Runtime::new(&params).unwrap();
@@ -187,60 +187,60 @@ fn alice(
     })
 }
 
-fn compile_circuits() -> (
-    CompiledCircuit,
-    CompiledCircuit,
-    CompiledCircuit,
-    CompiledCircuit,
+fn compile_fhe_programs() -> (
+    CompiledFheProgram,
+    CompiledFheProgram,
+    CompiledFheProgram,
+    CompiledFheProgram,
 ) {
-    #[circuit(scheme = "bfv")]
+    #[fhe_program(scheme = "bfv")]
     fn add(a: Cipher<Rational>, b: Cipher<Rational>) -> Cipher<Rational> {
         a + b
     }
 
-    #[circuit(scheme = "bfv")]
+    #[fhe_program(scheme = "bfv")]
     fn sub(a: Cipher<Rational>, b: Cipher<Rational>) -> Cipher<Rational> {
         a - b
     }
 
-    #[circuit(scheme = "bfv")]
+    #[fhe_program(scheme = "bfv")]
     fn mul(a: Cipher<Rational>, b: Cipher<Rational>) -> Cipher<Rational> {
         a * b
     }
 
-    #[circuit(scheme = "bfv")]
+    #[fhe_program(scheme = "bfv")]
     fn div(a: Cipher<Rational>, b: Cipher<Rational>) -> Cipher<Rational> {
         a / b
     }
 
-    // In order for ciphertexts to be compatible between circuits, they must all use the same
+    // In order for ciphertexts to be compatible between FHE programs, they must all use the same
     // parameters.
-    // With rational numbers, each of these circuits produces roughly the same amount of noise.
+    // With rational numbers, each of these FHE programs produces roughly the same amount of noise.
     // To be sure, we compile one of them with the default parameter search, and explicitly
-    // pass these parameters when compiling the other circuits so they are compatible.
-    let add_circuit = Compiler::with_circuit(add)
+    // pass these parameters when compiling the other FHE programs so they are compatible.
+    let add_program = Compiler::with_fhe_program(add)
         // We need to make the noise margin large enough so we can do a few repeated calculations.
         .noise_margin_bits(32)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(1_000_000))
         .compile()
         .unwrap();
 
-    let mul_circuit = Compiler::with_circuit(mul)
-        .with_params(&add_circuit.metadata.params)
+    let mul_program = Compiler::with_fhe_program(mul)
+        .with_params(&add_program.metadata.params)
         .compile()
         .unwrap();
 
-    let div_circuit = Compiler::with_circuit(div)
-        .with_params(&add_circuit.metadata.params)
+    let div_program = Compiler::with_fhe_program(div)
+        .with_params(&add_program.metadata.params)
         .compile()
         .unwrap();
 
-    let sub_circuit = Compiler::with_circuit(sub)
-        .with_params(&add_circuit.metadata.params)
+    let sub_program = Compiler::with_fhe_program(sub)
+        .with_params(&add_program.metadata.params)
         .compile()
         .unwrap();
 
-    (add_circuit, sub_circuit, mul_circuit, div_circuit)
+    (add_program, sub_program, mul_program, div_program)
 }
 
 fn bob(
@@ -250,7 +250,7 @@ fn bob(
     send_res: Sender<Ciphertext>,
 ) -> JoinHandle<()> {
     thread::spawn(move || {
-        let (add, sub, mul, div) = compile_circuits();
+        let (add, sub, mul, div) = compile_fhe_programs();
 
         send_params.send(add.metadata.params.clone()).unwrap();
 
@@ -284,7 +284,7 @@ fn bob(
                 Operand::Div => runtime.run(&div, vec![left, right], &public_key).unwrap(),
             };
 
-            // Our circuit produces a single value, so move the value out of the vector.
+            // Our FHE program produces a single value, so move the value out of the vector.
             let c = c.drain(0..).next().unwrap();
             ans = c.clone();
 

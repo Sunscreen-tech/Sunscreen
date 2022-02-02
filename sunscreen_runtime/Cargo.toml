@@ -10,7 +10,7 @@ bincode = "1.3.3"
 crossbeam = "0.8.1"
 log = "0.4.14"
 seal = { path = "../seal" }
-sunscreen_circuit = { path = "../sunscreen_circuit" }
+sunscreen_fhe_program = { path = "../sunscreen_fhe_program" }
 petgraph = "0.6.0"
 num_cpus = "1.13.0"
 rlp = "0.5.1"

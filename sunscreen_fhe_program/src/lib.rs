@@ -33,42 +33,15 @@ use std::collections::HashSet;
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 /**
- * There 3 primary FHE schemes in use today: BFV, CKKS, and TFHE. BFV is generally the best choice for algorithms
- * requiring exact arithmetic on integers easily expressed as addition and multiplication. CKKS is generally best
- * suited for approximate arithmetic easily expressed as addition and multiplication. TFHE is generally best
- * when it's non-trivial to express the majority of operations and multiplications and additions. A prescribed
- * sequence of homomorphic operations on ciphertexts is referred to as a circuit.
- *
- * Homomorphic operations in all three schemes introduce noise into the resulting ciphertext. If a ciphertext
- * contains too much noise, decryption will fail and result in garbled data. Fortunately, each scheme
- * has techniques to manage noise.
- *
- * BFV and CKKS are leveled schemes. This means that if the number of homomorphic operations is known in advance,
- * one can choose parameters for the scheme to accomodate the predicted noise. Generally speaking,
- * the maximum number of multiplications required to produce any output of a circuit determines the
- * scheme parameters. For those with a digital logic background, this is analogous to worst-case propagation
- * delay determining the clock cycle of the circuit. Choosing parameters that accomodate more noise unfortunately
- * results in more time spent on each operation.
- *
- * BFV and CKKS support SIMD, also known as batching. This means that a single addition or multiplication
- * operation can be applied to many numbers at once.
- *
- * While TFHE is also theoretically a leveled scheme, it primarily uses bootstrapping as the method to manage noise.
- * Under bootstrapping, one homomorphically decrypts a ciphertext, which resets the noise level. With TFHE,
- * this is a fast procedure. Bootstrapping can be applied repeatedly, resulting in an arbitrary number of computations.
- *
- * TFHE is similar to digital logic design; one expresses boolean circuits of and, or, not, etc. gates
- * on bits. While most flexible, it tends to have larger ciphertext expansion and be slower at numeric
- * computation than BFV and CKKS.
- *
- * CKKS and BFV can also perform bootstrapping, but it is generally expensive and not built into the underlying
- * implementation Sunscreen provides.
+ * Sunscreen supports the BFV scheme.
  */
 pub enum SchemeType {
     /**
+     *
+     * # Remarks
      * [BFV](https://eprint.iacr.org/2012/144.pdf) is a leveled scheme on polynomials in a cyclotomic
      * ring. The coefficients of a plaintext form a 2x(N/2) matrix (where N is the polynomial degree).
-     * Sunscreen automatically chooses the polynomial degree depending on the circuit. Each coefficient is
+     * Sunscreen automatically chooses the polynomial degree depending on the FHE program. Each coefficient is
      * an integer mod p (p is a scheme parameter and is the plaintext modulus). One can encode several different
      * meanings onto these coefficients:
      *
@@ -93,7 +66,7 @@ pub enum SchemeType {
      *
      * After some number of operations (parameter-dependent), ciphertexts contain too much noise and
      * decryption results in garbled data. Sunscreen automatically chooses the parameters to accomodate
-     * the noise growth in a given circuit at the expense of execution speed.
+     * the noise growth in a given FHE program at the expense of execution speed.
      *
      * One can think of parameters as a tradeoff between accomodating more noise and faster execution. For a given security
      * level, there are several possible parameter sets. These sets are ordered from accomodating the smallest
@@ -110,8 +83,8 @@ pub enum SchemeType {
      * * Most efficient way to do integer artithmetic.
      * * Exact values.
      * * Good ciphertext expansion when using batching.
-     * * Galois keys (needed if circuit does rotations or row swapping) can be compactly generated.
-     * * Relinearization keys (needed if circuit does multiplications) can be compactly generated.
+     * * Galois keys (needed if FHE program does rotations or row swapping) can be compactly generated.
+     * * Relinearization keys (needed if FHE program does multiplications) can be compactly generated.
      *
      * Cons:
      * * Bootstrapping not natively supported and isn't fast if one does implement it.
@@ -119,64 +92,6 @@ pub enum SchemeType {
      * will be approximate and/or particular to the scheme parameters.
      */
     Bfv,
-
-    /**
-     * Note, this scheme is not yet implemented in Sunscreen.
-     *
-     * [CKKS](https://eprint.iacr.org/2016/421.pdf) is a leveled scheme in polynomials in a cyclotomic
-     * ring. The coeffiecients of a plaintext form a vector of N/2 elements (where N is the polynomial degree),
-     * where each element is a complex integer mod c (c is the ciphertext modulus for the current rescale level).
-     *
-     * Homomorphic operantions in CKKS include addition and multiplication of ciphertexts. That is,
-     * one can homomorphically add and multiply floating-point-esque numbers.
-     *
-     * As one performs operations, noise manifests as increasing loss of precision, similar to floating-point
-     * round-off, but more pronounced. Rescaling operations (automatically inserted by Sunscreen) reduce
-     * future noise growth.
-     *
-     * Sunscreen uses Microsoft SEAL for the backing CKKS implementation.
-     *
-     * Pros:
-     * * Most efficient way to do floating-point arithmetic.
-     * * Natively supports complex arithmetic and complex conjugation.
-     * * Good ciphertext expansion when using batching.
-     * * Galois keys (needed if circuit does rotations or row swapping) can be compactly generated.
-     *
-     * Cons:
-     * * Bootstrapping not natively supported and isn't fast if one does implement it.
-     * * Some operations (e.g. comparison) are not easy to implement and any implementation
-     * will be particular to the scheme parameters.
-     * * Not suitable when exact values are needed.
-     */
-    Ckks,
-
-    /**
-     * Note, scheme not yet implemented in Sunscreen.
-     *
-     * The [TFHE](https://tfhe.github.io/tfhe/) scheme. While this scheme theoretically supports leveled computations, bootstrapping
-     * is very fast in TFHE so implementors rarely support leveling. This scheme supports homomorphic binary
-     * gate operations as well as an intrinsic multiplexer opeeration.
-     *
-     * This scheme is general enough to implement a [CPU](https://www.usenix.org/system/files/sec21summer_matsuoka.pdf)
-     * and homomorphically run any C program you like. The linked processor runs at 1.3Hz on a
-     * 96-core, 4GPU AWS instance that costs $8/hr. Additionally, you don't know when the computer
-     * halts so you have to run for an upper bound number of cycles and hope your computation completes,
-     * so this doesn't magically defeat some of FHE's challenges.
-     *
-     * Pros:
-     * * Ultra fast (~10us) Bootstrapping allows for unlimited computation.
-     * * Binary representation is completely flexible.
-     * * Exact values.
-     *
-     * Cons:
-     * * No batching results in poor throughput for complex operations.
-     * * Arithmetic is significantly slower than BFV and CKKS schemes.
-     * * Without a good library of emergent types, binary is very unwieldy. Must carry-select
-     * adders, shifts, etc. to accomplish arithmetic.
-     * * Large ciphertext expansion; a single bit of plaintext requires 10,000 bits of ciphertext.
-     * * Required bootstrapping key is ~16MB.
-     */
-    Tfhe,
 }
 
 impl Into<u8> for SchemeType {
@@ -186,8 +101,6 @@ impl Into<u8> for SchemeType {
     fn into(self) -> u8 {
         match self {
             Self::Bfv => 0,
-            Self::Ckks => 1,
-            Self::Tfhe => 2,
         }
     }
 }
@@ -201,8 +114,6 @@ impl TryFrom<u8> for SchemeType {
     fn try_from(val: u8) -> Result<Self> {
         Ok(match val {
             0 => Self::Bfv,
-            1 => Self::Ckks,
-            2 => Self::Tfhe,
             _ => Err(Error::InvalidSchemeType)?,
         })
     }
@@ -210,7 +121,7 @@ impl TryFrom<u8> for SchemeType {
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
 /**
- * The type of output from a circuit's graph node.
+ * The type of output from an Fhe Program's graph node.
  */
 pub enum OutputType {
     /**
@@ -226,7 +137,7 @@ pub enum OutputType {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 /**
- * Contains information about a node in the circuit graph.
+ * Contains information about a node in the FHE program graph.
  */
 pub struct NodeInfo {
     /**
@@ -263,7 +174,7 @@ impl NodeInfo {
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
 /**
- * Contains information about an edge between nodes in the circuit graph.
+ * Contains information about an edge between nodes in the FHE program graph.
  */
 pub enum EdgeInfo {
     /**
@@ -286,7 +197,7 @@ type IRGraph = StableGraph<NodeInfo, EdgeInfo>;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 /**
- * The intermediate representation for an FHE circuit used in the compiler back-end.
+ * The intermediate representation for an FHE program used in the compiler back-end.
  *
  * Other modules may transform these using the [forward_traverse](`Self::forward_traverse`)
  * and [reverse_traverse](`Self::reverse_traverse`) methods, or iterate over the graph
@@ -295,9 +206,9 @@ type IRGraph = StableGraph<NodeInfo, EdgeInfo>;
  * The graph construction methods `append_*` take NodeIndex types as arguments. These
  * indices must refer to other nodes in the graph.
  */
-pub struct Circuit {
+pub struct FheProgram {
     /**
-     * The scheme type this circuit will run under.
+     * The scheme type this FHE program will run under.
      */
     pub scheme: SchemeType,
 
@@ -307,7 +218,7 @@ pub struct Circuit {
     pub graph: IRGraph,
 }
 
-impl PartialEq for Circuit {
+impl PartialEq for FheProgram {
     fn eq(&self, b: &Self) -> bool {
         is_isomorphic_matching(
             &Graph::from(self.graph.clone()),
@@ -318,7 +229,7 @@ impl PartialEq for Circuit {
     }
 }
 
-impl Circuit {
+impl FheProgram {
     /**
      * Create a new new empty intermediate representation.
      */
@@ -336,20 +247,23 @@ impl Circuit {
     pub fn render(&self) -> String {
         let data = Dot::with_attr_getters(
             &self.graph,
-            &[petgraph::dot::Config::NodeNoLabel, petgraph::dot::Config::EdgeNoLabel],
-            &|_, e| { format!("label=\"{:?}\"", e.weight()) },
+            &[
+                petgraph::dot::Config::NodeNoLabel,
+                petgraph::dot::Config::EdgeNoLabel,
+            ],
+            &|_, e| format!("label=\"{:?}\"", e.weight()),
             &|_, n| {
-                let (index, info) =n;
+                let (index, info) = n;
 
                 match info.operation {
                     Operation::Literal(Literal::Plaintext(_)) => {
                         format!("label=\"Id: {} Op: Plaintext literal\"", index.index())
-                    },
+                    }
                     _ => {
                         format!("label=\"Id: {} Op: {:?}\"", index.index(), info)
                     }
                 }
-            }
+            },
         );
 
         format!("{:?}", data)
@@ -442,7 +356,7 @@ impl Circuit {
     }
 
     /**
-     * Sppends a node designating `x` as an output of the circuit.
+     * Sppends a node designating `x` as an output of the FHE program.
      */
     pub fn append_output_ciphertext(&mut self, x: NodeIndex) -> NodeIndex {
         self.append_1_input_node(Operation::OutputCiphertext, x)
@@ -624,7 +538,7 @@ impl Circuit {
     }
 
     /**
-     * Returns the number of inputs ciphertexts this circuit takes.
+     * Returns the number of inputs ciphertexts this FHE program takes.
      */
     pub fn num_inputs(&self) -> usize {
         self.graph
@@ -640,14 +554,14 @@ impl Circuit {
     }
 
     /**
-     * Runs tree shaking and returns a derived Circuit with only
+     * Runs tree shaking and returns a derived FheProgram with only
      * dependencies required to run the requested nodes.
      *
      * * `nodes`: indices specifying a set of nodes in the graph. Prune return a new
-     *   [`Circuit`] containing nodes in the transitive closure
+     *   [`FheProgram`] containing nodes in the transitive closure
      *   of this set.
      */
-    pub fn prune(&self, nodes: &[NodeIndex]) -> Circuit {
+    pub fn prune(&self, nodes: &[NodeIndex]) -> FheProgram {
         let mut compact_graph = Graph::from(self.graph.clone());
         compact_graph.reverse();
 
@@ -696,7 +610,7 @@ impl Circuit {
     }
 
     /**
-     * Validates this [`Circuit`] for correctness.
+     * Validates this [`FheProgram`] for correctness.
      */
     pub fn validate(&self) -> Result<()> {
         let errors = validation::validate_ir(self);
@@ -709,7 +623,7 @@ impl Circuit {
     }
 
     /**
-     * Whether or not this circuit needs relin keys to run. Needed for relinearization.
+     * Whether or not this FHE program needs relin keys to run. Needed for relinearization.
      */
     pub fn requires_relin_keys(&self) -> bool {
         self.graph.node_weights().any(|n| {
@@ -722,7 +636,7 @@ impl Circuit {
     }
 
     /**
-     * Whether or not this circuit requires Galois keys to run. Needed for rotation and row swap
+     * Whether or not this FHE program requires Galois keys to run. Needed for rotation and row swap
      * operations.
      */
     pub fn requires_galois_keys(&self) -> bool {
@@ -736,17 +650,17 @@ impl Circuit {
 }
 
 /**
- * A wrapper for ascertaining the structure of the underlying [`Circuit`].
- * This type is used in [`Circuit::forward_traverse`] and
- * [`Circuit::reverse_traverse`] callbacks.
+ * A wrapper for ascertaining the structure of the underlying [`FheProgram`].
+ * This type is used in [`FheProgram::forward_traverse`] and
+ * [`FheProgram::reverse_traverse`] callbacks.
  */
-pub struct GraphQuery<'a>(&'a Circuit);
+pub struct GraphQuery<'a>(&'a FheProgram);
 
 impl<'a> GraphQuery<'a> {
     /**
-     * Creates a new [`GraphQuery`] from a reference to an [`Circuit`].
+     * Creates a new [`GraphQuery`] from a reference to an [`FheProgram`].
      */
-    pub fn new(ir: &'a Circuit) -> Self {
+    pub fn new(ir: &'a FheProgram) -> Self {
         Self(ir)
     }
 
@@ -782,9 +696,9 @@ impl<'a> GraphQuery<'a> {
 
 #[derive(Debug, Clone)]
 /**
- * A transform for an [`Circuit`]. Callbacks in
- * [`Circuit::forward_traverse`] and
- * [`Circuit::reverse_traverse`] should emit these to update the
+ * A transform for an [`FheProgram`]. Callbacks in
+ * [`FheProgram::forward_traverse`] and
+ * [`FheProgram::reverse_traverse`] should emit these to update the
  * graph.
  *
  * Each of these variants use a [`TransformNodeIndex`] to reference either a node that
@@ -885,7 +799,7 @@ impl Into<TransformNodeIndex> for NodeIndex {
 }
 
 /**
- * A list of tranformations to be applied to the [`Circuit`] graph.
+ * A list of tranformations to be applied to the [`FheProgram`] graph.
  */
 pub struct TransformList {
     transforms: Vec<IRTransform>,
@@ -928,7 +842,7 @@ impl TransformList {
      * result in a node being added, this function will panic. For example, if an [`IRTransform::AppendAdd`]
      * refers to the index of a [`IRTransform::RemoveEdge`] transform, a panic will result.
      */
-    pub fn apply(&mut self, ir: &mut Circuit) {
+    pub fn apply(&mut self, ir: &mut FheProgram) {
         for t in self.transforms.clone().iter() {
             let inserted_node_id = match t {
                 AppendAdd(x, y) => {
@@ -984,12 +898,12 @@ impl TransformList {
 
     fn apply_1_input<F>(
         &mut self,
-        ir: &mut Circuit,
+        ir: &mut FheProgram,
         x: TransformNodeIndex,
         callback: F,
     ) -> Option<NodeIndex>
     where
-        F: FnOnce(&mut Circuit, NodeIndex) -> Option<NodeIndex>,
+        F: FnOnce(&mut FheProgram, NodeIndex) -> Option<NodeIndex>,
     {
         let x = self.materialize_index(x);
 
@@ -998,13 +912,13 @@ impl TransformList {
 
     fn apply_2_input<F>(
         &mut self,
-        ir: &mut Circuit,
+        ir: &mut FheProgram,
         x: TransformNodeIndex,
         y: TransformNodeIndex,
         callback: F,
     ) -> Option<NodeIndex>
     where
-        F: FnOnce(&mut Circuit, NodeIndex, NodeIndex) -> Option<NodeIndex>,
+        F: FnOnce(&mut FheProgram, NodeIndex, NodeIndex) -> Option<NodeIndex>,
     {
         let x = self.materialize_index(x);
         let y = self.materialize_index(y);
@@ -1025,8 +939,8 @@ impl TransformList {
 mod tests {
     use super::*;
 
-    fn create_simple_dag() -> Circuit {
-        let mut ir = Circuit::new(SchemeType::Bfv);
+    fn create_simple_dag() -> FheProgram {
+        let mut ir = FheProgram::new(SchemeType::Bfv);
 
         let ct = ir.append_input_ciphertext(0);
         let l1 = ir.append_input_literal(Literal::from(7i64));
@@ -1209,7 +1123,7 @@ mod tests {
 
     #[test]
     fn can_prune_ir() {
-        let mut ir = Circuit::new(SchemeType::Bfv);
+        let mut ir = FheProgram::new(SchemeType::Bfv);
 
         let ct = ir.append_input_ciphertext(0);
         let l1 = ir.append_input_literal(Literal::from(7i64));
@@ -1219,7 +1133,7 @@ mod tests {
 
         let pruned = ir.prune(&vec![add]);
 
-        let mut expected_ir = Circuit::new(SchemeType::Bfv);
+        let mut expected_ir = FheProgram::new(SchemeType::Bfv);
         let ct = expected_ir.append_input_ciphertext(0);
         let l1 = expected_ir.append_input_literal(Literal::from(7i64));
         expected_ir.append_add(ct, l1);
@@ -1229,7 +1143,7 @@ mod tests {
 
     #[test]
     fn can_prune_graph_with_removed_nodes() {
-        let mut ir = Circuit::new(SchemeType::Bfv);
+        let mut ir = FheProgram::new(SchemeType::Bfv);
 
         let ct = ir.append_input_ciphertext(0);
         let rem = ir.append_input_ciphertext(1);
@@ -1247,7 +1161,7 @@ mod tests {
 
         let pruned = ir.prune(&vec![add]);
 
-        let mut expected_ir = Circuit::new(SchemeType::Bfv);
+        let mut expected_ir = FheProgram::new(SchemeType::Bfv);
         let ct = expected_ir.append_input_ciphertext(0);
         let l1 = expected_ir.append_input_literal(Literal::from(7i64));
         expected_ir.append_add(ct, l1);
@@ -1257,7 +1171,7 @@ mod tests {
 
     #[test]
     fn can_prune_with_multiple_nodes() {
-        let mut ir = Circuit::new(SchemeType::Bfv);
+        let mut ir = FheProgram::new(SchemeType::Bfv);
 
         let ct1 = ir.append_input_ciphertext(0);
         let ct2 = ir.append_input_ciphertext(1);
@@ -1271,7 +1185,7 @@ mod tests {
 
         let pruned = ir.prune(&vec![o1, neg2]);
 
-        let mut expected_ir = Circuit::new(SchemeType::Bfv);
+        let mut expected_ir = FheProgram::new(SchemeType::Bfv);
         let ct1 = expected_ir.append_input_ciphertext(0);
         let ct2 = expected_ir.append_input_ciphertext(1);
         let neg1 = expected_ir.append_negate(ct1);
@@ -1283,7 +1197,7 @@ mod tests {
 
     #[test]
     fn pruning_empty_node_list_results_in_empty_graph() {
-        let mut ir = Circuit::new(SchemeType::Bfv);
+        let mut ir = FheProgram::new(SchemeType::Bfv);
 
         let ct1 = ir.append_input_ciphertext(0);
         let ct2 = ir.append_input_ciphertext(1);
@@ -1297,14 +1211,14 @@ mod tests {
 
         let pruned = ir.prune(&vec![]);
 
-        let expected_ir = Circuit::new(SchemeType::Bfv);
+        let expected_ir = FheProgram::new(SchemeType::Bfv);
 
         assert_eq!(pruned, expected_ir);
     }
 
     #[test]
     fn can_roundtrip_scheme_type() {
-        for s in [SchemeType::Bfv, SchemeType::Ckks, SchemeType::Tfhe] {
+        for s in [SchemeType::Bfv] {
             let s_2: u8 = s.into();
             let s_2 = SchemeType::try_from(s_2).unwrap();
 

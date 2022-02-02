@@ -1,5 +1,5 @@
 use crate::{InnerPlaintext, SealData};
-use sunscreen_circuit::{Circuit, EdgeInfo, Literal, Operation::*};
+use sunscreen_fhe_program::{EdgeInfo, FheProgram, Literal, Operation::*};
 
 use crossbeam::atomic::AtomicCell;
 use petgraph::{stable_graph::NodeIndex, visit::EdgeRef, Direction};
@@ -11,37 +11,37 @@ use seal::{Ciphertext, Error as SealError, Evaluator, GaloisKeys, Plaintext, Rel
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 /**
- * An error that occurs while running a circuit.
+ * An error that occurs while running an Fhe Program.
  */
-pub enum CircuitRunFailure {
+pub enum FheProgramRunFailure {
     /**
      * An error occurred in a SEAL evaluator.
      */
     SealError,
 
     /**
-     * The circuit needed Galois keys, but none were provided.
+     * The FHE program needed Galois keys, but none were provided.
      */
     MissingGaloisKeys,
 
     /**
-     * The circuit needed relin keys, but none were provided.
+     * The FHE program needed relin keys, but none were provided.
      */
     MissingRelinearizationKeys,
 
     /**
-     * Running the circuit caused a panic unwind.
+     * Running the FHE program caused a panic unwind.
      */
     Panic,
 
     /**
-     * Expected the output of a circuit node to be a ciphertext, but
+     * Expected the output of an Fhe Program node to be a ciphertext, but
      * it wasn't.
      */
     ExpectedCiphertext,
 
     /**
-     * Expected the output of a circuit node to be a plaintext, but
+     * Expected the output of an Fhe Program node to be a plaintext, but
      * it wasn't.
      */
     ExpectedPlaintext,
@@ -57,7 +57,7 @@ pub enum CircuitRunFailure {
     MissingData,
 }
 
-impl From<SealError> for CircuitRunFailure {
+impl From<SealError> for FheProgramRunFailure {
     fn from(_: SealError) -> Self {
         Self::SealError
     }
@@ -66,38 +66,38 @@ impl From<SealError> for CircuitRunFailure {
 /**
  * You probably should instead use [`Runtime::run()`](crate::Runtime::run).
  *
- * Run the given [`Circuit`] to completion with the given inputs. This
+ * Run the given [`FheProgram`] to completion with the given inputs. This
  * method performs no validation. You must verify the program is first valid. Programs produced
  * by the compiler are guaranteed to be valid, but deserialization does not make any such
- * guarantees. Call [`validate()`](sunscreen_circuit::Circuit::validate()) to verify a program's correctness.
+ * guarantees. Call [`validate()`](sunscreen_fhe_program::FheProgram::validate()) to verify a program's correctness.
  *
  * # Remarks
  * The input and outputs of this method are vectors containing [`seal::Ciphertext`] values, not the
  * high-level [`Ciphertext`] types. You must first unpack them from the high-level types.
  *
  * # Panics
- * Calling this method on a malformed [`Circuit`] may
+ * Calling this method on a malformed [`FheProgram`] may
  * result in a panic.
  *
  * # Non-termination
- * Calling this method on a malformed [`Circuit`] may
+ * Calling this method on a malformed [`FheProgram`] may
  * result in non-termination.
  *
  * # Undefined behavior
- * Calling this method on a malformed [`Circuit`] may
+ * Calling this method on a malformed [`FheProgram`] may
  * result in undefined behavior.
  */
 pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
-    ir: &Circuit,
+    ir: &FheProgram,
     inputs: &[SealData],
     evaluator: &E,
     relin_keys: &Option<&RelinearizationKeys>,
     galois_keys: &Option<&GaloisKeys>,
-) -> Result<Vec<Ciphertext>, CircuitRunFailure> {
+) -> Result<Vec<Ciphertext>, FheProgramRunFailure> {
     fn get_data<'a>(
         data: &'a [AtomicCell<Option<Cow<SealData>>>],
         index: usize,
-    ) -> Result<&'a SealData, CircuitRunFailure> {
+    ) -> Result<&'a SealData, FheProgramRunFailure> {
         // This is correct so long as the IR program is indeed a DAG executed in topological order
         // Since for a given edge (x,y), x executes before y, the operand data that y needs
         // from x will exist.
@@ -105,31 +105,31 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
 
         match val {
             Some(v) => Ok(v),
-            None => Err(CircuitRunFailure::MissingData),
+            None => Err(FheProgramRunFailure::MissingData),
         }
     }
 
     fn get_ciphertext<'a>(
         data: &'a [AtomicCell<Option<Cow<SealData>>>],
         index: usize,
-    ) -> Result<&'a Ciphertext, CircuitRunFailure> {
+    ) -> Result<&'a Ciphertext, FheProgramRunFailure> {
         let val = get_data(data, index)?;
 
         match val {
             SealData::Ciphertext(ref c) => Ok(c),
-            _ => Err(CircuitRunFailure::ExpectedCiphertext),
+            _ => Err(FheProgramRunFailure::ExpectedCiphertext),
         }
     }
 
     fn get_plaintext<'a>(
         data: &'a [AtomicCell<Option<Cow<SealData>>>],
         index: usize,
-    ) -> Result<&'a Plaintext, CircuitRunFailure> {
+    ) -> Result<&'a Plaintext, FheProgramRunFailure> {
         let val = get_data(data, index)?;
 
         match val {
             SealData::Plaintext(ref c) => Ok(c),
-            _ => Err(CircuitRunFailure::ExpectedPlaintext),
+            _ => Err(FheProgramRunFailure::ExpectedPlaintext),
         }
     }
 
@@ -170,7 +170,7 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
                         b,
                         galois_keys
                             .as_ref()
-                            .ok_or(CircuitRunFailure::MissingGaloisKeys)?,
+                            .ok_or(FheProgramRunFailure::MissingGaloisKeys)?,
                     )?;
 
                     data[index.index()].store(Some(Cow::Owned(c.into())));
@@ -192,7 +192,7 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
                         -b,
                         galois_keys
                             .as_ref()
-                            .ok_or(CircuitRunFailure::MissingGaloisKeys)?,
+                            .ok_or(FheProgramRunFailure::MissingGaloisKeys)?,
                     )?;
 
                     data[index.index()].store(Some(Cow::Owned(c.into())));
@@ -240,7 +240,7 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
                 SwapRows => {
                     let galois_keys = galois_keys
                         .as_ref()
-                        .ok_or(CircuitRunFailure::MissingGaloisKeys)?;
+                        .ok_or(FheProgramRunFailure::MissingGaloisKeys)?;
 
                     let input = get_unary_operand(ir, index);
 
@@ -253,7 +253,7 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
                 Relinearize => {
                     let relin_keys = relin_keys
                         .as_ref()
-                        .ok_or(CircuitRunFailure::MissingRelinearizationKeys)?;
+                        .ok_or(FheProgramRunFailure::MissingRelinearizationKeys)?;
 
                     let input = get_unary_operand(ir, index);
 
@@ -296,13 +296,13 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
                     match x {
                         Literal::Plaintext(p) => {
                             let p = InnerPlaintext::from_bytes(&p)
-                                .map_err(|_| CircuitRunFailure::MalformedPlaintext)?;
+                                .map_err(|_| FheProgramRunFailure::MalformedPlaintext)?;
 
                             match p {
                                 InnerPlaintext::Seal(p) => {
                                     // Plaintext literals should always have exactly one plaintext.
                                     if p.len() != 1 {
-                                        return Err(CircuitRunFailure::MalformedPlaintext);
+                                        return Err(FheProgramRunFailure::MalformedPlaintext);
                                     }
 
                                     data[index.index()]
@@ -335,7 +335,7 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
             OutputCiphertext => Some(get_ciphertext(&data, id.index())),
             _ => None,
         })
-        .collect::<Result<Vec<&Ciphertext>, CircuitRunFailure>>()?
+        .collect::<Result<Vec<&Ciphertext>, FheProgramRunFailure>>()?
         .drain(0..)
         .map(|c| c.to_owned())
         .collect();
@@ -347,12 +347,12 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
  * Traverses the graph in the given
  */
 fn parallel_traverse<F>(
-    ir: &Circuit,
+    ir: &FheProgram,
     callback: F,
     run_to: Option<NodeIndex>,
-) -> Result<(), CircuitRunFailure>
+) -> Result<(), FheProgramRunFailure>
 where
-    F: Fn(NodeIndex) -> Result<(), CircuitRunFailure> + Sync + Send,
+    F: Fn(NodeIndex) -> Result<(), FheProgramRunFailure> + Sync + Send,
 {
     let ir = if let Some(x) = run_to {
         Cow::Owned(ir.prune(&vec![x])) // MOO
@@ -470,15 +470,15 @@ where
  * Gets the two input operands and returns a tuple of left, right. For some operations
  * (i.e. subtraction), order matters. While it's erroneous for a binary operations to have
  * anything other than a single left and single right operand, having more operands will result
- * in one being selected arbitrarily. Validating the [`Circuit`] will
+ * in one being selected arbitrarily. Validating the [`FheProgram`] will
  * reveal having the wrong number of operands.
  *
  * # Panics
  * Panics if the given node doesn't have at least one left and one right operand. Calling
- * [`validate()`](sunscreen_circuit::Circuit::validate()) should reveal this
+ * [`validate()`](sunscreen_fhe_program::FheProgram::validate()) should reveal this
  * issue.
  */
-pub fn get_left_right_operands(ir: &Circuit, index: NodeIndex) -> (NodeIndex, NodeIndex) {
+pub fn get_left_right_operands(ir: &FheProgram, index: NodeIndex) -> (NodeIndex, NodeIndex) {
     let left = ir
         .graph
         .edges_directed(index, Direction::Incoming)
@@ -499,16 +499,16 @@ pub fn get_left_right_operands(ir: &Circuit, index: NodeIndex) -> (NodeIndex, No
 }
 
 /**
- * Gets the single unary input operand for the given node. If the [`Circuit`]
+ * Gets the single unary input operand for the given node. If the [`FheProgram`]
  * is malformed and the node has more than one UnaryOperand, one will be selected arbitrarily.
- * As such, one should validate the [`Circuit`] before calling this method.
+ * As such, one should validate the [`FheProgram`] before calling this method.
  *
  * # Panics
  * Panics if the given node doesn't have at least one unary operant. Calling
- * [`validate()`](sunscreen_circuit::Circuit::validate()) should reveal this
+ * [`validate()`](sunscreen_fhe_program::FheProgram::validate()) should reveal this
  * issue.
  */
-pub fn get_unary_operand(ir: &Circuit, index: NodeIndex) -> NodeIndex {
+pub fn get_unary_operand(ir: &FheProgram, index: NodeIndex) -> NodeIndex {
     ir.graph
         .edges_directed(index, Direction::Incoming)
         .filter(|e| *e.weight() == EdgeInfo::UnaryOperand)
@@ -521,7 +521,7 @@ pub fn get_unary_operand(ir: &Circuit, index: NodeIndex) -> NodeIndex {
 mod tests {
     use super::*;
     use seal::*;
-    use sunscreen_circuit::SchemeType;
+    use sunscreen_fhe_program::SchemeType;
 
     fn setup_scheme(
         degree: u64,
@@ -562,7 +562,7 @@ mod tests {
 
     #[test]
     fn simple_add() {
-        let mut ir = Circuit::new(SchemeType::Bfv);
+        let mut ir = FheProgram::new(SchemeType::Bfv);
 
         let a = ir.append_input_ciphertext(0);
         let b = ir.append_input_ciphertext(1);
@@ -602,7 +602,7 @@ mod tests {
 
     #[test]
     fn simple_mul() {
-        let mut ir = Circuit::new(SchemeType::Bfv);
+        let mut ir = FheProgram::new(SchemeType::Bfv);
 
         let a = ir.append_input_ciphertext(0);
         let b = ir.append_input_ciphertext(1);
@@ -649,7 +649,7 @@ mod tests {
 
     #[test]
     fn can_mul_and_relinearize() {
-        let mut ir = Circuit::new(SchemeType::Bfv);
+        let mut ir = FheProgram::new(SchemeType::Bfv);
 
         let a = ir.append_input_ciphertext(0);
         let b = ir.append_input_ciphertext(1);
@@ -697,7 +697,7 @@ mod tests {
 
     #[test]
     fn add_reduction() {
-        let mut ir = Circuit::new(SchemeType::Bfv);
+        let mut ir = FheProgram::new(SchemeType::Bfv);
 
         let a = ir.append_input_ciphertext(0);
         let b = ir.append_input_ciphertext(1);
@@ -760,7 +760,7 @@ mod tests {
 
     #[test]
     fn rotate_left() {
-        let mut ir = Circuit::new(SchemeType::Bfv);
+        let mut ir = FheProgram::new(SchemeType::Bfv);
 
         let a = ir.append_input_ciphertext(0);
         let l = ir.append_input_literal(Literal::U64(3));
@@ -805,7 +805,7 @@ mod tests {
 
     #[test]
     fn rotate_right() {
-        let mut ir = Circuit::new(SchemeType::Bfv);
+        let mut ir = FheProgram::new(SchemeType::Bfv);
 
         let a = ir.append_input_ciphertext(0);
         let l = ir.append_input_literal(Literal::U64(3));

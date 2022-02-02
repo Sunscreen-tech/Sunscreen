@@ -1,10 +1,10 @@
 use crate::types::{
-    intern::{CircuitNode, FheLiteral},
+    intern::{FheLiteral, FheProgramNode},
     Cipher, FheType,
 };
 
 /**
- * Called when a circuit encounters a / operation on two encrypted types.
+ * Called when an Fhe Program encounters a / operation on two encrypted types.
  */
 pub trait GraphCipherDiv {
     /**
@@ -21,13 +21,13 @@ pub trait GraphCipherDiv {
      * Process the + operation
      */
     fn graph_cipher_div(
-        a: CircuitNode<Cipher<Self::Left>>,
-        b: CircuitNode<Cipher<Self::Right>>,
-    ) -> CircuitNode<Cipher<Self::Left>>;
+        a: FheProgramNode<Cipher<Self::Left>>,
+        b: FheProgramNode<Cipher<Self::Right>>,
+    ) -> FheProgramNode<Cipher<Self::Left>>;
 }
 
 /**
- * Called when a circuit encounters a / operation with a
+ * Called when an Fhe Program encounters a / operation with a
  * ciphertext numerator and plaintext denominator.
  */
 pub trait GraphCipherPlainDiv {
@@ -45,13 +45,13 @@ pub trait GraphCipherPlainDiv {
      * Process the + operation
      */
     fn graph_cipher_plain_div(
-        a: CircuitNode<Cipher<Self::Left>>,
-        b: CircuitNode<Self::Right>,
-    ) -> CircuitNode<Cipher<Self::Left>>;
+        a: FheProgramNode<Cipher<Self::Left>>,
+        b: FheProgramNode<Self::Right>,
+    ) -> FheProgramNode<Cipher<Self::Left>>;
 }
 
 /**
- * Called when a circuit encounters a / operation with a
+ * Called when an Fhe Program encounters a / operation with a
  * plaintext numerator and ciphertext denominator.
  */
 pub trait GraphPlainCipherDiv {
@@ -69,13 +69,13 @@ pub trait GraphPlainCipherDiv {
      * Process the + operation
      */
     fn graph_plain_cipher_div(
-        a: CircuitNode<Self::Left>,
-        b: CircuitNode<Cipher<Self::Right>>,
-    ) -> CircuitNode<Cipher<Self::Left>>;
+        a: FheProgramNode<Self::Left>,
+        b: FheProgramNode<Cipher<Self::Right>>,
+    ) -> FheProgramNode<Cipher<Self::Left>>;
 }
 
 /**
- * Called when a circuit encounters a / operation on an encrypted numerator and literal denominator.
+ * Called when an Fhe Program encounters a / operation on an encrypted numerator and literal denominator.
  */
 pub trait GraphCipherConstDiv {
     /**
@@ -92,13 +92,13 @@ pub trait GraphCipherConstDiv {
      * Process the + operation
      */
     fn graph_cipher_const_div(
-        a: CircuitNode<Cipher<Self::Left>>,
+        a: FheProgramNode<Cipher<Self::Left>>,
         b: Self::Right,
-    ) -> CircuitNode<Cipher<Self::Left>>;
+    ) -> FheProgramNode<Cipher<Self::Left>>;
 }
 
 /**
- * Called when a circuit encounters a / operation on a
+ * Called when an Fhe Program encounters a / operation on a
  * literal numerator and encrypted denominator.
  */
 pub trait GraphConstCipherDiv {
@@ -117,6 +117,6 @@ pub trait GraphConstCipherDiv {
      */
     fn graph_const_cipher_div(
         a: Self::Left,
-        b: CircuitNode<Cipher<Self::Right>>,
-    ) -> CircuitNode<Cipher<Self::Right>>;
+        b: FheProgramNode<Cipher<Self::Right>>,
+    ) -> FheProgramNode<Cipher<Self::Right>>;
 }

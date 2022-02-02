@@ -5,7 +5,7 @@ use serde::{
     de::{self, Error as DeError, Visitor},
     Deserialize, Deserializer, Serialize, Serializer,
 };
-use sunscreen_circuit::{Circuit, SchemeType};
+use sunscreen_fhe_program::{FheProgram, SchemeType};
 
 use crate::{Error, Result};
 
@@ -103,32 +103,32 @@ impl<'de> Deserialize<'de> for Type {
 }
 
 /**
- * Indicates the type signatures of a circuit. Serves as a piece of the [`CircuitMetadata`].
+ * Indicates the type signatures of an Fhe Program. Serves as a piece of the [`FheProgramMetadata`].
  *
  * # Remarks
- * This type is serializable and circuit implementors can give this object
- * to consumers without revealing this circuit's implementation. This allows
+ * This type is serializable and FHE program implementors can give this object
+ * to consumers without revealing this FHE program's implementation. This allows
  * users to encrypt their data in a verifiable manner.
  */
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CallSignature {
     /**
-     * The type of each argument in the circuit.
+     * The type of each argument in the FHE program.
      *
      * # Remarks
-     * The ith argument to the circuit occupies the ith argument of the vector.
-     * The length of this vector equals the number of arguments to the circuit.
+     * The ith argument to the FHE program occupies the ith argument of the vector.
+     * The length of this vector equals the number of arguments to the FHE program.
      */
     pub arguments: Vec<Type>,
 
     /**
-     * The type of the single return value of the circuit if the return type is
-     * not a type. If the return type of the circuit is a tuple, then this contains
+     * The type of the single return value of the FHE program if the return type is
+     * not a type. If the return type of the FHE program is a tuple, then this contains
      * each type in the tuple.
      *
      * # Remarks
-     * The ith argument to the circuit occupies the ith argument of the vector.
-     * The length of this vector equals the number of arguments to the circuit.
+     * The ith argument to the FHE program occupies the ith argument of the vector.
+     * The length of this vector equals the number of arguments to the FHE program.
      */
     pub returns: Vec<Type>,
 
@@ -140,27 +140,27 @@ pub struct CallSignature {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 /**
- * A key type required for a circuit to function correctly.
+ * A key type required for an Fhe Program to function correctly.
  */
 pub enum RequiredKeys {
     /**
-     * The circuit performs SIMD shifts and requires Galois keys.
+     * The FHE program performs SIMD shifts and requires Galois keys.
      */
     Galois,
     /**
-     * The circuit performs relinearizations and requires relinearization keys.
+     * The FHE program performs relinearizations and requires relinearization keys.
      */
     Relin,
 
     /**
-     * The circuit performs an operation that requires the public encryption key.
+     * The FHE program performs an operation that requires the public encryption key.
      */
     PublicKey,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 /**
- * The parameter set required for a given circuit to run efficiently and correctly.
+ * The parameter set required for a given FHE program to run efficiently and correctly.
  */
 pub struct Params {
     /**
@@ -269,39 +269,39 @@ impl Params {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 /**
- * A serializable list of requirements for a circuit.
+ * A serializable list of requirements for an Fhe Program.
  */
-pub struct CircuitMetadata {
+pub struct FheProgramMetadata {
     /**
-     * The FHE scheme parameters required for encrypting data for use in the circuit.
+     * The FHE scheme parameters required for encrypting data for use in the FHE program.
      */
     pub params: Params,
 
     /**
-     * The call signature (arguments and returns) of the circuit.
+     * The call signature (arguments and returns) of the FHE program.
      */
     pub signature: CallSignature,
 
     /**
-     * The set of keys required to run the circuit.
+     * The set of keys required to run the FHE program.
      */
     pub required_keys: Vec<RequiredKeys>,
 }
 
 /**
- * A circuit with its associated metadata.
+ * An FHE program with its associated metadata.
  */
-pub struct CompiledCircuit {
+pub struct CompiledFheProgram {
     /**
-     * The underlying FHE circuit.
+     * The underlying FHE FHE program.
      */
-    pub circuit: Circuit,
+    pub fhe_program_fn: FheProgram,
 
     /**
-     * Information about the circuit, including its call signature and the scheme
+     * Information about the FHE program, including its call signature and the scheme
      * parameters needed by a [`Runtime`](crate::Runtime) to encrypt/decrypt its inputs/outputs.
      */
-    pub metadata: CircuitMetadata,
+    pub metadata: FheProgramMetadata,
 }
 
 #[cfg(test)]
@@ -315,7 +315,7 @@ mod tests {
             plain_modulus: 64,
             coeff_modulus: vec![1, 2, 3, 4],
             security_level: SecurityLevel::TC192,
-            scheme_type: SchemeType::Ckks,
+            scheme_type: SchemeType::Bfv,
         };
 
         let params_2 = Params::try_from_bytes(&params.to_bytes()).unwrap();

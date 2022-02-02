@@ -1,6 +1,6 @@
 /**
  * This module contains build-in types you can use as inputs and outputs
- * from circuits using the BFV scheme.
+ * from FHE programs using the BFV scheme.
  *
  * # BFV Scheme types
  * The BFV scheme is a good choice for exactly and quickly computing a small
@@ -8,7 +8,7 @@
  *
  * Plaintexts under the BFV scheme are polynomials with `N` terms, where
  * `N` is the `poly_degree` scheme paramter. This parameter is (by default)
- * automatically configured on circuit compilation based on its noise budget
+ * automatically configured during FHE program compilation based on its noise budget
  * requirements. Addition and multiplication imply adding and multiplying
  * polynomials.
  *
@@ -55,7 +55,7 @@ pub mod bfv;
 /**
  * This module contains implementation details used to support
  * Sunscreen's domain specific language under the
- * [`#[circuit]`](sunscreen_compiler_macros::circuit) macro.
+ * [`#[fhe_program]`](crate::fhe_program) macro.
  */
 pub mod intern;
 
@@ -99,7 +99,7 @@ pub trait LaneCount {
 
 #[derive(Copy, Clone)]
 /**
- * Declares a type T as being encrypted in a circuit.
+ * Declares a type T as being encrypted in an [`fhe_program`](crate::fhe_program).
  */
 pub struct Cipher<T>
 where

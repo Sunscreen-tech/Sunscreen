@@ -29,7 +29,7 @@ pub struct PublicKey {
     /**
      * Galois keys are used in BFV and CKKS schemes to rotate SIMD vectors.
      *
-     * Circuits that don't feature rotations have no use for these keys.
+     * FhePrograms that don't feature rotations have no use for these keys.
      */
     pub galois_key: Option<WithContext<GaloisKeys>>,
 
@@ -39,7 +39,7 @@ pub struct PublicKey {
      * resulting from multiplication. Sunscreen automatically inserts relinearization operations,
      * and hence they are an implementation detail.
      *
-     * Circuits without multiplications don't have relinearizations and thus don't need these keys.
+     * FhePrograms without multiplications don't have relinearizations and thus don't need these keys.
      */
     pub relin_key: Option<WithContext<RelinearizationKeys>>,
 }
@@ -49,7 +49,7 @@ mod tests {
     use super::*;
     use crate::*;
     use seal::{CoefficientModulus, PlainModulus, SecurityLevel, ToBytes};
-    use sunscreen_circuit::SchemeType;
+    use sunscreen_fhe_program::SchemeType;
 
     #[test]
     fn can_roundtrip_seal_public_key() {

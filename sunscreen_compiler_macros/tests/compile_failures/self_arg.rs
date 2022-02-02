@@ -1,10 +1,10 @@
-use sunscreen_compiler_macros::{circuit};
+use sunscreen_compiler_macros::{fhe_program};
 
 struct Foo {}
 
 impl Foo {
-    #[circuit(scheme = "bfv")]
-    fn panic_circuit(&self) {
+    #[fhe_program(scheme = "bfv")]
+    fn panic_fhe_program(&self) {
     }
 }
 

@@ -1,14 +1,14 @@
 use sunscreen_compiler::{
-    circuit,
+    fhe_program,
     types::{bfv::Signed, Cipher},
     Compiler, PlainModulusConstraint,
 };
 use sunscreen_runtime::Runtime;
 
 /**
- * The #[circuit] macro indicates this function represents a homomorphic encryption
- * circuit. This particular example simply multiplies the two operands together and returns
- * the result. Circuits may take any number of parameters and return either a single result
+ * The #[fhe_program] macro indicates this function represents a homomorphic encryption
+ * [`fhe_program`]. This particular example simply multiplies the two operands together and returns
+ * the result. FhePrograms may take any number of parameters and return either a single result
  * or a tuple of results.
  *
  * The [`Signed`] type refers to an unsigned integer modulo the plaintext
@@ -17,17 +17,17 @@ use sunscreen_runtime::Runtime;
  * A `Cipher` type indicates the type is encrypted. Thus, a `Cipher<Signed>`
  * refers to an encrypted [`Signed`] value.
  *
- * One takes a circuit and passes them to the compiler, which transforms it into a form
+ * One takes an [`fhe_program`] and passes them to the compiler, which transforms it into a form
  * suitable for execution.
  */
-#[circuit(scheme = "bfv")]
+#[fhe_program(scheme = "bfv")]
 fn simple_multiply(a: Cipher<Signed>, b: Cipher<Signed>) -> Cipher<Signed> {
     a * b
 }
 
 fn main() {
     /*
-     * Compile the circuit we previously declared. We specify the plain-text modulus is 600,
+     * Compile the FHE program we previously declared. We specify the plain-text modulus is 600,
      * meaning that if our calculatations ever result in a value greater than 600, we'll
      * encounter overflow. Since 5 * 15 = 75 < 600, we have plenty of headroom and won't encounter
      * this issue.
@@ -39,16 +39,16 @@ fn main() {
      * the smallest parameters that work in your application.
      *
      * Sunscreen allows experts to explicitly set the scheme parameters, but the default behavior
-     * is to let the compiler run your circuit a number of times with different parameters and measure
+     * is to let the compiler run your FHE program a number of times with different parameters and measure
      * the resulting noise.
      *
      * We set the noise margin bits parameter to 5, which means Sunscreen must retain 5 bits or more
      * of noise margin in every output ciphertext in order to use a given set of parameters.
      *
      * Afterwards, we simply compile and assert the compilation succeeds by calling unwrap. Compilation
-     * returns the compiled circuit and parameters.
+     * returns the compiled FHE program and parameters.
      */
-    let circuit = Compiler::with_circuit(simple_multiply)
+    let fhe_program = Compiler::with_fhe_program(simple_multiply)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(600))
         .noise_margin_bits(5)
         .compile()
@@ -56,9 +56,9 @@ fn main() {
 
     /*
      * Next, we construct a runtime. The runtime provides the APIs for encryption, decryption, and
-     * running a circuit.
+     * running an FHE program.
      */
-    let runtime = Runtime::new(&circuit.metadata.params).unwrap();
+    let runtime = Runtime::new(&fhe_program.metadata.params).unwrap();
 
     /*
      * Generate a public and private key pair. Normally, Alice would do this, sending the public
@@ -70,13 +70,13 @@ fn main() {
     let b = runtime.encrypt(Signed::from(5), &public).unwrap();
 
     /*
-     * Run the circuit with our arguments. This produces a results
-     * bundle containing the encrypted outputs of the circuit.
+     * Run the FHE program with our arguments. This produces a results
+     * bundle containing the encrypted outputs of the FHE program.
      */
-    let results = runtime.run(&circuit, vec![a, b], &public).unwrap();
+    let results = runtime.run(&fhe_program, vec![a, b], &public).unwrap();
 
     /*
-     * Our circuit outputs a Signed single value as the result. Decrypt it.
+     * Our FHE program outputs a Signed single value as the result. Decrypt it.
      */
     let c: Signed = runtime.decrypt(&results[0], &secret).unwrap();
 

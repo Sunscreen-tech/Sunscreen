@@ -1,7 +1,7 @@
 use sunscreen_compiler::{
-    circuit,
+    fhe_program,
     types::{bfv::Signed, Cipher},
-    CircuitInput, Compiler, PlainModulusConstraint, Runtime,
+    Compiler, FheProgramInput, PlainModulusConstraint, Runtime,
 };
 
 use std::ops::*;
@@ -15,18 +15,18 @@ where
 
 #[test]
 fn can_add_cipher_plain() {
-    #[circuit(scheme = "bfv")]
+    #[fhe_program(scheme = "bfv")]
     fn add(a: Cipher<Signed>, b: Signed) -> Cipher<Signed> {
         add_fn(a, b)
     }
 
-    let circuit = Compiler::with_circuit(add)
+    let fhe_program = Compiler::with_fhe_program(add)
         .noise_margin_bits(5)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(500))
         .compile()
         .unwrap();
 
-    let runtime = Runtime::new(&circuit.metadata.params).unwrap();
+    let runtime = Runtime::new(&fhe_program.metadata.params).unwrap();
 
     let (public, secret) = runtime.generate_keys().unwrap();
 
@@ -34,9 +34,9 @@ fn can_add_cipher_plain() {
     let a_c = runtime.encrypt(a, &public).unwrap();
     let b = Signed::from(-5);
 
-    let args: Vec<CircuitInput> = vec![a_c.into(), b.into()];
+    let args: Vec<FheProgramInput> = vec![a_c.into(), b.into()];
 
-    let result = runtime.run(&circuit, args, &public).unwrap();
+    let result = runtime.run(&fhe_program, args, &public).unwrap();
 
     let c: Signed = runtime.decrypt(&result[0], &secret).unwrap();
 
@@ -45,18 +45,18 @@ fn can_add_cipher_plain() {
 
 #[test]
 fn can_add_plain_cipher() {
-    #[circuit(scheme = "bfv")]
+    #[fhe_program(scheme = "bfv")]
     fn add(a: Signed, b: Cipher<Signed>) -> Cipher<Signed> {
         add_fn(a, b)
     }
 
-    let circuit = Compiler::with_circuit(add)
+    let fhe_program = Compiler::with_fhe_program(add)
         .noise_margin_bits(5)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(500))
         .compile()
         .unwrap();
 
-    let runtime = Runtime::new(&circuit.metadata.params).unwrap();
+    let runtime = Runtime::new(&fhe_program.metadata.params).unwrap();
 
     let (public, secret) = runtime.generate_keys().unwrap();
 
@@ -64,9 +64,9 @@ fn can_add_plain_cipher() {
     let b = Signed::from(15);
     let b_c = runtime.encrypt(b, &public).unwrap();
 
-    let args: Vec<CircuitInput> = vec![a.into(), b_c.into()];
+    let args: Vec<FheProgramInput> = vec![a.into(), b_c.into()];
 
-    let result = runtime.run(&circuit, args, &public).unwrap();
+    let result = runtime.run(&fhe_program, args, &public).unwrap();
 
     let c: Signed = runtime.decrypt(&result[0], &secret).unwrap();
 
@@ -75,26 +75,26 @@ fn can_add_plain_cipher() {
 
 #[test]
 fn can_add_cipher_literal() {
-    #[circuit(scheme = "bfv")]
+    #[fhe_program(scheme = "bfv")]
     fn add(a: Cipher<Signed>) -> Cipher<Signed> {
         add_fn(a, -4)
     }
 
-    let circuit = Compiler::with_circuit(add)
+    let fhe_program = Compiler::with_fhe_program(add)
         .noise_margin_bits(5)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(500))
         .compile()
         .unwrap();
 
-    let runtime = Runtime::new(&circuit.metadata.params).unwrap();
+    let runtime = Runtime::new(&fhe_program.metadata.params).unwrap();
 
     let (public, secret) = runtime.generate_keys().unwrap();
 
     let a = Signed::from(15);
     let a_c = runtime.encrypt(a, &public).unwrap();
-    let args: Vec<CircuitInput> = vec![a_c.into()];
+    let args: Vec<FheProgramInput> = vec![a_c.into()];
 
-    let result = runtime.run(&circuit, args, &public).unwrap();
+    let result = runtime.run(&fhe_program, args, &public).unwrap();
 
     let c: Signed = runtime.decrypt(&result[0], &secret).unwrap();
 
@@ -103,26 +103,26 @@ fn can_add_cipher_literal() {
 
 #[test]
 fn can_add_literal_cipher() {
-    #[circuit(scheme = "bfv")]
+    #[fhe_program(scheme = "bfv")]
     fn add(a: Cipher<Signed>) -> Cipher<Signed> {
         add_fn(-4, a)
     }
 
-    let circuit = Compiler::with_circuit(add)
+    let fhe_program = Compiler::with_fhe_program(add)
         .noise_margin_bits(5)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(500))
         .compile()
         .unwrap();
 
-    let runtime = Runtime::new(&circuit.metadata.params).unwrap();
+    let runtime = Runtime::new(&fhe_program.metadata.params).unwrap();
 
     let (public, secret) = runtime.generate_keys().unwrap();
 
     let a = Signed::from(15);
     let a_c = runtime.encrypt(a, &public).unwrap();
-    let args: Vec<CircuitInput> = vec![a_c.into()];
+    let args: Vec<FheProgramInput> = vec![a_c.into()];
 
-    let result = runtime.run(&circuit, args, &public).unwrap();
+    let result = runtime.run(&fhe_program, args, &public).unwrap();
 
     let c: Signed = runtime.decrypt(&result[0], &secret).unwrap();
 
@@ -138,18 +138,18 @@ where
 
 #[test]
 fn can_sub_cipher_plain() {
-    #[circuit(scheme = "bfv")]
+    #[fhe_program(scheme = "bfv")]
     fn sub(a: Cipher<Signed>, b: Signed) -> Cipher<Signed> {
         sub_fn(a, b)
     }
 
-    let circuit = Compiler::with_circuit(sub)
+    let fhe_program = Compiler::with_fhe_program(sub)
         .noise_margin_bits(5)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(500))
         .compile()
         .unwrap();
 
-    let runtime = Runtime::new(&circuit.metadata.params).unwrap();
+    let runtime = Runtime::new(&fhe_program.metadata.params).unwrap();
 
     let (public, secret) = runtime.generate_keys().unwrap();
 
@@ -157,9 +157,9 @@ fn can_sub_cipher_plain() {
     let a_c = runtime.encrypt(a, &public).unwrap();
     let b = Signed::from(-5);
 
-    let args: Vec<CircuitInput> = vec![a_c.into(), b.into()];
+    let args: Vec<FheProgramInput> = vec![a_c.into(), b.into()];
 
-    let result = runtime.run(&circuit, args, &public).unwrap();
+    let result = runtime.run(&fhe_program, args, &public).unwrap();
 
     let c: Signed = runtime.decrypt(&result[0], &secret).unwrap();
 
@@ -168,18 +168,18 @@ fn can_sub_cipher_plain() {
 
 #[test]
 fn can_sub_plain_cipher() {
-    #[circuit(scheme = "bfv")]
+    #[fhe_program(scheme = "bfv")]
     fn sub(a: Signed, b: Cipher<Signed>) -> Cipher<Signed> {
         sub_fn(a, b)
     }
 
-    let circuit = Compiler::with_circuit(sub)
+    let fhe_program = Compiler::with_fhe_program(sub)
         .noise_margin_bits(5)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(500))
         .compile()
         .unwrap();
 
-    let runtime = Runtime::new(&circuit.metadata.params).unwrap();
+    let runtime = Runtime::new(&fhe_program.metadata.params).unwrap();
 
     let (public, secret) = runtime.generate_keys().unwrap();
 
@@ -187,9 +187,9 @@ fn can_sub_plain_cipher() {
     let b = Signed::from(15);
     let b_c = runtime.encrypt(b, &public).unwrap();
 
-    let args: Vec<CircuitInput> = vec![a.into(), b_c.into()];
+    let args: Vec<FheProgramInput> = vec![a.into(), b_c.into()];
 
-    let result = runtime.run(&circuit, args, &public).unwrap();
+    let result = runtime.run(&fhe_program, args, &public).unwrap();
 
     let c: Signed = runtime.decrypt(&result[0], &secret).unwrap();
 
@@ -198,26 +198,26 @@ fn can_sub_plain_cipher() {
 
 #[test]
 fn can_sub_cipher_literal() {
-    #[circuit(scheme = "bfv")]
+    #[fhe_program(scheme = "bfv")]
     fn sub(a: Cipher<Signed>) -> Cipher<Signed> {
         sub_fn(a, -4)
     }
 
-    let circuit = Compiler::with_circuit(sub)
+    let fhe_program = Compiler::with_fhe_program(sub)
         .noise_margin_bits(5)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(500))
         .compile()
         .unwrap();
 
-    let runtime = Runtime::new(&circuit.metadata.params).unwrap();
+    let runtime = Runtime::new(&fhe_program.metadata.params).unwrap();
 
     let (public, secret) = runtime.generate_keys().unwrap();
 
     let a = Signed::from(15);
     let a_c = runtime.encrypt(a, &public).unwrap();
-    let args: Vec<CircuitInput> = vec![a_c.into()];
+    let args: Vec<FheProgramInput> = vec![a_c.into()];
 
-    let result = runtime.run(&circuit, args, &public).unwrap();
+    let result = runtime.run(&fhe_program, args, &public).unwrap();
 
     let c: Signed = runtime.decrypt(&result[0], &secret).unwrap();
 
@@ -226,26 +226,26 @@ fn can_sub_cipher_literal() {
 
 #[test]
 fn can_sub_literal_cipher() {
-    #[circuit(scheme = "bfv")]
+    #[fhe_program(scheme = "bfv")]
     fn sub(a: Cipher<Signed>) -> Cipher<Signed> {
         sub_fn(-4, a)
     }
 
-    let circuit = Compiler::with_circuit(sub)
+    let fhe_program = Compiler::with_fhe_program(sub)
         .noise_margin_bits(5)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(500))
         .compile()
         .unwrap();
 
-    let runtime = Runtime::new(&circuit.metadata.params).unwrap();
+    let runtime = Runtime::new(&fhe_program.metadata.params).unwrap();
 
     let (public, secret) = runtime.generate_keys().unwrap();
 
     let a = Signed::from(15);
     let a_c = runtime.encrypt(a, &public).unwrap();
-    let args: Vec<CircuitInput> = vec![a_c.into()];
+    let args: Vec<FheProgramInput> = vec![a_c.into()];
 
-    let result = runtime.run(&circuit, args, &public).unwrap();
+    let result = runtime.run(&fhe_program, args, &public).unwrap();
 
     let c: Signed = runtime.decrypt(&result[0], &secret).unwrap();
 
@@ -261,18 +261,18 @@ where
 
 #[test]
 fn can_mul_cipher_plain() {
-    #[circuit(scheme = "bfv")]
+    #[fhe_program(scheme = "bfv")]
     fn mul(a: Cipher<Signed>, b: Signed) -> Cipher<Signed> {
         mul_fn(a, b)
     }
 
-    let circuit = Compiler::with_circuit(mul)
+    let fhe_program = Compiler::with_fhe_program(mul)
         .noise_margin_bits(5)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(500))
         .compile()
         .unwrap();
 
-    let runtime = Runtime::new(&circuit.metadata.params).unwrap();
+    let runtime = Runtime::new(&fhe_program.metadata.params).unwrap();
 
     let (public, secret) = runtime.generate_keys().unwrap();
 
@@ -280,9 +280,9 @@ fn can_mul_cipher_plain() {
     let a_c = runtime.encrypt(a, &public).unwrap();
     let b = Signed::from(-5);
 
-    let args: Vec<CircuitInput> = vec![a_c.into(), b.into()];
+    let args: Vec<FheProgramInput> = vec![a_c.into(), b.into()];
 
-    let result = runtime.run(&circuit, args, &public).unwrap();
+    let result = runtime.run(&fhe_program, args, &public).unwrap();
 
     let c: Signed = runtime.decrypt(&result[0], &secret).unwrap();
 
@@ -291,18 +291,18 @@ fn can_mul_cipher_plain() {
 
 #[test]
 fn can_mul_plain_cipher() {
-    #[circuit(scheme = "bfv")]
+    #[fhe_program(scheme = "bfv")]
     fn mul(a: Signed, b: Cipher<Signed>) -> Cipher<Signed> {
         mul_fn(a, b)
     }
 
-    let circuit = Compiler::with_circuit(mul)
+    let fhe_program = Compiler::with_fhe_program(mul)
         .noise_margin_bits(5)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(500))
         .compile()
         .unwrap();
 
-    let runtime = Runtime::new(&circuit.metadata.params).unwrap();
+    let runtime = Runtime::new(&fhe_program.metadata.params).unwrap();
 
     let (public, secret) = runtime.generate_keys().unwrap();
 
@@ -310,9 +310,9 @@ fn can_mul_plain_cipher() {
     let b = Signed::from(15);
     let b_c = runtime.encrypt(b, &public).unwrap();
 
-    let args: Vec<CircuitInput> = vec![a.into(), b_c.into()];
+    let args: Vec<FheProgramInput> = vec![a.into(), b_c.into()];
 
-    let result = runtime.run(&circuit, args, &public).unwrap();
+    let result = runtime.run(&fhe_program, args, &public).unwrap();
 
     let c: Signed = runtime.decrypt(&result[0], &secret).unwrap();
 
@@ -321,26 +321,26 @@ fn can_mul_plain_cipher() {
 
 #[test]
 fn can_mul_cipher_literal() {
-    #[circuit(scheme = "bfv")]
+    #[fhe_program(scheme = "bfv")]
     fn mul(a: Cipher<Signed>) -> Cipher<Signed> {
         mul_fn(a, -4)
     }
 
-    let circuit = Compiler::with_circuit(mul)
+    let fhe_program = Compiler::with_fhe_program(mul)
         .noise_margin_bits(5)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(500))
         .compile()
         .unwrap();
 
-    let runtime = Runtime::new(&circuit.metadata.params).unwrap();
+    let runtime = Runtime::new(&fhe_program.metadata.params).unwrap();
 
     let (public, secret) = runtime.generate_keys().unwrap();
 
     let a = Signed::from(15);
     let a_c = runtime.encrypt(a, &public).unwrap();
-    let args: Vec<CircuitInput> = vec![a_c.into()];
+    let args: Vec<FheProgramInput> = vec![a_c.into()];
 
-    let result = runtime.run(&circuit, args, &public).unwrap();
+    let result = runtime.run(&fhe_program, args, &public).unwrap();
 
     let c: Signed = runtime.decrypt(&result[0], &secret).unwrap();
 
@@ -349,26 +349,26 @@ fn can_mul_cipher_literal() {
 
 #[test]
 fn can_mul_literal_cipher() {
-    #[circuit(scheme = "bfv")]
+    #[fhe_program(scheme = "bfv")]
     fn mul(a: Cipher<Signed>) -> Cipher<Signed> {
         mul_fn(-4, a)
     }
 
-    let circuit = Compiler::with_circuit(mul)
+    let fhe_program = Compiler::with_fhe_program(mul)
         .noise_margin_bits(5)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(500))
         .compile()
         .unwrap();
 
-    let runtime = Runtime::new(&circuit.metadata.params).unwrap();
+    let runtime = Runtime::new(&fhe_program.metadata.params).unwrap();
 
     let (public, secret) = runtime.generate_keys().unwrap();
 
     let a = Signed::from(15);
     let a_c = runtime.encrypt(a, &public).unwrap();
-    let args: Vec<CircuitInput> = vec![a_c.into()];
+    let args: Vec<FheProgramInput> = vec![a_c.into()];
 
-    let result = runtime.run(&circuit, args, &public).unwrap();
+    let result = runtime.run(&fhe_program, args, &public).unwrap();
 
     let c: Signed = runtime.decrypt(&result[0], &secret).unwrap();
 

@@ -13,7 +13,7 @@ pub type OpName = String;
  */
 pub enum Error {
     /**
-     * The given [`Circuit`](crate::Circuit) has
+     * The given [`FheProgram`](crate::FheProgram) has
      * one or more errors. The inner value is the list of errors.
      */
     IRError(Vec<IRError>),
@@ -25,7 +25,7 @@ pub enum Error {
 }
 
 /**
- * An error in an [`Circuit`](crate::Circuit).
+ * An error in an [`FheProgram`](crate::FheProgram).
  */
 #[derive(Debug, Clone, PartialEq)]
 pub enum IRError {
@@ -41,7 +41,7 @@ pub enum IRError {
 }
 
 /**
- * An error on a node in an [`Circuit`](crate::Circuit).
+ * An error on a node in an [`FheProgram`](crate::FheProgram).
  */
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum NodeError {

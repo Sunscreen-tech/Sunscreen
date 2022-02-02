@@ -1,10 +1,10 @@
-//! This example demonstrates how to use batching (i.e. the [`Simd`] data type)
+//! This example demonstrates how to use batching (i.e. the [`Batched`] data type)
 //! as well as how build fhe_programs that can be run non-homomorphically.
 //! To illustrate these features, we implement a
 //! [dot product](https://en.wikipedia.org/wiki/Dot_product#Algebraic_definition)
 use sunscreen_compiler::{
     fhe_program,
-    types::{bfv::Simd, Cipher, LaneCount, SwapRows},
+    types::{bfv::Batched, Cipher, LaneCount, SwapRows},
     Compiler, FheProgramInput, PlainModulusConstraint, Runtime,
 };
 
@@ -20,7 +20,7 @@ const VECLENDIV2: usize = 4096;
  * Writing the implementation generically allows us to:
  * * Run it without using FHE.
  * * Share the implementation for different data types. Imagine we
- * had another encryption scheme that supported SIMD, this implementation
+ * had another encryption scheme that supported Batched, this implementation
  * would work for that as well!
  */
 fn dot_product_impl<T>(a: T, b: T) -> T
@@ -33,13 +33,13 @@ where
         + LaneCount
         + Copy,
 {
-    // Each SIMD lane is an entry in the vector. Multiply every lane in a
+    // Each Batched lane is an entry in the vector. Multiply every lane in a
     // by every lane in b.
     let mut c = a * b;
     let mut shift_amount = 1;
 
     // Now, we need to perform a reduction, summing all the lanes with
-    // each other. Recall that Bfv SIMD vectors are 2xN.
+    // each other. Recall that Bfv Batched vectors are 2xN.
     // A simple example to illustate how this adds all the columns:
     // suppose c =
     //   [[01, 02, 03, 04, 05, 06, 07, 08], [09, 10, 11, 12, 13, 14, 15, 16]]
@@ -95,9 +95,9 @@ fn dot_product_naive(a: &[i64], b: &[i64]) -> i64 {
 
 #[fhe_program(scheme = "bfv")]
 fn dot_product(
-    a: Cipher<Simd<VECLENDIV2>>,
-    b: Cipher<Simd<VECLENDIV2>>,
-) -> Cipher<Simd<VECLENDIV2>> {
+    a: Cipher<Batched<VECLENDIV2>>,
+    b: Cipher<Batched<VECLENDIV2>>,
+) -> Cipher<Batched<VECLENDIV2>> {
     dot_product_impl(a, b)
 }
 
@@ -110,9 +110,9 @@ fn is_power_of_2(value: usize) -> bool {
 
 /**
  * Creates a math vector and returns it represented as both a [`Vec`] and a
- * [`Simd`] type.
+ * [`Batched`] type.
  */
-fn make_vector<const LENDIV2: usize>() -> (Vec<i64>, Simd<LENDIV2>) {
+fn make_vector<const LENDIV2: usize>() -> (Vec<i64>, Batched<LENDIV2>) {
     if !is_power_of_2(LENDIV2) {
         panic!("Vector length not a power of 2");
     }
@@ -124,13 +124,13 @@ fn make_vector<const LENDIV2: usize>() -> (Vec<i64>, Simd<LENDIV2>) {
     let a = (0..end).map(|x| x % 32).into_iter().collect::<Vec<i64>>();
     let (a_top, a_bottom) = a.split_at(LENDIV2);
 
-    let simd = Simd::<LENDIV2>::try_from([a_top.to_owned(), a_bottom.to_owned()]).unwrap();
+    let batched = Batched::<LENDIV2>::try_from([a_top.to_owned(), a_bottom.to_owned()]).unwrap();
 
-    (a, simd)
+    (a, batched)
 }
 
 fn main() {
-    let (a_vec, a_simd) = make_vector::<VECLENDIV2>();
+    let (a_vec, a_batched) = make_vector::<VECLENDIV2>();
 
     // Run our naive implementation of dot product we know to be correct.
     let start = Instant::now();
@@ -141,7 +141,7 @@ fn main() {
 
     // Run our optimized dot product, but non-homomorphically.
     let start = Instant::now();
-    let non_fhe_dot = dot_product_impl(a_simd, a_simd);
+    let non_fhe_dot = dot_product_impl(a_batched, a_batched);
     let end = start.elapsed();
 
     println!(
@@ -154,7 +154,7 @@ fn main() {
 
     // When using batching, we need to use the PlainModulusConstraint::BatchingMinimum
     // plaintext modulus constraint. This chooses a prime number for our plain modulus
-    // suitable for use with SIMD types. The 24 denotes the minimum precision of the plain
+    // suitable for use with Batched types. The 24 denotes the minimum precision of the plain
     // modulus.
     let fhe_program = Compiler::with_fhe_program(dot_product)
         .noise_margin_bits(30)
@@ -168,7 +168,7 @@ fn main() {
     let runtime = Runtime::new(&fhe_program.metadata.params).unwrap();
 
     let (public, secret) = runtime.generate_keys().unwrap();
-    let a_enc = runtime.encrypt(a_simd, &public).unwrap();
+    let a_enc = runtime.encrypt(a_batched, &public).unwrap();
 
     let args: Vec<FheProgramInput> = vec![a_enc.clone().into(), a_enc.clone().into()];
 
@@ -177,7 +177,7 @@ fn main() {
     let results = runtime.run(&fhe_program, args, &public).unwrap();
     let end = start.elapsed();
 
-    let fhe_dot: Simd<VECLENDIV2> = runtime.decrypt(&results[0], &secret).unwrap();
+    let fhe_dot: Batched<VECLENDIV2> = runtime.decrypt(&results[0], &secret).unwrap();
 
     println!(
         "FHE dot product = {} Time: {}s",

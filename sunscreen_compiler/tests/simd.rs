@@ -1,6 +1,6 @@
 use sunscreen_compiler::{
     fhe_program,
-    types::{bfv::Simd, Cipher, SwapRows},
+    types::{bfv::Batched, Cipher, SwapRows},
     Compiler, FheProgramInput, PlainModulusConstraint, Runtime,
 };
 
@@ -16,7 +16,7 @@ fn can_swap_rows_cipher() {
     }
 
     #[fhe_program(scheme = "bfv")]
-    fn swap_rows(a: Cipher<Simd<4>>) -> Cipher<Simd<4>> {
+    fn swap_rows(a: Cipher<Batched<4>>) -> Cipher<Batched<4>> {
         swap_impl(a)
     }
 
@@ -32,14 +32,14 @@ fn can_swap_rows_cipher() {
 
     let data = [vec![1, 2, 3, 4], vec![5, 6, 7, 8]];
 
-    let a = Simd::<4>::try_from(data).unwrap();
+    let a = Batched::<4>::try_from(data).unwrap();
     let a_c = runtime.encrypt(a, &public).unwrap();
 
     let args: Vec<FheProgramInput> = vec![a_c.into()];
 
     let result = runtime.run(&fhe_program, args, &public).unwrap();
 
-    let c: Simd<4> = runtime.decrypt(&result[0], &secret).unwrap();
+    let c: Batched<4> = runtime.decrypt(&result[0], &secret).unwrap();
 
     let expected = [vec![5, 6, 7, 8], vec![1, 2, 3, 4]];
 
@@ -57,7 +57,7 @@ fn can_rotate_left_cipher() {
     }
 
     #[fhe_program(scheme = "bfv")]
-    fn add(a: Cipher<Simd<4>>) -> Cipher<Simd<4>> {
+    fn add(a: Cipher<Batched<4>>) -> Cipher<Batched<4>> {
         shl_impl(a, 1)
     }
 
@@ -73,14 +73,14 @@ fn can_rotate_left_cipher() {
 
     let data = [vec![1, 2, 3, 4], vec![5, 6, 7, 8]];
 
-    let a = Simd::<4>::try_from(data).unwrap();
+    let a = Batched::<4>::try_from(data).unwrap();
     let a_c = runtime.encrypt(a, &public).unwrap();
 
     let args: Vec<FheProgramInput> = vec![a_c.into()];
 
     let result = runtime.run(&fhe_program, args, &public).unwrap();
 
-    let c: Simd<4> = runtime.decrypt(&result[0], &secret).unwrap();
+    let c: Batched<4> = runtime.decrypt(&result[0], &secret).unwrap();
 
     assert_eq!(c, shl_impl(a, 1));
 }
@@ -95,7 +95,7 @@ fn can_rotate_right_cipher() {
     }
 
     #[fhe_program(scheme = "bfv")]
-    fn add(a: Cipher<Simd<4>>) -> Cipher<Simd<4>> {
+    fn add(a: Cipher<Batched<4>>) -> Cipher<Batched<4>> {
         shr_impl(a, 1)
     }
 
@@ -111,14 +111,14 @@ fn can_rotate_right_cipher() {
 
     let data = [vec![1, 2, 3, 4], vec![5, 6, 7, 8]];
 
-    let a = Simd::<4>::try_from(data).unwrap();
+    let a = Batched::<4>::try_from(data).unwrap();
     let a_c = runtime.encrypt(a, &public).unwrap();
 
     let args: Vec<FheProgramInput> = vec![a_c.into()];
 
     let result = runtime.run(&fhe_program, args, &public).unwrap();
 
-    let c: Simd<4> = runtime.decrypt(&result[0], &secret).unwrap();
+    let c: Batched<4> = runtime.decrypt(&result[0], &secret).unwrap();
 
     assert_eq!(c, shr_impl(a, 1));
 }
@@ -133,7 +133,7 @@ fn can_add_cipher_cipher() {
     }
 
     #[fhe_program(scheme = "bfv")]
-    fn add(a: Cipher<Simd<4>>, b: Cipher<Simd<4>>) -> Cipher<Simd<4>> {
+    fn add(a: Cipher<Batched<4>>, b: Cipher<Batched<4>>) -> Cipher<Batched<4>> {
         add_impl(a, b)
     }
 
@@ -149,16 +149,16 @@ fn can_add_cipher_cipher() {
 
     let data = [vec![1, 2, 3, 4], vec![5, 6, 7, 8]];
 
-    let a = Simd::<4>::try_from(data.clone()).unwrap();
+    let a = Batched::<4>::try_from(data.clone()).unwrap();
     let a_c = runtime.encrypt(a, &public).unwrap();
-    let b = Simd::<4>::try_from(data).unwrap();
+    let b = Batched::<4>::try_from(data).unwrap();
     let b_c = runtime.encrypt(b, &public).unwrap();
 
     let args: Vec<FheProgramInput> = vec![a_c.into(), b_c.into()];
 
     let result = runtime.run(&fhe_program, args, &public).unwrap();
 
-    let c: Simd<4> = runtime.decrypt(&result[0], &secret).unwrap();
+    let c: Batched<4> = runtime.decrypt(&result[0], &secret).unwrap();
 
     assert_eq!(c, add_impl(a, b));
 }
@@ -173,7 +173,7 @@ fn can_sub_cipher_cipher() {
     }
 
     #[fhe_program(scheme = "bfv")]
-    fn sub(a: Cipher<Simd<4>>, b: Cipher<Simd<4>>) -> Cipher<Simd<4>> {
+    fn sub(a: Cipher<Batched<4>>, b: Cipher<Batched<4>>) -> Cipher<Batched<4>> {
         sub_impl(a, b)
     }
 
@@ -189,16 +189,16 @@ fn can_sub_cipher_cipher() {
 
     let data = [vec![1, 2, 3, 4], vec![5, 6, 7, 8]];
 
-    let a = Simd::<4>::try_from(data.clone()).unwrap();
+    let a = Batched::<4>::try_from(data.clone()).unwrap();
     let a_c = runtime.encrypt(a, &public).unwrap();
-    let b = Simd::<4>::try_from(data.clone()).unwrap();
+    let b = Batched::<4>::try_from(data.clone()).unwrap();
     let b_c = runtime.encrypt(b, &public).unwrap();
 
     let args: Vec<FheProgramInput> = vec![a_c.into(), b_c.into()];
 
     let result = runtime.run(&fhe_program, args, &public).unwrap();
 
-    let c: Simd<4> = runtime.decrypt(&result[0], &secret).unwrap();
+    let c: Batched<4> = runtime.decrypt(&result[0], &secret).unwrap();
 
     assert_eq!(c, sub_impl(a, b));
 }
@@ -213,7 +213,7 @@ fn can_mul_cipher_cipher() {
     }
 
     #[fhe_program(scheme = "bfv")]
-    fn mul(a: Cipher<Simd<4>>, b: Cipher<Simd<4>>) -> Cipher<Simd<4>> {
+    fn mul(a: Cipher<Batched<4>>, b: Cipher<Batched<4>>) -> Cipher<Batched<4>> {
         mul_impl(a, b)
     }
 
@@ -229,16 +229,16 @@ fn can_mul_cipher_cipher() {
 
     let data = [vec![1, 2, 3, 4], vec![5, 6, 7, 8]];
 
-    let a = Simd::<4>::try_from(data.clone()).unwrap();
+    let a = Batched::<4>::try_from(data.clone()).unwrap();
     let a_c = runtime.encrypt(a, &public).unwrap();
-    let b = Simd::<4>::try_from(data).unwrap();
+    let b = Batched::<4>::try_from(data).unwrap();
     let b_c = runtime.encrypt(b, &public).unwrap();
 
     let args: Vec<FheProgramInput> = vec![a_c.into(), b_c.into()];
 
     let result = runtime.run(&fhe_program, args, &public).unwrap();
 
-    let c: Simd<4> = runtime.decrypt(&result[0], &secret).unwrap();
+    let c: Batched<4> = runtime.decrypt(&result[0], &secret).unwrap();
 
     assert_eq!(c, mul_impl(a, b));
 }
@@ -253,7 +253,7 @@ fn can_neg_cipher_cipher() {
     }
 
     #[fhe_program(scheme = "bfv")]
-    fn mul(a: Cipher<Simd<4>>) -> Cipher<Simd<4>> {
+    fn mul(a: Cipher<Batched<4>>) -> Cipher<Batched<4>> {
         neg_impl(a)
     }
 
@@ -269,14 +269,14 @@ fn can_neg_cipher_cipher() {
 
     let data = [vec![1, 2, 3, 4], vec![5, 6, 7, 8]];
 
-    let a = Simd::<4>::try_from(data.clone()).unwrap();
+    let a = Batched::<4>::try_from(data.clone()).unwrap();
     let a_c = runtime.encrypt(a, &public).unwrap();
 
     let args: Vec<FheProgramInput> = vec![a_c.into()];
 
     let result = runtime.run(&fhe_program, args, &public).unwrap();
 
-    let c: Simd<4> = runtime.decrypt(&result[0], &secret).unwrap();
+    let c: Batched<4> = runtime.decrypt(&result[0], &secret).unwrap();
 
     assert_eq!(c, neg_impl(a));
 }

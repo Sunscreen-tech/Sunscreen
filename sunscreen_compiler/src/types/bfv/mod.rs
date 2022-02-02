@@ -1,9 +1,9 @@
 mod fractional;
 mod rational;
 mod signed;
-mod simd;
+mod batched;
 
 pub use fractional::*;
 pub use rational::*;
 pub use signed::*;
-pub use simd::*;
+pub use batched::*;

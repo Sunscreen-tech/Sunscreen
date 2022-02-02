@@ -10,7 +10,7 @@ use crate::{Context, Plaintext};
  * the plaintext modulus is a prime number T such that T is congruent to 1 modulo 2N,
  * then BatchEncoder allows the plaintext elements to be viewed as 2-by-(N/2)
  * matrices of integers modulo T. Homomorphic operations performed on such encrypted
- * matrices are applied coefficient (slot) wise, enabling powerful SIMD functionality
+ * matrices are applied coefficient (slot) wise, enabling powerful Batched functionality
  * for computations that are vectorizable. This functionality is often called "batching"
  * in the homomorphic encryption literature.
  *
@@ -196,7 +196,7 @@ impl BFVEncoder {
     }
 
     /**
-     * Returns the number of "SIMD" slots in this encoder produces.
+     * Returns the number of "Batched" slots in this encoder produces.
      */
     pub fn get_slot_count(&self) -> usize {
         let mut count: u64 = 0;

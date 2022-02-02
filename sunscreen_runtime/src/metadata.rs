@@ -144,7 +144,7 @@ pub struct CallSignature {
  */
 pub enum RequiredKeys {
     /**
-     * The FHE program performs SIMD shifts and requires Galois keys.
+     * The FHE program performs Batched shifts and requires Galois keys.
      */
     Galois,
     /**

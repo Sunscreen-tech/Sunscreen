@@ -53,10 +53,10 @@ pub enum SchemeType {
      * of operations one wishes to perform so that no digit overflows under addition and multiplication. Overflow
      * causes weird answers. Since this encoding typically allows for a smaller plaintext modulo, Sunscreen
      * can choose parameters that result in low latency.
-     * * A 2x(N/2) SIMD vector of integers modulo p. Overflow wraps lane-wise, as expected. This encoding
+     * * A 2x(N/2) Batched vector of integers modulo p. Overflow wraps lane-wise, as expected. This encoding
      * generally maximizes throughput when calulating many numbers. While the representation forms a matrix,
      * multiplication and addition both execute element-wise; multiplication is *not* defined as matrix multiplation.
-     * This SIMD computation is also referred to on the literature as batching.
+     * This Batched computation is also referred to on the literature as batching.
      *
      * Each of these encoding schemes supports both signed and unsigned values.
      *
@@ -71,12 +71,12 @@ pub enum SchemeType {
      * One can think of parameters as a tradeoff between accomodating more noise and faster execution. For a given security
      * level, there are several possible parameter sets. These sets are ordered from accomodating the smallest
      * level of noise to largest. Moving from one set to the next results in every operation requiring ~4x the
-     * runtime, but also results in 2x the SIMD lanes. Thus, when using SIMD plaintexts, the amortized
+     * runtime, but also results in 2x the Batched lanes. Thus, when using Batched plaintexts, the amortized
      * throughput resulting from using the next parameter set is 2x lower than the previous. The smallest 2
      * parameter sets fail to even generate relinearization keys and fail to even perform a single multiplication
      * when using batching, while the largest can perform over 25 multiplications with batching.
      *
-     * When using SIMD, Sunscreen supports rotating column SIMD lanes left and right and switching the rows
+     * When using Batched, Sunscreen supports rotating column Batched lanes left and right and switching the rows
      * of the matrix.
      *
      * Pros:
@@ -373,7 +373,7 @@ impl FheProgram {
      * Appends an operation that rotates ciphertext `x` left by the literal node at `y` places.
      *
      * # Remarks
-     * Recall that BFV has 2 rows in a SIMD vector. This rotates each row.
+     * Recall that BFV has 2 rows in a Batched vector. This rotates each row.
      * CKKS has one large vector.
      */
     pub fn append_rotate_left(&mut self, x: NodeIndex, y: NodeIndex) -> NodeIndex {
@@ -384,7 +384,7 @@ impl FheProgram {
      * Appends an operation that rotates ciphertext `x` right by the literal node at `y` places.
      *      
      * # Remarks
-     * Recall that BFV has 2 rows in a SIMD vector. This rotates each row.
+     * Recall that BFV has 2 rows in a Batched vector. This rotates each row.
      * CKKS has one large vector.
      */
     pub fn append_rotate_right(&mut self, x: NodeIndex, y: NodeIndex) -> NodeIndex {

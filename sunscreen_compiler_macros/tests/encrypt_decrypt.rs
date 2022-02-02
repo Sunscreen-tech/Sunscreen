@@ -8,7 +8,7 @@ fn can_encrypt_decrypt() {
     }
 
     let fhe_program = Compiler::with_fhe_program(foo)
-        .noise_margin_bits(5)
+        .additional_noise_budget(5)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(500))
         .compile()
         .unwrap();

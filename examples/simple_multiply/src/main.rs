@@ -27,30 +27,26 @@ fn simple_multiply(a: Cipher<Signed>, b: Cipher<Signed>) -> Cipher<Signed> {
 
 fn main() {
     /*
-     * Compile the FHE program we previously declared. We specify the plain-text modulus is 600,
-     * meaning that if our calculatations ever result in a value greater than 600, we'll
-     * encounter overflow. Since 5 * 15 = 75 < 600, we have plenty of headroom and won't encounter
-     * this issue.
-     *
-     * Homomorphic operations introduce noise into ciphertexts. Too much noise results in
-     * garbled messages upon decryption. Homomorphic encryption schemes have a number of parameters
-     * that impact how quickly the noise grows. While some parameters result in less noise, such parameters
-     * tend to result in slower computation. Hence, there's a tradeoff to make; ideally you pick
-     * the smallest parameters that work in your application.
-     *
-     * Sunscreen allows experts to explicitly set the scheme parameters, but the default behavior
-     * is to let the compiler run your FHE program a number of times with different parameters and measure
-     * the resulting noise.
-     *
-     * We set the noise margin bits parameter to 5, which means Sunscreen must retain 5 bits or more
-     * of noise margin in every output ciphertext in order to use a given set of parameters.
-     *
-     * Afterwards, we simply compile and assert the compilation succeeds by calling unwrap. Compilation
-     * returns the compiled FHE program and parameters.
-     */
+    * Compile the FHE program we previously declared. We specify the plain-text modulus is 600,
+    * meaning that if our calculatations ever result in a value greater than 600, we'll
+    * encounter overflow. Since 5 * 15 = 75 < 600, we have plenty of headroom and won't encounter
+    * this issue.
+    *
+    * Homomorphic operations introduce noise into ciphertexts. Too much noise results in
+    * garbled messages upon decryption. Homomorphic encryption schemes have a number of parameters
+    * that impact how quickly the noise grows. While some parameters result in less noise, such parameters
+    * tend to result in slower computation. Hence, there's a tradeoff to make; ideally you pick
+    * the smallest parameters that work in your application.
+    *
+    * Sunscreen allows experts to explicitly set the scheme parameters, but the default behavior
+    * is to let the compiler run your FHE program a number of times with different parameters and measure
+    * the resulting noise.
+
+    * Afterwards, we simply compile and assert the compilation succeeds by calling unwrap. Compilation
+    * returns the compiled FHE program and parameters.
+    */
     let fhe_program = Compiler::with_fhe_program(simple_multiply)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(600))
-        .noise_margin_bits(5)
         .compile()
         .unwrap();
 

@@ -173,7 +173,6 @@ fn run_fhe<F, T, U>(
 {
     let start = Instant::now();
     let fhe_program = Compiler::with_fhe_program(c)
-        .noise_margin_bits(20)
         .plain_modulus_constraint(plain_modulus)
         .compile()
         .unwrap();

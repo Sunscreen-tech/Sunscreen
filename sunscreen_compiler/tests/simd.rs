@@ -21,7 +21,7 @@ fn can_swap_rows_cipher() {
     }
 
     let fhe_program = Compiler::with_fhe_program(swap_rows)
-        .noise_margin_bits(5)
+        .additional_noise_budget(5)
         .plain_modulus_constraint(PlainModulusConstraint::BatchingMinimum(0))
         .compile()
         .unwrap();
@@ -62,7 +62,7 @@ fn can_rotate_left_cipher() {
     }
 
     let fhe_program = Compiler::with_fhe_program(add)
-        .noise_margin_bits(5)
+        .additional_noise_budget(5)
         .plain_modulus_constraint(PlainModulusConstraint::BatchingMinimum(0))
         .compile()
         .unwrap();
@@ -100,7 +100,7 @@ fn can_rotate_right_cipher() {
     }
 
     let fhe_program = Compiler::with_fhe_program(add)
-        .noise_margin_bits(5)
+        .additional_noise_budget(5)
         .plain_modulus_constraint(PlainModulusConstraint::BatchingMinimum(0))
         .compile()
         .unwrap();
@@ -138,7 +138,7 @@ fn can_add_cipher_cipher() {
     }
 
     let fhe_program = Compiler::with_fhe_program(add)
-        .noise_margin_bits(5)
+        .additional_noise_budget(5)
         .plain_modulus_constraint(PlainModulusConstraint::BatchingMinimum(0))
         .compile()
         .unwrap();
@@ -178,7 +178,7 @@ fn can_sub_cipher_cipher() {
     }
 
     let fhe_program = Compiler::with_fhe_program(sub)
-        .noise_margin_bits(5)
+        .additional_noise_budget(5)
         .plain_modulus_constraint(PlainModulusConstraint::BatchingMinimum(0))
         .compile()
         .unwrap();
@@ -218,7 +218,7 @@ fn can_mul_cipher_cipher() {
     }
 
     let fhe_program = Compiler::with_fhe_program(mul)
-        .noise_margin_bits(5)
+        .additional_noise_budget(5)
         .plain_modulus_constraint(PlainModulusConstraint::BatchingMinimum(0))
         .compile()
         .unwrap();
@@ -258,7 +258,7 @@ fn can_neg_cipher_cipher() {
     }
 
     let fhe_program = Compiler::with_fhe_program(mul)
-        .noise_margin_bits(5)
+        .additional_noise_budget(5)
         .plain_modulus_constraint(PlainModulusConstraint::BatchingMinimum(0))
         .compile()
         .unwrap();

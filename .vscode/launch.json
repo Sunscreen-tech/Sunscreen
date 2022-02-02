@@ -204,9 +204,12 @@
                     "build",
                     "--package=dot_prod"
                 ],
+                "filter": {
+                    "kind": "bin",
+                    "name": "dot_prod"
+                }
             },
             "args": [],
-            "program": "${workspaceFolder}/target/debug/dot_prod",
             "cwd": "${workspaceFolder}"
         },
         {
@@ -218,9 +221,12 @@
                     "build",
                     "--package=chi_sq"
                 ],
+                "filter": {
+                    "kind": "bin",
+                    "name": "chi_sq"
+                }
             },
             "args": [],
-            "program": "${workspaceFolder}/target/debug/chi_sq",
             "cwd": "${workspaceFolder}"
         }
     ]

@@ -1,5 +1,5 @@
 use crate::{InnerPlaintext, SealData};
-use sunscreen_fhe_program::{FheProgram, EdgeInfo, Literal, Operation::*};
+use sunscreen_fhe_program::{EdgeInfo, FheProgram, Literal, Operation::*};
 
 use crossbeam::atomic::AtomicCell;
 use petgraph::{stable_graph::NodeIndex, visit::EdgeRef, Direction};

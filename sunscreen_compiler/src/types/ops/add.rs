@@ -1,5 +1,5 @@
 use crate::types::{
-    intern::{FheProgramNode, FheLiteral},
+    intern::{FheLiteral, FheProgramNode},
     Cipher, FheType,
 };
 

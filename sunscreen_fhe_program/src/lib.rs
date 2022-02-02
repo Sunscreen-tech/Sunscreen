@@ -37,7 +37,7 @@ use std::collections::HashSet;
  */
 pub enum SchemeType {
     /**
-     * 
+     *
      * # Remarks
      * [BFV](https://eprint.iacr.org/2012/144.pdf) is a leveled scheme on polynomials in a cyclotomic
      * ring. The coefficients of a plaintext form a 2x(N/2) matrix (where N is the polynomial degree).
@@ -247,20 +247,23 @@ impl FheProgram {
     pub fn render(&self) -> String {
         let data = Dot::with_attr_getters(
             &self.graph,
-            &[petgraph::dot::Config::NodeNoLabel, petgraph::dot::Config::EdgeNoLabel],
-            &|_, e| { format!("label=\"{:?}\"", e.weight()) },
+            &[
+                petgraph::dot::Config::NodeNoLabel,
+                petgraph::dot::Config::EdgeNoLabel,
+            ],
+            &|_, e| format!("label=\"{:?}\"", e.weight()),
             &|_, n| {
-                let (index, info) =n;
+                let (index, info) = n;
 
                 match info.operation {
                     Operation::Literal(Literal::Plaintext(_)) => {
                         format!("label=\"Id: {} Op: Plaintext literal\"", index.index())
-                    },
+                    }
                     _ => {
                         format!("label=\"Id: {} Op: {:?}\"", index.index(), info)
                     }
                 }
-            }
+            },
         );
 
         format!("{:?}", data)

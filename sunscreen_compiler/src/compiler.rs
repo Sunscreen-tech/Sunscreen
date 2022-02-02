@@ -1,6 +1,6 @@
 use crate::params::{determine_params, PlainModulusConstraint};
 use crate::{
-    CallSignature, FheProgramMetadata, Error, FrontendCompilation, Params, RequiredKeys, Result,
+    CallSignature, Error, FheProgramMetadata, FrontendCompilation, Params, RequiredKeys, Result,
     SchemeType, SecurityLevel,
 };
 use sunscreen_runtime::CompiledFheProgram;
@@ -150,6 +150,9 @@ where
             signature,
         };
 
-        Ok(CompiledFheProgram { fhe_program_fn, metadata })
+        Ok(CompiledFheProgram {
+            fhe_program_fn,
+            metadata,
+        })
     }
 }

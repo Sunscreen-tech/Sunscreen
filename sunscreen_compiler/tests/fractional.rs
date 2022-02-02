@@ -2,7 +2,8 @@ use float_cmp::ApproxEq;
 use sunscreen_compiler::{
     fhe_program,
     types::{bfv::Fractional, Cipher},
-    FheProgramFn, FheProgramInput, CompiledFheProgram, Compiler, Params, PlainModulusConstraint, Runtime,
+    CompiledFheProgram, Compiler, FheProgramFn, FheProgramInput, Params, PlainModulusConstraint,
+    Runtime,
 };
 
 use std::ops::*;

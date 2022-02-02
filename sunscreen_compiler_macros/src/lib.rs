@@ -6,8 +6,8 @@
 
 extern crate proc_macro;
 
-mod fhe_program;
 mod error;
+mod fhe_program;
 mod internals;
 mod type_name;
 

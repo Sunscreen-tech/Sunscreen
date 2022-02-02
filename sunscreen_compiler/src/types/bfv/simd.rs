@@ -101,8 +101,11 @@ impl<const LANES: usize> std::fmt::Display for Simd<LANES> {
 
         let chars_remaining = f.width().unwrap_or(usize::MAX);
         let chars_per_row = usize::max(
-            usize::saturating_sub(chars_remaining / 2, prefix.len() + middle.len() + suffix.len())
-            , 2
+            usize::saturating_sub(
+                chars_remaining / 2,
+                prefix.len() + middle.len() + suffix.len(),
+            ),
+            2,
         );
 
         if chars_remaining > "[[..], [..]]".len() {
@@ -110,16 +113,16 @@ impl<const LANES: usize> std::fmt::Display for Simd<LANES> {
 
             for i in 0..self.data.len() {
                 let mut row_chars = chars_per_row;
-    
+
                 for (j, val) in self.data[i].iter().enumerate() {
                     let val = if j < self.data[i].len() {
                         format!("{}, ", val)
                     } else {
                         format!("{}", val)
                     };
-    
+
                     if val.len() > row_chars + 2 {
-                        write!(f, "..", )?;
+                        write!(f, "..",)?;
                         break;
                     } else {
                         write!(f, "{}", val)?;
@@ -297,7 +300,9 @@ impl<const LANES: usize> Into<[[i64; LANES]; 2]> for Simd<LANES> {
 impl<const LANES: usize> From<i64> for Simd<LANES> {
     fn from(data: i64) -> Self {
         // Splat the input across all the lanes.
-        Self { data: [[data; LANES], [data; LANES]] }
+        Self {
+            data: [[data; LANES], [data; LANES]],
+        }
     }
 }
 
@@ -543,13 +548,13 @@ impl<const LANES: usize> GraphCipherMul for Simd<LANES> {
     }
 }
 
-impl <const LANES: usize> GraphCipherConstMul for Simd<LANES> {
+impl<const LANES: usize> GraphCipherConstMul for Simd<LANES> {
     type Left = Self;
     type Right = i64;
 
     fn graph_cipher_const_mul(
         a: FheProgramNode<Cipher<Self::Left>>,
-        b: Self::Right
+        b: Self::Right,
     ) -> FheProgramNode<Cipher<Self::Left>> {
         with_ctx(|ctx| {
             let b = Self::from(b).try_into_plaintext(&ctx.params).unwrap();
@@ -572,7 +577,10 @@ impl<const LANES: usize> GraphCipherSwapRows for Simd<LANES> {
 }
 
 impl<const LANES: usize> GraphCipherRotateLeft for Simd<LANES> {
-    fn graph_cipher_rotate_left(x: FheProgramNode<Cipher<Self>>, y: u64) -> FheProgramNode<Cipher<Self>> {
+    fn graph_cipher_rotate_left(
+        x: FheProgramNode<Cipher<Self>>,
+        y: u64,
+    ) -> FheProgramNode<Cipher<Self>> {
         with_ctx(|ctx| {
             let y = ctx.add_literal(Literal::U64(y));
             let n = ctx.add_rotate_left(x.ids[0], y);

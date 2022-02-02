@@ -1,4 +1,4 @@
-use crate::{FheProgramFn, Error, Result, SecurityLevel};
+use crate::{Error, FheProgramFn, Result, SecurityLevel};
 
 use log::{debug, trace};
 

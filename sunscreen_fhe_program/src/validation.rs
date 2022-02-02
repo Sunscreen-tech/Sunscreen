@@ -1,5 +1,5 @@
 use crate::Operation::*;
-use crate::{FheProgram, EdgeInfo, IRError, NodeError, OutputType};
+use crate::{EdgeInfo, FheProgram, IRError, NodeError, OutputType};
 use petgraph::{algo::greedy_feedback_arc_set, stable_graph::NodeIndex, visit::EdgeRef, Direction};
 
 pub(crate) fn validate_ir(ir: &FheProgram) -> Vec<IRError> {

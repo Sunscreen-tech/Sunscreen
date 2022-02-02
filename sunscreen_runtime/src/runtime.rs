@@ -1,8 +1,8 @@
 use crate::error::*;
 use crate::metadata::*;
 use crate::{
-    run_program_unchecked, serialization::WithContext, Ciphertext, FheProgramInput, InnerCiphertext,
-    InnerPlaintext, Plaintext, PublicKey, SealCiphertext, SealData, SealPlaintext,
+    run_program_unchecked, serialization::WithContext, Ciphertext, FheProgramInput,
+    InnerCiphertext, InnerPlaintext, Plaintext, PublicKey, SealCiphertext, SealData, SealPlaintext,
     TryFromPlaintext, TryIntoPlaintext, TypeName, TypeNameInstance,
 };
 use sunscreen_fhe_program::SchemeType;

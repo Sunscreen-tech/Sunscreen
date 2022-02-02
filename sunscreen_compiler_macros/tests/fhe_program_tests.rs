@@ -1,6 +1,8 @@
 use sunscreen_compiler::{
+    fhe_program,
     types::{bfv::Signed, Cipher, TypeName},
-    CallSignature, FheProgramFn, FrontendCompilation, Params, SchemeType, SecurityLevel, CURRENT_CTX, fhe_program,
+    CallSignature, FheProgramFn, FrontendCompilation, Params, SchemeType, SecurityLevel,
+    CURRENT_CTX,
 };
 
 use serde_json::json;
@@ -350,7 +352,10 @@ fn can_collect_output() {
 #[test]
 fn can_collect_multiple_outputs() {
     #[fhe_program(scheme = "bfv")]
-    fn fhe_program_with_args(a: Cipher<Signed>, b: Cipher<Signed>) -> (Cipher<Signed>, Cipher<Signed>) {
+    fn fhe_program_with_args(
+        a: Cipher<Signed>,
+        b: Cipher<Signed>,
+    ) -> (Cipher<Signed>, Cipher<Signed>) {
         (a + b * a, a)
     }
 

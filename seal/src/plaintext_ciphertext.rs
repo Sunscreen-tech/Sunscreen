@@ -77,7 +77,7 @@ impl Serialize for Plaintext {
             bindgen::Plaintext_SaveSize(self.handle, CompressionType::ZStd as u8, &mut num_bytes)
         })
         .map_err(|e| {
-            S::Error::custom(format!("Failed to get secret key serialized size: {}", e))
+            S::Error::custom(format!("Failed to get private key serialized size: {}", e))
         })?;
 
         let bytes = self

@@ -15,14 +15,14 @@ fn can_encrypt_decrypt() {
 
     let runtime = Runtime::new(&fhe_program.metadata.params).unwrap();
 
-    let (public, secret) = runtime.generate_keys().unwrap();
+    let (public_key, private_key) = runtime.generate_keys().unwrap();
 
-    let a = runtime.encrypt(Signed::from(15), &public).unwrap();
-    let b = runtime.encrypt(Signed::from(5), &public).unwrap();
+    let a = runtime.encrypt(Signed::from(15), &public_key).unwrap();
+    let b = runtime.encrypt(Signed::from(5), &public_key).unwrap();
 
-    let result = runtime.run(&fhe_program, vec![a, b], &public).unwrap();
+    let result = runtime.run(&fhe_program, vec![a, b], &public_key).unwrap();
 
-    let c: Signed = runtime.decrypt(&result[0], &secret).unwrap();
+    let c: Signed = runtime.decrypt(&result[0], &private_key).unwrap();
 
     assert_eq!(c, 20.into());
 }

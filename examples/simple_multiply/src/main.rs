@@ -64,21 +64,21 @@ fn main() {
      * Generate a public and private key pair. Normally, Alice would do this, sending the public
      * key to bob, who then runs a computation.
      */
-    let (public, secret) = runtime.generate_keys().unwrap();
+    let (public_key, private_key) = runtime.generate_keys().unwrap();
 
-    let a = runtime.encrypt(Signed::from(15), &public).unwrap();
-    let b = runtime.encrypt(Signed::from(5), &public).unwrap();
+    let a = runtime.encrypt(Signed::from(15), &public_key).unwrap();
+    let b = runtime.encrypt(Signed::from(5), &public_key).unwrap();
 
     /*
      * Run the FHE program with our arguments. This produces a results
      * bundle containing the encrypted outputs of the FHE program.
      */
-    let results = runtime.run(&fhe_program, vec![a, b], &public).unwrap();
+    let results = runtime.run(&fhe_program, vec![a, b], &public_key).unwrap();
 
     /*
      * Our FHE program outputs a Signed single value as the result. Decrypt it.
      */
-    let c: Signed = runtime.decrypt(&results[0], &secret).unwrap();
+    let c: Signed = runtime.decrypt(&results[0], &private_key).unwrap();
 
     /*
      * Yay, 5 * 15 indeed equals 75.

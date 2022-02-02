@@ -28,17 +28,17 @@ fn can_add_cipher_plain() {
 
     let runtime = Runtime::new(&fhe_program.metadata.params).unwrap();
 
-    let (public, secret) = runtime.generate_keys().unwrap();
+    let (public_key, private_key) = runtime.generate_keys().unwrap();
 
     let a = Signed::from(15);
-    let a_c = runtime.encrypt(a, &public).unwrap();
+    let a_c = runtime.encrypt(a, &public_key).unwrap();
     let b = Signed::from(-5);
 
     let args: Vec<FheProgramInput> = vec![a_c.into(), b.into()];
 
-    let result = runtime.run(&fhe_program, args, &public).unwrap();
+    let result = runtime.run(&fhe_program, args, &public_key).unwrap();
 
-    let c: Signed = runtime.decrypt(&result[0], &secret).unwrap();
+    let c: Signed = runtime.decrypt(&result[0], &private_key).unwrap();
 
     assert_eq!(c, add_fn(a, b));
 }
@@ -58,17 +58,17 @@ fn can_add_plain_cipher() {
 
     let runtime = Runtime::new(&fhe_program.metadata.params).unwrap();
 
-    let (public, secret) = runtime.generate_keys().unwrap();
+    let (public_key, private_key) = runtime.generate_keys().unwrap();
 
     let a = Signed::from(-5);
     let b = Signed::from(15);
-    let b_c = runtime.encrypt(b, &public).unwrap();
+    let b_c = runtime.encrypt(b, &public_key).unwrap();
 
     let args: Vec<FheProgramInput> = vec![a.into(), b_c.into()];
 
-    let result = runtime.run(&fhe_program, args, &public).unwrap();
+    let result = runtime.run(&fhe_program, args, &public_key).unwrap();
 
-    let c: Signed = runtime.decrypt(&result[0], &secret).unwrap();
+    let c: Signed = runtime.decrypt(&result[0], &private_key).unwrap();
 
     assert_eq!(c, add_fn(a, b));
 }
@@ -88,15 +88,15 @@ fn can_add_cipher_literal() {
 
     let runtime = Runtime::new(&fhe_program.metadata.params).unwrap();
 
-    let (public, secret) = runtime.generate_keys().unwrap();
+    let (public_key, private_key) = runtime.generate_keys().unwrap();
 
     let a = Signed::from(15);
-    let a_c = runtime.encrypt(a, &public).unwrap();
+    let a_c = runtime.encrypt(a, &public_key).unwrap();
     let args: Vec<FheProgramInput> = vec![a_c.into()];
 
-    let result = runtime.run(&fhe_program, args, &public).unwrap();
+    let result = runtime.run(&fhe_program, args, &public_key).unwrap();
 
-    let c: Signed = runtime.decrypt(&result[0], &secret).unwrap();
+    let c: Signed = runtime.decrypt(&result[0], &private_key).unwrap();
 
     assert_eq!(c, add_fn(a, -4));
 }
@@ -116,15 +116,15 @@ fn can_add_literal_cipher() {
 
     let runtime = Runtime::new(&fhe_program.metadata.params).unwrap();
 
-    let (public, secret) = runtime.generate_keys().unwrap();
+    let (public_key, private_key) = runtime.generate_keys().unwrap();
 
     let a = Signed::from(15);
-    let a_c = runtime.encrypt(a, &public).unwrap();
+    let a_c = runtime.encrypt(a, &public_key).unwrap();
     let args: Vec<FheProgramInput> = vec![a_c.into()];
 
-    let result = runtime.run(&fhe_program, args, &public).unwrap();
+    let result = runtime.run(&fhe_program, args, &public_key).unwrap();
 
-    let c: Signed = runtime.decrypt(&result[0], &secret).unwrap();
+    let c: Signed = runtime.decrypt(&result[0], &private_key).unwrap();
 
     assert_eq!(c, add_fn(-4, a));
 }
@@ -151,17 +151,17 @@ fn can_sub_cipher_plain() {
 
     let runtime = Runtime::new(&fhe_program.metadata.params).unwrap();
 
-    let (public, secret) = runtime.generate_keys().unwrap();
+    let (public_key, private_key) = runtime.generate_keys().unwrap();
 
     let a = Signed::from(15);
-    let a_c = runtime.encrypt(a, &public).unwrap();
+    let a_c = runtime.encrypt(a, &public_key).unwrap();
     let b = Signed::from(-5);
 
     let args: Vec<FheProgramInput> = vec![a_c.into(), b.into()];
 
-    let result = runtime.run(&fhe_program, args, &public).unwrap();
+    let result = runtime.run(&fhe_program, args, &public_key).unwrap();
 
-    let c: Signed = runtime.decrypt(&result[0], &secret).unwrap();
+    let c: Signed = runtime.decrypt(&result[0], &private_key).unwrap();
 
     assert_eq!(c, sub_fn(a, b));
 }
@@ -181,17 +181,17 @@ fn can_sub_plain_cipher() {
 
     let runtime = Runtime::new(&fhe_program.metadata.params).unwrap();
 
-    let (public, secret) = runtime.generate_keys().unwrap();
+    let (public_key, private_key) = runtime.generate_keys().unwrap();
 
     let a = Signed::from(-5);
     let b = Signed::from(15);
-    let b_c = runtime.encrypt(b, &public).unwrap();
+    let b_c = runtime.encrypt(b, &public_key).unwrap();
 
     let args: Vec<FheProgramInput> = vec![a.into(), b_c.into()];
 
-    let result = runtime.run(&fhe_program, args, &public).unwrap();
+    let result = runtime.run(&fhe_program, args, &public_key).unwrap();
 
-    let c: Signed = runtime.decrypt(&result[0], &secret).unwrap();
+    let c: Signed = runtime.decrypt(&result[0], &private_key).unwrap();
 
     assert_eq!(c, sub_fn(a, b));
 }
@@ -211,15 +211,15 @@ fn can_sub_cipher_literal() {
 
     let runtime = Runtime::new(&fhe_program.metadata.params).unwrap();
 
-    let (public, secret) = runtime.generate_keys().unwrap();
+    let (public_key, private_key) = runtime.generate_keys().unwrap();
 
     let a = Signed::from(15);
-    let a_c = runtime.encrypt(a, &public).unwrap();
+    let a_c = runtime.encrypt(a, &public_key).unwrap();
     let args: Vec<FheProgramInput> = vec![a_c.into()];
 
-    let result = runtime.run(&fhe_program, args, &public).unwrap();
+    let result = runtime.run(&fhe_program, args, &public_key).unwrap();
 
-    let c: Signed = runtime.decrypt(&result[0], &secret).unwrap();
+    let c: Signed = runtime.decrypt(&result[0], &private_key).unwrap();
 
     assert_eq!(c, sub_fn(a, -4));
 }
@@ -239,15 +239,15 @@ fn can_sub_literal_cipher() {
 
     let runtime = Runtime::new(&fhe_program.metadata.params).unwrap();
 
-    let (public, secret) = runtime.generate_keys().unwrap();
+    let (public_key, private_key) = runtime.generate_keys().unwrap();
 
     let a = Signed::from(15);
-    let a_c = runtime.encrypt(a, &public).unwrap();
+    let a_c = runtime.encrypt(a, &public_key).unwrap();
     let args: Vec<FheProgramInput> = vec![a_c.into()];
 
-    let result = runtime.run(&fhe_program, args, &public).unwrap();
+    let result = runtime.run(&fhe_program, args, &public_key).unwrap();
 
-    let c: Signed = runtime.decrypt(&result[0], &secret).unwrap();
+    let c: Signed = runtime.decrypt(&result[0], &private_key).unwrap();
 
     assert_eq!(c, sub_fn(-4, a));
 }
@@ -274,17 +274,17 @@ fn can_mul_cipher_plain() {
 
     let runtime = Runtime::new(&fhe_program.metadata.params).unwrap();
 
-    let (public, secret) = runtime.generate_keys().unwrap();
+    let (public_key, private_key) = runtime.generate_keys().unwrap();
 
     let a = Signed::from(15);
-    let a_c = runtime.encrypt(a, &public).unwrap();
+    let a_c = runtime.encrypt(a, &public_key).unwrap();
     let b = Signed::from(-5);
 
     let args: Vec<FheProgramInput> = vec![a_c.into(), b.into()];
 
-    let result = runtime.run(&fhe_program, args, &public).unwrap();
+    let result = runtime.run(&fhe_program, args, &public_key).unwrap();
 
-    let c: Signed = runtime.decrypt(&result[0], &secret).unwrap();
+    let c: Signed = runtime.decrypt(&result[0], &private_key).unwrap();
 
     assert_eq!(c, mul_fn(a, b));
 }
@@ -304,17 +304,17 @@ fn can_mul_plain_cipher() {
 
     let runtime = Runtime::new(&fhe_program.metadata.params).unwrap();
 
-    let (public, secret) = runtime.generate_keys().unwrap();
+    let (public_key, private_key) = runtime.generate_keys().unwrap();
 
     let a = Signed::from(-5);
     let b = Signed::from(15);
-    let b_c = runtime.encrypt(b, &public).unwrap();
+    let b_c = runtime.encrypt(b, &public_key).unwrap();
 
     let args: Vec<FheProgramInput> = vec![a.into(), b_c.into()];
 
-    let result = runtime.run(&fhe_program, args, &public).unwrap();
+    let result = runtime.run(&fhe_program, args, &public_key).unwrap();
 
-    let c: Signed = runtime.decrypt(&result[0], &secret).unwrap();
+    let c: Signed = runtime.decrypt(&result[0], &private_key).unwrap();
 
     assert_eq!(c, mul_fn(a, b));
 }
@@ -334,15 +334,15 @@ fn can_mul_cipher_literal() {
 
     let runtime = Runtime::new(&fhe_program.metadata.params).unwrap();
 
-    let (public, secret) = runtime.generate_keys().unwrap();
+    let (public_key, private_key) = runtime.generate_keys().unwrap();
 
     let a = Signed::from(15);
-    let a_c = runtime.encrypt(a, &public).unwrap();
+    let a_c = runtime.encrypt(a, &public_key).unwrap();
     let args: Vec<FheProgramInput> = vec![a_c.into()];
 
-    let result = runtime.run(&fhe_program, args, &public).unwrap();
+    let result = runtime.run(&fhe_program, args, &public_key).unwrap();
 
-    let c: Signed = runtime.decrypt(&result[0], &secret).unwrap();
+    let c: Signed = runtime.decrypt(&result[0], &private_key).unwrap();
 
     assert_eq!(c, mul_fn(a, -4));
 }
@@ -362,15 +362,15 @@ fn can_mul_literal_cipher() {
 
     let runtime = Runtime::new(&fhe_program.metadata.params).unwrap();
 
-    let (public, secret) = runtime.generate_keys().unwrap();
+    let (public_key, private_key) = runtime.generate_keys().unwrap();
 
     let a = Signed::from(15);
-    let a_c = runtime.encrypt(a, &public).unwrap();
+    let a_c = runtime.encrypt(a, &public_key).unwrap();
     let args: Vec<FheProgramInput> = vec![a_c.into()];
 
-    let result = runtime.run(&fhe_program, args, &public).unwrap();
+    let result = runtime.run(&fhe_program, args, &public_key).unwrap();
 
-    let c: Signed = runtime.decrypt(&result[0], &secret).unwrap();
+    let c: Signed = runtime.decrypt(&result[0], &private_key).unwrap();
 
     assert_eq!(c, mul_fn(-4, a));
 }

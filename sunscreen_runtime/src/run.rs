@@ -547,16 +547,22 @@ mod tests {
 
         let keygen = KeyGenerator::new(&context).unwrap();
         let public_key = keygen.create_public_key();
-        let secret_key = keygen.secret_key();
+        let private_key = keygen.secret_key();
 
         let encryptor =
-            Encryptor::with_public_and_secret_key(&context, &public_key, &secret_key).unwrap();
-        let decryptor = Decryptor::new(&context, &secret_key).unwrap();
+            Encryptor::with_public_and_secret_key(&context, &public_key, &private_key).unwrap();
+        let decryptor = Decryptor::new(&context, &private_key).unwrap();
 
         let evaluator = BFVEvaluator::new(&context).unwrap();
 
         (
-            keygen, context, public_key, secret_key, encryptor, decryptor, evaluator,
+            keygen,
+            context,
+            public_key,
+            private_key,
+            encryptor,
+            decryptor,
+            evaluator,
         )
     }
 
@@ -571,7 +577,7 @@ mod tests {
 
         let degree = 8192;
 
-        let (_keygen, context, _public_key, _secret_key, encryptor, decryptor, evaluator) =
+        let (_keygen, context, _public_key, _private_key, encryptor, decryptor, evaluator) =
             setup_scheme(degree);
 
         let encoder = BFVEncoder::new(&context).unwrap();
@@ -611,7 +617,7 @@ mod tests {
 
         let degree = 8192;
 
-        let (keygen, context, _public_key, _secret_key, encryptor, decryptor, evaluator) =
+        let (keygen, context, _public_key, _private_key, encryptor, decryptor, evaluator) =
             setup_scheme(degree);
 
         let encoder = BFVEncoder::new(&context).unwrap();
@@ -659,7 +665,7 @@ mod tests {
 
         let degree = 8192;
 
-        let (keygen, context, _public_key, _secret_key, encryptor, decryptor, evaluator) =
+        let (keygen, context, _public_key, _private_key, encryptor, decryptor, evaluator) =
             setup_scheme(degree);
 
         let encoder = BFVEncoder::new(&context).unwrap();
@@ -722,7 +728,7 @@ mod tests {
 
         let degree = 8192;
 
-        let (keygen, context, _public_key, _secret_key, encryptor, decryptor, evaluator) =
+        let (keygen, context, _public_key, _private_key, encryptor, decryptor, evaluator) =
             setup_scheme(degree);
 
         let encoder = BFVEncoder::new(&context).unwrap();
@@ -771,7 +777,7 @@ mod tests {
 
         let degree = 4096;
 
-        let (keygen, context, _public_key, _secret_key, encryptor, decryptor, evaluator) =
+        let (keygen, context, _public_key, _private_key, encryptor, decryptor, evaluator) =
             setup_scheme(degree);
 
         let encoder = BFVEncoder::new(&context).unwrap();
@@ -816,7 +822,7 @@ mod tests {
 
         let degree = 4096;
 
-        let (keygen, context, _public_key, _secret_key, encryptor, decryptor, evaluator) =
+        let (keygen, context, _public_key, _private_key, encryptor, decryptor, evaluator) =
             setup_scheme(degree);
 
         let encoder = BFVEncoder::new(&context).unwrap();

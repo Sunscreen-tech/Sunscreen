@@ -14,7 +14,7 @@
 use sunscreen_compiler::{
     fhe_program,
     types::{
-        bfv::{Signed, Batched},
+        bfv::{Batched, Signed},
         Cipher, FheType, TypeName,
     },
     Compiler, FheProgramFn, FheProgramInput, PlainModulusConstraint, Runtime,
@@ -188,15 +188,15 @@ fn run_fhe<F, T, U>(
     let n_2 = U::from(n_2);
 
     let start = Instant::now();
-    let (public, secret) = runtime.generate_keys().unwrap();
+    let (public_key, private_key) = runtime.generate_keys().unwrap();
     let elapsed = start.elapsed().as_secs_f64();
 
     println!("\t\tKeygen time {}s", elapsed);
 
     let start = Instant::now();
-    let n_0_enc = runtime.encrypt(n_0, &public).unwrap();
-    let n_1_enc = runtime.encrypt(n_1, &public).unwrap();
-    let n_2_enc = runtime.encrypt(n_2, &public).unwrap();
+    let n_0_enc = runtime.encrypt(n_0, &public_key).unwrap();
+    let n_1_enc = runtime.encrypt(n_1, &public_key).unwrap();
+    let n_2_enc = runtime.encrypt(n_2, &public_key).unwrap();
     let elapsed = start.elapsed().as_secs_f64();
 
     println!("\t\tEncryption time {}s", elapsed);
@@ -204,16 +204,16 @@ fn run_fhe<F, T, U>(
     let start = Instant::now();
     let args: Vec<FheProgramInput> = vec![n_0_enc.into(), n_1_enc.into(), n_2_enc.into()];
 
-    let result = runtime.run(&fhe_program, args, &public).unwrap();
+    let result = runtime.run(&fhe_program, args, &public_key).unwrap();
     let elapsed = start.elapsed().as_secs_f64();
 
     println!("\t\tRun time {}s", elapsed);
 
     let start = Instant::now();
-    let a: U = runtime.decrypt(&result[0], &secret).unwrap();
-    let b_1: U = runtime.decrypt(&result[1], &secret).unwrap();
-    let b_2: U = runtime.decrypt(&result[2], &secret).unwrap();
-    let b_3: U = runtime.decrypt(&result[3], &secret).unwrap();
+    let a: U = runtime.decrypt(&result[0], &private_key).unwrap();
+    let b_1: U = runtime.decrypt(&result[1], &private_key).unwrap();
+    let b_2: U = runtime.decrypt(&result[2], &private_key).unwrap();
+    let b_3: U = runtime.decrypt(&result[3], &private_key).unwrap();
     let elapsed = start.elapsed().as_secs_f64();
 
     println!("\t\tDecryption time {}s", elapsed);

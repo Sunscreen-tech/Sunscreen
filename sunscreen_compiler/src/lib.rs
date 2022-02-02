@@ -23,14 +23,14 @@
 //!
 //!   let runtime = Runtime::new(&fhe_program.metadata.params).unwrap();
 //!
-//!   let (public, secret) = runtime.generate_keys().unwrap();
+//!   let (public_key, private_key) = runtime.generate_keys().unwrap();
 //!
-//!   let a = runtime.encrypt(Signed::from(15), &public).unwrap();
-//!   let b = runtime.encrypt(Signed::from(5), &public).unwrap();
+//!   let a = runtime.encrypt(Signed::from(15), &public_key).unwrap();
+//!   let b = runtime.encrypt(Signed::from(5), &public_key).unwrap();
 //!
-//!   let results = runtime.run(&fhe_program, vec![a, b], &public).unwrap();
+//!   let results = runtime.run(&fhe_program, vec![a, b], &public_key).unwrap();
 //!
-//!   let c: Signed = runtime.decrypt(&results[0], &secret).unwrap();
+//!   let c: Signed = runtime.decrypt(&results[0], &private_key).unwrap();
 //!
 //!   assert_eq!(c, 75.into());
 //! }
@@ -79,7 +79,7 @@ pub use sunscreen_fhe_program::{SchemeType, SecurityLevel};
 pub use sunscreen_runtime::{
     CallSignature, Ciphertext, CompiledFheProgram, Error as RuntimeError, FheProgramInput,
     FheProgramInputTrait, FheProgramMetadata, InnerCiphertext, InnerPlaintext, Params, Plaintext,
-    PublicKey, RequiredKeys, Runtime, WithContext,
+    PrivateKey, PublicKey, RequiredKeys, Runtime, WithContext,
 };
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]

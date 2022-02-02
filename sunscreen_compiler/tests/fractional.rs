@@ -69,34 +69,34 @@ fn can_add() {
 
     let runtime = Runtime::new(&c_add_c_c.metadata.params).unwrap();
 
-    let (public, secret) = runtime.generate_keys().unwrap();
+    let (public_key, private_key) = runtime.generate_keys().unwrap();
 
     let do_add = |a: f64, b: f64| {
         let a_p = Fractional::<64>::try_from(a).unwrap();
-        let a_c = runtime.encrypt(a_p, &public).unwrap();
+        let a_c = runtime.encrypt(a_p, &public_key).unwrap();
         let b_p = Fractional::<64>::try_from(b).unwrap();
-        let b_c = runtime.encrypt(b_p, &public).unwrap();
+        let b_c = runtime.encrypt(b_p, &public_key).unwrap();
 
         let args: Vec<FheProgramInput> = vec![a_c.clone().into(), b_c.clone().into()];
-        let c_0 = runtime.run(&c_add_c_c, args, &public).unwrap();
+        let c_0 = runtime.run(&c_add_c_c, args, &public_key).unwrap();
 
         let args: Vec<FheProgramInput> = vec![a_c.clone().into(), b_p.clone().into()];
-        let c_1 = runtime.run(&c_add_c_p, args, &public).unwrap();
+        let c_1 = runtime.run(&c_add_c_p, args, &public_key).unwrap();
 
         let args: Vec<FheProgramInput> = vec![a_p.clone().into(), b_c.clone().into()];
-        let c_2 = runtime.run(&c_add_p_c, args, &public).unwrap();
+        let c_2 = runtime.run(&c_add_p_c, args, &public_key).unwrap();
 
         let args: Vec<FheProgramInput> = vec![a_c.clone().into(), b_c.clone().into()];
-        let c_3 = runtime.run(&c_add_c_l, args, &public).unwrap();
+        let c_3 = runtime.run(&c_add_c_l, args, &public_key).unwrap();
 
         let args: Vec<FheProgramInput> = vec![a_c.clone().into(), b_c.clone().into()];
-        let c_4 = runtime.run(&c_add_l_c, args, &public).unwrap();
+        let c_4 = runtime.run(&c_add_l_c, args, &public_key).unwrap();
 
-        let c_0: Fractional<64> = runtime.decrypt(&c_0[0], &secret).unwrap();
-        let c_1: Fractional<64> = runtime.decrypt(&c_1[0], &secret).unwrap();
-        let c_2: Fractional<64> = runtime.decrypt(&c_2[0], &secret).unwrap();
-        let c_3: Fractional<64> = runtime.decrypt(&c_3[0], &secret).unwrap();
-        let c_4: Fractional<64> = runtime.decrypt(&c_4[0], &secret).unwrap();
+        let c_0: Fractional<64> = runtime.decrypt(&c_0[0], &private_key).unwrap();
+        let c_1: Fractional<64> = runtime.decrypt(&c_1[0], &private_key).unwrap();
+        let c_2: Fractional<64> = runtime.decrypt(&c_2[0], &private_key).unwrap();
+        let c_3: Fractional<64> = runtime.decrypt(&c_3[0], &private_key).unwrap();
+        let c_4: Fractional<64> = runtime.decrypt(&c_4[0], &private_key).unwrap();
 
         assert!(c_0.approx_eq((add_fn(a, b)).into(), (0.0, 1)));
         assert!(c_1.approx_eq((add_fn(a, b)).into(), (0.0, 1)));
@@ -163,40 +163,55 @@ fn can_mul() {
 
     let runtime = Runtime::new(&c_mul_c_c.metadata.params).unwrap();
 
-    let (public, secret) = runtime.generate_keys().unwrap();
+    let (public_key, private_key) = runtime.generate_keys().unwrap();
 
     let do_mul = |a: f64, b: f64| {
         let a_p = Fractional::<64>::try_from(a).unwrap();
-        let a_c = runtime.encrypt(a_p, &public).unwrap();
+        let a_c = runtime.encrypt(a_p, &public_key).unwrap();
         let b_p = Fractional::<64>::try_from(b).unwrap();
-        let b_c = runtime.encrypt(b_p, &public).unwrap();
+        let b_c = runtime.encrypt(b_p, &public_key).unwrap();
 
         let args: Vec<FheProgramInput> = vec![a_c.clone().into(), b_c.clone().into()];
-        let c_0 = runtime.run(&c_mul_c_c, args, &public).unwrap();
+        let c_0 = runtime.run(&c_mul_c_c, args, &public_key).unwrap();
 
         let args: Vec<FheProgramInput> = vec![a_c.clone().into(), b_p.clone().into()];
-        let c_1 = runtime.run(&c_mul_c_p, args, &public).unwrap();
+        let c_1 = runtime.run(&c_mul_c_p, args, &public_key).unwrap();
 
         let args: Vec<FheProgramInput> = vec![a_p.clone().into(), b_c.clone().into()];
-        let c_2 = runtime.run(&c_mul_p_c, args, &public).unwrap();
+        let c_2 = runtime.run(&c_mul_p_c, args, &public_key).unwrap();
 
         let args: Vec<FheProgramInput> = vec![a_c.clone().into()];
-        let c_3 = runtime.run(&c_mul_c_l, args, &public).unwrap();
+        let c_3 = runtime.run(&c_mul_c_l, args, &public_key).unwrap();
 
         let args: Vec<FheProgramInput> = vec![a_c.clone().into()];
-        let c_4 = runtime.run(&c_mul_l_c, args, &public).unwrap();
+        let c_4 = runtime.run(&c_mul_l_c, args, &public_key).unwrap();
 
-        assert_ne!(runtime.measure_noise_budget(&c_0[0], &secret).unwrap(), 0);
-        assert_ne!(runtime.measure_noise_budget(&c_1[0], &secret).unwrap(), 0);
-        assert_ne!(runtime.measure_noise_budget(&c_2[0], &secret).unwrap(), 0);
-        assert_ne!(runtime.measure_noise_budget(&c_3[0], &secret).unwrap(), 0);
-        assert_ne!(runtime.measure_noise_budget(&c_4[0], &secret).unwrap(), 0);
+        assert_ne!(
+            runtime.measure_noise_budget(&c_0[0], &private_key).unwrap(),
+            0
+        );
+        assert_ne!(
+            runtime.measure_noise_budget(&c_1[0], &private_key).unwrap(),
+            0
+        );
+        assert_ne!(
+            runtime.measure_noise_budget(&c_2[0], &private_key).unwrap(),
+            0
+        );
+        assert_ne!(
+            runtime.measure_noise_budget(&c_3[0], &private_key).unwrap(),
+            0
+        );
+        assert_ne!(
+            runtime.measure_noise_budget(&c_4[0], &private_key).unwrap(),
+            0
+        );
 
-        let c_0: Fractional<64> = runtime.decrypt(&c_0[0], &secret).unwrap();
-        let c_1: Fractional<64> = runtime.decrypt(&c_1[0], &secret).unwrap();
-        let c_2: Fractional<64> = runtime.decrypt(&c_2[0], &secret).unwrap();
-        let c_3: Fractional<64> = runtime.decrypt(&c_3[0], &secret).unwrap();
-        let c_4: Fractional<64> = runtime.decrypt(&c_4[0], &secret).unwrap();
+        let c_0: Fractional<64> = runtime.decrypt(&c_0[0], &private_key).unwrap();
+        let c_1: Fractional<64> = runtime.decrypt(&c_1[0], &private_key).unwrap();
+        let c_2: Fractional<64> = runtime.decrypt(&c_2[0], &private_key).unwrap();
+        let c_3: Fractional<64> = runtime.decrypt(&c_3[0], &private_key).unwrap();
+        let c_4: Fractional<64> = runtime.decrypt(&c_4[0], &private_key).unwrap();
 
         assert!(c_0.approx_eq(mul_fn(a, b).into(), (0.0, 1)));
         assert!(c_1.approx_eq(mul_fn(a, b).into(), (0.0, 1)));
@@ -261,34 +276,34 @@ fn can_sub() {
 
     let runtime = Runtime::new(&c_sub_c_c.metadata.params).unwrap();
 
-    let (public, secret) = runtime.generate_keys().unwrap();
+    let (public_key, private_key) = runtime.generate_keys().unwrap();
 
     let do_sub = |a: f64, b: f64| {
         let a_p = Fractional::<64>::try_from(a).unwrap();
-        let a_c = runtime.encrypt(a_p, &public).unwrap();
+        let a_c = runtime.encrypt(a_p, &public_key).unwrap();
         let b_p = Fractional::<64>::try_from(b).unwrap();
-        let b_c = runtime.encrypt(b_p, &public).unwrap();
+        let b_c = runtime.encrypt(b_p, &public_key).unwrap();
 
         let args: Vec<FheProgramInput> = vec![a_c.clone().into(), b_c.clone().into()];
-        let c_0 = runtime.run(&c_sub_c_c, args, &public).unwrap();
+        let c_0 = runtime.run(&c_sub_c_c, args, &public_key).unwrap();
 
         let args: Vec<FheProgramInput> = vec![a_c.clone().into(), b_p.clone().into()];
-        let c_1 = runtime.run(&c_sub_c_p, args, &public).unwrap();
+        let c_1 = runtime.run(&c_sub_c_p, args, &public_key).unwrap();
 
         let args: Vec<FheProgramInput> = vec![a_p.clone().into(), b_c.clone().into()];
-        let c_2 = runtime.run(&c_sub_p_c, args, &public).unwrap();
+        let c_2 = runtime.run(&c_sub_p_c, args, &public_key).unwrap();
 
         let args: Vec<FheProgramInput> = vec![a_c.clone().into(), b_c.clone().into()];
-        let c_3 = runtime.run(&c_sub_c_l, args, &public).unwrap();
+        let c_3 = runtime.run(&c_sub_c_l, args, &public_key).unwrap();
 
         let args: Vec<FheProgramInput> = vec![a_c.clone().into(), b_c.clone().into()];
-        let c_4 = runtime.run(&c_sub_l_c, args, &public).unwrap();
+        let c_4 = runtime.run(&c_sub_l_c, args, &public_key).unwrap();
 
-        let c_0: Fractional<64> = runtime.decrypt(&c_0[0], &secret).unwrap();
-        let c_1: Fractional<64> = runtime.decrypt(&c_1[0], &secret).unwrap();
-        let c_2: Fractional<64> = runtime.decrypt(&c_2[0], &secret).unwrap();
-        let c_3: Fractional<64> = runtime.decrypt(&c_3[0], &secret).unwrap();
-        let c_4: Fractional<64> = runtime.decrypt(&c_4[0], &secret).unwrap();
+        let c_0: Fractional<64> = runtime.decrypt(&c_0[0], &private_key).unwrap();
+        let c_1: Fractional<64> = runtime.decrypt(&c_1[0], &private_key).unwrap();
+        let c_2: Fractional<64> = runtime.decrypt(&c_2[0], &private_key).unwrap();
+        let c_3: Fractional<64> = runtime.decrypt(&c_3[0], &private_key).unwrap();
+        let c_4: Fractional<64> = runtime.decrypt(&c_4[0], &private_key).unwrap();
 
         assert!(c_0.approx_eq((sub_fn(a, b)).into(), (0.0, 1)));
         assert!(c_1.approx_eq((sub_fn(a, b)).into(), (0.0, 1)));
@@ -325,18 +340,18 @@ fn can_div_cipher_const() {
 
     let runtime = Runtime::new(&fhe_program.metadata.params).unwrap();
 
-    let (public, secret) = runtime.generate_keys().unwrap();
+    let (public_key, private_key) = runtime.generate_keys().unwrap();
 
     let test_div = |a: f64| {
         let a_c = runtime
-            .encrypt(Fractional::<64>::try_from(a).unwrap(), &public)
+            .encrypt(Fractional::<64>::try_from(a).unwrap(), &public_key)
             .unwrap();
 
         let args: Vec<FheProgramInput> = vec![a_c.into()];
 
-        let result = runtime.run(&fhe_program, args, &public).unwrap();
+        let result = runtime.run(&fhe_program, args, &public_key).unwrap();
 
-        let c: Fractional<64> = runtime.decrypt(&result[0], &secret).unwrap();
+        let c: Fractional<64> = runtime.decrypt(&result[0], &private_key).unwrap();
 
         assert!(c.approx_eq((a / 3.14).try_into().unwrap(), (0.0, 1)));
     };
@@ -366,18 +381,18 @@ fn can_negate() {
 
     let runtime = Runtime::new(&fhe_program.metadata.params).unwrap();
 
-    let (public, secret) = runtime.generate_keys().unwrap();
+    let (public_key, private_key) = runtime.generate_keys().unwrap();
 
     let test_div = |a: f64| {
         let a_c = runtime
-            .encrypt(Fractional::<64>::try_from(a).unwrap(), &public)
+            .encrypt(Fractional::<64>::try_from(a).unwrap(), &public_key)
             .unwrap();
 
         let args: Vec<FheProgramInput> = vec![a_c.into()];
 
-        let result = runtime.run(&fhe_program, args, &public).unwrap();
+        let result = runtime.run(&fhe_program, args, &public_key).unwrap();
 
-        let c: Fractional<64> = runtime.decrypt(&result[0], &secret).unwrap();
+        let c: Fractional<64> = runtime.decrypt(&result[0], &private_key).unwrap();
 
         assert_eq!(c, (-a).into());
     };

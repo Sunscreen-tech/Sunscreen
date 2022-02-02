@@ -220,7 +220,7 @@ fn compile_fhe_programs() -> (
     // pass these parameters when compiling the other FHE programs so they are compatible.
     let add_program = Compiler::with_fhe_program(add)
         // We need to make the noise margin large enough so we can do a few repeated calculations.
-        .noise_margin_bits(32)
+        .additional_noise_budget(32)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(1_000_000))
         .compile()
         .unwrap();

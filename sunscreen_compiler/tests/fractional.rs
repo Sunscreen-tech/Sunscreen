@@ -12,7 +12,7 @@ type CipherFractional = Cipher<Fractional<64>>;
 
 fn compile<F: FheProgramFn>(c: F) -> CompiledFheProgram {
     Compiler::with_fhe_program(c)
-        .noise_margin_bits(30)
+        .additional_noise_budget(30)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(500))
         .compile()
         .unwrap()
@@ -333,7 +333,7 @@ fn can_div_cipher_const() {
     }
 
     let fhe_program = Compiler::with_fhe_program(mul)
-        .noise_margin_bits(5)
+        .additional_noise_budget(5)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(100000))
         .compile()
         .unwrap();
@@ -374,7 +374,7 @@ fn can_negate() {
     }
 
     let fhe_program = Compiler::with_fhe_program(neg)
-        .noise_margin_bits(5)
+        .additional_noise_budget(5)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(100000))
         .compile()
         .unwrap();

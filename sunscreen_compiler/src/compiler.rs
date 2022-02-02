@@ -58,7 +58,7 @@ where
             params_mode: ParamsMode::Search,
             plain_modulus_constraint: None,
             security_level: SecurityLevel::TC128,
-            noise_margin: 10,
+            noise_margin: 20,
         }
     }
 
@@ -100,7 +100,7 @@ where
     /**
      * The minimum number of bits of noise budget the search algorithm will leave for all outputs.
      */
-    pub fn noise_margin_bits(mut self, noise_margin: u32) -> Self {
+    pub fn additional_noise_budget(mut self, noise_margin: u32) -> Self {
         self.noise_margin = noise_margin;
         self
     }

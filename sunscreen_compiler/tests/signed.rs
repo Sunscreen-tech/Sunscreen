@@ -21,7 +21,7 @@ fn can_add_cipher_plain() {
     }
 
     let fhe_program = Compiler::with_fhe_program(add)
-        .noise_margin_bits(5)
+        .additional_noise_budget(5)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(500))
         .compile()
         .unwrap();
@@ -51,7 +51,7 @@ fn can_add_plain_cipher() {
     }
 
     let fhe_program = Compiler::with_fhe_program(add)
-        .noise_margin_bits(5)
+        .additional_noise_budget(5)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(500))
         .compile()
         .unwrap();
@@ -81,7 +81,7 @@ fn can_add_cipher_literal() {
     }
 
     let fhe_program = Compiler::with_fhe_program(add)
-        .noise_margin_bits(5)
+        .additional_noise_budget(5)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(500))
         .compile()
         .unwrap();
@@ -109,7 +109,7 @@ fn can_add_literal_cipher() {
     }
 
     let fhe_program = Compiler::with_fhe_program(add)
-        .noise_margin_bits(5)
+        .additional_noise_budget(5)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(500))
         .compile()
         .unwrap();
@@ -144,7 +144,7 @@ fn can_sub_cipher_plain() {
     }
 
     let fhe_program = Compiler::with_fhe_program(sub)
-        .noise_margin_bits(5)
+        .additional_noise_budget(5)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(500))
         .compile()
         .unwrap();
@@ -174,7 +174,7 @@ fn can_sub_plain_cipher() {
     }
 
     let fhe_program = Compiler::with_fhe_program(sub)
-        .noise_margin_bits(5)
+        .additional_noise_budget(5)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(500))
         .compile()
         .unwrap();
@@ -204,7 +204,7 @@ fn can_sub_cipher_literal() {
     }
 
     let fhe_program = Compiler::with_fhe_program(sub)
-        .noise_margin_bits(5)
+        .additional_noise_budget(5)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(500))
         .compile()
         .unwrap();
@@ -232,7 +232,7 @@ fn can_sub_literal_cipher() {
     }
 
     let fhe_program = Compiler::with_fhe_program(sub)
-        .noise_margin_bits(5)
+        .additional_noise_budget(5)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(500))
         .compile()
         .unwrap();
@@ -267,7 +267,7 @@ fn can_mul_cipher_plain() {
     }
 
     let fhe_program = Compiler::with_fhe_program(mul)
-        .noise_margin_bits(5)
+        .additional_noise_budget(5)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(500))
         .compile()
         .unwrap();
@@ -297,7 +297,7 @@ fn can_mul_plain_cipher() {
     }
 
     let fhe_program = Compiler::with_fhe_program(mul)
-        .noise_margin_bits(5)
+        .additional_noise_budget(5)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(500))
         .compile()
         .unwrap();
@@ -327,7 +327,7 @@ fn can_mul_cipher_literal() {
     }
 
     let fhe_program = Compiler::with_fhe_program(mul)
-        .noise_margin_bits(5)
+        .additional_noise_budget(5)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(500))
         .compile()
         .unwrap();
@@ -355,7 +355,7 @@ fn can_mul_literal_cipher() {
     }
 
     let fhe_program = Compiler::with_fhe_program(mul)
-        .noise_margin_bits(5)
+        .additional_noise_budget(5)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(500))
         .compile()
         .unwrap();

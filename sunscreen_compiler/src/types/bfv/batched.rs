@@ -16,34 +16,34 @@ use std::ops::*;
 use sunscreen_runtime::{Error as RuntimeError, Result as RuntimeResult};
 
 /**
- * A SIMD vector of signed integers. The vector has 2 rows of `LANES`
+ * A Batched vector of signed integers. The vector has 2 rows of `LANES`
  * columns. The `LANES` value must be a power of 2 up to 16384.
  *
  * # Remarks
  * Plaintexts in the BFV scheme are polynomials. When the plaintext
  * modulus is an appropriate prime number, one can decompose the
  * cyclotomic field into ideals using the Chinese remainder theorem.
- * Each ideal is a value independent of the other and forms a SIMD lane.
+ * Each ideal is a value independent of the other and forms a Batched lane.
  *
  * In the BFV scheme using a vector encoding, plaintexts encode as a
  * `2xN/2` matrix, where N is the scheme's polynomial degree.
  * Homomorphic addition, subtraction, and multiplication
- * operate element-wise, thus making the scheme similar to CPU SIMD
+ * operate element-wise, thus making the scheme similar to CPU Batched
  * instructions (e.g. Intel AVX or ARM Neon) with the minor distinction
  * that BFV vector types have 2 rows of values.
  *
  * Unlike CPU vector instructions, which typically feature 4-16 lanes,
- * BFV Simd vectors have thousands of lanes. The LANES values
+ * BFV Batched vectors have thousands of lanes. The LANES values
  * effectively demarks a constraint to the compiler that the polynomial
  * degree must be at least 2*LANES. Should the compiler choose a larger
- * degree for unrelated reasons (e.g. noise budget), the Simd type will
+ * degree for unrelated reasons (e.g. noise budget), the Batched type will
  * automatically repeat the lanes so that rotation operations behave
  * as if you only have `LANES` elements. For example, if `LANES` is
  * 4 (not actually a legal value, but illustrative only!)
  *
  * To combine values across multiple lanes, one can use rotation
  * operations. Unlike a shift, rotation operations cause elements to
- * wrap around rather than truncate. The Simd type exposes these as the
+ * wrap around rather than truncate. The Batched type exposes these as the
  * `<<`, `>>`, and `swap_rows` operators:
  * * `x << n`, where n is a u64 rotates each row n places to the left.
  * For example, `[0, 1, 2, 3; 4, 5, 6, 7] << 3` yields
@@ -58,42 +58,42 @@ use sunscreen_runtime::{Error as RuntimeError, Result as RuntimeResult};
  * the polynomial degree has primacy in determining execution time.
  * A smaller polynomial degree results in a smaller noise budget, but
  * each operation is faster. Additionally, a smaller polynomial degree
- * results in fewer SIMD lanes in a plaintext.
+ * results in fewer Batched lanes in a plaintext.
  *
  * To maximally utilize FHE program throughput, one should choose a `LANES`
  * value equal to half the polynomial degree needed to accomodate the
  * FHE program's noise budget constraint.
  */
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct Simd<const LANES: usize> {
+pub struct Batched<const LANES: usize> {
     data: [[i64; LANES]; 2],
 }
 
-impl<const LANES: usize> NumCiphertexts for Simd<LANES> {
+impl<const LANES: usize> NumCiphertexts for Batched<LANES> {
     const NUM_CIPHERTEXTS: usize = 1;
 }
 
-impl<const LANES: usize> TypeName for Simd<LANES> {
+impl<const LANES: usize> TypeName for Batched<LANES> {
     fn type_name() -> Type {
         Type {
-            name: format!("sunscreen_compiler::types::Simd<{}>", LANES),
+            name: format!("sunscreen_compiler::types::Batched<{}>", LANES),
             version: Version::parse(crate_version!()).expect("Crate version is not a valid semver"),
             is_encrypted: false,
         }
     }
 }
 
-impl<const LANES: usize> TypeNameInstance for Simd<LANES> {
+impl<const LANES: usize> TypeNameInstance for Batched<LANES> {
     fn type_name_instance(&self) -> Type {
         Self::type_name()
     }
 }
 
-impl<const LANES: usize> FheProgramInputTrait for Simd<LANES> {}
-impl<const LANES: usize> FheType for Simd<LANES> {}
-impl<const LANES: usize> BfvType for Simd<LANES> {}
+impl<const LANES: usize> FheProgramInputTrait for Batched<LANES> {}
+impl<const LANES: usize> FheType for Batched<LANES> {}
+impl<const LANES: usize> BfvType for Batched<LANES> {}
 
-impl<const LANES: usize> std::fmt::Display for Simd<LANES> {
+impl<const LANES: usize> std::fmt::Display for Batched<LANES> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let prefix = "[[";
         let middle = "], [";
@@ -147,7 +147,7 @@ impl<const LANES: usize> std::fmt::Display for Simd<LANES> {
     }
 }
 
-impl<const LANES: usize> TryIntoPlaintext for Simd<LANES> {
+impl<const LANES: usize> TryIntoPlaintext for Batched<LANES> {
     fn try_into_plaintext(
         &self,
         params: &Params,
@@ -195,7 +195,7 @@ impl<const LANES: usize> TryIntoPlaintext for Simd<LANES> {
     }
 }
 
-impl<const LANES: usize> TryFromPlaintext for Simd<LANES> {
+impl<const LANES: usize> TryFromPlaintext for Batched<LANES> {
     fn try_from_plaintext(
         plaintext: &Plaintext,
         params: &Params,
@@ -262,7 +262,7 @@ impl<const LANES: usize> TryFromPlaintext for Simd<LANES> {
     }
 }
 
-impl<const LANES: usize> TryFrom<[Vec<i64>; 2]> for Simd<LANES> {
+impl<const LANES: usize> TryFrom<[Vec<i64>; 2]> for Batched<LANES> {
     type Error = RuntimeError;
 
     fn try_from(data: [Vec<i64>; 2]) -> RuntimeResult<Self> {
@@ -279,25 +279,25 @@ impl<const LANES: usize> TryFrom<[Vec<i64>; 2]> for Simd<LANES> {
     }
 }
 
-impl<const LANES: usize> Into<[Vec<i64>; 2]> for Simd<LANES> {
+impl<const LANES: usize> Into<[Vec<i64>; 2]> for Batched<LANES> {
     fn into(self) -> [Vec<i64>; 2] {
         [self.data[0].into(), self.data[1].into()]
     }
 }
 
-impl<const LANES: usize> From<[[i64; LANES]; 2]> for Simd<LANES> {
+impl<const LANES: usize> From<[[i64; LANES]; 2]> for Batched<LANES> {
     fn from(data: [[i64; LANES]; 2]) -> Self {
         Self { data }
     }
 }
 
-impl<const LANES: usize> Into<[[i64; LANES]; 2]> for Simd<LANES> {
+impl<const LANES: usize> Into<[[i64; LANES]; 2]> for Batched<LANES> {
     fn into(self) -> [[i64; LANES]; 2] {
         [self.data[0], self.data[1]]
     }
 }
 
-impl<const LANES: usize> From<i64> for Simd<LANES> {
+impl<const LANES: usize> From<i64> for Batched<LANES> {
     fn from(data: i64) -> Self {
         // Splat the input across all the lanes.
         Self {
@@ -306,7 +306,7 @@ impl<const LANES: usize> From<i64> for Simd<LANES> {
     }
 }
 
-impl<const LANES: usize> Add for Simd<LANES> {
+impl<const LANES: usize> Add for Batched<LANES> {
     type Output = Self;
 
     fn add(self, rhs: Self) -> Self::Output {
@@ -329,7 +329,7 @@ impl<const LANES: usize> Add for Simd<LANES> {
     }
 }
 
-impl<const LANES: usize> Sub for Simd<LANES> {
+impl<const LANES: usize> Sub for Batched<LANES> {
     type Output = Self;
 
     fn sub(self, rhs: Self) -> Self::Output {
@@ -352,7 +352,7 @@ impl<const LANES: usize> Sub for Simd<LANES> {
     }
 }
 
-impl<const LANES: usize> Mul for Simd<LANES> {
+impl<const LANES: usize> Mul for Batched<LANES> {
     type Output = Self;
 
     fn mul(self, rhs: Self) -> Self::Output {
@@ -375,7 +375,7 @@ impl<const LANES: usize> Mul for Simd<LANES> {
     }
 }
 
-impl<const LANES: usize> Neg for Simd<LANES> {
+impl<const LANES: usize> Neg for Batched<LANES> {
     type Output = Self;
 
     fn neg(self) -> Self::Output {
@@ -396,7 +396,7 @@ impl<const LANES: usize> Neg for Simd<LANES> {
     }
 }
 
-impl<const LANES: usize> Shl<u64> for Simd<LANES> {
+impl<const LANES: usize> Shl<u64> for Batched<LANES> {
     type Output = Self;
 
     fn shl(self, x: u64) -> Self::Output {
@@ -436,7 +436,7 @@ impl<const LANES: usize> Shl<u64> for Simd<LANES> {
     }
 }
 
-impl<const LANES: usize> Shr<u64> for Simd<LANES> {
+impl<const LANES: usize> Shr<u64> for Batched<LANES> {
     type Output = Self;
 
     fn shr(self, x: u64) -> Self::Output {
@@ -476,7 +476,7 @@ impl<const LANES: usize> Shr<u64> for Simd<LANES> {
     }
 }
 
-impl<const LANES: usize> SwapRows for Simd<LANES> {
+impl<const LANES: usize> SwapRows for Batched<LANES> {
     type Output = Self;
 
     fn swap_rows(self) -> Self::Output {
@@ -486,7 +486,7 @@ impl<const LANES: usize> SwapRows for Simd<LANES> {
     }
 }
 
-impl<const LANES: usize> Index<(usize, usize)> for Simd<LANES> {
+impl<const LANES: usize> Index<(usize, usize)> for Batched<LANES> {
     type Output = i64;
 
     fn index(&self, index: (usize, usize)) -> &Self::Output {
@@ -500,7 +500,7 @@ impl<const LANES: usize> Index<(usize, usize)> for Simd<LANES> {
     }
 }
 
-impl<const LANES: usize> GraphCipherAdd for Simd<LANES> {
+impl<const LANES: usize> GraphCipherAdd for Batched<LANES> {
     type Left = Self;
     type Right = Self;
 
@@ -516,7 +516,7 @@ impl<const LANES: usize> GraphCipherAdd for Simd<LANES> {
     }
 }
 
-impl<const LANES: usize> GraphCipherSub for Simd<LANES> {
+impl<const LANES: usize> GraphCipherSub for Batched<LANES> {
     type Left = Self;
     type Right = Self;
 
@@ -532,7 +532,7 @@ impl<const LANES: usize> GraphCipherSub for Simd<LANES> {
     }
 }
 
-impl<const LANES: usize> GraphCipherMul for Simd<LANES> {
+impl<const LANES: usize> GraphCipherMul for Batched<LANES> {
     type Left = Self;
     type Right = Self;
 
@@ -548,7 +548,7 @@ impl<const LANES: usize> GraphCipherMul for Simd<LANES> {
     }
 }
 
-impl<const LANES: usize> GraphCipherConstMul for Simd<LANES> {
+impl<const LANES: usize> GraphCipherConstMul for Batched<LANES> {
     type Left = Self;
     type Right = i64;
 
@@ -566,7 +566,7 @@ impl<const LANES: usize> GraphCipherConstMul for Simd<LANES> {
     }
 }
 
-impl<const LANES: usize> GraphCipherSwapRows for Simd<LANES> {
+impl<const LANES: usize> GraphCipherSwapRows for Batched<LANES> {
     fn graph_cipher_swap_rows(x: FheProgramNode<Cipher<Self>>) -> FheProgramNode<Cipher<Self>> {
         with_ctx(|ctx| {
             let n = ctx.add_swap_rows(x.ids[0]);
@@ -576,7 +576,7 @@ impl<const LANES: usize> GraphCipherSwapRows for Simd<LANES> {
     }
 }
 
-impl<const LANES: usize> GraphCipherRotateLeft for Simd<LANES> {
+impl<const LANES: usize> GraphCipherRotateLeft for Batched<LANES> {
     fn graph_cipher_rotate_left(
         x: FheProgramNode<Cipher<Self>>,
         y: u64,
@@ -590,7 +590,7 @@ impl<const LANES: usize> GraphCipherRotateLeft for Simd<LANES> {
     }
 }
 
-impl<const LANES: usize> GraphCipherRotateRight for Simd<LANES> {
+impl<const LANES: usize> GraphCipherRotateRight for Batched<LANES> {
     fn graph_cipher_rotate_right(
         x: FheProgramNode<Cipher<Self>>,
         y: u64,
@@ -604,7 +604,7 @@ impl<const LANES: usize> GraphCipherRotateRight for Simd<LANES> {
     }
 }
 
-impl<const LANES: usize> GraphCipherNeg for Simd<LANES> {
+impl<const LANES: usize> GraphCipherNeg for Batched<LANES> {
     type Val = Self;
 
     fn graph_cipher_neg(x: FheProgramNode<Cipher<Self>>) -> FheProgramNode<Cipher<Self::Val>> {
@@ -616,7 +616,7 @@ impl<const LANES: usize> GraphCipherNeg for Simd<LANES> {
     }
 }
 
-impl<const LANES: usize> LaneCount for Simd<LANES> {
+impl<const LANES: usize> LaneCount for Batched<LANES> {
     fn lane_count() -> usize {
         LANES
     }
@@ -629,7 +629,7 @@ mod tests {
     use seal::{CoefficientModulus, PlainModulus, SecurityLevel};
 
     #[test]
-    fn can_roundtrip_encode_simd() {
+    fn can_roundtrip_encode_batched() {
         let data = [vec![0, 1, 2, 3], vec![4, 5, 6, 7]];
 
         let params = Params {
@@ -644,10 +644,10 @@ mod tests {
             security_level: SecurityLevel::TC128,
         };
 
-        let x = Simd::<4>::try_from(data.clone()).unwrap();
+        let x = Batched::<4>::try_from(data.clone()).unwrap();
 
         let plaintext = x.try_into_plaintext(&params).unwrap();
-        let y = Simd::<4>::try_from_plaintext(&plaintext, &params).unwrap();
+        let y = Batched::<4>::try_from_plaintext(&plaintext, &params).unwrap();
 
         assert_eq!(x, y);
     }
@@ -657,52 +657,52 @@ mod tests {
 
     #[test]
     fn can_add_non_fhe() {
-        let a = Simd::<4>::try_from(A_VEC).unwrap();
-        let b = Simd::<4>::try_from(B_VEC).unwrap();
+        let a = Batched::<4>::try_from(A_VEC).unwrap();
+        let b = Batched::<4>::try_from(B_VEC).unwrap();
 
         assert_eq!(a + b, [[6, 8, 10, 12], [6, 8, 10, 12]].into());
     }
 
     #[test]
     fn can_mul_non_fhe() {
-        let a = Simd::<4>::try_from(A_VEC).unwrap();
-        let b = Simd::<4>::try_from(B_VEC).unwrap();
+        let a = Batched::<4>::try_from(A_VEC).unwrap();
+        let b = Batched::<4>::try_from(B_VEC).unwrap();
 
         assert_eq!(a * b, [[5, 12, 21, 32], [5, 12, 21, 32]].into());
     }
 
     #[test]
     fn can_sub_non_fhe() {
-        let a = Simd::<4>::try_from(A_VEC).unwrap();
-        let b = Simd::<4>::try_from(B_VEC).unwrap();
+        let a = Batched::<4>::try_from(A_VEC).unwrap();
+        let b = Batched::<4>::try_from(B_VEC).unwrap();
 
         assert_eq!(a - b, [[-4, -4, -4, -4], [4, 4, 4, 4]].into());
     }
 
     #[test]
     fn can_neg_non_fhe() {
-        let a = Simd::<4>::try_from(A_VEC).unwrap();
+        let a = Batched::<4>::try_from(A_VEC).unwrap();
 
         assert_eq!(-a, [[-1, -2, -3, -4], [-5, -6, -7, -8]].into());
     }
 
     #[test]
     fn can_shl_non_fhe() {
-        let a = Simd::<4>::try_from(A_VEC).unwrap();
+        let a = Batched::<4>::try_from(A_VEC).unwrap();
 
         assert_eq!(a << 3, [[4, 1, 2, 3], [8, 5, 6, 7]].into());
     }
 
     #[test]
     fn can_shr_non_fhe() {
-        let a = Simd::<4>::try_from(A_VEC).unwrap();
+        let a = Batched::<4>::try_from(A_VEC).unwrap();
 
         assert_eq!(a >> 3, [[2, 3, 4, 1], [6, 7, 8, 5]].into());
     }
 
     #[test]
     fn can_swap_rows_non_fhe() {
-        let a = Simd::<4>::try_from(A_VEC).unwrap();
+        let a = Batched::<4>::try_from(A_VEC).unwrap();
 
         assert_eq!(a.swap_rows(), [[5, 6, 7, 8], [1, 2, 3, 4]].into());
     }

@@ -14,7 +14,7 @@
 use sunscreen_compiler::{
     fhe_program,
     types::{
-        bfv::{Signed, Simd},
+        bfv::{Signed, Batched},
         Cipher, FheType, TypeName,
     },
     Compiler, FheProgramFn, FheProgramInput, PlainModulusConstraint, Runtime,
@@ -117,14 +117,14 @@ fn chi_sq_optimized_fhe_program(
 
 #[fhe_program(scheme = "bfv")]
 fn chi_sq_batched_fhe_program(
-    n_0: Cipher<Simd<4096>>,
-    n_1: Cipher<Simd<4096>>,
-    n_2: Cipher<Simd<4096>>,
+    n_0: Cipher<Batched<4096>>,
+    n_1: Cipher<Batched<4096>>,
+    n_2: Cipher<Batched<4096>>,
 ) -> (
-    Cipher<Simd<4096>>,
-    Cipher<Simd<4096>>,
-    Cipher<Simd<4096>>,
-    Cipher<Simd<4096>>,
+    Cipher<Batched<4096>>,
+    Cipher<Batched<4096>>,
+    Cipher<Batched<4096>>,
+    Cipher<Batched<4096>>,
 ) {
     chi_sq_optimized_impl(n_0, n_1, n_2)
 }
@@ -277,7 +277,7 @@ fn main() {
     println!("\t**********FHE************");
     run_fhe(
         chi_sq_batched_fhe_program,
-        PhantomData::<Simd<4096>>,
+        PhantomData::<Batched<4096>>,
         n_0,
         n_1,
         n_2,

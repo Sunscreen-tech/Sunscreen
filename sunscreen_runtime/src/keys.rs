@@ -27,7 +27,7 @@ pub struct PublicKey {
     pub public_key: WithContext<SealPublicKey>,
 
     /**
-     * Galois keys are used in BFV and CKKS schemes to rotate SIMD vectors.
+     * Galois keys are used in BFV and CKKS schemes to rotate Batched vectors.
      *
      * FhePrograms that don't feature rotations have no use for these keys.
      */

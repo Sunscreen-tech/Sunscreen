@@ -34,7 +34,11 @@
  * requires 2 multiplications for addition and subtraction. Unlike other types,
  * [`Rational`](crate::types::bfv::Rational) supports ciphertext-ciphertext
  * division.
- *
+ * * The [`Batched`](crate::types::bfv::Batched) type packs thousands of signed integers
+ * into lanes by exploiting the Chinese remainder theorem for cyclotomic polynomials.
+ * Arithmetic operations semantically execute per-lane, enabling high-throughput;
+ * e.g. a single addition operation `a + b` will element-wise add the many lanes of a to the
+ * many lanes in b.
  * Type comparison:
  *
  * | Type       | # ciphertexts | overflow conditions | values            | ops/add        | ops/mul | ops/sub        | ops/neg | ops/div |
@@ -73,7 +77,7 @@ pub use sunscreen_runtime::{
 };
 
 /**
- * A trait that allows data types to swap_rows. E.g. [`Simd`](crate::types::bfv::Simd)
+ * A trait that allows data types to swap_rows. E.g. [`Batched`](crate::types::bfv::Batched)
  */
 pub trait SwapRows {
     /**
@@ -88,7 +92,7 @@ pub trait SwapRows {
 }
 
 /**
- * On SIMD types, returns the number of SIMD lanes.
+ * On Batched types, returns the number of Batched lanes.
  */
 pub trait LaneCount {
     /**

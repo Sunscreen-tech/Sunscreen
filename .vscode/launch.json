@@ -154,7 +154,7 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug simd integration tests in library 'sunscreen_compiler'",
+            "name": "Debug batched integration tests in library 'sunscreen_compiler'",
             "cargo": {
                 "args": [
                     "test",
@@ -162,7 +162,7 @@
                     "--package=sunscreen_compiler",
                 ],
                 "filter": {
-                    "name": "simd",
+                    "name": "batched",
                     "kind": "test"
                 }
             },

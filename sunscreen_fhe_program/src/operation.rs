@@ -8,17 +8,17 @@ use crate::Literal;
  */
 pub enum Operation {
     /**
-     * Rotate each row in an encrypted SIMD type to the left.
+     * Rotate each row in an encrypted Batched type to the left.
      */
     ShiftLeft,
 
     /**
-     * Rotate each row in an encrypted SIMD type to the right.
+     * Rotate each row in an encrypted Batched type to the right.
      */
     ShiftRight,
 
     /**
-     * In some schemes (i.e. BFV), SIMD types cannonically form a 2xN matrix.
+     * In some schemes (i.e. BFV), Batched types cannonically form a 2xN matrix.
      * This operator swaps the rows.
      *
      * While ciphertexts may contain more rows after multiplication and before

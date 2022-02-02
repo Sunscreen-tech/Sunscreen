@@ -164,7 +164,7 @@ pub enum Operation {
     RotateRight,
 
     /**
-     * In the BFV scheme, swap rows in the SIMD vectors.
+     * In the BFV scheme, swap rows in the Batched vectors.
      */
     SwapRows,
 

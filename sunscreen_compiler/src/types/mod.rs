@@ -55,7 +55,7 @@ pub mod bfv;
 /**
  * This module contains implementation details used to support
  * Sunscreen's domain specific language under the
- * [`#[fhe_program]`](sunscreen_compiler_macros::circuit) macro.
+ * [`#[fhe_program]`](crate::fhe_program) macro.
  */
 pub mod intern;
 
@@ -99,7 +99,7 @@ pub trait LaneCount {
 
 #[derive(Copy, Clone)]
 /**
- * Declares a type T as being encrypted in a circuit.
+ * Declares a type T as being encrypted in an [`fhe_program`](crate::fhe_program).
  */
 pub struct Cipher<T>
 where

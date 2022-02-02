@@ -2,14 +2,14 @@ use float_cmp::ApproxEq;
 use sunscreen_compiler::{
     fhe_program,
     types::{bfv::Fractional, Cipher},
-    CircuitFn, CircuitInput, CompiledCircuit, Compiler, Params, PlainModulusConstraint, Runtime,
+    FheProgramFn, FheProgramInput, CompiledFheProgram, Compiler, Params, PlainModulusConstraint, Runtime,
 };
 
 use std::ops::*;
 
 type CipherFractional = Cipher<Fractional<64>>;
 
-fn compile<F: CircuitFn>(c: F) -> CompiledCircuit {
+fn compile<F: FheProgramFn>(c: F) -> CompiledFheProgram {
     Compiler::with_fhe_program(c)
         .noise_margin_bits(30)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(500))
@@ -17,7 +17,7 @@ fn compile<F: CircuitFn>(c: F) -> CompiledCircuit {
         .unwrap()
 }
 
-fn compile_with_params<F: CircuitFn>(c: F, params: &Params) -> CompiledCircuit {
+fn compile_with_params<F: FheProgramFn>(c: F, params: &Params) -> CompiledFheProgram {
     Compiler::with_fhe_program(c)
         .with_params(params)
         .compile()
@@ -76,19 +76,19 @@ fn can_add() {
         let b_p = Fractional::<64>::try_from(b).unwrap();
         let b_c = runtime.encrypt(b_p, &public).unwrap();
 
-        let args: Vec<CircuitInput> = vec![a_c.clone().into(), b_c.clone().into()];
+        let args: Vec<FheProgramInput> = vec![a_c.clone().into(), b_c.clone().into()];
         let c_0 = runtime.run(&c_add_c_c, args, &public).unwrap();
 
-        let args: Vec<CircuitInput> = vec![a_c.clone().into(), b_p.clone().into()];
+        let args: Vec<FheProgramInput> = vec![a_c.clone().into(), b_p.clone().into()];
         let c_1 = runtime.run(&c_add_c_p, args, &public).unwrap();
 
-        let args: Vec<CircuitInput> = vec![a_p.clone().into(), b_c.clone().into()];
+        let args: Vec<FheProgramInput> = vec![a_p.clone().into(), b_c.clone().into()];
         let c_2 = runtime.run(&c_add_p_c, args, &public).unwrap();
 
-        let args: Vec<CircuitInput> = vec![a_c.clone().into(), b_c.clone().into()];
+        let args: Vec<FheProgramInput> = vec![a_c.clone().into(), b_c.clone().into()];
         let c_3 = runtime.run(&c_add_c_l, args, &public).unwrap();
 
-        let args: Vec<CircuitInput> = vec![a_c.clone().into(), b_c.clone().into()];
+        let args: Vec<FheProgramInput> = vec![a_c.clone().into(), b_c.clone().into()];
         let c_4 = runtime.run(&c_add_l_c, args, &public).unwrap();
 
         let c_0: Fractional<64> = runtime.decrypt(&c_0[0], &secret).unwrap();
@@ -170,19 +170,19 @@ fn can_mul() {
         let b_p = Fractional::<64>::try_from(b).unwrap();
         let b_c = runtime.encrypt(b_p, &public).unwrap();
 
-        let args: Vec<CircuitInput> = vec![a_c.clone().into(), b_c.clone().into()];
+        let args: Vec<FheProgramInput> = vec![a_c.clone().into(), b_c.clone().into()];
         let c_0 = runtime.run(&c_mul_c_c, args, &public).unwrap();
 
-        let args: Vec<CircuitInput> = vec![a_c.clone().into(), b_p.clone().into()];
+        let args: Vec<FheProgramInput> = vec![a_c.clone().into(), b_p.clone().into()];
         let c_1 = runtime.run(&c_mul_c_p, args, &public).unwrap();
 
-        let args: Vec<CircuitInput> = vec![a_p.clone().into(), b_c.clone().into()];
+        let args: Vec<FheProgramInput> = vec![a_p.clone().into(), b_c.clone().into()];
         let c_2 = runtime.run(&c_mul_p_c, args, &public).unwrap();
 
-        let args: Vec<CircuitInput> = vec![a_c.clone().into()];
+        let args: Vec<FheProgramInput> = vec![a_c.clone().into()];
         let c_3 = runtime.run(&c_mul_c_l, args, &public).unwrap();
 
-        let args: Vec<CircuitInput> = vec![a_c.clone().into()];
+        let args: Vec<FheProgramInput> = vec![a_c.clone().into()];
         let c_4 = runtime.run(&c_mul_l_c, args, &public).unwrap();
 
         assert_ne!(runtime.measure_noise_budget(&c_0[0], &secret).unwrap(), 0);
@@ -268,19 +268,19 @@ fn can_sub() {
         let b_p = Fractional::<64>::try_from(b).unwrap();
         let b_c = runtime.encrypt(b_p, &public).unwrap();
 
-        let args: Vec<CircuitInput> = vec![a_c.clone().into(), b_c.clone().into()];
+        let args: Vec<FheProgramInput> = vec![a_c.clone().into(), b_c.clone().into()];
         let c_0 = runtime.run(&c_sub_c_c, args, &public).unwrap();
 
-        let args: Vec<CircuitInput> = vec![a_c.clone().into(), b_p.clone().into()];
+        let args: Vec<FheProgramInput> = vec![a_c.clone().into(), b_p.clone().into()];
         let c_1 = runtime.run(&c_sub_c_p, args, &public).unwrap();
 
-        let args: Vec<CircuitInput> = vec![a_p.clone().into(), b_c.clone().into()];
+        let args: Vec<FheProgramInput> = vec![a_p.clone().into(), b_c.clone().into()];
         let c_2 = runtime.run(&c_sub_p_c, args, &public).unwrap();
 
-        let args: Vec<CircuitInput> = vec![a_c.clone().into(), b_c.clone().into()];
+        let args: Vec<FheProgramInput> = vec![a_c.clone().into(), b_c.clone().into()];
         let c_3 = runtime.run(&c_sub_c_l, args, &public).unwrap();
 
-        let args: Vec<CircuitInput> = vec![a_c.clone().into(), b_c.clone().into()];
+        let args: Vec<FheProgramInput> = vec![a_c.clone().into(), b_c.clone().into()];
         let c_4 = runtime.run(&c_sub_l_c, args, &public).unwrap();
 
         let c_0: Fractional<64> = runtime.decrypt(&c_0[0], &secret).unwrap();
@@ -331,7 +331,7 @@ fn can_div_cipher_const() {
             .encrypt(Fractional::<64>::try_from(a).unwrap(), &public)
             .unwrap();
 
-        let args: Vec<CircuitInput> = vec![a_c.into()];
+        let args: Vec<FheProgramInput> = vec![a_c.into()];
 
         let result = runtime.run(&circuit, args, &public).unwrap();
 
@@ -372,7 +372,7 @@ fn can_negate() {
             .encrypt(Fractional::<64>::try_from(a).unwrap(), &public)
             .unwrap();
 
-        let args: Vec<CircuitInput> = vec![a_c.into()];
+        let args: Vec<FheProgramInput> = vec![a_c.into()];
 
         let result = runtime.run(&circuit, args, &public).unwrap();
 

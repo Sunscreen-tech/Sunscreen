@@ -1,11 +1,11 @@
 use crate::error::*;
 use crate::metadata::*;
 use crate::{
-    run_program_unchecked, serialization::WithContext, Ciphertext, CircuitInput, InnerCiphertext,
+    run_program_unchecked, serialization::WithContext, Ciphertext, FheProgramInput, InnerCiphertext,
     InnerPlaintext, Plaintext, PublicKey, SealCiphertext, SealData, SealPlaintext,
     TryFromPlaintext, TryIntoPlaintext, TypeName, TypeNameInstance,
 };
-use sunscreen_circuit::SchemeType;
+use sunscreen_fhe_program::SchemeType;
 
 use seal::{
     BFVEvaluator, BfvEncryptionParametersBuilder, Context as SealContext, Decryptor, Encryptor,
@@ -118,7 +118,7 @@ impl Runtime {
      *
      * # Remarks
      * For some parameters, generating some public key types may fail. For example, Galois
-     * keys tend to fail creation for small parameter values. Circuits with small parameters
+     * keys tend to fail creation for small parameter values. FhePrograms with small parameters
      * can't require these associated keys and so long as the circuit was compiled using the
      * search algorithm, it won't.
      *
@@ -200,12 +200,12 @@ impl Runtime {
      */
     pub fn run<I>(
         &self,
-        circuit: &CompiledCircuit,
+        circuit: &CompiledFheProgram,
         mut arguments: Vec<I>,
         public_key: &PublicKey,
     ) -> Result<Vec<Ciphertext>>
     where
-        I: Into<CircuitInput>,
+        I: Into<FheProgramInput>,
     {
         circuit.fhe_program_fn.validate()?;
 
@@ -218,7 +218,7 @@ impl Runtime {
             return Err(Error::MissingGaloisKeys);
         }
 
-        let mut arguments: Vec<CircuitInput> = arguments.drain(0..).map(|a| a.into()).collect();
+        let mut arguments: Vec<FheProgramInput> = arguments.drain(0..).map(|a| a.into()).collect();
 
         let expected_args = &circuit.metadata.signature.arguments;
 
@@ -256,14 +256,14 @@ impl Runtime {
 
                 for i in arguments.drain(0..) {
                     match i {
-                        CircuitInput::Ciphertext(c) => match c.inner {
+                        FheProgramInput::Ciphertext(c) => match c.inner {
                             InnerCiphertext::Seal(mut c) => {
                                 for j in c.drain(0..) {
                                     inputs.push(SealData::Ciphertext(j.data));
                                 }
                             }
                         },
-                        CircuitInput::Plaintext(p) => {
+                        FheProgramInput::Plaintext(p) => {
                             let p = p.try_into_plaintext(&self.params)?;
 
                             match p.inner {

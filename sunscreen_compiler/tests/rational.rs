@@ -1,7 +1,7 @@
 use sunscreen_compiler::{
     fhe_program,
     types::{bfv::Rational, Cipher},
-    CircuitInput, Compiler, PlainModulusConstraint, Runtime,
+    FheProgramInput, Compiler, PlainModulusConstraint, Runtime,
 };
 
 use std::ops::*;
@@ -93,7 +93,7 @@ fn can_add_cipher_plain() {
     let a_c = runtime.encrypt(a, &public).unwrap();
     let b = Rational::try_from(6.28).unwrap();
 
-    let args: Vec<CircuitInput> = vec![a_c.into(), b.into()];
+    let args: Vec<FheProgramInput> = vec![a_c.into(), b.into()];
 
     let result = runtime.run(&circuit, args, &public).unwrap();
 
@@ -123,7 +123,7 @@ fn can_add_plain_cipher() {
     let a_c = runtime.encrypt(a, &public).unwrap();
     let b = Rational::try_from(6.28).unwrap();
 
-    let args: Vec<CircuitInput> = vec![a_c.into(), b.into()];
+    let args: Vec<FheProgramInput> = vec![a_c.into(), b.into()];
 
     let result = runtime.run(&circuit, args, &public).unwrap();
 
@@ -152,7 +152,7 @@ fn can_add_cipher_literal() {
     let a = Rational::try_from(-6.28).unwrap();
     let a_c = runtime.encrypt(a, &public).unwrap();
 
-    let args: Vec<CircuitInput> = vec![a_c.into()];
+    let args: Vec<FheProgramInput> = vec![a_c.into()];
 
     let result = runtime.run(&circuit, args, &public).unwrap();
 
@@ -181,7 +181,7 @@ fn can_add_literal_cipher() {
     let a = Rational::try_from(-6.28).unwrap();
     let a_c = runtime.encrypt(a, &public).unwrap();
 
-    let args: Vec<CircuitInput> = vec![a_c.into()];
+    let args: Vec<FheProgramInput> = vec![a_c.into()];
 
     let result = runtime.run(&circuit, args, &public).unwrap();
 
@@ -247,7 +247,7 @@ fn can_sub_cipher_plain() {
     let a_c = runtime.encrypt(a, &public).unwrap();
     let b = Rational::try_from(6.28).unwrap();
 
-    let args: Vec<CircuitInput> = vec![a_c.into(), b.into()];
+    let args: Vec<FheProgramInput> = vec![a_c.into(), b.into()];
 
     let result = runtime.run(&circuit, args, &public).unwrap();
 
@@ -278,7 +278,7 @@ fn can_sub_plain_cipher() {
     let b = Rational::try_from(6.28).unwrap();
     let b_c = runtime.encrypt(b, &public).unwrap();
 
-    let args: Vec<CircuitInput> = vec![a.into(), b_c.into()];
+    let args: Vec<FheProgramInput> = vec![a.into(), b_c.into()];
 
     let result = runtime.run(&circuit, args, &public).unwrap();
 
@@ -307,7 +307,7 @@ fn can_sub_cipher_literal() {
     let a = Rational::try_from(-6.28).unwrap();
     let a_c = runtime.encrypt(a, &public).unwrap();
 
-    let args: Vec<CircuitInput> = vec![a_c.into()];
+    let args: Vec<FheProgramInput> = vec![a_c.into()];
 
     let result = runtime.run(&circuit, args, &public).unwrap();
 
@@ -336,7 +336,7 @@ fn can_sub_literal_cipher() {
     let a = Rational::try_from(-6.28).unwrap();
     let a_c = runtime.encrypt(a, &public).unwrap();
 
-    let args: Vec<CircuitInput> = vec![a_c.into()];
+    let args: Vec<FheProgramInput> = vec![a_c.into()];
 
     let result = runtime.run(&circuit, args, &public).unwrap();
 
@@ -402,7 +402,7 @@ fn can_mul_cipher_plain() {
     let a_c = runtime.encrypt(a, &public).unwrap();
     let b = Rational::try_from(6.28).unwrap();
 
-    let args: Vec<CircuitInput> = vec![a_c.into(), b.into()];
+    let args: Vec<FheProgramInput> = vec![a_c.into(), b.into()];
 
     let result = runtime.run(&circuit, args, &public).unwrap();
 
@@ -433,7 +433,7 @@ fn can_mul_plain_cipher() {
     let b = Rational::try_from(6.28).unwrap();
     let b_c = runtime.encrypt(b, &public).unwrap();
 
-    let args: Vec<CircuitInput> = vec![a.into(), b_c.into()];
+    let args: Vec<FheProgramInput> = vec![a.into(), b_c.into()];
 
     let result = runtime.run(&circuit, args, &public).unwrap();
 
@@ -462,7 +462,7 @@ fn can_mul_cipher_literal() {
     let a = Rational::try_from(-6.28).unwrap();
     let a_c = runtime.encrypt(a, &public).unwrap();
 
-    let args: Vec<CircuitInput> = vec![a_c.into()];
+    let args: Vec<FheProgramInput> = vec![a_c.into()];
 
     let result = runtime.run(&circuit, args, &public).unwrap();
 
@@ -491,7 +491,7 @@ fn can_mul_literal_cipher() {
     let a = Rational::try_from(-6.28).unwrap();
     let a_c = runtime.encrypt(a, &public).unwrap();
 
-    let args: Vec<CircuitInput> = vec![a_c.into()];
+    let args: Vec<FheProgramInput> = vec![a_c.into()];
 
     let result = runtime.run(&circuit, args, &public).unwrap();
 
@@ -557,7 +557,7 @@ fn can_div_cipher_plain() {
     let a_c = runtime.encrypt(a, &public).unwrap();
     let b = Rational::try_from(6.28).unwrap();
 
-    let args: Vec<CircuitInput> = vec![a_c.into(), b.into()];
+    let args: Vec<FheProgramInput> = vec![a_c.into(), b.into()];
 
     let result = runtime.run(&circuit, args, &public).unwrap();
 
@@ -588,7 +588,7 @@ fn can_div_plain_cipher() {
     let b = Rational::try_from(6.28).unwrap();
     let b_c = runtime.encrypt(b, &public).unwrap();
 
-    let args: Vec<CircuitInput> = vec![a.into(), b_c.into()];
+    let args: Vec<FheProgramInput> = vec![a.into(), b_c.into()];
 
     let result = runtime.run(&circuit, args, &public).unwrap();
 
@@ -617,7 +617,7 @@ fn can_div_cipher_literal() {
     let a = Rational::try_from(-6.28).unwrap();
     let a_c = runtime.encrypt(a, &public).unwrap();
 
-    let args: Vec<CircuitInput> = vec![a_c.into()];
+    let args: Vec<FheProgramInput> = vec![a_c.into()];
 
     let result = runtime.run(&circuit, args, &public).unwrap();
 
@@ -646,7 +646,7 @@ fn can_div_literal_cipher() {
     let a = Rational::try_from(-6.28).unwrap();
     let a_c = runtime.encrypt(a, &public).unwrap();
 
-    let args: Vec<CircuitInput> = vec![a_c.into()];
+    let args: Vec<FheProgramInput> = vec![a_c.into()];
 
     let result = runtime.run(&circuit, args, &public).unwrap();
 
@@ -682,7 +682,7 @@ fn can_neg_cipher() {
     let a = Rational::try_from(-6.28).unwrap();
     let a_c = runtime.encrypt(a, &public).unwrap();
 
-    let args: Vec<CircuitInput> = vec![a_c.into()];
+    let args: Vec<FheProgramInput> = vec![a_c.into()];
 
     let result = runtime.run(&circuit, args, &public).unwrap();
 

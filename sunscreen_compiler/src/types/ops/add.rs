@@ -1,5 +1,5 @@
 use crate::types::{
-    intern::{CircuitNode, FheLiteral},
+    intern::{FheProgramNode, FheLiteral},
     Cipher, FheType,
 };
 
@@ -22,9 +22,9 @@ pub trait GraphCipherAdd {
      * Process the + operation
      */
     fn graph_cipher_add(
-        a: CircuitNode<Cipher<Self::Left>>,
-        b: CircuitNode<Cipher<Self::Right>>,
-    ) -> CircuitNode<Cipher<Self::Left>>;
+        a: FheProgramNode<Cipher<Self::Left>>,
+        b: FheProgramNode<Cipher<Self::Right>>,
+    ) -> FheProgramNode<Cipher<Self::Left>>;
 }
 
 /**
@@ -46,9 +46,9 @@ pub trait GraphCipherPlainAdd {
      * Process the + operation
      */
     fn graph_cipher_plain_add(
-        a: CircuitNode<Cipher<Self::Left>>,
-        b: CircuitNode<Self::Right>,
-    ) -> CircuitNode<Cipher<Self::Left>>;
+        a: FheProgramNode<Cipher<Self::Left>>,
+        b: FheProgramNode<Self::Right>,
+    ) -> FheProgramNode<Cipher<Self::Left>>;
 }
 
 /**
@@ -70,7 +70,7 @@ pub trait GraphCipherConstAdd {
      * Process the + operation
      */
     fn graph_cipher_const_add(
-        a: CircuitNode<Cipher<Self::Left>>,
+        a: FheProgramNode<Cipher<Self::Left>>,
         b: Self::Right,
-    ) -> CircuitNode<Cipher<Self::Left>>;
+    ) -> FheProgramNode<Cipher<Self::Left>>;
 }

@@ -1,6 +1,6 @@
 use sunscreen_compiler::{
     types::{bfv::Signed, Cipher, TypeName},
-    CallSignature, CircuitFn, FrontendCompilation, Params, SchemeType, SecurityLevel, CURRENT_CTX, fhe_program,
+    CallSignature, FheProgramFn, FrontendCompilation, Params, SchemeType, SecurityLevel, CURRENT_CTX, fhe_program,
 };
 
 use serde_json::json;

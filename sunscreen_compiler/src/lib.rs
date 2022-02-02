@@ -65,19 +65,19 @@ use serde::{Deserialize, Serialize};
 use std::cell::RefCell;
 
 use sunscreen_backend::compile_inplace;
-use sunscreen_circuit::{
-    Circuit, EdgeInfo, Literal as CircuitLiteral, NodeInfo, Operation as CircuitOperation,
+use sunscreen_fhe_program::{
+    FheProgram, EdgeInfo, Literal as FheProgramLiteral, NodeInfo, Operation as FheProgramOperation,
 };
 
 pub use clap::crate_version;
-pub use compiler::{CircuitFn, Compiler};
+pub use compiler::{FheProgramFn, Compiler};
 pub use error::{Error, Result};
 pub use params::PlainModulusConstraint;
 pub use seal::Plaintext as SealPlaintext;
-pub use sunscreen_circuit::{SchemeType, SecurityLevel};
+pub use sunscreen_fhe_program::{SchemeType, SecurityLevel};
 pub use sunscreen_compiler_macros::*;
 pub use sunscreen_runtime::{
-    CallSignature, Ciphertext, CircuitInput, CircuitInputTrait, CircuitMetadata, CompiledCircuit,
+    CallSignature, Ciphertext, FheProgramInput, FheProgramInputTrait, FheProgramMetadata, CompiledFheProgram,
     Error as RuntimeError, InnerCiphertext, InnerPlaintext, Params, Plaintext, PublicKey,
     RequiredKeys, Runtime, WithContext,
 };
@@ -240,9 +240,9 @@ pub struct Context {
     pub params: Params,
 
     /**
-     * Stores indicies for graph nodes in a bump allocator. [`CircuitNode`](crate::types::intern::CircuitNode)
+     * Stores indicies for graph nodes in a bump allocator. [`FheProgramNode`](crate::types::intern::FheProgramNode)
      * can request allocations of these. This allows it to use slices instead of Vecs, which allows
-     * CircuitNode to impl Copy.
+     * FheProgramNode to impl Copy.
      */
     pub indicies_store: Vec<NodeIndex>,
 }
@@ -455,45 +455,45 @@ impl Context {
 
 impl FrontendCompilation {
     /**
-     * Performs frontend compilation of this intermediate representation into a backend [`Circuit`],
+     * Performs frontend compilation of this intermediate representation into a backend [`FheProgram`],
      * then perform backend compilation and return the result.
      */
-    pub fn compile(&self) -> Circuit {
-        let mut fhe_program = Circuit::new(SchemeType::Bfv);
+    pub fn compile(&self) -> FheProgram {
+        let mut fhe_program = FheProgram::new(SchemeType::Bfv);
 
         let mapped_graph = self.graph.map(
             |id, n| match n {
-                Operation::Add => NodeInfo::new(CircuitOperation::Add),
+                Operation::Add => NodeInfo::new(FheProgramOperation::Add),
                 Operation::InputCiphertext => {
                     // HACKHACK: Input nodes are always added first to the graph in the order
                     // they're specified as function arguments. We should not depend on this.
-                    NodeInfo::new(CircuitOperation::InputCiphertext(id.index()))
+                    NodeInfo::new(FheProgramOperation::InputCiphertext(id.index()))
                 }
                 Operation::InputPlaintext => {
                     // HACKHACK: Input nodes are always added first to the graph in the order
                     // they're specified as function arguments. We should not depend on this.
-                    NodeInfo::new(CircuitOperation::InputPlaintext(id.index()))
+                    NodeInfo::new(FheProgramOperation::InputPlaintext(id.index()))
                 }
                 Operation::Literal(Literal::U64(x)) => {
-                    NodeInfo::new(CircuitOperation::Literal(CircuitLiteral::U64(*x)))
+                    NodeInfo::new(FheProgramOperation::Literal(FheProgramLiteral::U64(*x)))
                 }
                 Operation::Literal(Literal::Plaintext(x)) => {
                     // It's okay to unwrap here because fhe_program compilation will
                     // catch the panic and return a compilation error.
-                    NodeInfo::new(CircuitOperation::Literal(CircuitLiteral::Plaintext(
+                    NodeInfo::new(FheProgramOperation::Literal(FheProgramLiteral::Plaintext(
                         x.to_bytes().expect("Failed to serialize plaintext."),
                     )))
                 }
-                Operation::Sub => NodeInfo::new(CircuitOperation::Sub),
-                Operation::SubPlaintext => NodeInfo::new(CircuitOperation::SubPlaintext),
-                Operation::Negate => NodeInfo::new(CircuitOperation::Negate),
-                Operation::Multiply => NodeInfo::new(CircuitOperation::Multiply),
-                Operation::MultiplyPlaintext => NodeInfo::new(CircuitOperation::MultiplyPlaintext),
-                Operation::Output => NodeInfo::new(CircuitOperation::OutputCiphertext),
-                Operation::RotateLeft => NodeInfo::new(CircuitOperation::ShiftLeft),
-                Operation::RotateRight => NodeInfo::new(CircuitOperation::ShiftRight),
-                Operation::SwapRows => NodeInfo::new(CircuitOperation::SwapRows),
-                Operation::AddPlaintext => NodeInfo::new(CircuitOperation::AddPlaintext),
+                Operation::Sub => NodeInfo::new(FheProgramOperation::Sub),
+                Operation::SubPlaintext => NodeInfo::new(FheProgramOperation::SubPlaintext),
+                Operation::Negate => NodeInfo::new(FheProgramOperation::Negate),
+                Operation::Multiply => NodeInfo::new(FheProgramOperation::Multiply),
+                Operation::MultiplyPlaintext => NodeInfo::new(FheProgramOperation::MultiplyPlaintext),
+                Operation::Output => NodeInfo::new(FheProgramOperation::OutputCiphertext),
+                Operation::RotateLeft => NodeInfo::new(FheProgramOperation::ShiftLeft),
+                Operation::RotateRight => NodeInfo::new(FheProgramOperation::ShiftRight),
+                Operation::SwapRows => NodeInfo::new(FheProgramOperation::SwapRows),
+                Operation::AddPlaintext => NodeInfo::new(FheProgramOperation::AddPlaintext),
             },
             |_, e| match e {
                 OperandInfo::Left => EdgeInfo::LeftOperand,

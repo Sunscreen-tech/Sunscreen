@@ -1,9 +1,9 @@
 use crate::params::{determine_params, PlainModulusConstraint};
 use crate::{
-    CallSignature, CircuitMetadata, Error, FrontendCompilation, Params, RequiredKeys, Result,
+    CallSignature, FheProgramMetadata, Error, FrontendCompilation, Params, RequiredKeys, Result,
     SchemeType, SecurityLevel,
 };
-use sunscreen_runtime::CompiledCircuit;
+use sunscreen_runtime::CompiledFheProgram;
 
 #[derive(Debug, Clone)]
 enum ParamsMode {
@@ -14,7 +14,7 @@ enum ParamsMode {
 /**
  * The operations supported by a #\[circuit\] function.
  */
-pub trait CircuitFn {
+pub trait FheProgramFn {
     /**
      * Get the call signature of the function
      */
@@ -36,7 +36,7 @@ pub trait CircuitFn {
  */
 pub struct Compiler<F>
 where
-    F: CircuitFn,
+    F: FheProgramFn,
 {
     fhe_program_fn: F,
     params_mode: ParamsMode,
@@ -47,7 +47,7 @@ where
 
 impl<F> Compiler<F>
 where
-    F: CircuitFn,
+    F: FheProgramFn,
 {
     /**
      * Create a new compiler with the given circuit.
@@ -106,10 +106,10 @@ where
     }
 
     /**
-     * Comile the circuit. If successful, returns a tuple of the [`Circuit`](crate::Circuit) and the [`Params`] suitable
+     * Comile the circuit. If successful, returns a tuple of the [`FheProgram`](crate::FheProgram) and the [`Params`] suitable
      * for running it.
      */
-    pub fn compile(self) -> Result<CompiledCircuit> {
+    pub fn compile(self) -> Result<CompiledFheProgram> {
         let scheme = self.fhe_program_fn.scheme_type();
         let signature = self.fhe_program_fn.signature();
 
@@ -144,12 +144,12 @@ where
             required_keys.push(RequiredKeys::Galois);
         }
 
-        let metadata = CircuitMetadata {
+        let metadata = FheProgramMetadata {
             params: params,
             required_keys,
             signature,
         };
 
-        Ok(CompiledCircuit { fhe_program_fn, metadata })
+        Ok(CompiledFheProgram { fhe_program_fn, metadata })
     }
 }

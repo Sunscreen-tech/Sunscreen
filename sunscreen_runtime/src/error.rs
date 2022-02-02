@@ -6,9 +6,9 @@ use crate::Type;
  */
 pub enum Error {
     /**
-     * An issue with an [`Circuit`](sunscreen_circuit::Circuit).
+     * An issue with an [`FheProgram`](sunscreen_fhe_program::FheProgram).
      */
-    IRError(sunscreen_circuit::Error),
+    IRError(sunscreen_fhe_program::Error),
 
     /**
      * An error occurred in the SEAL library.
@@ -97,7 +97,7 @@ pub enum Error {
     /**
      * Executing a circuit failed.
      */
-    CircuitRunError(crate::run::CircuitRunFailure),
+    FheProgramRunError(crate::run::FheProgramRunFailure),
 
     /**
      * This variant wraps some error specific to the representation of FheTypes. For example,
@@ -133,8 +133,8 @@ impl From<bincode::Error> for Error {
     }
 }
 
-impl From<sunscreen_circuit::Error> for Error {
-    fn from(err: sunscreen_circuit::Error) -> Self {
+impl From<sunscreen_fhe_program::Error> for Error {
+    fn from(err: sunscreen_fhe_program::Error) -> Self {
         Self::IRError(err)
     }
 }
@@ -145,9 +145,9 @@ impl From<seal::Error> for Error {
     }
 }
 
-impl From<crate::run::CircuitRunFailure> for Error {
-    fn from(err: crate::run::CircuitRunFailure) -> Self {
-        Self::CircuitRunError(err)
+impl From<crate::run::FheProgramRunFailure> for Error {
+    fn from(err: crate::run::FheProgramRunFailure) -> Self {
+        Self::FheProgramRunError(err)
     }
 }
 

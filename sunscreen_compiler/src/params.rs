@@ -1,4 +1,4 @@
-use crate::{CircuitFn, Error, Result, SecurityLevel};
+use crate::{FheProgramFn, Error, Result, SecurityLevel};
 
 use log::{debug, trace};
 
@@ -6,7 +6,7 @@ use seal::{
     BFVEvaluator, BFVScalarEncoder, BfvEncryptionParametersBuilder, CoefficientModulus,
     Context as SealContext, Decryptor, Encryptor, KeyGenerator, PlainModulus,
 };
-use sunscreen_circuit::{Operation, SchemeType};
+use sunscreen_fhe_program::{Operation, SchemeType};
 pub use sunscreen_runtime::Params;
 use sunscreen_runtime::{run_program_unchecked, SealData};
 
@@ -47,7 +47,7 @@ pub fn determine_params<F>(
     scheme_type: SchemeType,
 ) -> Result<Params>
 where
-    F: CircuitFn,
+    F: FheProgramFn,
 {
     'order_loop: for (i, n) in LATTICE_DIMENSIONS.iter().enumerate() {
         let plaintext_modulus = match plaintext_constraint {

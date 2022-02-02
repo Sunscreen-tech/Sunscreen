@@ -1,8 +1,8 @@
 use crate::Operation::*;
-use crate::{Circuit, EdgeInfo, IRError, NodeError, OutputType};
+use crate::{FheProgram, EdgeInfo, IRError, NodeError, OutputType};
 use petgraph::{algo::greedy_feedback_arc_set, stable_graph::NodeIndex, visit::EdgeRef, Direction};
 
-pub(crate) fn validate_ir(ir: &Circuit) -> Vec<IRError> {
+pub(crate) fn validate_ir(ir: &FheProgram) -> Vec<IRError> {
     let mut errors = vec![];
 
     errors.append(&mut ir_has_no_cycle(ir));
@@ -12,7 +12,7 @@ pub(crate) fn validate_ir(ir: &Circuit) -> Vec<IRError> {
     errors
 }
 
-pub(crate) fn ir_has_no_cycle(ir: &Circuit) -> Vec<IRError> {
+pub(crate) fn ir_has_no_cycle(ir: &FheProgram) -> Vec<IRError> {
     let mut errors = vec![];
 
     if greedy_feedback_arc_set(&ir.graph).next() != None {
@@ -22,7 +22,7 @@ pub(crate) fn ir_has_no_cycle(ir: &Circuit) -> Vec<IRError> {
     errors
 }
 
-pub(crate) fn validate_nodes(ir: &Circuit) -> Vec<IRError> {
+pub(crate) fn validate_nodes(ir: &FheProgram) -> Vec<IRError> {
     let mut errors = vec![];
 
     for i in ir.graph.node_indices() {
@@ -143,7 +143,7 @@ pub(crate) fn validate_nodes(ir: &Circuit) -> Vec<IRError> {
 }
 
 fn validate_binary_op_has_correct_operands(
-    ir: &Circuit,
+    ir: &FheProgram,
     index: NodeIndex,
     expected_left_output: OutputType,
     expected_right_output: OutputType,
@@ -195,7 +195,7 @@ fn validate_binary_op_has_correct_operands(
     errors
 }
 
-fn validate_unary_op_has_correct_operands(ir: &Circuit, index: NodeIndex) -> Vec<NodeError> {
+fn validate_unary_op_has_correct_operands(ir: &FheProgram, index: NodeIndex) -> Vec<NodeError> {
     let operand_count = ir.graph.edges_directed(index, Direction::Incoming).count();
 
     if operand_count != 1 {
@@ -217,7 +217,7 @@ fn validate_unary_op_has_correct_operands(ir: &Circuit, index: NodeIndex) -> Vec
 }
 
 fn get_left_right_operands(
-    ir: &Circuit,
+    ir: &FheProgram,
     index: NodeIndex,
 ) -> (Option<NodeIndex>, Option<NodeIndex>) {
     let left = ir
@@ -237,7 +237,7 @@ fn get_left_right_operands(
     (left, right)
 }
 
-pub fn get_unary_operand(ir: &Circuit, index: NodeIndex) -> Option<NodeIndex> {
+pub fn get_unary_operand(ir: &FheProgram, index: NodeIndex) -> Option<NodeIndex> {
     ir.graph
         .edges_directed(index, Direction::Incoming)
         .filter(|e| *e.weight() == EdgeInfo::UnaryOperand)
@@ -250,12 +250,12 @@ mod tests {
     use super::*;
     use crate::SchemeType;
 
-    // Circuit objects created with the API are guaranteed
+    // FheProgram objects created with the API are guaranteed
     // to never produce errors. We may only deserialize an erroneous IR.
 
     #[test]
     fn no_errors_for_ok_ir() {
-        let mut ir = Circuit::new(SchemeType::Bfv);
+        let mut ir = FheProgram::new(SchemeType::Bfv);
         let a = ir.append_input_ciphertext(0);
         let b = ir.append_input_ciphertext(1);
         ir.append_add(a, b);
@@ -305,7 +305,7 @@ mod tests {
           }
         });
 
-        let ir: Circuit = serde_json::from_value(ir_str).unwrap();
+        let ir: FheProgram = serde_json::from_value(ir_str).unwrap();
 
         let errors = validate_ir(&ir);
 
@@ -350,7 +350,7 @@ mod tests {
           }
         });
 
-        let ir: Circuit = serde_json::from_value(ir_str).unwrap();
+        let ir: FheProgram = serde_json::from_value(ir_str).unwrap();
 
         let errors = validate_ir(&ir);
 
@@ -397,7 +397,7 @@ mod tests {
           }
         });
 
-        let ir: Circuit = serde_json::from_value(ir_str).unwrap();
+        let ir: FheProgram = serde_json::from_value(ir_str).unwrap();
 
         let errors = validate_ir(&ir);
 
@@ -454,7 +454,7 @@ mod tests {
           }
         });
 
-        let ir: Circuit = serde_json::from_value(ir_str).unwrap();
+        let ir: FheProgram = serde_json::from_value(ir_str).unwrap();
 
         let errors = validate_ir(&ir);
 

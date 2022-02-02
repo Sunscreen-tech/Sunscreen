@@ -295,7 +295,7 @@ type IRGraph = StableGraph<NodeInfo, EdgeInfo>;
  * The graph construction methods `append_*` take NodeIndex types as arguments. These
  * indices must refer to other nodes in the graph.
  */
-pub struct Circuit {
+pub struct FheProgram {
     /**
      * The scheme type this circuit will run under.
      */
@@ -307,7 +307,7 @@ pub struct Circuit {
     pub graph: IRGraph,
 }
 
-impl PartialEq for Circuit {
+impl PartialEq for FheProgram {
     fn eq(&self, b: &Self) -> bool {
         is_isomorphic_matching(
             &Graph::from(self.graph.clone()),
@@ -318,7 +318,7 @@ impl PartialEq for Circuit {
     }
 }
 
-impl Circuit {
+impl FheProgram {
     /**
      * Create a new new empty intermediate representation.
      */
@@ -640,14 +640,14 @@ impl Circuit {
     }
 
     /**
-     * Runs tree shaking and returns a derived Circuit with only
+     * Runs tree shaking and returns a derived FheProgram with only
      * dependencies required to run the requested nodes.
      *
      * * `nodes`: indices specifying a set of nodes in the graph. Prune return a new
-     *   [`Circuit`] containing nodes in the transitive closure
+     *   [`FheProgram`] containing nodes in the transitive closure
      *   of this set.
      */
-    pub fn prune(&self, nodes: &[NodeIndex]) -> Circuit {
+    pub fn prune(&self, nodes: &[NodeIndex]) -> FheProgram {
         let mut compact_graph = Graph::from(self.graph.clone());
         compact_graph.reverse();
 
@@ -696,7 +696,7 @@ impl Circuit {
     }
 
     /**
-     * Validates this [`Circuit`] for correctness.
+     * Validates this [`FheProgram`] for correctness.
      */
     pub fn validate(&self) -> Result<()> {
         let errors = validation::validate_ir(self);
@@ -736,17 +736,17 @@ impl Circuit {
 }
 
 /**
- * A wrapper for ascertaining the structure of the underlying [`Circuit`].
- * This type is used in [`Circuit::forward_traverse`] and
- * [`Circuit::reverse_traverse`] callbacks.
+ * A wrapper for ascertaining the structure of the underlying [`FheProgram`].
+ * This type is used in [`FheProgram::forward_traverse`] and
+ * [`FheProgram::reverse_traverse`] callbacks.
  */
-pub struct GraphQuery<'a>(&'a Circuit);
+pub struct GraphQuery<'a>(&'a FheProgram);
 
 impl<'a> GraphQuery<'a> {
     /**
-     * Creates a new [`GraphQuery`] from a reference to an [`Circuit`].
+     * Creates a new [`GraphQuery`] from a reference to an [`FheProgram`].
      */
-    pub fn new(ir: &'a Circuit) -> Self {
+    pub fn new(ir: &'a FheProgram) -> Self {
         Self(ir)
     }
 
@@ -782,9 +782,9 @@ impl<'a> GraphQuery<'a> {
 
 #[derive(Debug, Clone)]
 /**
- * A transform for an [`Circuit`]. Callbacks in
- * [`Circuit::forward_traverse`] and
- * [`Circuit::reverse_traverse`] should emit these to update the
+ * A transform for an [`FheProgram`]. Callbacks in
+ * [`FheProgram::forward_traverse`] and
+ * [`FheProgram::reverse_traverse`] should emit these to update the
  * graph.
  *
  * Each of these variants use a [`TransformNodeIndex`] to reference either a node that
@@ -885,7 +885,7 @@ impl Into<TransformNodeIndex> for NodeIndex {
 }
 
 /**
- * A list of tranformations to be applied to the [`Circuit`] graph.
+ * A list of tranformations to be applied to the [`FheProgram`] graph.
  */
 pub struct TransformList {
     transforms: Vec<IRTransform>,
@@ -928,7 +928,7 @@ impl TransformList {
      * result in a node being added, this function will panic. For example, if an [`IRTransform::AppendAdd`]
      * refers to the index of a [`IRTransform::RemoveEdge`] transform, a panic will result.
      */
-    pub fn apply(&mut self, ir: &mut Circuit) {
+    pub fn apply(&mut self, ir: &mut FheProgram) {
         for t in self.transforms.clone().iter() {
             let inserted_node_id = match t {
                 AppendAdd(x, y) => {
@@ -984,12 +984,12 @@ impl TransformList {
 
     fn apply_1_input<F>(
         &mut self,
-        ir: &mut Circuit,
+        ir: &mut FheProgram,
         x: TransformNodeIndex,
         callback: F,
     ) -> Option<NodeIndex>
     where
-        F: FnOnce(&mut Circuit, NodeIndex) -> Option<NodeIndex>,
+        F: FnOnce(&mut FheProgram, NodeIndex) -> Option<NodeIndex>,
     {
         let x = self.materialize_index(x);
 
@@ -998,13 +998,13 @@ impl TransformList {
 
     fn apply_2_input<F>(
         &mut self,
-        ir: &mut Circuit,
+        ir: &mut FheProgram,
         x: TransformNodeIndex,
         y: TransformNodeIndex,
         callback: F,
     ) -> Option<NodeIndex>
     where
-        F: FnOnce(&mut Circuit, NodeIndex, NodeIndex) -> Option<NodeIndex>,
+        F: FnOnce(&mut FheProgram, NodeIndex, NodeIndex) -> Option<NodeIndex>,
     {
         let x = self.materialize_index(x);
         let y = self.materialize_index(y);
@@ -1025,8 +1025,8 @@ impl TransformList {
 mod tests {
     use super::*;
 
-    fn create_simple_dag() -> Circuit {
-        let mut ir = Circuit::new(SchemeType::Bfv);
+    fn create_simple_dag() -> FheProgram {
+        let mut ir = FheProgram::new(SchemeType::Bfv);
 
         let ct = ir.append_input_ciphertext(0);
         let l1 = ir.append_input_literal(Literal::from(7i64));
@@ -1209,7 +1209,7 @@ mod tests {
 
     #[test]
     fn can_prune_ir() {
-        let mut ir = Circuit::new(SchemeType::Bfv);
+        let mut ir = FheProgram::new(SchemeType::Bfv);
 
         let ct = ir.append_input_ciphertext(0);
         let l1 = ir.append_input_literal(Literal::from(7i64));
@@ -1219,7 +1219,7 @@ mod tests {
 
         let pruned = ir.prune(&vec![add]);
 
-        let mut expected_ir = Circuit::new(SchemeType::Bfv);
+        let mut expected_ir = FheProgram::new(SchemeType::Bfv);
         let ct = expected_ir.append_input_ciphertext(0);
         let l1 = expected_ir.append_input_literal(Literal::from(7i64));
         expected_ir.append_add(ct, l1);
@@ -1229,7 +1229,7 @@ mod tests {
 
     #[test]
     fn can_prune_graph_with_removed_nodes() {
-        let mut ir = Circuit::new(SchemeType::Bfv);
+        let mut ir = FheProgram::new(SchemeType::Bfv);
 
         let ct = ir.append_input_ciphertext(0);
         let rem = ir.append_input_ciphertext(1);
@@ -1247,7 +1247,7 @@ mod tests {
 
         let pruned = ir.prune(&vec![add]);
 
-        let mut expected_ir = Circuit::new(SchemeType::Bfv);
+        let mut expected_ir = FheProgram::new(SchemeType::Bfv);
         let ct = expected_ir.append_input_ciphertext(0);
         let l1 = expected_ir.append_input_literal(Literal::from(7i64));
         expected_ir.append_add(ct, l1);
@@ -1257,7 +1257,7 @@ mod tests {
 
     #[test]
     fn can_prune_with_multiple_nodes() {
-        let mut ir = Circuit::new(SchemeType::Bfv);
+        let mut ir = FheProgram::new(SchemeType::Bfv);
 
         let ct1 = ir.append_input_ciphertext(0);
         let ct2 = ir.append_input_ciphertext(1);
@@ -1271,7 +1271,7 @@ mod tests {
 
         let pruned = ir.prune(&vec![o1, neg2]);
 
-        let mut expected_ir = Circuit::new(SchemeType::Bfv);
+        let mut expected_ir = FheProgram::new(SchemeType::Bfv);
         let ct1 = expected_ir.append_input_ciphertext(0);
         let ct2 = expected_ir.append_input_ciphertext(1);
         let neg1 = expected_ir.append_negate(ct1);
@@ -1283,7 +1283,7 @@ mod tests {
 
     #[test]
     fn pruning_empty_node_list_results_in_empty_graph() {
-        let mut ir = Circuit::new(SchemeType::Bfv);
+        let mut ir = FheProgram::new(SchemeType::Bfv);
 
         let ct1 = ir.append_input_ciphertext(0);
         let ct2 = ir.append_input_ciphertext(1);
@@ -1297,7 +1297,7 @@ mod tests {
 
         let pruned = ir.prune(&vec![]);
 
-        let expected_ir = Circuit::new(SchemeType::Bfv);
+        let expected_ir = FheProgram::new(SchemeType::Bfv);
 
         assert_eq!(pruned, expected_ir);
     }

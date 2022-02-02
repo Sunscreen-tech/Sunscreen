@@ -11,8 +11,8 @@ use crate::types::{
 };
 use crate::{
     crate_version,
-    types::{intern::CircuitNode, BfvType, FheType, Type, Version},
-    with_ctx, CircuitInputTrait, Params, WithContext,
+    types::{intern::FheProgramNode, BfvType, FheType, Type, Version},
+    with_ctx, FheProgramInputTrait, Params, WithContext,
 };
 
 use sunscreen_runtime::{
@@ -173,7 +173,7 @@ impl<const INT_BITS: usize> NumCiphertexts for Fractional<INT_BITS> {
     const NUM_CIPHERTEXTS: usize = 1;
 }
 
-impl<const INT_BITS: usize> CircuitInputTrait for Fractional<INT_BITS> {}
+impl<const INT_BITS: usize> FheProgramInputTrait for Fractional<INT_BITS> {}
 
 impl<const INT_BITS: usize> TypeName for Fractional<INT_BITS> {
     fn type_name() -> Type {
@@ -200,13 +200,13 @@ impl<const INT_BITS: usize> GraphCipherAdd for Fractional<INT_BITS> {
     type Right = Fractional<INT_BITS>;
 
     fn graph_cipher_add(
-        a: CircuitNode<Cipher<Self::Left>>,
-        b: CircuitNode<Cipher<Self::Right>>,
-    ) -> CircuitNode<Cipher<Self::Left>> {
+        a: FheProgramNode<Cipher<Self::Left>>,
+        b: FheProgramNode<Cipher<Self::Right>>,
+    ) -> FheProgramNode<Cipher<Self::Left>> {
         with_ctx(|ctx| {
             let n = ctx.add_addition(a.ids[0], b.ids[0]);
 
-            CircuitNode::new(&[n])
+            FheProgramNode::new(&[n])
         })
     }
 }
@@ -216,13 +216,13 @@ impl<const INT_BITS: usize> GraphCipherPlainAdd for Fractional<INT_BITS> {
     type Right = Fractional<INT_BITS>;
 
     fn graph_cipher_plain_add(
-        a: CircuitNode<Cipher<Self::Left>>,
-        b: CircuitNode<Self::Right>,
-    ) -> CircuitNode<Cipher<Self::Left>> {
+        a: FheProgramNode<Cipher<Self::Left>>,
+        b: FheProgramNode<Self::Right>,
+    ) -> FheProgramNode<Cipher<Self::Left>> {
         with_ctx(|ctx| {
             let n = ctx.add_addition_plaintext(a.ids[0], b.ids[0]);
 
-            CircuitNode::new(&[n])
+            FheProgramNode::new(&[n])
         })
     }
 }
@@ -232,16 +232,16 @@ impl<const INT_BITS: usize> GraphCipherConstAdd for Fractional<INT_BITS> {
     type Right = f64;
 
     fn graph_cipher_const_add(
-        a: CircuitNode<Cipher<Self::Left>>,
+        a: FheProgramNode<Cipher<Self::Left>>,
         b: Self::Right,
-    ) -> CircuitNode<Cipher<Self::Left>> {
+    ) -> FheProgramNode<Cipher<Self::Left>> {
         with_ctx(|ctx| {
             let b = Self::from(b).try_into_plaintext(&ctx.params).unwrap();
 
             let lit = ctx.add_plaintext_literal(b.inner);
             let n = ctx.add_addition_plaintext(a.ids[0], lit);
 
-            CircuitNode::new(&[n])
+            FheProgramNode::new(&[n])
         })
     }
 }
@@ -251,13 +251,13 @@ impl<const INT_BITS: usize> GraphCipherSub for Fractional<INT_BITS> {
     type Right = Fractional<INT_BITS>;
 
     fn graph_cipher_sub(
-        a: CircuitNode<Cipher<Self::Left>>,
-        b: CircuitNode<Cipher<Self::Right>>,
-    ) -> CircuitNode<Cipher<Self::Left>> {
+        a: FheProgramNode<Cipher<Self::Left>>,
+        b: FheProgramNode<Cipher<Self::Right>>,
+    ) -> FheProgramNode<Cipher<Self::Left>> {
         with_ctx(|ctx| {
             let n = ctx.add_subtraction(a.ids[0], b.ids[0]);
 
-            CircuitNode::new(&[n])
+            FheProgramNode::new(&[n])
         })
     }
 }
@@ -267,13 +267,13 @@ impl<const INT_BITS: usize> GraphCipherPlainSub for Fractional<INT_BITS> {
     type Right = Fractional<INT_BITS>;
 
     fn graph_cipher_plain_sub(
-        a: CircuitNode<Cipher<Self::Left>>,
-        b: CircuitNode<Self::Right>,
-    ) -> CircuitNode<Cipher<Self::Left>> {
+        a: FheProgramNode<Cipher<Self::Left>>,
+        b: FheProgramNode<Self::Right>,
+    ) -> FheProgramNode<Cipher<Self::Left>> {
         with_ctx(|ctx| {
             let n = ctx.add_subtraction_plaintext(a.ids[0], b.ids[0]);
 
-            CircuitNode::new(&[n])
+            FheProgramNode::new(&[n])
         })
     }
 }
@@ -283,14 +283,14 @@ impl<const INT_BITS: usize> GraphPlainCipherSub for Fractional<INT_BITS> {
     type Right = Fractional<INT_BITS>;
 
     fn graph_plain_cipher_sub(
-        a: CircuitNode<Self::Left>,
-        b: CircuitNode<Cipher<Self::Right>>,
-    ) -> CircuitNode<Cipher<Self::Left>> {
+        a: FheProgramNode<Self::Left>,
+        b: FheProgramNode<Cipher<Self::Right>>,
+    ) -> FheProgramNode<Cipher<Self::Left>> {
         with_ctx(|ctx| {
             let n = ctx.add_subtraction_plaintext(b.ids[0], a.ids[0]);
             let n = ctx.add_negate(n);
 
-            CircuitNode::new(&[n])
+            FheProgramNode::new(&[n])
         })
     }
 }
@@ -300,16 +300,16 @@ impl<const INT_BITS: usize> GraphCipherConstSub for Fractional<INT_BITS> {
     type Right = f64;
 
     fn graph_cipher_const_sub(
-        a: CircuitNode<Cipher<Self::Left>>,
+        a: FheProgramNode<Cipher<Self::Left>>,
         b: Self::Right,
-    ) -> CircuitNode<Cipher<Self::Left>> {
+    ) -> FheProgramNode<Cipher<Self::Left>> {
         with_ctx(|ctx| {
             let b = Self::from(b).try_into_plaintext(&ctx.params).unwrap();
 
             let lit = ctx.add_plaintext_literal(b.inner);
             let n = ctx.add_subtraction_plaintext(a.ids[0], lit);
 
-            CircuitNode::new(&[n])
+            FheProgramNode::new(&[n])
         })
     }
 }
@@ -320,8 +320,8 @@ impl<const INT_BITS: usize> GraphConstCipherSub for Fractional<INT_BITS> {
 
     fn graph_const_cipher_sub(
         a: Self::Left,
-        b: CircuitNode<Cipher<Self::Right>>,
-    ) -> CircuitNode<Cipher<Self::Right>> {
+        b: FheProgramNode<Cipher<Self::Right>>,
+    ) -> FheProgramNode<Cipher<Self::Right>> {
         with_ctx(|ctx| {
             let a = Self::from(a).try_into_plaintext(&ctx.params).unwrap();
 
@@ -329,7 +329,7 @@ impl<const INT_BITS: usize> GraphConstCipherSub for Fractional<INT_BITS> {
             let n = ctx.add_subtraction_plaintext(b.ids[0], lit);
             let n = ctx.add_negate(n);
 
-            CircuitNode::new(&[n])
+            FheProgramNode::new(&[n])
         })
     }
 }
@@ -339,13 +339,13 @@ impl<const INT_BITS: usize> GraphCipherMul for Fractional<INT_BITS> {
     type Right = Fractional<INT_BITS>;
 
     fn graph_cipher_mul(
-        a: CircuitNode<Cipher<Self::Left>>,
-        b: CircuitNode<Cipher<Self::Right>>,
-    ) -> CircuitNode<Cipher<Self::Left>> {
+        a: FheProgramNode<Cipher<Self::Left>>,
+        b: FheProgramNode<Cipher<Self::Right>>,
+    ) -> FheProgramNode<Cipher<Self::Left>> {
         with_ctx(|ctx| {
             let n = ctx.add_multiplication(a.ids[0], b.ids[0]);
 
-            CircuitNode::new(&[n])
+            FheProgramNode::new(&[n])
         })
     }
 }
@@ -355,13 +355,13 @@ impl<const INT_BITS: usize> GraphCipherPlainMul for Fractional<INT_BITS> {
     type Right = Fractional<INT_BITS>;
 
     fn graph_cipher_plain_mul(
-        a: CircuitNode<Cipher<Self::Left>>,
-        b: CircuitNode<Self::Right>,
-    ) -> CircuitNode<Cipher<Self::Left>> {
+        a: FheProgramNode<Cipher<Self::Left>>,
+        b: FheProgramNode<Self::Right>,
+    ) -> FheProgramNode<Cipher<Self::Left>> {
         with_ctx(|ctx| {
             let n = ctx.add_multiplication_plaintext(a.ids[0], b.ids[0]);
 
-            CircuitNode::new(&[n])
+            FheProgramNode::new(&[n])
         })
     }
 }
@@ -371,16 +371,16 @@ impl<const INT_BITS: usize> GraphCipherConstMul for Fractional<INT_BITS> {
     type Right = f64;
 
     fn graph_cipher_const_mul(
-        a: CircuitNode<Cipher<Self::Left>>,
+        a: FheProgramNode<Cipher<Self::Left>>,
         b: Self::Right,
-    ) -> CircuitNode<Cipher<Self::Left>> {
+    ) -> FheProgramNode<Cipher<Self::Left>> {
         with_ctx(|ctx| {
             let b = Self::from(b).try_into_plaintext(&ctx.params).unwrap();
             let lit = ctx.add_plaintext_literal(b.inner);
 
             let n = ctx.add_multiplication_plaintext(a.ids[0], lit);
 
-            CircuitNode::new(&[n])
+            FheProgramNode::new(&[n])
         })
     }
 }
@@ -390,9 +390,9 @@ impl<const INT_BITS: usize> GraphCipherConstDiv for Fractional<INT_BITS> {
     type Right = f64;
 
     fn graph_cipher_const_div(
-        a: CircuitNode<Cipher<Self::Left>>,
+        a: FheProgramNode<Cipher<Self::Left>>,
         b: f64,
-    ) -> CircuitNode<Cipher<Self::Left>> {
+    ) -> FheProgramNode<Cipher<Self::Left>> {
         with_ctx(|ctx| {
             let b = Self::try_from(1. / b)
                 .unwrap()
@@ -403,7 +403,7 @@ impl<const INT_BITS: usize> GraphCipherConstDiv for Fractional<INT_BITS> {
 
             let n = ctx.add_multiplication_plaintext(a.ids[0], lit);
 
-            CircuitNode::new(&[n])
+            FheProgramNode::new(&[n])
         })
     }
 }
@@ -411,11 +411,11 @@ impl<const INT_BITS: usize> GraphCipherConstDiv for Fractional<INT_BITS> {
 impl<const INT_BITS: usize> GraphCipherNeg for Fractional<INT_BITS> {
     type Val = Fractional<INT_BITS>;
 
-    fn graph_cipher_neg(a: CircuitNode<Cipher<Self>>) -> CircuitNode<Cipher<Self::Val>> {
+    fn graph_cipher_neg(a: FheProgramNode<Cipher<Self>>) -> FheProgramNode<Cipher<Self::Val>> {
         with_ctx(|ctx| {
             let n = ctx.add_negate(a.ids[0]);
 
-            CircuitNode::new(&[n])
+            FheProgramNode::new(&[n])
         })
     }
 }

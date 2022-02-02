@@ -21,15 +21,15 @@ pub fn derive_typename(input: proc_macro::TokenStream) -> proc_macro::TokenStrea
 
 #[proc_macro_attribute]
 /**
- * Specifies a function to be an [`fhe_program`]. An [`fhe_program`] has any number of inputs that impl the
+ * Specifies a function to be an [`fhe_program`](macro@fhe_program). An [`fhe_program`](macro@fhe_program) has any number of inputs that impl the
  * `FheType` trait and returns either a single type implementing `FheType` or a tuple of
  * types implementing `FheType`.
  *
- * This function gets run by the compiler to build up the [`fhe_program`] you specify and does not
+ * This function gets run by the compiler to build up the [`fhe_program`](macro@fhe_program) you specify and does not
  * directly or eagerly perform homomorphic operations.
  *
  * # Parameters
- * * `scheme` (required): Designates the scheme this [`fhe_program`] uses. Today, this must be `"bfv"`.
+ * * `scheme` (required): Designates the scheme this [`fhe_program`](macro@fhe_program) uses. Today, this must be `"bfv"`.
  *
  * # Examples
  * ```rust

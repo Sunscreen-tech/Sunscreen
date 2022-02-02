@@ -64,7 +64,7 @@ pub fn fhe_program_impl(
             let ty = &ty.ty;
 
             quote! {
-                #name: CircuitNode<#ty>,
+                #name: FheProgramNode<#ty>,
             }
         })
         .collect::<Vec<TokenStream>>();
@@ -77,7 +77,7 @@ pub fn fhe_program_impl(
         let ty = &t.0.ty;
 
         quote_spanned! {t.0.span() =>
-            let #id: CircuitNode<#ty> = CircuitNode::input();
+            let #id: FheProgramNode<#ty> = FheProgramNode::input();
         }
     });
 
@@ -96,11 +96,11 @@ pub fn fhe_program_impl(
         #vis struct #fhe_program_struct_name {
         }
 
-        impl sunscreen_compiler::CircuitFn for #fhe_program_struct_name {
+        impl sunscreen_compiler::FheProgramFn for #fhe_program_struct_name {
             fn build(&self, params: &sunscreen_compiler::Params) -> sunscreen_compiler::Result<sunscreen_compiler::FrontendCompilation> {
                 use std::cell::RefCell;
                 use std::mem::transmute;
-                use sunscreen_compiler::{CURRENT_CTX, Context, Error, INDEX_ARENA, Result, Params, SchemeType, Value, types::{intern::{CircuitNode, Input}, NumCiphertexts, Type, TypeName, SwapRows, LaneCount, TypeNameInstance}};
+                use sunscreen_compiler::{CURRENT_CTX, Context, Error, INDEX_ARENA, Result, Params, SchemeType, Value, types::{intern::{FheProgramNode, Input}, NumCiphertexts, Type, TypeName, SwapRows, LaneCount, TypeNameInstance}};
 
                 if SchemeType::Bfv != params.scheme_type {
                     return Err(Error::IncorrectScheme)
@@ -167,7 +167,7 @@ pub fn fhe_program_impl(
 }
 
 /**
- * Lifts each return type T into CircuitNode<T>.
+ * Lifts each return type T into FheProgramNode<T>.
  */
 fn lift_return_type(ret: &ReturnType) -> TokenStream {
     match ret {
@@ -180,14 +180,14 @@ fn lift_return_type(ret: &ReturnType) -> TokenStream {
                         let inner_type = &*x;
 
                         quote! {
-                            sunscreen_compiler::types::intern::CircuitNode<#inner_type>
+                            sunscreen_compiler::types::intern::FheProgramNode<#inner_type>
                         }
                     })
                     .collect::<Vec<TokenStream>>(),
                 Type::Paren(t) => {
                     let inner_type = &*t.elem;
                     let inner_type = quote! {
-                        sunscreen_compiler::types::intern::CircuitNode<#inner_type>
+                        sunscreen_compiler::types::intern::FheProgramNode<#inner_type>
                     };
 
                     vec![inner_type]
@@ -195,14 +195,14 @@ fn lift_return_type(ret: &ReturnType) -> TokenStream {
                 Type::Path(_) => {
                     let r = &**t;
                     let r = quote! {
-                        sunscreen_compiler::types::intern::CircuitNode<#r>
+                        sunscreen_compiler::types::intern::FheProgramNode<#r>
                     };
 
                     vec![r]
                 }
                 _ => {
                     return TokenStream::from(quote! {
-                        compile_error!("Circuits must return a single Cipthertext or a tuple of Ciphertexts");
+                        compile_error!("FhePrograms must return a single Cipthertext or a tuple of Ciphertexts");
                     });
                 }
             };
@@ -247,7 +247,7 @@ fn capture_outputs(ret: &ReturnType) -> TokenStream {
                 }
                 _ => {
                     return TokenStream::from(quote! {
-                        compile_error!("Circuits must return a single Cipthertext or a tuple of Ciphertexts");
+                        compile_error!("FhePrograms must return a single Cipthertext or a tuple of Ciphertexts");
                     });
                 }
             };
@@ -314,7 +314,7 @@ fn create_signature(args: &[&Type], ret: &ReturnType) -> TokenStream {
                 }
                 _ => {
                     return TokenStream::from(quote! {
-                        compile_error!("Circuits must return a single Cipthertext or a tuple of Ciphertexts");
+                        compile_error!("FhePrograms must return a single Cipthertext or a tuple of Ciphertexts");
                     });
                 }
             };

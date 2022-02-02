@@ -1,5 +1,5 @@
 use crate::types::{
-    intern::{CircuitNode, FheType},
+    intern::{FheProgramNode, FheType},
     Cipher,
 };
 
@@ -15,5 +15,5 @@ pub trait GraphCipherNeg {
     /**
      * Negates the given ciphertext (e.g. -x).
      */
-    fn graph_cipher_neg(a: CircuitNode<Cipher<Self::Val>>) -> CircuitNode<Cipher<Self::Val>>;
+    fn graph_cipher_neg(a: FheProgramNode<Cipher<Self::Val>>) -> FheProgramNode<Cipher<Self::Val>>;
 }

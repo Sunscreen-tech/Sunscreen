@@ -11,14 +11,14 @@ mod transforms;
 
 pub use error::*;
 
-use sunscreen_circuit::Circuit;
+use sunscreen_fhe_program::FheProgram;
 
 use transforms::transform_intermediate_represenation;
 
 /**
- * Clones the given [`Circuit`] and compiles it.
+ * Clones the given [`FheProgram`] and compiles it.
  */
-pub fn compile(ir: &Circuit) -> Circuit {
+pub fn compile(ir: &FheProgram) -> FheProgram {
     let mut clone = ir.clone();
 
     transform_intermediate_represenation(&mut clone);
@@ -27,9 +27,9 @@ pub fn compile(ir: &Circuit) -> Circuit {
 }
 
 /**
- * Consumes the given [`Circuit`] and compiles it.
+ * Consumes the given [`FheProgram`] and compiles it.
  */
-pub fn compile_inplace(mut ir: Circuit) -> Circuit {
+pub fn compile_inplace(mut ir: FheProgram) -> FheProgram {
     transform_intermediate_represenation(&mut ir);
 
     ir

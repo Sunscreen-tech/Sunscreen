@@ -5,7 +5,7 @@ use serde::{
     de::{self, Error as DeError, Visitor},
     Deserialize, Deserializer, Serialize, Serializer,
 };
-use sunscreen_circuit::{Circuit, SchemeType};
+use sunscreen_fhe_program::{FheProgram, SchemeType};
 
 use crate::{Error, Result};
 
@@ -103,7 +103,7 @@ impl<'de> Deserialize<'de> for Type {
 }
 
 /**
- * Indicates the type signatures of a circuit. Serves as a piece of the [`CircuitMetadata`].
+ * Indicates the type signatures of a circuit. Serves as a piece of the [`FheProgramMetadata`].
  *
  * # Remarks
  * This type is serializable and circuit implementors can give this object
@@ -271,7 +271,7 @@ impl Params {
 /**
  * A serializable list of requirements for a circuit.
  */
-pub struct CircuitMetadata {
+pub struct FheProgramMetadata {
     /**
      * The FHE scheme parameters required for encrypting data for use in the circuit.
      */
@@ -291,17 +291,17 @@ pub struct CircuitMetadata {
 /**
  * A circuit with its associated metadata.
  */
-pub struct CompiledCircuit {
+pub struct CompiledFheProgram {
     /**
      * The underlying FHE circuit.
      */
-    pub fhe_program_fn: Circuit,
+    pub fhe_program_fn: FheProgram,
 
     /**
      * Information about the circuit, including its call signature and the scheme
      * parameters needed by a [`Runtime`](crate::Runtime) to encrypt/decrypt its inputs/outputs.
      */
-    pub metadata: CircuitMetadata,
+    pub metadata: FheProgramMetadata,
 }
 
 #[cfg(test)]

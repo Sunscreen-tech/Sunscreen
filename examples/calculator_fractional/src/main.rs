@@ -4,7 +4,7 @@ use std::thread::{self, JoinHandle};
 use sunscreen_compiler::{
     fhe_program,
     types::{bfv::Fractional, Cipher},
-    Ciphertext, CompiledCircuit, Compiler, Params, PlainModulusConstraint, PublicKey, Runtime,
+    Ciphertext, CompiledFheProgram, Compiler, Params, PlainModulusConstraint, PublicKey, Runtime,
     RuntimeError,
 };
 
@@ -205,7 +205,7 @@ fn alice(
     })
 }
 
-fn compile_fhe_programs() -> (CompiledCircuit, CompiledCircuit, CompiledCircuit) {
+fn compile_fhe_programs() -> (CompiledFheProgram, CompiledFheProgram, CompiledFheProgram) {
     #[fhe_program(scheme = "bfv")]
     fn add(a: Cipher<Fractional<64>>, b: Cipher<Fractional<64>>) -> Cipher<Fractional<64>> {
         a + b

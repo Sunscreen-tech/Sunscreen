@@ -4,13 +4,13 @@
  */
 pub enum Error {
     /**
-     * A circuit is erroneous.
+     * An [``]() is erroneous.
      */
-    IRError(sunscreen_circuit::Error),
+    IRError(sunscreen_fhe_program::Error),
 }
 
-impl From<sunscreen_circuit::Error> for Error {
-    fn from(err: sunscreen_circuit::Error) -> Self {
+impl From<sunscreen_fhe_program::Error> for Error {
+    fn from(err: sunscreen_fhe_program::Error) -> Self {
         Self::IRError(err)
     }
 }

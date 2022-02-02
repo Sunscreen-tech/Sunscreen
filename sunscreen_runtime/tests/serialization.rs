@@ -1,5 +1,5 @@
 use seal::{CoefficientModulus, SecurityLevel};
-use sunscreen_circuit::SchemeType;
+use sunscreen_fhe_program::SchemeType;
 use sunscreen_compiler::types::bfv::Signed;
 use sunscreen_runtime::{Ciphertext, Params, Runtime};
 

@@ -880,18 +880,8 @@ dependencies = [
  "log",
  "petgraph",
  "seal",
- "sunscreen_circuit",
+ "sunscreen_fhe_program",
  "sunscreen_runtime",
-]
-
-[[package]]
-name = "sunscreen_circuit"
-version = "0.1.0"
-dependencies = [
- "petgraph",
- "seal",
- "serde",
- "serde_json",
 ]
 
 [[package]]
@@ -908,8 +898,8 @@ dependencies = [
  "serde",
  "serde_json",
  "sunscreen_backend",
- "sunscreen_circuit",
  "sunscreen_compiler_macros",
+ "sunscreen_fhe_program",
  "sunscreen_runtime",
 ]
 
@@ -923,6 +913,16 @@ dependencies = [
  "sunscreen_compiler",
  "syn",
  "trybuild",
+]
+
+[[package]]
+name = "sunscreen_fhe_program"
+version = "0.1.0"
+dependencies = [
+ "petgraph",
+ "seal",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
@@ -940,8 +940,8 @@ dependencies = [
  "semver",
  "serde",
  "serde_json",
- "sunscreen_circuit",
  "sunscreen_compiler",
+ "sunscreen_fhe_program",
 ]
 
 [[package]]

@@ -15,7 +15,7 @@ use std::ops::{Add, Div, Mul, Neg, Shl, Shr, Sub};
  * # Remarks
  * This type serves as an anchor so users can apply +, *, -, /, <<, and >> operators
  * on types inside a circuit function. If the underlying type `T` implements the
- * `GraphCipherAdd`, `GraphCipherMul`, etc trait, then `CircuitNode<T>` implements
+ * `GraphCipherAdd`, `GraphCipherMul`, etc trait, then `FheProgramNode<T>` implements
  * [`std::ops::Add`], [`std::ops::Mul`], etc and proxies to T's underlying
  * implementation.
  *
@@ -26,31 +26,31 @@ use std::ops::{Add, Div, Mul, Neg, Shl, Shr, Sub};
  * arena of [`NodeIndex`](petgraph::stable_graph::NodeIndex) to allocate and copy
  * slices. This requires we lie about the lifetime of ids, which isn't actually 'static,
  * but rather until we clear the arena. We clean the arena in the circuit macro after
- * circuit construction and thus after all CircuitNodes have gone out of scope.
+ * circuit construction and thus after all FheProgramNodes have gone out of scope.
  *
  * # Undefined behavior
  * These types must be constructed while a [`crate::CURRENT_CTX`] refers to a valid
- * [`crate::Context`]. Furthermore, no [`CircuitNode`] should outlive the said context.
+ * [`crate::Context`]. Furthermore, no [`FheProgramNode`] should outlive the said context.
  * Violating any of these condicitions may result in memory corruption or
  * use-after-free.
  */
-pub struct CircuitNode<T: NumCiphertexts> {
+pub struct FheProgramNode<T: NumCiphertexts> {
     /**
      * The ids on this node. The 'static lifetime on this slice is a lie. The sunscreen
-     * compiler must ensure that no CircuitNode exists after circuit construction.
+     * compiler must ensure that no FheProgramNode exists after circuit construction.
      */
     pub ids: &'static [NodeIndex],
 
     _phantom: std::marker::PhantomData<T>,
 }
 
-impl<T: NumCiphertexts> CircuitNode<T> {
+impl<T: NumCiphertexts> FheProgramNode<T> {
     /**
      * Creates a new circuit node with the given node index.
      *
      * These are an implementation detail needed while constructing the circuit graph
      * and should not be constructed at any other time. Thus, you should never
-     * directly create a [`CircuitNode`].
+     * directly create a [`FheProgramNode`].
      *
      * # Remarks
      * This type internally captures a slice rather than directly storing its own Vec. We do this
@@ -58,7 +58,7 @@ impl<T: NumCiphertexts> CircuitNode<T> {
      * clone() all the time.
      *
      * # Undefined behavior
-     * This type references memory in a backing [`crate::Context`] and without carefully ensuring CircuitNodes
+     * This type references memory in a backing [`crate::Context`] and without carefully ensuring FheProgramNodes
      * never outlive the backing context, use-after-free can occur.
      *
      */
@@ -70,7 +70,7 @@ impl<T: NumCiphertexts> CircuitNode<T> {
             ids_dest.copy_from_slice(ids);
 
             // The memory in the bump allocator is valid until we call reset, which
-            // we do after creating the circuit. At this time, no CircuitNodes should
+            // we do after creating the circuit. At this time, no FheProgramNodes should
             // remain.
             Self {
                 ids: unsafe { std::mem::transmute(ids_dest) },
@@ -82,10 +82,10 @@ impl<T: NumCiphertexts> CircuitNode<T> {
     /**
      * Denote this node as an output by appending an output circuit node.
      *
-     * You should not call this, but rather allow the [`crate::circuit`] macro to do this on your behalf.
+     * You should not call this, but rather allow the [`fhe_program`](crate::fhe_program) macro to do this on your behalf.
      *
      * # Undefined behavior
-     * This type references memory in a backing [`crate::Context`] and without carefully ensuring CircuitNodes
+     * This type references memory in a backing [`crate::Context`] and without carefully ensuring FheProgramNodes
      * never outlive the backing context, use-after-free can occur.
      *
      */
@@ -96,7 +96,7 @@ impl<T: NumCiphertexts> CircuitNode<T> {
             ids.push(with_ctx(|ctx| ctx.add_output(self.ids[i])));
         }
 
-        CircuitNode::new(&ids)
+        FheProgramNode::new(&ids)
     }
 
     /**
@@ -108,7 +108,7 @@ impl<T: NumCiphertexts> CircuitNode<T> {
 }
 
 // cipher + cipher
-impl<T> Add for CircuitNode<Cipher<T>>
+impl<T> Add for FheProgramNode<Cipher<T>>
 where
     T: FheType + GraphCipherAdd<Left = T, Right = T>,
 {
@@ -120,31 +120,31 @@ where
 }
 
 // cipher + plain
-impl<T> Add<CircuitNode<T>> for CircuitNode<Cipher<T>>
+impl<T> Add<FheProgramNode<T>> for FheProgramNode<Cipher<T>>
 where
     T: FheType + GraphCipherPlainAdd<Left = T, Right = T>,
 {
     type Output = Self;
 
-    fn add(self, rhs: CircuitNode<T>) -> Self::Output {
+    fn add(self, rhs: FheProgramNode<T>) -> Self::Output {
         T::graph_cipher_plain_add(self, rhs)
     }
 }
 
 // plain + cipher
-impl<T> Add<CircuitNode<Cipher<T>>> for CircuitNode<T>
+impl<T> Add<FheProgramNode<Cipher<T>>> for FheProgramNode<T>
 where
     T: FheType + GraphCipherPlainAdd<Left = T, Right = T>,
 {
-    type Output = CircuitNode<Cipher<T>>;
+    type Output = FheProgramNode<Cipher<T>>;
 
-    fn add(self, rhs: CircuitNode<Cipher<T>>) -> Self::Output {
+    fn add(self, rhs: FheProgramNode<Cipher<T>>) -> Self::Output {
         T::graph_cipher_plain_add(rhs, self)
     }
 }
 
 // cipher + literal
-impl<T, U> Add<T> for CircuitNode<Cipher<U>>
+impl<T, U> Add<T> for FheProgramNode<Cipher<U>>
 where
     U: FheType + GraphCipherConstAdd<Left = U, Right = T>,
     T: FheLiteral,
@@ -157,43 +157,43 @@ where
 }
 
 // literal + cipher
-impl<T> Add<CircuitNode<Cipher<T>>> for u64
+impl<T> Add<FheProgramNode<Cipher<T>>> for u64
 where
     T: FheType + GraphCipherConstAdd<Left = T, Right = u64> + TryFrom<u64>,
 {
-    type Output = CircuitNode<Cipher<T>>;
+    type Output = FheProgramNode<Cipher<T>>;
 
-    fn add(self, rhs: CircuitNode<Cipher<T>>) -> Self::Output {
+    fn add(self, rhs: FheProgramNode<Cipher<T>>) -> Self::Output {
         T::graph_cipher_const_add(rhs, self)
     }
 }
 
 // literal + cipher
-impl<T> Add<CircuitNode<Cipher<T>>> for i64
+impl<T> Add<FheProgramNode<Cipher<T>>> for i64
 where
     T: FheType + GraphCipherConstAdd<Left = T, Right = i64> + TryFrom<i64>,
 {
-    type Output = CircuitNode<Cipher<T>>;
+    type Output = FheProgramNode<Cipher<T>>;
 
-    fn add(self, rhs: CircuitNode<Cipher<T>>) -> Self::Output {
+    fn add(self, rhs: FheProgramNode<Cipher<T>>) -> Self::Output {
         T::graph_cipher_const_add(rhs, self)
     }
 }
 
 // literal + cipher
-impl<T> Add<CircuitNode<Cipher<T>>> for f64
+impl<T> Add<FheProgramNode<Cipher<T>>> for f64
 where
     T: FheType + GraphCipherConstAdd<Left = T, Right = f64> + TryFrom<f64>,
 {
-    type Output = CircuitNode<Cipher<T>>;
+    type Output = FheProgramNode<Cipher<T>>;
 
-    fn add(self, rhs: CircuitNode<Cipher<T>>) -> Self::Output {
+    fn add(self, rhs: FheProgramNode<Cipher<T>>) -> Self::Output {
         T::graph_cipher_const_add(rhs, self)
     }
 }
 
 // cipher - cipher
-impl<T> Sub for CircuitNode<Cipher<T>>
+impl<T> Sub for FheProgramNode<Cipher<T>>
 where
     T: FheType + GraphCipherSub<Left = T, Right = T>,
 {
@@ -205,31 +205,31 @@ where
 }
 
 // cipher - plaintext
-impl<T> Sub<CircuitNode<T>> for CircuitNode<Cipher<T>>
+impl<T> Sub<FheProgramNode<T>> for FheProgramNode<Cipher<T>>
 where
     T: FheType + GraphCipherPlainSub<Left = T, Right = T>,
 {
     type Output = Self;
 
-    fn sub(self, rhs: CircuitNode<T>) -> Self::Output {
+    fn sub(self, rhs: FheProgramNode<T>) -> Self::Output {
         T::graph_cipher_plain_sub(self, rhs)
     }
 }
 
 // plaintext - cipher
-impl<T> Sub<CircuitNode<Cipher<T>>> for CircuitNode<T>
+impl<T> Sub<FheProgramNode<Cipher<T>>> for FheProgramNode<T>
 where
     T: FheType + GraphPlainCipherSub<Left = T, Right = T>,
 {
-    type Output = CircuitNode<Cipher<T>>;
+    type Output = FheProgramNode<Cipher<T>>;
 
-    fn sub(self, rhs: CircuitNode<Cipher<T>>) -> Self::Output {
+    fn sub(self, rhs: FheProgramNode<Cipher<T>>) -> Self::Output {
         T::graph_plain_cipher_sub(self, rhs)
     }
 }
 
 // cipher - literal
-impl<T, U> Sub<T> for CircuitNode<Cipher<U>>
+impl<T, U> Sub<T> for FheProgramNode<Cipher<U>>
 where
     U: FheType + GraphCipherConstSub<Left = U, Right = T>,
     T: FheLiteral,
@@ -242,43 +242,43 @@ where
 }
 
 // literal - ciphertext
-impl<T> Sub<CircuitNode<Cipher<T>>> for u64
+impl<T> Sub<FheProgramNode<Cipher<T>>> for u64
 where
     T: FheType + GraphConstCipherSub<Left = u64, Right = T>,
 {
-    type Output = CircuitNode<Cipher<T>>;
+    type Output = FheProgramNode<Cipher<T>>;
 
-    fn sub(self, rhs: CircuitNode<Cipher<T>>) -> Self::Output {
+    fn sub(self, rhs: FheProgramNode<Cipher<T>>) -> Self::Output {
         T::graph_const_cipher_sub(self, rhs)
     }
 }
 
 // literal - ciphertext
-impl<T> Sub<CircuitNode<Cipher<T>>> for f64
+impl<T> Sub<FheProgramNode<Cipher<T>>> for f64
 where
     T: FheType + GraphConstCipherSub<Left = f64, Right = T>,
 {
-    type Output = CircuitNode<Cipher<T>>;
+    type Output = FheProgramNode<Cipher<T>>;
 
-    fn sub(self, rhs: CircuitNode<Cipher<T>>) -> Self::Output {
+    fn sub(self, rhs: FheProgramNode<Cipher<T>>) -> Self::Output {
         T::graph_const_cipher_sub(self, rhs)
     }
 }
 
 // literal - ciphertext
-impl<T> Sub<CircuitNode<Cipher<T>>> for i64
+impl<T> Sub<FheProgramNode<Cipher<T>>> for i64
 where
     T: FheType + GraphConstCipherSub<Left = i64, Right = T>,
 {
-    type Output = CircuitNode<Cipher<T>>;
+    type Output = FheProgramNode<Cipher<T>>;
 
-    fn sub(self, rhs: CircuitNode<Cipher<T>>) -> Self::Output {
+    fn sub(self, rhs: FheProgramNode<Cipher<T>>) -> Self::Output {
         T::graph_const_cipher_sub(self, rhs)
     }
 }
 
 // cipher * cipher
-impl<T> Mul for CircuitNode<Cipher<T>>
+impl<T> Mul for FheProgramNode<Cipher<T>>
 where
     T: FheType + GraphCipherMul<Left = T, Right = T>,
 {
@@ -290,31 +290,31 @@ where
 }
 
 // cipher * plain
-impl<T> Mul<CircuitNode<T>> for CircuitNode<Cipher<T>>
+impl<T> Mul<FheProgramNode<T>> for FheProgramNode<Cipher<T>>
 where
     T: FheType + GraphCipherPlainMul<Left = T, Right = T>,
 {
     type Output = Self;
 
-    fn mul(self, rhs: CircuitNode<T>) -> Self::Output {
+    fn mul(self, rhs: FheProgramNode<T>) -> Self::Output {
         T::graph_cipher_plain_mul(self, rhs)
     }
 }
 
 // plain * cipher
-impl<T> Mul<CircuitNode<Cipher<T>>> for CircuitNode<T>
+impl<T> Mul<FheProgramNode<Cipher<T>>> for FheProgramNode<T>
 where
     T: FheType + GraphCipherPlainMul<Left = T, Right = T>,
 {
-    type Output = CircuitNode<Cipher<T>>;
+    type Output = FheProgramNode<Cipher<T>>;
 
-    fn mul(self, rhs: CircuitNode<Cipher<T>>) -> Self::Output {
+    fn mul(self, rhs: FheProgramNode<Cipher<T>>) -> Self::Output {
         T::graph_cipher_plain_mul(rhs, self)
     }
 }
 
 // cipher * literal
-impl<T, U> Mul<T> for CircuitNode<Cipher<U>>
+impl<T, U> Mul<T> for FheProgramNode<Cipher<U>>
 where
     U: FheType + GraphCipherConstMul<Left = U, Right = T> + TryFrom<T>,
     T: FheLiteral,
@@ -327,43 +327,43 @@ where
 }
 
 // literal * cipher
-impl<T> Mul<CircuitNode<Cipher<T>>> for u64
+impl<T> Mul<FheProgramNode<Cipher<T>>> for u64
 where
     T: FheType + GraphCipherConstMul<Left = T, Right = u64> + TryFrom<u64>,
 {
-    type Output = CircuitNode<Cipher<T>>;
+    type Output = FheProgramNode<Cipher<T>>;
 
-    fn mul(self, rhs: CircuitNode<Cipher<T>>) -> Self::Output {
+    fn mul(self, rhs: FheProgramNode<Cipher<T>>) -> Self::Output {
         T::graph_cipher_const_mul(rhs, self)
     }
 }
 
 // literal * cipher
-impl<T> Mul<CircuitNode<Cipher<T>>> for i64
+impl<T> Mul<FheProgramNode<Cipher<T>>> for i64
 where
     T: FheType + GraphCipherConstMul<Left = T, Right = i64> + TryFrom<i64>,
 {
-    type Output = CircuitNode<Cipher<T>>;
+    type Output = FheProgramNode<Cipher<T>>;
 
-    fn mul(self, rhs: CircuitNode<Cipher<T>>) -> Self::Output {
+    fn mul(self, rhs: FheProgramNode<Cipher<T>>) -> Self::Output {
         T::graph_cipher_const_mul(rhs, self)
     }
 }
 
 // literal * cipher
-impl<T> Mul<CircuitNode<Cipher<T>>> for f64
+impl<T> Mul<FheProgramNode<Cipher<T>>> for f64
 where
     T: FheType + GraphCipherConstMul<Left = T, Right = f64> + TryFrom<f64>,
 {
-    type Output = CircuitNode<Cipher<T>>;
+    type Output = FheProgramNode<Cipher<T>>;
 
-    fn mul(self, rhs: CircuitNode<Cipher<T>>) -> Self::Output {
+    fn mul(self, rhs: FheProgramNode<Cipher<T>>) -> Self::Output {
         T::graph_cipher_const_mul(rhs, self)
     }
 }
 
 // ciphertext / ciphertext
-impl<T> Div for CircuitNode<Cipher<T>>
+impl<T> Div for FheProgramNode<Cipher<T>>
 where
     T: FheType + GraphCipherDiv<Left = T, Right = T>,
 {
@@ -375,31 +375,31 @@ where
 }
 
 // ciphertext / ciphertext
-impl<T> Div<CircuitNode<T>> for CircuitNode<Cipher<T>>
+impl<T> Div<FheProgramNode<T>> for FheProgramNode<Cipher<T>>
 where
     T: FheType + GraphCipherPlainDiv<Left = T, Right = T>,
 {
     type Output = Self;
 
-    fn div(self, rhs: CircuitNode<T>) -> Self::Output {
+    fn div(self, rhs: FheProgramNode<T>) -> Self::Output {
         T::graph_cipher_plain_div(self, rhs)
     }
 }
 
 // ciphertext / ciphertext
-impl<T> Div<CircuitNode<Cipher<T>>> for CircuitNode<T>
+impl<T> Div<FheProgramNode<Cipher<T>>> for FheProgramNode<T>
 where
     T: FheType + GraphPlainCipherDiv<Left = T, Right = T>,
 {
-    type Output = CircuitNode<Cipher<T>>;
+    type Output = FheProgramNode<Cipher<T>>;
 
-    fn div(self, rhs: CircuitNode<Cipher<T>>) -> Self::Output {
+    fn div(self, rhs: FheProgramNode<Cipher<T>>) -> Self::Output {
         T::graph_plain_cipher_div(self, rhs)
     }
 }
 
 // ciphertext / literal
-impl<T, U> Div<U> for CircuitNode<Cipher<T>>
+impl<T, U> Div<U> for FheProgramNode<Cipher<T>>
 where
     U: FheLiteral,
     T: FheType + GraphCipherConstDiv<Left = T, Right = U>,
@@ -412,43 +412,43 @@ where
 }
 
 // literal / cipher
-impl<T> Div<CircuitNode<Cipher<T>>> for f64
+impl<T> Div<FheProgramNode<Cipher<T>>> for f64
 where
     T: FheType + GraphConstCipherDiv<Left = f64, Right = T> + TryFrom<f64>,
 {
-    type Output = CircuitNode<Cipher<T>>;
+    type Output = FheProgramNode<Cipher<T>>;
 
-    fn div(self, rhs: CircuitNode<Cipher<T>>) -> Self::Output {
+    fn div(self, rhs: FheProgramNode<Cipher<T>>) -> Self::Output {
         T::graph_const_cipher_div(self, rhs)
     }
 }
 
 // literal / cipher
-impl<T> Div<CircuitNode<Cipher<T>>> for i64
+impl<T> Div<FheProgramNode<Cipher<T>>> for i64
 where
     T: FheType + GraphConstCipherDiv<Left = i64, Right = T> + TryFrom<f64>,
 {
-    type Output = CircuitNode<Cipher<T>>;
+    type Output = FheProgramNode<Cipher<T>>;
 
-    fn div(self, rhs: CircuitNode<Cipher<T>>) -> Self::Output {
+    fn div(self, rhs: FheProgramNode<Cipher<T>>) -> Self::Output {
         T::graph_const_cipher_div(self, rhs)
     }
 }
 
 // literal / cipher
-impl<T> Div<CircuitNode<Cipher<T>>> for u64
+impl<T> Div<FheProgramNode<Cipher<T>>> for u64
 where
     T: FheType + GraphConstCipherDiv<Left = u64, Right = T> + TryFrom<f64>,
 {
-    type Output = CircuitNode<Cipher<T>>;
+    type Output = FheProgramNode<Cipher<T>>;
 
-    fn div(self, rhs: CircuitNode<Cipher<T>>) -> Self::Output {
+    fn div(self, rhs: FheProgramNode<Cipher<T>>) -> Self::Output {
         T::graph_const_cipher_div(self, rhs)
     }
 }
 
 // -ciphertext
-impl<T> Neg for CircuitNode<Cipher<T>>
+impl<T> Neg for FheProgramNode<Cipher<T>>
 where
     T: FheType + GraphCipherNeg<Val = T>,
 {
@@ -460,7 +460,7 @@ where
 }
 
 // ciphertext
-impl<T> SwapRows for CircuitNode<Cipher<T>>
+impl<T> SwapRows for FheProgramNode<Cipher<T>>
 where
     T: FheType + GraphCipherSwapRows,
 {
@@ -471,7 +471,7 @@ where
     }
 }
 
-impl<T> LaneCount for CircuitNode<Cipher<T>>
+impl<T> LaneCount for FheProgramNode<Cipher<T>>
 where
     T: FheType + LaneCount,
 {
@@ -480,7 +480,7 @@ where
     }
 }
 
-impl<T> Shl<u64> for CircuitNode<Cipher<T>>
+impl<T> Shl<u64> for FheProgramNode<Cipher<T>>
 where
     T: FheType + GraphCipherRotateLeft,
 {
@@ -491,7 +491,7 @@ where
     }
 }
 
-impl<T> Shr<u64> for CircuitNode<Cipher<T>>
+impl<T> Shr<u64> for FheProgramNode<Cipher<T>>
 where
     T: FheType + GraphCipherRotateRight,
 {

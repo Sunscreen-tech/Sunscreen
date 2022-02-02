@@ -1,9 +1,9 @@
 use crate::types::{
-    bfv::Signed, intern::CircuitNode, ops::*, BfvType, Cipher, FheType, GraphCipherAdd,
+    bfv::Signed, intern::FheProgramNode, ops::*, BfvType, Cipher, FheType, GraphCipherAdd,
     GraphCipherDiv, GraphCipherMul, GraphCipherSub, NumCiphertexts, TryFromPlaintext,
     TryIntoPlaintext, TypeName,
 };
-use crate::{with_ctx, CircuitInputTrait, InnerPlaintext, Params, Plaintext, TypeName};
+use crate::{with_ctx, FheProgramInputTrait, InnerPlaintext, Params, Plaintext, TypeName};
 use std::cmp::Eq;
 use std::ops::*;
 use sunscreen_runtime::Error;
@@ -74,7 +74,7 @@ impl TryIntoPlaintext for Rational {
     }
 }
 
-impl CircuitInputTrait for Rational {}
+impl FheProgramInputTrait for Rational {}
 impl FheType for Rational {}
 impl BfvType for Rational {}
 
@@ -266,9 +266,9 @@ impl GraphCipherAdd for Rational {
     type Right = Self;
 
     fn graph_cipher_add(
-        a: CircuitNode<Cipher<Self::Left>>,
-        b: CircuitNode<Cipher<Self::Right>>,
-    ) -> CircuitNode<Cipher<Self::Left>> {
+        a: FheProgramNode<Cipher<Self::Left>>,
+        b: FheProgramNode<Cipher<Self::Right>>,
+    ) -> FheProgramNode<Cipher<Self::Left>> {
         with_ctx(|ctx| {
             // Scale each numinator by the other's denominator.
             let num_a_2 = ctx.add_multiplication(a.ids[0], b.ids[1]);
@@ -279,7 +279,7 @@ impl GraphCipherAdd for Rational {
 
             let ids = [ctx.add_addition(num_a_2, num_b_2), den_2];
 
-            CircuitNode::new(&ids)
+            FheProgramNode::new(&ids)
         })
     }
 }
@@ -289,9 +289,9 @@ impl GraphCipherPlainAdd for Rational {
     type Right = Self;
 
     fn graph_cipher_plain_add(
-        a: CircuitNode<Cipher<Self::Left>>,
-        b: CircuitNode<Self::Right>,
-    ) -> CircuitNode<Cipher<Self::Left>> {
+        a: FheProgramNode<Cipher<Self::Left>>,
+        b: FheProgramNode<Self::Right>,
+    ) -> FheProgramNode<Cipher<Self::Left>> {
         with_ctx(|ctx| {
             // Scale each numinator by the other's denominator.
             let num_a_2 = ctx.add_multiplication_plaintext(a.ids[0], b.ids[1]);
@@ -302,7 +302,7 @@ impl GraphCipherPlainAdd for Rational {
 
             let ids = [ctx.add_addition(num_a_2, num_b_2), den_2];
 
-            CircuitNode::new(&ids)
+            FheProgramNode::new(&ids)
         })
     }
 }
@@ -312,9 +312,9 @@ impl GraphCipherConstAdd for Rational {
     type Right = f64;
 
     fn graph_cipher_const_add(
-        a: CircuitNode<Cipher<Self::Left>>,
+        a: FheProgramNode<Cipher<Self::Left>>,
         b: Self::Right,
-    ) -> CircuitNode<Cipher<Self::Left>> {
+    ) -> FheProgramNode<Cipher<Self::Left>> {
         with_ctx(|ctx| {
             let b = Self::try_from(b).unwrap();
 
@@ -333,7 +333,7 @@ impl GraphCipherConstAdd for Rational {
 
             let ids = [ctx.add_addition(num_a_2, num_b_2), den_2];
 
-            CircuitNode::new(&ids)
+            FheProgramNode::new(&ids)
         })
     }
 }
@@ -343,9 +343,9 @@ impl GraphCipherSub for Rational {
     type Right = Self;
 
     fn graph_cipher_sub(
-        a: CircuitNode<Cipher<Self::Left>>,
-        b: CircuitNode<Cipher<Self::Right>>,
-    ) -> CircuitNode<Cipher<Self::Left>> {
+        a: FheProgramNode<Cipher<Self::Left>>,
+        b: FheProgramNode<Cipher<Self::Right>>,
+    ) -> FheProgramNode<Cipher<Self::Left>> {
         with_ctx(|ctx| {
             // Scale each numinator by the other's denominator.
             let num_a_2 = ctx.add_multiplication(a.ids[0], b.ids[1]);
@@ -356,7 +356,7 @@ impl GraphCipherSub for Rational {
 
             let ids = [ctx.add_subtraction(num_a_2, num_b_2), den_2];
 
-            CircuitNode::new(&ids)
+            FheProgramNode::new(&ids)
         })
     }
 }
@@ -366,9 +366,9 @@ impl GraphCipherPlainSub for Rational {
     type Right = Self;
 
     fn graph_cipher_plain_sub(
-        a: CircuitNode<Cipher<Self::Left>>,
-        b: CircuitNode<Self::Right>,
-    ) -> CircuitNode<Cipher<Self::Left>> {
+        a: FheProgramNode<Cipher<Self::Left>>,
+        b: FheProgramNode<Self::Right>,
+    ) -> FheProgramNode<Cipher<Self::Left>> {
         with_ctx(|ctx| {
             // Scale each numinator by the other's denominator.
             let num_a_2 = ctx.add_multiplication_plaintext(a.ids[0], b.ids[1]);
@@ -379,7 +379,7 @@ impl GraphCipherPlainSub for Rational {
 
             let ids = [ctx.add_subtraction(num_a_2, num_b_2), den_2];
 
-            CircuitNode::new(&ids)
+            FheProgramNode::new(&ids)
         })
     }
 }
@@ -389,9 +389,9 @@ impl GraphPlainCipherSub for Rational {
     type Right = Self;
 
     fn graph_plain_cipher_sub(
-        a: CircuitNode<Self::Left>,
-        b: CircuitNode<Cipher<Self::Right>>,
-    ) -> CircuitNode<Cipher<Self::Left>> {
+        a: FheProgramNode<Self::Left>,
+        b: FheProgramNode<Cipher<Self::Right>>,
+    ) -> FheProgramNode<Cipher<Self::Left>> {
         with_ctx(|ctx| {
             // Scale each numinator by the other's denominator.
             let num_a_2 = ctx.add_multiplication_plaintext(b.ids[0], a.ids[1]);
@@ -402,7 +402,7 @@ impl GraphPlainCipherSub for Rational {
 
             let ids = [ctx.add_subtraction(num_a_2, num_b_2), den_2];
 
-            CircuitNode::new(&ids)
+            FheProgramNode::new(&ids)
         })
     }
 }
@@ -412,9 +412,9 @@ impl GraphCipherConstSub for Rational {
     type Right = f64;
 
     fn graph_cipher_const_sub(
-        a: CircuitNode<Cipher<Self::Left>>,
+        a: FheProgramNode<Cipher<Self::Left>>,
         b: Self::Right,
-    ) -> CircuitNode<Cipher<Self::Left>> {
+    ) -> FheProgramNode<Cipher<Self::Left>> {
         with_ctx(|ctx| {
             let b = Self::try_from(b).unwrap();
 
@@ -432,7 +432,7 @@ impl GraphCipherConstSub for Rational {
 
             let ids = [ctx.add_subtraction(num_a_2, num_b_2), den_2];
 
-            CircuitNode::new(&ids)
+            FheProgramNode::new(&ids)
         })
     }
 }
@@ -443,8 +443,8 @@ impl GraphConstCipherSub for Rational {
 
     fn graph_const_cipher_sub(
         a: Self::Left,
-        b: CircuitNode<Cipher<Self::Right>>,
-    ) -> CircuitNode<Cipher<Self::Right>> {
+        b: FheProgramNode<Cipher<Self::Right>>,
+    ) -> FheProgramNode<Cipher<Self::Right>> {
         with_ctx(|ctx| {
             let a = Self::try_from(a).unwrap();
 
@@ -462,7 +462,7 @@ impl GraphConstCipherSub for Rational {
 
             let ids = [ctx.add_subtraction(num_a_2, num_b_2), den_2];
 
-            CircuitNode::new(&ids)
+            FheProgramNode::new(&ids)
         })
     }
 }
@@ -472,9 +472,9 @@ impl GraphCipherMul for Rational {
     type Right = Self;
 
     fn graph_cipher_mul(
-        a: CircuitNode<Cipher<Self::Left>>,
-        b: CircuitNode<Cipher<Self::Right>>,
-    ) -> CircuitNode<Cipher<Self::Left>> {
+        a: FheProgramNode<Cipher<Self::Left>>,
+        b: FheProgramNode<Cipher<Self::Right>>,
+    ) -> FheProgramNode<Cipher<Self::Left>> {
         with_ctx(|ctx| {
             // Scale each numinator by the other's denominator.
             let mul_num = ctx.add_multiplication(a.ids[0], b.ids[0]);
@@ -482,7 +482,7 @@ impl GraphCipherMul for Rational {
 
             let ids = [mul_num, mul_den];
 
-            CircuitNode::new(&ids)
+            FheProgramNode::new(&ids)
         })
     }
 }
@@ -492,9 +492,9 @@ impl GraphCipherPlainMul for Rational {
     type Right = Self;
 
     fn graph_cipher_plain_mul(
-        a: CircuitNode<Cipher<Self::Left>>,
-        b: CircuitNode<Self::Right>,
-    ) -> CircuitNode<Cipher<Self::Left>> {
+        a: FheProgramNode<Cipher<Self::Left>>,
+        b: FheProgramNode<Self::Right>,
+    ) -> FheProgramNode<Cipher<Self::Left>> {
         with_ctx(|ctx| {
             // Scale each numinator by the other's denominator.
             let mul_num = ctx.add_multiplication_plaintext(a.ids[0], b.ids[0]);
@@ -502,7 +502,7 @@ impl GraphCipherPlainMul for Rational {
 
             let ids = [mul_num, mul_den];
 
-            CircuitNode::new(&ids)
+            FheProgramNode::new(&ids)
         })
     }
 }
@@ -512,9 +512,9 @@ impl GraphCipherConstMul for Rational {
     type Right = f64;
 
     fn graph_cipher_const_mul(
-        a: CircuitNode<Cipher<Self::Left>>,
+        a: FheProgramNode<Cipher<Self::Left>>,
         b: Self::Right,
-    ) -> CircuitNode<Cipher<Self::Left>> {
+    ) -> FheProgramNode<Cipher<Self::Left>> {
         with_ctx(|ctx| {
             let b = Self::try_from(b).unwrap();
 
@@ -529,7 +529,7 @@ impl GraphCipherConstMul for Rational {
 
             let ids = [mul_num, mul_den];
 
-            CircuitNode::new(&ids)
+            FheProgramNode::new(&ids)
         })
     }
 }
@@ -539,9 +539,9 @@ impl GraphCipherDiv for Rational {
     type Right = Self;
 
     fn graph_cipher_div(
-        a: CircuitNode<Cipher<Self::Left>>,
-        b: CircuitNode<Cipher<Self::Right>>,
-    ) -> CircuitNode<Cipher<Self::Left>> {
+        a: FheProgramNode<Cipher<Self::Left>>,
+        b: FheProgramNode<Cipher<Self::Right>>,
+    ) -> FheProgramNode<Cipher<Self::Left>> {
         with_ctx(|ctx| {
             // Scale each numinator by the other's denominator.
             let mul_num = ctx.add_multiplication(a.ids[0], b.ids[1]);
@@ -549,7 +549,7 @@ impl GraphCipherDiv for Rational {
 
             let ids = [mul_num, mul_den];
 
-            CircuitNode::new(&ids)
+            FheProgramNode::new(&ids)
         })
     }
 }
@@ -559,9 +559,9 @@ impl GraphCipherPlainDiv for Rational {
     type Right = Self;
 
     fn graph_cipher_plain_div(
-        a: CircuitNode<Cipher<Self::Left>>,
-        b: CircuitNode<Self::Right>,
-    ) -> CircuitNode<Cipher<Self::Left>> {
+        a: FheProgramNode<Cipher<Self::Left>>,
+        b: FheProgramNode<Self::Right>,
+    ) -> FheProgramNode<Cipher<Self::Left>> {
         with_ctx(|ctx| {
             // Scale each numinator by the other's denominator.
             let mul_num = ctx.add_multiplication_plaintext(a.ids[0], b.ids[1]);
@@ -569,7 +569,7 @@ impl GraphCipherPlainDiv for Rational {
 
             let ids = [mul_num, mul_den];
 
-            CircuitNode::new(&ids)
+            FheProgramNode::new(&ids)
         })
     }
 }
@@ -579,9 +579,9 @@ impl GraphPlainCipherDiv for Rational {
     type Right = Self;
 
     fn graph_plain_cipher_div(
-        a: CircuitNode<Self::Left>,
-        b: CircuitNode<Cipher<Self::Right>>,
-    ) -> CircuitNode<Cipher<Self::Left>> {
+        a: FheProgramNode<Self::Left>,
+        b: FheProgramNode<Cipher<Self::Right>>,
+    ) -> FheProgramNode<Cipher<Self::Left>> {
         with_ctx(|ctx| {
             // Scale each numinator by the other's denominator.
             let mul_num = ctx.add_multiplication_plaintext(a.ids[0], b.ids[1]);
@@ -589,7 +589,7 @@ impl GraphPlainCipherDiv for Rational {
 
             let ids = [mul_num, mul_den];
 
-            CircuitNode::new(&ids)
+            FheProgramNode::new(&ids)
         })
     }
 }
@@ -599,9 +599,9 @@ impl GraphCipherConstDiv for Rational {
     type Right = f64;
 
     fn graph_cipher_const_div(
-        a: CircuitNode<Cipher<Self::Left>>,
+        a: FheProgramNode<Cipher<Self::Left>>,
         b: Self::Right,
-    ) -> CircuitNode<Cipher<Self::Left>> {
+    ) -> FheProgramNode<Cipher<Self::Left>> {
         with_ctx(|ctx| {
             let b = Self::try_from(b).unwrap();
 
@@ -616,7 +616,7 @@ impl GraphCipherConstDiv for Rational {
 
             let ids = [mul_num, mul_den];
 
-            CircuitNode::new(&ids)
+            FheProgramNode::new(&ids)
         })
     }
 }
@@ -627,8 +627,8 @@ impl GraphConstCipherDiv for Rational {
 
     fn graph_const_cipher_div(
         a: Self::Left,
-        b: CircuitNode<Cipher<Self::Right>>,
-    ) -> CircuitNode<Cipher<Self::Right>> {
+        b: FheProgramNode<Cipher<Self::Right>>,
+    ) -> FheProgramNode<Cipher<Self::Right>> {
         with_ctx(|ctx| {
             let a = Self::try_from(a).unwrap();
 
@@ -643,7 +643,7 @@ impl GraphConstCipherDiv for Rational {
 
             let ids = [mul_num, mul_den];
 
-            CircuitNode::new(&ids)
+            FheProgramNode::new(&ids)
         })
     }
 }
@@ -651,12 +651,12 @@ impl GraphConstCipherDiv for Rational {
 impl GraphCipherNeg for Rational {
     type Val = Self;
 
-    fn graph_cipher_neg(a: CircuitNode<Cipher<Self::Val>>) -> CircuitNode<Cipher<Self::Val>> {
+    fn graph_cipher_neg(a: FheProgramNode<Cipher<Self::Val>>) -> FheProgramNode<Cipher<Self::Val>> {
         with_ctx(|ctx| {
             let neg = ctx.add_negate(a.ids[0]);
             let ids = [neg, a.ids[1]];
 
-            CircuitNode::new(&ids)
+            FheProgramNode::new(&ids)
         })
     }
 }

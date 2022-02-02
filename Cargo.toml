@@ -11,6 +11,6 @@ members = [
     "sunscreen_backend",
     "sunscreen_compiler",
     "sunscreen_compiler_macros",
-    "sunscreen_circuit",
+    "sunscreen_fhe_program",
     "sunscreen_runtime",
 ]

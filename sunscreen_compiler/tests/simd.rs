@@ -1,7 +1,7 @@
 use sunscreen_compiler::{
     fhe_program,
     types::{bfv::Simd, Cipher, SwapRows},
-    CircuitInput, Compiler, PlainModulusConstraint, Runtime,
+    FheProgramInput, Compiler, PlainModulusConstraint, Runtime,
 };
 
 use std::ops::*;
@@ -20,13 +20,13 @@ fn can_swap_rows_cipher() {
         swap_impl(a)
     }
 
-    let circuit = Compiler::with_fhe_program(swap_rows)
+    let fhe_program = Compiler::with_fhe_program(swap_rows)
         .noise_margin_bits(5)
         .plain_modulus_constraint(PlainModulusConstraint::BatchingMinimum(0))
         .compile()
         .unwrap();
 
-    let runtime = Runtime::new(&circuit.metadata.params).unwrap();
+    let runtime = Runtime::new(&fhe_program.metadata.params).unwrap();
 
     let (public, secret) = runtime.generate_keys().unwrap();
 
@@ -35,9 +35,9 @@ fn can_swap_rows_cipher() {
     let a = Simd::<4>::try_from(data).unwrap();
     let a_c = runtime.encrypt(a, &public).unwrap();
 
-    let args: Vec<CircuitInput> = vec![a_c.into()];
+    let args: Vec<FheProgramInput> = vec![a_c.into()];
 
-    let result = runtime.run(&circuit, args, &public).unwrap();
+    let result = runtime.run(&fhe_program, args, &public).unwrap();
 
     let c: Simd<4> = runtime.decrypt(&result[0], &secret).unwrap();
 
@@ -61,13 +61,13 @@ fn can_rotate_left_cipher() {
         shl_impl(a, 1)
     }
 
-    let circuit = Compiler::with_fhe_program(add)
+    let fhe_program = Compiler::with_fhe_program(add)
         .noise_margin_bits(5)
         .plain_modulus_constraint(PlainModulusConstraint::BatchingMinimum(0))
         .compile()
         .unwrap();
 
-    let runtime = Runtime::new(&circuit.metadata.params).unwrap();
+    let runtime = Runtime::new(&fhe_program.metadata.params).unwrap();
 
     let (public, secret) = runtime.generate_keys().unwrap();
 
@@ -76,9 +76,9 @@ fn can_rotate_left_cipher() {
     let a = Simd::<4>::try_from(data).unwrap();
     let a_c = runtime.encrypt(a, &public).unwrap();
 
-    let args: Vec<CircuitInput> = vec![a_c.into()];
+    let args: Vec<FheProgramInput> = vec![a_c.into()];
 
-    let result = runtime.run(&circuit, args, &public).unwrap();
+    let result = runtime.run(&fhe_program, args, &public).unwrap();
 
     let c: Simd<4> = runtime.decrypt(&result[0], &secret).unwrap();
 
@@ -99,13 +99,13 @@ fn can_rotate_right_cipher() {
         shr_impl(a, 1)
     }
 
-    let circuit = Compiler::with_fhe_program(add)
+    let fhe_program = Compiler::with_fhe_program(add)
         .noise_margin_bits(5)
         .plain_modulus_constraint(PlainModulusConstraint::BatchingMinimum(0))
         .compile()
         .unwrap();
 
-    let runtime = Runtime::new(&circuit.metadata.params).unwrap();
+    let runtime = Runtime::new(&fhe_program.metadata.params).unwrap();
 
     let (public, secret) = runtime.generate_keys().unwrap();
 
@@ -114,9 +114,9 @@ fn can_rotate_right_cipher() {
     let a = Simd::<4>::try_from(data).unwrap();
     let a_c = runtime.encrypt(a, &public).unwrap();
 
-    let args: Vec<CircuitInput> = vec![a_c.into()];
+    let args: Vec<FheProgramInput> = vec![a_c.into()];
 
-    let result = runtime.run(&circuit, args, &public).unwrap();
+    let result = runtime.run(&fhe_program, args, &public).unwrap();
 
     let c: Simd<4> = runtime.decrypt(&result[0], &secret).unwrap();
 
@@ -137,13 +137,13 @@ fn can_add_cipher_cipher() {
         add_impl(a, b)
     }
 
-    let circuit = Compiler::with_fhe_program(add)
+    let fhe_program = Compiler::with_fhe_program(add)
         .noise_margin_bits(5)
         .plain_modulus_constraint(PlainModulusConstraint::BatchingMinimum(0))
         .compile()
         .unwrap();
 
-    let runtime = Runtime::new(&circuit.metadata.params).unwrap();
+    let runtime = Runtime::new(&fhe_program.metadata.params).unwrap();
 
     let (public, secret) = runtime.generate_keys().unwrap();
 
@@ -154,9 +154,9 @@ fn can_add_cipher_cipher() {
     let b = Simd::<4>::try_from(data).unwrap();
     let b_c = runtime.encrypt(b, &public).unwrap();
 
-    let args: Vec<CircuitInput> = vec![a_c.into(), b_c.into()];
+    let args: Vec<FheProgramInput> = vec![a_c.into(), b_c.into()];
 
-    let result = runtime.run(&circuit, args, &public).unwrap();
+    let result = runtime.run(&fhe_program, args, &public).unwrap();
 
     let c: Simd<4> = runtime.decrypt(&result[0], &secret).unwrap();
 
@@ -177,13 +177,13 @@ fn can_sub_cipher_cipher() {
         sub_impl(a, b)
     }
 
-    let circuit = Compiler::with_fhe_program(sub)
+    let fhe_program = Compiler::with_fhe_program(sub)
         .noise_margin_bits(5)
         .plain_modulus_constraint(PlainModulusConstraint::BatchingMinimum(0))
         .compile()
         .unwrap();
 
-    let runtime = Runtime::new(&circuit.metadata.params).unwrap();
+    let runtime = Runtime::new(&fhe_program.metadata.params).unwrap();
 
     let (public, secret) = runtime.generate_keys().unwrap();
 
@@ -194,9 +194,9 @@ fn can_sub_cipher_cipher() {
     let b = Simd::<4>::try_from(data.clone()).unwrap();
     let b_c = runtime.encrypt(b, &public).unwrap();
 
-    let args: Vec<CircuitInput> = vec![a_c.into(), b_c.into()];
+    let args: Vec<FheProgramInput> = vec![a_c.into(), b_c.into()];
 
-    let result = runtime.run(&circuit, args, &public).unwrap();
+    let result = runtime.run(&fhe_program, args, &public).unwrap();
 
     let c: Simd<4> = runtime.decrypt(&result[0], &secret).unwrap();
 
@@ -217,13 +217,13 @@ fn can_mul_cipher_cipher() {
         mul_impl(a, b)
     }
 
-    let circuit = Compiler::with_fhe_program(mul)
+    let fhe_program = Compiler::with_fhe_program(mul)
         .noise_margin_bits(5)
         .plain_modulus_constraint(PlainModulusConstraint::BatchingMinimum(0))
         .compile()
         .unwrap();
 
-    let runtime = Runtime::new(&circuit.metadata.params).unwrap();
+    let runtime = Runtime::new(&fhe_program.metadata.params).unwrap();
 
     let (public, secret) = runtime.generate_keys().unwrap();
 
@@ -234,9 +234,9 @@ fn can_mul_cipher_cipher() {
     let b = Simd::<4>::try_from(data).unwrap();
     let b_c = runtime.encrypt(b, &public).unwrap();
 
-    let args: Vec<CircuitInput> = vec![a_c.into(), b_c.into()];
+    let args: Vec<FheProgramInput> = vec![a_c.into(), b_c.into()];
 
-    let result = runtime.run(&circuit, args, &public).unwrap();
+    let result = runtime.run(&fhe_program, args, &public).unwrap();
 
     let c: Simd<4> = runtime.decrypt(&result[0], &secret).unwrap();
 
@@ -257,13 +257,13 @@ fn can_neg_cipher_cipher() {
         neg_impl(a)
     }
 
-    let circuit = Compiler::with_fhe_program(mul)
+    let fhe_program = Compiler::with_fhe_program(mul)
         .noise_margin_bits(5)
         .plain_modulus_constraint(PlainModulusConstraint::BatchingMinimum(0))
         .compile()
         .unwrap();
 
-    let runtime = Runtime::new(&circuit.metadata.params).unwrap();
+    let runtime = Runtime::new(&fhe_program.metadata.params).unwrap();
 
     let (public, secret) = runtime.generate_keys().unwrap();
 
@@ -272,9 +272,9 @@ fn can_neg_cipher_cipher() {
     let a = Simd::<4>::try_from(data.clone()).unwrap();
     let a_c = runtime.encrypt(a, &public).unwrap();
 
-    let args: Vec<CircuitInput> = vec![a_c.into()];
+    let args: Vec<FheProgramInput> = vec![a_c.into()];
 
-    let result = runtime.run(&circuit, args, &public).unwrap();
+    let result = runtime.run(&fhe_program, args, &public).unwrap();
 
     let c: Simd<4> = runtime.decrypt(&result[0], &secret).unwrap();
 

@@ -38,7 +38,7 @@ fn compile_native(profile: &str, out_path: &Path) {
     println!("-I{}", out_path.join("include").display());
 }
 
-fn compile_wasm(profile: &str, out_path: &Path) {
+fn compile_wasm(_profile: &str, _out_path: &Path) {
     unimplemented!();
     /*
     let lib = PathBuf::from(std::env::var("OUT_DIR").unwrap())

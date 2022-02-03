@@ -8,7 +8,7 @@ edition = "2021"
 [dependencies]
 petgraph = { version = "0.6.0", features = ["serde-1"] }
 serde = { version = "1.0.130", features = ["derive"] }
-seal = { path = "../seal" }
+seal = { version = "^0.1", path = "../seal" }
 
 [dev-dependencies]
 serde_json = "1.0.71"

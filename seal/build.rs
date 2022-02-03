@@ -1,7 +1,7 @@
 use bindgen;
 
 use cmake::Config;
-use emsdk::Config as EmConfig;
+//use emsdk::Config as EmConfig;
 
 use std::path::{Path, PathBuf};
 
@@ -39,6 +39,8 @@ fn compile_native(profile: &str, out_path: &Path) {
 }
 
 fn compile_wasm(profile: &str, out_path: &Path) {
+    unimplemented!();
+    /*
     let lib = PathBuf::from(std::env::var("OUT_DIR").unwrap())
         .join("build")
         .join("lib")
@@ -73,6 +75,7 @@ fn compile_wasm(profile: &str, out_path: &Path) {
         .emcc_arg("ALLOW_MEMORY_GROWTH=1")
         .emcc_arg(&lib.to_string_lossy())
         .build();
+    */
 }
 
 fn main() {

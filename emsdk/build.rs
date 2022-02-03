@@ -2,6 +2,17 @@ use std::path::PathBuf;
 use std::process::Command;
 
 fn main() {
+    let target_dir = PathBuf::from(std::env::var("TARGET").expect("Failed to get target"));
+
+    fs_extra::dir::copy(
+        "./emsdk",
+        target_dir,
+        &fs_extra::dir::CopyOptions::default(),
+    )
+    .unwrap();
+
+    let output_emsdk = Pat
+
     let output = Command::new("./emsdk/emsdk")
         .arg("install")
         .arg("latest")

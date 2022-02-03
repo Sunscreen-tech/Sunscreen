@@ -749,7 +749,6 @@ version = "0.1.0"
 dependencies = [
  "bindgen",
  "cmake",
- "emsdk",
  "link-cplusplus",
  "serde",
  "serde_json",

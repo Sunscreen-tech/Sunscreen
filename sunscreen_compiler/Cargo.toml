@@ -11,10 +11,10 @@ clap = "2.34.0"
 log = "0.4.14"
 num = "0.4.0"
 petgraph = "0.6.0"
-sunscreen_compiler_macros = { version = "^0.1", path = "../sunscreen_compiler_macros" }
-sunscreen_backend = { version = "^0.1", path = "../sunscreen_backend" }
-sunscreen_fhe_program = { version = "^0.1", path = "../sunscreen_fhe_program" }
-sunscreen_runtime = { version = "^0.1", path = "../sunscreen_runtime" }
+sunscreen_compiler_macros = { version = "^0.1", path = "../sunscreen_compiler_macros", registry = "sunscreen"  }
+sunscreen_backend = { version = "^0.1", path = "../sunscreen_backend", registry = "sunscreen"  }
+sunscreen_fhe_program = { version = "^0.1", path = "../sunscreen_fhe_program", registry = "sunscreen"  }
+sunscreen_runtime = { version = "^0.1", path = "../sunscreen_runtime", registry = "sunscreen"  }
 seal = { version = "^0.1", path = "../seal" }
 serde = { version = "1.0.130", features = ["derive"] }
 

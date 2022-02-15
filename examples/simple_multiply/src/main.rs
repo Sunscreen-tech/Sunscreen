@@ -49,8 +49,6 @@ fn main() {
         .compile()
         .unwrap();
 
-    println!("{}", fhe_program.metadata.params.lattice_dimension);
-
     /*
      * Next, we construct a runtime. The runtime provides the APIs for encryption, decryption, and
      * running an FHE program.

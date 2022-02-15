@@ -7,4 +7,3 @@ edition = "2021"
 
 [dependencies]
 sunscreen_compiler = { path = "../../sunscreen_compiler" }
-sunscreen_runtime = { path = "../../sunscreen_runtime" }

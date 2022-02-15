@@ -1,9 +1,8 @@
 use sunscreen_compiler::{
     fhe_program,
     types::{bfv::Signed, Cipher},
-    Compiler, PlainModulusConstraint,
+    Compiler, PlainModulusConstraint, Runtime
 };
-use sunscreen_runtime::Runtime;
 
 /**
  * The #[fhe_program] macro indicates this function represents a homomorphic encryption
@@ -49,8 +48,6 @@ fn main() {
         .plain_modulus_constraint(PlainModulusConstraint::Raw(64))
         .compile()
         .unwrap();
-
-    println!("{}", fhe_program.metadata.params.lattice_dimension);
 
     /*
      * Next, we construct a runtime. The runtime provides the APIs for encryption, decryption, and

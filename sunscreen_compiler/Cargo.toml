@@ -15,7 +15,7 @@ sunscreen_compiler_macros = { version = "^0.1", path = "../sunscreen_compiler_ma
 sunscreen_backend = { version = "^0.1", path = "../sunscreen_backend", registry = "sunscreen"  }
 sunscreen_fhe_program = { version = "^0.1", path = "../sunscreen_fhe_program", registry = "sunscreen"  }
 sunscreen_runtime = { version = "^0.1", path = "../sunscreen_runtime", registry = "sunscreen"  }
-seal = { version = "^0.1", path = "../seal" }
+seal = { version = "^0.1", path = "../seal", registry = "sunscreen" }
 serde = { version = "1.0.130", features = ["derive"] }
 
 [dev-dependencies]

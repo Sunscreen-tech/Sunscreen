@@ -1,2 +1,2 @@
 [registries]
-sunscreen = { index = "http://localhost:7878/git/index" }
+sunscreen = { index = "https://crates.sunscreen.tech/git/index" }

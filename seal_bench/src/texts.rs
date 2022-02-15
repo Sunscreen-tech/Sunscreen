@@ -33,7 +33,7 @@ fn ciphertext() -> Row {
             .set_coefficient_modulus(
                 CoefficientModulus::bfv_default(d, SecurityLevel::default()).unwrap(),
             )
-            .set_plain_modulus_u64(1_000_000)
+            .set_plain_modulus_u64(64)
             .build()
             .unwrap();
 

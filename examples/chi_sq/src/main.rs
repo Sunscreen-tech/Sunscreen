@@ -228,7 +228,9 @@ fn main() {
     let n_1 = 7;
     let n_2 = 9;
 
-    let plain_modulus = PlainModulusConstraint::Raw(1024);
+    // Signed types allow us to use a really small modulus,
+    // allowing us to get very performant parameters.
+    let plain_modulus = PlainModulusConstraint::Raw(32);
 
     println!("**********Naive**************");
     println!("\t**********Native************");

@@ -46,9 +46,11 @@ fn main() {
     * returns the compiled FHE program and parameters.
     */
     let fhe_program = Compiler::with_fhe_program(simple_multiply)
-        .plain_modulus_constraint(PlainModulusConstraint::Raw(600))
+        .plain_modulus_constraint(PlainModulusConstraint::Raw(64))
         .compile()
         .unwrap();
+
+    println!("{}", fhe_program.metadata.params.lattice_dimension);
 
     /*
      * Next, we construct a runtime. The runtime provides the APIs for encryption, decryption, and

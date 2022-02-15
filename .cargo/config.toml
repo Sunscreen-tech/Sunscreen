@@ -1,0 +1,2 @@
+[registries]
+sunscreen = { index = "https://crates.sunscreen.tech/git/index" }

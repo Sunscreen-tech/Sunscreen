@@ -13,7 +13,7 @@ pub fn derive_typename(input: proc_macro::TokenStream) -> proc_macro::TokenStrea
 fn derive_typename_inner(parse_stream: DeriveInput) -> TokenStream {
     let name = &parse_stream.ident;
     let name_contents = LitStr::new(&format!("{{}}::{}", name.to_string()), name.span());
-    let crate_name = std::env::var("CARGO_PKG_NAME").unwrap();
+    let crate_name = std::env::var("CARGO_CRATE_NAME").unwrap();
 
     // If the sunscreen_compiler crate itself tries to derive types, then it needs to refer
     // to itself in the first-person as "crate", not in the third-person as "sunscreen_compiler"

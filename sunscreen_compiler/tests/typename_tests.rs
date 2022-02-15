@@ -1,12 +1,14 @@
 use sunscreen_compiler::{
     crate_version,
+    TypeName as DeriveTypeName,
     types::{Type, TypeName, TypeNameInstance, Version},
 };
-use sunscreen_compiler_macros::TypeName;
+
+
 
 #[test]
 fn derive_typename_example() {
-    #[derive(TypeName)]
+    #[derive(DeriveTypeName)]
     struct Foo {
         _cow: String,
     }

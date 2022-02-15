@@ -32,7 +32,7 @@ pub fn derive_typename(input: proc_macro::TokenStream) -> proc_macro::TokenStrea
  * * `scheme` (required): Designates the scheme this [`fhe_program`](macro@fhe_program) uses. Today, this must be `"bfv"`.
  *
  * # Examples
- * ```rust
+ * ```rust,ignore
  * # use sunscreen_compiler::{fhe_program, types::{bfv::Signed, Cipher}, Params, Context};
  *
  * #[fhe_program(scheme = "bfv")]
@@ -45,7 +45,7 @@ pub fn derive_typename(input: proc_macro::TokenStream) -> proc_macro::TokenStrea
  * }
  * ```
  *
- * ```rust
+ * ```rust,ignore
  * # use sunscreen_compiler::{fhe_program, types::{bfv::Signed, Cipher}, Params, Context};
  *
  * #[fhe_program(scheme = "bfv")]

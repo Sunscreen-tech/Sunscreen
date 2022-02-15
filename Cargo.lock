@@ -853,7 +853,6 @@ name = "simple_multiply"
 version = "0.1.0"
 dependencies = [
  "sunscreen_compiler",
- "sunscreen_runtime",
 ]
 
 [[package]]

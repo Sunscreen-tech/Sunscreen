@@ -1,9 +1,8 @@
 use sunscreen_compiler::{
     fhe_program,
     types::{bfv::Signed, Cipher},
-    Compiler, PlainModulusConstraint,
+    Compiler, PlainModulusConstraint, Runtime
 };
-use sunscreen_runtime::Runtime;
 
 /**
  * The #[fhe_program] macro indicates this function represents a homomorphic encryption

@@ -118,6 +118,24 @@
         {
             "type": "lldb",
             "request": "launch",
+            "name": "Debug edge_cases tests in library 'sunscreen_compiler'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--package=sunscreen_compiler"
+                ],
+                "filter": {
+                    "name": "edge_cases",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
             "name": "Debug signed integration tests in library 'sunscreen_compiler'",
             "cargo": {
                 "args": [

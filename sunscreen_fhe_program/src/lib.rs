@@ -594,7 +594,14 @@ impl FheProgram {
 
         let pruned = compact_graph.filter_map(
             |id, n| {
-                if closure_set.contains(&revmap[id.index()]) {
+                // Don't prune input nodes.
+                let is_input = match n.operation {
+                    Operation::InputPlaintext(_) => true,
+                    Operation::InputCiphertext(_) => true,
+                    _ => false
+                };
+
+                if closure_set.contains(&revmap[id.index()]) || is_input {
                     Some(n.clone())
                 } else {
                     None
@@ -1188,6 +1195,7 @@ mod tests {
         let mut expected_ir = FheProgram::new(SchemeType::Bfv);
         let ct1 = expected_ir.append_input_ciphertext(0);
         let ct2 = expected_ir.append_input_ciphertext(1);
+        let _ct3 = expected_ir.append_input_ciphertext(2);
         let neg1 = expected_ir.append_negate(ct1);
         expected_ir.append_negate(ct2);
         expected_ir.append_output_ciphertext(neg1);
@@ -1196,7 +1204,7 @@ mod tests {
     }
 
     #[test]
-    fn pruning_empty_node_list_results_in_empty_graph() {
+    fn pruning_empty_node_list_results_in_inputs_only() {
         let mut ir = FheProgram::new(SchemeType::Bfv);
 
         let ct1 = ir.append_input_ciphertext(0);
@@ -1211,7 +1219,10 @@ mod tests {
 
         let pruned = ir.prune(&vec![]);
 
-        let expected_ir = FheProgram::new(SchemeType::Bfv);
+        let mut expected_ir = FheProgram::new(SchemeType::Bfv);
+        let _ct1 = expected_ir.append_input_ciphertext(0);
+        let _ct2 = expected_ir.append_input_ciphertext(1);
+        let _ct3 = expected_ir.append_input_ciphertext(2);
 
         assert_eq!(pruned, expected_ir);
     }

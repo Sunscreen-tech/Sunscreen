@@ -1,10 +1,8 @@
 use sunscreen_compiler::{
     crate_version,
-    TypeName as DeriveTypeName,
     types::{Type, TypeName, TypeNameInstance, Version},
+    TypeName as DeriveTypeName,
 };
-
-
 
 #[test]
 fn derive_typename_example() {

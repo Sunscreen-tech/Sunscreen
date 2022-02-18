@@ -206,6 +206,11 @@ impl Runtime {
     where
         I: Into<FheProgramInput>,
     {
+        // We're going to call run_program_unchecked, which
+        // can result in undefined behavior, non-termination,
+        // or panics on malformed programs. Since this method is safe,
+        // it must guard against calling run_program_unchecked with
+        // inputs that result in undefined behavior.
         fhe_program.fhe_program_fn.validate()?;
 
         // Aside from FHE program correctness, check that the required keys are given.

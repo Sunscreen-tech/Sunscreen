@@ -5,6 +5,9 @@ use crate::types::{
 
 /**
  * Called when an Fhe Program encounters a / operation on two encrypted types.
+ *
+ * This trait is an implementation detail of FHE program compilation;
+ * you should not directly call methods on this trait.
  */
 pub trait GraphCipherDiv {
     /**
@@ -29,6 +32,9 @@ pub trait GraphCipherDiv {
 /**
  * Called when an Fhe Program encounters a / operation with a
  * ciphertext numerator and plaintext denominator.
+ *
+ * This trait is an implementation detail of FHE program compilation;
+ * you should not directly call methods on this trait.
  */
 pub trait GraphCipherPlainDiv {
     /**
@@ -53,6 +59,9 @@ pub trait GraphCipherPlainDiv {
 /**
  * Called when an Fhe Program encounters a / operation with a
  * plaintext numerator and ciphertext denominator.
+ *
+ * This trait is an implementation detail of FHE program compilation;
+ * you should not directly call methods on this trait.
  */
 pub trait GraphPlainCipherDiv {
     /**
@@ -76,6 +85,9 @@ pub trait GraphPlainCipherDiv {
 
 /**
  * Called when an Fhe Program encounters a / operation on an encrypted numerator and literal denominator.
+ *
+ * This trait is an implementation detail of FHE program compilation;
+ * you should not directly call methods on this trait.
  */
 pub trait GraphCipherConstDiv {
     /**
@@ -100,6 +112,9 @@ pub trait GraphCipherConstDiv {
 /**
  * Called when an Fhe Program encounters a / operation on a
  * literal numerator and encrypted denominator.
+ *
+ * This trait is an implementation detail of FHE program compilation;
+ * you should not directly call methods on this trait.
  */
 pub trait GraphConstCipherDiv {
     /**

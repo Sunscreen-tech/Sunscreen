@@ -1,7 +1,7 @@
 use sunscreen_compiler::{
     fhe_program,
     types::{bfv::Signed, Cipher},
-    Compiler, PlainModulusConstraint, Runtime
+    Compiler, PlainModulusConstraint, Runtime,
 };
 
 /**

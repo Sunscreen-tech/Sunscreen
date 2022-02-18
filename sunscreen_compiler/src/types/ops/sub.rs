@@ -74,6 +74,9 @@ pub trait GraphPlainCipherSub {
 
 /**
  * Called when an Fhe Program encounters a - operation on two encrypted types.
+ *
+ * This trait is an implementation detail of FHE program compilation;
+ * you should not directly call methods on this trait.
  */
 pub trait GraphCipherConstSub {
     /**

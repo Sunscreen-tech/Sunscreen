@@ -598,7 +598,7 @@ impl FheProgram {
                 let is_input = match n.operation {
                     Operation::InputPlaintext(_) => true,
                     Operation::InputCiphertext(_) => true,
-                    _ => false
+                    _ => false,
                 };
 
                 if closure_set.contains(&revmap[id.index()]) || is_input {

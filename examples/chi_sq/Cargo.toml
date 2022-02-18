@@ -7,3 +7,4 @@ edition = "2021"
 
 [dependencies]
 sunscreen_compiler = { path = "../../sunscreen_compiler" }
+env_logger = "0.9.0"

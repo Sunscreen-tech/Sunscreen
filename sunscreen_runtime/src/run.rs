@@ -378,18 +378,24 @@ where
 
     let items_remaining = AtomicUsize::new(ir.graph.node_count());
 
-    let ready = deps.iter().enumerate().filter_map(|(id, count)| {
+    // We must eagerly evaluate the iterator (i.e. collect) since
+    // the dependency counts will be changing during iteration. Lazy
+    // iteration causes a race condition between the filter_map closer
+    // evaluating and the deps counts being decremented, potentially
+    // resulting in nodes being run more than once.
+    let initial_ready = deps.iter().enumerate().filter_map(|(id, count)| {
         if count.load(Ordering::Relaxed) == 0 {
+            log::trace!("parallel_traverse: Initial node {}", id);
             Some(id)
         } else {
             None
         }
-    });
+    }).collect::<Vec<usize>>();
 
     let returned_result = AtomicCell::new(Ok(()));
 
     rayon::scope(|s| {
-        for node_id in ready {
+        for node_id in initial_ready {
             fn run_internal<'a, F>(
                 node_id: NodeIndex,
                 ir: &FheProgram,
@@ -399,6 +405,8 @@ where
                 callback: &F
             ) where F: Fn(NodeIndex) -> Result<(), FheProgramRunFailure> + Sync + Send
             {
+                log::trace!("parallel_traverse: Running node {}", node_id.index());
+
                 if returned_result.load().is_err() {
                     return;
                 }
@@ -418,6 +426,7 @@ where
                         // Note is the value prior to atomic subtraction.
                         if old_val == 1 {
                             s.spawn(move |_| {
+                                log::trace!("Node {} ready", e.index());
                                 run_internal(e, ir, deps, returned_result, items_remaining, callback);
                             });
                         }

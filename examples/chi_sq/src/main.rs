@@ -228,6 +228,8 @@ fn main() {
     let n_1 = 7;
     let n_2 = 9;
 
+    env_logger::init();
+
     // Signed types allow us to use a really small modulus,
     // allowing us to get very performant parameters.
     let plain_modulus = PlainModulusConstraint::Raw(32);
@@ -246,7 +248,7 @@ fn main() {
     );
     println!("**********Optimized************");
     println!("\t**********Native************");
-    run_native(chi_sq_optimized_impl, n_0, n_1, n_2);
+    // run_native(chi_sq_optimized_impl, n_0, n_1, n_2);
     println!("\t**********FHE************");
     // On a first-gen M1 mac, the optimized fhe_program is around 6
     // orders of magnitude slower than running natively, taking

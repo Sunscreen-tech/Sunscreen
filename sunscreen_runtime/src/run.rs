@@ -365,16 +365,11 @@ where
     let ir = ir.as_ref();
 
     // Initialize the number of incomplete dependencies.
-    let mut deps: Vec<AtomicUsize> = Vec::with_capacity(ir.graph.node_count());
-
-    for n in ir.graph.node_indices() {
-        unsafe {
-            *deps.get_unchecked_mut(n.index()) =
-                AtomicUsize::new(ir.graph.neighbors_directed(n, Direction::Incoming).count());
-        }
-    }
-
-    unsafe { deps.set_len(ir.graph.node_count()) };
+    let deps = ir
+        .graph
+        .node_indices()
+        .map(|n| AtomicUsize::new(ir.graph.neighbors_directed(n, Direction::Incoming).count()))
+        .collect::<Vec<AtomicUsize>>();
 
     let items_remaining = AtomicUsize::new(ir.graph.node_count());
 
@@ -383,14 +378,18 @@ where
     // iteration causes a race condition between the filter_map closer
     // evaluating and the deps counts being decremented, potentially
     // resulting in nodes being run more than once.
-    let initial_ready = deps.iter().enumerate().filter_map(|(id, count)| {
-        if count.load(Ordering::Relaxed) == 0 {
-            log::trace!("parallel_traverse: Initial node {}", id);
-            Some(id)
-        } else {
-            None
-        }
-    }).collect::<Vec<usize>>();
+    let initial_ready = deps
+        .iter()
+        .enumerate()
+        .filter_map(|(id, count)| {
+            if count.load(Ordering::Relaxed) == 0 {
+                log::trace!("parallel_traverse: Initial node {}", id);
+                Some(id)
+            } else {
+                None
+            }
+        })
+        .collect::<Vec<usize>>();
 
     let returned_result = AtomicCell::new(Ok(()));
 
@@ -402,8 +401,9 @@ where
                 deps: &[AtomicUsize],
                 returned_result: &AtomicCell<Result<(), FheProgramRunFailure>>,
                 items_remaining: &AtomicUsize,
-                callback: &F
-            ) where F: Fn(NodeIndex) -> Result<(), FheProgramRunFailure> + Sync + Send
+                callback: &F,
+            ) where
+                F: Fn(NodeIndex) -> Result<(), FheProgramRunFailure> + Sync + Send,
             {
                 log::trace!("parallel_traverse: Running node {}", node_id.index());
 
@@ -427,7 +427,14 @@ where
                         if old_val == 1 {
                             s.spawn(move |_| {
                                 log::trace!("Node {} ready", e.index());
-                                run_internal(e, ir, deps, returned_result, items_remaining, callback);
+                                run_internal(
+                                    e,
+                                    ir,
+                                    deps,
+                                    returned_result,
+                                    items_remaining,
+                                    callback,
+                                );
                             });
                         }
                     }
@@ -440,7 +447,14 @@ where
             let callback = &callback;
 
             s.spawn(move |_| {
-                run_internal(NodeIndex::from(node_id as u32), ir, deps,returned_result, items_remaining, callback);
+                run_internal(
+                    NodeIndex::from(node_id as u32),
+                    ir,
+                    deps,
+                    returned_result,
+                    items_remaining,
+                    callback,
+                );
             });
         }
     });

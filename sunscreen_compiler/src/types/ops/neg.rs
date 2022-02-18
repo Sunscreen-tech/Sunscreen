@@ -5,6 +5,9 @@ use crate::types::{
 
 /**
  * Called when the user performs unary negation (-) on a ciphertext.
+ *
+ * This trait is an implementation detail of FHE program compilation;
+ * you should not directly call methods on this trait.
  */
 pub trait GraphCipherNeg {
     /**

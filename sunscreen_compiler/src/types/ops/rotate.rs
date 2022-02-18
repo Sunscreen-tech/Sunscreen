@@ -2,6 +2,9 @@ use crate::types::{intern::FheProgramNode, Cipher, FheType};
 
 /**
  * Swaps the rows of the given ciphertext.
+ *
+ * This trait is an implementation detail of FHE program compilation;
+ * you should not directly call methods on this trait.
  */
 pub trait GraphCipherSwapRows
 where

@@ -28,10 +28,14 @@ use std::ops::{Add, Div, Mul, Neg, Shl, Shr, Sub};
  * but rather until we clear the arena. We clean the arena in the FHE program macro after
  * FHE program construction and thus after all FheProgramNodes have gone out of scope.
  *
+ * You should never explicitly construct these outside of e.g.
+ * FHE type GraphCipherPlainAdd traits, which run during graph
+ * construction.
+ *
  * # Undefined behavior
  * These types must be constructed while a [`crate::CURRENT_CTX`] refers to a valid
  * [`crate::Context`]. Furthermore, no [`FheProgramNode`] should outlive the said context.
- * Violating any of these condicitions may result in memory corruption or
+ * Violating any of these conditions may result in memory corruption or
  * use-after-free.
  */
 pub struct FheProgramNode<T: NumCiphertexts> {
@@ -48,19 +52,21 @@ impl<T: NumCiphertexts> FheProgramNode<T> {
     /**
      * Creates a new FHE program node with the given node index.
      *
-     * These are an implementation detail needed while constructing the FHE program graph
-     * and should not be constructed at any other time. Thus, you should never
-     * directly create a [`FheProgramNode`].
+     * These are an implementation detail needed while constructing the
+     * FHE program graph
+     * and should not be constructed at any other time. You should never
+     * need to directly create a [`FheProgramNode`].
      *
      * # Remarks
-     * This type internally captures a slice rather than directly storing its own Vec. We do this
-     * so the type can impl Copy and composing FHE programs is natural without the user needing to call
-     * clone() all the time.
+     * This type internally captures a slice rather than directly
+     * storing its own Vec. We do this so the type can impl Copy and
+     * composing FHE programs is natural without the user needing to
+     * call clone() all the time.
      *
      * # Undefined behavior
-     * This type references memory in a backing [`crate::Context`] and without carefully ensuring FheProgramNodes
-     * never outlive the backing context, use-after-free can occur.
-     *
+     * This type references memory in a bump allocator. Failing to
+     * ensure FheProgramNodes never outlive the backing context, will
+     * result in use-after-free.
      */
     pub fn new(ids: &[NodeIndex]) -> Self {
         INDEX_ARENA.with(|allocator| {
@@ -72,6 +78,7 @@ impl<T: NumCiphertexts> FheProgramNode<T> {
             // The memory in the bump allocator is valid until we call reset, which
             // we do after creating the FHE program. At this time, no FheProgramNodes should
             // remain.
+            // We invoke the dark transmutation ritual to turn a finite lifetime into a 'static.
             Self {
                 ids: unsafe { std::mem::transmute(ids_dest) },
                 _phantom: std::marker::PhantomData,

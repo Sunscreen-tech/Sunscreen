@@ -28,6 +28,11 @@ pub enum Error {
      * An Error occurred in the Sunscreen runtime.
      */
     RuntimeError(crate::RuntimeError),
+
+    /**
+     * The compiled Sunscreen FHE program is malformed.
+     */
+    FheProgramError(sunscreen_fhe_program::Error),
 }
 
 impl From<seal::Error> for Error {

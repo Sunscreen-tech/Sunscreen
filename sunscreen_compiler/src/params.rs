@@ -143,6 +143,8 @@ where
 
         let ir = fhe_program_fn.build(&params)?.compile();
 
+        ir.validate().map_err(|e| Error::FheProgramError(e))?;
+
         // From a noise standpoint, it doesn't matter what is in the plaintext or if the output
         // is meaningful or not. Just run a bunch of 1 values through the fhe_program and measure the
         // noise. We choose 1, as it avoids transparent ciphertexts when

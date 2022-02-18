@@ -1,6 +1,6 @@
 use sunscreen_compiler::{
+    types::{bfv::Signed, Cipher},
     *,
-    types::{bfv::{Signed}, Cipher}
 };
 
 #[test]
@@ -22,7 +22,9 @@ fn unused_cipher_parameter_1() {
     let a = runtime.encrypt(Signed::from(15), &public_key).unwrap();
     let b = runtime.encrypt(Signed::from(5), &public_key).unwrap();
 
-    let result = runtime.run(&program, vec![a.clone(), a, b], &public_key).unwrap();
+    let result = runtime
+        .run(&program, vec![a.clone(), a, b], &public_key)
+        .unwrap();
 
     let c: Signed = runtime.decrypt(&result[0], &private_key).unwrap();
 
@@ -48,7 +50,9 @@ fn unused_cipher_parameter_2() {
     let a = runtime.encrypt(Signed::from(15), &public_key).unwrap();
     let b = runtime.encrypt(Signed::from(5), &public_key).unwrap();
 
-    let result = runtime.run(&program, vec![a.clone(), a, b], &public_key).unwrap();
+    let result = runtime
+        .run(&program, vec![a.clone(), a, b], &public_key)
+        .unwrap();
 
     let c: Signed = runtime.decrypt(&result[0], &private_key).unwrap();
 
@@ -74,7 +78,9 @@ fn unused_cipher_parameter_3() {
     let a = runtime.encrypt(Signed::from(15), &public_key).unwrap();
     let b = runtime.encrypt(Signed::from(5), &public_key).unwrap();
 
-    let result = runtime.run(&program, vec![a, b.clone(), b], &public_key).unwrap();
+    let result = runtime
+        .run(&program, vec![a, b.clone(), b], &public_key)
+        .unwrap();
 
     let c: Signed = runtime.decrypt(&result[0], &private_key).unwrap();
 

@@ -5,6 +5,9 @@ use crate::types::{
 
 /**
  * Called when an Fhe Program encounters a * operation on two encrypted types.
+ *
+ * This trait is an implementation detail of FHE program compilation;
+ * you should not directly call methods on this trait.
  */
 pub trait GraphCipherMul {
     /**
@@ -29,6 +32,9 @@ pub trait GraphCipherMul {
 /**
  * Called when an Fhe Program encounters a * operation on an encrypted
  * and plaintext data type.
+ *
+ * This trait is an implementation detail of FHE program compilation;
+ * you should not directly call methods on this trait.
  */
 pub trait GraphCipherPlainMul {
     /**
@@ -53,6 +59,9 @@ pub trait GraphCipherPlainMul {
 /**
  * Called when an Fhe Program encounters a + operation on one encrypted
  * and a literal.
+ *
+ * This trait is an implementation detail of FHE program compilation;
+ * you should not directly call methods on this trait.
  */
 pub trait GraphCipherConstMul {
     /**

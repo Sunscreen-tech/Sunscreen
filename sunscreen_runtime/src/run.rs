@@ -98,10 +98,12 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
         data: &'a [AtomicCell<Option<Cow<SealData>>>],
         index: usize,
     ) -> Result<&'a SealData, FheProgramRunFailure> {
+        let data = data.get(index).ok_or(FheProgramRunFailure::MissingData)?;
+
         // This is correct so long as the IR program is indeed a DAG executed in topological order
         // Since for a given edge (x,y), x executes before y, the operand data that y needs
         // from x will exist.
-        let val = unsafe { data[index].as_ptr().as_ref().unwrap() };
+        let val = unsafe { data.as_ptr().as_ref().unwrap() };
 
         match val {
             Some(v) => Ok(v),
@@ -360,6 +362,8 @@ where
         Cow::Borrowed(ir) // moo
     };
 
+    let ir = ir.as_ref();
+
     // Initialize the number of incomplete dependencies.
     let mut deps: Vec<AtomicUsize> = Vec::with_capacity(ir.graph.node_count());
 
@@ -372,93 +376,71 @@ where
 
     unsafe { deps.set_len(ir.graph.node_count()) };
 
-    let mut threadpool = scoped_threadpool::Pool::new(num_cpus::get() as u32);
     let items_remaining = AtomicUsize::new(ir.graph.node_count());
 
-    let (sender, reciever) = crossbeam::channel::unbounded();
-
-    for r in deps.iter().enumerate().filter_map(|(id, count)| {
+    // We must eagerly evaluate the iterator (i.e. collect) since
+    // the dependency counts will be changing during iteration. Lazy
+    // iteration causes a race condition between the filter_map closer
+    // evaluating and the deps counts being decremented, potentially
+    // resulting in nodes being run more than once.
+    let initial_ready = deps.iter().enumerate().filter_map(|(id, count)| {
         if count.load(Ordering::Relaxed) == 0 {
+            log::trace!("parallel_traverse: Initial node {}", id);
             Some(id)
         } else {
             None
         }
-    }) {
-        sender.send(r).unwrap();
-    }
+    }).collect::<Vec<usize>>();
 
     let returned_result = AtomicCell::new(Ok(()));
 
-    threadpool.scoped(|scope| {
-        for _ in 0..num_cpus::get() {
-            scope.execute(|| {
-                loop {
-                    if returned_result.load().is_err() {
-                        return;
-                    }
+    rayon::scope(|s| {
+        for node_id in initial_ready {
+            fn run_internal<'a, F>(
+                node_id: NodeIndex,
+                ir: &FheProgram,
+                deps: &[AtomicUsize],
+                returned_result: &AtomicCell<Result<(), FheProgramRunFailure>>,
+                items_remaining: &AtomicUsize,
+                callback: &F
+            ) where F: Fn(NodeIndex) -> Result<(), FheProgramRunFailure> + Sync + Send
+            {
+                log::trace!("parallel_traverse: Running node {}", node_id.index());
 
-                    let mut updated_count = false;
+                if returned_result.load().is_err() {
+                    return;
+                }
 
-                    // Atomically check if the number of items remaining is zero. If it is,
-                    // there's no more work to do, so return. Otherwise, decrement the count
-                    // and this thread will take an item.
-                    while !updated_count {
-                        let count = items_remaining.load(Ordering::Acquire);
+                let result = callback(node_id);
 
-                        if count == 0 {
-                            return;
-                        }
+                if result.is_err() {
+                    returned_result.store(result);
+                    return;
+                }
 
-                        match items_remaining.compare_exchange_weak(
-                            count,
-                            count - 1,
-                            Ordering::Release,
-                            Ordering::Relaxed,
-                        ) {
-                            Ok(_) => {
-                                updated_count = true;
-                            }
-                            _ => {}
-                        }
-                    }
-
-                    // Not sure why we get a warning here. Clearly used on line
-                    // 289.
-                    #[allow(unused_assignments)]
-                    let mut recv_node_id: u32 = 0;
-
-                    loop {
-                        if returned_result.load().is_err() {
-                            return;
-                        }
-
-                        let r = reciever.recv_timeout(core::time::Duration::from_millis(100));
-
-                        if let Ok(val) = r {
-                            recv_node_id = val as u32;
-                            break;
-                        }
-                    }
-
-                    let node_id = NodeIndex::from(recv_node_id);
-
-                    let result = callback(node_id);
-
-                    if result.is_err() {
-                        returned_result.store(result);
-                        return;
-                    }
-
+                rayon::scope(|s| {
                     // Check each child's dependency count and mark it as ready if 0.
                     for e in ir.graph.neighbors_directed(node_id, Direction::Outgoing) {
                         let old_val = deps[e.index()].fetch_sub(1, Ordering::Relaxed);
 
                         // Note is the value prior to atomic subtraction.
                         if old_val == 1 {
-                            sender.send(e.index()).unwrap();
+                            s.spawn(move |_| {
+                                log::trace!("Node {} ready", e.index());
+                                run_internal(e, ir, deps, returned_result, items_remaining, callback);
+                            });
                         }
                     }
-                }
+                });
+            }
+
+            let deps = &deps;
+            let returned_result = &returned_result;
+            let items_remaining = &items_remaining;
+            let callback = &callback;
+
+            s.spawn(move |_| {
+                run_internal(NodeIndex::from(node_id as u32), ir, deps,returned_result, items_remaining, callback);
             });
         }
     });

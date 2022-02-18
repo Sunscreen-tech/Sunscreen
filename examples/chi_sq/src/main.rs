@@ -232,7 +232,7 @@ fn main() {
 
     // Signed types allow us to use a really small modulus,
     // allowing us to get very performant parameters.
-    let plain_modulus = PlainModulusConstraint::Raw(32);
+    let plain_modulus = PlainModulusConstraint::Raw(64);
 
     println!("**********Naive**************");
     println!("\t**********Native************");

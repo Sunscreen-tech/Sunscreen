@@ -26,10 +26,9 @@ fn simple_multiply(a: Cipher<Signed>, b: Cipher<Signed>) -> Cipher<Signed> {
 
 fn main() {
     /*
-    * Compile the FHE program we previously declared. We specify the plain-text modulus is 600,
-    * meaning that if our calculatations ever result in a value greater than 600, we'll
-    * encounter overflow. Since 5 * 15 = 75 < 600, we have plenty of headroom and won't encounter
-    * this issue.
+    * Compile the FHE program we previously declared. We specify the 
+    * plain-text modulus as 64. For help choosing a plain modulus, see
+    * the Sunscreen book for more information.
     *
     * Homomorphic operations introduce noise into ciphertexts. Too much noise results in
     * garbled messages upon decryption. Homomorphic encryption schemes have a number of parameters

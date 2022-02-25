@@ -172,6 +172,7 @@ fn run_fhe<F, T, U>(
     U: From<T> + FheType + TypeName + std::fmt::Display,
 {
     let start = Instant::now();
+
     let fhe_program = Compiler::with_fhe_program(c)
         .plain_modulus_constraint(plain_modulus)
         .compile()
@@ -224,15 +225,15 @@ fn run_fhe<F, T, U>(
 }
 
 fn main() {
-    let n_0 = 2;
-    let n_1 = 7;
-    let n_2 = 9;
+    let n_0 = 1 << 31 - 1;
+    let n_1 = 1 << 31 - 1;
+    let n_2 = 1 << 31 - 1;
 
     env_logger::init();
 
     // Signed types allow us to use a really small modulus,
     // allowing us to get very performant parameters.
-    let plain_modulus = PlainModulusConstraint::Raw(64);
+    let plain_modulus = PlainModulusConstraint::Raw(200);
 
     println!("**********Naive**************");
     println!("\t**********Native************");

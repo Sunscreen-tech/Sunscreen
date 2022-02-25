@@ -1,6 +1,6 @@
 use crate::params::{determine_params, PlainModulusConstraint};
 use crate::{
-    CallSignature, Error, FheProgramMetadata, FrontendCompilation, Params, RequiredKeys, Result,
+    CallSignature, FheProgramMetadata, FrontendCompilation, Params, RequiredKeys, Result,
     SchemeType, SecurityLevel,
 };
 use sunscreen_runtime::CompiledFheProgram;
@@ -40,7 +40,7 @@ where
 {
     fhe_program_fn: F,
     params_mode: ParamsMode,
-    plain_modulus_constraint: Option<PlainModulusConstraint>,
+    plain_modulus_constraint: PlainModulusConstraint,
     security_level: SecurityLevel,
     noise_margin: u32,
 }
@@ -56,7 +56,9 @@ where
         Self {
             fhe_program_fn,
             params_mode: ParamsMode::Search,
-            plain_modulus_constraint: None,
+            // This default value is sufficient for doing 3 levels of 64-bit
+            // multiplications
+            plain_modulus_constraint: PlainModulusConstraint::Raw(262_144),
             security_level: SecurityLevel::TC128,
             noise_margin: 20,
         }
@@ -76,7 +78,7 @@ where
      * batching of at least n bits in length.
      */
     pub fn plain_modulus_constraint(mut self, p: PlainModulusConstraint) -> Self {
-        self.plain_modulus_constraint = Some(p);
+        self.plain_modulus_constraint = p;
         self
     }
 
@@ -116,13 +118,9 @@ where
         let (fhe_program_fn, params) = match self.params_mode {
             ParamsMode::Manual(p) => (self.fhe_program_fn.build(&p), p.clone()),
             ParamsMode::Search => {
-                let constraint = self
-                    .plain_modulus_constraint
-                    .ok_or(Error::MissingPlainModulusConstraint)?;
-
                 let params = determine_params::<F>(
                     &self.fhe_program_fn,
-                    constraint,
+                    self.plain_modulus_constraint,
                     self.security_level,
                     self.noise_margin,
                     scheme,

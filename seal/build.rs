@@ -31,7 +31,13 @@ fn compile_native(profile: &str, out_path: &Path) {
         .define("SEAL_PURE_SOURCETREE", "ON")
         .build();
 
-    println!("cargo:rustc-link-search=native={}/build/lib", dst.display());
+    let out_path_suffix = if std::env::var("CARGO_CFG_WINDOWS").is_ok() {
+        profile
+    } else {
+        ""
+    };
+
+    println!("cargo:rustc-link-search=native={}/build/lib/{}", dst.display(), out_path_suffix);
     println!("cargo:rustc-link-lib=static=sealc-3.7");
     println!("cargo:rustc-link-lib=static=seal-3.7");
 

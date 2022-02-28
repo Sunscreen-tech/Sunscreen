@@ -1,6 +1,6 @@
 [workspace]
 members = [
-    "emsdk",
+    #"emsdk",
     "examples/simple_multiply",
     "examples/calculator_rational",
     "examples/calculator_fractional",

@@ -7,7 +7,7 @@
 //! # Examples
 //! This example is further annotated in `examples/simple_multiply`.
 //! ```
-//! # use sunscreen_compiler::{fhe_program, Compiler, types::{bfv::Signed, Cipher}, PlainModulusConstraint, Params, Runtime, Context};
+//! # use sunscreen::{fhe_program, Compiler, types::{bfv::Signed, Cipher}, PlainModulusConstraint, Params, Runtime, Context};
 //!
 //! #[fhe_program(scheme = "bfv")]
 //! fn simple_multiply(a: Cipher<Signed>, b: Cipher<Signed>) -> Cipher<Signed> {
@@ -51,7 +51,7 @@ mod params;
  * macro will automatically insert them for you as needed.
  *
  * The root of the module contains:
- * * [`Cipher`](crate::types::Cipher) is a paramterized type used to
+ * * [`Cipher`](crate::types::Cipher) is a parameterized type used to
  * denote an [`fhe_program`] input parameter as encrypted.
  */
 pub mod types;

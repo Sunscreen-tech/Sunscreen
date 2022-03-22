@@ -1,4 +1,4 @@
-use sunscreen_compiler::{
+use sunscreen::{
     crate_version,
     types::{Type, TypeName, TypeNameInstance, Version},
     TypeName as DeriveTypeName,

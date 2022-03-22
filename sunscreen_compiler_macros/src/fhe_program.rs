@@ -24,7 +24,7 @@ pub fn fhe_program_impl(
     let scheme_type = match attr_params.scheme {
         Scheme::Bfv => {
             quote! {
-                sunscreen_compiler::SchemeType::Bfv
+                sunscreen::SchemeType::Bfv
             }
         }
     };
@@ -97,11 +97,11 @@ pub fn fhe_program_impl(
         #vis struct #fhe_program_struct_name {
         }
 
-        impl sunscreen_compiler::FheProgramFn for #fhe_program_struct_name {
-            fn build(&self, params: &sunscreen_compiler::Params) -> sunscreen_compiler::Result<sunscreen_compiler::FrontendCompilation> {
+        impl sunscreen::FheProgramFn for #fhe_program_struct_name {
+            fn build(&self, params: &sunscreen::Params) -> sunscreen::Result<sunscreen::FrontendCompilation> {
                 use std::cell::RefCell;
                 use std::mem::transmute;
-                use sunscreen_compiler::{CURRENT_CTX, Context, Error, INDEX_ARENA, Result, Params, SchemeType, Value, types::{intern::{FheProgramNode, Input}, NumCiphertexts, Type, TypeName, SwapRows, LaneCount, TypeNameInstance}};
+                use sunscreen::{CURRENT_CTX, Context, Error, INDEX_ARENA, Result, Params, SchemeType, Value, types::{intern::{FheProgramNode, Input}, NumCiphertexts, Type, TypeName, SwapRows, LaneCount, TypeNameInstance}};
 
                 if SchemeType::Bfv != params.scheme_type {
                     return Err(Error::IncorrectScheme)
@@ -149,13 +149,13 @@ pub fn fhe_program_impl(
                 Ok(context.compilation)
             }
 
-            fn signature(&self) -> sunscreen_compiler::CallSignature {
-                use sunscreen_compiler::types::NumCiphertexts;
+            fn signature(&self) -> sunscreen::CallSignature {
+                use sunscreen::types::NumCiphertexts;
 
                 #signature
             }
 
-            fn scheme_type(&self) -> sunscreen_compiler::SchemeType {
+            fn scheme_type(&self) -> sunscreen::SchemeType {
                 #scheme_type
             }
         }
@@ -181,14 +181,14 @@ fn lift_return_type(ret: &ReturnType) -> TokenStream {
                         let inner_type = &*x;
 
                         quote! {
-                            sunscreen_compiler::types::intern::FheProgramNode<#inner_type>
+                            sunscreen::types::intern::FheProgramNode<#inner_type>
                         }
                     })
                     .collect::<Vec<TokenStream>>(),
                 Type::Paren(t) => {
                     let inner_type = &*t.elem;
                     let inner_type = quote! {
-                        sunscreen_compiler::types::intern::FheProgramNode<#inner_type>
+                        sunscreen::types::intern::FheProgramNode<#inner_type>
                     };
 
                     vec![inner_type]
@@ -196,7 +196,7 @@ fn lift_return_type(ret: &ReturnType) -> TokenStream {
                 Type::Path(_) => {
                     let r = &**t;
                     let r = quote! {
-                        sunscreen_compiler::types::intern::FheProgramNode<#r>
+                        sunscreen::types::intern::FheProgramNode<#r>
                     };
 
                     vec![r]
@@ -364,12 +364,12 @@ fn create_signature(args: &[&Type], ret: &ReturnType) -> TokenStream {
     };
 
     quote! {
-        use sunscreen_compiler::types::TypeName;
+        use sunscreen::types::TypeName;
 
         #(#arg_type_names)*
         #return_type_aliases
 
-        sunscreen_compiler::CallSignature {
+        sunscreen::CallSignature {
             arguments: vec![#(#arg_get_types)*],
             returns: #return_type_names,
             num_ciphertexts: #return_type_sizes,

@@ -133,8 +133,8 @@ use std::ops::*;
  * places (radix 2).
  *
  * ```rust
- * # use sunscreen_compiler::types::bfv::Fractional;
- * # use sunscreen_compiler::{Ciphertext, PublicKey, PrivateKey, Runtime, Result};
+ * # use sunscreen::types::bfv::Fractional;
+ * # use sunscreen::{Ciphertext, PublicKey, PrivateKey, Runtime, Result};
  *
  * fn normalize(
  *   runtime: &Runtime,
@@ -177,7 +177,7 @@ impl<const INT_BITS: usize> FheProgramInputTrait for Fractional<INT_BITS> {}
 impl<const INT_BITS: usize> TypeName for Fractional<INT_BITS> {
     fn type_name() -> Type {
         Type {
-            name: format!("sunscreen_compiler::types::Fractional<{}>", INT_BITS),
+            name: format!("sunscreen::types::Fractional<{}>", INT_BITS),
             version: Version::parse(crate_version!()).expect("Crate version is not a valid semver"),
             is_encrypted: false,
         }

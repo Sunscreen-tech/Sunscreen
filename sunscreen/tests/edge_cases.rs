@@ -1,4 +1,4 @@
-use sunscreen_compiler::{
+use sunscreen::{
     types::{bfv::Signed, Cipher},
     *,
 };

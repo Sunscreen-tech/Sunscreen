@@ -1,7 +1,7 @@
 use std::io::{self, Write};
 use std::sync::mpsc::{Receiver, Sender};
 use std::thread::{self, JoinHandle};
-use sunscreen_compiler::{
+use sunscreen::{
     fhe_program,
     types::{bfv::Rational, Cipher},
     Ciphertext, CompiledFheProgram, Compiler, Params, PlainModulusConstraint, PublicKey, Runtime,

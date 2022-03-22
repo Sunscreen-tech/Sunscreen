@@ -1,4 +1,4 @@
-use sunscreen_compiler::{
+use sunscreen::{
     fhe_program,
     types::{bfv::Batched, Cipher, SwapRows},
     Compiler, FheProgramInput, PlainModulusConstraint, Runtime,

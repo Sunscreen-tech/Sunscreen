@@ -76,7 +76,7 @@ impl<const LANES: usize> NumCiphertexts for Batched<LANES> {
 impl<const LANES: usize> TypeName for Batched<LANES> {
     fn type_name() -> Type {
         Type {
-            name: format!("sunscreen_compiler::types::Batched<{}>", LANES),
+            name: format!("sunscreen::types::Batched<{}>", LANES),
             version: Version::parse(crate_version!()).expect("Crate version is not a valid semver"),
             is_encrypted: false,
         }

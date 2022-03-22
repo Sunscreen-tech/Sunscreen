@@ -11,7 +11,7 @@
 //! Sunscreen's results with other FHE compilers, see
 //! [SoK: Fully Homomorphic Encryption Compilers](https://arxiv.org/abs/2101.07078).
 
-use sunscreen_compiler::{
+use sunscreen::{
     fhe_program,
     types::{
         bfv::{Batched, Signed},

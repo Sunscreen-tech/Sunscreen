@@ -1,4 +1,4 @@
-use sunscreen_compiler::{types::bfv::Signed, types::Cipher, *};
+use sunscreen::{types::bfv::Signed, types::Cipher, *};
 
 #[test]
 fn can_encrypt_decrypt() {

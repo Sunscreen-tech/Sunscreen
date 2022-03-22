@@ -1,5 +1,5 @@
 use float_cmp::ApproxEq;
-use sunscreen_compiler::{
+use sunscreen::{
     fhe_program,
     types::{bfv::Fractional, Cipher},
     CompiledFheProgram, Compiler, FheProgramFn, FheProgramInput, Params, PlainModulusConstraint,

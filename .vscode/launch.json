@@ -100,15 +100,15 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug unit tests in library 'sunscreen_compiler'",
+            "name": "Debug unit tests in library 'sunscreen'",
             "cargo": {
                 "args": [
                     "test",
                     "--no-run",
-                    "--package=sunscreen_compiler"
+                    "--package=sunscreen"
                 ],
                 "filter": {
-                    "name": "sunscreen_compiler",
+                    "name": "sunscreen",
                     "kind": "lib"
                 }
             },
@@ -118,12 +118,12 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug edge_cases tests in library 'sunscreen_compiler'",
+            "name": "Debug edge_cases tests in library 'sunscreen'",
             "cargo": {
                 "args": [
                     "test",
                     "--no-run",
-                    "--package=sunscreen_compiler"
+                    "--package=sunscreen"
                 ],
                 "filter": {
                     "name": "edge_cases",
@@ -136,12 +136,12 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug signed integration tests in library 'sunscreen_compiler'",
+            "name": "Debug signed integration tests in library 'sunscreen'",
             "cargo": {
                 "args": [
                     "test",
                     "--no-run",
-                    "--package=sunscreen_compiler",
+                    "--package=sunscreen",
                 ],
                 "filter": {
                     "name": "signed",
@@ -154,12 +154,12 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug fractional integration tests in library 'sunscreen_compiler'",
+            "name": "Debug fractional integration tests in library 'sunscreen'",
             "cargo": {
                 "args": [
                     "test",
                     "--no-run",
-                    "--package=sunscreen_compiler",
+                    "--package=sunscreen",
                 ],
                 "filter": {
                     "name": "fractional",
@@ -172,12 +172,12 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug batched integration tests in library 'sunscreen_compiler'",
+            "name": "Debug batched integration tests in library 'sunscreen'",
             "cargo": {
                 "args": [
                     "test",
                     "--no-run",
-                    "--package=sunscreen_compiler",
+                    "--package=sunscreen",
                 ],
                 "filter": {
                     "name": "batched",

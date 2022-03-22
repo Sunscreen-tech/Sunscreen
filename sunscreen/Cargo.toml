@@ -1,6 +1,6 @@
 [package]
-name = "sunscreen_compiler"
-version = "0.1.1"
+name = "sunscreen"
+version = "0.2.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -11,7 +11,7 @@ clap = "2.34.0"
 log = "0.4.14"
 num = "0.4.0"
 petgraph = "0.6.0"
-sunscreen_compiler_macros = { version = "^0.1", path = "../sunscreen_compiler_macros", registry = "sunscreen"  }
+sunscreen_compiler_macros = { version = "^0.2", path = "../sunscreen_compiler_macros", registry = "sunscreen"  }
 sunscreen_backend = { version = "^0.1", path = "../sunscreen_backend", registry = "sunscreen"  }
 sunscreen_fhe_program = { version = "^0.1", path = "../sunscreen_fhe_program", registry = "sunscreen"  }
 sunscreen_runtime = { version = "^0.1", path = "../sunscreen_runtime", registry = "sunscreen"  }

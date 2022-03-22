@@ -2,7 +2,7 @@
 //! as well as how build fhe_programs that can be run non-homomorphically.
 //! To illustrate these features, we implement a
 //! [dot product](https://en.wikipedia.org/wiki/Dot_product#Algebraic_definition)
-use sunscreen_compiler::{
+use sunscreen::{
     fhe_program,
     types::{bfv::Batched, Cipher, LaneCount, SwapRows},
     Compiler, FheProgramInput, PlainModulusConstraint, Runtime,

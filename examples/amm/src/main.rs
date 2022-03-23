@@ -69,5 +69,5 @@ fn main() {
 
     let received_eth: f64 = received_eth.into();
 
-    assert_eq!(received_eth, 20f64);
+    println!("Alice received {}ETH", received_eth);
 }

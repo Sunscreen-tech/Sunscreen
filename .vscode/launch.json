@@ -246,6 +246,23 @@
             },
             "args": [],
             "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug binary 'amm'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--package=amm"
+                ],
+                "filter": {
+                    "kind": "bin",
+                    "name": "amm"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
         }
     ]
 }

@@ -381,7 +381,7 @@ where
     }
 }
 
-// ciphertext / ciphertext
+// ciphertext / plaintext
 impl<T> Div<FheProgramNode<T>> for FheProgramNode<Cipher<T>>
 where
     T: FheType + GraphCipherPlainDiv<Left = T, Right = T>,
@@ -393,7 +393,7 @@ where
     }
 }
 
-// ciphertext / ciphertext
+// plaintext / ciphertext
 impl<T> Div<FheProgramNode<Cipher<T>>> for FheProgramNode<T>
 where
     T: FheType + GraphPlainCipherDiv<Left = T, Right = T>,

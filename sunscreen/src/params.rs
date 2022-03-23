@@ -143,6 +143,11 @@ where
 
         let ir = fhe_program_fn.build(&params)?.compile();
 
+        use std::io::Write;
+
+        let mut f = std::fs::File::create("foo").unwrap();
+        writeln!(&mut f, "{}", ir.render());
+
         ir.validate().map_err(|e| Error::FheProgramError(e))?;
 
         // From a noise standpoint, it doesn't matter what is in the plaintext or if the output

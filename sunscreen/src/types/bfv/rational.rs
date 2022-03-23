@@ -584,8 +584,8 @@ impl GraphPlainCipherDiv for Rational {
     ) -> FheProgramNode<Cipher<Self::Left>> {
         with_ctx(|ctx| {
             // Scale each numinator by the other's denominator.
-            let mul_num = ctx.add_multiplication_plaintext(a.ids[0], b.ids[1]);
-            let mul_den = ctx.add_multiplication_plaintext(a.ids[1], b.ids[0]);
+            let mul_num = ctx.add_multiplication_plaintext(b.ids[1], a.ids[0]);
+            let mul_den = ctx.add_multiplication_plaintext(b.ids[0], a.ids[1]);
 
             let ids = [mul_num, mul_den];
 

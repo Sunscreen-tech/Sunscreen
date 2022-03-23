@@ -508,9 +508,9 @@ fn can_mul_literal_cipher() {
 
 fn div_impl<T, U, R>(a: T, b: U) -> R
 where
-    T: Mul<U, Output = R>,
+    T: Div<U, Output = R>,
 {
-    a * b
+    a / b
 }
 
 #[test]
@@ -602,7 +602,7 @@ fn can_div_plain_cipher() {
 
     let c: Rational = runtime.decrypt(&result[0], &private_key).unwrap();
 
-    assert_eq!(c, div_impl(b, a));
+    assert_eq!(c, div_impl(a, b));
 }
 
 #[test]

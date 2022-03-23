@@ -172,6 +172,24 @@
         {
             "type": "lldb",
             "request": "launch",
+            "name": "Debug rational integration tests in library 'sunscreen'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--package=sunscreen",
+                ],
+                "filter": {
+                    "name": "rational",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
             "name": "Debug batched integration tests in library 'sunscreen'",
             "cargo": {
                 "args": [
@@ -242,6 +260,23 @@
                 "filter": {
                     "kind": "bin",
                     "name": "chi_sq"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug binary 'amm'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--package=amm"
+                ],
+                "filter": {
+                    "kind": "bin",
+                    "name": "amm"
                 }
             },
             "args": [],

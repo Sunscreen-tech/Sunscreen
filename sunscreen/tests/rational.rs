@@ -9,11 +9,11 @@ use std::ops::*;
 #[test]
 fn can_encode_rational_numbers() {
     #[fhe_program(scheme = "bfv")]
-    fn add(a: Cipher<Rational>) -> Cipher<Rational> {
+    fn no_op(a: Cipher<Rational>) -> Cipher<Rational> {
         a
     }
 
-    let fhe_program = Compiler::with_fhe_program(add)
+    let fhe_program = Compiler::with_fhe_program(no_op)
         .additional_noise_budget(5)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(500))
         .compile()

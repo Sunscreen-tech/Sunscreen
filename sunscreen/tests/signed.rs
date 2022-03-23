@@ -14,6 +14,37 @@ where
 }
 
 #[test]
+fn can_add_cipher_cipher() {
+    #[fhe_program(scheme = "bfv")]
+    fn add(a: Cipher<Signed>, b: Cipher<Signed>) -> Cipher<Signed> {
+        add_fn(a, b)
+    }
+
+    let fhe_program = Compiler::with_fhe_program(add)
+        .additional_noise_budget(5)
+        .plain_modulus_constraint(PlainModulusConstraint::Raw(500))
+        .compile()
+        .unwrap();
+
+    let runtime = Runtime::new(&fhe_program.metadata.params).unwrap();
+
+    let (public_key, private_key) = runtime.generate_keys().unwrap();
+
+    let a = Signed::from(15);
+    let a_c = runtime.encrypt(a, &public_key).unwrap();
+    let b = Signed::from(-5);
+    let b_c = runtime.encrypt(b, &public_key).unwrap();
+
+    let args: Vec<FheProgramInput> = vec![a_c.into(), b_c.into()];
+
+    let result = runtime.run(&fhe_program, args, &public_key).unwrap();
+
+    let c: Signed = runtime.decrypt(&result[0], &private_key).unwrap();
+
+    assert_eq!(c, add_fn(a, b));
+}
+
+#[test]
 fn can_add_cipher_plain() {
     #[fhe_program(scheme = "bfv")]
     fn add(a: Cipher<Signed>, b: Signed) -> Cipher<Signed> {
@@ -137,6 +168,37 @@ where
 }
 
 #[test]
+fn can_sub_cipher_cipher() {
+    #[fhe_program(scheme = "bfv")]
+    fn sub(a: Cipher<Signed>, b: Cipher<Signed>) -> Cipher<Signed> {
+        sub_fn(a, b)
+    }
+
+    let fhe_program = Compiler::with_fhe_program(sub)
+        .additional_noise_budget(5)
+        .plain_modulus_constraint(PlainModulusConstraint::Raw(500))
+        .compile()
+        .unwrap();
+
+    let runtime = Runtime::new(&fhe_program.metadata.params).unwrap();
+
+    let (public_key, private_key) = runtime.generate_keys().unwrap();
+
+    let a = Signed::from(15);
+    let a_c = runtime.encrypt(a, &public_key).unwrap();
+    let b = Signed::from(-5);
+    let b_c = runtime.encrypt(b, &public_key).unwrap();
+
+    let args: Vec<FheProgramInput> = vec![a_c.into(), b_c.into()];
+
+    let result = runtime.run(&fhe_program, args, &public_key).unwrap();
+
+    let c: Signed = runtime.decrypt(&result[0], &private_key).unwrap();
+
+    assert_eq!(c, sub_fn(a, b));
+}
+
+#[test]
 fn can_sub_cipher_plain() {
     #[fhe_program(scheme = "bfv")]
     fn sub(a: Cipher<Signed>, b: Signed) -> Cipher<Signed> {
@@ -257,6 +319,37 @@ where
     T: Mul<U, Output = R>,
 {
     a * b
+}
+
+#[test]
+fn can_mul_cipher_cipher() {
+    #[fhe_program(scheme = "bfv")]
+    fn mul(a: Cipher<Signed>, b: Cipher<Signed>) -> Cipher<Signed> {
+        mul_fn(a, b)
+    }
+
+    let fhe_program = Compiler::with_fhe_program(mul)
+        .additional_noise_budget(5)
+        .plain_modulus_constraint(PlainModulusConstraint::Raw(500))
+        .compile()
+        .unwrap();
+
+    let runtime = Runtime::new(&fhe_program.metadata.params).unwrap();
+
+    let (public_key, private_key) = runtime.generate_keys().unwrap();
+
+    let a = Signed::from(15);
+    let a_c = runtime.encrypt(a, &public_key).unwrap();
+    let b = Signed::from(-5);
+    let b_c = runtime.encrypt(b, &public_key).unwrap();
+
+    let args: Vec<FheProgramInput> = vec![a_c.into(), b_c.into()];
+
+    let result = runtime.run(&fhe_program, args, &public_key).unwrap();
+
+    let c: Signed = runtime.decrypt(&result[0], &private_key).unwrap();
+
+    assert_eq!(c, mul_fn(a, b));
 }
 
 #[test]

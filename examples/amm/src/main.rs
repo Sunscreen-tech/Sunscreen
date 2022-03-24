@@ -1,7 +1,7 @@
 use sunscreen::{
     fhe_program,
     types::{bfv::Rational, Cipher},
-    Ciphertext, CompiledFheProgram, Compiler, FheProgramInput, Params, PrivateKey, PublicKey,
+    Ciphertext, CompiledFheProgram, Compiler, Params, PrivateKey, PublicKey,
     Runtime,
 };
 
@@ -9,15 +9,12 @@ use sunscreen::{
 /// This program swaps NU tokens to receive ETH.
 fn swap_nu(
     nu_tokens_to_trade: Cipher<Rational>,
-    total_eth: Rational,
-    total_nu: Rational,
-    total_tokens: Rational,
 ) -> Cipher<Rational> {
+    let total_eth = 100.0;
+    let total_nu = 1_000.0;
+
     // RS: I would call trade_nu something else. I can see it as being confusing having "trade_nu" and "swap_nu"
-    // total_tokens should equal total_eth * total_nu. Sunscreen doesn't
-    // currently support plaintext-plaintext multiply, so this needs to
-    // be computed outside of FHE.
-    -(total_tokens / (total_nu + nu_tokens_to_trade) - total_eth)
+    -(total_eth * total_nu / (total_nu + nu_tokens_to_trade) - total_eth)
 }
 
 /// Imagine this is a miner in a blockchain application. They're responsible
@@ -26,25 +23,19 @@ struct Miner {
     // RS: I would probably clarify what swap_fhe is (i.e. the compiled swap_nu program)
     /// The compiled FHE swap program
     pub swap_fhe: CompiledFheProgram,
-    /// The total ETH in the liquidity pool
-    pub total_eth: f64,
-    /// The total NU in the liquidity pool
-    pub total_nu: f64,
 
     /// The Miner's runtime
     runtime: Runtime,
 }
 
 impl Miner {
-    pub fn setup(initial_eth: f64, initial_nu: f64) -> Miner {
+    pub fn setup() -> Miner {
         let swap_fhe = Compiler::with_fhe_program(swap_nu).compile().unwrap();
 
         let runtime = Runtime::new(&swap_fhe.metadata.params).unwrap();
 
         Miner {
             swap_fhe,
-            total_eth: initial_eth,
-            total_nu: initial_nu,
             runtime,
         }
     }
@@ -54,17 +45,7 @@ impl Miner {
         nu_tokens_to_trade: Ciphertext,
         public_key: &PublicKey,
     ) -> Ciphertext {
-        // RS: will need to clarify what's going on here...
-        let args: Vec<FheProgramInput> = vec![
-            nu_tokens_to_trade.into(),
-            Rational::try_from(self.total_eth).unwrap().into(),
-            Rational::try_from(self.total_nu).unwrap().into(),
-            Rational::try_from(self.total_eth * self.total_nu)
-                .unwrap()
-                .into(),
-        ];
-
-        let results = self.runtime.run(&self.swap_fhe, args, public_key).unwrap();
+        let results = self.runtime.run(&self.swap_fhe, vec![nu_tokens_to_trade], public_key).unwrap();
 
         results[0].clone()
     }
@@ -115,7 +96,7 @@ impl Alice {
 
 fn main() {
     // Set up the miner with some NU and ETH tokens.
-    let miner = Miner::setup(100.0, 1000.0);
+    let miner = Miner::setup();
 
     // Alice sets herself up. The FHE scheme parameters are public to the
     // protocol, so Alice has them.

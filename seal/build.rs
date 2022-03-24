@@ -37,7 +37,11 @@ fn compile_native(profile: &str, out_path: &Path) {
         ""
     };
 
-    println!("cargo:rustc-link-search=native={}/build/lib/{}", dst.display(), out_path_suffix);
+    println!(
+        "cargo:rustc-link-search=native={}/build/lib/{}",
+        dst.display(),
+        out_path_suffix
+    );
     println!("cargo:rustc-link-lib=static=sealc-3.7");
     println!("cargo:rustc-link-lib=static=seal-3.7");
 

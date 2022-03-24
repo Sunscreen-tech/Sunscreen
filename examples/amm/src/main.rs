@@ -17,7 +17,7 @@ fn swap_nu(trade_nu: Cipher<Rational>, total_eth: Rational, total_nu: Rational, 
     // total_tokens should equal total_eth * total_nu. Sunscreen doesn't
     // currently support plaintext-plaintext multiply, so this needs to
     // be computed outside of FHE.
-    total_tokens / (total_eth + trade_nu) + total_nu
+    -(total_tokens / (total_nu + trade_nu) - total_eth)
 }
 
 struct Miner {

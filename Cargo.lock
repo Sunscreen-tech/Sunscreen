@@ -869,7 +869,7 @@ dependencies = [
 
 [[package]]
 name = "sunscreen"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "bumpalo",
  "clap",

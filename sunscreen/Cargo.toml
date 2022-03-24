@@ -1,5 +1,8 @@
 [package]
 name = "sunscreen"
+# Read and understand
+# https://doc.rust-lang.org/cargo/reference/semver.html
+# before bumping the version.
 version = "0.2.1"
 edition = "2021"
 

@@ -26,7 +26,7 @@ fn simple_multiply(a: Cipher<Signed>, b: Cipher<Signed>) -> Cipher<Signed> {
 
 fn main() {
     /*
-    * Compile the FHE program we previously declared. We specify the 
+    * Compile the FHE program we previously declared. We specify the
     * plain-text modulus as 64. For help choosing a plaintext modulus, please see the section "Choosing the right plaintext modulus" in the Sunscreen book.
     *
     * Homomorphic operations introduce noise into ciphertexts. Too much noise results in

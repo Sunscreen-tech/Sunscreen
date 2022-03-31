@@ -1,7 +1,7 @@
 use sunscreen::{
     fhe_program,
     types::{bfv::Signed, Cipher},
-    Compiler, PlainModulusConstraint, Runtime,
+    Compiler, Error, PlainModulusConstraint, Runtime,
 };
 
 /**
@@ -24,7 +24,7 @@ fn simple_multiply(a: Cipher<Signed>, b: Cipher<Signed>) -> Cipher<Signed> {
     a * b
 }
 
-fn main() {
+fn main() -> Result<(), Error> {
     /*
     * Compile the FHE program we previously declared. We specify the
     * plain-text modulus as 64. For help choosing a plaintext modulus, please see the section "Choosing the right plaintext modulus" in the Sunscreen book.
@@ -44,37 +44,38 @@ fn main() {
     */
     let fhe_program = Compiler::with_fhe_program(simple_multiply)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(64))
-        .compile()
-        .unwrap();
+        .compile()?;
 
     /*
      * Next, we construct a runtime. The runtime provides the APIs for encryption, decryption, and
      * running an FHE program.
      */
-    let runtime = Runtime::new(&fhe_program.metadata.params).unwrap();
+    let runtime = Runtime::new(&fhe_program.metadata.params)?;
 
     /*
      * Generate a public and private key pair. Normally, Alice would do this, sending the public
      * key to bob, who then runs a computation.
      */
-    let (public_key, private_key) = runtime.generate_keys().unwrap();
+    let (public_key, private_key) = runtime.generate_keys()?;
 
-    let a = runtime.encrypt(Signed::from(15), &public_key).unwrap();
-    let b = runtime.encrypt(Signed::from(5), &public_key).unwrap();
+    let a = runtime.encrypt(Signed::from(15), &public_key)?;
+    let b = runtime.encrypt(Signed::from(5), &public_key)?;
 
     /*
      * Run the FHE program with our arguments. This produces a results
      * bundle containing the encrypted outputs of the FHE program.
      */
-    let results = runtime.run(&fhe_program, vec![a, b], &public_key).unwrap();
+    let results = runtime.run(&fhe_program, vec![a, b], &public_key)?;
 
     /*
      * Our FHE program outputs a Signed single value as the result. Decrypt it.
      */
-    let c: Signed = runtime.decrypt(&results[0], &private_key).unwrap();
+    let c: Signed = runtime.decrypt(&results[0], &private_key)?;
 
     /*
      * Yay, 5 * 15 indeed equals 75.
      */
     assert_eq!(c, 75.into());
+
+    Ok(())
 }

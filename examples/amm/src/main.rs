@@ -1,10 +1,11 @@
 use sunscreen::{
     fhe_program,
     types::{bfv::Rational, Cipher},
-    Ciphertext, CompiledFheProgram, Compiler, Params, PrivateKey, PublicKey,
+    Ciphertext, CompiledFheProgram, Compiler, Params, PrivateKey, 
+    Error,
+    PublicKey,
     Runtime,
 };
-use std::time::Instant;
 
 #[fhe_program(scheme = "bfv")]
 /// This program swaps NU tokens to receive ETH.
@@ -30,25 +31,25 @@ struct Miner {
 }
 
 impl Miner {
-    pub fn setup() -> Miner {
-        let swap_fhe = Compiler::with_fhe_program(swap_nu).compile().unwrap();
+    pub fn setup() -> Result<Miner, Error> {
+        let swap_fhe = Compiler::with_fhe_program(swap_nu).compile()?;
 
-        let runtime = Runtime::new(&swap_fhe.metadata.params).unwrap();
+        let runtime = Runtime::new(&swap_fhe.metadata.params)?;
 
-        Miner {
+        Ok(Miner {
             swap_fhe,
             runtime,
-        }
+        })
     }
 
     pub fn run_contract(
         &self,
         nu_tokens_to_trade: Ciphertext,
         public_key: &PublicKey,
-    ) -> Ciphertext {
-        let results = self.runtime.run(&self.swap_fhe, vec![nu_tokens_to_trade], public_key).unwrap();
+    ) -> Result<Ciphertext, Error> {
+        let results = self.runtime.run(&self.swap_fhe, vec![nu_tokens_to_trade], public_key)?;
 
-        results[0].clone()
+        Ok(results[0].clone())
     }
 }
 
@@ -65,50 +66,51 @@ struct Alice {
 }
 
 impl Alice {
-    pub fn setup(params: &Params) -> Alice {
-        let runtime = Runtime::new(params).unwrap();
+    pub fn setup(params: &Params) -> Result<Alice, Error> {
+        let runtime = Runtime::new(params)?;
 
-        let (public_key, private_key) = runtime.generate_keys().unwrap();
+        let (public_key, private_key) = runtime.generate_keys()?;
 
-        Alice {
+        Ok(Alice {
             public_key,
             private_key,
             runtime,
-        }
+        })
     }
 
-    pub fn create_transaction(&self, amount: f64) -> Ciphertext {
-        self.runtime
-            .encrypt(Rational::try_from(amount).unwrap(), &self.public_key)
-            .unwrap()
+    pub fn create_transaction(&self, amount: f64) -> Result<Ciphertext, Error> {
+        Ok(self.runtime
+            .encrypt(Rational::try_from(amount)?, &self.public_key)?
+        )
     }
 
-    pub fn check_received_eth(&self, received_eth: Ciphertext) {
+    pub fn check_received_eth(&self, received_eth: Ciphertext) -> Result<(), Error> {
         let received_eth: Rational = self
             .runtime
-            .decrypt(&received_eth, &self.private_key)
-            .unwrap();
+            .decrypt(&received_eth, &self.private_key)?;
 
         let received_eth: f64 = received_eth.into();
 
         println!("Alice received {}ETH", received_eth);
+
+        Ok(())
     }
 }
 
-fn main() {
-    let comp_time = Instant::now();
+fn main() -> Result<(), Error> {
     // Set up the miner with some NU and ETH tokens.
-    let miner = Miner::setup();
-    println!("{}", comp_time.elapsed().as_secs_f64());
+    let miner = Miner::setup()?;
 
-    let run_time = Instant::now();
     // Alice sets herself up. The FHE scheme parameters are public to the
     // protocol, so Alice has them.
-    let alice = Alice::setup(&miner.swap_fhe.metadata.params);
+    let alice = Alice::setup(&miner.swap_fhe.metadata.params)?;
+
+    let transaction = alice.create_transaction(20.0)?;
 
     let encrypted_received_eth =
-        miner.run_contract(alice.create_transaction(20.0), &alice.public_key);
+        miner.run_contract(transaction, &alice.public_key)?;
 
-    println!("{}", run_time.elapsed().as_secs_f64());
-    alice.check_received_eth(encrypted_received_eth);
+    alice.check_received_eth(encrypted_received_eth)?;
+
+    Ok(())
 }

@@ -227,15 +227,15 @@ where
 }
 
 fn main() -> Result<(), Error> {
-    let n_0 = 1 << 31 - 1;
-    let n_1 = 1 << 31 - 1;
-    let n_2 = 1 << 31 - 1;
+    let n_0 = 2;
+    let n_1 = 7;
+    let n_2 = 9;
 
     env_logger::init();
 
     // Signed types allow us to use a really small modulus,
     // allowing us to get very performant parameters.
-    let plain_modulus = PlainModulusConstraint::Raw(200);
+    let plain_modulus = PlainModulusConstraint::Raw(64);
 
     println!("**********Naive**************");
     println!("\t**********Native************");

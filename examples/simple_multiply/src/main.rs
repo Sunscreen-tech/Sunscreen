@@ -38,8 +38,10 @@ fn main() -> Result<(), Error> {
     * Sunscreen allows experts to explicitly set the scheme parameters, but the default behavior
     * is to let the compiler run your FHE program a number of times with different parameters and measure
     * the resulting noise.
-
-    * Afterwards, we simply compile and assert the compilation succeeds by calling unwrap. Compilation
+    *
+    * Afterwards, we simply compile. The `?` operator is Rust's standard
+    * error handling mechanism; the current function (`main`)
+    * returns when an error occurs or continues on success. Compilation
     * returns the compiled FHE program and parameters.
     */
     let fhe_program = Compiler::with_fhe_program(simple_multiply)

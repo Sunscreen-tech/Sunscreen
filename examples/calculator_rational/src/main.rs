@@ -1,5 +1,3 @@
-mod error;
-
 use std::io::{self, Write};
 use std::sync::mpsc::{Receiver, Sender};
 use std::thread::{self, JoinHandle};
@@ -9,8 +7,6 @@ use sunscreen::{
     Ciphertext, CompiledFheProgram, Compiler, Params, PlainModulusConstraint, PublicKey, Runtime,
     RuntimeError,
 };
-
-use crate::error::Error;
 
 fn help() {
     println!("This is a privacy preserving calculator. You can add, subtract, multiply, divide decimal values. The operation is sent to Bob in cleartext while the operands
@@ -48,6 +44,10 @@ enum ParseResult {
     Help,
     Exit,
     Expression(Expression),
+}
+
+enum Error {
+    ParseError,
 }
 
 fn parse_input(line: &str) -> Result<ParseResult, Error> {
@@ -96,13 +96,14 @@ fn parse_input(line: &str) -> Result<ParseResult, Error> {
     }))
 }
 
-fn encrypt_term(runtime: &Runtime, public_key: &PublicKey, input: Term) -> Result<Term, Error> {
+fn encrypt_term(runtime: &Runtime, public_key: &PublicKey, input: Term) -> Term {
     match input {
-        Term::Ans => Ok(Term::Ans),
-        Term::F64(v) => Ok(Term::Encrypted(
+        Term::Ans => Term::Ans,
+        Term::F64(v) => Term::Encrypted(
             runtime
-                .encrypt(Rational::try_from(v)?, &public_key)?,
-        )),
+                .encrypt(Rational::try_from(v).unwrap(), &public_key)
+                .unwrap(),
+        ),
         _ => {
             panic!("This shouldn't happen.");
         }
@@ -116,88 +117,82 @@ fn alice(
     recv_res: Receiver<Ciphertext>,
 ) -> JoinHandle<()> {
     thread::spawn(move || {
-        let thread_body = move || -> Result<(), Error> {
-            let stdin = io::stdin();
-            let mut stdout = io::stdout();
+        let stdin = io::stdin();
+        let mut stdout = io::stdout();
 
-            println!("Bob's private calculator. Type `help` for help.");
+        println!("Bob's private calculator. Type `help` for help.");
 
-            // Bob needs to send us the scheme parameters compatible with his FHE program.
-            let params = recv_params.recv()?;
+        // Bob needs to send us the scheme parameters compatible with his FHE program.
+        let params = recv_params.recv().unwrap();
 
-            let runtime = Runtime::new(&params)?;
+        let runtime = Runtime::new(&params).unwrap();
 
-            let (public_key, private_key) = runtime.generate_keys()?;
+        let (public_key, private_key) = runtime.generate_keys().unwrap();
 
-            // Send Bob a copy of our public keys.
-            send_pub.send(public_key.clone())?;
+        // Send Bob a copy of our public keys.
+        send_pub.send(public_key.clone()).unwrap();
 
-            loop {
-                print!(">> ");
+        loop {
+            print!(">> ");
 
-                stdout.flush()?;
+            stdout.flush().unwrap();
 
-                let mut line = String::new();
-                stdin.read_line(&mut line)?;
-                let line = line.trim();
+            let mut line = String::new();
+            stdin.read_line(&mut line).unwrap();
+            let line = line.trim();
 
-                // Read the line and parse it into operands and an operator.
-                let parsed = parse_input(&line);
+            // Read the line and parse it into operands and an operator.
+            let parsed = parse_input(&line);
 
-                let Expression { left, right, op } = match parsed {
-                    Ok(ParseResult::Expression(val)) => val,
-                    Ok(ParseResult::Exit) => std::process::exit(0),
-                    Ok(ParseResult::Help) => {
-                        help();
-                        continue;
-                    }
-                    Err(_) => {
-                        println!("Parse error. Try again.");
-                        continue;
-                    }
-                };
+            let Expression { left, right, op } = match parsed {
+                Ok(ParseResult::Expression(val)) => val,
+                Ok(ParseResult::Exit) => std::process::exit(0),
+                Ok(ParseResult::Help) => {
+                    help();
+                    continue;
+                }
+                Err(_) => {
+                    println!("Parse error. Try again.");
+                    continue;
+                }
+            };
 
-                // Encrypt the left and right terms.
-                let encrypt_left = encrypt_term(&runtime, &public_key, left)?;
-                let encrypt_right = encrypt_term(&runtime, &public_key, right)?;
+            // Encrypt the left and right terms.
+            let encrypt_left = encrypt_term(&runtime, &public_key, left);
+            let encrypt_right = encrypt_term(&runtime, &public_key, right);
 
-                // Send Bob our encrypted operation.
-                send_calc
-                    .send(Expression {
-                        left: encrypt_left,
-                        right: encrypt_right,
-                        op: op,
-                    })?;
+            // Send Bob our encrypted operation.
+            send_calc
+                .send(Expression {
+                    left: encrypt_left,
+                    right: encrypt_right,
+                    op: op,
+                })
+                .unwrap();
 
-                // Get our result from Bob and print it.
-                let result: Ciphertext = recv_res.recv()?;
-                let result: Rational = match runtime.decrypt(&result, &private_key) {
-                    Ok(v) => v,
-                    Err(RuntimeError::TooMuchNoise) => {
-                        println!("Decryption failed: too much noise");
-                        continue;
-                    }
-                    Err(e) => { return Err(e.into()); },
-                };
-                let result: f64 = result.into();
+            // Get our result from Bob and print it.
+            let result: Ciphertext = recv_res.recv().unwrap();
+            let result: Rational = match runtime.decrypt(&result, &private_key) {
+                Ok(v) => v,
+                Err(RuntimeError::TooMuchNoise) => {
+                    println!("Decryption failed: too much noise");
+                    continue;
+                }
+                Err(e) => panic!("{:#?}", e),
+            };
+            let result: f64 = result.into();
 
-                println!("{}", result);
-            }
-        };
-
-        match thread_body() {
-            Ok(_) => {},
-            Err(e) => panic!("{:#?}", e),
+            println!("{}", result);
         }
     })
 }
 
-fn compile_fhe_programs() -> Result<(
+fn compile_fhe_programs() -> (
     CompiledFheProgram,
     CompiledFheProgram,
     CompiledFheProgram,
     CompiledFheProgram,
-), Error> {
+) {
     #[fhe_program(scheme = "bfv")]
     fn add(a: Cipher<Rational>, b: Cipher<Rational>) -> Cipher<Rational> {
         a + b
@@ -228,24 +223,24 @@ fn compile_fhe_programs() -> Result<(
         .additional_noise_budget(32)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(1_000_000))
         .compile()
-        ?;
+        .unwrap();
 
     let mul_program = Compiler::with_fhe_program(mul)
         .with_params(&add_program.metadata.params)
         .compile()
-        ?;
+        .unwrap();
 
     let div_program = Compiler::with_fhe_program(div)
         .with_params(&add_program.metadata.params)
         .compile()
-        ?;
+        .unwrap();
 
     let sub_program = Compiler::with_fhe_program(sub)
         .with_params(&add_program.metadata.params)
         .compile()
-        ?;
+        .unwrap();
 
-    Ok((add_program, sub_program, mul_program, div_program))
+    (add_program, sub_program, mul_program, div_program)
 }
 
 fn bob(
@@ -255,58 +250,50 @@ fn bob(
     send_res: Sender<Ciphertext>,
 ) -> JoinHandle<()> {
     thread::spawn(move || {
-        let thread_body = move || -> Result<(), Error> {
-            let (add, sub, mul, div) = compile_fhe_programs()?;
+        let (add, sub, mul, div) = compile_fhe_programs();
 
-            send_params.send(add.metadata.params.clone())?;
+        send_params.send(add.metadata.params.clone()).unwrap();
 
-            let public_key = recv_pub.recv()?;
+        let public_key = recv_pub.recv().unwrap();
 
-            let runtime = Runtime::new(&add.metadata.params)?;
+        let runtime = Runtime::new(&add.metadata.params).unwrap();
 
-            let mut ans = runtime
-                .encrypt(Rational::try_from(0f64)?, &public_key)
-                ?;
+        let mut ans = runtime
+            .encrypt(Rational::try_from(0f64).unwrap(), &public_key)
+            .unwrap();
 
-            loop {
-                let Expression { left, right, op } = recv_calc.recv()?;
+        loop {
+            let Expression { left, right, op } = recv_calc.recv().unwrap();
 
-                let left = match left {
-                    Term::Ans => ans.clone(),
-                    Term::Encrypted(c) => c,
-                    _ => panic!("Alice sent us a plaintext!"),
-                };
+            let left = match left {
+                Term::Ans => ans.clone(),
+                Term::Encrypted(c) => c,
+                _ => panic!("Alice sent us a plaintext!"),
+            };
 
-                let right = match right {
-                    Term::Ans => ans.clone(),
-                    Term::Encrypted(c) => c,
-                    _ => panic!("Alice sent us a plaintext!"),
-                };
+            let right = match right {
+                Term::Ans => ans.clone(),
+                Term::Encrypted(c) => c,
+                _ => panic!("Alice sent us a plaintext!"),
+            };
 
-                let mut c = match op {
-                    Operand::Add => runtime.run(&add, vec![left, right], &public_key)?,
-                    Operand::Sub => runtime.run(&sub, vec![left, right], &public_key)?,
-                    Operand::Mul => runtime.run(&mul, vec![left, right], &public_key)?,
-                    Operand::Div => runtime.run(&div, vec![left, right], &public_key)?,
-                };
+            let mut c = match op {
+                Operand::Add => runtime.run(&add, vec![left, right], &public_key).unwrap(),
+                Operand::Sub => runtime.run(&sub, vec![left, right], &public_key).unwrap(),
+                Operand::Mul => runtime.run(&mul, vec![left, right], &public_key).unwrap(),
+                Operand::Div => runtime.run(&div, vec![left, right], &public_key).unwrap(),
+            };
 
-                // Our FHE program produces a single value, so move the value out of the vector.
-                let c = c.drain(0..).next().expect("Internal error: FHE program didn't produce a result");
-                ans = c.clone();
+            // Our FHE program produces a single value, so move the value out of the vector.
+            let c = c.drain(0..).next().unwrap();
+            ans = c.clone();
 
-                send_res.send(c)?;
-            }
-
-        };
-
-        match thread_body() {
-            Ok(_) => {},
-            Err(e) => panic!("{:#?}", e),
-        };
+            send_res.send(c).unwrap();
+        }
     })
 }
 
-fn main() -> Result<(), Error> {
+fn main() {
     // A channel for Alice to send her public keys to Bob.
     let (send_alice_pub, receive_alice_pub) = std::sync::mpsc::channel::<PublicKey>();
 
@@ -337,6 +324,4 @@ fn main() -> Result<(), Error> {
 
     a.join().unwrap();
     b.join().unwrap();
-
-    Ok(())
 }

@@ -17,7 +17,7 @@ use sunscreen::{
         bfv::{Batched, Signed},
         Cipher, FheType, TypeName,
     },
-    Compiler, FheProgramFn, FheProgramInput, PlainModulusConstraint, Runtime,
+    Compiler, FheProgramFn, FheProgramInput, PlainModulusConstraint, Runtime, Error,
 };
 
 use std::marker::PhantomData;
@@ -167,7 +167,8 @@ fn run_fhe<F, T, U>(
     n_1: T,
     n_2: T,
     plain_modulus: PlainModulusConstraint,
-) where
+) -> Result<(), Error>
+where
     F: FheProgramFn,
     U: From<T> + FheType + TypeName + std::fmt::Display,
 {
@@ -175,28 +176,27 @@ fn run_fhe<F, T, U>(
 
     let fhe_program = Compiler::with_fhe_program(c)
         .plain_modulus_constraint(plain_modulus)
-        .compile()
-        .unwrap();
+        .compile()?;
     let elapsed = start.elapsed().as_secs_f64();
 
     println!("\t\tCompile time {}s", elapsed);
 
-    let runtime = Runtime::new(&fhe_program.metadata.params).unwrap();
+    let runtime = Runtime::new(&fhe_program.metadata.params)?;
 
     let n_0 = U::from(n_0);
     let n_1 = U::from(n_1);
     let n_2 = U::from(n_2);
 
     let start = Instant::now();
-    let (public_key, private_key) = runtime.generate_keys().unwrap();
+    let (public_key, private_key) = runtime.generate_keys()?;
     let elapsed = start.elapsed().as_secs_f64();
 
     println!("\t\tKeygen time {}s", elapsed);
 
     let start = Instant::now();
-    let n_0_enc = runtime.encrypt(n_0, &public_key).unwrap();
-    let n_1_enc = runtime.encrypt(n_1, &public_key).unwrap();
-    let n_2_enc = runtime.encrypt(n_2, &public_key).unwrap();
+    let n_0_enc = runtime.encrypt(n_0, &public_key)?;
+    let n_1_enc = runtime.encrypt(n_1, &public_key)?;
+    let n_2_enc = runtime.encrypt(n_2, &public_key)?;
     let elapsed = start.elapsed().as_secs_f64();
 
     println!("\t\tEncryption time {}s", elapsed);
@@ -204,16 +204,16 @@ fn run_fhe<F, T, U>(
     let start = Instant::now();
     let args: Vec<FheProgramInput> = vec![n_0_enc.into(), n_1_enc.into(), n_2_enc.into()];
 
-    let result = runtime.run(&fhe_program, args, &public_key).unwrap();
+    let result = runtime.run(&fhe_program, args, &public_key)?;
     let elapsed = start.elapsed().as_secs_f64();
 
     println!("\t\tRun time {}s", elapsed);
 
     let start = Instant::now();
-    let a: U = runtime.decrypt(&result[0], &private_key).unwrap();
-    let b_1: U = runtime.decrypt(&result[1], &private_key).unwrap();
-    let b_2: U = runtime.decrypt(&result[2], &private_key).unwrap();
-    let b_3: U = runtime.decrypt(&result[3], &private_key).unwrap();
+    let a: U = runtime.decrypt(&result[0], &private_key)?;
+    let b_1: U = runtime.decrypt(&result[1], &private_key)?;
+    let b_2: U = runtime.decrypt(&result[2], &private_key)?;
+    let b_3: U = runtime.decrypt(&result[3], &private_key)?;
     let elapsed = start.elapsed().as_secs_f64();
 
     println!("\t\tDecryption time {}s", elapsed);
@@ -222,18 +222,20 @@ fn run_fhe<F, T, U>(
         "\t\tchi_sq (fhe) alpha {:40}, beta_1 {:40}, beta_2 {:40}, beta_3 {:40}",
         a, b_1, b_2, b_3
     );
+
+    Ok(())
 }
 
-fn main() {
-    let n_0 = 1 << 31 - 1;
-    let n_1 = 1 << 31 - 1;
-    let n_2 = 1 << 31 - 1;
+fn main() -> Result<(), Error> {
+    let n_0 = 2;
+    let n_1 = 7;
+    let n_2 = 9;
 
     env_logger::init();
 
     // Signed types allow us to use a really small modulus,
     // allowing us to get very performant parameters.
-    let plain_modulus = PlainModulusConstraint::Raw(200);
+    let plain_modulus = PlainModulusConstraint::Raw(64);
 
     println!("**********Naive**************");
     println!("\t**********Native************");
@@ -246,7 +248,7 @@ fn main() {
         n_1,
         n_2,
         plain_modulus,
-    );
+    )?;
     println!("**********Optimized************");
     println!("\t**********Native************");
     // run_native(chi_sq_optimized_impl, n_0, n_1, n_2);
@@ -261,7 +263,7 @@ fn main() {
         n_1,
         n_2,
         plain_modulus,
-    );
+    )?;
 
     // Pack repetitions of n_0, n_1, n_2 into 2x4096 vectors
     // to demonstrate batching.
@@ -286,5 +288,7 @@ fn main() {
         n_1,
         n_2,
         plain_modulus,
-    );
+    )?;
+
+    Ok(())
 }

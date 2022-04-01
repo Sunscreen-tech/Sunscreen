@@ -112,7 +112,7 @@ fn is_power_of_2(value: usize) -> bool {
  * Creates a math vector and returns it represented as both a [`Vec`] and a
  * [`Batched`] type.
  */
-fn make_vector<const LENDIV2: usize>() -> (Vec<i64>, Batched<LENDIV2>) {
+fn make_vector<const LENDIV2: usize>() -> Result<(Vec<i64>, Batched<LENDIV2>), sunscreen::Error> {
     if !is_power_of_2(LENDIV2) {
         panic!("Vector length not a power of 2");
     }
@@ -124,13 +124,13 @@ fn make_vector<const LENDIV2: usize>() -> (Vec<i64>, Batched<LENDIV2>) {
     let a = (0..end).map(|x| x % 32).into_iter().collect::<Vec<i64>>();
     let (a_top, a_bottom) = a.split_at(LENDIV2);
 
-    let batched = Batched::<LENDIV2>::try_from([a_top.to_owned(), a_bottom.to_owned()]).unwrap();
+    let batched = Batched::<LENDIV2>::try_from([a_top.to_owned(), a_bottom.to_owned()])?;
 
-    (a, batched)
+    Ok((a, batched))
 }
 
-fn main() {
-    let (a_vec, a_batched) = make_vector::<VECLENDIV2>();
+fn main() -> Result<(), sunscreen::Error> {
+    let (a_vec, a_batched) = make_vector::<VECLENDIV2>()?;
 
     // Run our naive implementation of dot product we know to be correct.
     let start = Instant::now();
@@ -159,28 +159,30 @@ fn main() {
     let fhe_program = Compiler::with_fhe_program(dot_product)
         .plain_modulus_constraint(PlainModulusConstraint::BatchingMinimum(24))
         .compile()
-        .unwrap();
+        ?;
     let end = start.elapsed();
 
     println!("Compiled in {}s", end.as_secs_f64());
 
-    let runtime = Runtime::new(&fhe_program.metadata.params).unwrap();
+    let runtime = Runtime::new(&fhe_program.metadata.params)?;
 
-    let (public_key, private_key) = runtime.generate_keys().unwrap();
-    let a_enc = runtime.encrypt(a_batched, &public_key).unwrap();
+    let (public_key, private_key) = runtime.generate_keys()?;
+    let a_enc = runtime.encrypt(a_batched, &public_key)?;
 
     let args: Vec<FheProgramInput> = vec![a_enc.clone().into(), a_enc.clone().into()];
 
     // Run our dot product homomorphically, decrypt and verify the result.
     let start = Instant::now();
-    let results = runtime.run(&fhe_program, args, &public_key).unwrap();
+    let results = runtime.run(&fhe_program, args, &public_key)?;
     let end = start.elapsed();
 
-    let fhe_dot: Batched<VECLENDIV2> = runtime.decrypt(&results[0], &private_key).unwrap();
+    let fhe_dot: Batched<VECLENDIV2> = runtime.decrypt(&results[0], &private_key)?;
 
     println!(
         "FHE dot product = {} Time: {}s",
         fhe_dot[(0, 0)],
         end.as_secs_f64()
     );
+
+    Ok(())
 }

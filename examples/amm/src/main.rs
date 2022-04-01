@@ -4,6 +4,7 @@ use sunscreen::{
     Ciphertext, CompiledFheProgram, Compiler, Params, PrivateKey, PublicKey,
     Runtime,
 };
+use std::time::Instant;
 
 #[fhe_program(scheme = "bfv")]
 /// This program swaps NU tokens to receive ETH.
@@ -95,9 +96,12 @@ impl Alice {
 }
 
 fn main() {
+    let comp_time = Instant::now();
     // Set up the miner with some NU and ETH tokens.
     let miner = Miner::setup();
+    println!("{}", comp_time.elapsed().as_secs_f64());
 
+    let run_time = Instant::now();
     // Alice sets herself up. The FHE scheme parameters are public to the
     // protocol, so Alice has them.
     let alice = Alice::setup(&miner.swap_fhe.metadata.params);
@@ -105,5 +109,6 @@ fn main() {
     let encrypted_received_eth =
         miner.run_contract(alice.create_transaction(20.0), &alice.public_key);
 
+    println!("{}", run_time.elapsed().as_secs_f64());
     alice.check_received_eth(encrypted_received_eth);
 }

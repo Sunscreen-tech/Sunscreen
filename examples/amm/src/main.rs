@@ -15,16 +15,14 @@ fn swap_nu(
     let total_eth = 100.0;
     let total_nu = 1_000.0;
 
-    // RS: I would call trade_nu something else. I can see it as being confusing having "trade_nu" and "swap_nu"
     -(total_eth * total_nu / (total_nu + nu_tokens_to_trade) - total_eth)
 }
 
 /// Imagine this is a miner in a blockchain application. They're responsible
 /// for processing transactions
 struct Miner {
-    // RS: I would probably clarify what swap_fhe is (i.e. the compiled swap_nu program)
     /// The compiled FHE swap program
-    pub swap_fhe: CompiledFheProgram,
+    pub compiled_swap_nu: CompiledFheProgram,
 
     /// The Miner's runtime
     runtime: Runtime,
@@ -32,12 +30,12 @@ struct Miner {
 
 impl Miner {
     pub fn setup() -> Result<Miner, Error> {
-        let swap_fhe = Compiler::with_fhe_program(swap_nu).compile()?;
+        let compiled_swap_nu = Compiler::with_fhe_program(swap_nu).compile()?;
 
-        let runtime = Runtime::new(&swap_fhe.metadata.params)?;
+        let runtime = Runtime::new(&compiled_swap_nu.metadata.params)?;
 
         Ok(Miner {
-            swap_fhe,
+            compiled_swap_nu,
             runtime,
         })
     }
@@ -47,7 +45,7 @@ impl Miner {
         nu_tokens_to_trade: Ciphertext,
         public_key: &PublicKey,
     ) -> Result<Ciphertext, Error> {
-        let results = self.runtime.run(&self.swap_fhe, vec![nu_tokens_to_trade], public_key)?;
+        let results = self.runtime.run(&self.compiled_swap_nu, vec![nu_tokens_to_trade], public_key)?;
 
         Ok(results[0].clone())
     }
@@ -103,7 +101,7 @@ fn main() -> Result<(), Error> {
 
     // Alice sets herself up. The FHE scheme parameters are public to the
     // protocol, so Alice has them.
-    let alice = Alice::setup(&miner.swap_fhe.metadata.params)?;
+    let alice = Alice::setup(&miner.compiled_swap_nu.metadata.params)?;
 
     let transaction = alice.create_transaction(20.0)?;
 

@@ -38,6 +38,7 @@ pub fn fhe_program_impl(
             }
             FnArg::Typed(t) => match (&*t.ty, &*t.pat) {
                 (Type::Path(_), Pat::Ident(i)) => (t, &i.ident),
+                (Type::Array(_), Pat::Ident(i)) => (t, &i.ident),
                 _ => {
                     return proc_macro::TokenStream::from(quote! {
                         compile_error!("fhe_program arguments' name must be a simple identifier and type must be a plain path.");

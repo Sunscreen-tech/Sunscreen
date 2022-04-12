@@ -1,5 +1,5 @@
 pub use crate::{
-    types::{intern::FheProgramNode, Cipher, FheType},
+    types::{intern::FheProgramNode, Cipher, FheType, NumCiphertexts, TypeName},
     with_ctx,
 };
 
@@ -20,30 +20,19 @@ pub trait Input {
     fn input() -> Self;
 }
 
-impl<T> Input for FheProgramNode<Cipher<T>>
-where
-    T: FheType,
-{
-    fn input() -> Self {
-        let mut ids = Vec::with_capacity(T::NUM_CIPHERTEXTS);
-
-        for _ in 0..T::NUM_CIPHERTEXTS {
-            ids.push(with_ctx(|ctx| ctx.add_ciphertext_input()));
-        }
-
-        FheProgramNode::new(&ids)
-    }
-}
-
 impl<T> Input for FheProgramNode<T>
 where
-    T: FheType,
+    T: NumCiphertexts + TypeName,
 {
     fn input() -> Self {
         let mut ids = Vec::with_capacity(T::NUM_CIPHERTEXTS);
 
         for _ in 0..T::NUM_CIPHERTEXTS {
-            ids.push(with_ctx(|ctx| ctx.add_plaintext_input()));
+            if T::type_name().is_encrypted {
+                ids.push(with_ctx(|ctx| ctx.add_ciphertext_input()));
+            } else {
+                ids.push(with_ctx(|ctx| ctx.add_plaintext_input()));
+            }
         }
 
         FheProgramNode::new(&ids)

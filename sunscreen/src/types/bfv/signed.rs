@@ -41,6 +41,12 @@ impl std::fmt::Display for Signed {
     }
 }
 
+impl Default for Signed {
+    fn default() -> Self {
+        Self::from(0)
+    }
+}
+
 fn significant_bits(val: u64) -> usize {
     let bits = std::mem::size_of::<u64>() * 8;
 

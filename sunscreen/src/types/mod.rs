@@ -101,7 +101,7 @@ pub trait LaneCount {
     fn lane_count() -> usize;
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 /**
  * Declares a type T as being encrypted in an [`fhe_program`](crate::fhe_program).
  */
@@ -130,7 +130,3 @@ where
         }
     }
 }
-
-trait Foo {}
-
-impl<T> Foo for T where T: FheType {}

@@ -158,8 +158,7 @@ fn main() -> Result<(), sunscreen::Error> {
     // modulus.
     let fhe_program = Compiler::with_fhe_program(dot_product)
         .plain_modulus_constraint(PlainModulusConstraint::BatchingMinimum(24))
-        .compile()
-        ?;
+        .compile()?;
     let end = start.elapsed();
 
     println!("Compiled in {}s", end.as_secs_f64());

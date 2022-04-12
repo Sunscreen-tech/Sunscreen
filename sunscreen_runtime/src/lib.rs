@@ -4,6 +4,7 @@
 //! This crate contains the types and functions for executing a Sunscreen FHE program
 //! (i.e. an [`FheProgram`](sunscreen_fhe_program::FheProgram)).
 
+mod array;
 mod error;
 mod keys;
 mod metadata;

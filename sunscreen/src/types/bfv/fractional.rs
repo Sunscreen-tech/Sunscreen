@@ -174,6 +174,12 @@ impl<const INT_BITS: usize> NumCiphertexts for Fractional<INT_BITS> {
 
 impl<const INT_BITS: usize> FheProgramInputTrait for Fractional<INT_BITS> {}
 
+impl<const INT_BITS: usize> Default for Fractional<INT_BITS> {
+    fn default() -> Self {
+        Self::from(0.0)
+    }
+}
+
 impl<const INT_BITS: usize> TypeName for Fractional<INT_BITS> {
     fn type_name() -> Type {
         Type {

@@ -10,7 +10,7 @@ use sunscreen::{
  * the result.
  *
  * `Signed` is Sunscreen's integer type compatible with FHE programs.
- * 
+ *
  * The `Cipher<T>` type indicates that type `T` is encrypted, thus `Cipher<Signed>`
  * is an encrypted [`Signed`] value.
  *
@@ -24,26 +24,25 @@ fn simple_multiply(a: Cipher<Signed>, b: Cipher<Signed>) -> Cipher<Signed> {
 
 fn main() -> Result<(), Error> {
     /*
-    * Here we compile the FHE program we previously declared. In the first step,
-    * we create our compiler and use the default settings.
-    *
-    * Afterwards, we simply compile. The `?` operator is Rust's standard
-    * error handling mechanism; it returns from the current function (`main`)
-    * when an error occurs (shouldn't happen) or emits our compiled
-    * program on success. 
-    * 
-    * The compiler transforms our program and chooses encryption scheme parameters.
-    * These parameters are a tradeoff between correctness and performance;
-    * if parameters are too small data corruption occurs, but if they're too large,
-    * your program runs more slowly than necessary.
-    *
-    * Sunscreen allows experts to explicitly set the scheme parameters, 
-    * but the default behavior has Sunscreen pick parameters for you, yielding
-    * good performance maintaining correctness for nearly all applications.
-    *
-    */
-    let fhe_program = Compiler::with_fhe_program(simple_multiply)
-        .compile()?;
+     * Here we compile the FHE program we previously declared. In the first step,
+     * we create our compiler and use the default settings.
+     *
+     * Afterwards, we simply compile. The `?` operator is Rust's standard
+     * error handling mechanism; it returns from the current function (`main`)
+     * when an error occurs (shouldn't happen) or emits our compiled
+     * program on success.
+     *
+     * The compiler transforms our program and chooses encryption scheme parameters.
+     * These parameters are a tradeoff between correctness and performance;
+     * if parameters are too small data corruption occurs, but if they're too large,
+     * your program runs more slowly than necessary.
+     *
+     * Sunscreen allows experts to explicitly set the scheme parameters,
+     * but the default behavior has Sunscreen pick parameters for you, yielding
+     * good performance maintaining correctness for nearly all applications.
+     *
+     */
+    let fhe_program = Compiler::with_fhe_program(simple_multiply).compile()?;
 
     /*
      * Next, we construct a runtime, which provides the APIs for encryption,
@@ -52,7 +51,7 @@ fn main() -> Result<(), Error> {
     let runtime = Runtime::new(&fhe_program.metadata.params)?;
 
     /*
-     * Here, we generate a public and private key pair. Normally, Alice does this, 
+     * Here, we generate a public and private key pair. Normally, Alice does this,
      * sending the public key to bob, who then runs a computation.
      */
     let (public_key, private_key) = runtime.generate_keys()?;

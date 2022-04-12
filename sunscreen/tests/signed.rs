@@ -467,3 +467,8 @@ fn can_mul_literal_cipher() {
 
     assert_eq!(c, mul_fn(-4, a));
 }
+
+#[test]
+fn can_create_default() {
+    assert_eq!(Into::<i64>::into(Signed::default()), 0);
+}

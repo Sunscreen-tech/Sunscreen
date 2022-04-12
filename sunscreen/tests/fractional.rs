@@ -406,3 +406,8 @@ fn can_negate() {
     test_div(1e-23);
     test_div(4294967295.);
 }
+
+#[test]
+fn can_create_default() {
+    assert_eq!(Into::<f64>::into(Fractional::<64>::default()), 0.0f64);
+}

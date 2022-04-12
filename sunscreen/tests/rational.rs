@@ -698,3 +698,8 @@ fn can_neg_cipher() {
 
     assert_eq!(c, neg_impl(a));
 }
+
+#[test]
+fn can_create_default() {
+    assert_eq!(Into::<f64>::into(Rational::default()), 0.0f64);
+}

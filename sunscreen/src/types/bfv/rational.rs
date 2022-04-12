@@ -30,6 +30,12 @@ impl PartialEq for Rational {
     }
 }
 
+impl Default for Rational {
+    fn default() -> Self {
+        Self::try_from(0.0).unwrap()
+    }
+}
+
 impl NumCiphertexts for Rational {
     const NUM_CIPHERTEXTS: usize = Signed::NUM_CIPHERTEXTS + Signed::NUM_CIPHERTEXTS;
 }

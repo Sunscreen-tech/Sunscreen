@@ -179,7 +179,7 @@ impl CoefficientModulus {
         let coefficients_ptr = coefficients.as_mut_ptr() as *mut *mut c_void;
 
         convert_seal_error(unsafe {
-            bindgen::CoeffModulus_Create(degree, length, bit_sizes.as_mut_ptr(), coefficients_ptr)
+            bindgen::CoeffModulus_Create1(degree, length, bit_sizes.as_mut_ptr(), coefficients_ptr)
         })?;
 
         unsafe { coefficients.set_len(length as usize) };

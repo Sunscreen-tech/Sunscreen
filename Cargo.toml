@@ -7,6 +7,7 @@ members = [
     "examples/calculator_fractional",
     "examples/chi_sq",
     "examples/dot_prod",
+    "examples/pir",
     "seal",
     "seal_bench",
     "sunscreen",

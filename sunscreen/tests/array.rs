@@ -91,6 +91,44 @@ fn multidimensional_arrays() {
 }
 
 #[test]
+fn multidimensional_is_row_major() {
+    #[fhe_program(scheme = "bfv")]
+    fn determinant(x: [[Cipher<Signed>; 3]; 3]) -> Cipher<Signed> {
+        x[1][2]
+    }
+
+    let fhe_program = Compiler::with_fhe_program(determinant)
+        .additional_noise_budget(5)
+        .plain_modulus_constraint(PlainModulusConstraint::Raw(500))
+        .compile()
+        .unwrap();
+
+    let runtime = Runtime::new(&fhe_program.metadata.params).unwrap();
+
+    let (public_key, private_key) = runtime.generate_keys().unwrap();
+
+    let mut matrix = <[[Signed; 3]; 3]>::default();
+
+    for i in 0..3 {
+        for j in 0..3 {
+            let value: i64 = (3 * i + j) as i64;
+            matrix[i][j] = Signed::from(value);
+        }
+    }
+
+    matrix[0][0] = Signed::from(1);
+
+    let a_c = runtime.encrypt(matrix, &public_key).unwrap();
+
+    let result = runtime.run(&fhe_program, vec![a_c], &public_key).unwrap();
+
+    let c: Signed = runtime.decrypt(&result[0], &private_key).unwrap();
+
+    assert_eq!(c, Signed::from(5));
+    assert_eq!(c, matrix[1][2]);
+}
+
+#[test]
 fn cipher_plain_arrays() {
     #[fhe_program(scheme = "bfv")]
     fn dot(a: [Cipher<Signed>; 3], b: [Signed; 3]) -> Cipher<Signed> {

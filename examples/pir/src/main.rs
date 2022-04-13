@@ -5,35 +5,38 @@ use sunscreen::{
     PublicKey, Runtime,
 };
 
+const DATABASE_SIZE: usize = 100;
+
 #[fhe_program(scheme = "bfv")]
-/// This program swaps NU tokens to receive ETH.
-fn lookup(query: [Cipher<Signed>; 10], database: [Signed; 10]) -> Cipher<Signed> {
+/// This program takes a user's query and looks up the entry in the database.
+/// Queries are arrays containing a single 1 element at the
+/// desired item's index and 0s elsewhere.
+fn lookup(query: [Cipher<Signed>; DATABASE_SIZE], database: [Signed; DATABASE_SIZE]) -> Cipher<Signed> {
     let mut sum = query[0] * database[0];
 
-    for i in 1..10 {
+    for i in 1..DATABASE_SIZE {
         sum = sum + query[i] * database[i]
     }
 
     sum
 }
 
-/// Imagine this is a miner in a blockchain application. They're responsible
-/// for processing transactions
-struct Bob {
-    /// The compiled FHE swap program
+/// This is the server that processes Alice's query.
+struct Server {
+    /// The compiled database query program
     pub compiled_query: CompiledFheProgram,
 
-    /// The Miner's runtime
+    /// The server's runtime
     runtime: Runtime,
 }
 
-impl Bob {
-    pub fn setup() -> Result<Bob, Error> {
+impl Server {
+    pub fn setup() -> Result<Server, Error> {
         let compiled_query = Compiler::with_fhe_program(lookup).compile()?;
 
         let runtime = Runtime::new(&compiled_query.metadata.params)?;
 
-        Ok(Bob {
+        Ok(Server {
             compiled_query,
             runtime,
         })
@@ -44,9 +47,9 @@ impl Bob {
         query: Ciphertext,
         public_key: &PublicKey,
     ) -> Result<Ciphertext, Error> {
-        // Our database will consist of values between 400 and 410.
-        let database: [Signed; 10] = (400..410)
-            .map(|x| Signed::from(x))
+        // Our database will consist of values between 400 and 500.
+        let database: [Signed; DATABASE_SIZE] = (400..(400 + DATABASE_SIZE))
+            .map(|x| Signed::from(x as i64))
             .collect::<Vec<Signed>>()
             .try_into()
             .unwrap();
@@ -59,7 +62,8 @@ impl Bob {
     }
 }
 
-/// Alice is a party that would like to trade some NU for ETH.
+/// Alice is a party that wants to look up a value in the database without
+/// revealing what she looked up.
 struct Alice {
     /// Alice's public key
     pub public_key: PublicKey,
@@ -84,12 +88,9 @@ impl Alice {
         })
     }
 
-    /// To look up the item at `entry` location, construct an
-    /// array containing 0s except for a single 1 at `entry`'s
-    /// location.
-    pub fn create_query(&self, entry: usize) -> Result<Ciphertext, Error> {
-        let mut query = <[Signed; 10]>::default();
-        query[entry] = Signed::from(1);
+    pub fn create_query(&self, index: usize) -> Result<Ciphertext, Error> {
+        let mut query = [Signed::from(0); DATABASE_SIZE];
+        query[index] = Signed::from(1);
 
         Ok(self.runtime.encrypt(query, &self.public_key)?)
     }
@@ -106,17 +107,16 @@ impl Alice {
 }
 
 fn main() -> Result<(), Error> {
-    // Set up the miner with some NU and ETH tokens.
-    let bob = Bob::setup()?;
+    // Set up the database
+    let server = Server::setup()?;
 
     // Alice sets herself up. The FHE scheme parameters are public to the
     // protocol, so Alice has them.
-    let alice = Alice::setup(&bob.compiled_query.metadata.params)?;
+    let alice = Alice::setup(&server.compiled_query.metadata.params)?;
 
-    // Alice w
-    let query = alice.create_query(6)?;
+    let query = alice.create_query(94)?;
 
-    let response = bob.run_query(query, &alice.public_key)?;
+    let response = server.run_query(query, &alice.public_key)?;
 
     alice.check_response(response)?;
 

@@ -24,6 +24,14 @@ jobs:
       run: cargo fmt --check
     - name: Build and run tests
       run: cargo test --verbose --release
-    - name: Verify amm
+    - name: Verify examples (amm)
       run: cargo run --release --bin amm
+    - name: Verify examples (chi_sq)
+      run: cargo run --release --bin chi_sq
+    - name: Verify examples (simple_multiply)
+      run: cargo run --release --bin simple_multiply
+    - name: Verify examples (dot_prod)
+      run: cargo run --release --bin dot_prod
+    - name: Verify examples (pir)
+      run: cargo run --release --bin pir
       

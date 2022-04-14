@@ -11,7 +11,10 @@ const DATABASE_SIZE: usize = 100;
 /// This program takes a user's query and looks up the entry in the database.
 /// Queries are arrays containing a single 1 element at the
 /// desired item's index and 0s elsewhere.
-fn lookup(query: [Cipher<Signed>; DATABASE_SIZE], database: [Signed; DATABASE_SIZE]) -> Cipher<Signed> {
+fn lookup(
+    query: [Cipher<Signed>; DATABASE_SIZE],
+    database: [Signed; DATABASE_SIZE],
+) -> Cipher<Signed> {
     let mut sum = query[0] * database[0];
 
     for i in 1..DATABASE_SIZE {

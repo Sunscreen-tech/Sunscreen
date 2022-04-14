@@ -19,7 +19,7 @@ jobs:
       with:
         submodules: 'recursive'
     - name: CPU Features
-      run: /proc/cpuinfo
+      run: sudo /proc/cpuinfo
     - name: Format
       run: cargo fmt --check
     - name: Build

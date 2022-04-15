@@ -1,4 +1,4 @@
-[![Rust](https://github.com/Sunscreen-tech/Sunscreen/actions/workflows/rust.yml/badge.svg)](https://github.com/Sunscreen-tech/Sunscreen/actions/workflows/rust.yml)
+[![Rust](https://github.com/Sunscreen-tech/Sunscreen/workflows/CI/badge.svg)](https://github.com/Sunscreen-tech/Sunscreen/actions/workflows/rust.yml)
 
 # Intro
 

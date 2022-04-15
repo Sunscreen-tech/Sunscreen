@@ -18,12 +18,21 @@ jobs:
     - uses: actions/checkout@v3
       with:
         submodules: 'recursive'
+    # Checks are ordered from fastest to slowest so your build fails quickly on invalid PRs
+    # We do everything in release mode so tests run quickly and steps cache each other.
+    # Check the submitted change meets style guidelines
     - name: Cargo Format
       run: cargo fmt --check
+    # Cursory check to ensure your CL contains valid Rust code
+    - name: Cargo check
+      run: cargo check --release
+    # Check the documentation builds, links work, etc.
     - name: Cargo doc
-      run: cargo doc
+      run: cargo doc --release --no-deps
+    # Build and run the tests
     - name: Build and run tests
       run: cargo test --verbose --release
+    # Run our non-interactive examples and assert the complete without error
     - name: Verify examples (amm)
       run: cargo run --release --bin amm
     - name: Verify examples (chi_sq)

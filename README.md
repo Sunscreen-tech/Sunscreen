@@ -1,3 +1,5 @@
+[![Rust](https://github.com/Sunscreen-tech/Sunscreen/actions/workflows/rust.yml/badge.svg)](https://github.com/Sunscreen-tech/Sunscreen/actions/workflows/rust.yml)
+
 # Intro
 
 Sunscreen is an ecosystem for building privacy-preserving applications using fully homomorphic encryption and zero-knowlege proofs.

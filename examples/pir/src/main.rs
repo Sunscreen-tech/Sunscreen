@@ -27,7 +27,7 @@ fn lookup(
 /// This is the server that processes Alice's query.
 struct Server {
     /// The compiled database query program
-    pub compiled_query: CompiledFheProgram,
+    pub compiled_lookup: CompiledFheProgram,
 
     /// The server's runtime
     runtime: Runtime,
@@ -35,12 +35,12 @@ struct Server {
 
 impl Server {
     pub fn setup() -> Result<Server, Error> {
-        let compiled_query = Compiler::with_fhe_program(lookup).compile()?;
+        let compiled_lookup = Compiler::with_fhe_program(lookup).compile()?;
 
-        let runtime = Runtime::new(&compiled_query.metadata.params)?;
+        let runtime = Runtime::new(&compiled_lookup.metadata.params)?;
 
         Ok(Server {
-            compiled_query,
+            compiled_lookup,
             runtime,
         })
     }
@@ -59,7 +59,7 @@ impl Server {
 
         let args: Vec<FheProgramInput> = vec![query.into(), database.into()];
 
-        let results = self.runtime.run(&self.compiled_query, args, public_key)?;
+        let results = self.runtime.run(&self.compiled_lookup, args, public_key)?;
 
         Ok(results[0].clone())
     }
@@ -115,7 +115,7 @@ fn main() -> Result<(), Error> {
 
     // Alice sets herself up. The FHE scheme parameters are public to the
     // protocol, so Alice has them.
-    let alice = Alice::setup(&server.compiled_query.metadata.params)?;
+    let alice = Alice::setup(&server.compiled_lookup.metadata.params)?;
 
     let query = alice.create_query(94)?;
 

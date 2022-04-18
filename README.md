@@ -4,6 +4,8 @@
 
 Sunscreen is an ecosystem for building privacy-preserving applications using fully homomorphic encryption and zero-knowlege proofs.
 
+*WARNING!* This library is meant for experiments only. It has not been audited and is *not* intended for use in production. 
+
 # Set-up
 These directions apply for the requirements to *develop the sunscreen platform itself*, which may be more than needed to merely consume it as a dependency. If you wish to develop an application using Sunscreen, see the installation 
 

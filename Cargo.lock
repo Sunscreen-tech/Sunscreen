@@ -739,7 +739,7 @@ checksum = "d29ab0c6d3fc0ee92fe66e2d99f700eab17a8d57d1c1d3b748380fb20baa78cd"
 
 [[package]]
 name = "seal"
-version = "0.1.1"
+version = "0.3.0"
 dependencies = [
  "bindgen",
  "cmake",
@@ -876,7 +876,7 @@ dependencies = [
 
 [[package]]
 name = "sunscreen"
-version = "0.2.1"
+version = "0.3.0"
 dependencies = [
  "bumpalo",
  "clap",
@@ -896,7 +896,7 @@ dependencies = [
 
 [[package]]
 name = "sunscreen_backend"
-version = "0.1.1"
+version = "0.3.0"
 dependencies = [
  "env_logger",
  "log",
@@ -908,7 +908,7 @@ dependencies = [
 
 [[package]]
 name = "sunscreen_compiler_macros"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -918,7 +918,7 @@ dependencies = [
 
 [[package]]
 name = "sunscreen_fhe_program"
-version = "0.1.1"
+version = "0.3.0"
 dependencies = [
  "petgraph",
  "seal",
@@ -928,7 +928,7 @@ dependencies = [
 
 [[package]]
 name = "sunscreen_runtime"
-version = "0.1.1"
+version = "0.3.0"
 dependencies = [
  "bincode",
  "crossbeam",

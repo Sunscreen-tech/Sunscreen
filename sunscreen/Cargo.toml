@@ -3,7 +3,7 @@ name = "sunscreen"
 # Read and understand
 # https://doc.rust-lang.org/cargo/reference/semver.html
 # before bumping the version.
-version = "0.2.1"
+version = "0.3.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -14,11 +14,11 @@ clap = "2.34.0"
 log = "0.4.14"
 num = "0.4.0"
 petgraph = "0.6.0"
-sunscreen_compiler_macros = { version = "^0.2", path = "../sunscreen_compiler_macros", registry = "sunscreen"  }
-sunscreen_backend = { version = "^0.1", path = "../sunscreen_backend", registry = "sunscreen"  }
-sunscreen_fhe_program = { version = "^0.1", path = "../sunscreen_fhe_program", registry = "sunscreen"  }
-sunscreen_runtime = { version = "^0.1", path = "../sunscreen_runtime", registry = "sunscreen"  }
-seal = { version = "^0.1", path = "../seal", registry = "sunscreen" }
+sunscreen_compiler_macros = { version = "^0.3", path = "../sunscreen_compiler_macros", registry = "sunscreen"  }
+sunscreen_backend = { version = "^0.3", path = "../sunscreen_backend", registry = "sunscreen"  }
+sunscreen_fhe_program = { version = "^0.3", path = "../sunscreen_fhe_program", registry = "sunscreen"  }
+sunscreen_runtime = { version = "^0.3", path = "../sunscreen_runtime", registry = "sunscreen"  }
+seal = { version = "^0.3", path = "../seal", registry = "sunscreen" }
 serde = { version = "1.0.130", features = ["derive"] }
 
 [dev-dependencies]

@@ -1,7 +1,7 @@
 use bindgen;
 
 use cmake::Config;
-//use emsdk::Config as EmConfig;
+use emsdk::Config as EmConfig;
 
 use std::path::{Path, PathBuf};
 
@@ -28,7 +28,6 @@ fn compile_native(profile: &str, out_path: &Path) {
         .define("SEAL_USE_MSGSL", "OFF")
         .define("SEAL_USE_ZLIB", "ON")
         .define("SEAL_USE_ZSTD", "ON")
-        .define("SEAL_PURE_SOURCETREE", "ON")
         .build();
 
     let out_path_suffix = if std::env::var("CARGO_CFG_WINDOWS").is_ok() {
@@ -48,21 +47,19 @@ fn compile_native(profile: &str, out_path: &Path) {
     println!("-I{}", out_path.join("include").display());
 }
 
-fn compile_wasm(_profile: &str, _out_path: &Path) {
-    unimplemented!();
-    /*
+fn compile_wasm(profile: &str, out_path: &Path) {
     let lib = PathBuf::from(std::env::var("OUT_DIR").unwrap())
         .join("build")
         .join("lib")
-        .join("libseal-3.7.a");
+        .join("libseal-4.0.a");
 
     let _dst = EmConfig::new("SEAL")
         .define("CMAKE_BUILD_TYPE", profile)
-        .define("CMAKE_CXX_FLAGS_RELEASE", "-DNDEBUG -flto -O3")
-        .define("CMAKE_C_FLAGS_RELEASE", "-DNDEBUG -flto -O3")
-        //.define("SEAL_BUILD_STATIC_SEAL_C", "ON")
+        .define("CMAKE_CXX_FLAGS_RELEASE", "-DNDEBUG -O3")
+        .define("CMAKE_C_FLAGS_RELEASE", "-DNDEBUG -O3")
+        .define("SEAL_BUILD_STATIC_SEAL_C", "OFF")
         .define("SEAL_BUILD_DEPS", "ON")
-        //.define("SEAL_BUILD_SEAL_C", "ON")
+        .define("SEAL_BUILD_SEAL_C", "OFF")
         .define("SEAL_BUILD_BENCH", "OFF")
         .define("SEAL_BUILD_EXAMPLES", "OFF")
         .define("SEAL_BUILD_TESTS", "OFF")
@@ -71,11 +68,8 @@ fn compile_wasm(_profile: &str, _out_path: &Path) {
         .define("SEAL_USE_MSGSL", "OFF")
         .define("SEAL_USE_ZLIB", "ON")
         .define("SEAL_USE_ZSTD", "ON")
-        .define("SEAL_PURE_SOURCETREE", "ON")
-        .define("SEAL_THIRDPARTY_DIR", &out_path.to_string_lossy().as_ref())
         .emcc_arg("--no-entry")
         .emcc_arg("-Wall")
-        .emcc_arg("-flto")
         .emcc_arg("-O3")
         .emcc_arg("-o")
         .emcc_arg(&out_path.join("seal.wasm").to_string_lossy())
@@ -85,7 +79,6 @@ fn compile_wasm(_profile: &str, _out_path: &Path) {
         .emcc_arg("ALLOW_MEMORY_GROWTH=1")
         .emcc_arg(&lib.to_string_lossy())
         .build();
-    */
 }
 
 fn main() {
@@ -102,7 +95,7 @@ fn main() {
         panic!("Unknown profile type {}", profile);
     };
 
-    if target == "wasm32-unknown-unknown" {
+    if target == "wasm32-unknown-emscripten" {
         compile_wasm(&profile, &out_path);
     } else {
         compile_native(&profile, &out_path);

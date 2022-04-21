@@ -107,7 +107,7 @@ fn main() {
         .clang_arg("-xc++")
         .clang_arg("-std=c++17");
 
-    if target == "wasm32-unknown-unknown" {
+    if target == "wasm32-unknown-emscripten" {
         // Bindgen appears to be broken under wasm. Just generate bindings with
         // the host's target.
         builder = builder

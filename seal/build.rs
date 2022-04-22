@@ -53,32 +53,35 @@ fn compile_wasm(profile: &str, out_path: &Path) {
         .join("lib")
         .join("libseal-4.0.a");
 
-    let _dst = EmConfig::new("SEAL")
+    let dst = EmConfig::new("SEAL")
         .define("CMAKE_BUILD_TYPE", profile)
-        .define("CMAKE_CXX_FLAGS_RELEASE", "-DNDEBUG -O3")
-        .define("CMAKE_C_FLAGS_RELEASE", "-DNDEBUG -O3")
+        .define("CMAKE_CXX_FLAGS_RELEASE", "-DNDEBUG -g -O3")
+        .define("CMAKE_C_FLAGS_RELEASE", "-DNDEBUG -g -O3")
+        .define("LDFLAGS", "-sERROR_ON_UNDEFINED_SYMBOLS=0 -sALLOW_MEMORY_GROWTH")
         .define("SEAL_BUILD_STATIC_SEAL_C", "ON")
         .define("SEAL_BUILD_DEPS", "ON")
         .define("SEAL_BUILD_SEAL_C", "ON")
-        .define("SEAL_BUILD_BENCH", "OFF")
-        .define("SEAL_BUILD_EXAMPLES", "OFF")
-        .define("SEAL_BUILD_TESTS", "OFF")
+        //.define("SEAL_BUILD_BENCH", "OFF")
+        //.define("SEAL_BUILD_EXAMPLES", "OFF")
+        //.define("SEAL_BUILD_TESTS", "OFF")
         .define("SEAL_USE_CXX17", "ON")
         .define("SEAL_USE_INTRIN", "ON")
         .define("SEAL_USE_MSGSL", "OFF")
-        .define("SEAL_USE_ZLIB", "ON")
-        .define("SEAL_USE_ZSTD", "ON")
-        .emcc_arg("--no-entry")
-        .emcc_arg("-Wall")
-        .emcc_arg("-O3")
-        .emcc_arg("-o")
-        .emcc_arg(&out_path.join("seal.wasm").to_string_lossy())
-        .emcc_arg("-s")
-        .emcc_arg("STANDALONE_WASM")
-        .emcc_arg("-s")
-        .emcc_arg("ALLOW_MEMORY_GROWTH=1")
-        .emcc_arg(&lib.to_string_lossy())
+        //.define("SEAL_USE_ZLIB", "ON")
+        //.define("SEAL_USE_ZSTD", "ON")
         .build();
+
+        let lib_path = format!("{}/lib/{}", dst.display(), "");
+
+        println!("cargo:rustc-link-args=-g -O3 -sALLOW_MEMORY_GROWTH");
+        println!(
+            "cargo:rustc-link-search=native={}",
+            lib_path
+        );
+
+
+        println!("cargo:rustc-link-lib=static=sealc-4.0");
+        println!("cargo:rustc-link-lib=static=seal-4.0");
 }
 
 fn main() {

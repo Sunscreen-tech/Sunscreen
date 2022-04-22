@@ -25,7 +25,7 @@ fn unzip<P>(file_name: P, dst: &Path) where P: Into<PathBuf> {
     println!("{}", file_name.to_string_lossy());
     println!("{}", dst.to_string_lossy());
 
-    Command::new("tar")
+    let status = Command::new("tar")
         .current_dir(dst)
         .args(&["-jxvf", file_name.to_str().unwrap()])
         .stdout(Stdio::inherit())
@@ -34,9 +34,14 @@ fn unzip<P>(file_name: P, dst: &Path) where P: Into<PathBuf> {
         .unwrap()
         .wait()
         .unwrap();
+
+    if !status.success() {
+        panic!("Failed to extract emsdk");
+    }
 }
 
 fn main() {
+    /*
     let emscripten_zip = format!("wasm-binaries.{}", EXTENSION);
     let emscripten_url = format!("https://storage.googleapis.com/webassembly/emscripten-releases-builds/{}/{}/{}", HOST_OS, REVISION, &emscripten_zip);
 
@@ -56,5 +61,5 @@ fn main() {
         unzip(zip_file_path.file_name().unwrap(), &out_dir);
     } else {
         println!("{} exists. Skipping download", zip_file_path.to_string_lossy());
-    }
+    }*/
 }

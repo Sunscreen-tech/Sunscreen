@@ -28,7 +28,7 @@ impl Config {
         self
     }
 
-    pub fn build(self) {
+    pub fn build(self) -> PathBuf {
         let emsdk_out_dir = PathBuf::from(env!("OUT_DIR"));
         let output_directory = PathBuf::from(std::env::var("OUT_DIR").unwrap());
 
@@ -46,13 +46,13 @@ impl Config {
         let bin_dir = emsdk_dir.join("bin");
         let emscipten_bin_dir = emsdk_out_dir.join("emscripten");
 
-        writeln!(script, "export PATH={}:{}:$PATH", bin_dir.to_str().unwrap(), emscipten_bin_dir.to_str().unwrap()).unwrap();
+        //writeln!(script, "export PATH={}:{}:$PATH", bin_dir.to_str().unwrap(), emscipten_bin_dir.to_str().unwrap()).unwrap();
         writeln!(script, "set -e").unwrap();
         writeln!(script, "{}", self.get_cmake_command(&build_dir)).unwrap();
         writeln!(script, "emmake make -C {:#?} -j", build_dir).unwrap();
-        writeln!(script, "{}", self.get_emcc_command()).unwrap();
+        //writeln!(script, "{}", self.get_emcc_command()).unwrap();
 
-        Command::new("bash")
+        let status = Command::new("bash")
             .arg(script_path)
             .stdout(Stdio::inherit())
             .stderr(Stdio::inherit())
@@ -60,6 +60,12 @@ impl Config {
             .unwrap()
             .wait()
             .unwrap();
+
+        if !status.success() {
+            panic!("Compilation failed");
+        }
+
+        build_dir.to_owned()
     }
 
     fn get_cmake_command(&self, build_dir: &Path) -> String {

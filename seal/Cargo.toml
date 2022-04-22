@@ -11,6 +11,16 @@ serde={ version = "1.0.130", features = ["derive"] }
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 link-cplusplus="1.0.5"
 
+[target.'cfg(target_arch = "wasm32")']
+rustflags = [
+  "-C", "link-arg=-g",
+  "-C", "link-arg=-O3",
+  "-C", "link-arg=-s",
+  "-C", "link-arg=ALLOW_MEMORY_GROWTH",
+  "-C", "link-arg=--source-map-base",
+  "-C", "link-arg=localhost:8080"
+]
+
 [build-dependencies]
 cmake="0.1.46"
 bindgen="0.59.1"

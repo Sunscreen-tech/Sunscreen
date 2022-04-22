@@ -47,41 +47,31 @@ fn compile_native(profile: &str, out_path: &Path) {
     println!("-I{}", out_path.join("include").display());
 }
 
-fn compile_wasm(profile: &str, out_path: &Path) {
-    let lib = PathBuf::from(std::env::var("OUT_DIR").unwrap())
-        .join("build")
-        .join("lib")
-        .join("libseal-4.0.a");
-
+fn compile_wasm(profile: &str, _out_path: &Path) {
     let dst = EmConfig::new("SEAL")
         .define("CMAKE_BUILD_TYPE", profile)
         .define("CMAKE_CXX_FLAGS_RELEASE", "-DNDEBUG -g -O3")
         .define("CMAKE_C_FLAGS_RELEASE", "-DNDEBUG -g -O3")
-        .define("LDFLAGS", "-sERROR_ON_UNDEFINED_SYMBOLS=0 -sALLOW_MEMORY_GROWTH")
         .define("SEAL_BUILD_STATIC_SEAL_C", "ON")
         .define("SEAL_BUILD_DEPS", "ON")
         .define("SEAL_BUILD_SEAL_C", "ON")
-        //.define("SEAL_BUILD_BENCH", "OFF")
-        //.define("SEAL_BUILD_EXAMPLES", "OFF")
-        //.define("SEAL_BUILD_TESTS", "OFF")
+        .define("SEAL_BUILD_BENCH", "OFF")
+        .define("SEAL_BUILD_EXAMPLES", "OFF")
+        .define("SEAL_BUILD_TESTS", "OFF")
         .define("SEAL_USE_CXX17", "ON")
         .define("SEAL_USE_INTRIN", "ON")
         .define("SEAL_USE_MSGSL", "OFF")
-        //.define("SEAL_USE_ZLIB", "ON")
-        //.define("SEAL_USE_ZSTD", "ON")
+        .define("SEAL_USE_ZLIB", "ON")
+        .define("SEAL_USE_ZSTD", "ON")
         .build();
 
-        let lib_path = format!("{}/lib/{}", dst.display(), "");
+    let lib_path = format!("{}/lib/{}", dst.display(), "");
 
-        println!("cargo:rustc-link-args=-g -O3 -sALLOW_MEMORY_GROWTH");
-        println!(
-            "cargo:rustc-link-search=native={}",
-            lib_path
-        );
+    println!("cargo:rustc-link-args=-g -O3 -sALLOW_MEMORY_GROWTH");
+    println!("cargo:rustc-link-search=native={}", lib_path);
 
-
-        println!("cargo:rustc-link-lib=static=sealc-4.0");
-        println!("cargo:rustc-link-lib=static=seal-4.0");
+    println!("cargo:rustc-link-lib=static=sealc-4.0");
+    println!("cargo:rustc-link-lib=static=seal-4.0");
 }
 
 fn main() {

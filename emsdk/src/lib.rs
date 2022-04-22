@@ -29,28 +29,16 @@ impl Config {
     }
 
     pub fn build(self) -> PathBuf {
-        let emsdk_out_dir = PathBuf::from(env!("OUT_DIR"));
         let output_directory = PathBuf::from(std::env::var("OUT_DIR").unwrap());
-
-        let emsdk_dir = emsdk_out_dir.join("emsdk");
 
         let script_path = output_directory.join("build.sh");
         let mut script = std::fs::File::create(&script_path).unwrap();
 
         let build_dir = output_directory.join("build");
 
-        if build_dir.exists() {
-            //std::fs::remove_dir_all(&build_dir).unwrap();
-        }
-
-        let bin_dir = emsdk_dir.join("bin");
-        let emscipten_bin_dir = emsdk_out_dir.join("emscripten");
-
-        //writeln!(script, "export PATH={}:{}:$PATH", bin_dir.to_str().unwrap(), emscipten_bin_dir.to_str().unwrap()).unwrap();
         writeln!(script, "set -e").unwrap();
         writeln!(script, "{}", self.get_cmake_command(&build_dir)).unwrap();
         writeln!(script, "emmake make -C {:#?} -j", build_dir).unwrap();
-        //writeln!(script, "{}", self.get_emcc_command()).unwrap();
 
         let status = Command::new("bash")
             .arg(script_path)
@@ -80,16 +68,6 @@ impl Config {
 
         for (k, v) in &self.defines {
             args.push(format!("-D{}=\"{}\"", k, v.to_owned()));
-        }
-
-        args.join(" ")
-    }
-
-    fn get_emcc_command(&self) -> String {
-        let mut args = vec!["emcc"];
-
-        for i in &self.emcc_args {
-            args.push(i);
         }
 
         args.join(" ")

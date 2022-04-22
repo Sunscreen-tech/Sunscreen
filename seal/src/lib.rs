@@ -88,8 +88,3 @@ pub trait FromBytes {
     where
         Self: Sized;
 }
-
-#[no_mangle]
-extern "C" fn __gxx_personality_v0(_a: i32, _b: i32, _c: i64, _d: i32, _e: i32)  -> i32 {
-    0
-}

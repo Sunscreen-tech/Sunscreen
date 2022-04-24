@@ -5,20 +5,38 @@ use sunscreen::{
     PublicKey, Runtime,
 };
 
-const DATABASE_SIZE: usize = 100;
+const SQRT_DATABASE_SIZE: usize = 10;
 
 #[fhe_program(scheme = "bfv")]
 /// This program takes a user's query and looks up the entry in the database.
 /// Queries are arrays containing a single 1 element at the
 /// desired item's index and 0s elsewhere.
 fn lookup(
-    query: [Cipher<Signed>; DATABASE_SIZE],
-    database: [Signed; DATABASE_SIZE],
+    col_query: [Cipher<Signed>; SQRT_DATABASE_SIZE],
+    row_query: [Cipher<Signed>; SQRT_DATABASE_SIZE],
+    database: [[Signed; SQRT_DATABASE_SIZE]; SQRT_DATABASE_SIZE],
 ) -> Cipher<Signed> {
-    let mut sum = query[0] * database[0];
+    // Clone col_query just so we get an initialized object of the right
+    // type in col.
+    let mut col = [col_query[0]; SQRT_DATABASE_SIZE];
 
-    for i in 1..DATABASE_SIZE {
-        sum = sum + query[i] * database[i]
+    // Perform matrix-vector multiplication with col_query to extract
+    // Alice's desired column
+    for i in 0..SQRT_DATABASE_SIZE {
+        for j in 0..SQRT_DATABASE_SIZE {
+            if j == 0 {
+                col[i] = database[i][j] * col_query[j];
+            } else {
+                col[i] = col[i] + database[i][j] * col_query[j];
+            }
+        }
+    }
+
+    let mut sum = col[0] * row_query[0];
+
+    // Dot product the result with the row query to get the result
+    for i in 1..SQRT_DATABASE_SIZE {
+        sum = sum + col[i] * row_query[i];
     }
 
     sum
@@ -47,17 +65,22 @@ impl Server {
 
     pub fn run_query(
         &self,
-        query: Ciphertext,
+        col_query: Ciphertext,
+        row_query: Ciphertext,
         public_key: &PublicKey,
     ) -> Result<Ciphertext, Error> {
         // Our database will consist of values between 400 and 500.
-        let database: [Signed; DATABASE_SIZE] = (400..(400 + DATABASE_SIZE))
-            .map(|x| Signed::from(x as i64))
-            .collect::<Vec<Signed>>()
-            .try_into()
-            .unwrap();
+        let mut database = [[Signed::from(0); SQRT_DATABASE_SIZE]; SQRT_DATABASE_SIZE];
+        let mut val = Signed::from(400);
 
-        let args: Vec<FheProgramInput> = vec![query.into(), database.into()];
+        for i in 0..SQRT_DATABASE_SIZE {
+            for j in 0..SQRT_DATABASE_SIZE {
+                database[i][j] = val;
+                val = val + 1;
+            }
+        }
+
+        let args: Vec<FheProgramInput> = vec![col_query.into(), row_query.into(), database.into()];
 
         let results = self.runtime.run(&self.compiled_lookup, args, public_key)?;
 
@@ -91,11 +114,19 @@ impl Alice {
         })
     }
 
-    pub fn create_query(&self, index: usize) -> Result<Ciphertext, Error> {
-        let mut query = [Signed::from(0); DATABASE_SIZE];
-        query[index] = Signed::from(1);
+    pub fn create_query(&self, index: usize) -> Result<(Ciphertext, Ciphertext), Error> {
+        let col = index % SQRT_DATABASE_SIZE;
+        let row = index / SQRT_DATABASE_SIZE;
 
-        Ok(self.runtime.encrypt(query, &self.public_key)?)
+        let mut col_query = [Signed::from(0); SQRT_DATABASE_SIZE];
+        let mut row_query = [Signed::from(0); SQRT_DATABASE_SIZE];
+        col_query[col] = Signed::from(1);
+        row_query[row] = Signed::from(1);
+
+        Ok((
+            self.runtime.encrypt(col_query, &self.public_key)?,
+            self.runtime.encrypt(row_query, &self.public_key)?,
+        ))
     }
 
     pub fn check_response(&self, value: Ciphertext) -> Result<(), Error> {
@@ -117,9 +148,9 @@ fn main() -> Result<(), Error> {
     // protocol, so Alice has them.
     let alice = Alice::setup(&server.compiled_lookup.metadata.params)?;
 
-    let query = alice.create_query(94)?;
+    let (col_query, row_query) = alice.create_query(94)?;
 
-    let response = server.run_query(query, &alice.public_key)?;
+    let response = server.run_query(col_query, row_query, &alice.public_key)?;
 
     alice.check_response(response)?;
 

@@ -1,5 +1,6 @@
 {
     "configurations": [
+
         {
             "type": "lldb",
             "request": "launch",
@@ -295,6 +296,23 @@
                 "filter": {
                     "kind": "bin",
                     "name": "amm"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug binary 'pir'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--package=pir"
+                ],
+                "filter": {
+                    "kind": "bin",
+                    "name": "pir"
                 }
             },
             "args": [],

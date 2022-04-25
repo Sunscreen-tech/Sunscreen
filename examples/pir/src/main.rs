@@ -16,8 +16,8 @@ fn lookup(
     row_query: [Cipher<Signed>; SQRT_DATABASE_SIZE],
     database: [[Signed; SQRT_DATABASE_SIZE]; SQRT_DATABASE_SIZE],
 ) -> Cipher<Signed> {
-    // Clone col_query just so we get an initialized object of the right
-    // type in col.
+    // Safe Rust requires you initialize arrays with some value. Just put
+    // put copies of col_query[0] and we'll overwrite them later.
     let mut col = [col_query[0]; SQRT_DATABASE_SIZE];
 
     // Perform matrix-vector multiplication with col_query to extract

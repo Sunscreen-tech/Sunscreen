@@ -9,7 +9,6 @@ members = [
     "examples/dot_prod",
     "examples/pir",
     "seal",
-    "seal_bench",
     "sunscreen",
     "sunscreen_backend",
     "sunscreen_compiler_macros",

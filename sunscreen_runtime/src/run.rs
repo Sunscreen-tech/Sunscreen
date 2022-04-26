@@ -5,6 +5,9 @@ use crossbeam::atomic::AtomicCell;
 use petgraph::{stable_graph::NodeIndex, visit::EdgeRef, Direction};
 
 use std::borrow::Cow;
+#[cfg(target_arch = "wasm32")]
+use std::collections::VecDeque;
+#[cfg(not(target_arch = "wasm32"))]
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 use seal::{Ciphertext, Error as SealError, Evaluator, GaloisKeys, Plaintext, RelinearizationKeys};
@@ -142,7 +145,7 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
         data.push(AtomicCell::new(None));
     }
 
-    parallel_traverse(
+    traverse(
         ir,
         |index| {
             let node = &ir.graph[index];
@@ -345,10 +348,11 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
     Ok(output)
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 /**
  * Traverses the graph in the given
  */
-fn parallel_traverse<F>(
+fn traverse<F>(
     ir: &FheProgram,
     callback: F,
     run_to: Option<NodeIndex>,
@@ -460,6 +464,66 @@ where
     });
 
     returned_result.load()
+}
+
+#[cfg(target_arch = "wasm32")]
+fn traverse<F>(
+    ir: &FheProgram,
+    callback: F,
+    run_to: Option<NodeIndex>,
+) -> Result<(), FheProgramRunFailure>
+where
+    F: Fn(NodeIndex) -> Result<(), FheProgramRunFailure> + Sync + Send,
+{
+    let ir = if let Some(x) = run_to {
+        Cow::Owned(ir.prune(&vec![x]))
+    } else {
+        Cow::Borrowed(ir)
+    };
+
+    // Initialize the number of incomplete dependencies.
+    let mut deps = ir
+        .graph
+        .node_indices()
+        .map(|n| ir.graph.neighbors_directed(n, Direction::Incoming).count())
+        .collect::<Vec<usize>>();
+
+    let initial_ready = deps.iter().enumerate().filter_map(|(id, count)| {
+        if *count == 0 {
+            log::trace!("traverse: Initial node {}", id);
+            Some(NodeIndex::from(id as u32))
+        } else {
+            None
+        }
+    });
+
+    let mut ready_nodes = VecDeque::new();
+
+    for i in initial_ready {
+        ready_nodes.push_back(i);
+    }
+
+    loop {
+        let node_id = ready_nodes.pop_front();
+        let node_id = match node_id {
+            Some(i) => i,
+            None => {
+                break;
+            }
+        };
+
+        callback(node_id)?;
+
+        for e in ir.graph.neighbors_directed(node_id, Direction::Outgoing) {
+            deps[e.index()] -= 1;
+
+            if deps[e.index()] == 0 {
+                ready_nodes.push_back(e);
+            }
+        }
+    }
+
+    Ok(())
 }
 
 /**

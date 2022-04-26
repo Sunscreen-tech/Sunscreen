@@ -1,1 +1,0 @@
-This app benchmarks seal to measure sizes of various objects (e.g. keys, ciphertexts, etc.).

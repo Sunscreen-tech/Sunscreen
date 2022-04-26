@@ -1,4 +1,7 @@
-use crate::internals::{attr::Attrs, case::Scheme};
+use crate::{
+    fhe_program_transforms::*,
+    internals::{attr::Attrs, case::Scheme},
+};
 use proc_macro2::{Span, TokenStream};
 use quote::{quote, quote_spanned};
 use syn::{
@@ -74,12 +77,9 @@ pub fn fhe_program_impl(
     let fhe_program_returns = lift_return_type(ret);
 
     let var_decl = unwrapped_inputs.iter().enumerate().map(|(i, t)| {
-        let id = Ident::new(&format!("c_{}", i), Span::call_site());
-        let ty = &t.0.ty;
+        let var_name = format!("c_{}", i);
 
-        quote_spanned! {t.0.span() =>
-            let #id: FheProgramNode<#ty> = FheProgramNode::input();
-        }
+        create_fhe_program_node(&var_name, &t.0.ty)
     });
 
     let args = unwrapped_inputs.iter().enumerate().map(|(i, t)| {

@@ -4,7 +4,7 @@ use crate::{
 };
 use petgraph::stable_graph::NodeIndex;
 
-use std::ops::{Add, Div, Index, Mul, Neg, Shl, Shr, Sub};
+use std::ops::{Add, Div, Mul, Neg, Shl, Shr, Sub};
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 /**
@@ -520,31 +520,5 @@ impl <T> TypeName for FheProgramNode<T>
 {
     fn type_name() -> Type {
         T::type_name()
-    }
-}
-
-impl<T, const N: usize> Index<usize> for FheProgramNode<[T; N]>
-where
-    T: NumCiphertexts + Sync + Send + 'static,
-{
-    type Output = FheProgramNode<T>;
-
-    fn index<'a>(&'a self, idx: usize) -> &'a Self::Output {
-        // Indexing is nasty because Rust requires we return a reference,
-        // but we don't have an FheProgramNode sitting around to borrow.
-        // We have to conjure one out of the ether on the context and return
-        // a reference to that.
-        with_ctx(|ctx| {
-            let stride = self.ids.len() / N;
-            let start = idx * stride;
-            let end = (idx + 1) * stride;
-
-            let slice = &self.ids[start..end];
-
-            // This [] operator is only used during program compilation,
-            // which always has a context that lives until compilation
-            // completes. Thus, it is sound to call this method.
-            unsafe { ctx.get_fhe_program_node(slice) }
-        })
     }
 }

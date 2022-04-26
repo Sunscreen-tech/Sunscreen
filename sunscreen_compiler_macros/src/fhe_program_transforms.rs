@@ -33,7 +33,7 @@ pub fn create_fhe_program_node(var_name: &str, arg_type: &Type) -> TokenStream2 
     let var_name = format_ident!("{}", var_name);
 
     let type_annotation = match arg_type {
-        Type::Path(ty) => quote_spanned! { ty.span() => #mapped_type },
+        Type::Path(ty) => quote_spanned! { ty.span() => FheProgramNode },
         Type::Array(a) => quote_spanned! { a.span() =>
             <#mapped_type>
         },
@@ -119,6 +119,40 @@ mod test {
 
         let expected = quote! {
             [[FheProgramNode<Cipher<Rational> >; 6]; 7]
+        };
+
+        assert_token_stream_eq(&actual, &expected);
+    }
+
+    #[test]
+    fn can_create_simple_fhe_program_node() {
+        let type_name = quote! {
+            Cipher<Rational>
+        };
+
+        let type_name: Type = parse_quote!(#type_name);
+
+        let actual = create_fhe_program_node("horse", &type_name);
+
+        let expected = quote! {
+            let horse: FheProgramNode<Cipher<Rational> > = FheProgramNode::input();
+        };
+
+        assert_token_stream_eq(&actual, &expected);
+    }
+
+    #[test]
+    fn can_create_array_program_node() {
+        let type_name = quote! {
+            [Cipher<Rational>; 7]
+        };
+
+        let type_name: Type = parse_quote!(#type_name);
+
+        let actual = create_fhe_program_node("horse", &type_name);
+
+        let expected = quote! {
+            let horse: [FheProgramNode<Cipher<Rational> >; 7] = <[FheProgramNode<Cipher<Rational> >; 7]>::input();
         };
 
         assert_token_stream_eq(&actual, &expected);

@@ -48,7 +48,7 @@ where
 
 impl<T, const N: usize> Input for [T; N]
 where
-    T: NumCiphertexts + TypeName + Input + Copy
+    T: NumCiphertexts + TypeName + Input + Copy,
 {
     type Output = [T::Output; N];
 
@@ -61,16 +61,19 @@ where
 
         match output.try_into() {
             Ok(val) => val,
-            Err(_) => panic!("Internal error: vec to array length mismatch")
+            Err(_) => panic!("Internal error: vec to array length mismatch"),
         }
     }
 }
 
 #[test]
 fn can_create_inputs() {
-    use crate::{CURRENT_CTX, Context, Params, SchemeType, SecurityLevel, types::{bfv::Rational, intern::FheProgramNode}, Operation};
-    use std::mem::transmute;
+    use crate::{
+        types::{bfv::Rational, intern::FheProgramNode},
+        Context, Operation, Params, SchemeType, SecurityLevel, CURRENT_CTX,
+    };
     use std::cell::RefCell;
+    use std::mem::transmute;
 
     use petgraph::stable_graph::NodeIndex;
 
@@ -80,7 +83,7 @@ fn can_create_inputs() {
             coeff_modulus: vec![],
             plain_modulus: 0,
             scheme_type: SchemeType::Bfv,
-            security_level: SecurityLevel::TC128
+            security_level: SecurityLevel::TC128,
         });
 
         ctx.swap(&RefCell::new(Some(unsafe { transmute(&mut context) })));
@@ -94,7 +97,7 @@ fn can_create_inputs() {
 
         offset += 2;
 
-        let array_node: [FheProgramNode<Rational>; 6] = <[FheProgramNode::<Rational>; 6]>::input();
+        let array_node: [FheProgramNode<Rational>; 6] = <[FheProgramNode<Rational>; 6]>::input();
 
         assert_eq!(array_node.len(), 6);
 
@@ -104,32 +107,48 @@ fn can_create_inputs() {
             assert_eq!(array_node[i].ids[1].index(), offset + 2 * i + 1);
         }
 
-        let multi_dim_array_node: [[FheProgramNode<Cipher<Rational>>; 6]; 6] = <[[FheProgramNode<Cipher<Rational>>; 6]; 6]>::input();
+        let multi_dim_array_node: [[FheProgramNode<Cipher<Rational>>; 6]; 6] =
+            <[[FheProgramNode<Cipher<Rational>>; 6]; 6]>::input();
 
         offset += 12;
 
         for i in 0..6 {
             for j in 0..6 {
                 assert_eq!(multi_dim_array_node[i][j].ids.len(), 2);
-                assert_eq!(multi_dim_array_node[i][j].ids[0].index(), offset + 6 * 2 * i + 2 * j + 0);
-                assert_eq!(multi_dim_array_node[i][j].ids[1].index(), offset + 6 * 2 * i + 2 * j + 1);   
+                assert_eq!(
+                    multi_dim_array_node[i][j].ids[0].index(),
+                    offset + 6 * 2 * i + 2 * j + 0
+                );
+                assert_eq!(
+                    multi_dim_array_node[i][j].ids[1].index(),
+                    offset + 6 * 2 * i + 2 * j + 1
+                );
             }
         }
 
         offset += 2 * 6 * 6;
 
         assert_eq!(context.compilation.graph.node_count(), offset);
-    
+
         for i in 0..2 {
-            assert_eq!(context.compilation.graph[NodeIndex::from(i)], Operation::InputPlaintext);
+            assert_eq!(
+                context.compilation.graph[NodeIndex::from(i)],
+                Operation::InputPlaintext
+            );
         }
 
         for i in 2..14 {
-            assert_eq!(context.compilation.graph[NodeIndex::from(i)], Operation::InputPlaintext);
+            assert_eq!(
+                context.compilation.graph[NodeIndex::from(i)],
+                Operation::InputPlaintext
+            );
         }
 
         for i in 14..context.compilation.graph.node_count() {
-            assert_eq!(context.compilation.graph[NodeIndex::from(i as u32)], Operation::InputCiphertext);
+            assert_eq!(
+                context.compilation.graph[NodeIndex::from(i as u32)],
+                Operation::InputCiphertext
+            );
         }
     });
 }

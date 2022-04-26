@@ -169,3 +169,47 @@ fn cipher_plain_arrays() {
 
     assert_eq!(c, Signed::from(28));
 }
+
+#[test]
+fn can_mutate_array() {
+    #[fhe_program(scheme = "bfv")]
+    fn mult(mut a: [Cipher<Signed>; 6]) -> Cipher<Signed> {
+        let mut a = a.clone();
+
+        for i in 0..a.len() {
+            a[i] = a[i] * 2
+        }
+
+        let mut sum = a[0];
+
+        for i in 1..a.len() {
+            sum = sum + a[i];
+        }
+
+        sum
+    }
+
+    let fhe_program = Compiler::with_fhe_program(mult)
+        .additional_noise_budget(5)
+        .plain_modulus_constraint(PlainModulusConstraint::Raw(500))
+        .compile()
+        .unwrap();
+
+    let runtime = Runtime::new(&fhe_program.metadata.params).unwrap();
+
+    let (public_key, private_key) = runtime.generate_keys().unwrap();
+
+    let mut a = <[Signed; 6]>::default();
+
+    for i in 0..a.len() {
+        a[i] = Signed::from((i) as i64);
+    }
+
+    let a_enc = runtime.encrypt(a, &public_key).unwrap();
+
+    let result = runtime.run(&fhe_program, vec![a_enc], &public_key).unwrap();
+
+    let c: Signed = runtime.decrypt(&result[0], &private_key).unwrap();
+
+    assert_eq!(c, Signed::from(30));
+}

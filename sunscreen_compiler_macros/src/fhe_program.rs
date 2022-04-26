@@ -4,9 +4,7 @@ use crate::{
 };
 use proc_macro2::{Span, TokenStream};
 use quote::{quote, quote_spanned};
-use syn::{
-    parse_macro_input, spanned::Spanned, FnArg, Ident, Index, ItemFn, Pat, ReturnType, Type,
-};
+use syn::{parse_macro_input, spanned::Spanned, Ident, Index, ItemFn, ReturnType, Type};
 
 pub fn fhe_program_impl(
     metadata: proc_macro::TokenStream,
@@ -20,8 +18,6 @@ pub fn fhe_program_impl(
     let inputs = &input_fn.sig.inputs;
     let ret = &input_fn.sig.output;
 
-    let mut unwrapped_inputs = vec![];
-
     let attr_params = parse_macro_input!(metadata as Attrs);
 
     let scheme_type = match attr_params.scheme {
@@ -32,26 +28,19 @@ pub fn fhe_program_impl(
         }
     };
 
-    for i in inputs {
-        let input_type = match i {
-            FnArg::Receiver(_) => {
-                return proc_macro::TokenStream::from(quote! {
-                    compile_error!("fhe_program must not take a reference to self");
-                });
-            }
-            FnArg::Typed(t) => match (&*t.ty, &*t.pat) {
-                (Type::Path(_), Pat::Ident(i)) => (t, &i.ident),
-                (Type::Array(_), Pat::Ident(i)) => (t, &i.ident),
-                _ => {
-                    return proc_macro::TokenStream::from(quote! {
-                        compile_error!("fhe_program arguments' name must be a simple identifier and type must be a plain path.");
-                    });
+    let unwrapped_inputs = match extract_fn_arguments(&inputs) {
+        Ok(v) => v,
+        Err(e) => {
+            return proc_macro::TokenStream::from(match e {
+                ExtractFnArgumentsError::ContainsSelf => {
+                    quote_spanned! {inputs.span() => compile_error!("FHE programs must not contain `self`") }
                 }
-            },
-        };
-
-        unwrapped_inputs.push(input_type);
-    }
+                ExtractFnArgumentsError::IllegalType(s) => quote_spanned! {
+                    s => compile_error! {"" }
+                },
+            });
+        }
+    };
 
     let signature = create_signature(
         &unwrapped_inputs
@@ -65,10 +54,10 @@ pub fn fhe_program_impl(
         .iter()
         .map(|i| {
             let (ty, name) = i;
-            let ty = &ty.ty;
+            let ty = map_input_type(&ty.ty);
 
             quote! {
-                #name: FheProgramNode<#ty>,
+                #name: #ty,
             }
         })
         .collect::<Vec<TokenStream>>();

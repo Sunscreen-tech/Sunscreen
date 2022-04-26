@@ -1,7 +1,0 @@
-error: fhe_program must not take a reference to self
- --> tests/compile_failures/self_arg.rs:6:5
-  |
-6 |     #[fhe_program(scheme = "bfv")]
-  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  |
-  = note: this error originates in the attribute macro `fhe_program` (in Nightly builds, run with -Z macro-backtrace for more info)

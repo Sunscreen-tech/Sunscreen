@@ -1,5 +1,8 @@
 use crate::{
-    types::{intern::FheLiteral, ops::*, Cipher, FheType, LaneCount, NumCiphertexts, SwapRows, TypeName, Type}, 
+    types::{
+        intern::FheLiteral, ops::*, Cipher, FheType, LaneCount, NumCiphertexts, SwapRows, Type,
+        TypeName,
+    },
     with_ctx, INDEX_ARENA,
 };
 use petgraph::stable_graph::NodeIndex;
@@ -509,14 +512,16 @@ where
     }
 }
 
-impl <T> NumCiphertexts for FheProgramNode<T>
-    where T: NumCiphertexts
+impl<T> NumCiphertexts for FheProgramNode<T>
+where
+    T: NumCiphertexts,
 {
     const NUM_CIPHERTEXTS: usize = T::NUM_CIPHERTEXTS;
 }
 
-impl <T> TypeName for FheProgramNode<T>
-    where T: TypeName + NumCiphertexts
+impl<T> TypeName for FheProgramNode<T>
+where
+    T: TypeName + NumCiphertexts,
 {
     fn type_name() -> Type {
         T::type_name()

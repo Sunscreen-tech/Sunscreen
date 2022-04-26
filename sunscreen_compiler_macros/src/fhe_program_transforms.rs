@@ -1,6 +1,6 @@
-use proc_macro2::TokenStream as TokenStream2;
+use proc_macro2::{Span, TokenStream as TokenStream2};
 use quote::{format_ident, quote, quote_spanned};
-use syn::{spanned::Spanned, Type};
+use syn::{punctuated::Punctuated, spanned::Spanned, FnArg, Ident, Pat, PatType, Token, Type};
 
 /**
  * Given an input type T, returns
@@ -45,6 +45,36 @@ pub fn create_fhe_program_node(var_name: &str, arg_type: &Type) -> TokenStream2 
     quote_spanned! {arg_type.span() =>
         let #var_name: #mapped_type = #type_annotation::input();
     }
+}
+
+pub enum ExtractFnArgumentsError {
+    ContainsSelf,
+    IllegalType(Span),
+}
+
+pub fn extract_fn_arguments(
+    args: &Punctuated<FnArg, Token!(,)>,
+) -> Result<Vec<(&PatType, &Ident)>, ExtractFnArgumentsError> {
+    let mut unwrapped_inputs = vec![];
+
+    for i in args {
+        let input_type = match i {
+            FnArg::Receiver(_) => {
+                return Err(ExtractFnArgumentsError::ContainsSelf);
+            }
+            FnArg::Typed(t) => match (&*t.ty, &*t.pat) {
+                (Type::Path(_), Pat::Ident(i)) => (t, &i.ident),
+                (Type::Array(_), Pat::Ident(i)) => (t, &i.ident),
+                _ => {
+                    return Err(ExtractFnArgumentsError::IllegalType(i.span()));
+                }
+            },
+        };
+
+        unwrapped_inputs.push(input_type);
+    }
+
+    Ok(unwrapped_inputs)
 }
 
 #[cfg(test)]
@@ -153,6 +183,23 @@ mod test {
 
         let expected = quote! {
             let horse: [FheProgramNode<Cipher<Rational> >; 7] = <[FheProgramNode<Cipher<Rational> >; 7]>::input();
+        };
+
+        assert_token_stream_eq(&actual, &expected);
+    }
+
+    #[test]
+    fn can_create_multidimensional_array_program_node() {
+        let type_name = quote! {
+            [[Cipher<Rational>; 7]; 6]
+        };
+
+        let type_name: Type = parse_quote!(#type_name);
+
+        let actual = create_fhe_program_node("horse", &type_name);
+
+        let expected = quote! {
+            let horse: [[FheProgramNode<Cipher<Rational> >; 7]; 6] = <[[FheProgramNode<Cipher<Rational> >; 7]; 6]>::input();
         };
 
         assert_token_stream_eq(&actual, &expected);

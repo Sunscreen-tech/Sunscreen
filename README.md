@@ -4,6 +4,8 @@
 
 Sunscreen is an ecosystem for building privacy-preserving applications using fully homomorphic encryption and zero-knowlege proofs.
 
+This project is licensed under the terms of the GNU AGPLv3 license. If you require a different license for your application, please reach out to us.
+
 *WARNING!* This library is meant for experiments only. It has not been audited and is *not* intended for use in production. 
 
 # Set-up

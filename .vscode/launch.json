@@ -106,6 +106,7 @@
                 "args": [
                     "test",
                     "--no-run",
+                    "--lib",
                     "--package=sunscreen"
                 ],
                 "filter": {
@@ -237,6 +238,25 @@
                 "filter": {
                     "name": "fhe_program_tests",
                     "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'sunscreen_compiler_macros'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=sunscreen_compiler_macros"
+                ],
+                "filter": {
+                    "name": "sunscreen_compiler_macros",
+                    "kind": "lib"
                 }
             },
             "args": [],

@@ -63,9 +63,7 @@ use petgraph::{
 };
 use serde::{Deserialize, Serialize};
 
-use core::any::Any;
 use std::cell::RefCell;
-use std::collections::HashMap;
 
 use sunscreen_backend::compile_inplace;
 use sunscreen_fhe_program::{
@@ -84,8 +82,6 @@ pub use sunscreen_runtime::{
     FheProgramInputTrait, FheProgramMetadata, InnerCiphertext, InnerPlaintext, Params, Plaintext,
     PrivateKey, PublicKey, RequiredKeys, Runtime, WithContext,
 };
-
-use crate::types::{intern::FheProgramNode, NumCiphertexts};
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 /**
@@ -250,11 +246,6 @@ pub struct Context {
      * FheProgramNode to impl Copy.
      */
     pub indicies_store: Vec<NodeIndex>,
-
-    /**
-     * A cache of FheProgramNodes used by [`get_fhe_program_node()`](Self::get_fhe_program_node).
-     */
-    pub fhe_program_nodes: HashMap<&'static [NodeIndex], std::rc::Rc<dyn Any>>,
 }
 
 impl PartialEq for FrontendCompilation {
@@ -310,7 +301,6 @@ impl Context {
             },
             params: params.clone(),
             indicies_store: vec![],
-            fhe_program_nodes: HashMap::new(),
         }
     }
 
@@ -461,42 +451,6 @@ impl Context {
      */
     pub fn add_output(&mut self, i: NodeIndex) -> NodeIndex {
         self.add_1_input(Operation::Output, i)
-    }
-
-    /**
-     * Creates an FheProgramNode from the given nodeIds.
-     *
-     * # Undefined behavior
-     * Using the returned reference after this context is dropped will result
-     * in use-after-free.
-     *
-     * # Panics
-     * Calling this method multiple times with the same ids but a different
-     * type T will panic.
-     */
-    pub unsafe fn get_fhe_program_node<T>(
-        &mut self,
-        ids: &'static [NodeIndex],
-    ) -> &'static FheProgramNode<T>
-    where
-        T: NumCiphertexts + Sync + Send + 'static,
-    {
-        let node_ref = match self.fhe_program_nodes.get(ids) {
-            // Panic if T doesn't match the first time we got the same node ids.
-            Some(n) => n.downcast_ref::<FheProgramNode<T>>().unwrap(),
-            None => {
-                let new_node = FheProgramNode::<T>::new(ids);
-
-                self.fhe_program_nodes
-                    .insert(ids, std::rc::Rc::new(new_node));
-                self.fhe_program_nodes[ids]
-                    .downcast_ref::<FheProgramNode<T>>()
-                    .unwrap()
-            }
-        };
-
-        // Extend the lifetime to 'static.
-        std::mem::transmute(node_ref)
     }
 }
 

@@ -79,13 +79,6 @@ fn panicing_fhe_program_clears_ctx() {
 }
 
 #[test]
-fn compile_failures() {
-    let t = trybuild::TestCases::new();
-
-    t.compile_fail("tests/compile_failures/self_arg.rs");
-}
-
-#[test]
 fn capture_fhe_program_input_args() {
     #[fhe_program(scheme = "bfv")]
     fn fhe_program_with_args(_a: Signed, _b: Signed, _c: Signed, _d: Signed) {}

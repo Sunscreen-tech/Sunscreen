@@ -1,5 +1,5 @@
 use crate::{
-    types::{intern::FheLiteral, ops::*, Cipher, FheType, LaneCount, NumCiphertexts, SwapRows},
+    types::{intern::FheLiteral, ops::*, Cipher, FheType, LaneCount, NumCiphertexts, SwapRows, TypeName, Type}, 
     with_ctx, INDEX_ARENA,
 };
 use petgraph::stable_graph::NodeIndex;
@@ -506,6 +506,20 @@ where
 
     fn shr(self, x: u64) -> Self {
         T::graph_cipher_rotate_right(self, x)
+    }
+}
+
+impl <T> NumCiphertexts for FheProgramNode<T>
+    where T: NumCiphertexts
+{
+    const NUM_CIPHERTEXTS: usize = T::NUM_CIPHERTEXTS;
+}
+
+impl <T> TypeName for FheProgramNode<T>
+    where T: TypeName + NumCiphertexts
+{
+    fn type_name() -> Type {
+        T::type_name()
     }
 }
 

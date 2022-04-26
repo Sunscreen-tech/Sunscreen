@@ -169,7 +169,8 @@ pub struct Ciphertext {
 }
 
 /**
- *
+ * A trait that denotes this type can be used as an
+ * argument to an FHE program.
  */
 pub trait FheProgramInputTrait: TryIntoPlaintext + TypeNameInstance {}
 

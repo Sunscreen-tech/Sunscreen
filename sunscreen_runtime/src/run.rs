@@ -467,12 +467,13 @@ where
 }
 
 #[cfg(target_arch = "wasm32")]
-fn traverse<F>(    
+fn traverse<F>(
     ir: &FheProgram,
     callback: F,
-    run_to: Option<NodeIndex>
-) -> Result<(), FheProgramRunFailure> where
-F: Fn(NodeIndex) -> Result<(), FheProgramRunFailure> + Sync + Send,
+    run_to: Option<NodeIndex>,
+) -> Result<(), FheProgramRunFailure>
+where
+    F: Fn(NodeIndex) -> Result<(), FheProgramRunFailure> + Sync + Send,
 {
     let ir = if let Some(x) = run_to {
         Cow::Owned(ir.prune(&vec![x]))
@@ -481,23 +482,20 @@ F: Fn(NodeIndex) -> Result<(), FheProgramRunFailure> + Sync + Send,
     };
 
     // Initialize the number of incomplete dependencies.
-    let deps = ir
+    let mut deps = ir
         .graph
         .node_indices()
         .map(|n| ir.graph.neighbors_directed(n, Direction::Incoming).count())
         .collect::<Vec<usize>>();
 
-    let initial_ready = deps
-        .iter()
-        .enumerate()
-        .filter_map(|(id, count)| {
-            if *count == 0 {
-                log::trace!("parallel_traverse: Initial node {}", id);
-                Some(NodeIndex::from(id as u32))
-            } else {
-                None
-            }
-        });
+    let initial_ready = deps.iter().enumerate().filter_map(|(id, count)| {
+        if *count == 0 {
+            log::trace!("traverse: Initial node {}", id);
+            Some(NodeIndex::from(id as u32))
+        } else {
+            None
+        }
+    });
 
     let mut ready_nodes = VecDeque::new();
 
@@ -509,14 +507,20 @@ F: Fn(NodeIndex) -> Result<(), FheProgramRunFailure> + Sync + Send,
         let node_id = ready_nodes.pop_front();
         let node_id = match node_id {
             Some(i) => i,
-            None => { break; }
+            None => {
+                break;
+            }
         };
 
         callback(node_id)?;
 
         for e in ir.graph.neighbors_directed(node_id, Direction::Outgoing) {
-            ready_nodes.push_back(e);
-        }        
+            deps[e.index()] -= 1;
+
+            if deps[e.index()] == 0 {
+                ready_nodes.push_back(e);
+            }
+        }
     }
 
     Ok(())

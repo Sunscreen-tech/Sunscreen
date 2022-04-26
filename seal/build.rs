@@ -67,7 +67,6 @@ fn compile_wasm(profile: &str, _out_path: &Path) {
 
     let lib_path = format!("{}/lib/{}", dst.display(), "");
 
-    println!("cargo:rustc-link-args=-g -O3 -sALLOW_MEMORY_GROWTH");
     println!("cargo:rustc-link-search=native={}", lib_path);
 
     println!("cargo:rustc-link-lib=static=sealc-4.0");

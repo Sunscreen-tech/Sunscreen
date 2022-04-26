@@ -32,11 +32,14 @@ pub fn fhe_program_impl(
         Ok(v) => v,
         Err(e) => {
             return proc_macro::TokenStream::from(match e {
-                ExtractFnArgumentsError::ContainsSelf => {
-                    quote_spanned! {inputs.span() => compile_error!("FHE programs must not contain `self`") }
+                ExtractFnArgumentsError::ContainsSelf(s) => {
+                    quote_spanned! {s => compile_error!("FHE programs must not contain `self`") }
                 }
+                ExtractFnArgumentsError::IllegalPat(s) => quote_spanned! {
+                    s => compile_error! { "Expected Identifier" }
+                },
                 ExtractFnArgumentsError::IllegalType(s) => quote_spanned! {
-                    s => compile_error! {"" }
+                    s => compile_error! { "FHE program arguments must be an array or named type" }
                 },
             });
         }

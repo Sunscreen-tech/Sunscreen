@@ -47,9 +47,11 @@ pub fn create_fhe_program_node(var_name: &str, arg_type: &Type) -> TokenStream2 
     }
 }
 
+#[derive(Debug)]
 pub enum ExtractFnArgumentsError {
-    ContainsSelf,
+    ContainsSelf(Span),
     IllegalType(Span),
+    IllegalPat(Span),
 }
 
 pub fn extract_fn_arguments(
@@ -60,13 +62,20 @@ pub fn extract_fn_arguments(
     for i in args {
         let input_type = match i {
             FnArg::Receiver(_) => {
-                return Err(ExtractFnArgumentsError::ContainsSelf);
+                return Err(ExtractFnArgumentsError::ContainsSelf(i.span()));
             }
             FnArg::Typed(t) => match (&*t.ty, &*t.pat) {
                 (Type::Path(_), Pat::Ident(i)) => (t, &i.ident),
                 (Type::Array(_), Pat::Ident(i)) => (t, &i.ident),
                 _ => {
-                    return Err(ExtractFnArgumentsError::IllegalType(i.span()));
+                    match &*t.pat {
+                        Pat::Ident(_) => {}
+                        _ => {
+                            return Err(ExtractFnArgumentsError::IllegalPat(t.span()));
+                        }
+                    };
+
+                    return Err(ExtractFnArgumentsError::IllegalType(t.span()));
                 }
             },
         };
@@ -203,5 +212,36 @@ mod test {
         };
 
         assert_token_stream_eq(&actual, &expected);
+    }
+
+    #[test]
+    fn can_extract_arguments() {
+        let type_name = quote! {
+            a: [[Cipher<Rational>; 7]; 6], b: Cipher<Rational>
+        };
+
+        let args: Punctuated<FnArg, Token!(,)> = parse_quote!(#type_name);
+
+        let extracted = extract_fn_arguments(&args);
+
+        assert_eq!(extracted.unwrap().len(), 2);
+    }
+
+    #[test]
+    fn disallows_self_arguments() {
+        let type_name = quote! {
+            &self, a: [[Cipher<Rational>; 7]; 6], b: Cipher<Rational>
+        };
+
+        let args: Punctuated<FnArg, Token!(,)> = parse_quote!(#type_name);
+
+        let extracted = extract_fn_arguments(&args);
+
+        match extracted {
+            Err(ExtractFnArgumentsError::ContainsSelf(_)) => {}
+            _ => {
+                panic!("Expected ExtractFnArgumentsError::ContainsSelf");
+            }
+        };
     }
 }

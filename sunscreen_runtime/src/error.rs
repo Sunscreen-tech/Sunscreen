@@ -116,6 +116,11 @@ pub enum Error {
     NoPlaintextData,
 
     /**
+     * The given [`Plaintext`](crate::Plaintext) had an incorrect array count.
+     */
+    MalformedPlaintext,
+
+    /**
      * An error occurred when serializing/deserializing with bincode.
      */
     BincodeError(String),

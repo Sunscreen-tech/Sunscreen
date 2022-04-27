@@ -90,26 +90,6 @@ impl<T: NumCiphertexts> FheProgramNode<T> {
     }
 
     /**
-     * Denote this node as an output by appending an output FHE program node.
-     *
-     * You should not call this, but rather allow the [`fhe_program`](crate::fhe_program) macro to do this on your behalf.
-     *
-     * # Undefined behavior
-     * This type references memory in a backing [`crate::Context`] and without carefully ensuring FheProgramNodes
-     * never outlive the backing context, use-after-free can occur.
-     *
-     */
-    pub fn output(&self) -> Self {
-        let mut ids = Vec::with_capacity(self.ids.len());
-
-        for i in 0..self.ids.len() {
-            ids.push(with_ctx(|ctx| ctx.add_output(self.ids[i])));
-        }
-
-        FheProgramNode::new(&ids)
-    }
-
-    /**
      * Returns the plain modulus parameter for the given BFV scheme
      */
     pub fn get_plain_modulus() -> u64 {

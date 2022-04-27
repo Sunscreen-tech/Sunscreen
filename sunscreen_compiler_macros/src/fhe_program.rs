@@ -4,7 +4,7 @@ use crate::{
 };
 use proc_macro2::{Span, TokenStream};
 use quote::{quote, quote_spanned};
-use syn::{parse_macro_input, spanned::Spanned, Ident, Index, ItemFn, ReturnType, Type};
+use syn::{parse_macro_input, spanned::Spanned, Ident, ItemFn, Type};
 
 pub fn fhe_program_impl(
     metadata: proc_macro::TokenStream,
@@ -39,25 +39,22 @@ pub fn fhe_program_impl(
                     s => compile_error! { "Expected Identifier" }
                 },
                 ExtractFnArgumentsError::IllegalType(s) => quote_spanned! {
-                    s => compile_error! { "FHE program arguments must be an array or named type" }
+                    s => compile_error! { "FHE program arguments must be an array or named struct type" }
                 },
             });
         }
     };
 
-    let signature = create_signature(
-        &unwrapped_inputs
-            .iter()
-            .map(|t| &*t.0.ty)
-            .collect::<Vec<&Type>>(),
-        ret,
-    );
+    let argument_types = unwrapped_inputs
+        .iter()
+        .map(|(t, _)| (**t).clone())
+        .collect::<Vec<Type>>();
 
     let fhe_program_args = unwrapped_inputs
         .iter()
         .map(|i| {
             let (ty, name) = i;
-            let ty = map_input_type(&ty.ty);
+            let ty = map_fhe_type(ty).unwrap();
 
             quote! {
                 #name: #ty,
@@ -65,13 +62,38 @@ pub fn fhe_program_impl(
         })
         .collect::<Vec<TokenStream>>();
 
-    let catpured_outputs = capture_outputs(ret);
-    let fhe_program_returns = lift_return_type(ret);
+    let return_types = match extract_return_types(ret) {
+        Ok(v) => v,
+        Err(ExtractReturnTypesError::IllegalType(s)) => {
+            return proc_macro::TokenStream::from(
+                quote_spanned! {s => compile_error! {"FHE programs may return a single value or a tuple of values. Each type must be an FHE type or array of such."}},
+            );
+        }
+    };
+
+    let output_capture = emit_output_capture(&return_types);
+
+    let fhe_program_returns = match return_types
+        .iter()
+        .map(|t| map_fhe_type(t))
+        .collect::<Result<Vec<Type>, MapFheTypeError>>()
+    {
+        Ok(v) => v,
+        Err(MapFheTypeError::IllegalType(s)) => {
+            return proc_macro::TokenStream::from(
+                quote_spanned! {s => compile_error! {"Each return type for an FHE program must be either an array or named struct type."}},
+            );
+        }
+    };
+
+    let fhe_program_return = pack_return_type(&fhe_program_returns);
+
+    let signature = emit_signature(&argument_types, &return_types);
 
     let var_decl = unwrapped_inputs.iter().enumerate().map(|(i, t)| {
         let var_name = format!("c_{}", i);
 
-        create_fhe_program_node(&var_name, &t.0.ty)
+        create_fhe_program_node(&var_name, t.0)
     });
 
     let args = unwrapped_inputs.iter().enumerate().map(|(i, t)| {
@@ -94,7 +116,7 @@ pub fn fhe_program_impl(
             fn build(&self, params: &sunscreen::Params) -> sunscreen::Result<sunscreen::FrontendCompilation> {
                 use std::cell::RefCell;
                 use std::mem::transmute;
-                use sunscreen::{CURRENT_CTX, Context, Error, INDEX_ARENA, Result, Params, SchemeType, Value, types::{intern::{FheProgramNode, Input}, NumCiphertexts, Type, TypeName, SwapRows, LaneCount, TypeNameInstance}};
+                use sunscreen::{CURRENT_CTX, Context, Error, INDEX_ARENA, Result, Params, SchemeType, Value, types::{intern::{FheProgramNode, Input, Output}, NumCiphertexts, Type, TypeName, SwapRows, LaneCount, TypeNameInstance}};
 
                 if SchemeType::Bfv != params.scheme_type {
                     return Err(Error::IncorrectScheme)
@@ -105,7 +127,7 @@ pub fn fhe_program_impl(
 
                 CURRENT_CTX.with(|ctx| {
                     #[forbid(unused_variables)]
-                    let internal = | #(#fhe_program_args)* | -> #fhe_program_returns
+                    let internal = | #(#fhe_program_args)* | -> #fhe_program_return
                         #body
                     ;
 
@@ -123,7 +145,7 @@ pub fn fhe_program_impl(
                     // when panicing or not, we need to collect our indicies arena and
                     // unset the context reference.
                     match panic_res {
-                        Ok(v) => { #catpured_outputs },
+                        Ok(v) => { #output_capture },
                         Err(err) => {
                             INDEX_ARENA.with(|allocator| {
                                 allocator.borrow_mut().reset()
@@ -158,218 +180,4 @@ pub fn fhe_program_impl(
     });
 
     fhe_program
-}
-
-/**
- * Lifts each return type T into FheProgramNode<T>.
- */
-fn lift_return_type(ret: &ReturnType) -> TokenStream {
-    match ret {
-        ReturnType::Type(_, t) => {
-            let tuple_inners = match &**t {
-                Type::Tuple(t) => t
-                    .elems
-                    .iter()
-                    .map(|x| {
-                        let inner_type = &*x;
-
-                        quote! {
-                            sunscreen::types::intern::FheProgramNode<#inner_type>
-                        }
-                    })
-                    .collect::<Vec<TokenStream>>(),
-                Type::Paren(t) => {
-                    let inner_type = &*t.elem;
-                    let inner_type = quote! {
-                        sunscreen::types::intern::FheProgramNode<#inner_type>
-                    };
-
-                    vec![inner_type]
-                }
-                Type::Path(_) => {
-                    let r = &**t;
-                    let r = quote! {
-                        sunscreen::types::intern::FheProgramNode<#r>
-                    };
-
-                    vec![r]
-                }
-                _ => {
-                    return TokenStream::from(quote! {
-                        compile_error!("FhePrograms must return a single Cipthertext or a tuple of Ciphertexts");
-                    });
-                }
-            };
-
-            if tuple_inners.len() == 1 {
-                let t = &tuple_inners[0];
-
-                quote_spanned! {tuple_inners[0].span() =>
-                    #t
-                }
-            } else {
-                let t: Vec<TokenStream> = tuple_inners
-                    .iter()
-                    .map(|t| {
-                        quote_spanned! {t.span() =>
-                            #t,
-                        }
-                    })
-                    .collect();
-
-                quote_spanned! {ret.span() =>
-                    (#(#t)*)
-                }
-            }
-        }
-        ReturnType::Default => {
-            quote! { () }
-        }
-    }
-}
-
-fn capture_outputs(ret: &ReturnType) -> TokenStream {
-    match ret {
-        ReturnType::Type(_, t) => {
-            let tuple_inners = match &**t {
-                Type::Tuple(t) => t.elems.iter().map(|x| &*x).collect::<Vec<&Type>>(),
-                Type::Paren(t) => {
-                    vec![&*t.elem]
-                }
-                Type::Path(_) => {
-                    vec![&**t]
-                }
-                _ => {
-                    return TokenStream::from(quote! {
-                        compile_error!("FhePrograms must return a single Cipthertext or a tuple of Ciphertexts");
-                    });
-                }
-            };
-
-            if tuple_inners.len() == 1 {
-                quote_spanned! {tuple_inners[0].span() =>
-                    v.output();
-                }
-            } else {
-                tuple_inners
-                    .iter()
-                    .enumerate()
-                    .map(|(i, t)| {
-                        let index = Index::from(i);
-
-                        quote_spanned! {t.span() =>
-                            v.#index.output();
-                        }
-                    })
-                    .collect()
-            }
-        }
-        ReturnType::Default => {
-            quote! {}
-        }
-    }
-}
-
-fn create_signature(args: &[&Type], ret: &ReturnType) -> TokenStream {
-    // We have to type alias arguments and returns because they might
-    // be generic and cause an error during invocation.
-    // E.g. Foo<Bar> causes an error when doing Foo<Bar>::func()
-    // because you need :: after Foo.
-    // So we make type aliases and invoke the function on the alias.
-    let arg_type_names = args
-        .iter()
-        .enumerate()
-        .map(|(i, t)| {
-            let alias = ident("T", i);
-
-            quote! {
-                type #alias = #t;
-            }
-        })
-        .collect::<Vec<TokenStream>>();
-
-    let arg_get_types = arg_type_names.iter().enumerate().map(|(i, _)| {
-        let alias = ident("T", i);
-
-        quote! {
-            #alias::type_name(),
-        }
-    });
-
-    let (return_type_aliases, return_type_names, return_type_sizes) = match ret {
-        ReturnType::Type(_, t) => {
-            let tuple_inners = match &**t {
-                Type::Tuple(t) => t.elems.iter().map(|x| &*x).collect::<Vec<&Type>>(),
-                Type::Paren(t) => {
-                    vec![&*t.elem]
-                }
-                Type::Path(_) => {
-                    vec![&**t]
-                }
-                _ => {
-                    return TokenStream::from(quote! {
-                        compile_error!("FhePrograms must return a single Cipthertext or a tuple of Ciphertexts");
-                    });
-                }
-            };
-
-            let return_type_aliases = tuple_inners.iter().enumerate().map(|(i, t)| {
-                let alias = ident("R", i);
-
-                quote! {
-                    type #alias = #t;
-                }
-            });
-
-            let return_type_sizes = tuple_inners.iter().enumerate().map(|(i, _)| {
-                let alias = ident("R", i);
-
-                quote! {
-                    #alias ::NUM_CIPHERTEXTS,
-                }
-            });
-
-            let type_names = tuple_inners.iter().enumerate().map(|(i, _)| {
-                let alias = ident("R", i);
-
-                quote! {
-                    #alias ::type_name(),
-                }
-            });
-
-            (
-                quote! {
-                    #(#return_type_aliases)*
-                },
-                quote! {
-                    vec![
-                        #(#type_names)*
-                    ]
-                },
-                quote! {
-                    vec![
-                        #(#return_type_sizes)*
-                    ]
-                },
-            )
-        }
-        ReturnType::Default => (quote! {}, quote! { vec![] }, quote! { vec![] }),
-    };
-
-    quote! {
-        use sunscreen::types::TypeName;
-
-        #(#arg_type_names)*
-        #return_type_aliases
-
-        sunscreen::CallSignature {
-            arguments: vec![#(#arg_get_types)*],
-            returns: #return_type_names,
-            num_ciphertexts: #return_type_sizes,
-        }
-    }
-}
-
-fn ident(prefix: &str, i: usize) -> Ident {
-    Ident::new(&format!("{}{}", prefix, i), Span::call_site())
 }

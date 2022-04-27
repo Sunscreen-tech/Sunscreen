@@ -1,6 +1,6 @@
 use crate::{
-    FheProgramInputTrait, InnerPlaintext, NumCiphertexts, Params, Plaintext, Result,
-    TryIntoPlaintext, Type, TypeName, TypeNameInstance, WithContext,
+    Error, FheProgramInputTrait, InnerPlaintext, NumCiphertexts, Params, Plaintext, Result,
+    TryFromPlaintext, TryIntoPlaintext, Type, TypeName, TypeNameInstance, WithContext,
 };
 use seal::Plaintext as SealPlaintext;
 
@@ -23,6 +23,38 @@ where
         Ok(Plaintext {
             inner: InnerPlaintext::Seal(element_plaintexts),
             data_type: Self::type_name(),
+        })
+    }
+}
+
+impl<T, const N: usize> TryFromPlaintext for [T; N]
+where
+    T: TryFromPlaintext + TypeName + NumCiphertexts,
+    Self: TypeName + NumCiphertexts,
+{
+    fn try_from_plaintext(plaintext: &Plaintext, params: &Params) -> Result<Self> {
+        let data = match &plaintext.inner {
+            InnerPlaintext::Seal(p) => {
+                if p.len() != Self::NUM_CIPHERTEXTS {
+                    return Err(Error::MalformedPlaintext);
+                }
+
+                p.chunks(T::NUM_CIPHERTEXTS)
+                    .map(|c| {
+                        let p = Plaintext {
+                            data_type: T::type_name(),
+                            inner: InnerPlaintext::Seal(c.to_owned()),
+                        };
+
+                        T::try_from_plaintext(&p, params)
+                    })
+                    .collect::<Result<Vec<T>>>()?
+            }
+        };
+
+        Ok(match data.try_into() {
+            Ok(v) => v,
+            _ => unreachable!(),
         })
     }
 }

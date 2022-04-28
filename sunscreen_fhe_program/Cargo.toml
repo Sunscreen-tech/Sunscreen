@@ -1,6 +1,6 @@
 [package]
 name = "sunscreen_fhe_program"
-version = "0.3.0"
+version = "0.4.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -8,7 +8,7 @@ edition = "2021"
 [dependencies]
 petgraph = { version = "0.6.0", features = ["serde-1"] }
 serde = { version = "1.0.130", features = ["derive"] }
-seal = { version = "^0.3", path = "../seal", registry = "sunscreen" }
+seal = { version = "0.4", path = "../seal", registry = "sunscreen" }
 
 [dev-dependencies]
 serde_json = "1.0.71"

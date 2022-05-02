@@ -15,3 +15,6 @@ members = [
     "sunscreen_fhe_program",
     "sunscreen_runtime",
 ]
+exclude = [
+    "mdBook"
+]

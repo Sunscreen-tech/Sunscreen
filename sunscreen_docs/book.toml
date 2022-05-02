@@ -1,0 +1,12 @@
+[book]
+authors = ["Rick Weber"]
+language = "en"
+multilingual = false
+src = "src"
+title = "Sunscreen Documentation"
+
+[output.html]
+mathjax-support = true
+
+[rust]
+edition = "2021"

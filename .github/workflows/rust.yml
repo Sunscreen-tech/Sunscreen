@@ -44,7 +44,7 @@ jobs:
       run: cargo build --release
       working-directory: ./mdBook
     - name: Test docs
-      run: pwd; ls -la
+      run: pwd; ls -la mdBook/target/release
       #./mdBook/target/release/mdBook test -L dependency=./target/debug/deps --extern sunscreen=./target/release/libsunscreen.rlib --extern bincode=./target/release/deps/libbincode.rlib
   api_docs:
     runs-on: ubuntu-latest

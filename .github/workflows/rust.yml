@@ -42,8 +42,7 @@ jobs:
       run: cargo build --release --package bincode
     - name: Build mdBook
       run: cargo build --release
-      env:
-        working-directory: ./mdBook
+      working-directory: ./mdBook
     - name: Test docs
       run: ./mdBook/target/release/mdBook test -L dependency=./target/debug/deps --extern sunscreen=./target/release/libsunscreen.rlib --extern bincode=./target/release/deps/libbincode.rlib
   api_docs:

@@ -5,3 +5,6 @@
 [submodule "emsdk/emsdk"]
 	path = emsdk/emsdk
 	url = https://github.com/emscripten-core/emsdk.git
+[submodule "mdBook"]
+	path = mdBook
+	url = git@github.com:rickwebiii/mdBook.git

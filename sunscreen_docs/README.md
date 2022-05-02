@@ -1,7 +1,5 @@
 # What is fully homomorphic encryption (FHE)? 
 
-*[RS: need to add disclaimer about FHE not supporting computation on encrypted inputs belonging to different keys]*
-
 You can think of FHE as the next generation of public key encryption schemes. Standard public key encryption allows anyone to send you data in a secure way; your friend encrypts her message (with respect to your public key) and sends the encrypted message to you. However, you can't really do anything with this encrypted message, apart from decrypting it. That's where FHE comes in! 
 
 Using FHE, anyone can perform computations directly on private (i.e. encrypted) data&mdash;no need to decrypt.
@@ -83,53 +81,18 @@ This list isn't comprehensive. These are just the main features we'd like to cal
 - Compiler generates FHE programs for you (no need to work with circuits)
 - Compiler automatically parallelizes program (i.e. circuit) execution for you
 - Support for serialization
+- Support for WASM
 - Can compile natively to Apple's M1
-- Can run computations on plaintext (useful for testing/debugging purposes)
-
-## Limitations
-
-We don't take advantage of all possible compiler transforms so performance isn't as good as it could be (yet!).
-
-Additionally, we do not currently allow users to author their own types.
-
-## Performance considerations
-[To do for us:]
-- Short discussion around multi-threading maybe?
-
-# Performance
-
-We've benchmarked Sunscreen's compiler against existing FHE compilers (that support exact computation). We run a chi-squared test according to the criteria set out in [this](https://arxiv.org/pdf/2101.07078.pdf) SoK paper on FHE compilers.
-
-Time includes key generation + encryption + (homomorphic) computation + decryption.
-
-Experiments were performed on an Intel Xeon @ 3.00 GHz with 8 cores and 16 GB RAM.
-
-| Compiler  | Time (seconds) |
-| ------------- | ------------- |
-| Sunscreen | 0.072 |
-| Microsoft EVA  | 0.328  |
-| Cingulata-BFV  | 492.109  |
-| Cingulata-TFHE  | 62.118  |
-| E<sup>3</sup>-BFV  | 11.319  |
-| E<sup>3</sup>-TFHE  | 1934.663 |
-| Zama Numpy  | N/A[^2]  |
-
-[^2]: Zama's compiler could not support the program (only computation on values <256 is supported). If coded and optimized manually using the underlying Concrete library, Sunscreen would still run at least a full order of magnitude faster.
-
-Our compiler is built on SEAL's implementation of the BFV scheme. For reference, if coded directly in SEAL and optimized manually by an expert, the chi-squared test can run in 0.053 s.
-
 
 # Future offerings
 For v0.1, our focus was primarily on getting the API right. Improved performance coming soon!
 
 Planned improvements for our compiler (v0.2+):
 - Additional examples of how our compiler can be used in practice (let us know if there's anything you'd really like to see!)
-- WASM support
 - Automating plaintext modulus constraint selection (if desired)
 
 We are considering offering the following (but no promises yet!):
 - Support for other FHE schemes (e.g. CKKS, BGV)
-- Bootstrapping (so you wouldn't have to know a priori an upper bound on the number of private operations)
 
 In terms of what's next for Sunscreen, we plan to provide:
 - A complementary zero-knowledge proof library (that's compatible with our FHE compiler)

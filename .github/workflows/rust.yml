@@ -44,7 +44,7 @@ jobs:
       run: cargo build --release
       env: ./mdBook
     - name: Test docs
-      run: ./mdBook/target/release/mdBook test -L dependency=./target/debug/deps --extern sunscreen=./target/release/libsunscreen.rlib --extern bincode=./target/release/deps/libbincode.rlib
+      run: mdBook/target/release/mdBook test -L dependency=./target/debug/deps --extern sunscreen=./target/release/libsunscreen.rlib --extern bincode=./target/release/deps/libbincode.rlib
   api_docs:
     runs-on: ubuntu-latest
     

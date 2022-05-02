@@ -11,7 +11,6 @@ env:
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
 
     steps:
@@ -23,12 +22,6 @@ jobs:
     # Check the submitted change meets style guidelines
     - name: Cargo Format
       run: cargo fmt --check
-    # Cursory check to ensure your CL contains valid Rust code
-    - name: Cargo check
-      run: cargo check --release
-    # Check the documentation builds, links work, etc.
-    - name: Cargo doc
-      run: cargo doc --release --no-deps
     # Build and run the tests
     - name: Build and run tests
       run: cargo test --verbose --release
@@ -43,4 +36,13 @@ jobs:
       run: cargo run --release --bin dot_prod
     - name: Verify examples (pir)
       run: cargo run --release --bin pir
-      
+  api_docs:
+    runs-on: ubuntu-latest
+    
+    steps:
+    # Cursory check to ensure your CL contains valid Rust code
+    - name: Cargo check
+      run: cargo check --release
+    # Check the documentation builds, links work, etc.
+    - name: Cargo doc
+      run: cargo doc --release --no-deps

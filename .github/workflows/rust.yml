@@ -36,9 +36,55 @@ jobs:
       run: cargo run --release --bin dot_prod
     - name: Verify examples (pir)
       run: cargo run --release --bin pir
+    - name: Build sunscreen
+      run: cargo build --release --package sunscreen
+    - name: Build bincode
+      run: cargo build --release --package bincode
+    - uses: actions/upload-artifact@master
+      with:
+        name: libraries
+        path: |
+          ./target/release/deps/**/
+          ./target/release/libsunscreen.rlib
+          ./target/release/libbincode.rlib
+
+  mdbook:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: 'recursive'
+    - name: Build mdBook
+      run: cargo build --release
+      working-directory: ./mdBook
+    - uses: actions/upload-artifact@master
+      with:
+        name: mdbook
+        path: ./mdBook/target/release/mdbook
+  
+  user_docs:
+    needs: [mdbook, build]
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: 'recursive'
+    - uses: actions/download-artifact@master
+      with:
+        name: libraries
+        path: ./target/release
+    - uses: actions/download-artifact@master
+      with:
+        name: mdbook
+        path: ./mdBook/target/release
+    - name: chmod 755
+      run: chmod 755 ./mdBook/target/release/mdbook
+    - name: Test docs
+      run: ../mdBook/target/release/mdbook test -L dependency=../target/release/deps --extern sunscreen=../target/release/libsunscreen.rlib --extern bincode=../target/release/libbincode.rlib
+      working-directory: ./sunscreen_docs
+
   api_docs:
     runs-on: ubuntu-latest
-    
     steps:
     - uses: actions/checkout@v3
       with:

@@ -40,6 +40,9 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: 'recursive'
     # Cursory check to ensure your CL contains valid Rust code
     - name: Cargo check
       run: cargo check --release

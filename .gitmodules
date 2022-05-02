@@ -8,3 +8,6 @@
 [submodule "mdBook"]
 	path = mdBook
 	url = git@github.com:rickwebiii/mdBook.git
+[submodule "rust-playground"]
+	path = rust-playground
+	url = git@github.com:integer32llc/rust-playground.git

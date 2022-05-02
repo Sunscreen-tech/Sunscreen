@@ -16,5 +16,6 @@ members = [
     "sunscreen_runtime",
 ]
 exclude = [
-    "mdBook"
+    "mdBook",
+    "rust-playground"
 ]

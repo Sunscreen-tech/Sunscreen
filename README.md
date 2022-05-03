@@ -71,4 +71,3 @@ Working Sunscreen is as you'd expect with any other Rust repository:
 
 ## Debugging
 We have a `launch.json` checked in that defines a bunch of debug configurations. In VSCode, you should see a bunch of dropdowns in the debug menu to debug the tests and examples.
-

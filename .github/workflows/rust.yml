@@ -25,6 +25,7 @@ jobs:
           ~/.cargo/registry/cache/
           ~/.cargo/git/db/
           target/
+          mdBook/target
         key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
     # Checks are ordered from fastest to slowest so your build fails quickly on invalid PRs
     # We do everything in release mode so tests run quickly and steps cache each other.
@@ -54,6 +55,7 @@ jobs:
       working-directory: ./mdBook
     - name: Test docs
       run: ../mdBook/target/release/mdbook test -L dependency=../target/release/deps --extern sunscreen=../target/release/libsunscreen.rlib --extern bincode=../target/release/libbincode.rlib
+      working-directory: ./sunscreen_docs
 
   api_docs:
     runs-on: ubuntu-latest

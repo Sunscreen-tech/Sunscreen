@@ -17,6 +17,15 @@ jobs:
     - uses: actions/checkout@v3
       with:
         submodules: 'recursive'
+    - uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cargo/bin/
+          ~/.cargo/registry/index/
+          ~/.cargo/registry/cache/
+          ~/.cargo/git/db/
+          target/
+    key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
     # Checks are ordered from fastest to slowest so your build fails quickly on invalid PRs
     # We do everything in release mode so tests run quickly and steps cache each other.
     # Check the submitted change meets style guidelines
@@ -54,6 +63,14 @@ jobs:
     - uses: actions/checkout@v3
       with:
         submodules: 'recursive'
+    - uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cargo/bin/
+          ~/.cargo/registry/index/
+          ~/.cargo/registry/cache/
+          ~/.cargo/git/db/
+          mdBook/target/
     - name: Build mdBook
       run: cargo build --release
       working-directory: ./mdBook
@@ -89,6 +106,14 @@ jobs:
     - uses: actions/checkout@v3
       with:
         submodules: 'recursive'
+    - uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cargo/bin/
+          ~/.cargo/registry/index/
+          ~/.cargo/registry/cache/
+          ~/.cargo/git/db/
+          target/
     # Cursory check to ensure your CL contains valid Rust code
     - name: Cargo check
       run: cargo check --release

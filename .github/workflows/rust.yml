@@ -54,3 +54,25 @@ jobs:
       working-directory: ./mdBook
     - name: Test docs
       run: ../mdBook/target/release/mdbook test -L dependency=../target/release/deps --extern sunscreen=../target/release/libsunscreen.rlib --extern bincode=../target/release/libbincode.rlib
+
+  api_docs:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: 'recursive'
+    - uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cargo/bin/
+          ~/.cargo/registry/index/
+          ~/.cargo/registry/cache/
+          ~/.cargo/git/db/
+          target/
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+    # Cursory check to ensure your CL contains valid Rust code
+    - name: Cargo check
+      run: cargo check --release
+    # Check the documentation builds, links work, etc.
+    - name: Cargo doc
+      run: cargo doc --release --no-deps

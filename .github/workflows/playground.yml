@@ -31,3 +31,4 @@ jobs:
       working-directory: ./rust-playground/ui/frontend
     - name: Build UI
       run: yarn build
+      working-directory: ./rust-playground/ui/frontend

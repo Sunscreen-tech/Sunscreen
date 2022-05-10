@@ -1,0 +1,33 @@
+name: playground
+
+on:
+  push:
+    branches: [ playground ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build_ui:
+    runs-on: ubuntu-latest
+  
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: 'recursive'
+    - uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cargo/bin/
+          ~/.cargo/registry/index/
+          ~/.cargo/registry/cache/
+          ~/.cargo/git/db/
+          rust-playground/ui/target
+          rust-playground/ui/frontend/node_modules
+          rust-playground/ui/
+        key: ${{ runner.os }}-cargo-playground-${{ hashFiles('**/Cargo.lock') }}
+    - name: Fetch node modules
+      run: yarn install
+      working-directory: ./rust-playground/ui/frontend
+    - name: Build UI
+      run: yarn build

@@ -8,26 +8,7 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  build_ui:
-    runs-on: ubuntu-latest
-  
-    steps:
-    - uses: actions/checkout@v3
-      with:
-        submodules: 'recursive'
-    - uses: actions/cache@v3
-      with:
-        path: |
-          rust-playground/ui/frontend/node_modules
-        key: ${{ runner.os }}-cargo-playground-ui-${{ hashFiles('rust-playground/ui/frontend/yarn.lock') }}
-    - name: Fetch node modules
-      run: yarn install
-      working-directory: ./rust-playground/ui/frontend
-    - name: Build UI
-      run: yarn build
-      working-directory: ./rust-playground/ui/frontend
-  
-  build_frontend:
+  build_and_deploy:
     runs-on: ubuntu-latest
 
     steps:
@@ -42,23 +23,15 @@ jobs:
           ~/.cargo/registry/cache/
           ~/.cargo/git/db/
           rust-playground/ui/target
-        key: ${{ runner.os }}-cargo-playground-frontend-${{ hashFiles('rust-playground/ui/Cargo.lock') }}
+          rust-playground/ui/frontend/node_modules
+        key: ${{ runner.os }}-cargo-playground-${{ hashFiles('rust-playground/ui/Cargo.lock') }}
     - name: Cargo build
       run: cargo build --release --verbose
       working-directory: ./rust-playground/ui
-
-  create_agent:
-    runs-on: ubuntu-latest
-
-    steps:
-    - uses: actions/checkout@v3
-      with:
-        submodules: 'recursive'
     - name: Create EC2 instance
       run: ./rust-playground/deployment/aws_launch_instance.sh
       env:
         AWS_ACCESS_KEY_ID: ${{ secrets.DEPLOYMENT_AWS_ACCESS_KEY }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.DEPLOYMENT_AWS_ACCESS_KEY_SECRET }}
         EC2_KEY_PAIR: Deployment
-        
-
+        EC2_SECRET_KEY: ${{ secrets.DEPLOYMENT_KEYPAIR_SECRET_KEY }}

@@ -46,3 +46,14 @@ jobs:
     - name: Cargo build
       run: cargo build --release --verbose
       working-directory: ./rust-playground/ui
+
+  create_agent:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: 'recursive'
+    - name: Create EC2 instance
+      run: ./rust-playground/deployment/aws_launch_instances.sh
+

@@ -56,4 +56,8 @@ jobs:
         submodules: 'recursive'
     - name: Create EC2 instance
       run: ./rust-playground/deployment/aws_launch_instance.sh
+      env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.DEPLOYMENT_AWS_ACCESS_KEY }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.DEPLOYMENT_AWS_ACCESS_KEY_SECRET }}
+        
 

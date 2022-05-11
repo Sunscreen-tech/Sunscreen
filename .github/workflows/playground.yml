@@ -55,5 +55,5 @@ jobs:
       with:
         submodules: 'recursive'
     - name: Create EC2 instance
-      run: ./rust-playground/deployment/aws_launch_instances.sh
+      run: ./rust-playground/deployment/aws_launch_instance.sh
 

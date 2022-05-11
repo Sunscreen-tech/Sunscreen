@@ -24,7 +24,13 @@ jobs:
           ~/.cargo/git/db/
           rust-playground/ui/target
           rust-playground/ui/frontend/node_modules
-        key: ${{ runner.os }}-cargo-playground-${{ hashFiles('rust-playground/ui/Cargo.lock') }}
+        key: ${{ runner.os }}-cargo-playground-${{ hashFiles('rust-playground/ui/Cargo.lock') }}-${{ hashFiles('rust-playground/ui/frontend/yarn.lock') }}
+    - name: Yarn install
+      run: yarn install
+      working-directory: ./rust-playground/ui/frontend
+    - name: Yarn build
+      run: yarn build
+      working-directory: ./rust-playground/ui/frontend
     - name: Cargo build
       run: cargo build --release --verbose
       working-directory: ./rust-playground/ui

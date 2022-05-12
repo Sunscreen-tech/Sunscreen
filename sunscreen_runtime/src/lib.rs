@@ -19,16 +19,16 @@ pub use run::*;
 pub use runtime::*;
 pub use serialization::WithContext;
 
-use seal::{Ciphertext as SealCiphertext, Plaintext as SealPlaintext};
+use seal_fhe::{Ciphertext as SealCiphertext, Plaintext as SealPlaintext};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 /**
- * The underlying backend implementation of a plaintext (e.g. SEAL's [`Plaintext`](seal::Plaintext)).
+ * The underlying backend implementation of a plaintext (e.g. SEAL's [`Plaintext`](seal_fhe::Plaintext)).
  */
 pub enum InnerPlaintext {
     /**
-     * This plaintext wraps a SEAL [`Plaintext`](seal::Plaintext).
+     * This plaintext wraps a SEAL [`Plaintext`](seal_fhe::Plaintext).
      */
     Seal(Vec<WithContext<SealPlaintext>>),
 }
@@ -141,7 +141,7 @@ impl Plaintext {
 
 #[derive(Clone, Deserialize, Serialize)]
 /**
- * The underlying backend implementation of a ciphertext (e.g SEAL's [`Ciphertext`](seal::Ciphertext)).
+ * The underlying backend implementation of a ciphertext (e.g SEAL's [`Ciphertext`](seal_fhe::Ciphertext)).
  */
 pub enum InnerCiphertext {
     /**

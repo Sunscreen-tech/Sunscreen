@@ -13,7 +13,7 @@ pub enum Error {
     /**
      * An error occurred in the SEAL library.
      */
-    SealError(seal::Error),
+    SealError(seal_fhe::Error),
 
     /**
      * Tried to run an Fhe Program that requires relinearization keys, but didn't provide any.
@@ -144,8 +144,8 @@ impl From<sunscreen_fhe_program::Error> for Error {
     }
 }
 
-impl From<seal::Error> for Error {
-    fn from(err: seal::Error) -> Self {
+impl From<seal_fhe::Error> for Error {
+    fn from(err: seal_fhe::Error) -> Self {
         Self::SealError(err)
     }
 }

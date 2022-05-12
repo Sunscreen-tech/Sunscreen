@@ -22,9 +22,10 @@ jobs:
           ~/.cargo/registry/index/
           ~/.cargo/registry/cache/
           ~/.cargo/git/db/
+          rust-playground/deployment/target
           rust-playground/ui/target
           rust-playground/ui/frontend/node_modules
-        key: ${{ runner.os }}-cargo-playground-${{ hashFiles('rust-playground/ui/Cargo.lock') }}-${{ hashFiles('rust-playground/ui/frontend/yarn.lock') }}
+        key: ${{ runner.os }}-cargo-playground-${{ hashFiles('rust-playground/ui/Cargo.lock') }}-${{ hashFiles('rust-playground/ui/frontend/yarn.lock') }}-${{ hashFiles('rust-playground/deployment/Cargo.lock') }}
     - name: Yarn install
       run: yarn install
       working-directory: ./rust-playground/ui/frontend
@@ -34,10 +35,15 @@ jobs:
     - name: Cargo build
       run: cargo build --release --verbose
       working-directory: ./rust-playground/ui
+    - name: Build deployment app
+      run: cargo build --release --verbose
+      working-directory: ./rust-playground/deployment
     - name: Create EC2 instance
-      run: ./rust-playground/deployment/aws_launch_instance.sh
+      run: ./target/release/deployment
+      working-directory: ./rust-playground/deployment
       env:
         AWS_ACCESS_KEY_ID: ${{ secrets.DEPLOYMENT_AWS_ACCESS_KEY }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.DEPLOYMENT_AWS_ACCESS_KEY_SECRET }}
         EC2_KEY_PAIR: Deployment
         EC2_SECRET_KEY: ${{ secrets.DEPLOYMENT_KEYPAIR_SECRET_KEY }}
+        RUST_LOG: info

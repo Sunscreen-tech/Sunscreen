@@ -1,5 +1,5 @@
 use crate::Params;
-use seal::{BfvEncryptionParametersBuilder, Context, FromBytes, Modulus, ToBytes};
+use seal_fhe::{BfvEncryptionParametersBuilder, Context, FromBytes, Modulus, ToBytes};
 use serde::{
     de::{Deserializer, MapAccess, SeqAccess, Visitor},
     ser::{Error, SerializeStruct, Serializer},
@@ -161,7 +161,7 @@ where
     }
 }
 
-fn deserialize_with_params<'de, T>(params: &Params, data: &[u8]) -> Result<T, seal::Error>
+fn deserialize_with_params<'de, T>(params: &Params, data: &[u8]) -> Result<T, seal_fhe::Error>
 where
     T: FromBytes,
 {
@@ -169,7 +169,7 @@ where
         .coeff_modulus
         .iter()
         .map(|x| Modulus::new(*x))
-        .collect::<std::result::Result<Vec<Modulus>, seal::Error>>()?;
+        .collect::<std::result::Result<Vec<Modulus>, seal_fhe::Error>>()?;
 
     let encryption_params = BfvEncryptionParametersBuilder::new()
         .set_coefficient_modulus(coeffs)

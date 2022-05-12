@@ -10,7 +10,7 @@ use std::collections::VecDeque;
 #[cfg(not(target_arch = "wasm32"))]
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-use seal::{Ciphertext, Error as SealError, Evaluator, GaloisKeys, Plaintext, RelinearizationKeys};
+use seal_fhe::{Ciphertext, Error as SealError, Evaluator, GaloisKeys, Plaintext, RelinearizationKeys};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 /**
@@ -75,7 +75,7 @@ impl From<SealError> for FheProgramRunFailure {
  * guarantees. Call [`validate()`](sunscreen_fhe_program::FheProgram::validate()) to verify a program's correctness.
  *
  * # Remarks
- * The input and outputs of this method are vectors containing [`seal::Ciphertext`] values, not the
+ * The input and outputs of this method are vectors containing [`seal_fhe::Ciphertext`] values, not the
  * high-level [`Ciphertext`] types. You must first unpack them from the high-level types.
  *
  * # Panics
@@ -580,7 +580,7 @@ pub fn get_unary_operand(ir: &FheProgram, index: NodeIndex) -> NodeIndex {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use seal::*;
+    use seal_fhe::*;
     use sunscreen_fhe_program::SchemeType;
 
     fn setup_scheme(

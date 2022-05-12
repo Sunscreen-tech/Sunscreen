@@ -24,7 +24,7 @@ use serde::{Deserialize, Serialize};
 pub use error::*;
 pub use literal::*;
 pub use operation::*;
-pub use seal::SecurityLevel;
+pub use seal_fhe::SecurityLevel;
 
 use IRTransform::*;
 use TransformNodeIndex::*;

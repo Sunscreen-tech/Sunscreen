@@ -1,5 +1,5 @@
 [submodule "seal/SEAL"]
-	path = seal/SEAL
+	path = seal_fhe/SEAL
 	url = git@github.com:rickwebiii/SEAL.git
 	branch = wasm
 [submodule "emsdk/emsdk"]

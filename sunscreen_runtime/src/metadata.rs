@@ -1,5 +1,5 @@
 use rlp::encode_list;
-use seal::SecurityLevel;
+use seal_fhe::SecurityLevel;
 pub use semver::Version;
 use serde::{
     de::{self, Error as DeError, Visitor},

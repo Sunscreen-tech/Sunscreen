@@ -1,7 +1,19 @@
 [package]
 name = "seal_fhe"
-version = "0.4.0"
+version = "0.5.0"
 edition = "2021"
+
+authors = ["Sunscreen LLC"]
+rust-version = "1.60.0"
+license = "AGPL-3.0-only"
+description = "This crate contains Rust bindings for Microsoft's SEAL Fully Homomorphic Encryption (FHE) library."
+homepage = "https://sunscreen.tech"
+repository = "https://github.com/Sunscreen-tech/Sunscreen"
+documentation = "https://docs.sunscreen.tech/sunscreen"
+keywords = ["FHE", "BFV", "lattice", "cryptography"]
+categories = ["cryptography"]
+readme = "crates-io.md"
+
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -14,7 +26,7 @@ link-cplusplus="1.0.5"
 [build-dependencies]
 cmake="0.1.46"
 bindgen="0.59.1"
-emsdk = { version = "^0.1", path = "../emsdk", registry = "sunscreen" }
+emsdk = { version = "^0.1", path = "../emsdk" }
 
 [dev-dependencies]
 serde_json="1.0.69"

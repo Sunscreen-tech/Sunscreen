@@ -1,9 +1,18 @@
 [package]
 name = "emsdk"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+authors = ["Sunscreen"]
+rust-version = "1.60.0"
+license = "AGPL-3.0-only"
+description = "A crate for building C++ projects with emcake. This facilitates building wasm binaries with both Rust and C++ code."
+homepage = "https://sunscreen.tech"
+repository = "https://github.com/Sunscreen-tech/Sunscreen"
+documentation = "https://docs.sunscreen.tech/sunscreen"
+keywords = ["emsdk", "emcc", "emcmake"]
+categories = ["development-tools"]
+readme = "crates-io.md"
 
 [dependencies]
 

@@ -1,14 +1,25 @@
 [package]
 name = "sunscreen_backend"
-version = "0.4.0"
+version = "0.5.0"
 edition = "2021"
+
+authors = ["Sunscreen LLC"]
+rust-version = "1.60.0"
+license = "AGPL-3.0-only"
+description = "The backend for the Sunscreen compiler."
+homepage = "https://sunscreen.tech"
+repository = "https://github.com/Sunscreen-tech/Sunscreen"
+documentation = "https://docs.sunscreen.tech/sunscreen"
+keywords = ["FHE", "BFV", "lattice", "cryptography"]
+categories = ["cryptography"]
+readme = "crates-io.md"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-seal_fhe = { version = "0.4", path = "../seal_fhe", registry = "sunscreen"  }
-sunscreen_fhe_program = { version = "0.4", path = "../sunscreen_fhe_program", registry = "sunscreen"  }
-sunscreen_runtime = { version = "0.4", path = "../sunscreen_runtime", registry = "sunscreen"  }
+seal_fhe = { version = "0.5", path = "../seal_fhe" }
+sunscreen_fhe_program = { version = "0.5", path = "../sunscreen_fhe_program" }
+sunscreen_runtime = { version = "0.5", path = "../sunscreen_runtime" }
 petgraph = "0.6.0"
 log = "0.4.14"
 env_logger = "0.9.0"

@@ -10,7 +10,9 @@ use std::collections::VecDeque;
 #[cfg(not(target_arch = "wasm32"))]
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-use seal_fhe::{Ciphertext, Error as SealError, Evaluator, GaloisKeys, Plaintext, RelinearizationKeys};
+use seal_fhe::{
+    Ciphertext, Error as SealError, Evaluator, GaloisKeys, Plaintext, RelinearizationKeys,
+};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 /**

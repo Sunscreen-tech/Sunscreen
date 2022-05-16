@@ -1,5 +1,5 @@
 mod test_common;
-use seal::Evaluator;
+use seal_fhe::Evaluator;
 
 #[test]
 fn overflow_does_not_bleed_into_other_lanes() {

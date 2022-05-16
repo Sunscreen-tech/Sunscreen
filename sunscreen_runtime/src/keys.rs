@@ -1,6 +1,6 @@
 use crate::serialization::WithContext;
 
-use seal::{
+use seal_fhe::{
     GaloisKeys, PublicKey as SealPublicKey, RelinearizationKeys, SecretKey as SealSecretKey,
 };
 use serde::{Deserialize, Serialize};
@@ -55,7 +55,7 @@ pub struct PrivateKey(pub(crate) SealSecretKey);
 mod tests {
     use super::*;
     use crate::*;
-    use seal::{CoefficientModulus, PlainModulus, SecurityLevel, ToBytes};
+    use seal_fhe::{CoefficientModulus, PlainModulus, SecurityLevel, ToBytes};
     use sunscreen_fhe_program::SchemeType;
 
     #[test]

@@ -1,4 +1,4 @@
-use seal::Plaintext as SealPlaintext;
+use seal_fhe::Plaintext as SealPlaintext;
 
 use crate::types::{
     ops::{

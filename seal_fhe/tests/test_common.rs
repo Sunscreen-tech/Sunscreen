@@ -1,4 +1,4 @@
-use seal::*;
+use seal_fhe::*;
 
 pub fn run_bfv_test<F>(lane_bits: u32, degree: u64, test: F)
 where

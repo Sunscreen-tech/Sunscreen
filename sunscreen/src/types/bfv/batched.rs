@@ -8,7 +8,7 @@ use crate::{
     },
     with_ctx, FheProgramInputTrait, InnerPlaintext, Literal, Params, Plaintext, WithContext,
 };
-use seal::{
+use seal_fhe::{
     BFVEncoder, BfvEncryptionParametersBuilder, Context as SealContext, Modulus,
     Result as SealResult,
 };
@@ -626,7 +626,7 @@ impl<const LANES: usize> LaneCount for Batched<LANES> {
 mod tests {
     use super::*;
     use crate::SchemeType;
-    use seal::{CoefficientModulus, PlainModulus, SecurityLevel};
+    use seal_fhe::{CoefficientModulus, PlainModulus, SecurityLevel};
 
     #[test]
     fn can_roundtrip_encode_batched() {

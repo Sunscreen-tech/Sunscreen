@@ -22,7 +22,7 @@ pub enum Error {
     /**
      * An internal error occurred in the SEAL library.
      */
-    SealError(seal::Error),
+    SealError(seal_fhe::Error),
 
     /**
      * An Error occurred in the Sunscreen runtime.
@@ -35,8 +35,8 @@ pub enum Error {
     FheProgramError(sunscreen_fhe_program::Error),
 }
 
-impl From<seal::Error> for Error {
-    fn from(err: seal::Error) -> Self {
+impl From<seal_fhe::Error> for Error {
+    fn from(err: seal_fhe::Error) -> Self {
         Self::SealError(err)
     }
 }

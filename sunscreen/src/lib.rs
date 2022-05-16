@@ -74,7 +74,7 @@ pub use clap::crate_version;
 pub use compiler::{Compiler, FheProgramFn};
 pub use error::{Error, Result};
 pub use params::PlainModulusConstraint;
-pub use seal::Plaintext as SealPlaintext;
+pub use seal_fhe::Plaintext as SealPlaintext;
 pub use sunscreen_compiler_macros::*;
 pub use sunscreen_fhe_program::{SchemeType, SecurityLevel};
 pub use sunscreen_runtime::{

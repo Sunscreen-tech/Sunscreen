@@ -1055,7 +1055,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d29ab0c6d3fc0ee92fe66e2d99f700eab17a8d57d1c1d3b748380fb20baa78cd"
 
 [[package]]
-name = "seal"
+name = "seal_fhe"
 version = "0.4.0"
 dependencies = [
  "bindgen",
@@ -1183,7 +1183,7 @@ dependencies = [
  "log",
  "num",
  "petgraph",
- "seal",
+ "seal_fhe",
  "serde",
  "serde_json",
  "sunscreen_backend",
@@ -1199,7 +1199,7 @@ dependencies = [
  "env_logger",
  "log",
  "petgraph",
- "seal",
+ "seal_fhe",
  "sunscreen_fhe_program",
  "sunscreen_runtime",
 ]
@@ -1219,7 +1219,7 @@ name = "sunscreen_fhe_program"
 version = "0.4.0"
 dependencies = [
  "petgraph",
- "seal",
+ "seal_fhe",
  "serde",
  "serde_json",
 ]
@@ -1235,7 +1235,7 @@ dependencies = [
  "petgraph",
  "rayon",
  "rlp",
- "seal",
+ "seal_fhe",
  "semver",
  "serde",
  "serde_json",

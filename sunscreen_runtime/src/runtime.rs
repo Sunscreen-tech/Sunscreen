@@ -7,7 +7,7 @@ use crate::{
 };
 use sunscreen_fhe_program::SchemeType;
 
-use seal::{
+use seal_fhe::{
     BFVEvaluator, BfvEncryptionParametersBuilder, Context as SealContext, Decryptor, Encryptor,
     KeyGenerator, Modulus,
 };

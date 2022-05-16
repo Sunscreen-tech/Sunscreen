@@ -2,7 +2,7 @@ use crate::{
     Error, FheProgramInputTrait, InnerPlaintext, NumCiphertexts, Params, Plaintext, Result,
     TryFromPlaintext, TryIntoPlaintext, Type, TypeName, TypeNameInstance, WithContext,
 };
-use seal::Plaintext as SealPlaintext;
+use seal_fhe::Plaintext as SealPlaintext;
 
 impl<T, const N: usize> TryIntoPlaintext for [T; N]
 where

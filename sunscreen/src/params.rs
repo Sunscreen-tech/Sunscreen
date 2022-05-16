@@ -2,7 +2,7 @@ use crate::{Error, FheProgramFn, Result, SecurityLevel};
 
 use log::{debug, trace};
 
-use seal::{
+use seal_fhe::{
     BFVEvaluator, BFVScalarEncoder, BfvEncryptionParametersBuilder, CoefficientModulus,
     Context as SealContext, Decryptor, Encryptor, KeyGenerator, PlainModulus,
 };

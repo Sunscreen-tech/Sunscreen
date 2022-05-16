@@ -8,7 +8,7 @@ members = [
     "examples/chi_sq",
     "examples/dot_prod",
     "examples/pir",
-    "seal",
+    "seal_fhe",
     "sunscreen",
     "sunscreen_backend",
     "sunscreen_compiler_macros",

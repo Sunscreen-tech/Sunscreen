@@ -1,5 +1,5 @@
 [package]
-name = "seal"
+name = "seal_fhe"
 version = "0.4.0"
 edition = "2021"
 

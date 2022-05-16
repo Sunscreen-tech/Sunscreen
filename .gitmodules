@@ -1,4 +1,4 @@
-[submodule "seal/SEAL"]
+[submodule "seal_fhe/SEAL"]
 	path = seal_fhe/SEAL
 	url = git@github.com:rickwebiii/SEAL.git
 	branch = wasm

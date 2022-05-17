@@ -47,3 +47,4 @@ jobs:
         EC2_KEY_PAIR: Deployment
         EC2_SECRET_KEY: ${{ secrets.DEPLOYMENT_KEYPAIR_SECRET_KEY }}
         RUST_LOG: info
+        ELASTIC_IP_ADDRESS: "52.41.249.44"

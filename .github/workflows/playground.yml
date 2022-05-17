@@ -43,7 +43,7 @@ jobs:
       run: cargo run --release --verbose
       working-directory: ./rust-playground/top-crates
     - name: Build docker images
-      run: 
+      run: ./build.sh
       working-directory: ./rust-playground/compiler
     - name: Create EC2 instance
       run: ./target/release/deployment

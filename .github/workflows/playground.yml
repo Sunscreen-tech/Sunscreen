@@ -22,10 +22,11 @@ jobs:
           ~/.cargo/registry/index/
           ~/.cargo/registry/cache/
           ~/.cargo/git/db/
+          rust-playground/top-crates/target
           rust-playground/deployment/target
           rust-playground/ui/target
           rust-playground/ui/frontend/node_modules
-        key: ${{ runner.os }}-cargo-playground-${{ hashFiles('rust-playground/ui/Cargo.lock') }}-${{ hashFiles('rust-playground/ui/frontend/yarn.lock') }}-${{ hashFiles('rust-playground/deployment/Cargo.lock') }}
+        key: ${{ runner.os }}-cargo-playground-${{ hashFiles('rust-playground/ui/Cargo.lock') }}-${{ hashFiles('rust-playground/ui/frontend/yarn.lock') }}-${{ hashFiles('rust-playground/deployment/Cargo.lock') }}-${{ hashFiles('rust-playground/top-crates/Cargo.lock') }}
     - name: Yarn install
       run: yarn install
       working-directory: ./rust-playground/ui/frontend
@@ -38,6 +39,12 @@ jobs:
     - name: Build deployment app
       run: cargo build --release --verbose
       working-directory: ./rust-playground/deployment
+    - name: Run top crates
+      run: cargo run --release --verbose
+      working-directory: ./rust-playground/top-crates
+    - name: Build docker images
+      run: 
+      working-directory: ./rust-playground/compiler
     - name: Create EC2 instance
       run: ./target/release/deployment
       working-directory: ./rust-playground/deployment

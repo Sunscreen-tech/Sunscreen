@@ -38,13 +38,13 @@ jobs:
     - name: Build deployment app
       run: cargo build --release --verbose
       working-directory: ./rust-playground/deployment
-    #- name: Create EC2 instance
-    #  run: ./target/release/deployment
-    #  working-directory: ./rust-playground/deployment
-    #  env:
-    #    AWS_ACCESS_KEY_ID: ${{ secrets.DEPLOYMENT_AWS_ACCESS_KEY }}
-    #    AWS_SECRET_ACCESS_KEY: ${{ secrets.DEPLOYMENT_AWS_ACCESS_KEY_SECRET }}
-    #    EC2_KEY_PAIR: Deployment
-    #    EC2_SECRET_KEY: ${{ secrets.DEPLOYMENT_KEYPAIR_SECRET_KEY }}
-    #    RUST_LOG: info
-    #    ELASTIC_IP_ADDRESS: "52.41.249.44"
+    - name: Create EC2 instance
+      run: ./target/release/deployment
+      working-directory: ./rust-playground/deployment
+      env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.DEPLOYMENT_AWS_ACCESS_KEY }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.DEPLOYMENT_AWS_ACCESS_KEY_SECRET }}
+        EC2_KEY_PAIR: Deployment
+        EC2_SECRET_KEY: ${{ secrets.DEPLOYMENT_KEYPAIR_SECRET_KEY }}
+        RUST_LOG: info
+        ELASTIC_IP_ADDRESS: "52.41.249.44"

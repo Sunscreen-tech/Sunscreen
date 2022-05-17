@@ -1,0 +1,1 @@
+This crate provides Rust bindings for Microsoft SEAL.

@@ -1,0 +1,29 @@
+name: docs-deployment
+
+on:
+  push:
+    branches: [ docs ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+concurrency: docs-production
+
+jobs:
+  build-docs:
+    runs-on: ubuntu-latest
+    - uses: actions/checkout@v3
+      with:
+        submodules: 'recursive'
+    - name: Build mdBook
+      run: cargo build --release
+      working-directory: ./mdBook
+    - name: Build docs
+      run: ../mdBook/target/release/mdBook build
+      working-directory: ./sunscreen_docs
+    - name: Write to S3
+      run: aws s3 cp book s3://docs.sunscreen.tech --recursive
+      working-directory: ./sunscreen_docs
+      env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.DOCS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.DOCS_SECRET_ACCESS_KEY }}

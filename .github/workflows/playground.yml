@@ -1,4 +1,4 @@
-name: playground
+name: playground-deployment
 
 on:
   push:

@@ -6,7 +6,7 @@ Sunscreen is an ecosystem for building privacy-preserving applications using ful
 
 This project is licensed under the terms of the GNU AGPLv3 license. If you require a different license for your application, please reach out to us.
 
-*WARNING!* This library is meant for experiments only. It has not been audited and is *not* intended for use in production. 
+*WARNING!* This library is meant for experiments only. It has not been externally audited and is *not* intended for use in production. 
 
 # Set-up
 These directions apply for the requirements to *develop the sunscreen platform itself*, which may be more than needed to merely consume it as a dependency. If you wish to develop an application using Sunscreen, see the installation 

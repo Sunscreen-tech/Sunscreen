@@ -12,6 +12,8 @@ concurrency: docs-production
 jobs:
   build-docs:
     runs-on: ubuntu-latest
+
+    steps:
     - uses: actions/checkout@v3
       with:
         submodules: 'recursive'

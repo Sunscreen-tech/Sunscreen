@@ -7,8 +7,10 @@ on:
 env:
   CARGO_TERM_COLOR: always
 
+concurrency: production
+
 jobs:
-  build_and_deploy:
+  build-and-prime-cache:
     runs-on: ubuntu-latest
 
     steps:
@@ -22,28 +24,139 @@ jobs:
           ~/.cargo/registry/index/
           ~/.cargo/registry/cache/
           ~/.cargo/git/db/
-          rust-playground/deployment/target
-          rust-playground/ui/target
+          rust-playground/target
           rust-playground/ui/frontend/node_modules
-        key: ${{ runner.os }}-cargo-playground-${{ hashFiles('rust-playground/ui/Cargo.lock') }}-${{ hashFiles('rust-playground/ui/frontend/yarn.lock') }}-${{ hashFiles('rust-playground/deployment/Cargo.lock') }}
-    - name: Yarn install
+        key: ${{ runner.os }}-playground-${{ hashFiles('rust-playground/Cargo.lock') }}-${{ hashFiles('rust-playground/ui/frontend/yarn.lock') }}
+    - name: Install frontend UI dependencies
       run: yarn install
       working-directory: ./rust-playground/ui/frontend
-    - name: Yarn build
+    - name: Compile frontend UI code
       run: yarn build
       working-directory: ./rust-playground/ui/frontend
-    - name: Cargo build
-      run: cargo build --release --verbose
-      working-directory: ./rust-playground/ui
-    - name: Build deployment app
-      run: cargo build --release --verbose
-      working-directory: ./rust-playground/deployment
+    - name: Build Rust binaries
+      run: cargo build --release --verbose --bins
+      working-directory: ./rust-playground
+    - uses: actions/upload-artifact@v3
+      with:
+        name: build-output
+        path: |
+          rust-playground/target/release/ui
+          rust-playground/target/release/rust-playground-top-crates
+          rust-playground/target/release/deployment
+
+  build-docker-rust:
+    runs-on: ubuntu-latest
+    needs: ['build-and-prime-cache']
+
+    strategy:
+      matrix:
+        channel: ["stable", "beta", "nightly"]
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: 'recursive'
+    - uses: actions/download-artifact@v3
+      with:
+        name: build-output
+        path: rust-playground/target/release
+    - name: chmod 755
+      run: chmod 755 ./target/release/rust-playground-top-crates
+      working-directory: ./rust-playground
+    - name: Run top crates
+      run: ./target/release/rust-playground-top-crates --top-n 0 --omit-cookbook
+      working-directory: ./rust-playground
+    - name: Build docker images
+      run: ./build.sh
+      working-directory: ./rust-playground/compiler
+      env:
+        CHANNELS_TO_BUILD: ${{ matrix.channel }}
+        TOOLS_TO_BUILD: ""
+        DOCKER_REGISTRY: sunscreendeployment
+        DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+        DOCKER_USER: sunscreendeployment
+
+  build-docker-tools:
+    runs-on: ubuntu-latest
+    needs: ['build-and-prime-cache', 'build-docker-rust']
+
+    strategy:
+      matrix:
+        tool: ["rustfmt", "clippy", "miri"]
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: 'recursive'
+    - uses: actions/download-artifact@v3
+      with:
+        name: build-output
+        path: rust-playground/target/release
+    - name: chmod 755
+      run: chmod 755 ./target/release/rust-playground-top-crates
+      working-directory: ./rust-playground
+    - name: Run top crates
+      run: ./target/release/rust-playground-top-crates --top-n 0 --omit-cookbook     
+      working-directory: ./rust-playground
+    - name: Build docker images
+      run: ./build.sh
+      working-directory: ./rust-playground/compiler
+      env:
+        CHANNELS_TO_BUILD: ""
+        TOOLS_TO_BUILD: ${{ matrix.tool }}
+        DOCKER_REGISTRY: sunscreendeployment
+        DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+        DOCKER_USER: sunscreendeployment
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: ['build-and-prime-cache', 'build-docker-tools', 'build-docker-rust']
+    
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: 'recursive'
+    - uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cargo/bin/
+          ~/.cargo/registry/index/
+          ~/.cargo/registry/cache/
+          ~/.cargo/git/db/
+          rust-playground/target
+          rust-playground/ui/frontend/node_modules
+        key: ${{ runner.os }}-playground-${{ hashFiles('rust-playground/Cargo.lock') }}-${{ hashFiles('rust-playground/ui/frontend/yarn.lock') }}
+    - name: Install frontend UI dependencies
+      run: yarn install
+      working-directory: ./rust-playground/ui/frontend
+    - name: Compile frontend UI code
+      run: yarn build
+      working-directory: ./rust-playground/ui/frontend
+    - uses: actions/download-artifact@v3
+      with:
+        name: build-output
+        path: rust-playground/target/release
+    - name: chmod 755
+      run: chmod 755 ./target/release/ui ./target/release/deployment
+      working-directory: ./rust-playground
     - name: Create EC2 instance
       run: ./target/release/deployment
-      working-directory: ./rust-playground/deployment
+      working-directory: ./rust-playground
       env:
         AWS_ACCESS_KEY_ID: ${{ secrets.DEPLOYMENT_AWS_ACCESS_KEY }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.DEPLOYMENT_AWS_ACCESS_KEY_SECRET }}
         EC2_KEY_PAIR: Deployment
         EC2_SECRET_KEY: ${{ secrets.DEPLOYMENT_KEYPAIR_SECRET_KEY }}
         RUST_LOG: info
+        ELASTIC_IP_ADDRESS: "52.41.249.44"
+        DOCKER_REPOSITORY: sunscreendeployment
+    
+  delete-artifacts:
+    runs-on: ubuntu-latest
+    needs: ['deploy']
+    if: always()
+
+    steps:
+    - uses: geekyeggo/delete-artifact@v1
+      with:
+        name: build-output

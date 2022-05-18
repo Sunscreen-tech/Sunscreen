@@ -21,7 +21,7 @@ jobs:
       run: cargo build --release
       working-directory: ./mdBook
     - name: Build docs
-      run: ../mdBook/target/release/mdBook build
+      run: ../mdBook/target/release/mdbook build
       working-directory: ./sunscreen_docs
     - name: Write to S3
       run: aws s3 cp book s3://docs.sunscreen.tech --recursive

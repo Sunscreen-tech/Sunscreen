@@ -5,7 +5,7 @@ The `Cipher` type is special in that you don't directly create `Cipher` values. 
 While arguments may be unencrypted (i.e. of type `T`), return values must always be encrypted (i.e. of type `Cipher<T>`).
 
 For example:
-```rust,no_run
+```rust
 #[fhe_program(scheme = "bfv")]
 fn my_program(a: Cipher<Signed>, b: Signed) -> (Cipher<Signed>, Cipher<Signed>) {
     // Do things

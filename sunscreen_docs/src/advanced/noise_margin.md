@@ -15,7 +15,7 @@ There are a few reasons you may wish to change the noise margin:
 ## How to change the noise margin
 To change the noise margin, simply call `.additional_noise_budget()` when compiling your program. For example:
 
-```rust,no_run
+```rust
 # use sunscreen::{
 #     fhe_program,
 #     types::{bfv::Signed, Cipher},

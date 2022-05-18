@@ -2,7 +2,7 @@
 
 
 In our simple example, we called `runtime.run` to execute our FHE program
-```rust,no_run
+```rust
 # use sunscreen::{*, types::{{bfv::Signed}, Cipher}};
 #
 # fn main() { 
@@ -37,7 +37,7 @@ Our `FheProgramInput` wrapper enum solves this problem; it wraps values so they 
 
 If your FHE program only accepts ciphertexts (a common scenario), it's sufficient to simply pass a `Vec<Ciphertext>` as we did in the above example. However, if you want to mix `Ciphertext` and unencrypted values, you'll need to make a `Vec<FheProgramInput>` manually, converting each argument yourself:
 
-```rust,no_run
+```rust
 # use sunscreen::{*, types::{{bfv::Signed}, Cipher}};
 #
 # fn main() {

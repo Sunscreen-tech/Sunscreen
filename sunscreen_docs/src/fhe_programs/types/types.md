@@ -20,7 +20,7 @@ The `Cipher` type is special in that you don't directly create `Cipher` values. 
 While arguments may be unencrypted (i.e. of type `T`), return values must always be encrypted (i.e. of type `Cipher<T>`).
 
 For example:
-```rust,no_run
+```rust
 # use sunscreen::{
 #     fhe_program,
 #     types::{bfv::Signed, Cipher},
@@ -40,7 +40,7 @@ fn my_program(a: Cipher<Signed>, b: Signed) -> (Cipher<Signed>, Cipher<Signed>) 
 ## Arrays
 Sunscreen supports fixed-length arrays[^1] that behave as you'd expect. You declare and use them as any other fixed-length array in Rust:
 
-```rust,no_run
+```rust
 # use sunscreen::{
 #     fhe_program,
 #     types::{bfv::Fractional, Cipher},
@@ -78,7 +78,7 @@ You can make arrays of encrypted or unencrypted data types. In the former case, 
 Sometimes, you simply want to double a value or add `15`. Fortunately, most FHE types and operations support literal operands.
 
 For example, `Signed` values work with `i64` values
-```rust,no_run
+```rust
 # use sunscreen::{
 #     fhe_program,
 #     types::{bfv::Signed, Cipher},
@@ -91,7 +91,7 @@ fn answer(a: Cipher<Signed>) -> Cipher<Signed> {
 ```
 
 while `Fractional` and `Rational` values support `f64` values
-```rust,no_run
+```rust
 # use sunscreen::{
 #     fhe_program,
 #     types::{bfv::Fractional, Cipher},

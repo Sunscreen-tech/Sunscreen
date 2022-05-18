@@ -13,7 +13,7 @@ Some of these keys can be fairly large, the size of which is determined by schem
 You can `compile()` an FHE program and look at `fhe_program.metadata.required_keys` to get a list of required keys for your specific program.
 
 You can then remove unneeded keys. For example:
-```rust,no_run
+```rust
 # use sunscreen::{
 #     fhe_program,
 #     types::{bfv::Signed, Cipher},

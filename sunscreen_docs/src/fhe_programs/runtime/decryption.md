@@ -1,7 +1,7 @@
 # Decryption
 To decrypt, simply call `decrypt()` using your private key and the data you want to decrypt
 
-```rust,no_run
+```rust
 # use sunscreen::{
 #     fhe_program,
 #     types::{bfv::Signed, Cipher},

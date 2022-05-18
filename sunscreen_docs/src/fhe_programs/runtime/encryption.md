@@ -1,6 +1,6 @@
 # Encryption
 To encrypt data, simply call `encrypt()` on `Runtime`:
-```rust,no_run
+```rust
 # use sunscreen::{
 #     fhe_program,
 #     types::{bfv::Signed, Cipher},

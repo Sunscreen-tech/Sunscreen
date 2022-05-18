@@ -16,7 +16,7 @@ When setting the plaintext modulus, you call `compiler.plain_modulus_constraint(
 
 ## How to change the plaintext modulus
 You can manually set the `PlainModulusConstraint` when compiling your program like so:
-```rust,no_run
+```rust
 # use sunscreen::{
 #     fhe_program,
 #     types::{bfv::Signed, Cipher},

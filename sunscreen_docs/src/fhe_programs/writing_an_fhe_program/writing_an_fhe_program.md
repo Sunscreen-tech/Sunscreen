@@ -5,7 +5,7 @@ An FHE program is simply a Rust function with an annotation and a few restrictio
 ## The `#[fhe_program(...)]` attribute
 To indicate that a function is an FHE program, simply add the `#[fhe_program()]` attribute to an `fn` function:
 
-```rust,no_run
+```rust
 # use sunscreen::{
 #    fhe_program,
 # };
@@ -28,7 +28,7 @@ FHE programs implement their logic in the `fn` function beneath the `#[fhe_progr
 
 Here's an example of an FHE program that returns a tuple containing two encrypted values: `a * b` and `a + c`.
 
-```rust,no_run
+```rust
 # use sunscreen::{
 #     fhe_program,
 #     types::{bfv::Signed, Cipher},

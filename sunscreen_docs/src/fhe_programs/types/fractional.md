@@ -16,7 +16,7 @@ Additionally, you perform unary negation on `Fractional` ciphertexts.
 
 While division by only literals may seem limiting, this is one of the more common use cases. For example, you can average 3 values:
 
-```rust,no_run
+```rust
 # use sunscreen::{
 #     fhe_program,
 #     types::{bfv::Fractional, Cipher},

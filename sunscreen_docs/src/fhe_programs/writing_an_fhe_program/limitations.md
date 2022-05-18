@@ -41,7 +41,7 @@ fn invalid(a: Cipher<Signed>, b: Signed) -> Cipher<Signed> {
 
 You *can*, however, use loops and if statements so long as their conditions don't depend on FHE program arguments. The examples below show **allowed loop and if statements**:
 
-```rust,no_run
+```rust
 # use sunscreen::{
 #    types::{bfv::{Fractional, Signed}, Cipher},
 #    fhe_program

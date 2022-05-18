@@ -1,7 +1,7 @@
 # Key Generation
 Once you've created a runtime, generating keys is simple:
 
-```rust,no_run
+```rust
 # use sunscreen::{
 #     fhe_program,
 #     types::{bfv::Signed, Cipher},

@@ -27,7 +27,7 @@ Let's look at how to implement this now.
 
 ### Setup
 
-```rust,no_run
+```rust
 use sunscreen::{
     fhe_program,
     types::{bfv::Rational, Cipher},
@@ -55,7 +55,7 @@ We declare our `swap_nu` function as an FHE program with the appropriate attribu
 Notice that the other values in `swap_nu` (i.e. the pool reserves for ETH `total_eth` and NU `total_nu`) are in the clear.  
 
 ### Alice
-```rust,no_run
+```rust
 # use sunscreen::{
 #     fhe_program,
 #     types::{bfv::Rational, Cipher},
@@ -79,7 +79,7 @@ struct Alice {
 ```
 Alice wants to swap some encrypted (i.e. hidden) amount of NU for an encrypted (i.e. hidden) amount of ETH. She'll need a public/private key pair to do this (since she needs to encrypt her order with respect to her public key).
 
-```rust,no_run
+```rust
 # use sunscreen::{
 #     fhe_program,
 #     types::{bfv::Rational, Cipher},
@@ -144,7 +144,7 @@ We won't use this until the very end but `check_received_eth` will allow Alice t
 ### Miner
 Let's look at the miner next.
 
-```rust,no_run
+```rust
 # use sunscreen::{
 #     fhe_program,
 #     types::{bfv::Rational, Cipher},
@@ -165,7 +165,7 @@ struct Miner {
 ```
  Recall that the miner is responsible for processing Alice's order; thus, he'll have to run the compiled `swap_nu` program (`compiled_swap_nu`).
 
-```rust,no_run
+```rust
 # use sunscreen::{
 #     fhe_program,
 #     types::{bfv::Rational, Cipher},
@@ -227,7 +227,7 @@ The miner can run the token swap contract (see `run_contract`) by calling `runti
 
 ### Swapping the tokens privately
 
-```rust,no_run
+```rust
 # use sunscreen::{
 #     fhe_program,
 #     types::{bfv::Rational, Cipher},

@@ -4,7 +4,7 @@ Now that we have installed the Sunscreen crate as a dependency, let's get starte
 
 In this example, we'll just multiply two encrypted integers.
 
-```rust,no_run
+```rust
 use sunscreen::{
     fhe_program,
     types::{bfv::Signed, Cipher},
@@ -26,7 +26,7 @@ Notice that the `simple_multiply` function is like any other function in Rust, e
 
 Having specified our program, let's compile it.
 
-```rust,no_run
+```rust
 use sunscreen::{
     fhe_program,
     types::{bfv::Signed, Cipher},
@@ -52,7 +52,7 @@ What's the `?` after at the end of `.compile()`? For the uninitiated, the [`?`](
 
 Next, we need a public and private key pair. In order to generate keys, we'll first construct a `Runtime` with the parameters we got from compilation. This allows us to encrypt/decrypt data and run FHE programs.
 
-```rust,no_run
+```rust
 use sunscreen::{
     fhe_program,
     types::{bfv::Signed, Cipher},
@@ -85,7 +85,7 @@ Next, we call `Signed::from(15)` to make an unencrypted `Signed` integer equal t
 
 Once we have our plaintext value 15, we encrypt it by calling `runtime.encrypt(...)`, passing in the value and our public key. We repeat this process for `b` with the value `5`. Now that we have the two ciphertexts `a` and `b` to give to `simple_multiply`, we're ready to run our FHE program!
 
-```rust,no_run
+```rust
 use sunscreen::{
     fhe_program,
     types::{bfv::Signed, Cipher},

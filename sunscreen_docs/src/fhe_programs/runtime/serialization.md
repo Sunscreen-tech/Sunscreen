@@ -8,7 +8,7 @@ While most examples compute everything in one place, in practice, data will be s
 Sunscreen uses [`serde`](https://serde.rs/) for serialization and can serialize data in a number of formats including JSON and bincode. Since most data in Sunscreen is high entropy byte arrays, we recommend using [bincode](https://docs.rs/bincode/1.3.3/bincode/) since it reduces storage and network requirements by efficiently packing byte arrays.
 
 The process to serialize and deserialize any type is the same, but this example shows how to do it with a ciphertext:
-```rust,no_run
+```rust
 # use sunscreen::{
 #     fhe_program,
 #     types::{bfv::Signed, Cipher},

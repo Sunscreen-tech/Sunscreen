@@ -1,7 +1,7 @@
 # Runtime
 To create a runtime, you simply call `Runtime::new`, passing a `Params` object. You get a params object from compiling an FHE program as we did in our example.
 
-```rust,no_run
+```rust
 # use sunscreen::{
 #     fhe_program,
 #     types::{bfv::Signed, Cipher},

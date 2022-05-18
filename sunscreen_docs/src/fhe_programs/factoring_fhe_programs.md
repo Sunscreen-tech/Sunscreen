@@ -6,7 +6,7 @@ In this section we'll show you how to factor your programs in a specific way tha
 
 Let's begin by rewriting our `simple_multiply` example with a common implementation (`simple_multiply_impl`):
 
-```rust,no_run
+```rust
 use sunscreen::{
     fhe_program,
     types::{bfv::{Signed, Fractional}, Cipher},
@@ -36,7 +36,7 @@ The first FHE program multiplies encrypted `Signed` values. In the second, `a` i
 ## Running your implementation without FHE
 If we inspect the [trait bounds](https://doc.rust-lang.org/rust-by-example/generics/where.html) on `simple_multiply_impl`, we'll notice there is no mention of anything Sunscreen related. This means we can directly run our implementation with Rust `i64` values by simply calling:
 
-```rust,no_run
+```rust
 # use std::ops::Mul;
 #
 # fn simple_multiply_impl<T, U>(a: T, b: U) -> T

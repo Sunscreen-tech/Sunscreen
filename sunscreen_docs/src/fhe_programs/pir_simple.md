@@ -36,7 +36,7 @@ Our database will have 100 items in it. We'll represent the vectors from earlier
 
 ### Setup
 
-```rust,no_run
+```rust
 use sunscreen::{
     fhe_program,
     types::{bfv::Signed, Cipher},
@@ -66,7 +66,7 @@ We declare our `lookup` function as an FHE program with the appropriate attribut
 `lookup` implements the dot product formula discussed above. It takes in the unencrypted `database` and the encrypted `query` from the user to retrieve an item privately. The database is an array of length `DATABASE_SIZE` where each item in the database is a signed integer (`Signed`). Hence, the user's `query` is an array of length `DATABASE_SIZE` as well, where each entry is of type `Cipher<Signed>`.
 
 ### Alice
-```rust,no_run
+```rust
 # use sunscreen::{
 #     fhe_program,
 #     types::{bfv::Signed, Cipher},
@@ -90,7 +90,7 @@ struct Alice {
 
 Alice wants to retrieve an item from the database privately. She'll need a public/private key pair to do this (since she needs to encrypt her query with respect to her public key).
 
-```rust,no_run
+```rust
 # use sunscreen::{
 #     fhe_program,
 #     types::{bfv::Signed, Cipher},
@@ -155,7 +155,7 @@ We won't use this until the very end but `check_response` allows Alice to decryp
 ### Server
 Let's look at the server next.
 
-```rust,no_run
+```rust
 # use sunscreen::{
 #     fhe_program,
 #     types::{bfv::Signed, Cipher},
@@ -174,7 +174,7 @@ struct Server {
 
 Recall that the server is responsible for retrieving Alice's item from the database; thus, it will have to run the compiled `lookup` program (`compiled_lookup`).
 
-```rust,no_run
+```rust
 # use sunscreen::{
 #     fhe_program,
 #     types::{bfv::Signed, Cipher},
@@ -252,7 +252,7 @@ Once all that's done, the server can `run` the FHE program by passing in the `co
 
 
 ### Retrieving the item privately
-```rust,no_run
+```rust
 # use sunscreen::{
 #     fhe_program,
 #     types::{bfv::Signed, Cipher},

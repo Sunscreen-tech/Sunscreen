@@ -2,7 +2,7 @@
 
 Let's walk through an example of how to efficiently compute a dot product using batching. Recall that a dot product is an operation on two vectors that multiplies each element in the first vector by the corresponding element in the second vector and finally sums all of these values together. A straightforward Rust implementation might look like
 
-```rust,no_run
+```rust
 fn dot_product(a: &[i64], b: &[i64]) -> i64 {
     if a.len() != b.len() {
         panic!("a and b must be the same length");
@@ -30,7 +30,7 @@ fn dot_product(a: &[i64], b: &[i64]) -> i64 {
 ## Import types
 
 First, some boilerplate code
-```rust,no_run
+```rust
 use sunscreen_compiler::{
     fhe_program,
     types::{bfv::Batched, Cipher, LaneCount, SwapRows},
@@ -88,7 +88,7 @@ c = c + c.swapRows()
 
 We're going to write this algorithm [generically](/fhe_programs/plaintext_execution.md) so we can reuse the code for `Batched` types with different `LANES` type arguments:
 
-```rust,no_run
+```rust
 use sunscreen_compiler::{
     fhe_program,
     types::{bfv::Batched, Cipher, LaneCount, SwapRows},
@@ -134,7 +134,7 @@ fn main() {
 
 Next, we'll make some test data. Let's write a function `make_vector` that generates a vector with 8192 elements of the sequence `0..32` repeated and packed as described in the algorithm outline. 
 
-```rust,no_run
+```rust
 fn is_power_of_2(value: usize) -> bool {
     value.count_ones() == 1
 }
@@ -160,7 +160,7 @@ fn make_vector<const LENDIV2: usize>() -> Batched<LENDIV2> {
 ## FHE dot product
 Finally, we'll put it all together to compute a dot product with FHE:
 
-```rust,no_run
+```rust
 use sunscreen_compiler::{
     fhe_program,
     types::{bfv::Batched, Cipher, LaneCount, SwapRows},

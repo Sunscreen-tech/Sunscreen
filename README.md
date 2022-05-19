@@ -2,7 +2,7 @@
 
 # Intro
 
-Sunscreen is an ecosystem for building privacy-preserving applications using fully homomorphic encryption. While in private beta, documentation can be found [here](https://sunscreen-docs-preview-test-1.s3.us-west-2.amazonaws.com/intro/intro.html).
+Sunscreen is an ecosystem for building privacy-preserving applications using fully homomorphic encryption. Documentation can be found [here](https://docs.sunscreen.tech). If you'd like to try out the compiler before downloading it, we also offer [a playground](https://playground.sunscreen.tech).
 
 This project is licensed under the terms of the GNU AGPLv3 license. If you require a different license for your application, please reach out to us.
 

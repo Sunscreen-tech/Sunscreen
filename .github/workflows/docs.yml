@@ -24,7 +24,7 @@ jobs:
       run: ../mdBook/target/release/mdbook build
       working-directory: ./sunscreen_docs
     - name: Write to S3
-      run: aws s3 cp book s3://docs.sunscreen.tech --recursive
+      run: aws s3 cp book s3://sunscreen-docs --recursive
       working-directory: ./sunscreen_docs
       env:
         AWS_ACCESS_KEY_ID: ${{ secrets.DOCS_ACCESS_KEY_ID }}

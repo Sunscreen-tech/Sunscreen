@@ -1,18 +1,11 @@
 # Installation
 
-Using Sunscreen in your app no different than any other Rust crate. However, while in private release, you must use Sunscreen's private registry. 
+Using Sunscreen in your app no different than any other Rust crate.
 
-In your repository, add/edit `.cargo/config.toml` and add the following line
-```toml
-sunscreen = { index = "https://crates.sunscreen.tech/git/index" }
-```
-
-under the `[registries]` section (or create one if not present).
-
-In your `Cargo.toml` simply add
+Simply add
 
 ```toml
-sunscreen = { version="0.4.0", registry="sunscreen" }
+sunscreen = "0.5.0"
 ```
 
 to your application's Cargo.toml `[dependencies]` section.
@@ -87,3 +80,7 @@ Install [llvm+clang](https://github.com/llvm/llvm-project/releases/download/llvm
 
 ### git
 Install [git](https://git-scm.com/download/win). Defaults are fine.
+
+# Crate features
+Sunscreen supports the following [crate features](https://doc.rust-lang.org/cargo/reference/features.html#dependency-features):
+* `hexl` &mdash; Speeds up FHE operations with [HEXL](https://www.intel.com/content/www/us/en/developer/articles/technical/introducing-intel-hexl.html) on x86_64 processors supporting AVX-512 IMFA instructions. Disabled by default.

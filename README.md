@@ -10,7 +10,7 @@ This project is licensed under the terms of the GNU AGPLv3 license. If you requi
 
 *WARNING!* This library is meant for experiments only. It has not been externally audited and is *not* intended for use in production. 
 
-# Set-up
+# Set up
 These directions apply for the requirements to *develop the sunscreen platform itself*, which may be more than needed to merely consume it as a dependency. If you wish to develop an application using Sunscreen, see the installation 
 
 ## Install Rust
@@ -71,5 +71,10 @@ Working Sunscreen is as you'd expect with any other Rust repository:
 ## Format
 ```cargo fmt```
 
-## Debugging
+## Debug
 We have a `launch.json` checked in that defines a bunch of debug configurations. In VSCode, you should see a bunch of dropdowns in the debug menu to debug the tests and examples.
+
+# Contribute
+Feel free to open up issues!
+
+If you'd like to submit a pull request, you'll need to agree to a Contributor License Agreement. Please reach out to us at hello@sunscreen.tech for additional info.

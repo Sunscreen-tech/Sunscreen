@@ -20,13 +20,14 @@ fn can_swap_rows_cipher() {
         swap_impl(a)
     }
 
-    let fhe_program = Compiler::with_fhe_program(swap_rows)
+    let app = Compiler::new()
+        .fhe_program(swap_rows)
         .additional_noise_budget(5)
         .plain_modulus_constraint(PlainModulusConstraint::BatchingMinimum(0))
         .compile()
         .unwrap();
 
-    let runtime = Runtime::new(&fhe_program.metadata.params).unwrap();
+    let runtime = Runtime::new(&app.get_program(swap_rows).metadata.params).unwrap();
 
     let (public_key, private_key) = runtime.generate_keys().unwrap();
 

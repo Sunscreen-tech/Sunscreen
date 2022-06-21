@@ -130,6 +130,11 @@ pub enum Error {
      * on non-Seal plaintext.
      */
     NotASealPlaintext,
+
+    /**
+     * Attempted to construct an [`Application`] without passing any programs.
+     */
+    NoFhePrograms,
 }
 
 impl From<bincode::Error> for Error {

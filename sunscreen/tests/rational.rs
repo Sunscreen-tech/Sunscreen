@@ -677,13 +677,14 @@ fn can_neg_cipher() {
         neg_impl(x)
     }
 
-    let fhe_program = Compiler::with_fhe_program(neg)
+    let app = Compiler::new()
+        .fhe_program(neg)
         .additional_noise_budget(5)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(500))
         .compile()
         .unwrap();
 
-    let runtime = Runtime::new(&fhe_program.metadata.params).unwrap();
+    let runtime = Runtime::new(&app.params).unwrap();
 
     let (public_key, private_key) = runtime.generate_keys().unwrap();
 

@@ -9,6 +9,7 @@ use sunscreen_fhe_program::{FheProgram, SchemeType};
 
 use crate::{Error, Result};
 
+use std::collections::HashMap;
 use std::str::FromStr;
 
 /**
@@ -288,6 +289,56 @@ pub struct FheProgramMetadata {
     pub required_keys: Vec<RequiredKeys>,
 }
 
+#[derive(Clone, Serialize, Deserialize)]
+/**
+ * The outcome of successful compilation. Contains one or more [`CompiledFheProgram`].
+ */
+pub struct Application {
+    programs: HashMap<String, CompiledFheProgram>,
+}
+
+impl Application {
+    /**
+     * Constructs a new Application from the given HashMap of programs. The 
+     * keys of this contain FHE program names and the values are the 
+     * compiled FHE programs.
+     * 
+     * # Remarks
+     * The programs [`HashMap`] must contain at least 1 program or this
+     * function will return [`Error::NoFhePrograms`].
+     */
+    pub fn new(programs: HashMap<String, CompiledFheProgram>) -> Result<Self> {
+        if programs.len() == 0 {
+            return Err(Error::NoFhePrograms);
+        }
+
+        Ok(Self {
+            programs
+        })
+    }
+
+    /**
+     * Returns the [`Params`] suitable for running each contained [`CompiledFheProgram`].
+     * These parameters were chosen during compilation.
+     */
+    pub fn params(&self) -> &Params {
+        // We can safely unwrap the iterator because we ensured we have at
+        // least 1 program during construction.
+        &self.programs.values().next().unwrap().metadata.params
+    }
+
+    /**
+     * Gets the [`CompiledFheProgram`] with the given name or [`None`] if not present.
+     */
+    pub fn get_program<'a, N>(&self, name: N) -> Option<&CompiledFheProgram>
+    where
+        N: AsRef<str>,
+    {
+        self.programs.get(name.as_ref())
+    }
+}
+
+#[derive(Clone, Serialize, Deserialize)]
 /**
  * An FHE program with its associated metadata.
  */

@@ -20,6 +20,16 @@ pub enum Error {
     IncorrectScheme,
 
     /**
+     * No FHE programs were given to the compiler.
+     */
+    NoPrograms,
+
+    /**
+     * Not all FHE programs passed to compilation used the same scheme.
+     */
+    SchemeMismatch,
+
+    /**
      * An internal error occurred in the SEAL library.
      */
     SealError(seal_fhe::Error),

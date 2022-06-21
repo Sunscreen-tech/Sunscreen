@@ -78,7 +78,7 @@ pub use seal_fhe::Plaintext as SealPlaintext;
 pub use sunscreen_compiler_macros::*;
 pub use sunscreen_fhe_program::{SchemeType, SecurityLevel};
 pub use sunscreen_runtime::{
-    CallSignature, Ciphertext, CompiledFheProgram, Error as RuntimeError, FheProgramInput,
+    Application, CallSignature, Ciphertext, CompiledFheProgram, Error as RuntimeError, FheProgramInput,
     FheProgramInputTrait, FheProgramMetadata, InnerCiphertext, InnerPlaintext, Params, Plaintext,
     PrivateKey, PublicKey, RequiredKeys, Runtime, WithContext,
 };

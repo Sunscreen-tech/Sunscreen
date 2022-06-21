@@ -184,8 +184,9 @@ pub fn fhe_program_impl(
 
         impl AsRef<str> for #fhe_program_struct_name {
             fn as_ref(&self) -> &str {
-                "horse"
-                //self.name()
+                use sunscreen::FheProgramFn;
+
+                self.name()
             }
         }
 

@@ -1,7 +1,7 @@
 use crate::params::{determine_params, PlainModulusConstraint};
 use crate::{
-    Application, CallSignature, Error, FheProgramMetadata, FrontendCompilation, Params, RequiredKeys, Result,
-    SchemeType, SecurityLevel,
+    Application, CallSignature, Error, FheProgramMetadata, FrontendCompilation, Params,
+    RequiredKeys, Result, SchemeType, SecurityLevel,
 };
 use std::collections::HashMap;
 use sunscreen_runtime::CompiledFheProgram;
@@ -134,7 +134,7 @@ impl Compiler {
         if self
             .fhe_program_fns
             .iter()
-            .any(|p| p.scheme_type() == self.fhe_program_fns.iter().next().unwrap().scheme_type())
+            .any(|p| p.scheme_type() != self.fhe_program_fns.iter().next().unwrap().scheme_type())
         {
             return Err(Error::SchemeMismatch);
         }
@@ -161,17 +161,17 @@ impl Compiler {
             .iter()
             .map(|prog| {
                 let execution_graph = prog.build(&params);
-                let mut required_keys = vec![];    
+                let mut required_keys = vec![];
                 let fhe_program_fn = execution_graph?.compile();
 
                 if fhe_program_fn.requires_relin_keys() {
                     required_keys.push(RequiredKeys::Relin);
                 }
-        
+
                 if fhe_program_fn.requires_galois_keys() {
                     required_keys.push(RequiredKeys::Galois);
                 }
-        
+
                 let metadata = FheProgramMetadata {
                     params: params.clone(),
                     required_keys,

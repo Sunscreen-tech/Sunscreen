@@ -299,10 +299,10 @@ pub struct Application {
 
 impl Application {
     /**
-     * Constructs a new Application from the given HashMap of programs. The 
-     * keys of this contain FHE program names and the values are the 
+     * Constructs a new Application from the given HashMap of programs. The
+     * keys of this contain FHE program names and the values are the
      * compiled FHE programs.
-     * 
+     *
      * # Remarks
      * The programs [`HashMap`] must contain at least 1 program or this
      * function will return [`Error::NoFhePrograms`].
@@ -312,9 +312,7 @@ impl Application {
             return Err(Error::NoFhePrograms);
         }
 
-        Ok(Self {
-            programs
-        })
+        Ok(Self { programs })
     }
 
     /**

@@ -61,7 +61,7 @@ pub fn determine_params(
                             n,
                             e
                         );
-                        continue;
+                        continue 'order_loop;
                     }
                 }
             }
@@ -108,7 +108,7 @@ pub fn determine_params(
                                 n,
                                 e
                             );
-                            continue;
+                            continue 'order_loop;
                         }
                     };
 
@@ -125,7 +125,7 @@ pub fn determine_params(
                         n,
                         e
                     );
-                    continue;
+                    continue 'order_loop;
                 }
                 Ok(c) => c,
             };
@@ -176,7 +176,7 @@ pub fn determine_params(
                     Ok(v) => Some(v),
                     Err(e) => {
                         trace!("Failed to create relin keys: {:#?}", e);
-                        continue;
+                        continue 'order_loop;
                     }
                 }
             } else {
@@ -188,7 +188,7 @@ pub fn determine_params(
                     Ok(v) => Some(v),
                     Err(e) => {
                         trace!("Failed to create galois keys: {:#?}", e);
-                        continue;
+                        continue 'order_loop;
                     }
                 }
             } else {
@@ -210,7 +210,7 @@ pub fn determine_params(
             let outputs = match outputs {
                 Ok(x) => x,
                 Err(_) => {
-                    continue;
+                    continue 'order_loop;
                 }
             };
 

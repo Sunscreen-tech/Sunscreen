@@ -169,19 +169,20 @@ fn run_fhe<F, T, U>(
     plain_modulus: PlainModulusConstraint,
 ) -> Result<(), Error>
 where
-    F: FheProgramFn,
+    F: FheProgramFn + Clone + 'static + AsRef<str>,
     U: From<T> + FheType + TypeName + std::fmt::Display,
 {
     let start = Instant::now();
 
-    let fhe_program = Compiler::with_fhe_program(c)
+    let app = Compiler::new()
+        .fhe_program(c.clone())
         .plain_modulus_constraint(plain_modulus)
         .compile()?;
     let elapsed = start.elapsed().as_secs_f64();
 
     println!("\t\tCompile time {}s", elapsed);
 
-    let runtime = Runtime::new(&fhe_program.metadata.params)?;
+    let runtime = Runtime::new(app.params())?;
 
     let n_0 = U::from(n_0);
     let n_1 = U::from(n_1);
@@ -204,7 +205,7 @@ where
     let start = Instant::now();
     let args: Vec<FheProgramInput> = vec![n_0_enc.into(), n_1_enc.into(), n_2_enc.into()];
 
-    let result = runtime.run(&fhe_program, args, &public_key)?;
+    let result = runtime.run(app.get_program(c).unwrap(), args, &public_key)?;
     let elapsed = start.elapsed().as_secs_f64();
 
     println!("\t\tRun time {}s", elapsed);

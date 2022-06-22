@@ -191,7 +191,7 @@ pub fn fhe_program_impl(
         }
 
         #[allow(non_upper_case_globals)]
-        const #fhe_program_name: #fhe_program_struct_name = #fhe_program_struct_name { };
+        #vis const #fhe_program_name: #fhe_program_struct_name = #fhe_program_struct_name { };
     });
 
     fhe_program

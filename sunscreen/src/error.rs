@@ -30,6 +30,11 @@ pub enum Error {
     SchemeMismatch,
 
     /**
+     * Multiple FHE programs with the same name were compiled.
+     */
+    NameCollision,
+
+    /**
      * An internal error occurred in the SEAL library.
      */
     SealError(seal_fhe::Error),

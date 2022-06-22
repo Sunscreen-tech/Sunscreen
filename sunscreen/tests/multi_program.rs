@@ -74,3 +74,34 @@ fn get_programs_iterates_every_program() {
     assert_eq!(app.get_programs().any(|(k, _)| k == "mul"), true);
     assert_eq!(app.get_programs().any(|(k, _)| k == "add"), true);
 }
+
+#[test]
+fn cant_compile_multiple_programs_with_same_name() {
+    mod foo {
+        use super::*;
+
+        #[fhe_program(scheme = "bfv")]
+        pub fn add(a: Cipher<Signed>, b: Cipher<Signed>) -> Cipher<Signed> {
+            a + b
+        }
+    }
+
+    mod bar {
+        use super::*;
+
+        #[fhe_program(scheme = "bfv")]
+        pub fn add(a: Cipher<Signed>, b: Cipher<Signed>) -> Cipher<Signed> {
+            a + b
+        }
+    }
+
+    let result = Compiler::new()
+        .fhe_program(foo::add)
+        .fhe_program(bar::add)
+        .compile();
+
+    match result {
+        Err(Error::NameCollision) => {},
+        _ => { panic!("Expected Error::NameCollision") }
+    };
+}

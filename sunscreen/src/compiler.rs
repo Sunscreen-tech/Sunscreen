@@ -3,7 +3,7 @@ use crate::{
     Application, CallSignature, Error, FheProgramMetadata, FrontendCompilation, Params,
     RequiredKeys, Result, SchemeType, SecurityLevel,
 };
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use sunscreen_runtime::CompiledFheProgram;
 
 #[derive(Debug, Clone)]
@@ -122,7 +122,7 @@ impl Compiler {
     /**
      * Comile the FHE program. If successful, returns an
      * [`Application`] containing a compiled form of each
-     * [`fhe_program`] argument.
+     * `fhe_program` argument.
      */
     pub fn compile(self) -> Result<Application> {
         if self.fhe_program_fns.len() == 0 {
@@ -138,6 +138,11 @@ impl Compiler {
             .any(|p| p.scheme_type() != self.fhe_program_fns.iter().next().unwrap().scheme_type())
         {
             return Err(Error::SchemeMismatch);
+        }
+
+        // Check that each fhe_program has a unique name
+        if self.fhe_program_fns.iter().map(|f| f.name().to_owned()).collect::<HashSet<String>>().len() != self.fhe_program_fns.len() {
+            return Err(Error::NameCollision);
         }
 
         let scheme = self.fhe_program_fns.iter().next().unwrap().scheme_type();

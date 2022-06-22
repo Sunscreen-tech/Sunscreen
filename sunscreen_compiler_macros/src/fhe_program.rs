@@ -107,7 +107,7 @@ pub fn fhe_program_impl(
     let fhe_program_struct_name =
         Ident::new(&format!("{}_struct", fhe_program_name), Span::call_site());
 
-    let fhe_program_name_literal = format!("\"{}\"", fhe_program_name);
+    let fhe_program_name_literal = format!("{}", fhe_program_name);
 
     let fhe_program = proc_macro::TokenStream::from(quote! {
         #[allow(non_camel_case_types)]

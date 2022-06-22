@@ -2,11 +2,10 @@ use std::io::{self, Write};
 use std::sync::mpsc::{Receiver, Sender};
 use std::thread::{self, JoinHandle};
 use sunscreen::{
-    Application,
     fhe_program,
     types::{bfv::Rational, Cipher},
-    Ciphertext, CompiledFheProgram, Compiler, Params, PlainModulusConstraint, PublicKey, Runtime,
-    RuntimeError,
+    Application, Ciphertext, CompiledFheProgram, Compiler, Params, PlainModulusConstraint,
+    PublicKey, Runtime, RuntimeError,
 };
 
 fn help() {
@@ -258,10 +257,34 @@ fn bob(
             };
 
             let mut c = match op {
-                Operand::Add => runtime.run(app.get_program("add").unwrap(), vec![left, right], &public_key).unwrap(),
-                Operand::Sub => runtime.run(app.get_program("sub").unwrap(), vec![left, right], &public_key).unwrap(),
-                Operand::Mul => runtime.run(app.get_program("mul").unwrap(), vec![left, right], &public_key).unwrap(),
-                Operand::Div => runtime.run(app.get_program("div").unwrap(), vec![left, right], &public_key).unwrap(),
+                Operand::Add => runtime
+                    .run(
+                        app.get_program("add").unwrap(),
+                        vec![left, right],
+                        &public_key,
+                    )
+                    .unwrap(),
+                Operand::Sub => runtime
+                    .run(
+                        app.get_program("sub").unwrap(),
+                        vec![left, right],
+                        &public_key,
+                    )
+                    .unwrap(),
+                Operand::Mul => runtime
+                    .run(
+                        app.get_program("mul").unwrap(),
+                        vec![left, right],
+                        &public_key,
+                    )
+                    .unwrap(),
+                Operand::Div => runtime
+                    .run(
+                        app.get_program("div").unwrap(),
+                        vec![left, right],
+                        &public_key,
+                    )
+                    .unwrap(),
             };
 
             // Our FHE program produces a single value, so move the value out of the vector.

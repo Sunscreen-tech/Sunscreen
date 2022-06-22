@@ -2,6 +2,7 @@ use std::io::{self, Write};
 use std::sync::mpsc::{Receiver, Sender};
 use std::thread::{self, JoinHandle};
 use sunscreen::{
+    Application,
     fhe_program,
     types::{bfv::Fractional, Cipher},
     Ciphertext, CompiledFheProgram, Compiler, Params, PlainModulusConstraint, PublicKey, Runtime,
@@ -205,7 +206,7 @@ fn alice(
     })
 }
 
-fn compile_fhe_programs() -> (CompiledFheProgram, CompiledFheProgram, CompiledFheProgram) {
+fn compile_fhe_programs() -> Application{
     #[fhe_program(scheme = "bfv")]
     fn add(a: Cipher<Fractional<64>>, b: Cipher<Fractional<64>>) -> Cipher<Fractional<64>> {
         a + b
@@ -221,29 +222,15 @@ fn compile_fhe_programs() -> (CompiledFheProgram, CompiledFheProgram, CompiledFh
         a * b
     }
 
-    // In order for ciphertexts to be compatible between FHE programs, they must all use the same
-    // parameters.
-    // With rational numbers, each of these FHE programs produces roughly the same amount of noise.
-    // To be sure, we compile one of them with the default parameter search, and explicitly
-    // pass these parameters when compiling the other FHE programs so they are compatible.
-    let mul_program = Compiler::with_fhe_program(mul)
+    Compiler::new()
+        .fhe_program(add)
+        .fhe_program(sub)
+        .fhe_program(mul)
         // We need to make the noise margin large enough so we can do a few repeated calculations.
         .additional_noise_budget(32)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(1_000_000))
         .compile()
-        .unwrap();
-
-    let add_program = Compiler::with_fhe_program(add)
-        .with_params(&mul_program.metadata.params)
-        .compile()
-        .unwrap();
-
-    let sub_program = Compiler::with_fhe_program(sub)
-        .with_params(&mul_program.metadata.params)
-        .compile()
-        .unwrap();
-
-    (add_program, sub_program, mul_program)
+        .unwrap()
 }
 
 fn bob(
@@ -253,13 +240,13 @@ fn bob(
     send_res: Sender<Ciphertext>,
 ) -> JoinHandle<()> {
     thread::spawn(move || {
-        let (add, sub, mul) = compile_fhe_programs();
+        let app = compile_fhe_programs();
 
-        send_params.send(add.metadata.params.clone()).unwrap();
+        send_params.send(app.params().clone()).unwrap();
 
         let public_key = recv_pub.recv().unwrap();
 
-        let runtime = Runtime::new(&add.metadata.params).unwrap();
+        let runtime = Runtime::new(app.params()).unwrap();
 
         let mut ans = runtime
             .encrypt(Fractional::<64>::try_from(0f64).unwrap(), &public_key)
@@ -281,12 +268,12 @@ fn bob(
             };
 
             let mut c = match op {
-                Operand::Add => runtime.run(&add, vec![left, right], &public_key).unwrap(),
-                Operand::Sub => runtime.run(&sub, vec![left, right], &public_key).unwrap(),
-                Operand::Mul => runtime.run(&mul, vec![left, right], &public_key).unwrap(),
+                Operand::Add => runtime.run(app.get_program("add").unwrap(), vec![left, right], &public_key).unwrap(),
+                Operand::Sub => runtime.run(app.get_program("sub").unwrap(), vec![left, right], &public_key).unwrap(),
+                Operand::Mul => runtime.run(app.get_program("mul").unwrap(), vec![left, right], &public_key).unwrap(),
                 // To do division, Alice must send us 1 / b and we
                 // multiply.
-                Operand::Div => runtime.run(&mul, vec![left, right], &public_key).unwrap(),
+                Operand::Div => runtime.run(app.get_program("mul").unwrap(), vec![left, right], &public_key).unwrap(),
             };
 
             // Our FHE program produces a single value, so move the value out of the vector.

@@ -13,12 +13,13 @@ To decrypt, simply call `decrypt()` using your private key and the data you want
 # }
 #
 # fn main() {
-#    let fhe_program = Compiler::with_fhe_program(noop)
+#    let app = Compiler::new()
+#        .fhe_program(noop)
 #        .plain_modulus_constraint(PlainModulusConstraint::Raw(5))
 #        .compile()
 #        .unwrap();
 #
-#    let runtime = Runtime::new(&fhe_program.metadata.params).unwrap();
+#    let runtime = Runtime::new(app.params()).unwrap();
 #    let (public_key, private_key) = runtime.generate_keys().unwrap();
 #
 #    let val = Signed::from(15);

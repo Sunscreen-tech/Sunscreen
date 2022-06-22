@@ -12,11 +12,12 @@ To encrypt data, simply call `encrypt()` on `Runtime`:
 # }
 #
 # fn main() {
-#    let fhe_program = Compiler::with_fhe_program(noop)
+#    let app = Compiler::new()
+#        .fhe_program(noop)
 #        .compile()
 #        .unwrap();
 #
-#    let runtime = Runtime::new(&fhe_program.metadata.params).unwrap();
+#    let runtime = Runtime::new(app.params()).unwrap();
 #    let (public_key, private_key) = runtime.generate_keys().unwrap();
 #
     let val = Signed::from(15);

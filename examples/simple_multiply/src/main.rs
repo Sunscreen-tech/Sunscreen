@@ -25,30 +25,28 @@ fn simple_multiply(a: Cipher<Signed>, b: Cipher<Signed>) -> Cipher<Signed> {
 fn main() -> Result<(), Error> {
     /*
      * Here we compile the FHE program we previously declared. In the first step,
-     * we create our compiler and use the default settings.
+     * we create our compiler, specify that we want to compile
+     * `simple_multiple`, and build it with the default settings.
      *
-     * Afterwards, we simply compile. The `?` operator is Rust's standard
+     * The `?` operator is Rust's standard
      * error handling mechanism; it returns from the current function (`main`)
-     * when an error occurs (shouldn't happen) or emits our compiled
-     * program on success.
-     *
-     * The compiler transforms our program and chooses encryption scheme parameters.
-     * These parameters are a tradeoff between correctness and performance;
-     * if parameters are too small data corruption occurs, but if they're too large,
-     * your program runs more slowly than necessary.
-     *
-     * Sunscreen allows experts to explicitly set the scheme parameters,
-     * but the default behavior has Sunscreen pick parameters for you, yielding
-     * good performance maintaining correctness for nearly all applications.
-     *
+     * when an error occurs (shouldn't happen).
+     * 
+     * On success, compilation returns an [`Application`], which
+     * stores a group of FHE programs compiled under the same scheme parameters.
+     * These parameters are an implementation detail of FHE.
+     * While Sunscreen allows experts to explicitly set the scheme parameters,
+     * we're using the default behavior: automatically choose parameters
+     * yielding good performance while maintaining correctness.
      */
-    let fhe_program = Compiler::with_fhe_program(simple_multiply).compile()?;
+    let app = Compiler::new().fhe_program(simple_multiply).compile()?;
 
     /*
      * Next, we construct a runtime, which provides the APIs for encryption,
-     * decryption, and running an FHE program.
+     * decryption, and running an FHE program. We need to pass
+     * the scheme parameters our compiler chose.
      */
-    let runtime = Runtime::new(&fhe_program.metadata.params)?;
+    let runtime = Runtime::new(app.params())?;
 
     /*
      * Here, we generate a public and private key pair. Normally, Alice does this,
@@ -63,7 +61,11 @@ fn main() -> Result<(), Error> {
      * Now, we run the FHE program with our arguments. This produces a results
      * `Vec` containing the encrypted outputs of the FHE program.
      */
-    let results = runtime.run(&fhe_program, vec![a, b], &public_key)?;
+    let results = runtime.run(
+        app.get_program(simple_multiply).unwrap(),
+        vec![a, b],
+        &public_key,
+    )?;
 
     /*
      * Finally, we decrypt our program's output so we can check it. Our FHE

@@ -10,9 +10,7 @@ Some of these keys can be fairly large, the size of which is determined by schem
 
 ## How to prune `PublicKey`
 
-You can `compile()` an FHE program and look at `fhe_program.metadata.required_keys` to get a list of required keys for your specific program.
-
-You can then remove unneeded keys. For example:
+Each compiled FHE program contains a list the keys it needs at runtime in `fhe_program.metadata.required_keys`. You can then remove unneeded keys. For example:
 ```rust
 # use sunscreen::{
 #     fhe_program,
@@ -25,11 +23,12 @@ You can then remove unneeded keys. For example:
 # }
 #
 # fn main() {
-#    let fhe_program = Compiler::with_fhe_program(noop)
+#    let app = Compiler::new()
+#        .fhe_program(noop)
 #        .compile()
 #        .unwrap();
 #
-#    let runtime = Runtime::new(&fhe_program.metadata.params).unwrap();
+#    let runtime = Runtime::new(app.params()).unwrap();
 let (public_key, private_key) = runtime.generate_keys().unwrap();
 
 // Shadow and overwrite the public_key, removing the galois_key and relin_key

@@ -120,8 +120,9 @@ impl Compiler {
     }
 
     /**
-     * Comile the FHE program. If successful, returns a tuple of the [`FheProgram`](crate::FheProgram) and the [`Params`] suitable
-     * for running it.
+     * Comile the FHE program. If successful, returns an
+     * [`Application`] containing a compiled form of each
+     * [`fhe_program`] argument.
      */
     pub fn compile(self) -> Result<Application> {
         if self.fhe_program_fns.len() == 0 {

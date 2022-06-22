@@ -4,7 +4,7 @@ use std::thread::{self, JoinHandle};
 use sunscreen::{
     fhe_program,
     types::{bfv::Rational, Cipher},
-    Application, Ciphertext, CompiledFheProgram, Compiler, Params, PlainModulusConstraint,
+    Application, Ciphertext, Compiler, Params, PlainModulusConstraint,
     PublicKey, Runtime, RuntimeError,
 };
 

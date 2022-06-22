@@ -20,11 +20,12 @@ The process to serialize and deserialize any type is the same, but this example 
 # }
 #
 # fn main() {
-#    let fhe_program = Compiler::with_fhe_program(noop)
+#    let app = Compiler::new()
+#        .fhe_program(noop)
 #        .compile()
 #        .unwrap();
 #
-#    let runtime = Runtime::new(&fhe_program.metadata.params).unwrap();
+#    let runtime = Runtime::new(app.params()).unwrap();
 #    let (public_key, _) = runtime.generate_keys().unwrap();
     let c = runtime
         .encrypt(Signed::from(20), &public_key)

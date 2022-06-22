@@ -80,9 +80,9 @@ pub use seal_fhe::Plaintext as SealPlaintext;
 pub use sunscreen_compiler_macros::*;
 pub use sunscreen_fhe_program::{SchemeType, SecurityLevel};
 pub use sunscreen_runtime::{
-    CallSignature, Ciphertext, CompiledFheProgram, Error as RuntimeError,
-    FheProgramInput, FheProgramInputTrait, FheProgramMetadata, InnerCiphertext, InnerPlaintext,
-    Params, Plaintext, PrivateKey, PublicKey, RequiredKeys, Runtime, WithContext,
+    CallSignature, Ciphertext, CompiledFheProgram, Error as RuntimeError, FheProgramInput,
+    FheProgramInputTrait, FheProgramMetadata, InnerCiphertext, InnerPlaintext, Params, Plaintext,
+    PrivateKey, PublicKey, RequiredKeys, Runtime, WithContext,
 };
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -102,7 +102,7 @@ impl Application {
      * # Remarks
      * The programs [`HashMap`] must contain at least 1 program or this
      * function will return [`Error::NoPrograms`].
-     * 
+     *
      * You should generally not call this function
      * It is an implementation detail of compilation.
      */
@@ -137,8 +137,7 @@ impl Application {
     /**
      * Returns an iterator over all the compiled programs.
      */
-    pub fn get_programs(&self) -> impl Iterator<Item=(&String,&CompiledFheProgram)>
-    {
+    pub fn get_programs(&self) -> impl Iterator<Item = (&String, &CompiledFheProgram)> {
         self.programs.iter()
     }
 }

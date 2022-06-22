@@ -4,8 +4,8 @@ use std::thread::{self, JoinHandle};
 use sunscreen::{
     fhe_program,
     types::{bfv::Fractional, Cipher},
-    Application, Ciphertext, Compiler, Params, PlainModulusConstraint,
-    PublicKey, Runtime, RuntimeError,
+    Application, Ciphertext, Compiler, Params, PlainModulusConstraint, PublicKey, Runtime,
+    RuntimeError,
 };
 
 fn help() {

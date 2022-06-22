@@ -31,7 +31,7 @@ fn main() -> Result<(), Error> {
      * The `?` operator is Rust's standard
      * error handling mechanism; it returns from the current function (`main`)
      * when an error occurs (shouldn't happen).
-     * 
+     *
      * On success, compilation returns an [`Application`], which
      * stores a group of FHE programs compiled under the same scheme parameters.
      * These parameters are an implementation detail of FHE.

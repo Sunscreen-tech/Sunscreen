@@ -141,7 +141,14 @@ impl Compiler {
         }
 
         // Check that each fhe_program has a unique name
-        if self.fhe_program_fns.iter().map(|f| f.name().to_owned()).collect::<HashSet<String>>().len() != self.fhe_program_fns.len() {
+        if self
+            .fhe_program_fns
+            .iter()
+            .map(|f| f.name().to_owned())
+            .collect::<HashSet<String>>()
+            .len()
+            != self.fhe_program_fns.len()
+        {
             return Err(Error::NameCollision);
         }
 

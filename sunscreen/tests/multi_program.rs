@@ -101,7 +101,9 @@ fn cant_compile_multiple_programs_with_same_name() {
         .compile();
 
     match result {
-        Err(Error::NameCollision) => {},
-        _ => { panic!("Expected Error::NameCollision") }
+        Err(Error::NameCollision) => {}
+        _ => {
+            panic!("Expected Error::NameCollision")
+        }
     };
 }

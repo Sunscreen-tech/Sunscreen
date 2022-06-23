@@ -123,24 +123,24 @@ impl Compiler {
      * Compile the FHE program. If successful, returns an
      * [`Application`] containing a compiled form of each
      * `fhe_program` argument.
-     * 
+     *
      * # Remarks
      * Each compiled FHE program in the returned [`Application`]
      * is compiled under the same [`Params`] so ciphertexts can be
      * used interchangeably between programs.
-     * 
+     *
      * You must specify at least one `fhe_program` in the builder
-     * before calling compile. `compile` returns a 
+     * before calling compile. `compile` returns a
      * [`Error::NoPrograms`] if you fail to do so.
-     * 
-     * Each specified FHE program must have a unique name, 
-     * regardless of its parent module or crate. `compile` returns 
+     *
+     * Each specified FHE program must have a unique name,
+     * regardless of its parent module or crate. `compile` returns
      * a [`Error::NameCollision`] if two or more FHE programs
      * have the same name.
-     * 
+     *
      * Each FHE program must use the same scheme or `compile`
      * will return a [`Error::NameCollision`] error.
-     * 
+     *
      */
     pub fn compile(self) -> Result<Application> {
         if self.fhe_program_fns.len() == 0 {

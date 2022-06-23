@@ -51,7 +51,7 @@ We invoke the compiler to build our `simple_multiply` FHE program. Compilation t
 
 What's the `?` after at the end of `.compile()`? For the uninitiated, the [`?`](https://doc.rust-lang.org/book/ch09-02-recoverable-errors-with-result.html) operator propagates errors. Fallible expressions in Rust emit [`Results`](https://doc.rust-lang.org/std/result/enum.Result.html), which can contain either a value or an error. Using `?` unwraps the value in a successful result or immediately returns the error from a failed one, letting the caller of the current function deal with it. We should see the former after compilation, as our program is well-formed.
 
-On success, the compiler emits an `Application` bundle containing the compiled form of each `.fhe_program()` builder invocation. In our case, `app` will contain a single compiled FHE program named `simple_multiply`.
+On success, the compiler emits an `Application` bundle containing the compiled form of each `.fhe_program()` argument. In our case, `app` will contain a single compiled FHE program named `simple_multiply`.
 
 Next, we need a public and private key pair. In order to generate keys, we'll first construct a `Runtime` with the parameters we got from compilation. This allows us to encrypt/decrypt data and run FHE programs.
 

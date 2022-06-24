@@ -4,11 +4,11 @@
 
 Sunscreen is an ecosystem for building privacy-preserving applications using fully homomorphic encryption (and later on zero-knowledge proofs as well). Fully homomorphic encryption (FHE) is a special kind of encryption scheme that allows you to perform computations directly on encrypted data. Since it's quite hard to write FHE programs, we've created a "compiler" to make this process easier for developers.
 
-Documentation can be found [here](https://docs.sunscreen.tech). If you'd like to try out our FHE compiler before downloading it, we also offer [a playground](https://playground.sunscreen.tech).
+Documentation can be found [here](https://docs.sunscreen.tech). 
 
-This project is licensed under the terms of the GNU AGPLv3 license. If you require a different license for your application, please reach out to us.
+If you'd like to try out our FHE compiler before downloading it, we also offer [a playground](https://playground.sunscreen.tech).
 
-*WARNING!* This library is meant for experiments only. It has not been externally audited and is *not* intended for use in production. 
+*WARNING!* This library is meant for experiments only. It has not been externally audited and is *not* intended for use in production yet. 
 
 # Set up
 These directions apply for the requirements to *develop the sunscreen platform itself*, which may be more than needed to merely consume it as a dependency. If you wish to develop an application using Sunscreen, see the installation 
@@ -73,6 +73,9 @@ Working Sunscreen is as you'd expect with any other Rust repository:
 
 ## Debug
 We have a `launch.json` checked in that defines a bunch of debug configurations. In VSCode, you should see a bunch of dropdowns in the debug menu to debug the tests and examples.
+
+# License
+This project is licensed under the terms of the GNU AGPLv3 license. If you require a different license for your application, please reach out to us.
 
 # Contribute
 Feel free to open up issues!

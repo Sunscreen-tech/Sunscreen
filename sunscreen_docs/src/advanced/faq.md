@@ -15,6 +15,7 @@ In terms of plans for our compiler specifically, we'd like to add support for:
 - batching
 - choosing scheme parameters based on multiple FHE programs as inputs
 - using the outputs of one FHE program as the inputs to another FHE program
+- providing rigorous analysis of noise growth
 
 In terms of broader plans for Sunscreen, some of our next milestones include:
 - helping users manage large FHE ciphertexts

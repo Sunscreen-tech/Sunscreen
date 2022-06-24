@@ -146,7 +146,7 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
 
     let inputs = inputs
         .iter()
-        .map(|v| Arc::new(v.clone()) )
+        .map(|v| Arc::new(v.clone()))
         .collect::<Vec<Arc<SealData>>>();
 
     for _ in 0..ir.graph.node_count() {

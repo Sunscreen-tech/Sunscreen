@@ -76,41 +76,9 @@ jobs:
         DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
         DOCKER_USER: sunscreendeployment
 
-  build-docker-tools:
-    runs-on: ubuntu-latest
-    needs: ['build-and-prime-cache', 'build-docker-rust']
-
-    strategy:
-      matrix:
-        tool: ["rustfmt", "clippy", "miri"]
-
-    steps:
-    - uses: actions/checkout@v3
-      with:
-        submodules: 'recursive'
-    - uses: actions/download-artifact@v3
-      with:
-        name: build-output
-        path: rust-playground/target/release
-    - name: chmod 755
-      run: chmod 755 ./target/release/rust-playground-top-crates
-      working-directory: ./rust-playground
-    - name: Run top crates
-      run: ./target/release/rust-playground-top-crates --top-n 0 --omit-cookbook     
-      working-directory: ./rust-playground
-    - name: Build docker images
-      run: ./build.sh
-      working-directory: ./rust-playground/compiler
-      env:
-        CHANNELS_TO_BUILD: ""
-        TOOLS_TO_BUILD: ${{ matrix.tool }}
-        DOCKER_REGISTRY: sunscreendeployment
-        DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
-        DOCKER_USER: sunscreendeployment
-
   deploy:
     runs-on: ubuntu-latest
-    needs: ['build-and-prime-cache', 'build-docker-tools', 'build-docker-rust']
+    needs: ['build-and-prime-cache', 'build-docker-rust']
     
     steps:
     - uses: actions/checkout@v3

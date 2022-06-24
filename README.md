@@ -80,4 +80,4 @@ This project is licensed under the terms of the GNU AGPLv3 license. If you requi
 # Contribute
 Feel free to open up issues!
 
-If you'd like to submit a pull request, you'll need to agree to a Contributor License Agreement. Please reach out to us at hello@sunscreen.tech for additional info.
+If you'd like to submit a pull request, you'll need to agree to a Contributor License Agreement. For more info, contact us at hello@sunscreen.tech.

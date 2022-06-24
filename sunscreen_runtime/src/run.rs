@@ -9,6 +9,7 @@ use std::borrow::Cow;
 use std::collections::VecDeque;
 #[cfg(not(target_arch = "wasm32"))]
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::Arc;
 
 use seal_fhe::{
     Ciphertext, Error as SealError, Evaluator, GaloisKeys, Plaintext, RelinearizationKeys,
@@ -100,9 +101,9 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
     galois_keys: &Option<&GaloisKeys>,
 ) -> Result<Vec<Ciphertext>, FheProgramRunFailure> {
     fn get_data<'a>(
-        data: &'a [AtomicCell<Option<Cow<SealData>>>],
+        data: &'a [AtomicCell<Option<Arc<SealData>>>],
         index: usize,
-    ) -> Result<&'a SealData, FheProgramRunFailure> {
+    ) -> Result<&'a Arc<SealData>, FheProgramRunFailure> {
         let data = data.get(index).ok_or(FheProgramRunFailure::MissingData)?;
 
         // This is correct so long as the IR program is indeed a DAG executed in topological order
@@ -117,10 +118,10 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
     }
 
     fn get_ciphertext<'a>(
-        data: &'a [AtomicCell<Option<Cow<SealData>>>],
+        data: &'a [AtomicCell<Option<Arc<SealData>>>],
         index: usize,
     ) -> Result<&'a Ciphertext, FheProgramRunFailure> {
-        let val = get_data(data, index)?;
+        let val = get_data(data, index)?.as_ref();
 
         match val {
             SealData::Ciphertext(ref c) => Ok(c),
@@ -129,10 +130,10 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
     }
 
     fn get_plaintext<'a>(
-        data: &'a [AtomicCell<Option<Cow<SealData>>>],
+        data: &'a [AtomicCell<Option<Arc<SealData>>>],
         index: usize,
     ) -> Result<&'a Plaintext, FheProgramRunFailure> {
-        let val = get_data(data, index)?;
+        let val = get_data(data, index)?.as_ref();
 
         match val {
             SealData::Plaintext(ref c) => Ok(c),
@@ -140,8 +141,13 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
         }
     }
 
-    let mut data: Vec<AtomicCell<Option<Cow<SealData>>>> =
+    let mut data: Vec<AtomicCell<Option<Arc<SealData>>>> =
         Vec::with_capacity(ir.graph.node_count());
+
+    let inputs = inputs
+        .iter()
+        .map(|v| Arc::new(v.clone()))
+        .collect::<Vec<Arc<SealData>>>();
 
     for _ in 0..ir.graph.node_count() {
         data.push(AtomicCell::new(None));
@@ -154,11 +160,11 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
 
             match &node.operation {
                 InputCiphertext(id) => {
-                    data[index.index()].store(Some(Cow::Borrowed(&inputs[*id])));
+                    data[index.index()].store(Some(inputs[*id].clone()));
                     // moo
                 }
                 InputPlaintext(id) => {
-                    data[index.index()].store(Some(Cow::Borrowed(&inputs[*id])));
+                    data[index.index()].store(Some(inputs[*id].clone()));
                 }
                 ShiftLeft => {
                     let (left, right) = get_left_right_operands(ir, index);
@@ -180,7 +186,7 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
                             .ok_or(FheProgramRunFailure::MissingGaloisKeys)?,
                     )?;
 
-                    data[index.index()].store(Some(Cow::Owned(c.into())));
+                    data[index.index()].store(Some(Arc::new(c.into())));
                 }
                 ShiftRight => {
                     let (left, right) = get_left_right_operands(ir, index);
@@ -202,7 +208,7 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
                             .ok_or(FheProgramRunFailure::MissingGaloisKeys)?,
                     )?;
 
-                    data[index.index()].store(Some(Cow::Owned(c.into())));
+                    data[index.index()].store(Some(Arc::new(c.into())));
                 }
                 Add => {
                     let (left, right) = get_left_right_operands(ir, index);
@@ -212,7 +218,7 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
 
                     let c = evaluator.add(&a, &b)?;
 
-                    data[index.index()].store(Some(Cow::Owned(c.into())));
+                    data[index.index()].store(Some(Arc::new(c.into())));
                 }
                 AddPlaintext => {
                     let (left, right) = get_left_right_operands(ir, index);
@@ -222,7 +228,7 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
 
                     let c = evaluator.add_plain(&a, &b)?;
 
-                    data[index.index()].store(Some(Cow::Owned(c.into())));
+                    data[index.index()].store(Some(Arc::new(c.into())));
                 }
                 Multiply => {
                     let (left, right) = get_left_right_operands(ir, index);
@@ -232,7 +238,7 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
 
                     let c = evaluator.multiply(&a, &b)?;
 
-                    data[index.index()].store(Some(Cow::Owned(c.into())));
+                    data[index.index()].store(Some(Arc::new(c.into())));
                 }
                 MultiplyPlaintext => {
                     let (left, right) = get_left_right_operands(ir, index);
@@ -242,7 +248,7 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
 
                     let c = evaluator.multiply_plain(&a, &b)?;
 
-                    data[index.index()].store(Some(Cow::Owned(c.into())));
+                    data[index.index()].store(Some(Arc::new(c.into())));
                 }
                 SwapRows => {
                     let galois_keys = galois_keys
@@ -255,7 +261,7 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
 
                     let y = evaluator.rotate_columns(&x, galois_keys)?;
 
-                    data[index.index()].store(Some(Cow::Owned(y.into())));
+                    data[index.index()].store(Some(Arc::new(y.into())));
                 }
                 Relinearize => {
                     let relin_keys = relin_keys
@@ -268,7 +274,7 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
 
                     let c = evaluator.relinearize(&a, relin_keys)?;
 
-                    data[index.index()].store(Some(Cow::Owned(c.into())));
+                    data[index.index()].store(Some(Arc::new(c.into())));
                 }
                 Negate => {
                     let x_id = get_unary_operand(ir, index);
@@ -277,7 +283,7 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
 
                     let y = evaluator.negate(&x)?;
 
-                    data[index.index()].store(Some(Cow::Owned(y.into())));
+                    data[index.index()].store(Some(Arc::new(y.into())));
                 }
                 Sub => {
                     let (left, right) = get_left_right_operands(ir, index);
@@ -287,7 +293,7 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
 
                     let c = evaluator.sub(&a, &b)?;
 
-                    data[index.index()].store(Some(Cow::Owned(c.into())));
+                    data[index.index()].store(Some(Arc::new(c.into())));
                 }
                 SubPlaintext => {
                     let (left, right) = get_left_right_operands(ir, index);
@@ -297,7 +303,7 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
 
                     let c = evaluator.sub_plain(&a, &b)?;
 
-                    data[index.index()].store(Some(Cow::Owned(c.into())));
+                    data[index.index()].store(Some(Arc::new(c.into())));
                 }
                 Literal(x) => {
                     match x {
@@ -313,7 +319,7 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
                                     }
 
                                     data[index.index()]
-                                        .store(Some(Cow::Owned(p[0].data.clone().into())))
+                                        .store(Some(Arc::new(p[0].data.clone().into())))
                                 }
                             };
                         }
@@ -325,7 +331,7 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
 
                     let a = get_data(&data, input.index())?;
 
-                    data[index.index()].store(Some(Cow::Borrowed(&a)));
+                    data[index.index()].store(Some(a.clone()));
                 }
             };
 

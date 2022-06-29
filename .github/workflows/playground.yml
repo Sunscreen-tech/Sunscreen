@@ -116,7 +116,9 @@ jobs:
         DOCKER_USER: sunscreendeployment
         DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
     - name: docker push
-      run: docker push playground:$DEPLOYMENT_ID
+      run: docker push $DOCKER_REGISTRY/playground:$DEPLOYMENT_ID
+      env:
+        DOCKER_REGISTRY: sunscreendeployment
 
   deploy:
     runs-on: ubuntu-latest

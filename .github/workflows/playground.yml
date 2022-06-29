@@ -6,20 +6,11 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+  DEPLOYMENT_ID: ${{ github.run_id }}.${{ github.run_attempt }}
 
 concurrency: production
 
 jobs:
-  create-deployment-id:
-    runs-on: ubuntu-latest
-
-    outputs:
-      deployment_id: ${{ steps.step1.outputs.deployment_id }}
-
-    steps:
-    - name: create id
-      run: echo "::set-output name=deployment_id::$GITHUB_RUN_ID.$GITHUB_RUN_ATTEMPT"
-
   build-and-prime-cache:
     runs-on: ubuntu-latest
 
@@ -56,7 +47,7 @@ jobs:
 
   build-docker-rust:
     runs-on: ubuntu-latest
-    needs: ['build-and-prime-cache', 'create-deployment-id']
+    needs: ['build-and-prime-cache']
 
     strategy:
       matrix:
@@ -85,11 +76,11 @@ jobs:
         DOCKER_REGISTRY: sunscreendeployment
         DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
         DOCKER_USER: sunscreendeployment
-        DEPLOYMENT_ID: ${{ needs.create-deployment-id.outputs.deployment_id }}
+        
 
   build-playground-image:
     runs-on: ubuntu-latest
-    needs: ['build-and-prime-cache', 'create-deployment-id']
+    needs: ['build-and-prime-cache']
 
     steps:
     - uses: actions/checkout@v3
@@ -120,9 +111,9 @@ jobs:
       run: docker build --build-arg docker_repo=sunscreendeployment -f deployment/Dockerfile .
       working-directory: ./rust-playground
     - name: docker tag
-      run: docker tag playground playground:${{ needs.create-deployment-id.outputs.deployment_id }}
+      run: docker tag playground playground:$DEPLOYMENT_ID
     - name: docker push
-      run: docker push playground:${{ needs.create-deployment-id.outputs.deployment_id }}
+      run: docker push playground:$DEPLOYMENT_ID
 
   deploy:
     runs-on: ubuntu-latest

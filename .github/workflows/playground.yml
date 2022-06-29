@@ -44,6 +44,7 @@ jobs:
           rust-playground/target/release/ui
           rust-playground/target/release/rust-playground-top-crates
           rust-playground/target/release/deployment
+          rust-playground/ui/frontend/build
 
   build-docker-rust:
     runs-on: ubuntu-latest

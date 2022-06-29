@@ -111,7 +111,10 @@ jobs:
       run: docker build -t playground:$DEPLOYMENT_ID --build-arg docker_repo=sunscreendeployment -f deployment/Dockerfile .
       working-directory: ./rust-playground
     - name: docker login
-      run: echo ${DOCKER_PASSWORD} | docker login --username ${DOCKER_USER} --password-stdin
+      run: docker login --username ${DOCKER_USER} --password ${DOCKER_PASSWORD}
+      env:
+        DOCKER_USER: sunscreendeployment
+        DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
     - name: docker push
       run: docker push playground:$DEPLOYMENT_ID
 

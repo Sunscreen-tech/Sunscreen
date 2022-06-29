@@ -44,7 +44,6 @@ jobs:
           rust-playground/target/release/ui
           rust-playground/target/release/rust-playground-top-crates
           rust-playground/target/release/deployment
-          rust-playground/ui/frontend/build
 
   build-docker-rust:
     runs-on: ubuntu-latest
@@ -61,7 +60,7 @@ jobs:
     - uses: actions/download-artifact@v3
       with:
         name: build-output
-        path: rust-playground/target/release/rust-playground-top-crates
+        path: rust-playground/target/release
     - name: chmod 755
       run: chmod 755 ./target/release/rust-playground-top-crates
       working-directory: ./rust-playground
@@ -89,11 +88,23 @@ jobs:
     - uses: actions/download-artifact@v3
       with:
         name: build-output
+        path:
+          rust-playground/target/release
+    - uses: actions/cache@v3
+      with:
         path: |
-          rust-playground/target/release/ui
-          rust-playground/target/release/rust-playground-top-crates
-          rust-playground/ui/frontend/build
-
+          ~/.cargo/bin/
+          ~/.cargo/registry/index/
+          ~/.cargo/registry/cache/
+          ~/.cargo/git/db/
+          rust-playground/target
+          rust-playground/ui/frontend/node_modules
+        key: ${{ runner.os }}-playground-${{ hashFiles('rust-playground/Cargo.lock') }}-${{ hashFiles('rust-playground/ui/frontend/yarn.lock') }}
+    - name: Install frontend UI dependencies
+      run: yarn install
+      working-directory: ./rust-playground/ui/frontend
+    - name: Compile frontend UI code
+      run: yarn build
     - name: docker build
       run: docker build --build-arg docker_repo=sunscreendeployment -f deployment/Dockerfile .
       working-directory: ./rust-playground

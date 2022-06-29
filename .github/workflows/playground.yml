@@ -6,6 +6,7 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+  DEPLOYMENT_ID: ${{ env.GITHUB_RUN_ID }}.${{ env.GITHUB_RUN_ATTEMPT }}
 
 concurrency: production
 
@@ -76,49 +77,35 @@ jobs:
         DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
         DOCKER_USER: sunscreendeployment
 
+  build-playground-image:
+    runs-on: ubuntu-latest
+    needs: ['build-and-prime-cache']
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: 'recursive'
+    - uses: actions/download-artifact@v3
+      with:
+        name: build-output
+        path: rust-playground/target/release
+    - name: docker build
+      run: docker build --build-arg docker_repo=sunscreendeployment -f deployment/Dockerfile .
+      working-directory: ./rust-playground
+    - name: docker tag
+      run: docker tag playground playground:$DEPLOYMENT_ID
+    - name: docker push
+      run: docker push playground:DEPLOYMENT_ID
+
   deploy:
     runs-on: ubuntu-latest
-    needs: ['build-and-prime-cache', 'build-docker-rust']
+    needs: ['build-and-prime-cache', 'build-playground-image', 'build-docker-rust']
     
     steps:
     - uses: actions/checkout@v3
       with:
         submodules: 'recursive'
-    - uses: actions/cache@v3
-      with:
-        path: |
-          ~/.cargo/bin/
-          ~/.cargo/registry/index/
-          ~/.cargo/registry/cache/
-          ~/.cargo/git/db/
-          rust-playground/target
-          rust-playground/ui/frontend/node_modules
-        key: ${{ runner.os }}-playground-${{ hashFiles('rust-playground/Cargo.lock') }}-${{ hashFiles('rust-playground/ui/frontend/yarn.lock') }}
-    - name: Install frontend UI dependencies
-      run: yarn install
-      working-directory: ./rust-playground/ui/frontend
-    - name: Compile frontend UI code
-      run: yarn build
-      working-directory: ./rust-playground/ui/frontend
-    - uses: actions/download-artifact@v3
-      with:
-        name: build-output
-        path: rust-playground/target/release
-    - name: chmod 755
-      run: chmod 755 ./target/release/ui ./target/release/deployment
-      working-directory: ./rust-playground
-    - name: Create EC2 instance
-      run: ./target/release/deployment
-      working-directory: ./rust-playground
-      env:
-        AWS_ACCESS_KEY_ID: ${{ secrets.DEPLOYMENT_AWS_ACCESS_KEY }}
-        AWS_SECRET_ACCESS_KEY: ${{ secrets.DEPLOYMENT_AWS_ACCESS_KEY_SECRET }}
-        EC2_KEY_PAIR: Deployment
-        EC2_SECRET_KEY: ${{ secrets.DEPLOYMENT_KEYPAIR_SECRET_KEY }}
-        RUST_LOG: info
-        ELASTIC_IP_ADDRESS: "52.41.249.44"
-        DOCKER_REPOSITORY: sunscreendeployment
-    
+
   delete-artifacts:
     runs-on: ubuntu-latest
     needs: ['deploy']

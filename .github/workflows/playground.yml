@@ -61,7 +61,7 @@ jobs:
     - uses: actions/download-artifact@v3
       with:
         name: build-output
-        path: rust-playground/target/release
+        path: rust-playground/target/release/rust-playground-top-crates
     - name: chmod 755
       run: chmod 755 ./target/release/rust-playground-top-crates
       working-directory: ./rust-playground
@@ -90,7 +90,8 @@ jobs:
       with:
         name: build-output
         path: |
-          rust-playground/target/release
+          rust-playground/target/release/ui
+          rust-playground/target/release/rust-playground-top-crates
           rust-playground/ui/frontend/build
 
     - name: docker build

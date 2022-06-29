@@ -109,14 +109,12 @@ jobs:
     - name: docker build
       run: docker build -t $DOCKER_REGISTRY/playground:$DEPLOYMENT_ID --build-arg docker_repo=sunscreendeployment -f deployment/Dockerfile .
       working-directory: ./rust-playground
-      env:
     - name: docker login
       run: docker login --username ${DOCKER_USER} --password ${DOCKER_PASSWORD}
       env:
         DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
     - name: docker push
       run: docker push $DOCKER_REGISTRY/playground:$DEPLOYMENT_ID
-      env:
 
   deploy:
     runs-on: ubuntu-latest

@@ -105,6 +105,7 @@ jobs:
       working-directory: ./rust-playground/ui/frontend
     - name: Compile frontend UI code
       run: yarn build
+      working-directory: ./rust-playground/ui/frontend
     - name: docker build
       run: docker build --build-arg docker_repo=sunscreendeployment -f deployment/Dockerfile .
       working-directory: ./rust-playground

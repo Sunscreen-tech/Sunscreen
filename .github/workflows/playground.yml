@@ -6,7 +6,7 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-  DEPLOYMENT_ID: $GITHUB_RUN_ID.$GITHUB_RUN_ATTEMPT
+  DEPLOYMENT_ID: ${{ $env.GITHUB_RUN_ID }}.${{ env.GITHUB_RUN_ATTEMPT }}
 
 concurrency: production
 
@@ -28,6 +28,8 @@ jobs:
           rust-playground/target
           rust-playground/ui/frontend/node_modules
         key: ${{ runner.os }}-playground-${{ hashFiles('rust-playground/Cargo.lock') }}-${{ hashFiles('rust-playground/ui/frontend/yarn.lock') }}
+    - name: echo $DEPLYOMENT_ID
+      run: echo $DEPLYOMENT_ID
     - name: Install frontend UI dependencies
       run: yarn install
       working-directory: ./rust-playground/ui/frontend

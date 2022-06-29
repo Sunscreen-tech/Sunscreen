@@ -6,7 +6,7 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-  DEPLOYMENT_ID: ${{ $env.GITHUB_RUN_ID }}.${{ env.GITHUB_RUN_ATTEMPT }}
+  DEPLOYMENT_ID: ${{ env.GITHUB_RUN_ID }}.${{ env.GITHUB_RUN_ATTEMPT }}
 
 concurrency: production
 

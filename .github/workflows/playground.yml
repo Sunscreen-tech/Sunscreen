@@ -89,7 +89,10 @@ jobs:
     - uses: actions/download-artifact@v3
       with:
         name: build-output
-        path: rust-playground/target/release
+        path: |
+          rust-playground/target/release
+          rust-playground/ui/frontend/build
+
     - name: docker build
       run: docker build --build-arg docker_repo=sunscreendeployment -f deployment/Dockerfile .
       working-directory: ./rust-playground

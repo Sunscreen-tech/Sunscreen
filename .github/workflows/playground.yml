@@ -108,10 +108,8 @@ jobs:
       run: yarn build
       working-directory: ./rust-playground/ui/frontend
     - name: docker build
-      run: docker build --build-arg docker_repo=sunscreendeployment -f deployment/Dockerfile .
+      run: docker build -t playground:$DEPLOYMENT_ID --build-arg docker_repo=sunscreendeployment -f deployment/Dockerfile .
       working-directory: ./rust-playground
-    - name: docker tag
-      run: docker tag playground playground:$DEPLOYMENT_ID
     - name: docker push
       run: docker push playground:$DEPLOYMENT_ID
 

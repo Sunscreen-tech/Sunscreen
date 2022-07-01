@@ -116,7 +116,7 @@ jobs:
     - name: docker push
       run: docker push $DOCKER_REGISTRY/playground:$DEPLOYMENT_ID
 
-  deploy-preprod:
+  deploy-preproduction:
     runs-on: ubuntu-latest
     needs: ['build-and-prime-cache', 'build-playground-image', 'build-docker-rust']
     
@@ -135,7 +135,7 @@ jobs:
 
   delete-artifacts:
     runs-on: ubuntu-latest
-    needs: ['deploy']
+    needs: ['deploy-preproduction']
     if: always()
 
     steps:

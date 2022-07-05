@@ -107,7 +107,7 @@ jobs:
       run: yarn build
       working-directory: ./rust-playground/ui/frontend
     - name: docker build
-      run: docker build -t $DOCKER_REGISTRY/playground:$DEPLOYMENT_ID --build-arg docker_repo=sunscreendeployment -f deployment/Dockerfile .
+      run: docker build -t $DOCKER_REGISTRY/playground:$DEPLOYMENT_ID --build-arg docker_repo=sunscreendeployment --build-arg deployment_id=$DEPLOYMENT_ID -f deployment/Dockerfile .
       working-directory: ./rust-playground
     - name: docker login
       run: docker login --username ${DOCKER_USER} --password ${DOCKER_PASSWORD}

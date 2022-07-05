@@ -125,13 +125,14 @@ jobs:
       with:
         submodules: 'recursive'
     - name: Deploy to preproduction
-      run: ./rust-playground/deployment/deploy.sh
+      run: ./deploy.sh
       working-directory: ./rust-playground/deployment
       env:
         DOCKER_USER: sunscreendeployment
         ENVIRONMENT_ID: e-svmuitwvz8
-        S3_BUCKET: s3://elasticbeanstalk-us-west-2-436473215996/
+        S3_BUCKET: s3://elasticbeanstalk-us-west-2-436473215996
         AWS_ACCESS_KEY_ID: ${{ secrets.DEPLOYMENT_AWS_ACCESS_KEY }}
+        AWS_DEFAULT_REGION: us-west-2
         AWS_SECRET_ACCESS_KEY: ${{ secrets.DEPLOYMENT_AWS_ACCESS_KEY_SECRET }}
 
   delete-artifacts:

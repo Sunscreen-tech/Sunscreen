@@ -1,0 +1,18 @@
+on: 
+  workflow_dispatch:
+    inputs:
+      deployment_id:
+        description: 'The ID of a preproduction playground deployment version to deploy to production'
+        required: true
+
+concurrency: playground-production
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy
+      run: aws elasticbeanstalk update-environment --application-name Playground --environment-id $ENVIRONMENT_ID --description "Deployment for ID ${{ github.event.inputs.deployment_id}}" --version-label ${{ github.event.inputs.deployment_id}}
+      env:
+        ENVIRONMENT_ID: e-ehgmnmqadu

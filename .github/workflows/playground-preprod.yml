@@ -10,7 +10,7 @@ env:
   DOCKER_REGISTRY: sunscreendeployment
   DOCKER_USER: sunscreendeployment
 
-concurrency: production
+concurrency: playground-preproduction
 
 jobs:
   build-and-prime-cache:

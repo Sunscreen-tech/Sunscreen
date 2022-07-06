@@ -1,4 +1,4 @@
-name: playground-deployment
+name: "Playground preproduction build and deploy"
 
 on:
   push:
@@ -6,8 +6,11 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+  DEPLOYMENT_ID: ${{ github.run_id }}.${{ github.run_attempt }}
+  DOCKER_REGISTRY: sunscreendeployment
+  DOCKER_USER: sunscreendeployment
 
-concurrency: production
+concurrency: playground-preproduction
 
 jobs:
   build-and-prime-cache:
@@ -72,18 +75,21 @@ jobs:
       env:
         CHANNELS_TO_BUILD: ${{ matrix.channel }}
         TOOLS_TO_BUILD: ""
-        DOCKER_REGISTRY: sunscreendeployment
         DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
-        DOCKER_USER: sunscreendeployment
-
-  deploy:
+        
+  build-playground-image:
     runs-on: ubuntu-latest
-    needs: ['build-and-prime-cache', 'build-docker-rust']
-    
+    needs: ['build-and-prime-cache']
+
     steps:
     - uses: actions/checkout@v3
       with:
         submodules: 'recursive'
+    - uses: actions/download-artifact@v3
+      with:
+        name: build-output
+        path:
+          rust-playground/target/release
     - uses: actions/cache@v3
       with:
         path: |
@@ -100,28 +106,38 @@ jobs:
     - name: Compile frontend UI code
       run: yarn build
       working-directory: ./rust-playground/ui/frontend
-    - uses: actions/download-artifact@v3
-      with:
-        name: build-output
-        path: rust-playground/target/release
-    - name: chmod 755
-      run: chmod 755 ./target/release/ui ./target/release/deployment
+    - name: docker build
+      run: docker build -t $DOCKER_REGISTRY/playground:$DEPLOYMENT_ID --build-arg docker_repo=sunscreendeployment --build-arg deployment_id=$DEPLOYMENT_ID -f deployment/Dockerfile .
       working-directory: ./rust-playground
-    - name: Create EC2 instance
-      run: ./target/release/deployment
-      working-directory: ./rust-playground
+    - name: docker login
+      run: docker login --username ${DOCKER_USER} --password ${DOCKER_PASSWORD}
       env:
-        AWS_ACCESS_KEY_ID: ${{ secrets.DEPLOYMENT_AWS_ACCESS_KEY }}
-        AWS_SECRET_ACCESS_KEY: ${{ secrets.DEPLOYMENT_AWS_ACCESS_KEY_SECRET }}
-        EC2_KEY_PAIR: Deployment
-        EC2_SECRET_KEY: ${{ secrets.DEPLOYMENT_KEYPAIR_SECRET_KEY }}
-        RUST_LOG: info
-        ELASTIC_IP_ADDRESS: "52.41.249.44"
-        DOCKER_REPOSITORY: sunscreendeployment
+        DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+    - name: docker push
+      run: docker push $DOCKER_REGISTRY/playground:$DEPLOYMENT_ID
+
+  deploy-preproduction:
+    runs-on: ubuntu-latest
+    needs: ['build-and-prime-cache', 'build-playground-image', 'build-docker-rust']
     
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: 'recursive'
+    - name: Deploy to preproduction
+      run: ./deploy.sh
+      working-directory: ./rust-playground/deployment
+      env:
+        DOCKER_USER: sunscreendeployment
+        ENVIRONMENT_ID: e-svmuitwvz8
+        S3_BUCKET: elasticbeanstalk-us-west-2-436473215996
+        AWS_ACCESS_KEY_ID: ${{ secrets.DEPLOYMENT_AWS_ACCESS_KEY }}
+        AWS_DEFAULT_REGION: us-west-2
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.DEPLOYMENT_AWS_ACCESS_KEY_SECRET }}
+
   delete-artifacts:
     runs-on: ubuntu-latest
-    needs: ['deploy']
+    needs: ['deploy-preproduction']
     if: always()
 
     steps:

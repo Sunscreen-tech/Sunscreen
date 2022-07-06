@@ -17,4 +17,7 @@ jobs:
     - name: Deploy
       run: aws elasticbeanstalk update-environment --application-name Playground --environment-id $ENVIRONMENT_ID --description "Deployment for ID ${{ github.event.inputs.deployment_id}}" --version-label ${{ github.event.inputs.deployment_id}}
       env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.DEPLOYMENT_AWS_ACCESS_KEY }}
+        AWS_DEFAULT_REGION: us-west-2
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.DEPLOYMENT_AWS_ACCESS_KEY_SECRET }}
         ENVIRONMENT_ID: e-ehgmnmqadu

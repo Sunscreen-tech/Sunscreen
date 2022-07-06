@@ -1,3 +1,5 @@
+name: "Playground production deployment"
+
 on: 
   workflow_dispatch:
     inputs:

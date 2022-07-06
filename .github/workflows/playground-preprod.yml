@@ -1,4 +1,4 @@
-name: playground-deployment
+name: "Playground preproduction build and deploy"
 
 on:
   push:

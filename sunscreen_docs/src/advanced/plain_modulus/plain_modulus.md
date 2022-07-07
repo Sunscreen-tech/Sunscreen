@@ -28,7 +28,8 @@ You can manually set the `PlainModulusConstraint` when compiling your program li
 # }
 #
 # fn main() {
-    let fhe_program = Compiler::with_fhe_program(my_program)
+    let app = Compiler::new()
+        .fhe_program(my_program)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(1_000_000))
         .compile()
         .unwrap();

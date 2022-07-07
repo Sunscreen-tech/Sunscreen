@@ -1,8 +1,9 @@
 use crate::params::{determine_params, PlainModulusConstraint};
 use crate::{
-    CallSignature, FheProgramMetadata, FrontendCompilation, Params, RequiredKeys, Result,
-    SchemeType, SecurityLevel,
+    Application, CallSignature, Error, FheProgramMetadata, FrontendCompilation, Params,
+    RequiredKeys, Result, SchemeType, SecurityLevel,
 };
+use std::collections::{HashMap, HashSet};
 use sunscreen_runtime::CompiledFheProgram;
 
 #[derive(Debug, Clone)]
@@ -29,32 +30,31 @@ pub trait FheProgramFn {
      * Get the scheme type.
      */
     fn scheme_type(&self) -> SchemeType;
+
+    /**
+     * Gets the name of the FHE program.
+     */
+    fn name(&self) -> &str;
 }
 
 /**
  * A frontend compiler for Sunscreen FHE programs.
  */
-pub struct Compiler<F>
-where
-    F: FheProgramFn,
-{
-    fhe_program_fn: F,
+pub struct Compiler {
+    fhe_program_fns: Vec<Box<dyn FheProgramFn>>,
     params_mode: ParamsMode,
     plain_modulus_constraint: PlainModulusConstraint,
     security_level: SecurityLevel,
     noise_margin: u32,
 }
 
-impl<F> Compiler<F>
-where
-    F: FheProgramFn,
-{
+impl Compiler {
     /**
-     * Create a new compiler with the given FHE program.
+     * Creates a new [`Compiler`] builder.
      */
-    pub fn with_fhe_program(fhe_program_fn: F) -> Self {
+    pub fn new() -> Self {
         Self {
-            fhe_program_fn,
+            fhe_program_fns: vec![],
             params_mode: ParamsMode::Search,
             // This default value is sufficient for doing 3 levels of 64-bit
             // multiplications
@@ -62,6 +62,18 @@ where
             security_level: SecurityLevel::TC128,
             noise_margin: 20,
         }
+    }
+
+    /**
+     * Add the given FHE program for compilation.
+     */
+    pub fn fhe_program<F>(mut self, fhe_program_fn: F) -> Self
+    where
+        F: FheProgramFn + Clone + 'static,
+    {
+        self.fhe_program_fns.push(Box::new(fhe_program_fn.clone()));
+
+        self
     }
 
     /**
@@ -108,49 +120,104 @@ where
     }
 
     /**
-     * Comile the FHE program. If successful, returns a tuple of the [`FheProgram`](crate::FheProgram) and the [`Params`] suitable
-     * for running it.
+     * Compile the FHE program. If successful, returns an
+     * [`Application`] containing a compiled form of each
+     * `fhe_program` argument.
+     *
+     * # Remarks
+     * Each compiled FHE program in the returned [`Application`]
+     * is compiled under the same [`Params`] so ciphertexts can be
+     * used interchangeably between programs.
+     *
+     * You must specify at least one `fhe_program` in the builder
+     * before calling compile. `compile` returns a
+     * [`Error::NoPrograms`] if you fail to do so.
+     *
+     * Each specified FHE program must have a unique name,
+     * regardless of its parent module or crate. `compile` returns
+     * a [`Error::NameCollision`] if two or more FHE programs
+     * have the same name.
+     *
+     * Each FHE program must use the same scheme or `compile`
+     * will return a [`Error::NameCollision`] error.
+     *
      */
-    pub fn compile(self) -> Result<CompiledFheProgram> {
-        let scheme = self.fhe_program_fn.scheme_type();
-        let signature = self.fhe_program_fn.signature();
+    pub fn compile(self) -> Result<Application> {
+        if self.fhe_program_fns.len() == 0 {
+            return Err(Error::NoPrograms);
+        }
 
-        let (fhe_program_fn, params) = match self.params_mode {
-            ParamsMode::Manual(p) => (self.fhe_program_fn.build(&p), p.clone()),
+        // Check that all programs use the same scheme type.
+        // Unwrapping the iterator is safe because we checked that
+        // self.fhe_program_fns has at least 1 element
+        if self
+            .fhe_program_fns
+            .iter()
+            .any(|p| p.scheme_type() != self.fhe_program_fns.iter().next().unwrap().scheme_type())
+        {
+            return Err(Error::SchemeMismatch);
+        }
+
+        // Check that each fhe_program has a unique name
+        if self
+            .fhe_program_fns
+            .iter()
+            .map(|f| f.name().to_owned())
+            .collect::<HashSet<String>>()
+            .len()
+            != self.fhe_program_fns.len()
+        {
+            return Err(Error::NameCollision);
+        }
+
+        let scheme = self.fhe_program_fns.iter().next().unwrap().scheme_type();
+
+        let params = match self.params_mode {
+            ParamsMode::Manual(p) => (p),
             ParamsMode::Search => {
-                let params = determine_params::<F>(
-                    &self.fhe_program_fn,
+                let params = determine_params(
+                    &self.fhe_program_fns,
                     self.plain_modulus_constraint,
                     self.security_level,
                     self.noise_margin,
                     scheme,
                 )?;
 
-                (self.fhe_program_fn.build(&params), params.clone())
+                params
             }
         };
 
-        let mut required_keys = vec![];
+        let fhe_programs = self
+            .fhe_program_fns
+            .iter()
+            .map(|prog| {
+                let execution_graph = prog.build(&params);
+                let mut required_keys = vec![];
+                let fhe_program_fn = execution_graph?.compile();
 
-        let fhe_program_fn = fhe_program_fn?.compile();
+                if fhe_program_fn.requires_relin_keys() {
+                    required_keys.push(RequiredKeys::Relin);
+                }
 
-        if fhe_program_fn.requires_relin_keys() {
-            required_keys.push(RequiredKeys::Relin);
-        }
+                if fhe_program_fn.requires_galois_keys() {
+                    required_keys.push(RequiredKeys::Galois);
+                }
 
-        if fhe_program_fn.requires_galois_keys() {
-            required_keys.push(RequiredKeys::Galois);
-        }
+                let metadata = FheProgramMetadata {
+                    params: params.clone(),
+                    required_keys,
+                    signature: prog.signature(),
+                };
 
-        let metadata = FheProgramMetadata {
-            params: params,
-            required_keys,
-            signature,
-        };
+                let compiled_program = CompiledFheProgram {
+                    fhe_program_fn,
+                    metadata,
+                };
 
-        Ok(CompiledFheProgram {
-            fhe_program_fn,
-            metadata,
-        })
+                Ok((prog.name().to_owned(), compiled_program))
+            })
+            .collect::<Result<HashMap<String, CompiledFheProgram>>>()?;
+
+        Ok(Application::new(fhe_programs)?)
     }
 }

@@ -156,14 +156,15 @@ fn main() -> Result<(), sunscreen::Error> {
     // plaintext modulus constraint. This chooses a prime number for our plain modulus
     // suitable for use with Batched types. The 24 denotes the minimum precision of the plain
     // modulus.
-    let fhe_program = Compiler::with_fhe_program(dot_product)
+    let app = Compiler::new()
+        .fhe_program(dot_product)
         .plain_modulus_constraint(PlainModulusConstraint::BatchingMinimum(24))
         .compile()?;
     let end = start.elapsed();
 
     println!("Compiled in {}s", end.as_secs_f64());
 
-    let runtime = Runtime::new(&fhe_program.metadata.params)?;
+    let runtime = Runtime::new(app.params())?;
 
     let (public_key, private_key) = runtime.generate_keys()?;
     let a_enc = runtime.encrypt(a_batched, &public_key)?;
@@ -172,7 +173,7 @@ fn main() -> Result<(), sunscreen::Error> {
 
     // Run our dot product homomorphically, decrypt and verify the result.
     let start = Instant::now();
-    let results = runtime.run(&fhe_program, args, &public_key)?;
+    let results = runtime.run(app.get_program(dot_product).unwrap(), args, &public_key)?;
     let end = start.elapsed();
 
     let fhe_dot: Batched<VECLENDIV2> = runtime.decrypt(&results[0], &private_key)?;

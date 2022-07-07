@@ -11,17 +11,18 @@ In our simple example, we called `runtime.run` to execute our FHE program
 #   a * b
 #   }
 #
-#   let fhe_program = Compiler::with_fhe_program(multiply)
+#   let app = Compiler::new()
+#       .fhe_program(multiply)
 #       .plain_modulus_constraint(PlainModulusConstraint::Raw(64))
 #       .compile()
 #       .unwrap();
 #
-#   let runtime = Runtime::new(&fhe_program.metadata.params).unwrap();
+#   let runtime = Runtime::new(app.params()).unwrap();
 #   let (public_key, _) = runtime.generate_keys().unwrap();
     let a_enc = runtime.encrypt(Signed::from(5), &public_key).unwrap();
     let b_enc = runtime.encrypt(Signed::from(15), &public_key).unwrap();
 
-    let results = runtime.run(&fhe_program, vec![a_enc, b_enc], &public_key).unwrap();
+    let results = runtime.run(app.get_program(multiply).unwrap(), vec![a_enc, b_enc], &public_key).unwrap();
 # }
 ```
 
@@ -48,11 +49,12 @@ If your FHE program only accepts ciphertexts (a common scenario), it's sufficien
 #         a * b
 #     }
 #
-#     let fhe_program = Compiler::with_fhe_program(multiply)
+#     let app = Compiler::new()
+#         .fhe_program(multiply)
 #         .compile()
 #         .unwrap();
 #
-#     let runtime = Runtime::new(&fhe_program.metadata.params).unwrap();
+#     let runtime = Runtime::new(app.params()).unwrap();
 #     let (public_key, _) = runtime.generate_keys().unwrap();
 
     let a_enc = runtime.encrypt(Signed::from(5), &public_key).unwrap();
@@ -61,7 +63,7 @@ If your FHE program only accepts ciphertexts (a common scenario), it's sufficien
     // We make a Vec<FheProgramInput> by calling `.into()`
     // on each value.
     let args: Vec<FheProgramInput> = vec![a_enc.into(), Signed::from(15).into()];
-    let results = runtime.run(&fhe_program, args, &public_key).unwrap();
+    let results = runtime.run(app.get_program(multiply).unwrap(), args, &public_key).unwrap();
 # }
 ```
 

@@ -198,12 +198,14 @@ struct Miner {
 #
 impl Miner {
     pub fn setup() -> Result<Miner, Error> {
-        let compiled_swap_nu = Compiler::with_fhe_program(swap_nu).compile()?;
+        let app = Compiler::new()
+            .fhe_program(swap_nu)
+            .compile()?;
 
-        let runtime = Runtime::new(&compiled_swap_nu.metadata.params)?;
+        let runtime = Runtime::new(app.params())?;
 
         Ok(Miner {
-            compiled_swap_nu,
+            compiled_swap_nu: app.get_program(swap_nu).unwrap().clone(),
             runtime,
         })
     }
@@ -260,12 +262,14 @@ The miner can run the token swap contract (see `run_contract`) by calling `runti
 # 
 # impl Miner {
 #     pub fn setup() -> Result<Miner, Error> {
-#         let compiled_swap_nu = Compiler::with_fhe_program(swap_nu).compile()?;
+#         let app = Compiler::new()
+#             .fhe_program(swap_nu)
+#             .compile()?;
 # 
-#         let runtime = Runtime::new(&compiled_swap_nu.metadata.params)?;
+#         let runtime = Runtime::new(app.params())?;
 # 
 #         Ok(Miner {
-#             compiled_swap_nu,
+#             compiled_swap_nu: app.get_program(swap_nu).unwrap().clone(),
 #             runtime,
 #         })
 #     }

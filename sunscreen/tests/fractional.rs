@@ -2,28 +2,12 @@ use float_cmp::ApproxEq;
 use sunscreen::{
     fhe_program,
     types::{bfv::Fractional, Cipher},
-    CompiledFheProgram, Compiler, FheProgramFn, FheProgramInput, Params, PlainModulusConstraint,
-    Runtime,
+    Compiler, FheProgramInput, PlainModulusConstraint, Runtime,
 };
 
 use std::ops::*;
 
 type CipherFractional = Cipher<Fractional<64>>;
-
-fn compile<F: FheProgramFn>(c: F) -> CompiledFheProgram {
-    Compiler::with_fhe_program(c)
-        .additional_noise_budget(30)
-        .plain_modulus_constraint(PlainModulusConstraint::Raw(500))
-        .compile()
-        .unwrap()
-}
-
-fn compile_with_params<F: FheProgramFn>(c: F, params: &Params) -> CompiledFheProgram {
-    Compiler::with_fhe_program(c)
-        .with_params(params)
-        .compile()
-        .unwrap()
-}
 
 #[test]
 fn can_add() {
@@ -59,15 +43,18 @@ fn can_add() {
         add_fn(3.14, a)
     }
 
-    let (c_add_c_c, c_add_c_p, c_add_p_c, c_add_c_l, c_add_l_c) = (
-        compile(add_c_c),
-        compile(add_c_p),
-        compile(add_p_c),
-        compile(add_c_l),
-        compile(add_l_c),
-    );
+    let app = Compiler::new()
+        .fhe_program(add_c_c)
+        .fhe_program(add_c_p)
+        .fhe_program(add_p_c)
+        .fhe_program(add_c_l)
+        .fhe_program(add_l_c)
+        .additional_noise_budget(30)
+        .plain_modulus_constraint(PlainModulusConstraint::Raw(500))
+        .compile()
+        .unwrap();
 
-    let runtime = Runtime::new(&c_add_c_c.metadata.params).unwrap();
+    let runtime = Runtime::new(app.params()).unwrap();
 
     let (public_key, private_key) = runtime.generate_keys().unwrap();
 
@@ -78,19 +65,29 @@ fn can_add() {
         let b_c = runtime.encrypt(b_p, &public_key).unwrap();
 
         let args: Vec<FheProgramInput> = vec![a_c.clone().into(), b_c.clone().into()];
-        let c_0 = runtime.run(&c_add_c_c, args, &public_key).unwrap();
+        let c_0 = runtime
+            .run(app.get_program(add_c_c).unwrap(), args, &public_key)
+            .unwrap();
 
         let args: Vec<FheProgramInput> = vec![a_c.clone().into(), b_p.clone().into()];
-        let c_1 = runtime.run(&c_add_c_p, args, &public_key).unwrap();
+        let c_1 = runtime
+            .run(app.get_program(add_c_p).unwrap(), args, &public_key)
+            .unwrap();
 
         let args: Vec<FheProgramInput> = vec![a_p.clone().into(), b_c.clone().into()];
-        let c_2 = runtime.run(&c_add_p_c, args, &public_key).unwrap();
+        let c_2 = runtime
+            .run(app.get_program(add_p_c).unwrap(), args, &public_key)
+            .unwrap();
 
         let args: Vec<FheProgramInput> = vec![a_c.clone().into(), b_c.clone().into()];
-        let c_3 = runtime.run(&c_add_c_l, args, &public_key).unwrap();
+        let c_3 = runtime
+            .run(app.get_program(add_c_l).unwrap(), args, &public_key)
+            .unwrap();
 
         let args: Vec<FheProgramInput> = vec![a_c.clone().into(), b_c.clone().into()];
-        let c_4 = runtime.run(&c_add_l_c, args, &public_key).unwrap();
+        let c_4 = runtime
+            .run(app.get_program(add_l_c).unwrap(), args, &public_key)
+            .unwrap();
 
         let c_0: Fractional<64> = runtime.decrypt(&c_0[0], &private_key).unwrap();
         let c_1: Fractional<64> = runtime.decrypt(&c_1[0], &private_key).unwrap();
@@ -152,16 +149,18 @@ fn can_mul() {
         mul_fn(3.14, a)
     }
 
-    let c_mul_c_c = compile(mul_c_c);
+    let app = Compiler::new()
+        .fhe_program(mul_c_c)
+        .fhe_program(mul_c_p)
+        .fhe_program(mul_p_c)
+        .fhe_program(mul_c_l)
+        .fhe_program(mul_l_c)
+        .additional_noise_budget(30)
+        .plain_modulus_constraint(PlainModulusConstraint::Raw(500))
+        .compile()
+        .unwrap();
 
-    let (c_mul_c_p, c_mul_p_c, c_mul_c_l, c_mul_l_c) = (
-        compile_with_params(mul_c_p, &c_mul_c_c.metadata.params),
-        compile_with_params(mul_p_c, &c_mul_c_c.metadata.params),
-        compile_with_params(mul_c_l, &c_mul_c_c.metadata.params),
-        compile_with_params(mul_l_c, &c_mul_c_c.metadata.params),
-    );
-
-    let runtime = Runtime::new(&c_mul_c_c.metadata.params).unwrap();
+    let runtime = Runtime::new(app.params()).unwrap();
 
     let (public_key, private_key) = runtime.generate_keys().unwrap();
 
@@ -172,19 +171,29 @@ fn can_mul() {
         let b_c = runtime.encrypt(b_p, &public_key).unwrap();
 
         let args: Vec<FheProgramInput> = vec![a_c.clone().into(), b_c.clone().into()];
-        let c_0 = runtime.run(&c_mul_c_c, args, &public_key).unwrap();
+        let c_0 = runtime
+            .run(app.get_program(mul_c_c).unwrap(), args, &public_key)
+            .unwrap();
 
         let args: Vec<FheProgramInput> = vec![a_c.clone().into(), b_p.clone().into()];
-        let c_1 = runtime.run(&c_mul_c_p, args, &public_key).unwrap();
+        let c_1 = runtime
+            .run(app.get_program(mul_c_p).unwrap(), args, &public_key)
+            .unwrap();
 
         let args: Vec<FheProgramInput> = vec![a_p.clone().into(), b_c.clone().into()];
-        let c_2 = runtime.run(&c_mul_p_c, args, &public_key).unwrap();
+        let c_2 = runtime
+            .run(app.get_program(mul_p_c).unwrap(), args, &public_key)
+            .unwrap();
 
         let args: Vec<FheProgramInput> = vec![a_c.clone().into()];
-        let c_3 = runtime.run(&c_mul_c_l, args, &public_key).unwrap();
+        let c_3 = runtime
+            .run(app.get_program(mul_c_l).unwrap(), args, &public_key)
+            .unwrap();
 
         let args: Vec<FheProgramInput> = vec![a_c.clone().into()];
-        let c_4 = runtime.run(&c_mul_l_c, args, &public_key).unwrap();
+        let c_4 = runtime
+            .run(app.get_program(mul_l_c).unwrap(), args, &public_key)
+            .unwrap();
 
         assert_ne!(
             runtime.measure_noise_budget(&c_0[0], &private_key).unwrap(),
@@ -266,15 +275,18 @@ fn can_sub() {
         sub_fn(3.14, a)
     }
 
-    let (c_sub_c_c, c_sub_c_p, c_sub_p_c, c_sub_c_l, c_sub_l_c) = (
-        compile(sub_c_c),
-        compile(sub_c_p),
-        compile(sub_p_c),
-        compile(sub_c_l),
-        compile(sub_l_c),
-    );
+    let app = Compiler::new()
+        .fhe_program(sub_c_c)
+        .fhe_program(sub_c_p)
+        .fhe_program(sub_p_c)
+        .fhe_program(sub_c_l)
+        .fhe_program(sub_l_c)
+        .additional_noise_budget(30)
+        .plain_modulus_constraint(PlainModulusConstraint::Raw(500))
+        .compile()
+        .unwrap();
 
-    let runtime = Runtime::new(&c_sub_c_c.metadata.params).unwrap();
+    let runtime = Runtime::new(app.params()).unwrap();
 
     let (public_key, private_key) = runtime.generate_keys().unwrap();
 
@@ -285,19 +297,29 @@ fn can_sub() {
         let b_c = runtime.encrypt(b_p, &public_key).unwrap();
 
         let args: Vec<FheProgramInput> = vec![a_c.clone().into(), b_c.clone().into()];
-        let c_0 = runtime.run(&c_sub_c_c, args, &public_key).unwrap();
+        let c_0 = runtime
+            .run(app.get_program(sub_c_c).unwrap(), args, &public_key)
+            .unwrap();
 
         let args: Vec<FheProgramInput> = vec![a_c.clone().into(), b_p.clone().into()];
-        let c_1 = runtime.run(&c_sub_c_p, args, &public_key).unwrap();
+        let c_1 = runtime
+            .run(app.get_program(sub_c_p).unwrap(), args, &public_key)
+            .unwrap();
 
         let args: Vec<FheProgramInput> = vec![a_p.clone().into(), b_c.clone().into()];
-        let c_2 = runtime.run(&c_sub_p_c, args, &public_key).unwrap();
+        let c_2 = runtime
+            .run(app.get_program(sub_p_c).unwrap(), args, &public_key)
+            .unwrap();
 
         let args: Vec<FheProgramInput> = vec![a_c.clone().into(), b_c.clone().into()];
-        let c_3 = runtime.run(&c_sub_c_l, args, &public_key).unwrap();
+        let c_3 = runtime
+            .run(app.get_program(sub_c_l).unwrap(), args, &public_key)
+            .unwrap();
 
         let args: Vec<FheProgramInput> = vec![a_c.clone().into(), b_c.clone().into()];
-        let c_4 = runtime.run(&c_sub_l_c, args, &public_key).unwrap();
+        let c_4 = runtime
+            .run(app.get_program(sub_l_c).unwrap(), args, &public_key)
+            .unwrap();
 
         let c_0: Fractional<64> = runtime.decrypt(&c_0[0], &private_key).unwrap();
         let c_1: Fractional<64> = runtime.decrypt(&c_1[0], &private_key).unwrap();
@@ -332,13 +354,14 @@ fn can_div_cipher_const() {
         a / 3.14
     }
 
-    let fhe_program = Compiler::with_fhe_program(mul)
+    let app = Compiler::new()
+        .fhe_program(mul)
         .additional_noise_budget(5)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(100000))
         .compile()
         .unwrap();
 
-    let runtime = Runtime::new(&fhe_program.metadata.params).unwrap();
+    let runtime = Runtime::new(app.params()).unwrap();
 
     let (public_key, private_key) = runtime.generate_keys().unwrap();
 
@@ -349,7 +372,9 @@ fn can_div_cipher_const() {
 
         let args: Vec<FheProgramInput> = vec![a_c.into()];
 
-        let result = runtime.run(&fhe_program, args, &public_key).unwrap();
+        let result = runtime
+            .run(app.get_program(mul).unwrap(), args, &public_key)
+            .unwrap();
 
         let c: Fractional<64> = runtime.decrypt(&result[0], &private_key).unwrap();
 
@@ -373,13 +398,14 @@ fn can_negate() {
         -a
     }
 
-    let fhe_program = Compiler::with_fhe_program(neg)
+    let app = Compiler::new()
+        .fhe_program(neg)
         .additional_noise_budget(5)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(100000))
         .compile()
         .unwrap();
 
-    let runtime = Runtime::new(&fhe_program.metadata.params).unwrap();
+    let runtime = Runtime::new(app.params()).unwrap();
 
     let (public_key, private_key) = runtime.generate_keys().unwrap();
 
@@ -390,7 +416,9 @@ fn can_negate() {
 
         let args: Vec<FheProgramInput> = vec![a_c.into()];
 
-        let result = runtime.run(&fhe_program, args, &public_key).unwrap();
+        let result = runtime
+            .run(app.get_program(neg).unwrap(), args, &public_key)
+            .unwrap();
 
         let c: Fractional<64> = runtime.decrypt(&result[0], &private_key).unwrap();
 

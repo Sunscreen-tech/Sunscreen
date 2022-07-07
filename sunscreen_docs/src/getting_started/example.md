@@ -39,16 +39,19 @@ fn simple_multiply(a: Cipher<Signed>, b: Cipher<Signed>) -> Cipher<Signed> {
 }
 
 fn main() -> Result<(), Error> {
-    let fhe_program = Compiler::with_fhe_program(simple_multiply)
+    let app = Compiler::new()
+        .fhe_program(simple_multiply)
         .compile()?;
 
     Ok(())
 }
 ```
 
-The `Compiler::with_fhe_program(simple_multiply)` line creates a compiler and `.compile()`, tells it to compile our FHE program. Compilation performs optimization and fills in implementation details, including figuring out FHE scheme parameters and inserting special operations. 
+We invoke the compiler to build our `simple_multiply` FHE program. Compilation translates our program into a runnable format, performs optimizations and fills in implementation details, including figuring out FHE scheme parameters and inserting special operations. 
 
 What's the `?` after at the end of `.compile()`? For the uninitiated, the [`?`](https://doc.rust-lang.org/book/ch09-02-recoverable-errors-with-result.html) operator propagates errors. Fallible expressions in Rust emit [`Results`](https://doc.rust-lang.org/std/result/enum.Result.html), which can contain either a value or an error. Using `?` unwraps the value in a successful result or immediately returns the error from a failed one, letting the caller of the current function deal with it. We should see the former after compilation, as our program is well-formed.
+
+On success, the compiler emits an `Application` bundle containing the compiled form of each `.fhe_program()` argument. In our case, `app` will contain a single compiled FHE program named `simple_multiply`.
 
 Next, we need a public and private key pair. In order to generate keys, we'll first construct a `Runtime` with the parameters we got from compilation. This allows us to encrypt/decrypt data and run FHE programs.
 
@@ -65,10 +68,11 @@ fn simple_multiply(a: Cipher<Signed>, b: Cipher<Signed>) -> Cipher<Signed> {
 }
 
 fn main() -> Result<(), Error> {
-    let fhe_program = Compiler::with_fhe_program(simple_multiply)
+    let app = Compiler::new()
+        .fhe_program(simple_multiply)
         .compile()?;
 
-    let runtime = Runtime::new(&fhe_program.metadata.params)?;
+    let runtime = Runtime::new(app.params())?;
 
     let (public_key, private_key) = runtime.generate_keys()?;
 
@@ -98,17 +102,18 @@ fn simple_multiply(a: Cipher<Signed>, b: Cipher<Signed>) -> Cipher<Signed> {
 }
 
 fn main() -> Result<(), Error> {
-    let fhe_program = Compiler::with_fhe_program(simple_multiply)
+    let app = Compiler::new()
+        .fhe_program(simple_multiply)
         .compile()?;
 
-    let runtime = Runtime::new(&fhe_program.metadata.params)?;
+    let runtime = Runtime::new(app.params())?;
 
     let (public_key, private_key) = runtime.generate_keys()?;
 
     let a = runtime.encrypt(Signed::from(15), &public_key)?;
     let b = runtime.encrypt(Signed::from(5), &public_key)?;
     
-    let results = runtime.run(&fhe_program, vec![a, b], &public_key)?;
+    let results = runtime.run(app.get_program(simple_multiply).unwrap(), vec![a, b], &public_key)?;
     
     let c: Signed = runtime.decrypt(&results[0], &private_key)?;
     assert_eq!(c, 75.into());
@@ -117,7 +122,7 @@ fn main() -> Result<(), Error> {
 }
 ```
 
-We call `runtime.run(...)` to execute our FHE program. For the first argument, we pass in our previously compiled program `fhe_program`. The second argument is always a [Vec](https://doc.rust-lang.org/std/vec/struct.Vec.html) containing the arguments to the FHE program. In this case, we pass in the encrypted `a` and `b` values. You'll need to pass in the `public_key` as well.
+We call `runtime.run(...)` to execute our FHE program. For the first argument, we pass in our previously compiled program. We retrieve this program by calling `app.get_program()` and unwrapping the result. The second argument is always a [Vec](https://doc.rust-lang.org/std/vec/struct.Vec.html) containing the arguments to the FHE program. In this case, we pass in the encrypted `a` and `b` values. You'll need to pass in the `public_key` as well.
 
 What would happen if we forgot to encrypt one of our values or gave an encrypted `Fractional` value where the program wanted an encrypted `Signed` value? Fortunately, the `run` method first performs some sanity checks to ensure the arguments match the call signature. If the types of the values we pass in don't match the signature, the `run` method returns an error `Result`. The `?` propagates this error, but our program exits because this is the `main()` method!
 

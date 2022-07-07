@@ -262,12 +262,14 @@ Recall that the server is responsible for retrieving Alice's item from the datab
 #
 impl Server {
     pub fn setup() -> Result<Server, Error> {
-        let compiled_lookup = Compiler::with_fhe_program(lookup).compile()?;
+        let app = Compiler::new()
+            .fhe_program(lookup)
+            .compile()?;
 
-        let runtime = Runtime::new(&compiled_lookup.metadata.params)?;
+        let runtime = Runtime::new(app.params())?;
 
         Ok(Server {
-            compiled_lookup,
+            compiled_lookup: app.get_program(lookup).unwrap().clone(),
             runtime,
         })
     }
@@ -419,12 +421,14 @@ Once all that's done, the server can `run` the FHE program by passing in the `co
 #
 # impl Server { 
 #     pub fn setup() -> Result<Server, Error> { 
-#         let compiled_lookup = Compiler::with_fhe_program(lookup).compile()?; 
+#         let app = Compiler::new()
+#             .fhe_program(lookup)
+#             .compile()?; 
 #  
-#         let runtime = Runtime::new(&compiled_lookup.metadata.params)?; 
+#         let runtime = Runtime::new(app.params())?; 
 #  
 #         Ok(Server { 
-#             compiled_lookup, 
+#             compiled_lookup: app.get_program(lookup).unwrap().clone(), 
 #             runtime, 
 #         }) 
 #     } 

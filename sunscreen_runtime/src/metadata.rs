@@ -288,6 +288,7 @@ pub struct FheProgramMetadata {
     pub required_keys: Vec<RequiredKeys>,
 }
 
+#[derive(Clone, Serialize, Deserialize)]
 /**
  * An FHE program with its associated metadata.
  */

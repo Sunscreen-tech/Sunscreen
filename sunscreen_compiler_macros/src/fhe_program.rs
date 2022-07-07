@@ -107,8 +107,11 @@ pub fn fhe_program_impl(
     let fhe_program_struct_name =
         Ident::new(&format!("{}_struct", fhe_program_name), Span::call_site());
 
+    let fhe_program_name_literal = format!("{}", fhe_program_name);
+
     let fhe_program = proc_macro::TokenStream::from(quote! {
         #[allow(non_camel_case_types)]
+        #[derive(Clone)]
         #vis struct #fhe_program_struct_name {
         }
 
@@ -173,10 +176,22 @@ pub fn fhe_program_impl(
             fn scheme_type(&self) -> sunscreen::SchemeType {
                 #scheme_type
             }
+
+            fn name(&self) -> &str {
+                #fhe_program_name_literal
+            }
+        }
+
+        impl AsRef<str> for #fhe_program_struct_name {
+            fn as_ref(&self) -> &str {
+                use sunscreen::FheProgramFn;
+
+                self.name()
+            }
         }
 
         #[allow(non_upper_case_globals)]
-        const #fhe_program_name: #fhe_program_struct_name = #fhe_program_struct_name { };
+        #vis const #fhe_program_name: #fhe_program_struct_name = #fhe_program_struct_name { };
     });
 
     fhe_program

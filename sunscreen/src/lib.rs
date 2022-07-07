@@ -15,20 +15,21 @@
 //! }
 //!
 //! fn main() {
-//!   let fhe_program = Compiler::with_fhe_program(simple_multiply)
+//!   let app = Compiler::new()
+//!       .fhe_program(simple_multiply)
 //!       .plain_modulus_constraint(PlainModulusConstraint::Raw(600))
 //!       .additional_noise_budget(5)
 //!       .compile()
 //!       .unwrap();
 //!
-//!   let runtime = Runtime::new(&fhe_program.metadata.params).unwrap();
+//!   let runtime = Runtime::new(app.params()).unwrap();
 //!
 //!   let (public_key, private_key) = runtime.generate_keys().unwrap();
 //!
 //!   let a = runtime.encrypt(Signed::from(15), &public_key).unwrap();
 //!   let b = runtime.encrypt(Signed::from(5), &public_key).unwrap();
 //!
-//!   let results = runtime.run(&fhe_program, vec![a, b], &public_key).unwrap();
+//!   let results = runtime.run(app.get_program(simple_multiply).unwrap(), vec![a, b], &public_key).unwrap();
 //!
 //!   let c: Signed = runtime.decrypt(&results[0], &private_key).unwrap();
 //!
@@ -64,6 +65,7 @@ use petgraph::{
 use serde::{Deserialize, Serialize};
 
 use std::cell::RefCell;
+use std::collections::HashMap;
 
 use sunscreen_backend::compile_inplace;
 use sunscreen_fhe_program::{
@@ -82,6 +84,63 @@ pub use sunscreen_runtime::{
     FheProgramInputTrait, FheProgramMetadata, InnerCiphertext, InnerPlaintext, Params, Plaintext,
     PrivateKey, PublicKey, RequiredKeys, Runtime, WithContext,
 };
+
+#[derive(Clone, Serialize, Deserialize)]
+/**
+ * The outcome of successful compilation. Contains one or more [`CompiledFheProgram`].
+ */
+pub struct Application {
+    programs: HashMap<String, CompiledFheProgram>,
+}
+
+impl Application {
+    /**
+     * Constructs a new Application from the given HashMap of programs. The
+     * keys of this contain FHE program names and the values are the
+     * compiled FHE programs.
+     *
+     * # Remarks
+     * The programs [`HashMap`] must contain at least 1 program or this
+     * function will return [`Error::NoPrograms`].
+     *
+     * You should generally not call this function
+     * It is an implementation detail of compilation.
+     */
+    pub(crate) fn new(programs: HashMap<String, CompiledFheProgram>) -> Result<Self> {
+        if programs.len() == 0 {
+            return Err(Error::NoPrograms);
+        }
+
+        Ok(Self { programs })
+    }
+
+    /**
+     * Returns the [`Params`] suitable for running each contained [`CompiledFheProgram`].
+     * These parameters were chosen during compilation.
+     */
+    pub fn params(&self) -> &Params {
+        // We can safely unwrap the iterator because we ensured we have at
+        // least 1 program during construction.
+        &self.programs.values().next().unwrap().metadata.params
+    }
+
+    /**
+     * Gets the [`CompiledFheProgram`] with the given name or [`None`] if not present.
+     */
+    pub fn get_program<'a, N>(&self, name: N) -> Option<&CompiledFheProgram>
+    where
+        N: AsRef<str>,
+    {
+        self.programs.get(name.as_ref())
+    }
+
+    /**
+     * Returns an iterator over all the compiled programs.
+     */
+    pub fn get_programs(&self) -> impl Iterator<Item = (&String, &CompiledFheProgram)> {
+        self.programs.iter()
+    }
+}
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 /**

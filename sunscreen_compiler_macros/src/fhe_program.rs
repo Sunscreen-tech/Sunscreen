@@ -28,6 +28,8 @@ pub fn fhe_program_impl(
         }
     };
 
+    let chain_count = attr_params.chain_count;
+
     let unwrapped_inputs = match extract_fn_arguments(&inputs) {
         Ok(v) => v,
         Err(e) => {
@@ -113,6 +115,7 @@ pub fn fhe_program_impl(
         #[allow(non_camel_case_types)]
         #[derive(Clone)]
         #vis struct #fhe_program_struct_name {
+            chain_count: usize
         }
 
         impl sunscreen::FheProgramFn for #fhe_program_struct_name {
@@ -191,7 +194,9 @@ pub fn fhe_program_impl(
         }
 
         #[allow(non_upper_case_globals)]
-        #vis const #fhe_program_name: #fhe_program_struct_name = #fhe_program_struct_name { };
+        #vis const #fhe_program_name: #fhe_program_struct_name = #fhe_program_struct_name {
+            chain_count: #chain_count
+        };
     });
 
     fhe_program

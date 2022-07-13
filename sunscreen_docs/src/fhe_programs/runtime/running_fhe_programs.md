@@ -27,7 +27,7 @@ In our simple example, we called `runtime.run` to execute our FHE program
 ```
 
 Let's break down the arguments to `runtime.run`:
-1. The first `fhe_program` argument is the compiled program you wish to run.
+1. The first `app.get_program(multiply).unwrap()` argument is the compiled `multiply` program you wish to run.
 2. The second `vec![a, b]` argument contains the input arguments to the program in a [`Vec`](https://doc.rust-lang.org/std/vec/struct.Vec.html).
 3. The final `public_key` argument is the public key used to generate the encrypted program inputs (i.e. `a_enc` and `b_enc`).
 

@@ -20,7 +20,7 @@ In machine learning, FHE allows for private inference. We have two parties in th
 FHE used to be incredibly slow. Performance has come a long way in the past few years; operations that used to take seconds (or even minutes) now take milliseconds (if not microseconds). 
 
 As magical as FHE is, it's actually [very hard](/intro/why.md) to write FHE programs unless you're a cryptography expert (even then it's pretty hard).
-Researchers built various FHE compilers in an attempt to improve usability. Unfortunately, these compilers failed for one of the following reasons: they introduced a [huge performance overhead](/compiler/compiler.md#compiler-performance), expected the user to know quite a bit about how FHE works, or were poorly designed for the target applications.
+Researchers built various FHE compilers in an attempt to improve usability. Unfortunately, these compilers failed for one of the following reasons: they introduced a [huge performance overhead](./../compiler/performance.md), expected the user to know quite a bit about how FHE works, or were poorly designed for the target applications.
 
 For FHE to see widespread adoption, we need usability *and* great performance.
 

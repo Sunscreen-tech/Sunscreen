@@ -13,8 +13,8 @@ There are also variants of FHE&mdash;multi-party FHE and multi-key FHE&mdash; th
 ### What are your future plans?
 In terms of plans for our compiler specifically, we'd like to add support for:
 - batching
-- choosing scheme parameters based on multiple FHE programs as inputs
-- using the outputs of one FHE program as the inputs to another FHE program
+- choosing scheme parameters based on multiple FHE programs as inputs (multi-program parameter sharing)
+- using the outputs of one FHE program as the inputs to another FHE program (chaining)
 - providing rigorous analysis of noise growth
 
 In terms of broader plans for Sunscreen, some of our next milestones include:

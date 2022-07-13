@@ -70,8 +70,6 @@ fn matrix_vector_multiply(a: [[Cipher<Fractional<64>>; 10]; 10], b: [Cipher<Frac
 
 You can make arrays of encrypted or unencrypted data types. In the former case, the `Cipher` must go inside the array; you can't declare a `Cipher<[T; 2]>`.
 
-*TODO: add discussion on using arrays as inputs to FHE programs (readable vs writeable). having to initialize writeable arrays. cannot return arrays from FHE programs.*
-
 [^1]: Don't confuse these with `Vec`, which Sunscreen does *not* support!
 
 ## Working with literals

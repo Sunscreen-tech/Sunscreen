@@ -2,6 +2,7 @@
 	path = seal_fhe/SEAL
 	url = git@github.com:rickwebiii/SEAL.git
 	branch = wasm
+  fetchRecurseSubmodules = true
 [submodule "emsdk/emsdk"]
 	path = emsdk/emsdk
 	url = https://github.com/emscripten-core/emsdk.git

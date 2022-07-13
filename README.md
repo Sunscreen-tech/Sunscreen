@@ -11,7 +11,7 @@ Extensive documentation can be found [here](https://docs.sunscreen.tech).
 *WARNING!* This library is meant for experiments only. It has not been externally audited and is *not* intended for use in production yet. 
 
 # Set up
-These directions cover the requirements for *developing the sunscreen platform itself*, which may be more than needed to merely consume it as a dependency. If you wish to develop an application using Sunscreen, see the installation 
+These directions cover the requirements for *developing the sunscreen platform itself*, which may be more than needed to merely consume it as a dependency. If you wish to develop an application using Sunscreen, see the installation.
 
 ## Install Rust
 Install [Rustup](https://rustup.rs/) and follow the directions for your OS. We recommend stable Rust 1.58 or later.
@@ -57,7 +57,7 @@ git submodule update
 ```
 
 # Dev workflows
-Working Sunscreen is as you'd expect with any other Rust repository:
+Working with Sunscreen is as you'd expect with any other Rust repository:
 
 ## Build
 ```cargo build```

@@ -3,7 +3,7 @@
 - [Introduction](./intro/intro.md)
   - [Prerequisites](./intro/prelim.md)
   - [Why is a compiler needed for FHE?](./intro/why.md)
-- [Sunscreen's compiler](./compiler/compiler.md)
+- [Sunscreen's FHE compiler](./compiler/compiler.md)
   - [Features](./compiler/features.md)
   - [Who should use it?](./compiler/who.md)
   - [Performance](./compiler/performance.md)

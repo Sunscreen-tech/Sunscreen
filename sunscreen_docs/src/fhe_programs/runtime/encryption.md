@@ -27,8 +27,6 @@ To encrypt data, simply call `encrypt()` on `Runtime`:
 
 This produces a `Ciphertext` value suitable for use in `run()`. Be careful not to confuse the `Ciphertext` type, which represents an actual encrypted value, with [`Cipher`](/fhe_programs/types/cipher.md), which is a marker type to indicate a value in an FHE program is encrypted! Sunscreen can encrypt any of its provided [types](./fhe_programs/types/types.md) or fixed-length arrays[^1] of them. Note that arrays encrypt as multiple values in a single large `Ciphertext`.
 
-*[DW: if the user is sending many ciphertexts (e.g., a vector of ciphertexts) under the same scheme, wouldn't it make sense to only communicate the scheme parameters once for all of the ciphertexts rather than attaching them on each one? That would help save some space.]*
-
 [^1]: Fixed-length arrays have the type `[T; N]` where `N` is a the number `T`s. Don't confuse these with `Vec<T>`, which does not encode the length in its type! Sunscreen does not support `Vecs`.
 
 ## Cleartext metadata

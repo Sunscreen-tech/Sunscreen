@@ -1,12 +1,14 @@
 # Intro
 
-Sunscreen is an ecosystem for building privacy-preserving applications using fully homomorphic encryption. While in private beta, documentation can be found [here](https://sunscreen-docs-preview-test-1.s3.us-west-2.amazonaws.com/intro/intro.html).
+Sunscreen is an ecosystem for building privacy-preserving applications using fully homomorphic encryption.
 
 This project is licensed under the terms of the GNU AGPLv3 license. If you require a different license for your application, please reach out to us.
 
-*WARNING!* This library is meant for experiments only. It has not been audited and is *not* intended for use in production. 
+*WARNING!* This library is meant for experiments only. It has not been externally audited and is *not* intended for use in production. 
 
 # Example
+Below, we look at how to multiply two encrypted integers together.
+
 ```rust
 use sunscreen::{
     fhe_program,
@@ -20,16 +22,18 @@ fn simple_multiply(a: Cipher<Signed>, b: Cipher<Signed>) -> Cipher<Signed> {
 }
 
 fn main() -> Result<(), Error> {
-    let fhe_program = Compiler::with_fhe_program(simple_multiply).compile()?;
+    let app = Compiler::new()
+        .fhe_program(simple_multiply)
+        .compile()?;
 
-    let runtime = Runtime::new(&fhe_program.metadata.params)?;
+    let runtime = Runtime::new(app.params())?;
 
     let (public_key, private_key) = runtime.generate_keys()?;
 
     let a = runtime.encrypt(Signed::from(15), &public_key)?;
     let b = runtime.encrypt(Signed::from(5), &public_key)?;
 
-    let results = runtime.run(&fhe_program, vec![a, b], &public_key)?;
+    let results = runtime.run(app.get_program(simple_multiply).unwrap(), vec![a, b], &public_key)?;
 
     let c: Signed = runtime.decrypt(&results[0], &private_key)?;
 
@@ -40,7 +44,8 @@ fn main() -> Result<(), Error> {
 ```
 
 # Docs
-*TODO*
+* [User guide](https://docs.sunscreen.tech)
+* [API docs](https://docs.rs/sunscreen)
 
 # Getting help
-*TODO*
+For questions about Sunscreen, join our [Discord](https://discord.gg/WHCs6jNNDS)!

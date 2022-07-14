@@ -3,7 +3,7 @@ name = "sunscreen"
 # Read and understand
 # https://doc.rust-lang.org/cargo/reference/semver.html
 # before bumping the version.
-version = "0.6.0"
+version = "0.6.1"
 edition = "2021"
 
 authors = ["Sunscreen"]

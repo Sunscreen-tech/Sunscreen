@@ -1186,7 +1186,7 @@ dependencies = [
 
 [[package]]
 name = "sunscreen_backend"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "env_logger",
  "log",
@@ -1198,7 +1198,7 @@ dependencies = [
 
 [[package]]
 name = "sunscreen_compiler_macros"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1208,7 +1208,7 @@ dependencies = [
 
 [[package]]
 name = "sunscreen_fhe_program"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "petgraph",
  "seal_fhe",
@@ -1218,7 +1218,7 @@ dependencies = [
 
 [[package]]
 name = "sunscreen_runtime"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "bincode",
  "crossbeam",

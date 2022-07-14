@@ -1,6 +1,6 @@
 [package]
 name = "sunscreen_runtime"
-version = "0.5.1"
+version = "0.6.0"
 edition = "2021"
 
 authors = ["Sunscreen LLC"]
@@ -20,8 +20,8 @@ readme = "crates-io.md"
 bincode = "1.3.3"
 crossbeam = "0.8.1"
 log = "0.4.14"
-seal_fhe = { version = "0.5", path = "../seal_fhe" }
-sunscreen_fhe_program = { version = "0.5", path = "../sunscreen_fhe_program"  }
+seal_fhe = { version = "0.6", path = "../seal_fhe" }
+sunscreen_fhe_program = { version = "0.6", path = "../sunscreen_fhe_program"  }
 petgraph = "0.6.0"
 num_cpus = "1.13.0"
 rayon = "1.5.1"

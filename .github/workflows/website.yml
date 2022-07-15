@@ -1,0 +1,40 @@
+name: website-deployment
+
+on:
+  push:
+    branches: [ website ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+concurrency: website-production
+
+jobs:
+  build-docs:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: 'recursive'
+    - uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cargo/bin/
+          ~/.cargo/registry/index/
+          ~/.cargo/registry/cache/
+          ~/.cargo/git/db/
+          mdBook/target
+        key: ${{ runner.os }}-cargo-mdBook-${{ hashFiles('mdBook/Cargo.lock') }}
+    - name: Copy site to S3
+      run: aws s3 cp src/* s3://sunscreen-site
+      env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.DOCS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.DOCS_SECRET_ACCESS_KEY }}
+        AWS_DEFAULT_REGION: us-west-2
+    - name: Invalidate Cloudfront
+      run: aws cloudfront create-invalidation --distribution-id E10NWJGCYHNFM4 --paths "/*"
+      env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.DOCS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.DOCS_SECRET_ACCESS_KEY }}
+        AWS_DEFAULT_REGION: us-west-2

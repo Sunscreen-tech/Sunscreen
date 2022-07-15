@@ -34,7 +34,7 @@ jobs:
           ~/.cargo/registry/cache/
           ~/.cargo/git/db/
           mdBook/target
-        key: ${{ runner.os }}-cargo-mdbook-${{ hashFiles('mdbook/Cargo.lock') }}
+        key: ${{ runner.os }}-cargo-mdBook-${{ hashFiles('mdBook/Cargo.lock') }}
     # Checks are ordered from fastest to slowest so your build fails quickly on invalid PRs
     # We do everything in release mode so tests run quickly and steps cache each other.
     # Check the submitted change meets style guidelines

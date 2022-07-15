@@ -25,8 +25,16 @@ jobs:
           ~/.cargo/registry/cache/
           ~/.cargo/git/db/
           target/
+        key: ${{ runner.os }}-cargo-build-${{ hashFiles('Cargo.lock') }}
+    - uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cargo/bin/
+          ~/.cargo/registry/index/
+          ~/.cargo/registry/cache/
+          ~/.cargo/git/db/
           mdBook/target
-        key: ${{ runner.os }}-cargo-build-${{ hashFiles('**/Cargo.lock') }}
+        key: ${{ runner.os }}-cargo-mdbook-${{ hashFiles('mdbook/Cargo.lock') }}
     # Checks are ordered from fastest to slowest so your build fails quickly on invalid PRs
     # We do everything in release mode so tests run quickly and steps cache each other.
     # Check the submitted change meets style guidelines

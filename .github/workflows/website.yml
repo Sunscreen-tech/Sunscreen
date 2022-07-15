@@ -10,7 +10,7 @@ env:
 concurrency: website-production
 
 jobs:
-  build-docs:
+  deploy-website:
     runs-on: ubuntu-latest
 
     steps:
@@ -28,6 +28,7 @@ jobs:
         key: ${{ runner.os }}-cargo-mdBook-${{ hashFiles('mdBook/Cargo.lock') }}
     - name: Copy site to S3
       run: aws s3 cp src/* s3://sunscreen-site
+      working-directory: ./website
       env:
         AWS_ACCESS_KEY_ID: ${{ secrets.DOCS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.DOCS_SECRET_ACCESS_KEY }}

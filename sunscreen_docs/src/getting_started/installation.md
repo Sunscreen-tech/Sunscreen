@@ -5,7 +5,7 @@ Using Sunscreen in your app no different than any other Rust crate.
 Simply add
 
 ```toml
-sunscreen = "0.5.0"
+sunscreen = "*"
 ```
 
 to your application's Cargo.toml `[dependencies]` section.

@@ -2,13 +2,13 @@
 
 # Intro
 
-Sunscreen is an ecosystem for building privacy-preserving applications using fully homomorphic encryption (and later on zero-knowledge proofs as well). Fully homomorphic encryption (FHE) is a special kind of encryption scheme that allows you to perform computations directly on encrypted data. Since it's quite hard to write FHE programs, we've created a "compiler" to make this process easier for developers.
+Sunscreen is an ecosystem for building privacy-preserving applications using fully homomorphic encryption (and later on zero-knowledge proofs as well). Fully homomorphic encryption (FHE) is a special kind of encryption scheme that allows anyone to perform computations directly on encrypted data. Since it's quite hard to write FHE programs, we've created a "compiler" to make this process easier for developers.
 
 If you'd like to try out our FHE compiler before downloading it, we offer [a playground](https://playground.sunscreen.tech).
 
 Extensive documentation can be found [here](https://docs.sunscreen.tech).
 
-*WARNING!* This library is meant for experiments only. It has not been externally audited and is *not* intended for use in production yet. 
+*WARNING!* This library is meant for experiments only. It has not been externally audited and is not intended for use in production. 
 
 # Set up
 These directions cover the requirements for *developing the sunscreen platform itself*, which may be more than needed to merely consume it as a dependency. If you wish to develop an application using Sunscreen, see the installation.

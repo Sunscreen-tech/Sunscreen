@@ -42,6 +42,24 @@
         {
             "type": "lldb",
             "request": "launch",
+            "name": "Debug serialization tests in library 'sunscreen_runtime'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--package=sunscreen_runtime"
+                ],
+                "filter": {
+                    "name": "serialization",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
             "name": "Debug unit tests in library 'sunscreen_backend'",
             "cargo": {
                 "args": [

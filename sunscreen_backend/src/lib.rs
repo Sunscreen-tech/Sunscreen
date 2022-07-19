@@ -7,6 +7,10 @@
 //! of transformations.
 
 mod error;
+/**
+ * A module for performing noise estimation on FHE programs.
+ */
+pub mod noise_model;
 mod transforms;
 
 pub use error::*;

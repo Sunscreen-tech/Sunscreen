@@ -7,6 +7,11 @@ pub enum Error {
      * An [``]() is erroneous.
      */
     IRError(sunscreen_fhe_program::Error),
+
+    /**
+     * The given parameters are invalid.
+     */
+    InvalidParams,
 }
 
 impl From<sunscreen_fhe_program::Error> for Error {
@@ -16,6 +21,6 @@ impl From<sunscreen_fhe_program::Error> for Error {
 }
 
 /**
- * A convensience wrapper around [`std::result::Result`].
+ * A convenience wrapper around [`std::result::Result`].
  */
 pub type Result<T> = std::result::Result<T, Error>;

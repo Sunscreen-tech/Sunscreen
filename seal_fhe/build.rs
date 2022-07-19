@@ -16,6 +16,7 @@ fn compile_native(profile: &str, out_path: &Path) {
         .define("CMAKE_BUILD_TYPE", profile)
         .define("CMAKE_CXX_FLAGS_RELEASE", "-DNDEBUG -O3")
         .define("CMAKE_C_FLAGS_RELEASE", "-DNDEBUG -O3")
+        .define("SEAL_USE_GAUSSIAN_NOISE", "ON")
         .define("SEAL_BUILD_STATIC_SEAL_C", "ON")
         .define("SEAL_USE_INTEL_HEXL", hexl)
         .define("SEAL_BUILD_DEPS", "ON")

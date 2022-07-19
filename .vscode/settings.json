@@ -32,5 +32,8 @@
         "algorithm": "cpp",
         "chrono": "cpp"
     },
-    "debug.allowBreakpointsEverywhere": true
+    "debug.allowBreakpointsEverywhere": true,
+    "cSpell.words": [
+        "ciphertext"
+    ]
 }

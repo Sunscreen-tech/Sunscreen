@@ -187,5 +187,8 @@ fn relinearization_consumes_no_noise_budget() {
 
     let noise_post = decryptor.invariant_noise_budget(&c_3).unwrap();
 
+    println!("{}", noise_pre);
+    println!("{}", noise_post);
+
     assert_eq!(noise_post, noise_pre);
 }

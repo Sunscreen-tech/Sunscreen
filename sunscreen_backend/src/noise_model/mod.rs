@@ -154,6 +154,20 @@ impl NoiseModel {
     }
 
     /**
+     * Returns the predicted invariant noise after multiplying a ciphertext
+     * and plaintext.
+     * 
+     * # Remarks
+     * From SEAL 2.3.1 manual page 13.
+     */
+    pub fn mul_ct_pt(&self, a_invariant_noise: f64) -> f64 {
+        let n = self.params.lattice_dimension as f64;
+        let t = self.params.plain_modulus as f64;
+
+        a_invariant_noise * n * t
+    }
+
+    /**
      * Calculates the invariant noise budget from the given invariant
      * noise.
      * 
@@ -275,8 +289,46 @@ mod tests {
     }
 
     #[test]
-    fn multiply_bound_exceeds_measured() {
+    fn addition_pt_bound_exceeds_measured() {
         for d in [2048, 4096, 8192, 16384] {
+            for p in [100, 1000, 10000, 10000] {
+                let (ctx, params) = setup_scheme(d, p);
+
+                let keygen = KeyGenerator::new(&ctx).unwrap();
+                let public_key = keygen.create_public_key();
+                let private_key = keygen.secret_key();
+                let encryptor = Encryptor::with_public_key(&ctx, &public_key).unwrap();
+                let decryptor = Decryptor::new(&ctx, &private_key).unwrap();
+                let evalulator = BFVEvaluator::new(&ctx).unwrap();
+
+                let mut pt = Plaintext::new().unwrap();
+                pt.resize(d as usize);
+
+                for i in 0..d {
+                    pt.set_coefficient(i as usize, p - 1);
+                }
+
+                let ct_0 = encryptor.encrypt(&pt).unwrap();
+
+                let s = evalulator.add_plain(&ct_0, &pt).unwrap();
+
+                let measured_noise_budget = decryptor.invariant_noise_budget(&s).unwrap();
+
+                let noise_model = NoiseModel::new(&params).unwrap();
+
+                let ct_0_noise = noise_model.encrypt();
+                let s_noise = noise_model.add_ct_pt(ct_0_noise);
+
+                let modeled_noise_budget = noise_model.noise_budget(s_noise);
+
+                assert_eq!(modeled_noise_budget < measured_noise_budget, true);
+            }
+        }
+    }
+
+    #[test]
+    fn multiply_bound_exceeds_measured() {
+        for d in [4096, 8192, 16384] {
             for p in [100, 1000, 10000, 10000] {
                 let (ctx, params) = setup_scheme(d, p);
 
@@ -297,6 +349,11 @@ mod tests {
                 let ct_0 = encryptor.encrypt(&pt).unwrap();
                 let ct_1 = encryptor.encrypt(&pt).unwrap();
 
+                let pre_multiply_noise_budget = u32::min(
+                    decryptor.invariant_noise_budget(&ct_0).unwrap(),
+                    decryptor.invariant_noise_budget(&ct_1).unwrap()
+                );
+
                 let s = evalulator.multiply(&ct_0, &ct_1).unwrap();
 
                 let measured_noise_budget = decryptor.invariant_noise_budget(&s).unwrap();
@@ -309,7 +366,53 @@ mod tests {
 
                 let modeled_noise_budget = noise_model.noise_budget(s_noise);
 
-                assert_eq!(modeled_noise_budget < measured_noise_budget, true);
+                let actual_noise = pre_multiply_noise_budget - measured_noise_budget;
+                let modeled_noise = noise_model.noise_budget(ct_0_noise) - modeled_noise_budget;
+
+                assert_eq!(modeled_noise > actual_noise, true);
+            }
+        }
+    }
+
+    #[test]
+    fn multiply_pt_bound_exceeds_measured() {
+        for d in [4096, 8192, 16384] {
+            for p in [100, 1000, 10000, 10000] {
+                let (ctx, params) = setup_scheme(d, p);
+
+                let keygen = KeyGenerator::new(&ctx).unwrap();
+                let public_key = keygen.create_public_key();
+                let private_key = keygen.secret_key();
+                let encryptor = Encryptor::with_public_key(&ctx, &public_key).unwrap();
+                let decryptor = Decryptor::new(&ctx, &private_key).unwrap();
+                let evalulator = BFVEvaluator::new(&ctx).unwrap();
+
+                let mut pt = Plaintext::new().unwrap();
+                pt.resize(d as usize);
+
+                for i in 0..d {
+                    pt.set_coefficient(i as usize, p - 1);
+                }
+
+                let ct_0 = encryptor.encrypt(&pt).unwrap();
+
+                let pre_multiply_noise_budget = decryptor.invariant_noise_budget(&ct_0).unwrap();
+
+                let s = evalulator.multiply_plain(&ct_0, &pt).unwrap();
+
+                let measured_noise_budget = decryptor.invariant_noise_budget(&s).unwrap();
+
+                let noise_model = NoiseModel::new(&params).unwrap();
+
+                let ct_0_noise = noise_model.encrypt();
+                let s_noise = noise_model.mul_ct_pt(ct_0_noise);
+
+                let modeled_noise_budget = noise_model.noise_budget(s_noise);
+
+                let actual_noise = pre_multiply_noise_budget - measured_noise_budget;
+                let modeled_noise = noise_model.noise_budget(ct_0_noise) - modeled_noise_budget;
+
+                assert_eq!(modeled_noise > actual_noise, true);
             }
         }
     }

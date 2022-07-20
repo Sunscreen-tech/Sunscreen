@@ -4,7 +4,7 @@ version = "0.6.0"
 edition = "2021"
 
 authors = ["Sunscreen LLC"]
-rust-version = "1.60.0"
+rust-version = "1.56.0"
 license = "AGPL-3.0-only"
 description = "This crate contains Rust bindings for Microsoft's SEAL Fully Homomorphic Encryption (FHE) library."
 homepage = "https://sunscreen.tech"

@@ -7,7 +7,7 @@ version = "0.6.1"
 edition = "2021"
 
 authors = ["Sunscreen"]
-rust-version = "1.60.0"
+rust-version = "1.56.0"
 license = "AGPL-3.0-only"
 description = "A Fully Homomorphic Encryption (FHE) compiler supporting the Brakerski/Fan-Vercauteren (BFV) scheme."
 homepage = "https://sunscreen.tech"

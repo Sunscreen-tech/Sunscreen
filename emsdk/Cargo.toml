@@ -4,7 +4,7 @@ version = "0.1.1"
 edition = "2021"
 
 authors = ["Sunscreen"]
-rust-version = "1.60.0"
+rust-version = "1.56.0"
 license = "AGPL-3.0-only"
 description = "A crate for building C++ projects with emcake. This facilitates building wasm binaries with both Rust and C++ code."
 homepage = "https://sunscreen.tech"

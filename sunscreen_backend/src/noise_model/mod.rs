@@ -1,8 +1,9 @@
 use crate::{Error, Result};
-use sunscreen_runtime::{Params};
+use num::{BigUint, ToPrimitive};
+use sunscreen_runtime::Params;
 
 /**
- * The standard deviation of the Gaussian noise introduced when encrypting 
+ * The standard deviation of the Gaussian noise introduced when encrypting
  * ciphertexts.
  */
 pub const NOISE_STD_DEV: f64 = 3.2f64;
@@ -18,55 +19,154 @@ pub const NOISE_NUM_STD_DEVIATIONS: f64 = 6f64;
  */
 pub const NOISE_MAX: f64 = NOISE_STD_DEV * NOISE_NUM_STD_DEVIATIONS;
 
-// Noise modeling results come from "Optimizations of Fully
-// Homomorphic Encryption" by Iliashenko.
-
 /**
- * Gets the 
+ * A model for tracking noise growth over multiply homomorphic encryption
+ * operations.
  */
-fn total_q(params: &Params) -> Result<f64> {
-    if params.coeff_modulus.len() < 1 {
-        return Err(Error::InvalidParams)
+pub struct NoiseModel {
+    params: Params,
+}
+
+impl NoiseModel {
+    /**
+     * Create a new noise model with the given parameters.
+     *
+     * # Remarks
+     * Returns [`Error::InvalidParams`] if the given parameters:
+     * * contain fewer than 2 coefficient modulus chain values
+     * * have a plain modulus < 2
+     */
+    pub fn new(params: &Params) -> Result<Self> {
+        if params.coeff_modulus.len() < 1 {
+            return Err(Error::InvalidParams);
+        }
+
+        if params.plain_modulus < 2 {
+            return Err(Error::InvalidParams);
+        }
+
+        Ok(Self {
+            params: params.clone(),
+        })
     }
 
-    let val = params.coeff_modulus.iter().take(params.coeff_modulus.len() - 1).fold(1f64, |sum, x| sum * (*x) as f64);
+    /**
+     * Compute q from the coefficient modulus chain in the given Params.
+     * This excludes the final "special" modulus that SEAL uses.
+     */
+    pub fn total_q(&self) -> BigUint {
+        let val = self
+            .params
+            .coeff_modulus
+            .iter()
+            .take(usize::max(self.params.coeff_modulus.len() - 1, 1))
+            .fold(BigUint::from(1u64), |sum, x| sum * (*x));
 
-    Ok(val)
-}
+        val
+    }
 
-/**
- * Return a heuristic bound on the noise in a freshly encrypted 
- * ciphertext. See
- * page 45.
- * 
- * # Remarks
- * Returns an upper bound on the noise of a freshly encrypted 
- * ciphertext using the given parameters.
- * 
- * Returns `Err(Error::InvalidParams)` if params.coeff_modulus doesn't
- * contain at least one value.
- */
-pub fn model_encryption_noise(params: &Params) -> Result<f64> {
-    let t = params.plain_modulus as f64;
-    let q = total_q(params)?;
-    let n = params.lattice_dimension as f64;
+    /**
+     * Compute `q mod t`, where q is `total_q(params)` and `t` is the plain
+     * modulus.
+     */
+    pub fn r_t(&self) -> BigUint {
+        let q = self.total_q();
+        let t = BigUint::from(self.params.plain_modulus);
 
-    let noise = t * (n * (t - 1f64) / 2f64) + 2f64 * NOISE_STD_DEV * f64::sqrt(12f64 * n * n + 9f64 * n);
-    //let noise = t * NOISE_MAX * (4. * f64::sqrt(3.) * n + f64::sqrt(n));
+        q % t
+    }
 
-    let invariant_noise = noise / q;
+    /**
+     * Return a heuristic bound on the noise in a freshly encrypted
+     * ciphertext.
+     *
+     * # Remarks
+     * From "Optimizations of Fully Homomorphic Encryption" by Ilia 
+     * Iliashenko, page 45.
+     */
+    pub fn encrypt(&self) -> f64 {
+        let t = self.params.plain_modulus as f64;
+        let q = self
+            .total_q()
+            .to_f64()
+            .expect("Failed to convert BigUInt to f64");
+        let n = self.params.lattice_dimension as f64;
 
-    Ok(invariant_noise)
-}
+        let noise = t * (n * (t - 1f64) / 2f64)
+            + 2f64 * NOISE_STD_DEV * f64::sqrt(12f64 * n * n + 9f64 * n);
+        //let noise = t * NOISE_MAX * (4. * f64::sqrt(3.) * n + f64::sqrt(n));
 
-/**
- * Calculates the invariant noise budget from the given noise and
- * coefficient modulus
- */
-pub fn model_noise_budget(noise: f64) -> Result<u32> {
-    let noise_budget = -f64::log2(2. * noise);
+        let invariant_noise = noise / q;
 
-    Ok(noise_budget as u32)
+        invariant_noise
+    }
+
+    /**
+     * Returns the predicted invariant noise after adding 2 ciphertexts.
+     * 
+     * # Remarks
+     * From SEAL 2.3.1 release notes page 12.
+     */
+    pub fn add_ct_ct(&self, a_invariant_noise: f64, b_invariant_noise: f64) -> f64 {
+        a_invariant_noise + b_invariant_noise
+    }
+
+    /**
+     * Returns the predicted invariant noise after adding a ciphertext to a
+     * plaintext.
+     * 
+     * # Remarks
+     * From SEAL 2.3.1 release notes page 13.
+     */
+    pub fn add_ct_pt(&self, ct_invariant_noise: f64) -> f64 {
+        let r_t = self
+            .r_t()
+            .to_f64()
+            .expect("Failed to convert BigUInt to f64");
+
+        let q = self.total_q().to_f64().expect("Failed to convert BigUInt to f64");
+
+        let pt_noise = r_t * self.params.lattice_dimension as f64 * self.params.plain_modulus as f64;
+        
+        ct_invariant_noise + pt_noise / q
+    }
+
+    /**
+     * Returns the predicted invariant noise after multiplying 2 
+     * ciphertexts.
+     * 
+     * # Remarks
+     * From "Optimizations of Fully Homomorphic Encryption" by Ilia 
+     * Iliashenko, page 48.
+     */
+    pub fn mul_ct_ct(&self, a_invariant_noise: f64, b_invariant_noise: f64) -> f64 {
+        let q = self.total_q().to_f64().expect("Failed to convert BigUInt to f64");
+        let t = self.params.plain_modulus as f64;
+        let n = self.params.lattice_dimension as f64;
+
+        let term_0 = t * f64::sqrt(3. * n + 2. * n * n) * (a_invariant_noise + b_invariant_noise);
+
+        let term_1 = 3. * a_invariant_noise + b_invariant_noise;
+
+        let term_2 = (t / q) * f64::sqrt(3f64 * n + 2f64 * n * n + 4. / 3. * n * n * n);
+
+        term_0 + term_1 + term_2
+    }
+
+    /**
+     * Calculates the invariant noise budget from the given invariant
+     * noise.
+     * 
+     * # Remarks
+     * Returns $-log_2(2 * |v|) = log_2(q) - log_2(q * |v|) - 1$, where
+     * $|v|$ is the invariant noise and $q$ is the total coefficient
+     * modulus.
+     */
+    pub fn noise_budget(&self, invariant_noise: f64) -> u32 {
+        let noise_budget = -f64::log2(2. * invariant_noise);
+
+        noise_budget as u32
+    }
 }
 
 #[cfg(test)]
@@ -78,20 +178,25 @@ mod tests {
         let params = BfvEncryptionParametersBuilder::new()
             .set_plain_modulus_u64(plain_modulus)
             .set_poly_modulus_degree(lattice_dimension)
-            .set_coefficient_modulus(CoefficientModulus::bfv_default(lattice_dimension, SecurityLevel::TC128).unwrap())
+            .set_coefficient_modulus(
+                CoefficientModulus::bfv_default(lattice_dimension, SecurityLevel::TC128).unwrap(),
+            )
             .build()
             .unwrap();
 
         let params_ret = Params {
             lattice_dimension: params.get_poly_modulus_degree(),
             plain_modulus: params.get_plain_modulus().value(),
-            coeff_modulus: params.get_coefficient_modulus().iter().map(|x| x.value()).collect(),
+            coeff_modulus: params
+                .get_coefficient_modulus()
+                .iter()
+                .map(|x| x.value())
+                .collect(),
             scheme_type: sunscreen_fhe_program::SchemeType::Bfv,
             security_level: SecurityLevel::TC128,
         };
 
-        let ctx = Context::new(&params, false, SecurityLevel::TC128)
-            .unwrap();
+        let ctx = Context::new(&params, false, SecurityLevel::TC128).unwrap();
 
         (ctx, params_ret)
     }
@@ -118,8 +223,91 @@ mod tests {
                 let ct = encryptor.encrypt(&pt).unwrap();
 
                 let measured_noise_budget = decryptor.invariant_noise_budget(&ct).unwrap();
-                let modeled_noise = model_encryption_noise(&params).unwrap();
-                let modeled_noise_budget = model_noise_budget(modeled_noise).unwrap();
+
+                let noise_model = NoiseModel::new(&params).unwrap();
+                
+                let modeled_noise = noise_model.encrypt();
+                let modeled_noise_budget = noise_model.noise_budget(modeled_noise);
+
+                assert_eq!(modeled_noise_budget < measured_noise_budget, true);
+            }
+        }
+    }
+
+    #[test]
+    fn addition_bound_exceeds_measured() {
+        for d in [2048, 4096, 8192, 16384] {
+            for p in [100, 1000, 10000, 10000] {
+                let (ctx, params) = setup_scheme(d, p);
+
+                let keygen = KeyGenerator::new(&ctx).unwrap();
+                let public_key = keygen.create_public_key();
+                let private_key = keygen.secret_key();
+                let encryptor = Encryptor::with_public_key(&ctx, &public_key).unwrap();
+                let decryptor = Decryptor::new(&ctx, &private_key).unwrap();
+                let evalulator = BFVEvaluator::new(&ctx).unwrap();
+
+                let mut pt = Plaintext::new().unwrap();
+                pt.resize(d as usize);
+
+                for i in 0..d {
+                    pt.set_coefficient(i as usize, p - 1);
+                }
+
+                let ct_0 = encryptor.encrypt(&pt).unwrap();
+                let ct_1 = encryptor.encrypt(&pt).unwrap();
+
+                let s = evalulator.add(&ct_0, &ct_1).unwrap();
+
+                let measured_noise_budget = decryptor.invariant_noise_budget(&s).unwrap();
+
+                let noise_model = NoiseModel::new(&params).unwrap();
+
+                let ct_0_noise = noise_model.encrypt();
+                let ct_1_noise = noise_model.encrypt();
+                let s_noise = noise_model.add_ct_ct(ct_0_noise, ct_1_noise);
+
+                let modeled_noise_budget = noise_model.noise_budget(s_noise);
+
+                assert_eq!(modeled_noise_budget < measured_noise_budget, true);
+            }
+        }
+    }
+
+    #[test]
+    fn multiply_bound_exceeds_measured() {
+        for d in [2048, 4096, 8192, 16384] {
+            for p in [100, 1000, 10000, 10000] {
+                let (ctx, params) = setup_scheme(d, p);
+
+                let keygen = KeyGenerator::new(&ctx).unwrap();
+                let public_key = keygen.create_public_key();
+                let private_key = keygen.secret_key();
+                let encryptor = Encryptor::with_public_key(&ctx, &public_key).unwrap();
+                let decryptor = Decryptor::new(&ctx, &private_key).unwrap();
+                let evalulator = BFVEvaluator::new(&ctx).unwrap();
+
+                let mut pt = Plaintext::new().unwrap();
+                pt.resize(d as usize);
+
+                for i in 0..d {
+                    pt.set_coefficient(i as usize, p - 1);
+                }
+
+                let ct_0 = encryptor.encrypt(&pt).unwrap();
+                let ct_1 = encryptor.encrypt(&pt).unwrap();
+
+                let s = evalulator.multiply(&ct_0, &ct_1).unwrap();
+
+                let measured_noise_budget = decryptor.invariant_noise_budget(&s).unwrap();
+
+                let noise_model = NoiseModel::new(&params).unwrap();
+
+                let ct_0_noise = noise_model.encrypt();
+                let ct_1_noise = noise_model.encrypt();
+                let s_noise = noise_model.mul_ct_ct(ct_0_noise, ct_1_noise);
+
+                let modeled_noise_budget = noise_model.noise_budget(s_noise);
 
                 assert_eq!(modeled_noise_budget < measured_noise_budget, true);
             }

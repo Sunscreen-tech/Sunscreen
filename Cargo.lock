@@ -1190,6 +1190,7 @@ version = "0.6.1"
 dependencies = [
  "env_logger",
  "log",
+ "num",
  "petgraph",
  "seal_fhe",
  "sunscreen_fhe_program",

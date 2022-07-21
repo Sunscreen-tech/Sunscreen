@@ -81,6 +81,8 @@ fn main() {
     let out_path = PathBuf::from(std::env::var("OUT_DIR").unwrap());
     let target = std::env::var("TARGET").expect("Failed to get target");
 
+    println!("cargo:rerun-if-changed=SEAL");
+
     let profile = if profile == "release" {
         "Release"
     } else if profile == "debug" {

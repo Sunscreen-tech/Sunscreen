@@ -92,6 +92,12 @@
     },
     "debug.allowBreakpointsEverywhere": true,
     "cSpell.words": [
-        "ciphertext"
+        "ciphertext",
+        "ciphertexts",
+        "Iliashenko",
+        "petgraph",
+        "relinearization",
+        "relinearizations",
+        "relinearize"
     ]
 }

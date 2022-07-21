@@ -17,7 +17,7 @@ pub use error::*;
 
 use sunscreen_fhe_program::FheProgram;
 
-use transforms::transform_intermediate_represenation;
+use transforms::transform_intermediate_representation;
 
 /**
  * Clones the given [`FheProgram`] and compiles it.
@@ -25,7 +25,7 @@ use transforms::transform_intermediate_represenation;
 pub fn compile(ir: &FheProgram) -> FheProgram {
     let mut clone = ir.clone();
 
-    transform_intermediate_represenation(&mut clone);
+    transform_intermediate_representation(&mut clone);
 
     clone
 }
@@ -34,7 +34,7 @@ pub fn compile(ir: &FheProgram) -> FheProgram {
  * Consumes the given [`FheProgram`] and compiles it.
  */
 pub fn compile_inplace(mut ir: FheProgram) -> FheProgram {
-    transform_intermediate_represenation(&mut ir);
+    transform_intermediate_representation(&mut ir);
 
     ir
 }

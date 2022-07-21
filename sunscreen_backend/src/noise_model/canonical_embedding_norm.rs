@@ -80,7 +80,6 @@ impl NoiseModel for CanonicalEmbeddingNormModel {
 
         let noise = t * (n * (t - 1f64) / 2f64)
             + 2f64 * super::NOISE_STD_DEV * f64::sqrt(12f64 * n * n + 9f64 * n);
-        //let noise = t * NOISE_MAX * (4. * f64::sqrt(3.) * n + f64::sqrt(n));
 
         let invariant_noise = noise / q;
 

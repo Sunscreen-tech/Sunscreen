@@ -2,7 +2,9 @@ use sunscreen_fhe_program::FheProgram;
 use sunscreen_runtime::Params;
 
 mod canonical_embedding_norm;
-pub use {canonical_embedding_norm::*};
+mod measured_model;
+pub use canonical_embedding_norm::*;
+pub use measured_model::*;
 
 /**
  * The standard deviation of the Gaussian noise introduced when encrypting
@@ -25,7 +27,7 @@ pub const NOISE_MAX: f64 = NOISE_STD_DEV * NOISE_NUM_STD_DEVIATIONS;
  * Returns the predicted noise levels in output ciphertexts for the
  * given [`FheProgram`].
  */
-pub fn predict_noise(_model: Box<dyn NoiseModel>, _params: &Params, _fhe_program: &FheProgram) -> Vec<FheProgram> {
+pub fn predict_noise(_model: Box<dyn NoiseModel>, _params: &Params, _fhe_program: &FheProgram) -> Vec<f64> {
     vec![]
 }
 

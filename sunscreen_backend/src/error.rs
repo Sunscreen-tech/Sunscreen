@@ -29,7 +29,18 @@ pub enum Error {
     /**
      * An error occurred when running an FHE program.
      */
-    RuntimeError(RuntimeError),    
+    RuntimeError(RuntimeError),
+
+    /**
+     * The given target noise budget is unachievable even with a fresh ciphertext.
+     */
+    ImpossibleNoiseFloor,
+
+    /**
+     * Attempted to create a ciphertext with
+     * [`TargetNoiseLevel::NotApplicable`].
+     */
+    NotApplicable
 }
 
 impl From<sunscreen_fhe_program::Error> for Error {

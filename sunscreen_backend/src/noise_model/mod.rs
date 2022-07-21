@@ -27,19 +27,23 @@ pub const NOISE_MAX: f64 = NOISE_STD_DEV * NOISE_NUM_STD_DEVIATIONS;
  * Returns the predicted noise levels in output ciphertexts for the
  * given [`FheProgram`].
  */
-pub fn predict_noise(_model: Box<dyn NoiseModel>, _params: &Params, _fhe_program: &FheProgram) -> Vec<f64> {
+pub fn predict_noise(
+    _model: Box<dyn NoiseModel>,
+    _params: &Params,
+    _fhe_program: &FheProgram,
+) -> Vec<f64> {
     vec![]
 }
 
 /**
  * Calculates the invariant noise budget from the given invariant
  * noise.
- * 
+ *
  * # Remarks
  * Returns $-log_2(2 * |v|) = log_2(q) - log_2(q * |v|) - 1$, where
  * $|v|$ is the invariant noise and $q$ is the total coefficient
  * modulus.
- * 
+ *
  * When `invariant_noise` is between [0, 0.5), the ciphertext should
  * still decrypt.
  */
@@ -93,7 +97,7 @@ pub trait NoiseModel {
 
     /**
      * Predict the amount of noise for the given output's index.
-     * 
+     *
      * # Remarks
      * For purely predictive models, this function should just return the
      * input `invariant_noise`. For empirical models that run

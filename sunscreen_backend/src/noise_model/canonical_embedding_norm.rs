@@ -1,11 +1,11 @@
-use crate::{Error, Result, noise_model::NoiseModel};
+use crate::{noise_model::NoiseModel, Error, Result};
 use num::{BigUint, ToPrimitive};
 use sunscreen_runtime::Params;
 
 /**
  * A model for tracking noise growth using derivations of the canonical
  * embedding norm of ciphertexts' randomness as an upper bound.
- * 
+ *
  * # Remarks
  * The implemented heuristics come from the following sources:
  * * `encrypt`: "Optimizations of Fully Homomorphic Encryption" by Ilia Iliashenko, page 45.
@@ -96,15 +96,22 @@ impl NoiseModel for CanonicalEmbeddingNormModel {
             .to_f64()
             .expect("Failed to convert BigUInt to f64");
 
-        let q = self.total_q().to_f64().expect("Failed to convert BigUInt to f64");
+        let q = self
+            .total_q()
+            .to_f64()
+            .expect("Failed to convert BigUInt to f64");
 
-        let pt_noise = r_t * self.params.lattice_dimension as f64 * self.params.plain_modulus as f64;
-        
+        let pt_noise =
+            r_t * self.params.lattice_dimension as f64 * self.params.plain_modulus as f64;
+
         ct_invariant_noise + pt_noise / q
     }
 
     fn mul_ct_ct(&self, a_invariant_noise: f64, b_invariant_noise: f64) -> f64 {
-        let q = self.total_q().to_f64().expect("Failed to convert BigUInt to f64");
+        let q = self
+            .total_q()
+            .to_f64()
+            .expect("Failed to convert BigUInt to f64");
         let t = self.params.plain_modulus as f64;
         let n = self.params.lattice_dimension as f64;
 
@@ -189,9 +196,10 @@ mod tests {
                 let measured_noise_budget = decryptor.invariant_noise_budget(&ct).unwrap();
 
                 let noise_model = CanonicalEmbeddingNormModel::new(&params).unwrap();
-                
+
                 let modeled_noise = noise_model.encrypt();
-                let modeled_noise_budget = crate::noise_model::noise_to_noise_budget(modeled_noise) as u32;
+                let modeled_noise_budget =
+                    crate::noise_model::noise_to_noise_budget(modeled_noise) as u32;
 
                 assert_eq!(modeled_noise_budget < measured_noise_budget, true);
             }
@@ -231,7 +239,8 @@ mod tests {
                 let ct_1_noise = noise_model.encrypt();
                 let s_noise = noise_model.add_ct_ct(ct_0_noise, ct_1_noise);
 
-                let modeled_noise_budget = crate::noise_model::noise_to_noise_budget(s_noise) as u32;
+                let modeled_noise_budget =
+                    crate::noise_model::noise_to_noise_budget(s_noise) as u32;
 
                 assert_eq!(modeled_noise_budget < measured_noise_budget, true);
             }
@@ -269,7 +278,8 @@ mod tests {
                 let ct_0_noise = noise_model.encrypt();
                 let s_noise = noise_model.add_ct_pt(ct_0_noise);
 
-                let modeled_noise_budget = crate::noise_model::noise_to_noise_budget(s_noise) as u32;
+                let modeled_noise_budget =
+                    crate::noise_model::noise_to_noise_budget(s_noise) as u32;
 
                 assert_eq!(modeled_noise_budget < measured_noise_budget, true);
             }
@@ -301,7 +311,7 @@ mod tests {
 
                 let pre_multiply_noise_budget = u32::min(
                     decryptor.invariant_noise_budget(&ct_0).unwrap(),
-                    decryptor.invariant_noise_budget(&ct_1).unwrap()
+                    decryptor.invariant_noise_budget(&ct_1).unwrap(),
                 );
 
                 let s = evalulator.multiply(&ct_0, &ct_1).unwrap();
@@ -314,13 +324,18 @@ mod tests {
                 let ct_1_noise = noise_model.encrypt();
                 let s_noise = noise_model.mul_ct_ct(ct_0_noise, ct_1_noise);
 
-                let pre_multiply_modeled_noise = crate::noise_model::noise_to_noise_budget(ct_0_noise) as u32;
+                let pre_multiply_modeled_noise =
+                    crate::noise_model::noise_to_noise_budget(ct_0_noise) as u32;
                 let post_multiply_modeled_noise =
-                crate::noise_model::noise_to_noise_budget(s_noise) as u32;
+                    crate::noise_model::noise_to_noise_budget(s_noise) as u32;
 
-                let actual_noise = pre_multiply_noise_budget.checked_sub( measured_noise_budget).unwrap();
+                let actual_noise = pre_multiply_noise_budget
+                    .checked_sub(measured_noise_budget)
+                    .unwrap();
 
-                let modeled_noise = pre_multiply_modeled_noise.checked_sub(post_multiply_modeled_noise).unwrap();
+                let modeled_noise = pre_multiply_modeled_noise
+                    .checked_sub(post_multiply_modeled_noise)
+                    .unwrap();
 
                 assert_eq!(modeled_noise > actual_noise, true);
             }
@@ -360,13 +375,19 @@ mod tests {
                 let ct_0_noise = noise_model.encrypt();
                 let s_noise = noise_model.mul_ct_pt(ct_0_noise);
 
-                let pre_multiply_modeled_noise = crate::noise_model::noise_to_noise_budget(ct_0_noise) as u32;
+                let pre_multiply_modeled_noise =
+                    crate::noise_model::noise_to_noise_budget(ct_0_noise) as u32;
 
-                let post_multiply_modeled_noise = crate::noise_model::noise_to_noise_budget(s_noise) as u32;
+                let post_multiply_modeled_noise =
+                    crate::noise_model::noise_to_noise_budget(s_noise) as u32;
 
-                let modeled_noise = pre_multiply_modeled_noise.checked_sub(post_multiply_modeled_noise).unwrap();
+                let modeled_noise = pre_multiply_modeled_noise
+                    .checked_sub(post_multiply_modeled_noise)
+                    .unwrap();
 
-                let actual_noise = pre_multiply_noise_budget.checked_sub(measured_noise_budget).unwrap();
+                let actual_noise = pre_multiply_noise_budget
+                    .checked_sub(measured_noise_budget)
+                    .unwrap();
 
                 assert_eq!(modeled_noise > actual_noise, true);
             }

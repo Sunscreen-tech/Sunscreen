@@ -177,7 +177,7 @@ pub fn add_noise(
 
     let mut noise = vec![];
 
-    for _ in 0..SAMPLES {
+    for _ in 0..1 {
         let a = create_ciphertext_with_noise_level(
             &context,
             &public_key,
@@ -236,7 +236,7 @@ pub fn add_pt_noise(
 
     let mut noise = vec![];
 
-    for _ in 0..SAMPLES {
+    for _ in 0..1 {
         let a = create_ciphertext_with_noise_level(
             &context,
             &public_key,
@@ -352,7 +352,7 @@ pub fn mul_pt_noise(
 
     let mut noise = vec![];
 
-    for _ in 0..SAMPLES {
+    for _ in 0..1 {
         let a = create_ciphertext_with_noise_level(
             &context,
             &public_key,

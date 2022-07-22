@@ -2,7 +2,7 @@ use crate::{noise_model::NoiseModel, Error, Result};
 use num::{BigUint, ToPrimitive};
 use sunscreen_runtime::Params;
 
-use super::{noise_budget_to_noise};
+use super::noise_budget_to_noise;
 
 /**
  * A model for tracking noise growth using derivations of the canonical

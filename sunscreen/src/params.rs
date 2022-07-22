@@ -2,7 +2,10 @@ use crate::{Error, FheProgramFn, Result, SecurityLevel};
 
 use log::{debug, trace};
 
-use seal_fhe::{Context, CoefficientModulus, PlainModulus, BfvEncryptionParametersBuilder, Modulus, KeyGenerator};
+use seal_fhe::{
+    BfvEncryptionParametersBuilder, CoefficientModulus, Context, KeyGenerator, Modulus,
+    PlainModulus,
+};
 use sunscreen_backend::noise_model::{
     noise_budget_to_noise, predict_noise, MeasuredModel, NoiseModel, TargetNoiseLevel,
 };
@@ -78,7 +81,11 @@ fn plaintext_constraint_to_modulus(
  */
 fn can_make_required_keys(fhe_program: &FheProgram, params: &Params) -> Result<bool> {
     let plain_modulus = PlainModulus::raw(params.plain_modulus)?;
-    let modulus_chain = params.coeff_modulus.iter().map(|x| Modulus::new(*x).map_err(|e| Error::from(e))).collect::<Result<Vec<Modulus>>>()?;
+    let modulus_chain = params
+        .coeff_modulus
+        .iter()
+        .map(|x| Modulus::new(*x).map_err(|e| Error::from(e)))
+        .collect::<Result<Vec<Modulus>>>()?;
 
     let enc_params = BfvEncryptionParametersBuilder::new()
         .set_plain_modulus(plain_modulus)
@@ -93,16 +100,20 @@ fn can_make_required_keys(fhe_program: &FheProgram, params: &Params) -> Result<b
     let create_galois = if fhe_program.requires_galois_keys() {
         match keygen.create_galois_keys() {
             Ok(_) => true,
-            Err(_) => false
+            Err(_) => false,
         }
-    } else { true };
+    } else {
+        true
+    };
 
     let create_relin = if fhe_program.requires_relin_keys() {
         match keygen.create_relinearization_keys() {
             Ok(_) => true,
-            Err(_) => false
+            Err(_) => false,
         }
-    } else { true };
+    } else {
+        true
+    };
 
     Ok(create_galois && create_relin)
 }
@@ -160,11 +171,10 @@ pub fn determine_params(
                     if !can_make_keys {
                         continue 'params_loop;
                     }
-                },
+                }
                 Err(_) => {
                     continue 'params_loop;
                 }
-                
             };
 
             let noise_targets = ir

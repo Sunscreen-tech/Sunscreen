@@ -2,6 +2,8 @@ use crate::{noise_model::NoiseModel, Error, Result};
 use num::{BigUint, ToPrimitive};
 use sunscreen_runtime::Params;
 
+use super::{noise_budget_to_noise};
+
 /**
  * A model for tracking noise growth using derivations of the canonical
  * embedding norm of ciphertexts' randomness as an upper bound.
@@ -139,8 +141,8 @@ impl NoiseModel for CanonicalEmbeddingNormModel {
         invariant_noise
     }
 
-    fn neg(&self, _invariant_noise: f64) -> f64 {
-        0.
+    fn neg(&self, invariant_noise: f64) -> f64 {
+        invariant_noise
     }
 
     fn sub_ct_ct(&self, a_invariant_noise: f64, b_invariant_noise: f64) -> f64 {
@@ -151,16 +153,19 @@ impl NoiseModel for CanonicalEmbeddingNormModel {
         self.add_ct_pt(a_invariant_noise)
     }
 
-    fn shift_left(&self, _a_invariant_noise: f64, _places: i32) -> f64 {
-        unimplemented!();
+    fn shift_left(&self, a_invariant_noise: f64, _places: i32) -> f64 {
+        // TODO: Make a real heuristic
+        a_invariant_noise + noise_budget_to_noise(8.)
     }
 
-    fn shift_right(&self, _a_invariant_noise: f64, _places: i32) -> f64 {
-        unimplemented!();
+    fn shift_right(&self, a_invariant_noise: f64, _places: i32) -> f64 {
+        // TODO: Make a real heuristic
+        a_invariant_noise + noise_budget_to_noise(8.)
     }
 
-    fn swap_rows(&self, _a_invariant_noise: f64) -> f64 {
-        unimplemented!();
+    fn swap_rows(&self, a_invariant_noise: f64) -> f64 {
+        // TODO: Make a real heuristic
+        a_invariant_noise + noise_budget_to_noise(8.)
     }
 }
 

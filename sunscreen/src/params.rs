@@ -2,11 +2,11 @@ use crate::{Error, FheProgramFn, Result, SecurityLevel};
 
 use log::{debug, trace};
 
-use seal_fhe::{CoefficientModulus, PlainModulus};
+use seal_fhe::{Context, CoefficientModulus, PlainModulus, BfvEncryptionParametersBuilder, Modulus, KeyGenerator};
 use sunscreen_backend::noise_model::{
     noise_budget_to_noise, predict_noise, MeasuredModel, NoiseModel, TargetNoiseLevel,
 };
-use sunscreen_fhe_program::{Operation, SchemeType};
+use sunscreen_fhe_program::{FheProgram, Operation, SchemeType};
 pub use sunscreen_runtime::Params;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -73,6 +73,41 @@ fn plaintext_constraint_to_modulus(
 }
 
 /**
+ * Verifies the keys required by the fhe_program can be created
+ * with the given parameter set.
+ */
+fn can_make_required_keys(fhe_program: &FheProgram, params: &Params) -> Result<bool> {
+    let plain_modulus = PlainModulus::raw(params.plain_modulus)?;
+    let modulus_chain = params.coeff_modulus.iter().map(|x| Modulus::new(*x).map_err(|e| Error::from(e))).collect::<Result<Vec<Modulus>>>()?;
+
+    let enc_params = BfvEncryptionParametersBuilder::new()
+        .set_plain_modulus(plain_modulus)
+        .set_coefficient_modulus(modulus_chain)
+        .set_poly_modulus_degree(params.lattice_dimension)
+        .build()?;
+
+    let context = Context::new(&enc_params, true, params.security_level).unwrap();
+
+    let keygen = KeyGenerator::new(&context).unwrap();
+
+    let create_galois = if fhe_program.requires_galois_keys() {
+        match keygen.create_galois_keys() {
+            Ok(_) => true,
+            Err(_) => false
+        }
+    } else { true };
+
+    let create_relin = if fhe_program.requires_relin_keys() {
+        match keygen.create_relinearization_keys() {
+            Ok(_) => true,
+            Err(_) => false
+        }
+    } else { true };
+
+    Ok(create_galois && create_relin)
+}
+
+/**
  * Determines the minimal parameters required to satisfy the noise constraint for
  * the given FHE program and plaintext modulo and security level.
  */
@@ -119,6 +154,18 @@ pub fn determine_params(
 
             ir.validate().map_err(|e| Error::FheProgramError(e))?;
             trace!("Built and validated {}", program.name());
+
+            match can_make_required_keys(&ir, &params) {
+                Ok(can_make_keys) => {
+                    if !can_make_keys {
+                        continue 'params_loop;
+                    }
+                },
+                Err(_) => {
+                    continue 'params_loop;
+                }
+                
+            };
 
             let noise_targets = ir
                 .graph

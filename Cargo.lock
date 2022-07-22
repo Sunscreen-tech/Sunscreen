@@ -1188,8 +1188,10 @@ dependencies = [
 name = "sunscreen_backend"
 version = "0.6.1"
 dependencies = [
+ "crossbeam",
  "env_logger",
  "log",
+ "num",
  "petgraph",
  "seal_fhe",
  "sunscreen_fhe_program",

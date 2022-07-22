@@ -1,8 +1,8 @@
 use crate::{InnerPlaintext, SealData};
-use sunscreen_fhe_program::{EdgeInfo, FheProgram, Literal, Operation::*};
+use sunscreen_fhe_program::{traversal::*, FheProgram, Literal, Operation::*};
 
 use crossbeam::atomic::AtomicCell;
-use petgraph::{stable_graph::NodeIndex, visit::EdgeRef, Direction};
+use petgraph::{stable_graph::NodeIndex, Direction};
 
 use std::borrow::Cow;
 #[cfg(target_arch = "wasm32")]
@@ -358,9 +358,18 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
 
 #[cfg(not(target_arch = "wasm32"))]
 /**
- * Traverses the graph in the given
+ * Traverses the FheProgram's nodes in topological order, executing
+ * callback on each node.
+ *
+ * # Remarks
+ * This implementation executes in parallel and cannot mutate the graph
+ * during traversal (as indicated by the lack of `mut` on `ir`).
+ *
+ * The optional `run_to` specifies to only run the given node and
+ * its ancestors, topologically. If not specified, every node in the
+ * program gets visited.
  */
-fn traverse<F>(
+pub fn traverse<F>(
     ir: &FheProgram,
     callback: F,
     run_to: Option<NodeIndex>,
@@ -475,7 +484,7 @@ where
 }
 
 #[cfg(target_arch = "wasm32")]
-fn traverse<F>(
+pub fn traverse<F>(
     ir: &FheProgram,
     callback: F,
     run_to: Option<NodeIndex>,
@@ -532,57 +541,6 @@ where
     }
 
     Ok(())
-}
-
-/**
- * Gets the two input operands and returns a tuple of left, right. For some operations
- * (i.e. subtraction), order matters. While it's erroneous for a binary operations to have
- * anything other than a single left and single right operand, having more operands will result
- * in one being selected arbitrarily. Validating the [`FheProgram`] will
- * reveal having the wrong number of operands.
- *
- * # Panics
- * Panics if the given node doesn't have at least one left and one right operand. Calling
- * [`validate()`](sunscreen_fhe_program::FheProgram::validate()) should reveal this
- * issue.
- */
-pub fn get_left_right_operands(ir: &FheProgram, index: NodeIndex) -> (NodeIndex, NodeIndex) {
-    let left = ir
-        .graph
-        .edges_directed(index, Direction::Incoming)
-        .filter(|e| *e.weight() == EdgeInfo::LeftOperand)
-        .map(|e| e.source())
-        .nth(0)
-        .unwrap();
-
-    let right = ir
-        .graph
-        .edges_directed(index, Direction::Incoming)
-        .filter(|e| *e.weight() == EdgeInfo::RightOperand)
-        .map(|e| e.source())
-        .nth(0)
-        .unwrap();
-
-    (left, right)
-}
-
-/**
- * Gets the single unary input operand for the given node. If the [`FheProgram`]
- * is malformed and the node has more than one UnaryOperand, one will be selected arbitrarily.
- * As such, one should validate the [`FheProgram`] before calling this method.
- *
- * # Panics
- * Panics if the given node doesn't have at least one unary operant. Calling
- * [`validate()`](sunscreen_fhe_program::FheProgram::validate()) should reveal this
- * issue.
- */
-pub fn get_unary_operand(ir: &FheProgram, index: NodeIndex) -> NodeIndex {
-    ir.graph
-        .edges_directed(index, Direction::Incoming)
-        .filter(|e| *e.weight() == EdgeInfo::UnaryOperand)
-        .map(|e| e.source())
-        .nth(0)
-        .unwrap()
 }
 
 #[cfg(test)]

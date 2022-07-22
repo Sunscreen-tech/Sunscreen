@@ -4,16 +4,16 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug unit tests in library 'sunscreen_ir'",
+            "name": "Debug unit tests in library 'sunscreen_fhe_program'",
             "cargo": {
                 "args": [
                     "test",
                     "--no-run",
                     "--lib",
-                    "--package=sunscreen_ir"
+                    "--package=sunscreen_fhe_program"
                 ],
                 "filter": {
-                    "name": "sunscreen_ir",
+                    "name": "sunscreen_fhe_program",
                     "kind": "lib"
                 }
             },
@@ -82,16 +82,16 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug unit tests in library 'seal'",
+            "name": "Debug unit tests in library 'seal_fhe'",
             "cargo": {
                 "args": [
                     "test",
                     "--no-run",
                     "--lib",
-                    "--package=seal"
+                    "--package=seal_fhe"
                 ],
                 "filter": {
-                    "name": "seal",
+                    "name": "seal_fhe",
                     "kind": "lib"
                 }
             },
@@ -101,12 +101,12 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug assumption tests in library 'seal'",
+            "name": "Debug assumption tests in library 'seal_fhe'",
             "cargo": {
                 "args": [
                     "test",
                     "--no-run",
-                    "--package=seal"
+                    "--package=seal_fhe"
                 ],
                 "filter": {
                     "name": "assumptions",
@@ -179,14 +179,11 @@
                 "args": [
                     "test",
                     "--no-run",
+                    "--test=array",
                     "--package=sunscreen",
                 ],
-                "filter": {
-                    "name": "array",
-                    "kind": "test"
-                }
             },
-            "args": [],
+            "args": ["can_mutate_array"],
             "cwd": "${workspaceFolder}"
         },
         {

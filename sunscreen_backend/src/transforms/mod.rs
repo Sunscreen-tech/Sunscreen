@@ -5,7 +5,7 @@ use sunscreen_fhe_program::FheProgram;
 
 use insert_relinearizations::apply_insert_relinearizations;
 
-pub fn transform_intermediate_represenation(ir: &mut FheProgram) {
+pub fn transform_intermediate_representation(ir: &mut FheProgram) {
     apply_insert_relinearizations(ir);
 
     // Dead code elimination.

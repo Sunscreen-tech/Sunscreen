@@ -10,7 +10,7 @@ use petgraph::{stable_graph::NodeIndex, visit::EdgeRef, Direction};
  *
  * # Panics
  * Panics if the given node doesn't have at least one left and one right operand. Calling
- * [`validate()`](sunscreen_fhe_program::FheProgram::validate()) should reveal this
+ * [`validate()`](crate::FheProgram::validate()) should reveal this
  * issue.
  */
 pub fn get_left_right_operands(ir: &FheProgram, index: NodeIndex) -> (NodeIndex, NodeIndex) {
@@ -40,7 +40,7 @@ pub fn get_left_right_operands(ir: &FheProgram, index: NodeIndex) -> (NodeIndex,
  *
  * # Panics
  * Panics if the given node doesn't have at least one unary operant. Calling
- * [`validate()`](sunscreen_fhe_program::FheProgram::validate()) should reveal this
+ * [`validate()`](crate::FheProgram::validate()) should reveal this
  * issue.
  */
 pub fn get_unary_operand(ir: &FheProgram, index: NodeIndex) -> NodeIndex {

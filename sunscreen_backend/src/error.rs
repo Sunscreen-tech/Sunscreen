@@ -38,7 +38,7 @@ pub enum Error {
 
     /**
      * Attempted to create a ciphertext with
-     * [`TargetNoiseLevel::NotApplicable`].
+     * [`TargetNoiseLevel::NotApplicable`](crate::noise_model::TargetNoiseLevel::NotApplicable).
      */
     NotApplicable,
 }

@@ -35,6 +35,16 @@ pub enum Error {
     NameCollision,
 
     /**
+     * Failed to created an encryption scheme using the given parameters.
+     */
+    SealEncryptionParameterError,
+
+    /**
+     * The a constraint cannot be satisfied.
+     */
+    UnsatisfiableConstraint,
+
+    /**
      * An internal error occurred in the SEAL library.
      */
     SealError(seal_fhe::Error),

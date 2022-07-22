@@ -40,7 +40,7 @@ pub enum Error {
      * Attempted to create a ciphertext with
      * [`TargetNoiseLevel::NotApplicable`].
      */
-    NotApplicable
+    NotApplicable,
 }
 
 impl From<sunscreen_fhe_program::Error> for Error {

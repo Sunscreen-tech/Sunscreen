@@ -26,7 +26,7 @@ pub enum TargetNoiseLevel {
     /**
      * The given input isn't a ciphertext. I.e. it's a plaintext.
      */
-    NotApplicable
+    NotApplicable,
 }
 
 /**
@@ -41,7 +41,7 @@ pub enum TargetNoiseLevel {
  * ciphertext with the desired noise budget. If this target noise budget
  * if below that of a fresh ciphertext, this function returns
  * [`Error::ImpossibleNoiseFloor`].
- * 
+ *
  * If noise_level is [`TargetNoiseLevel::NotApplicable`], this function
  * returns [`Error::NotApplicable`].
  */
@@ -60,7 +60,7 @@ pub fn create_ciphertext_with_noise_level(
         TargetNoiseLevel::Fresh => {
             let p = encoder.encode_unsigned(1)?;
             encryptor.encrypt(&p)?
-        },
+        }
         TargetNoiseLevel::InvariantNoiseBudget(target_noise_budget) => {
             let decryptor = Decryptor::new(&context, &private_key)?;
             let evaluator = BFVEvaluator::new(&context)?;
@@ -155,8 +155,8 @@ pub fn create_ciphertext_with_noise_level(
             }
 
             old_c
-        },
-        _ => unimplemented!("")
+        }
+        _ => unimplemented!(""),
     };
 
     Ok(ciphertext)
@@ -221,12 +221,14 @@ fn create_inputs_for_program(
         })
         .zip(noise_targets)
         .map(|(n, target)| match n.operation {
-            Operation::InputCiphertext(_) => {
-                Ok(
-                    create_ciphertext_with_noise_level(context, public_key, private_key, relin_keys, *target)?
-                        .into(),
-                )
-            }
+            Operation::InputCiphertext(_) => Ok(create_ciphertext_with_noise_level(
+                context,
+                public_key,
+                private_key,
+                relin_keys,
+                *target,
+            )?
+            .into()),
             Operation::InputPlaintext(_) => Ok(encoder.encode_unsigned(1)?.into()),
             _ => unreachable!(),
         })
@@ -268,7 +270,11 @@ impl MeasuredModel {
     /**
      * Creates a new `MeasuredModel` with the given [`FheProgram`] and [`Params`].
      */
-    pub fn new(ir: &FheProgram, params: &Params, noise_targets: &[TargetNoiseLevel]) -> Result<Self> {
+    pub fn new(
+        ir: &FheProgram,
+        params: &Params,
+        noise_targets: &[TargetNoiseLevel],
+    ) -> Result<Self> {
         ir.validate()?;
 
         let seal_params = create_seal_params(params)?;
@@ -287,7 +293,14 @@ impl MeasuredModel {
 
         let (relin_keys, galois_keys) = make_relin_galois_keys(ir, &keygen)?;
 
-        let inputs = create_inputs_for_program(ir, &context, &public_key, &private_key, relin_keys.as_ref(), noise_targets)?;
+        let inputs = create_inputs_for_program(
+            ir,
+            &context,
+            &public_key,
+            &private_key,
+            relin_keys.as_ref(),
+            noise_targets,
+        )?;
 
         // We validated the fhe_program, so it's safe to call
         // run_program_unchecked
@@ -351,22 +364,40 @@ impl NoiseModel for MeasuredModel {
     fn output(&self, output_id: usize, _invariant_noise: f64) -> f64 {
         self.output_noise[output_id]
     }
+
+    fn neg(&self, _invariant_noise: f64) -> f64 {
+        0.
+    }
+
+    fn sub_ct_ct(&self, _a_invariant_noise: f64, _b_invariant_noise: f64) -> f64 {
+        0.
+    }
+
+    fn sub_ct_pt(&self, _a_invariant_noise: f64) -> f64 {
+        0.
+    }
+
+    fn swap_rows(&self, _a_invariant_noise: f64) -> f64 {
+        0.
+    }
+
+    fn shift_left(&self, _a_invariant_noise: f64, _places: i32) -> f64 {
+        0.
+    }
+
+    fn shift_right(&self, _a_invariant_noise: f64, _places: i32) -> f64 {
+        0.
+    }
 }
 
 #[test]
-fn can_create_target_noise_ciphertext() {  
+fn can_create_target_noise_ciphertext() {
     let d = 8192;
 
     let params = BfvEncryptionParametersBuilder::new()
         .set_plain_modulus(PlainModulus::raw(1234).unwrap())
         .set_poly_modulus_degree(d)
-        .set_coefficient_modulus(
-            CoefficientModulus::bfv_default(
-                d,
-                SecurityLevel::TC128,
-            )
-            .unwrap(),
-        )
+        .set_coefficient_modulus(CoefficientModulus::bfv_default(d, SecurityLevel::TC128).unwrap())
         .build()
         .unwrap();
 
@@ -379,7 +410,14 @@ fn can_create_target_noise_ciphertext() {
 
     let desired_noise = 42;
 
-    let c = create_ciphertext_with_noise_level(&context, &public_key, &private_key, Some(&relin_keys), TargetNoiseLevel::InvariantNoiseBudget(desired_noise)).unwrap();
+    let c = create_ciphertext_with_noise_level(
+        &context,
+        &public_key,
+        &private_key,
+        Some(&relin_keys),
+        TargetNoiseLevel::InvariantNoiseBudget(desired_noise),
+    )
+    .unwrap();
 
     let decryptor = Decryptor::new(&context, &private_key).unwrap();
     let measured_noise = decryptor.invariant_noise_budget(&c).unwrap();

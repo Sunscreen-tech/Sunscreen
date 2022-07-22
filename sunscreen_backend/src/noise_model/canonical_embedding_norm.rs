@@ -138,6 +138,30 @@ impl NoiseModel for CanonicalEmbeddingNormModel {
     fn output(&self, _output_id: usize, invariant_noise: f64) -> f64 {
         invariant_noise
     }
+
+    fn neg(&self, _invariant_noise: f64) -> f64 {
+        0.
+    }
+
+    fn sub_ct_ct(&self, a_invariant_noise: f64, b_invariant_noise: f64) -> f64 {
+        self.add_ct_ct(a_invariant_noise, b_invariant_noise)
+    }
+
+    fn sub_ct_pt(&self, a_invariant_noise: f64) -> f64 {
+        self.add_ct_pt(a_invariant_noise)
+    }
+
+    fn shift_left(&self, _a_invariant_noise: f64, _places: i32) -> f64 {
+        unimplemented!();
+    }
+
+    fn shift_right(&self, _a_invariant_noise: f64, _places: i32) -> f64 {
+        unimplemented!();
+    }
+
+    fn swap_rows(&self, _a_invariant_noise: f64) -> f64 {
+        unimplemented!();
+    }
 }
 
 #[cfg(test)]

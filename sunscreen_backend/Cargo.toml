@@ -17,6 +17,7 @@ readme = "crates-io.md"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+crossbeam = "0.8.1"
 seal_fhe = { version = "0.6", path = "../seal_fhe" }
 sunscreen_fhe_program = { version = "0.6", path = "../sunscreen_fhe_program" }
 sunscreen_runtime = { version = "0.6", path = "../sunscreen_runtime" }

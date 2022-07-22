@@ -2,13 +2,12 @@ use crate::{Error, FheProgramFn, Result, SecurityLevel};
 
 use log::{debug, trace};
 
-use seal_fhe::{
-    BFVEvaluator, BFVScalarEncoder, BfvEncryptionParametersBuilder, CoefficientModulus,
-    Context as SealContext, Decryptor, Encryptor, KeyGenerator, PlainModulus,
+use seal_fhe::{CoefficientModulus, PlainModulus};
+use sunscreen_backend::noise_model::{
+    noise_budget_to_noise, predict_noise, MeasuredModel, NoiseModel, TargetNoiseLevel,
 };
 use sunscreen_fhe_program::{Operation, SchemeType};
 pub use sunscreen_runtime::Params;
-use sunscreen_runtime::{run_program_unchecked, SealData};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 /**
@@ -36,6 +35,44 @@ const LATTICE_DIMENSIONS: &[u64] = &[1024, 2048, 4096, 8192, 16384, 32768];
 const BATCHING_MIN_BITS: &[u32] = &[14, 14, 16, 17, 17, 17];
 
 /**
+ * Returns a plaintext modulus that satisfies the given
+ * PlainModulusConstraint and lattice dimension.
+ *
+ * # Remarks
+ * Particularly with batching, the constraint may not be satisfiable with
+ * the given lattice dimension. In such cases, this function returns
+ * [`Error::UnsatisfiableConstraint`].
+ */
+fn plaintext_constraint_to_modulus(
+    constraint: PlainModulusConstraint,
+    lattice_dimension_index: usize,
+) -> Result<seal_fhe::Modulus> {
+    let lattice_dimension = LATTICE_DIMENSIONS[lattice_dimension_index];
+
+    let plaintext_modulus = match constraint {
+        PlainModulusConstraint::Raw(v) => PlainModulus::raw(v).unwrap(),
+        PlainModulusConstraint::BatchingMinimum(min) => {
+            let min_batching_bits = BATCHING_MIN_BITS[lattice_dimension_index];
+
+            match PlainModulus::batching(lattice_dimension, u32::max(min_batching_bits, min)) {
+                Ok(v) => v,
+                Err(e) => {
+                    trace!(
+                        "Can't use batching with {} bits for dimension n={}: {:#?}",
+                        min_batching_bits,
+                        lattice_dimension,
+                        e
+                    );
+                    return Err(Error::UnsatisfiableConstraint);
+                }
+            }
+        }
+    };
+
+    Ok(plaintext_modulus)
+}
+
+/**
  * Determines the minimal parameters required to satisfy the noise constraint for
  * the given FHE program and plaintext modulo and security level.
  */
@@ -46,27 +83,17 @@ pub fn determine_params(
     noise_margin_bits: u32,
     scheme_type: SchemeType,
 ) -> Result<Params> {
-    'order_loop: for (i, n) in LATTICE_DIMENSIONS.iter().enumerate() {
-        let plaintext_modulus = match plaintext_constraint {
-            PlainModulusConstraint::Raw(v) => PlainModulus::raw(v).unwrap(),
-            PlainModulusConstraint::BatchingMinimum(min) => {
-                let min_batching_bits = BATCHING_MIN_BITS[i];
-
-                match PlainModulus::batching(*n, u32::max(min_batching_bits, min)) {
-                    Ok(v) => v,
-                    Err(e) => {
-                        trace!(
-                            "Can't use batching with {} bits for dimension n={}: {:#?}",
-                            min_batching_bits,
-                            n,
-                            e
-                        );
-                        continue 'order_loop;
-                    }
-                }
+    'params_loop: for (i, n) in LATTICE_DIMENSIONS.iter().enumerate() {
+        // Select a plain modulus that meets needs of the passed
+        // constraint.
+        let plaintext_modulus = match plaintext_constraint_to_modulus(plaintext_constraint, i) {
+            Ok(v) => v,
+            Err(_) => {
+                continue 'params_loop;
             }
         };
 
+        // Tell SEAL to give us whatever modulus chain it finds suitable.
         let coeff = CoefficientModulus::bfv_default(*n, security_level).unwrap();
 
         // Compile the given fhe_program.
@@ -86,70 +113,14 @@ pub fn determine_params(
         );
 
         for program in fhe_program_fns {
-            trace!("Evaluating parameters for `{}`", program.name());
-
-            let plaintext_modulus = plaintext_modulus.clone();
-
-            let scheme = match scheme_type {
-                SchemeType::Bfv => {
-                    let scheme_result = BfvEncryptionParametersBuilder::new()
-                        .set_plain_modulus(plaintext_modulus.clone())
-                        .set_poly_modulus_degree(*n)
-                        .set_coefficient_modulus(
-                            CoefficientModulus::bfv_default(*n, security_level).unwrap(),
-                        )
-                        .build();
-
-                    let scheme = match scheme_result {
-                        Ok(v) => v,
-                        Err(e) => {
-                            trace!(
-                                "Failed to create scheme for lattice dimension {}: {:#?}",
-                                n,
-                                e
-                            );
-                            continue 'order_loop;
-                        }
-                    };
-
-                    scheme
-                }
-            };
-
             trace!("Successfully created parameters.");
-
-            let context = match SealContext::new(&scheme, true, security_level) {
-                Err(e) => {
-                    trace!(
-                        "Failed to create context for lattice dimension {}: {:#?}",
-                        n,
-                        e
-                    );
-                    continue 'order_loop;
-                }
-                Ok(c) => c,
-            };
-
-            trace!("Successfully created context.");
-
-            let keygen = KeyGenerator::new(&context).unwrap();
-            let public_key = keygen.create_public_key();
-            let private_key = keygen.secret_key();
-
-            let encryptor =
-                Encryptor::with_public_and_secret_key(&context, &public_key, &private_key).unwrap();
-            let decryptor = Decryptor::new(&context, &private_key).unwrap();
-            let encoder = BFVScalarEncoder::new();
-
+            trace!("Running backend compilation for {}", program.name());
             let ir = program.build(&params)?.compile();
 
             ir.validate().map_err(|e| Error::FheProgramError(e))?;
+            trace!("Built and validated {}", program.name());
 
-            // From a noise standpoint, it doesn't matter what is in the plaintext or if the output
-            // is meaningful or not. Just run a bunch of 1 values through the fhe_program and measure the
-            // noise. We choose 1, as it avoids transparent ciphertexts when
-            // multiplying plaintexts.
-            let inputs = ir
+            let noise_targets = ir
                 .graph
                 .node_weights()
                 .filter(|n| match n.operation {
@@ -158,83 +129,42 @@ pub fn determine_params(
                     _ => false,
                 })
                 .map(|n| match n.operation {
-                    Operation::InputCiphertext(_) => {
-                        let p = encoder.encode_unsigned(1)?;
-                        Ok(encryptor.encrypt(&p)?.into())
-                    }
-                    Operation::InputPlaintext(_) => Ok(encoder.encode_unsigned(1)?.into()),
+                    Operation::InputCiphertext(_) => TargetNoiseLevel::Fresh,
+                    Operation::InputPlaintext(_) => TargetNoiseLevel::NotApplicable,
                     _ => unreachable!(),
                 })
-                .collect::<Result<Vec<SealData>>>()?;
+                .collect::<Vec<TargetNoiseLevel>>();
 
-            let evaluator = match ir.scheme {
-                SchemeType::Bfv => BFVEvaluator::new(&context).unwrap(),
-            };
-
-            let relin_keys = if ir.requires_relin_keys() {
-                match keygen.create_relinearization_keys() {
-                    Ok(v) => Some(v),
-                    Err(e) => {
-                        trace!("Failed to create relin keys: {:#?}", e);
-                        continue 'order_loop;
-                    }
-                }
-            } else {
-                None
-            };
-
-            let galois_keys = if ir.requires_galois_keys() {
-                match keygen.create_galois_keys() {
-                    Ok(v) => Some(v),
-                    Err(e) => {
-                        trace!("Failed to create galois keys: {:#?}", e);
-                        continue 'order_loop;
-                    }
-                }
-            } else {
-                None
-            };
-
-            // We already checked for errors at the start of this function. This should be
-            // well-behaved.
-            let outputs = unsafe {
-                run_program_unchecked(
-                    &ir,
-                    &inputs,
-                    &evaluator,
-                    &relin_keys.as_ref(),
-                    &galois_keys.as_ref(),
-                )
-            };
-
-            let outputs = match outputs {
-                Ok(x) => x,
+            let model = match MeasuredModel::new(&ir, &params, &noise_targets) {
+                Ok(v) => v,
                 Err(_) => {
-                    continue 'order_loop;
+                    trace!(
+                        "Failed to construct noise model for {} with lattice_dimension={}",
+                        program.name(),
+                        n
+                    );
+                    continue 'params_loop;
                 }
             };
 
-            for (i, o) in outputs.iter().enumerate() {
-                let noise_budget = decryptor.invariant_noise_budget(&o).unwrap();
+            let model: Box<dyn NoiseModel + Sync> = Box::new(model);
 
-                trace!(
-                    "Output {} has {} bits of noise budget remaining",
-                    i,
-                    noise_budget
-                );
+            let output_noises = predict_noise(&model, &ir);
 
-                if noise_budget < noise_margin_bits {
+            let target_noise = noise_budget_to_noise(noise_margin_bits as f64);
+
+            for output_noise in output_noises {
+                if output_noise > target_noise {
                     trace!(
-                        "Output {} has {} bits of noise, is below {}",
-                        i,
-                        noise_budget,
-                        noise_margin_bits
+                        "Failed to meet noise constraints with lattice dimension {} for program {}",
+                        n,
+                        program.name()
                     );
-                    continue 'order_loop;
+                    continue 'params_loop;
                 }
             }
 
-            debug!("Params n={} and c={:#?}", n, coeff);
+            debug!("Using params lattice_dimension={} and ={:#?}", n, coeff);
         }
 
         return Ok(params);

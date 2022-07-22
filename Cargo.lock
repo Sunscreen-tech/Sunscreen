@@ -1188,6 +1188,7 @@ dependencies = [
 name = "sunscreen_backend"
 version = "0.6.1"
 dependencies = [
+ "crossbeam",
  "env_logger",
  "log",
  "num",

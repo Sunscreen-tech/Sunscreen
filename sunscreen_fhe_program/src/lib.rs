@@ -7,6 +7,12 @@
 mod error;
 mod literal;
 mod operation;
+
+/**
+ * Functions related to getting more information about a node in the
+ * execution graph. E.g. getting operands for operations.
+ */
+pub mod traversal;
 mod validation;
 
 use petgraph::{

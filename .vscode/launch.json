@@ -183,7 +183,22 @@
                     "--package=sunscreen",
                 ],
             },
-            "args": ["can_mutate_array"],
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug simd integration tests in library 'sunscreen'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=simd",
+                    "--package=sunscreen",
+                ],
+            },
+            "args": ["can_rotate_left_cipher"],
             "cwd": "${workspaceFolder}"
         },
         {

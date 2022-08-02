@@ -1,4 +1,4 @@
-use log::trace;
+use log::{error, trace};
 use seal_fhe::*;
 use sunscreen_fhe_program::{FheProgram, Operation, SchemeType as FheProgramSchemeType};
 use sunscreen_runtime::{run_program_unchecked, Params, SealData};
@@ -71,6 +71,10 @@ pub fn create_ciphertext_with_noise_level(
             let noise_budget = decryptor.invariant_noise_budget(&c_initial)?;
 
             if noise_budget < target_noise_budget {
+                error!(
+                    "Noise budget {} is below target of {}",
+                    noise_budget, target_noise_budget
+                );
                 return Err(Error::ImpossibleNoiseFloor);
             } else if noise_budget == target_noise_budget {
                 return Ok(c_initial);

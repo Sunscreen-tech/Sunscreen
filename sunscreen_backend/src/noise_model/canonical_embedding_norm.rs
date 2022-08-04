@@ -4,6 +4,7 @@ use sunscreen_runtime::Params;
 
 use super::noise_budget_to_noise;
 
+#[derive(Clone)]
 /**
  * A model for tracking noise growth using derivations of the canonical
  * embedding norm of ciphertexts' randomness as an upper bound.
@@ -18,7 +19,10 @@ use super::noise_budget_to_noise;
  * * `relinearize`: Empirically measured that relinearization produces no noise. See `relinearization_consumes_no_noise_budget()` in `seal_fhe/tests/assumptions.rs`
  */
 pub struct CanonicalEmbeddingNormModel {
-    params: Params,
+    /**
+     * The BFV scheme parameters to use for this model.
+     */
+    pub params: Params,
 }
 
 impl CanonicalEmbeddingNormModel {

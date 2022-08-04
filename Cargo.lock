@@ -115,6 +115,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "cannonical_norm_noise_model"
+version = "0.1.0"
+dependencies = [
+ "env_logger",
+ "log",
+ "rayon",
+ "seal_fhe",
+ "sunscreen_backend",
+ "sunscreen_fhe_program",
+ "sunscreen_runtime",
+]
+
+[[package]]
 name = "cc"
 version = "1.0.73"
 source = "registry+https://github.com/rust-lang/crates.io-index"

@@ -150,10 +150,12 @@ fn main() {
                             stats.min as u32
                         };
 
-                        loop {
+                        let noise_margin_increment = n_a / 3;
+
+                        for _ in 0..3 {
                             let mut n_b = n_a;
 
-                            loop {
+                            for _ in 0..3 {
                                 NUM_TASKS.fetch_add(1, Ordering::Relaxed);
                                 scope.spawn(move |_| {
                                     add_noise(
@@ -204,17 +206,17 @@ fn main() {
                                     update();
                                 });
 
-                                if n_b < 40 {
+                                if n_b <= noise_margin_increment {
                                     break;
                                 }
-                                n_b -= 40;
+
+                                n_b -= noise_margin_increment;
                             }
 
-                            if n_a < 40 {
+                            if n_a <= noise_margin_increment {
                                 break;
                             }
-
-                            n_a -= 40;
+                            n_a -= noise_margin_increment;
                         }
                     });
                 }

@@ -209,6 +209,29 @@ impl Decryptor {
 
         Ok(noise as u32)
     }
+
+    /**
+     * Computes the invariant noise of a ciphertext. The invariant noise is
+     * a value that increases with FHE operations. This function only works
+     * with the BFV scheme.
+     *
+     * # Invariant Noise
+     * The invariant noise polynomial of a ciphertext is a rational * coefficient
+     * polynomial, such that a ciphertext decrypts correctly as long as the
+     * coefficients of the invariant noise polynomial are of absolute value less
+     * than 1/2. Thus, we call the infinity-norm of the invariant noise polynomial
+     * the invariant noise, and for correct decryption require it to be less than
+     * 1/2.
+     */
+    pub fn invariant_noise(&self, ciphertext: &Ciphertext) -> Result<f64> {
+        let mut noise: f64 = 0f64;
+
+        convert_seal_error(unsafe {
+            bindgen::Decryptor_InvariantNoise(self.handle, ciphertext.get_handle(), &mut noise)
+        })?;
+
+        Ok(noise)
+    }
 }
 
 impl Drop for Decryptor {

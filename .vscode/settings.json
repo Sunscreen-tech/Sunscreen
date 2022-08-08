@@ -88,7 +88,9 @@
         "variant": "cpp",
         "__functional_base": "cpp",
         "functional": "cpp",
-        "pointers": "cpp"
+        "pointers": "cpp",
+        "future": "cpp",
+        "multi_span": "cpp"
     },
     "debug.allowBreakpointsEverywhere": true,
     "cSpell.words": [

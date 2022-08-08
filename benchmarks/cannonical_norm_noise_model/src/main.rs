@@ -12,6 +12,7 @@ mod ops;
 use crate::ops::*;
 
 const SAMPLES: usize = 10_000;
+const ENCRYPTION_SAMPLES: usize = 100_000;
 
 pub struct Stats {
     mean: f64,
@@ -151,7 +152,7 @@ fn main() {
                             stats.max
                         };
 
-                        let noise_margin_increment = n_a / 3f64;
+                        let noise_margin_increment_bits = noise_to_noise_budget(n_a) / 3.;
 
                         for _ in 0..3 {
                             let mut n_b = n_a;
@@ -207,17 +208,18 @@ fn main() {
                                     update();
                                 });
 
-                                if n_b <= noise_margin_increment {
+                                if noise_to_noise_budget(n_b) <= noise_margin_increment_bits {
                                     break;
                                 }
 
-                                n_b -= noise_margin_increment;
+                                n_b = noise_budget_to_noise(noise_to_noise_budget(n_b) - noise_margin_increment_bits);
                             }
 
-                            if n_a <= noise_margin_increment {
+                            if noise_to_noise_budget(n_a) <= noise_margin_increment_bits {
                                 break;
                             }
-                            n_a -= noise_margin_increment;
+
+                            n_a = noise_budget_to_noise(noise_to_noise_budget(n_a) - noise_margin_increment_bits);
                         }
                     });
                 }

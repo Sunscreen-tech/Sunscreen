@@ -1,5 +1,6 @@
 use seal_fhe::*;
 use std::sync::Mutex;
+use sunscreen_backend::{Error, Result};
 use sunscreen_fhe_program::SchemeType;
 
 use crate::*;
@@ -128,7 +129,7 @@ pub fn encryption_noise(
 
     let mut noise = vec![];
 
-    for _ in 0..SAMPLES {
+    for _ in 0..ENCRYPTION_SAMPLES {
         let plaintext = Plaintext::new().unwrap();
         let ciphertext = encryptor.encrypt(&plaintext).unwrap();
         noise.push(decryptor.invariant_noise(&ciphertext).unwrap() as f64);
@@ -147,6 +148,29 @@ pub fn encryption_noise(
     );
 
     stats
+}
+
+/**
+ * Creates a ciphertext with approximately the specified 
+ * noise level. Guarantees that the noise does not exceed
+ * the target. Retries up to 100 times before giving up.
+ */
+fn create_ciphertext(
+    context: &Context,
+    public_key: &PublicKey,
+    private_key: &SecretKey,
+    relin_keys: Option<&RelinearizationKeys>,
+    noise_level: TargetNoiseLevel
+) -> Result<Ciphertext> {
+    for _ in 0..100 {
+        match create_ciphertext_with_noise_level(context, public_key, private_key, relin_keys, noise_level) {
+            Ok(v) => { return Ok(v); },
+            Err(Error::ImpossibleNoiseFloor) => { continue; },
+            Err(e) => { return Err(e); }
+        }
+    };
+
+    return Err(Error::ImpossibleNoiseFloor);
 }
 
 pub fn add_noise(
@@ -182,7 +206,7 @@ pub fn add_noise(
             TargetNoiseLevel::InvariantNoise(n_a),
         )
         .unwrap();
-        let b = create_ciphertext_with_noise_level(
+        let b = create_ciphertext(
             &context,
             &public_key,
             &private_key,
@@ -287,7 +311,7 @@ pub fn mul_noise(
     let mut noise = vec![];
 
     for _ in 0..SAMPLES {
-        let a = create_ciphertext_with_noise_level(
+        let a = create_ciphertext(
             &context,
             &public_key,
             &private_key,
@@ -295,7 +319,7 @@ pub fn mul_noise(
             TargetNoiseLevel::InvariantNoise(n_a),
         )
         .unwrap();
-        let b = create_ciphertext_with_noise_level(
+        let b = create_ciphertext(
             &context,
             &public_key,
             &private_key,
@@ -404,7 +428,7 @@ pub fn _swap_noise(
     let mut noise = vec![];
 
     for _ in 0..SAMPLES {
-        let a = create_ciphertext_with_noise_level(
+        let a = create_ciphertext(
             &context,
             &public_key,
             &private_key,
@@ -462,7 +486,7 @@ pub fn _shift_noise(
     let mut noise = vec![];
 
     for _ in 0..SAMPLES {
-        let a = create_ciphertext_with_noise_level(
+        let a = create_ciphertext(
             &context,
             &public_key,
             &private_key,

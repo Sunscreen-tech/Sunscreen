@@ -146,9 +146,9 @@ fn main() {
 
                         let mut n_a = if lattice_dimension > 4_096 {
                             // Fudge factor in case noise level not in samples
-                            noise_budget_to_noise(noise_to_noise_budget(stats.min) - 2f64)
+                            noise_budget_to_noise(noise_to_noise_budget(stats.max) - 2f64)
                         } else {
-                            stats.min
+                            stats.max
                         };
 
                         let noise_margin_increment = n_a / 3f64;

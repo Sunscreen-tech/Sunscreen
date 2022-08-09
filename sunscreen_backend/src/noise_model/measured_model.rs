@@ -1,4 +1,4 @@
-use log::{warn, trace};
+use log::{debug, trace};
 use seal_fhe::*;
 use sunscreen_fhe_program::{FheProgram, Operation, SchemeType as FheProgramSchemeType};
 use sunscreen_runtime::{run_program_unchecked, Params, SealData};
@@ -85,7 +85,7 @@ pub fn create_ciphertext_with_noise_level(
     let current_noise = decryptor.invariant_noise(&c_initial)?;
 
     if current_noise > target_noise_level {
-        warn!(
+        debug!(
             "Noise level {} exceeds target of {}",
             current_noise, target_noise_level
         );

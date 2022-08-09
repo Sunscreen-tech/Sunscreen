@@ -1,4 +1,4 @@
-use log::{error, trace};
+use log::{debug, trace};
 use seal_fhe::*;
 use sunscreen_fhe_program::{FheProgram, Operation, SchemeType as FheProgramSchemeType};
 use sunscreen_runtime::{run_program_unchecked, Params, SealData};
@@ -22,6 +22,13 @@ pub enum TargetNoiseLevel {
      * will create a new ciphertext with the same noise budget.
      */
     InvariantNoiseBudget(u32),
+
+    /**
+     * The input ciphertext has the target invariant noise. The
+     * MeasuredModel will create a new ciphertext with approximately
+     * the same noise budget.
+     */
+    InvariantNoise(f64),
 
     /**
      * The given input isn't a ciphertext. I.e. it's a plaintext.
@@ -56,114 +63,163 @@ pub fn create_ciphertext_with_noise_level(
 
     let encryptor = Encryptor::with_public_and_secret_key(&context, &public_key, &private_key)?;
 
-    let ciphertext = match noise_level {
+    let target_noise_level = match noise_level {
         TargetNoiseLevel::Fresh => {
             let p = encoder.encode_unsigned(1)?;
-            encryptor.encrypt(&p)?
+            return Ok(encryptor.encrypt(&p)?);
         }
         TargetNoiseLevel::InvariantNoiseBudget(target_noise_budget) => {
-            let decryptor = Decryptor::new(&context, &private_key)?;
-            let evaluator = BFVEvaluator::new(&context)?;
-
-            let p = encoder.encode_unsigned(1)?;
-            let c_initial = encryptor.encrypt(&p)?;
-
-            let noise_budget = decryptor.invariant_noise_budget(&c_initial)?;
-
-            if noise_budget < target_noise_budget {
-                error!(
-                    "Noise budget {} is below target of {}",
-                    noise_budget, target_noise_budget
-                );
-                return Err(Error::ImpossibleNoiseFloor);
-            } else if noise_budget == target_noise_budget {
-                return Ok(c_initial);
-            }
-
-            // Repeatedly square the ciphertext to quadratically consume
-            // noise budget until we exceed the target. Take the last
-            // ciphertext that doesn't exceed this budget.
-            let mut old_c = c_initial.clone();
-
-            if relin_keys.is_some() {
-                loop {
-                    let c = evaluator.multiply(&old_c, &old_c)?;
-                    let c = evaluator.relinearize(&c, relin_keys.unwrap())?;
-
-                    let noise_budget = decryptor.invariant_noise_budget(&c)?;
-
-                    if noise_budget < target_noise_budget {
-                        break;
-                    } else if noise_budget == target_noise_budget {
-                        return Ok(c);
-                    } else {
-                        old_c = c;
-                    }
-                }
-            }
-
-            // Repeatedly multiply the ciphertext with a fresh ciphertext
-            // to consume a medium amount of noise budget until we
-            // exceed the target. Take the last ciphertext that doesn't
-            // exceed this budget.
-            if relin_keys.is_some() {
-                loop {
-                    let c = evaluator.multiply(&old_c, &c_initial)?;
-                    let c = evaluator.relinearize(&c, relin_keys.unwrap())?;
-
-                    let noise_budget = decryptor.invariant_noise_budget(&c)?;
-
-                    if noise_budget < target_noise_budget {
-                        break;
-                    } else if noise_budget == target_noise_budget {
-                        return Ok(c);
-                    } else {
-                        old_c = c;
-                    }
-                }
-            }
-
-            // Repeatedly add the ciphertext with itself to consume a
-            // smallish amount of noise budget until we exceed the target.
-            // Take the last ciphertext that doesn't exceed this target.
-            loop {
-                let c = evaluator.add(&old_c, &old_c)?;
-
-                let noise_budget = decryptor.invariant_noise_budget(&c)?;
-
-                if noise_budget < target_noise_budget {
-                    break;
-                } else if noise_budget == target_noise_budget {
-                    return Ok(c);
-                } else {
-                    old_c = c;
-                }
-            }
-
-            // Repeatedly add the ciphertext with a fresh ciphertext to
-            // consume a tiny amount of noise budget until we exceed the
-            // target. Take the last ciphertext that doesn't exceed this
-            // target.
-            loop {
-                let c = evaluator.add(&old_c, &old_c)?;
-
-                let noise_budget = decryptor.invariant_noise_budget(&c)?;
-
-                if noise_budget < target_noise_budget {
-                    break;
-                } else if noise_budget == target_noise_budget {
-                    return Ok(c);
-                } else {
-                    old_c = c;
-                }
-            }
-
-            old_c
+            noise_budget_to_noise(target_noise_budget as f64)
         }
+        TargetNoiseLevel::InvariantNoise(target_noise) => target_noise,
         _ => unimplemented!(""),
     };
 
-    Ok(ciphertext)
+    trace!(
+        "create_ciphertext_with_noise_level: Creating ciphertext with target noise {}...",
+        target_noise_level
+    );
+
+    let decryptor = Decryptor::new(&context, &private_key)?;
+    let evaluator = BFVEvaluator::new(&context)?;
+
+    let p = encoder.encode_unsigned(1)?;
+    let c_initial = encryptor.encrypt(&p)?;
+
+    let current_noise = decryptor.invariant_noise(&c_initial)?;
+
+    if current_noise > target_noise_level {
+        debug!(
+            "Noise level {} exceeds target of {}",
+            current_noise, target_noise_level
+        );
+        return Ok(c_initial);
+    } else if current_noise == target_noise_level {
+        return Ok(c_initial);
+    }
+
+    trace!(
+        "create_ciphertext_with_noise_level: current noise {}",
+        current_noise
+    );
+
+    // Repeatedly square the ciphertext to quadratically consume
+    // noise budget until we exceed the target. Take the last
+    // ciphertext that doesn't exceed this budget.
+    let mut old_c = c_initial.clone();
+
+    if relin_keys.is_some() {
+        loop {
+            trace!("create_ciphertext_with_noise_level: squaring...");
+
+            let c = evaluator.multiply(&old_c, &old_c)?;
+            let c = evaluator.relinearize(&c, relin_keys.unwrap())?;
+
+            let current_noise = decryptor.invariant_noise(&c)?;
+
+            if current_noise > target_noise_level {
+                trace!("create_ciphertext_with_noise_level: Exceeded noise budget squaring.");
+                break;
+            } else if current_noise == target_noise_level {
+                trace!("create_ciphertext_with_noise_level: Hit noise level.");
+                return Ok(c);
+            } else {
+                trace!(
+                    "create_ciphertext_with_noise_level: current noise {}",
+                    current_noise
+                );
+                old_c = c;
+            }
+        }
+    }
+
+    // Repeatedly multiply the ciphertext with a fresh ciphertext
+    // to consume a medium amount of noise budget until we
+    // exceed the target. Take the last ciphertext that doesn't
+    // exceed this budget.
+    if relin_keys.is_some() {
+        loop {
+            trace!("create_ciphertext_with_noise_level: multiplying...");
+
+            let c = evaluator.multiply(&old_c, &c_initial)?;
+            let c = evaluator.relinearize(&c, relin_keys.unwrap())?;
+
+            let current_noise = decryptor.invariant_noise(&c)?;
+
+            if current_noise > target_noise_level {
+                trace!("create_ciphertext_with_noise_level: Exceeded noise budget multiplying.");
+                break;
+            } else if current_noise == target_noise_level {
+                trace!("create_ciphertext_with_noise_level: Hit noise level.");
+                return Ok(c);
+            } else {
+                trace!(
+                    "create_ciphertext_with_noise_level: current noise {}",
+                    current_noise
+                );
+                old_c = c;
+            }
+        }
+    }
+
+    // Repeatedly add the ciphertext with itself to consume a
+    // smallish amount of noise budget until we exceed the target.
+    // Take the last ciphertext that doesn't exceed this target.
+    loop {
+        trace!("create_ciphertext_with_noise_level: doubling...");
+
+        let c = evaluator.add(&old_c, &old_c)?;
+
+        let current_noise = decryptor.invariant_noise(&c)?;
+
+        if current_noise > target_noise_level {
+            trace!("create_ciphertext_with_noise_level: Exceeded noise budget doubling.");
+            break;
+        } else if current_noise == target_noise_level {
+            trace!("create_ciphertext_with_noise_level: Hit noise level.");
+            return Ok(c);
+        } else {
+            trace!(
+                "create_ciphertext_with_noise_level: current noise {}",
+                current_noise
+            );
+            old_c = c;
+        }
+    }
+
+    // Repeatedly add the ciphertext with a fresh ciphertext to
+    // consume a tiny amount of noise budget until we exceed the
+    // target. Take the last ciphertext that doesn't exceed this
+    // target.
+    loop {
+        trace!("create_ciphertext_with_noise_level: adding...");
+
+        let c = evaluator.add(&old_c, &old_c)?;
+
+        let current_noise = decryptor.invariant_noise(&c)?;
+
+        if current_noise > target_noise_level {
+            trace!("create_ciphertext_with_noise_level: Exceeded noise budget adding.");
+            break;
+        } else if current_noise == target_noise_level {
+            trace!("create_ciphertext_with_noise_level: Hit noise level.");
+            return Ok(c);
+        } else {
+            trace!(
+                "create_ciphertext_with_noise_level: current noise {}",
+                current_noise
+            );
+            old_c = c;
+        }
+    }
+
+    trace!(
+        "Final noise budget: {} out of target {}",
+        decryptor.invariant_noise(&old_c).unwrap(),
+        target_noise_level
+    );
+
+    Ok(old_c)
 }
 
 /**

@@ -5,6 +5,7 @@ use std::sync::{
     atomic::{AtomicUsize, Ordering},
     Mutex,
 };
+use sunscreen_backend::noise_model::{noise_budget_to_noise, noise_to_noise_budget};
 use sunscreen_runtime::Params;
 
 mod ops;
@@ -72,8 +73,8 @@ impl Results {
         params: &Params,
         op: &str,
         predicted: f64,
-        n_a: Option<u32>,
-        n_b: Option<u32>,
+        n_a: Option<f64>,
+        n_b: Option<f64>,
         stats: &Stats,
         op_valid: bool,
     ) {
@@ -145,12 +146,12 @@ fn main() {
 
                         let mut n_a = if lattice_dimension > 4_096 {
                             // Fudge factor in case noise level not in samples
-                            stats.min as u32 - 2
+                            noise_budget_to_noise(noise_to_noise_budget(stats.max) - 2f64)
                         } else {
-                            stats.min as u32
+                            stats.max
                         };
 
-                        let noise_margin_increment = n_a / 3;
+                        let noise_margin_increment = n_a / 3f64;
 
                         for _ in 0..3 {
                             let mut n_b = n_a;

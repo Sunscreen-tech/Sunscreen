@@ -5,8 +5,7 @@ use sunscreen_fhe_program::SchemeType;
 use crate::*;
 
 use sunscreen_backend::noise_model::{
-    create_ciphertext_with_noise_level, noise_budget_to_noise, noise_to_noise_budget,
-    CanonicalEmbeddingNormModel, NoiseModel, TargetNoiseLevel,
+    create_ciphertext_with_noise_level, CanonicalEmbeddingNormModel, NoiseModel, TargetNoiseLevel,
 };
 
 pub fn make_context(
@@ -125,14 +124,14 @@ pub fn encryption_noise(
         _evaluator,
     ) = make_seal_things(lattice_dimension, plain_modulus, security_level);
 
-    let predicted_noise = noise_to_noise_budget(model.encrypt());
+    let predicted_noise = model.encrypt();
 
     let mut noise = vec![];
 
     for _ in 0..SAMPLES {
         let plaintext = Plaintext::new().unwrap();
         let ciphertext = encryptor.encrypt(&plaintext).unwrap();
-        noise.push(decryptor.invariant_noise_budget(&ciphertext).unwrap() as f64);
+        noise.push(decryptor.invariant_noise(&ciphertext).unwrap() as f64);
     }
 
     let stats = stats(&noise);
@@ -152,8 +151,8 @@ pub fn encryption_noise(
 
 pub fn add_noise(
     results: &Mutex<Results>,
-    n_a: u32,
-    n_b: u32,
+    n_a: f64,
+    n_b: f64,
     lattice_dimension: u64,
     plain_modulus: u64,
     security_level: SecurityLevel,
@@ -170,20 +169,17 @@ pub fn add_noise(
         evaluator,
     ) = make_seal_things(lattice_dimension, plain_modulus, security_level);
 
-    let predicted_noise = noise_to_noise_budget(model.add_ct_ct(
-        noise_budget_to_noise(n_a as f64),
-        noise_budget_to_noise(n_b as f64),
-    ));
+    let predicted_noise = model.add_ct_ct(n_a, n_b);
 
     let mut noise = vec![];
 
-    for _ in 0..1 {
+    for _ in 0..SAMPLES {
         let a = create_ciphertext_with_noise_level(
             &context,
             &public_key,
             &private_key,
             relin_keys.as_ref(),
-            TargetNoiseLevel::InvariantNoiseBudget(n_a),
+            TargetNoiseLevel::InvariantNoise(n_a),
         )
         .unwrap();
         let b = create_ciphertext_with_noise_level(
@@ -191,13 +187,13 @@ pub fn add_noise(
             &public_key,
             &private_key,
             relin_keys.as_ref(),
-            TargetNoiseLevel::InvariantNoiseBudget(n_b),
+            TargetNoiseLevel::InvariantNoise(n_b),
         )
         .unwrap();
 
         let c = evaluator.add(&a, &b).unwrap();
 
-        noise.push(decryptor.invariant_noise_budget(&c).unwrap() as f64);
+        noise.push(decryptor.invariant_noise(&c).unwrap() as f64);
     }
 
     let stats = stats(&noise);
@@ -215,7 +211,7 @@ pub fn add_noise(
 
 pub fn add_pt_noise(
     results: &Mutex<Results>,
-    n_a: u32,
+    n_a: f64,
     lattice_dimension: u64,
     plain_modulus: u64,
     security_level: SecurityLevel,
@@ -232,17 +228,17 @@ pub fn add_pt_noise(
         evaluator,
     ) = make_seal_things(lattice_dimension, plain_modulus, security_level);
 
-    let predicted_noise = noise_to_noise_budget(model.add_ct_pt(noise_budget_to_noise(n_a as f64)));
+    let predicted_noise = model.add_ct_pt(n_a);
 
     let mut noise = vec![];
 
-    for _ in 0..1 {
+    for _ in 0..SAMPLES {
         let a = create_ciphertext_with_noise_level(
             &context,
             &public_key,
             &private_key,
             relin_keys.as_ref(),
-            TargetNoiseLevel::InvariantNoiseBudget(n_a),
+            TargetNoiseLevel::InvariantNoise(n_a),
         )
         .unwrap();
         let mut b = Plaintext::new().unwrap();
@@ -251,7 +247,7 @@ pub fn add_pt_noise(
 
         let c = evaluator.add_plain(&a, &b).unwrap();
 
-        noise.push(decryptor.invariant_noise_budget(&c).unwrap() as f64);
+        noise.push(decryptor.invariant_noise(&c).unwrap() as f64);
     }
 
     let stats = stats(&noise);
@@ -269,8 +265,8 @@ pub fn add_pt_noise(
 
 pub fn mul_noise(
     results: &Mutex<Results>,
-    n_a: u32,
-    n_b: u32,
+    n_a: f64,
+    n_b: f64,
     lattice_dimension: u64,
     plain_modulus: u64,
     security_level: SecurityLevel,
@@ -287,10 +283,7 @@ pub fn mul_noise(
         evaluator,
     ) = make_seal_things(lattice_dimension, plain_modulus, security_level);
 
-    let predicted_noise = noise_to_noise_budget(model.mul_ct_ct(
-        noise_budget_to_noise(n_a as f64),
-        noise_budget_to_noise(n_b as f64),
-    ));
+    let predicted_noise = model.mul_ct_ct(n_a, n_b);
     let mut noise = vec![];
 
     for _ in 0..SAMPLES {
@@ -299,7 +292,7 @@ pub fn mul_noise(
             &public_key,
             &private_key,
             relin_keys.as_ref(),
-            TargetNoiseLevel::InvariantNoiseBudget(n_a),
+            TargetNoiseLevel::InvariantNoise(n_a),
         )
         .unwrap();
         let b = create_ciphertext_with_noise_level(
@@ -307,13 +300,13 @@ pub fn mul_noise(
             &public_key,
             &private_key,
             relin_keys.as_ref(),
-            TargetNoiseLevel::InvariantNoiseBudget(n_b),
+            TargetNoiseLevel::InvariantNoise(n_b),
         )
         .unwrap();
 
         let c = evaluator.multiply(&a, &b).unwrap();
 
-        noise.push(decryptor.invariant_noise_budget(&c).unwrap() as f64);
+        noise.push(decryptor.invariant_noise(&c).unwrap() as f64);
     }
 
     let stats = stats(&noise);
@@ -331,7 +324,7 @@ pub fn mul_noise(
 
 pub fn mul_pt_noise(
     results: &Mutex<Results>,
-    n_a: u32,
+    n_a: f64,
     lattice_dimension: u64,
     plain_modulus: u64,
     security_level: SecurityLevel,
@@ -348,17 +341,17 @@ pub fn mul_pt_noise(
         evaluator,
     ) = make_seal_things(lattice_dimension, plain_modulus, security_level);
 
-    let predicted_noise = noise_to_noise_budget(model.mul_ct_pt(noise_budget_to_noise(n_a as f64)));
+    let predicted_noise = model.mul_ct_pt(n_a);
 
     let mut noise = vec![];
 
-    for _ in 0..1 {
+    for _ in 0..SAMPLES {
         let a = create_ciphertext_with_noise_level(
             &context,
             &public_key,
             &private_key,
             relin_keys.as_ref(),
-            TargetNoiseLevel::InvariantNoiseBudget(n_a),
+            TargetNoiseLevel::InvariantNoise(n_a),
         )
         .unwrap();
         let mut b = Plaintext::new().unwrap();
@@ -367,7 +360,7 @@ pub fn mul_pt_noise(
 
         let c = evaluator.multiply_plain(&a, &b).unwrap();
 
-        noise.push(decryptor.invariant_noise_budget(&c).unwrap() as f64);
+        noise.push(decryptor.invariant_noise(&c).unwrap() as f64);
     }
 
     let stats = stats(&noise);
@@ -385,7 +378,7 @@ pub fn mul_pt_noise(
 
 pub fn _swap_noise(
     results: &Mutex<Results>,
-    n_a: u32,
+    n_a: f64,
     lattice_dimension: u64,
     plain_modulus: u64,
     security_level: SecurityLevel,
@@ -406,7 +399,7 @@ pub fn _swap_noise(
         return;
     }
 
-    let predicted_noise = noise_to_noise_budget(model.swap_rows(noise_budget_to_noise(n_a as f64)));
+    let predicted_noise = model.swap_rows(n_a);
 
     let mut noise = vec![];
 
@@ -416,7 +409,7 @@ pub fn _swap_noise(
             &public_key,
             &private_key,
             relin_keys.as_ref(),
-            TargetNoiseLevel::InvariantNoiseBudget(n_a),
+            TargetNoiseLevel::InvariantNoise(n_a),
         )
         .unwrap();
 
@@ -424,7 +417,7 @@ pub fn _swap_noise(
             .rotate_columns(&a, &galois_keys.as_ref().unwrap())
             .unwrap();
 
-        noise.push(decryptor.invariant_noise_budget(&c).unwrap() as f64);
+        noise.push(decryptor.invariant_noise(&c).unwrap() as f64);
     }
 
     let stats = stats(&noise);
@@ -442,7 +435,7 @@ pub fn _swap_noise(
 
 pub fn _shift_noise(
     results: &Mutex<Results>,
-    n_a: u32,
+    n_a: f64,
     shift_places: i32,
     lattice_dimension: u64,
     plain_modulus: u64,
@@ -464,8 +457,7 @@ pub fn _shift_noise(
         return;
     }
 
-    let predicted_noise =
-        noise_to_noise_budget(model.shift_left(noise_budget_to_noise(n_a as f64), shift_places));
+    let predicted_noise = model.shift_left(n_a, shift_places);
 
     let mut noise = vec![];
 
@@ -475,7 +467,7 @@ pub fn _shift_noise(
             &public_key,
             &private_key,
             relin_keys.as_ref(),
-            TargetNoiseLevel::InvariantNoiseBudget(n_a),
+            TargetNoiseLevel::InvariantNoise(n_a),
         )
         .unwrap();
 
@@ -483,7 +475,7 @@ pub fn _shift_noise(
             .rotate_rows(&a, shift_places, galois_keys.as_ref().unwrap())
             .unwrap();
 
-        noise.push(decryptor.invariant_noise_budget(&c).unwrap() as f64);
+        noise.push(decryptor.invariant_noise(&c).unwrap() as f64);
     }
 
     let stats = stats(&noise);

@@ -65,25 +65,22 @@ fn main() -> Result<()> {
 
     let data = runtime.encrypt(create_dataset(), &public_key)?;
 
-    let mean_result = runtime
-        .run(
-            app.get_program(mean_fhe).unwrap(),
-            vec![data.clone()],
-            &public_key,
-        )?;
+    let mean_result = runtime.run(
+        app.get_program(mean_fhe).unwrap(),
+        vec![data.clone()],
+        &public_key,
+    )?;
 
-    let variance_result = runtime
-        .run(
-            app.get_program(variance_fhe).unwrap(),
-            vec![data],
-            &public_key,
-        )?;
+    let variance_result = runtime.run(
+        app.get_program(variance_fhe).unwrap(),
+        vec![data],
+        &public_key,
+    )?;
 
     let mean_result: Fractional<64> = runtime.decrypt(&mean_result[0], &private_key)?;
     let mean_result: f64 = mean_result.into();
 
-    let variance_result: Fractional<64> =
-        runtime.decrypt(&variance_result[0], &private_key)?;
+    let variance_result: Fractional<64> = runtime.decrypt(&variance_result[0], &private_key)?;
     let variance_result: f64 = variance_result.into();
 
     println!("Mean={}, Variance={}", mean_result, variance_result);

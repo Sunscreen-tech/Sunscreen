@@ -53,41 +53,40 @@ fn create_dataset() -> [Fractional<64>; DATA_POINTS] {
         .unwrap()
 }
 
-fn main() {
+fn main() -> Result<()> {
     let app = Compiler::new()
         .fhe_program(mean_fhe)
         .fhe_program(variance_fhe)
-        .compile()
-        .unwrap();
+        .compile()?;
 
-    let runtime = Runtime::new(app.params()).unwrap();
+    let runtime = Runtime::new(app.params())?;
 
-    let (public_key, private_key) = runtime.generate_keys().unwrap();
+    let (public_key, private_key) = runtime.generate_keys()?;
 
-    let data = runtime.encrypt(create_dataset(), &public_key).unwrap();
+    let data = runtime.encrypt(create_dataset(), &public_key)?;
 
     let mean_result = runtime
         .run(
             app.get_program(mean_fhe).unwrap(),
             vec![data.clone()],
             &public_key,
-        )
-        .unwrap();
+        )?;
 
     let variance_result = runtime
         .run(
             app.get_program(variance_fhe).unwrap(),
             vec![data],
             &public_key,
-        )
-        .unwrap();
+        )?;
 
-    let mean_result: Fractional<64> = runtime.decrypt(&mean_result[0], &private_key).unwrap();
+    let mean_result: Fractional<64> = runtime.decrypt(&mean_result[0], &private_key)?;
     let mean_result: f64 = mean_result.into();
 
     let variance_result: Fractional<64> =
-        runtime.decrypt(&variance_result[0], &private_key).unwrap();
+        runtime.decrypt(&variance_result[0], &private_key)?;
     let variance_result: f64 = variance_result.into();
 
     println!("Mean={}, Variance={}", mean_result, variance_result);
+
+    Ok(())
 }

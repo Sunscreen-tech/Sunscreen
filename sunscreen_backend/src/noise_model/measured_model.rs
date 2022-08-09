@@ -67,14 +67,18 @@ pub fn create_ciphertext_with_noise_level(
         TargetNoiseLevel::Fresh => {
             let p = encoder.encode_unsigned(1)?;
             return Ok(encryptor.encrypt(&p)?);
-        },
-        TargetNoiseLevel::InvariantNoiseBudget(target_noise_budget) => noise_budget_to_noise(target_noise_budget as f64),
-        
+        }
+        TargetNoiseLevel::InvariantNoiseBudget(target_noise_budget) => {
+            noise_budget_to_noise(target_noise_budget as f64)
+        }
         TargetNoiseLevel::InvariantNoise(target_noise) => target_noise,
-        _ => unimplemented!("")
+        _ => unimplemented!(""),
     };
 
-    trace!("create_ciphertext_with_noise_level: Creating ciphertext with target noise {}...", target_noise_level);
+    trace!(
+        "create_ciphertext_with_noise_level: Creating ciphertext with target noise {}...",
+        target_noise_level
+    );
 
     let decryptor = Decryptor::new(&context, &private_key)?;
     let evaluator = BFVEvaluator::new(&context)?;
@@ -94,7 +98,10 @@ pub fn create_ciphertext_with_noise_level(
         return Ok(c_initial);
     }
 
-    trace!("create_ciphertext_with_noise_level: current noise {}", current_noise);
+    trace!(
+        "create_ciphertext_with_noise_level: current noise {}",
+        current_noise
+    );
 
     // Repeatedly square the ciphertext to quadratically consume
     // noise budget until we exceed the target. Take the last
@@ -117,7 +124,10 @@ pub fn create_ciphertext_with_noise_level(
                 trace!("create_ciphertext_with_noise_level: Hit noise level.");
                 return Ok(c);
             } else {
-                trace!("create_ciphertext_with_noise_level: current noise {}", current_noise);
+                trace!(
+                    "create_ciphertext_with_noise_level: current noise {}",
+                    current_noise
+                );
                 old_c = c;
             }
         }
@@ -143,7 +153,10 @@ pub fn create_ciphertext_with_noise_level(
                 trace!("create_ciphertext_with_noise_level: Hit noise level.");
                 return Ok(c);
             } else {
-                trace!("create_ciphertext_with_noise_level: current noise {}", current_noise);
+                trace!(
+                    "create_ciphertext_with_noise_level: current noise {}",
+                    current_noise
+                );
                 old_c = c;
             }
         }
@@ -166,7 +179,10 @@ pub fn create_ciphertext_with_noise_level(
             trace!("create_ciphertext_with_noise_level: Hit noise level.");
             return Ok(c);
         } else {
-            trace!("create_ciphertext_with_noise_level: current noise {}", current_noise);
+            trace!(
+                "create_ciphertext_with_noise_level: current noise {}",
+                current_noise
+            );
             old_c = c;
         }
     }
@@ -189,12 +205,19 @@ pub fn create_ciphertext_with_noise_level(
             trace!("create_ciphertext_with_noise_level: Hit noise level.");
             return Ok(c);
         } else {
-            trace!("create_ciphertext_with_noise_level: current noise {}", current_noise);
+            trace!(
+                "create_ciphertext_with_noise_level: current noise {}",
+                current_noise
+            );
             old_c = c;
         }
     }
 
-    trace!("Final noise budget: {} out of target {}", decryptor.invariant_noise(&old_c).unwrap(), target_noise_level);
+    trace!(
+        "Final noise budget: {} out of target {}",
+        decryptor.invariant_noise(&old_c).unwrap(),
+        target_noise_level
+    );
 
     Ok(old_c)
 }

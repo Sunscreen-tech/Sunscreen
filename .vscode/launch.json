@@ -355,6 +355,23 @@
         {
             "type": "lldb",
             "request": "launch",
+            "name": "Debug binary 'mean_variance'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--package=mean_variance"
+                ],
+                "filter": {
+                    "kind": "bin",
+                    "name": "mean_variance"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
             "name": "Debug binary 'amm'",
             "cargo": {
                 "args": [

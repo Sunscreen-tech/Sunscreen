@@ -8,6 +8,7 @@ members = [
     "examples/calculator_fractional",
     "examples/chi_sq",
     "examples/dot_prod",
+    "examples/mean_variance",
     "examples/pir",
     "seal_fhe",
     "sunscreen",

@@ -5,8 +5,7 @@ use sunscreen_fhe_program::SchemeType;
 use crate::*;
 
 use sunscreen_backend::noise_model::{
-    create_ciphertext_with_noise_level,
-    CanonicalEmbeddingNormModel, NoiseModel, TargetNoiseLevel,
+    create_ciphertext_with_noise_level, CanonicalEmbeddingNormModel, NoiseModel, TargetNoiseLevel,
 };
 
 pub fn make_context(
@@ -170,10 +169,7 @@ pub fn add_noise(
         evaluator,
     ) = make_seal_things(lattice_dimension, plain_modulus, security_level);
 
-    let predicted_noise = model.add_ct_ct(
-        n_a,
-        n_b,
-    );
+    let predicted_noise = model.add_ct_ct(n_a, n_b);
 
     let mut noise = vec![];
 
@@ -287,10 +283,7 @@ pub fn mul_noise(
         evaluator,
     ) = make_seal_things(lattice_dimension, plain_modulus, security_level);
 
-    let predicted_noise = model.mul_ct_ct(
-        n_a,
-        n_b,
-    );
+    let predicted_noise = model.mul_ct_ct(n_a, n_b);
     let mut noise = vec![];
 
     for _ in 0..SAMPLES {
@@ -464,8 +457,7 @@ pub fn _shift_noise(
         return;
     }
 
-    let predicted_noise =
-        model.shift_left(n_a, shift_places);
+    let predicted_noise = model.shift_left(n_a, shift_places);
 
     let mut noise = vec![];
 

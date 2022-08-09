@@ -1,11 +1,11 @@
 use seal_fhe::*;
-use sunscreen_backend::noise_model::{noise_to_noise_budget, noise_budget_to_noise};
 use std::fs::File;
 use std::io::Write;
 use std::sync::{
     atomic::{AtomicUsize, Ordering},
     Mutex,
 };
+use sunscreen_backend::noise_model::{noise_budget_to_noise, noise_to_noise_budget};
 use sunscreen_runtime::Params;
 
 mod ops;

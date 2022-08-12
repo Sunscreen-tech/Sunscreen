@@ -125,33 +125,36 @@ pub fn encryption_noise(
         _evaluator,
     ) = make_seal_things(lattice_dimension, plain_modulus, security_level);
 
-    let predicted_noise = model.encrypt();
+    let predicted_noise = vec![model.encrypt(); SAMPLES];
 
-    let mut noise = vec![];
+    let mut measured_noise = vec![];
 
-    for _ in 0..ENCRYPTION_SAMPLES {
+    for _ in 0..SAMPLES {
         let plaintext = Plaintext::new().unwrap();
         let ciphertext = encryptor.encrypt(&plaintext).unwrap();
-        noise.push(decryptor.invariant_noise(&ciphertext).unwrap() as f64);
+        measured_noise.push(decryptor.invariant_noise(&ciphertext).unwrap() as f64);
     }
 
-    let stats = stats(&noise);
+    let measured = stats(&measured_noise);
+    let predicted = stats(&predicted_noise);
+    let diff = stats(&relative_diff(&predicted_noise, &measured_noise));
 
     results.lock().unwrap().output_row(
         &model.params,
         "encrypt",
-        predicted_noise,
-        None,
-        None,
-        &stats,
         true,
+        None,
+        None,
+        &measured,
+        &predicted,
+        &diff,
     );
 
-    stats
+    measured
 }
 
 /**
- * Creates a ciphertext with approximately the specified 
+ * Creates a ciphertext with approximately the specified
  * noise level. Guarantees that the noise does not exceed
  * the target. Retries up to 100 times before giving up.
  */
@@ -160,15 +163,27 @@ fn create_ciphertext(
     public_key: &PublicKey,
     private_key: &SecretKey,
     relin_keys: Option<&RelinearizationKeys>,
-    noise_level: TargetNoiseLevel
+    noise_level: TargetNoiseLevel,
 ) -> Result<Ciphertext> {
     for _ in 0..100 {
-        match create_ciphertext_with_noise_level(context, public_key, private_key, relin_keys, noise_level) {
-            Ok(v) => { return Ok(v); },
-            Err(Error::ImpossibleNoiseFloor) => { continue; },
-            Err(e) => { return Err(e); }
+        match create_ciphertext_with_noise_level(
+            context,
+            public_key,
+            private_key,
+            relin_keys,
+            noise_level,
+        ) {
+            Ok(v) => {
+                return Ok(v);
+            }
+            Err(Error::ImpossibleNoiseFloor) => {
+                continue;
+            }
+            Err(e) => {
+                return Err(e);
+            }
         }
-    };
+    }
 
     return Err(Error::ImpossibleNoiseFloor);
 }
@@ -193,9 +208,8 @@ pub fn add_noise(
         evaluator,
     ) = make_seal_things(lattice_dimension, plain_modulus, security_level);
 
-    let predicted_noise = model.add_ct_ct(n_a, n_b);
-
-    let mut noise = vec![];
+    let mut measured_noise = vec![];
+    let mut predicted_noise = vec![];
 
     for _ in 0..SAMPLES {
         let a = create_ciphertext_with_noise_level(
@@ -215,21 +229,29 @@ pub fn add_noise(
         )
         .unwrap();
 
+        predicted_noise.push(model.add_ct_ct(
+            decryptor.invariant_noise(&a).unwrap(),
+            decryptor.invariant_noise(&b).unwrap(),
+        ));
+
         let c = evaluator.add(&a, &b).unwrap();
 
-        noise.push(decryptor.invariant_noise(&c).unwrap() as f64);
+        measured_noise.push(decryptor.invariant_noise(&c).unwrap() as f64);
     }
 
-    let stats = stats(&noise);
+    let measured = stats(&measured_noise);
+    let predicted = stats(&predicted_noise);
+    let diff = stats(&relative_diff(&predicted_noise, &measured_noise));
 
     results.lock().unwrap().output_row(
         &model.params,
         "add",
-        predicted_noise,
+        true,
         Some(n_a),
         Some(n_b),
-        &stats,
-        true,
+        &measured,
+        &predicted,
+        &diff,
     );
 }
 
@@ -252,9 +274,15 @@ pub fn add_pt_noise(
         evaluator,
     ) = make_seal_things(lattice_dimension, plain_modulus, security_level);
 
-    let predicted_noise = model.add_ct_pt(n_a);
+    let mut measured_noise = vec![];
+    let mut predicted_noise = vec![];
 
-    let mut noise = vec![];
+    let mut b = Plaintext::new().unwrap();
+    b.resize(lattice_dimension as usize);
+
+    for i in 0..lattice_dimension {
+        b.set_coefficient(i as usize, 1);
+    }
 
     for _ in 0..SAMPLES {
         let a = create_ciphertext_with_noise_level(
@@ -265,25 +293,26 @@ pub fn add_pt_noise(
             TargetNoiseLevel::InvariantNoise(n_a),
         )
         .unwrap();
-        let mut b = Plaintext::new().unwrap();
-        b.resize(1);
-        b.set_coefficient(0, 1);
 
         let c = evaluator.add_plain(&a, &b).unwrap();
 
-        noise.push(decryptor.invariant_noise(&c).unwrap() as f64);
+        predicted_noise.push(model.add_ct_pt(decryptor.invariant_noise(&a).unwrap()));
+        measured_noise.push(decryptor.invariant_noise(&c).unwrap() as f64);
     }
 
-    let stats = stats(&noise);
+    let measured = stats(&measured_noise);
+    let predicted = stats(&predicted_noise);
+    let diff = stats(&relative_diff(&predicted_noise, &measured_noise));
 
     results.lock().unwrap().output_row(
         &model.params,
         "add_plain",
-        predicted_noise,
+        true,
         Some(n_a),
         None,
-        &stats,
-        true,
+        &measured,
+        &predicted,
+        &diff,
     );
 }
 
@@ -307,8 +336,8 @@ pub fn mul_noise(
         evaluator,
     ) = make_seal_things(lattice_dimension, plain_modulus, security_level);
 
-    let predicted_noise = model.mul_ct_ct(n_a, n_b);
-    let mut noise = vec![];
+    let mut measured_noise = vec![];
+    let mut predicted_noise = vec![];
 
     for _ in 0..SAMPLES {
         let a = create_ciphertext(
@@ -330,19 +359,27 @@ pub fn mul_noise(
 
         let c = evaluator.multiply(&a, &b).unwrap();
 
-        noise.push(decryptor.invariant_noise(&c).unwrap() as f64);
+        predicted_noise.push(model.mul_ct_ct(
+            decryptor.invariant_noise(&a).unwrap(),
+            decryptor.invariant_noise(&b).unwrap(),
+        ));
+
+        measured_noise.push(decryptor.invariant_noise(&c).unwrap() as f64);
     }
 
-    let stats = stats(&noise);
+    let measured = stats(&measured_noise);
+    let predicted = stats(&predicted_noise);
+    let diff = stats(&relative_diff(&predicted_noise, &measured_noise));
 
     results.lock().unwrap().output_row(
         &model.params,
         "mul",
-        predicted_noise,
+        relin_keys.is_some(),
         Some(n_a),
         Some(n_b),
-        &stats,
-        relin_keys.is_some(),
+        &measured,
+        &predicted,
+        &diff,
     );
 }
 
@@ -365,9 +402,15 @@ pub fn mul_pt_noise(
         evaluator,
     ) = make_seal_things(lattice_dimension, plain_modulus, security_level);
 
-    let predicted_noise = model.mul_ct_pt(n_a);
+    let mut measured_noise = vec![];
+    let mut predicted_noise = vec![];
 
-    let mut noise = vec![];
+    let mut b = Plaintext::new().unwrap();
+    b.resize(lattice_dimension as usize);
+
+    for i in 0..lattice_dimension {
+        b.set_coefficient(i as usize, 1);
+    }
 
     for _ in 0..SAMPLES {
         let a = create_ciphertext_with_noise_level(
@@ -378,139 +421,25 @@ pub fn mul_pt_noise(
             TargetNoiseLevel::InvariantNoise(n_a),
         )
         .unwrap();
-        let mut b = Plaintext::new().unwrap();
-        b.resize(1);
-        b.set_coefficient(0, 1);
 
         let c = evaluator.multiply_plain(&a, &b).unwrap();
 
-        noise.push(decryptor.invariant_noise(&c).unwrap() as f64);
+        predicted_noise.push(model.mul_ct_pt(decryptor.invariant_noise(&a).unwrap()));
+        measured_noise.push(decryptor.invariant_noise(&c).unwrap() as f64);
     }
 
-    let stats = stats(&noise);
+    let measured = stats(&measured_noise);
+    let predicted = stats(&predicted_noise);
+    let diff = stats(&relative_diff(&predicted_noise, &measured_noise));
 
     results.lock().unwrap().output_row(
         &model.params,
         "mul_plain",
-        predicted_noise,
+        true,
         Some(n_a),
         None,
-        &stats,
-        true,
-    );
-}
-
-pub fn _swap_noise(
-    results: &Mutex<Results>,
-    n_a: f64,
-    lattice_dimension: u64,
-    plain_modulus: u64,
-    security_level: SecurityLevel,
-) {
-    let (
-        context,
-        model,
-        public_key,
-        private_key,
-        relin_keys,
-        galois_keys,
-        _encryptor,
-        decryptor,
-        evaluator,
-    ) = make_seal_things(lattice_dimension, plain_modulus, security_level);
-
-    if galois_keys.is_none() {
-        return;
-    }
-
-    let predicted_noise = model.swap_rows(n_a);
-
-    let mut noise = vec![];
-
-    for _ in 0..SAMPLES {
-        let a = create_ciphertext(
-            &context,
-            &public_key,
-            &private_key,
-            relin_keys.as_ref(),
-            TargetNoiseLevel::InvariantNoise(n_a),
-        )
-        .unwrap();
-
-        let c = evaluator
-            .rotate_columns(&a, &galois_keys.as_ref().unwrap())
-            .unwrap();
-
-        noise.push(decryptor.invariant_noise(&c).unwrap() as f64);
-    }
-
-    let stats = stats(&noise);
-
-    results.lock().unwrap().output_row(
-        &model.params,
-        "swap_rows",
-        predicted_noise,
-        Some(n_a),
-        None,
-        &stats,
-        true,
-    );
-}
-
-pub fn _shift_noise(
-    results: &Mutex<Results>,
-    n_a: f64,
-    shift_places: i32,
-    lattice_dimension: u64,
-    plain_modulus: u64,
-    security_level: SecurityLevel,
-) {
-    let (
-        context,
-        model,
-        public_key,
-        private_key,
-        relin_keys,
-        galois_keys,
-        _encryptor,
-        decryptor,
-        evaluator,
-    ) = make_seal_things(lattice_dimension, plain_modulus, security_level);
-
-    if galois_keys.is_none() {
-        return;
-    }
-
-    let predicted_noise = model.shift_left(n_a, shift_places);
-
-    let mut noise = vec![];
-
-    for _ in 0..SAMPLES {
-        let a = create_ciphertext(
-            &context,
-            &public_key,
-            &private_key,
-            relin_keys.as_ref(),
-            TargetNoiseLevel::InvariantNoise(n_a),
-        )
-        .unwrap();
-
-        let c = evaluator
-            .rotate_rows(&a, shift_places, galois_keys.as_ref().unwrap())
-            .unwrap();
-
-        noise.push(decryptor.invariant_noise(&c).unwrap() as f64);
-    }
-
-    let stats = stats(&noise);
-
-    results.lock().unwrap().output_row(
-        &model.params,
-        "shift",
-        predicted_noise,
-        Some(n_a),
-        None,
-        &stats,
-        true,
+        &measured,
+        &predicted,
+        &diff,
     );
 }

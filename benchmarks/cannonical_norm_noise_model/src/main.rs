@@ -11,14 +11,19 @@ use sunscreen_runtime::Params;
 mod ops;
 use crate::ops::*;
 
-const SAMPLES: usize = 10_000;
-const ENCRYPTION_SAMPLES: usize = 100_000;
+const SAMPLES: usize = 1_000;
 
 pub struct Stats {
     mean: f64,
     min: f64,
     max: f64,
     stddev: f64,
+}
+
+fn relative_diff(a: &[f64], b: &[f64]) -> Vec<f64> {
+    assert_eq!(a.len(), b.len());
+
+    a.iter().zip(b.iter()).map(|(a, b)| (a - b) / a).collect()
 }
 
 fn stats(data: &[f64]) -> Stats {
@@ -62,7 +67,7 @@ impl Results {
 
         writeln!(
             output_file,
-            "λ,d,p,op,predicted,N_a,N_b,std,mean,min,max,op_valid"
+            "λ,d,p,op,op_valid,N_a,N_b,measured_std,actual_mean,actual_min,actual_max,model_std,model_mean,model_min,model_max,diff_std,diff_mean,diff_min,diff_max"
         )
         .unwrap();
 
@@ -73,11 +78,12 @@ impl Results {
         &mut self,
         params: &Params,
         op: &str,
-        predicted: f64,
+        op_valid: bool,
         n_a: Option<f64>,
         n_b: Option<f64>,
-        stats: &Stats,
-        op_valid: bool,
+        acutal: &Stats,
+        modeled: &Stats,
+        diff: &Stats,
     ) {
         let n_a = n_a.map(|x| x.to_string()).unwrap_or("".to_owned());
         let n_b = n_b.map(|x| x.to_string()).unwrap_or("".to_owned());
@@ -90,19 +96,26 @@ impl Results {
 
         writeln!(
             self.output_file,
-            "{},{},{},{},{},{},{},{},{},{},{},{}",
+            "{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{}",
             security_level,
             params.lattice_dimension,
             params.plain_modulus,
             op,
-            predicted,
+            op_valid,
             n_a,
             n_b,
-            stats.stddev,
-            stats.mean,
-            stats.min,
-            stats.max,
-            op_valid,
+            acutal.stddev,
+            acutal.mean,
+            acutal.min,
+            acutal.max,
+            modeled.stddev,
+            modeled.mean,
+            modeled.min,
+            modeled.max,
+            diff.stddev,
+            diff.mean,
+            diff.min,
+            diff.max
         )
         .unwrap();
     }
@@ -212,14 +225,18 @@ fn main() {
                                     break;
                                 }
 
-                                n_b = noise_budget_to_noise(noise_to_noise_budget(n_b) - noise_margin_increment_bits);
+                                n_b = noise_budget_to_noise(
+                                    noise_to_noise_budget(n_b) - noise_margin_increment_bits,
+                                );
                             }
 
                             if noise_to_noise_budget(n_a) <= noise_margin_increment_bits {
                                 break;
                             }
 
-                            n_a = noise_budget_to_noise(noise_to_noise_budget(n_a) - noise_margin_increment_bits);
+                            n_a = noise_budget_to_noise(
+                                noise_to_noise_budget(n_a) - noise_margin_increment_bits,
+                            );
                         }
                     });
                 }

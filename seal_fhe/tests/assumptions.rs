@@ -192,3 +192,56 @@ fn relinearization_consumes_no_noise_budget() {
 
     assert_eq!(noise_post, noise_pre);
 }
+
+#[test]
+fn addition_noise_less_equal_operands() {
+    use seal_fhe::*;
+
+    let degree = 8192;
+    let lane_bits = 18;
+
+    let params = BfvEncryptionParametersBuilder::new()
+        .set_poly_modulus_degree(degree)
+        .set_coefficient_modulus(
+            CoefficientModulus::bfv_default(degree, SecurityLevel::TC128).unwrap(),
+        )
+        .set_plain_modulus(PlainModulus::batching(degree, lane_bits).unwrap())
+        .build()
+        .unwrap();
+
+    let ctx = Context::new(&params, false, SecurityLevel::TC128).unwrap();
+    let gen = KeyGenerator::new(&ctx).unwrap();
+
+    let encoder = BFVEncoder::new(&ctx).unwrap();
+
+    let public_key = gen.create_public_key();
+    let private_key = gen.secret_key();
+
+    let encryptor = Encryptor::with_public_and_secret_key(&ctx, &public_key, &private_key).unwrap();
+    let decryptor = Decryptor::new(&ctx, &private_key).unwrap();
+    let eval = BFVEvaluator::new(&ctx).unwrap();
+
+    // Modulus should be 114_689
+    let mut data = Vec::with_capacity(8192);
+    let mut data_2 = Vec::with_capacity(8192);
+
+    for _i in 0..8192 {
+        data.push(114_688);
+        data_2.push(1);
+    }
+
+    let p = encoder.encode_unsigned(&data).unwrap();
+    let c_1 = encryptor.encrypt(&p).unwrap();
+    let c_2 = encryptor.encrypt(&p).unwrap();
+
+    let noise_a = decryptor.invariant_noise(&c_1).unwrap();
+    let noise_b = decryptor.invariant_noise(&c_2).unwrap();
+
+    // 10_000 ^ 2 should produce the same value in every lane if the modulus
+    // is the same in every lane.
+    let c_2 = eval.add(&c_1, &c_2).unwrap();
+
+    let noise_c = decryptor.invariant_noise(&c_2).unwrap();
+
+    assert!(noise_a + noise_b >= noise_c);
+}

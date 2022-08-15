@@ -377,16 +377,16 @@ impl MeasuredModel {
         let mut noise_levels = vec![];
 
         for (i, o) in outputs.iter().enumerate() {
-            let noise_budget = decryptor.invariant_noise_budget(&o).unwrap();
+            let invariant_noise = decryptor.invariant_noise(&o).unwrap();
 
             // The model expects noise budgets to be in terms of invariant
             // noise, not the budget.
-            noise_levels.push(noise_budget_to_noise(noise_budget as f64));
+            noise_levels.push(invariant_noise);
 
             trace!(
                 "Output {} has {} bits of noise budget remaining",
                 i,
-                noise_budget
+                invariant_noise
             );
         }
 

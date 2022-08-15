@@ -222,6 +222,24 @@
         {
             "type": "lldb",
             "request": "launch",
+            "name": "Debug chaining integration tests in library 'sunscreen'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--package=sunscreen",
+                ],
+                "filter": {
+                    "name": "chaining",
+                    "kind": "test"
+                }
+            },
+            "args": ["chaining_increases_parameters"],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
             "name": "Debug fractional integration tests in library 'sunscreen'",
             "cargo": {
                 "args": [

@@ -177,47 +177,59 @@ pub fn determine_params(
                 }
             };
 
-            let noise_targets = ir
-                .graph
-                .node_weights()
-                .filter(|n| match n.operation {
-                    Operation::InputCiphertext(_) => true,
-                    Operation::InputPlaintext(_) => true,
-                    _ => false,
-                })
-                .map(|n| match n.operation {
-                    Operation::InputCiphertext(_) => TargetNoiseLevel::Fresh,
-                    Operation::InputPlaintext(_) => TargetNoiseLevel::NotApplicable,
-                    _ => unreachable!(),
-                })
-                .collect::<Vec<TargetNoiseLevel>>();
+            let mut chain_noise_level = 0f64;
 
-            let model = match MeasuredModel::new(&ir, &params, &noise_targets) {
-                Ok(v) => v,
-                Err(_) => {
-                    trace!(
-                        "Failed to construct noise model for {} with lattice_dimension={}",
-                        program.name(),
-                        n
-                    );
-                    continue 'params_loop;
-                }
-            };
+            for _ in 0..program.chain_count() {
+                let noise_targets = ir
+                    .graph
+                    .node_weights()
+                    .filter(|n| match n.operation {
+                        Operation::InputCiphertext(_) => true,
+                        Operation::InputPlaintext(_) => true,
+                        _ => false,
+                    })
+                    .map(|n| match n.operation {
+                        Operation::InputCiphertext(_) => {
+                            if chain_noise_level == 0f64 {
+                                TargetNoiseLevel::Fresh
+                            } else {
+                                TargetNoiseLevel::InvariantNoise(chain_noise_level)
+                            }
+                        }
+                        Operation::InputPlaintext(_) => TargetNoiseLevel::NotApplicable,
+                        _ => unreachable!(),
+                    })
+                    .collect::<Vec<TargetNoiseLevel>>();
 
-            let model: Box<dyn NoiseModel + Sync> = Box::new(model);
+                let model = match MeasuredModel::new(&ir, &params, &noise_targets) {
+                    Ok(v) => v,
+                    Err(_) => {
+                        trace!(
+                            "Failed to construct noise model for {} with lattice_dimension={}",
+                            program.name(),
+                            n
+                        );
+                        continue 'params_loop;
+                    }
+                };
 
-            let output_noises = predict_noise(&model, &ir);
+                let model: Box<dyn NoiseModel + Sync> = Box::new(model);
 
-            let target_noise = noise_budget_to_noise(noise_margin_bits as f64);
+                let output_noises = predict_noise(&model, &ir);
 
-            for output_noise in output_noises {
-                if output_noise > target_noise {
-                    trace!(
-                        "Failed to meet noise constraints with lattice dimension {} for program {}",
-                        n,
-                        program.name()
-                    );
-                    continue 'params_loop;
+                let target_noise = noise_budget_to_noise(noise_margin_bits as f64);
+
+                for output_noise in output_noises {
+                    if output_noise > target_noise {
+                        trace!(
+                            "Failed to meet noise constraints with lattice dimension {} for program {}",
+                            n,
+                            program.name()
+                        );
+                        continue 'params_loop;
+                    } else if output_noise > chain_noise_level {
+                        chain_noise_level = output_noise
+                    }
                 }
             }
 

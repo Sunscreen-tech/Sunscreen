@@ -183,6 +183,10 @@ pub fn fhe_program_impl(
             fn name(&self) -> &str {
                 #fhe_program_name_literal
             }
+
+            fn chain_count(&self) -> usize {
+                self.chain_count
+            }
         }
 
         impl AsRef<str> for #fhe_program_struct_name {

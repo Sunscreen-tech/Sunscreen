@@ -58,6 +58,11 @@ pub enum Error {
      * The compiled Sunscreen FHE program is malformed.
      */
     FheProgramError(sunscreen_fhe_program::Error),
+
+    /**
+     * The given configuration is not supported.
+     */
+    Unsupported(String),
 }
 
 impl From<seal_fhe::Error> for Error {

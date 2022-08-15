@@ -451,7 +451,7 @@ impl NoiseModel for MeasuredModel {
 }
 
 #[test]
-fn can_create_target_noise_ciphertext() {
+fn can_create_target_noise_budget_ciphertext() {
     let d = 8192;
 
     let params = BfvEncryptionParametersBuilder::new()
@@ -485,4 +485,41 @@ fn can_create_target_noise_ciphertext() {
     println!("{}", measured_noise);
 
     assert_eq!(measured_noise, desired_noise);
+}
+
+#[test]
+fn can_create_target_noise_ciphertext() {
+    let d = 8192;
+
+    let params = BfvEncryptionParametersBuilder::new()
+        .set_plain_modulus(PlainModulus::raw(1234).unwrap())
+        .set_poly_modulus_degree(d)
+        .set_coefficient_modulus(CoefficientModulus::bfv_default(d, SecurityLevel::TC128).unwrap())
+        .build()
+        .unwrap();
+
+    let context = Context::new(&params, false, SecurityLevel::TC128).unwrap();
+
+    let keygen = KeyGenerator::new(&context).unwrap();
+    let public_key = keygen.create_public_key();
+    let private_key = keygen.secret_key();
+    let relin_keys = keygen.create_relinearization_keys().unwrap();
+
+    let desired_noise = 0.25f64;
+
+    let c = create_ciphertext_with_noise_level(
+        &context,
+        &public_key,
+        &private_key,
+        Some(&relin_keys),
+        TargetNoiseLevel::InvariantNoise(desired_noise),
+    )
+    .unwrap();
+
+    let decryptor = Decryptor::new(&context, &private_key).unwrap();
+    let measured_noise = decryptor.invariant_noise(&c).unwrap();
+
+    println!("{}", measured_noise);
+
+    assert!(measured_noise < desired_noise);
 }

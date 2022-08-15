@@ -234,7 +234,7 @@
                     "kind": "test"
                 }
             },
-            "args": ["chaining_increases_parameters"],
+            "args": [],
             "cwd": "${workspaceFolder}"
         },
         {

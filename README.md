@@ -66,7 +66,9 @@ Working with Sunscreen is as you'd expect with any other Rust repository:
 ```cargo test --release```
 
 ## Docs
-```cargo doc --open```
+Extensive documentation can be found [here](https://docs.sunscreen.tech).
+
+For API documentation, ```cargo doc --open```.
 
 ## Format
 ```cargo fmt```

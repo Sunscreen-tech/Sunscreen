@@ -71,7 +71,7 @@ impl EvaluatorBase {
      * Creates an Evaluator instance initialized with the specified Context.
      * * `ctx` - The context.
      */
-    pub(in crate) fn new(ctx: &Context) -> Result<Self> {
+    pub(crate) fn new(ctx: &Context) -> Result<Self> {
         let mut handle = null_mut();
 
         convert_seal_error(unsafe { bindgen::Evaluator_Create(ctx.get_handle(), &mut handle) })?;
@@ -86,7 +86,7 @@ impl EvaluatorBase {
         self.handle
     }
 
-    pub(in crate) fn negate_inplace(&self, a: &mut Ciphertext) -> Result<()> {
+    pub(crate) fn negate_inplace(&self, a: &mut Ciphertext) -> Result<()> {
         convert_seal_error(unsafe {
             bindgen::Evaluator_Negate(self.handle, a.get_handle(), a.get_handle())
         })?;
@@ -94,7 +94,7 @@ impl EvaluatorBase {
         Ok(())
     }
 
-    pub(in crate) fn negate(&self, a: &Ciphertext) -> Result<Ciphertext> {
+    pub(crate) fn negate(&self, a: &Ciphertext) -> Result<Ciphertext> {
         let out = Ciphertext::new()?;
 
         convert_seal_error(unsafe {
@@ -104,7 +104,7 @@ impl EvaluatorBase {
         Ok(out)
     }
 
-    pub(in crate) fn add_inplace(&self, a: &mut Ciphertext, b: &Ciphertext) -> Result<()> {
+    pub(crate) fn add_inplace(&self, a: &mut Ciphertext, b: &Ciphertext) -> Result<()> {
         convert_seal_error(unsafe {
             bindgen::Evaluator_Add(self.handle, a.get_handle(), b.get_handle(), a.get_handle())
         })?;
@@ -112,7 +112,7 @@ impl EvaluatorBase {
         Ok(())
     }
 
-    pub(in crate) fn add(&self, a: &Ciphertext, b: &Ciphertext) -> Result<Ciphertext> {
+    pub(crate) fn add(&self, a: &Ciphertext, b: &Ciphertext) -> Result<Ciphertext> {
         let c = Ciphertext::new()?;
 
         convert_seal_error(unsafe {
@@ -122,7 +122,7 @@ impl EvaluatorBase {
         Ok(c)
     }
 
-    pub(in crate) fn add_many(&self, a: &[Ciphertext]) -> Result<Ciphertext> {
+    pub(crate) fn add_many(&self, a: &[Ciphertext]) -> Result<Ciphertext> {
         let c = Ciphertext::new()?;
 
         let mut a = a
@@ -137,7 +137,7 @@ impl EvaluatorBase {
         Ok(c)
     }
 
-    pub(in crate) fn multiply_many(
+    pub(crate) fn multiply_many(
         &self,
         a: &[Ciphertext],
         relin_keys: &RelinearizationKeys,
@@ -163,7 +163,7 @@ impl EvaluatorBase {
         Ok(c)
     }
 
-    pub(in crate) fn sub_inplace(&self, a: &mut Ciphertext, b: &Ciphertext) -> Result<()> {
+    pub(crate) fn sub_inplace(&self, a: &mut Ciphertext, b: &Ciphertext) -> Result<()> {
         convert_seal_error(unsafe {
             bindgen::Evaluator_Sub(self.handle, a.get_handle(), b.get_handle(), a.get_handle())
         })?;
@@ -171,7 +171,7 @@ impl EvaluatorBase {
         Ok(())
     }
 
-    pub(in crate) fn sub(&self, a: &Ciphertext, b: &Ciphertext) -> Result<Ciphertext> {
+    pub(crate) fn sub(&self, a: &Ciphertext, b: &Ciphertext) -> Result<Ciphertext> {
         let c = Ciphertext::new()?;
 
         convert_seal_error(unsafe {
@@ -181,7 +181,7 @@ impl EvaluatorBase {
         Ok(c)
     }
 
-    pub(in crate) fn multiply_inplace(&self, a: &mut Ciphertext, b: &Ciphertext) -> Result<()> {
+    pub(crate) fn multiply_inplace(&self, a: &mut Ciphertext, b: &Ciphertext) -> Result<()> {
         convert_seal_error(unsafe {
             bindgen::Evaluator_Multiply(
                 self.handle,
@@ -195,7 +195,7 @@ impl EvaluatorBase {
         Ok(())
     }
 
-    pub(in crate) fn multiply(&self, a: &Ciphertext, b: &Ciphertext) -> Result<Ciphertext> {
+    pub(crate) fn multiply(&self, a: &Ciphertext, b: &Ciphertext) -> Result<Ciphertext> {
         let c = Ciphertext::new()?;
 
         convert_seal_error(unsafe {
@@ -211,7 +211,7 @@ impl EvaluatorBase {
         Ok(c)
     }
 
-    pub(in crate) fn square_inplace(&self, a: &mut Ciphertext) -> Result<()> {
+    pub(crate) fn square_inplace(&self, a: &mut Ciphertext) -> Result<()> {
         convert_seal_error(unsafe {
             bindgen::Evaluator_Square(self.handle, a.get_handle(), a.get_handle(), null_mut())
         })?;
@@ -219,7 +219,7 @@ impl EvaluatorBase {
         Ok(())
     }
 
-    pub(in crate) fn square(&self, a: &Ciphertext) -> Result<Ciphertext> {
+    pub(crate) fn square(&self, a: &Ciphertext) -> Result<Ciphertext> {
         let c = Ciphertext::new()?;
 
         convert_seal_error(unsafe {
@@ -229,7 +229,7 @@ impl EvaluatorBase {
         Ok(c)
     }
 
-    pub(in crate) fn mod_switch_to_next(&self, a: &Ciphertext) -> Result<Ciphertext> {
+    pub(crate) fn mod_switch_to_next(&self, a: &Ciphertext) -> Result<Ciphertext> {
         let c = Ciphertext::new()?;
 
         convert_seal_error(unsafe {
@@ -244,7 +244,7 @@ impl EvaluatorBase {
         Ok(c)
     }
 
-    pub(in crate) fn mod_switch_to_next_inplace(&self, a: &Ciphertext) -> Result<()> {
+    pub(crate) fn mod_switch_to_next_inplace(&self, a: &Ciphertext) -> Result<()> {
         convert_seal_error(unsafe {
             bindgen::Evaluator_ModSwitchToNext1(
                 self.get_handle(),
@@ -257,7 +257,7 @@ impl EvaluatorBase {
         Ok(())
     }
 
-    pub(in crate) fn mod_switch_to_next_plaintext(&self, a: &Plaintext) -> Result<Plaintext> {
+    pub(crate) fn mod_switch_to_next_plaintext(&self, a: &Plaintext) -> Result<Plaintext> {
         let p = Plaintext::new()?;
 
         convert_seal_error(unsafe {
@@ -267,7 +267,7 @@ impl EvaluatorBase {
         Ok(p)
     }
 
-    pub(in crate) fn mod_switch_to_next_inplace_plaintext(&self, a: &Plaintext) -> Result<()> {
+    pub(crate) fn mod_switch_to_next_inplace_plaintext(&self, a: &Plaintext) -> Result<()> {
         convert_seal_error(unsafe {
             bindgen::Evaluator_ModSwitchToNext2(self.get_handle(), a.get_handle(), a.get_handle())
         })?;
@@ -275,7 +275,7 @@ impl EvaluatorBase {
         Ok(())
     }
 
-    pub(in crate) fn exponentiate(
+    pub(crate) fn exponentiate(
         &self,
         a: &Ciphertext,
         exponent: u64,
@@ -297,7 +297,7 @@ impl EvaluatorBase {
         Ok(c)
     }
 
-    pub(in crate) fn exponentiate_inplace(
+    pub(crate) fn exponentiate_inplace(
         &self,
         a: &Ciphertext,
         exponent: u64,
@@ -317,7 +317,7 @@ impl EvaluatorBase {
         Ok(())
     }
 
-    pub(in crate) fn add_plain(&self, a: &Ciphertext, b: &Plaintext) -> Result<Ciphertext> {
+    pub(crate) fn add_plain(&self, a: &Ciphertext, b: &Plaintext) -> Result<Ciphertext> {
         let c = Ciphertext::new()?;
 
         convert_seal_error(unsafe {
@@ -332,7 +332,7 @@ impl EvaluatorBase {
         Ok(c)
     }
 
-    pub(in crate) fn add_plain_inplace(&self, a: &mut Ciphertext, b: &Plaintext) -> Result<()> {
+    pub(crate) fn add_plain_inplace(&self, a: &mut Ciphertext, b: &Plaintext) -> Result<()> {
         convert_seal_error(unsafe {
             bindgen::Evaluator_AddPlain(
                 self.get_handle(),
@@ -345,7 +345,7 @@ impl EvaluatorBase {
         Ok(())
     }
 
-    pub(in crate) fn sub_plain(&self, a: &Ciphertext, b: &Plaintext) -> Result<Ciphertext> {
+    pub(crate) fn sub_plain(&self, a: &Ciphertext, b: &Plaintext) -> Result<Ciphertext> {
         let c = Ciphertext::new()?;
 
         convert_seal_error(unsafe {
@@ -360,7 +360,7 @@ impl EvaluatorBase {
         Ok(c)
     }
 
-    pub(in crate) fn sub_plain_inplace(&self, a: &mut Ciphertext, b: &Plaintext) -> Result<()> {
+    pub(crate) fn sub_plain_inplace(&self, a: &mut Ciphertext, b: &Plaintext) -> Result<()> {
         convert_seal_error(unsafe {
             bindgen::Evaluator_SubPlain(
                 self.get_handle(),
@@ -373,7 +373,7 @@ impl EvaluatorBase {
         Ok(())
     }
 
-    pub(in crate) fn multiply_plain(&self, a: &Ciphertext, b: &Plaintext) -> Result<Ciphertext> {
+    pub(crate) fn multiply_plain(&self, a: &Ciphertext, b: &Plaintext) -> Result<Ciphertext> {
         let c = Ciphertext::new()?;
 
         convert_seal_error(unsafe {
@@ -389,11 +389,7 @@ impl EvaluatorBase {
         Ok(c)
     }
 
-    pub(in crate) fn multiply_plain_inplace(
-        &self,
-        a: &mut Ciphertext,
-        b: &Plaintext,
-    ) -> Result<()> {
+    pub(crate) fn multiply_plain_inplace(&self, a: &mut Ciphertext, b: &Plaintext) -> Result<()> {
         convert_seal_error(unsafe {
             bindgen::Evaluator_MultiplyPlain(
                 self.get_handle(),

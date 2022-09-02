@@ -194,8 +194,8 @@ fn main() -> Result<(), Error> {
     let alice = Alice::new(&bob.serialized_scheme_params()?)?;
     let serialized_input = alice.encrypt_and_serialize_input()?;
 
-    let (serialized_mean, serialized_variance) =
-        bob.compute_and_serialize_mean_variance(&serialized_input, &alice.serialized_public_key()?)?;
+    let (serialized_mean, serialized_variance) = bob
+        .compute_and_serialize_mean_variance(&serialized_input, &alice.serialized_public_key()?)?;
 
     alice.deserialize_decrypt_and_print_results(&serialized_mean, &serialized_variance)?;
 

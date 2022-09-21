@@ -9,7 +9,7 @@ use sunscreen_fhe_program::SchemeType;
 
 use seal_fhe::{
     BFVEvaluator, BfvEncryptionParametersBuilder, Context as SealContext, Decryptor, Encryptor,
-    KeyGenerator, Modulus,
+    FromBytes, KeyGenerator, Modulus, SecretKey,
 };
 
 enum Context {
@@ -156,6 +156,22 @@ impl Runtime {
         };
 
         Ok(keys)
+    }
+
+    /**
+     * Takes a byte array of the serialized private key material and returns a PrivateKey instance
+     */
+    pub fn bytes_to_private_key(&self, sk: &[u8]) -> Result<PrivateKey> {
+        let key = match &self.context {
+            Context::Seal(context) => {
+                let sk_seal: SecretKey = SecretKey::from_bytes(&context, sk)?;
+
+                let sk = PrivateKey(sk_seal);
+
+                sk
+            }
+        };
+        Ok(key)
     }
 
     /**

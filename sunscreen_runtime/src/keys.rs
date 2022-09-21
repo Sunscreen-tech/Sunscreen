@@ -49,6 +49,7 @@ pub struct PublicKey {
 /**
  * The private key used to decrypt ciphertexts.
  */
+#[derive(Serialize)]
 pub struct PrivateKey(pub(crate) SealSecretKey);
 
 #[cfg(test)]

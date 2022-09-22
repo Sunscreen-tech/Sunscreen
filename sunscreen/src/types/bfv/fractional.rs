@@ -10,7 +10,6 @@ use crate::types::{
     Cipher,
 };
 use crate::{
-    crate_version,
     types::{intern::FheProgramNode, BfvType, FheType, Type, Version},
     with_ctx, FheProgramInputTrait, Params, WithContext,
 };
@@ -182,9 +181,11 @@ impl<const INT_BITS: usize> Default for Fractional<INT_BITS> {
 
 impl<const INT_BITS: usize> TypeName for Fractional<INT_BITS> {
     fn type_name() -> Type {
+        let version = env!("CARGO_PKG_VERSION");
+
         Type {
             name: format!("sunscreen::types::Fractional<{}>", INT_BITS),
-            version: Version::parse(crate_version!()).expect("Crate version is not a valid semver"),
+            version: Version::parse(version).expect("Crate version is not a valid semver"),
             is_encrypted: false,
         }
     }

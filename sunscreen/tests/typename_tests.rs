@@ -1,5 +1,4 @@
 use sunscreen::{
-    crate_version,
     types::{Type, TypeName, TypeNameInstance, Version},
     TypeName as DeriveTypeName,
 };
@@ -16,7 +15,9 @@ fn derive_typename_example() {
     };
 
     let name = format!("{}::{}", module_path!(), "Foo");
-    let version = Version::parse(crate_version!()).unwrap();
+    let version = env!("CARGO_PKG_VERSION");
+
+    let version = Version::parse(version).unwrap();
 
     let expected = Type {
         name,

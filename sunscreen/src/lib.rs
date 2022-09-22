@@ -72,7 +72,6 @@ use sunscreen_fhe_program::{
     EdgeInfo, FheProgram, Literal as FheProgramLiteral, NodeInfo, Operation as FheProgramOperation,
 };
 
-pub use clap::crate_version;
 pub use compiler::{Compiler, FheProgramFn};
 pub use error::{Error, Result};
 pub use params::PlainModulusConstraint;

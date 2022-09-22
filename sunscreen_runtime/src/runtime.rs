@@ -151,7 +151,12 @@ impl Runtime {
                     relin_key: relin_keys,
                 };
 
-                (public_keys, PrivateKey(keygen.secret_key()))
+                let secret_key = PrivateKey(WithContext {
+                    params: self.params.clone(),
+                    data: keygen.secret_key(),
+                });
+
+                (public_keys, secret_key)
             }
         };
 

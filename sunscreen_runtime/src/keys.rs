@@ -46,10 +46,11 @@ pub struct PublicKey {
     pub relin_key: Option<WithContext<RelinearizationKeys>>,
 }
 
+#[derive(Clone, Deserialize, PartialEq, Serialize)]
 /**
  * The private key used to decrypt ciphertexts.
  */
-pub struct PrivateKey(pub(crate) SealSecretKey);
+pub struct PrivateKey(pub(crate) WithContext<SealSecretKey>);
 
 #[cfg(test)]
 mod tests {
@@ -166,7 +167,7 @@ mod tests {
         })
         .unwrap();
 
-        let (public_key, _) = runtime.generate_keys().unwrap();
+        let (public_key, private_key) = runtime.generate_keys().unwrap();
 
         let data = serde_json::to_string(&public_key).unwrap();
         let public_2: PublicKey = serde_json::from_str(&data).unwrap();
@@ -182,6 +183,14 @@ mod tests {
         assert_eq!(
             public_key.public_key.data.as_bytes(),
             public_2.public_key.data.as_bytes()
+        );
+
+        let data = serde_json::to_string(&private_key).unwrap();
+        let private_2: PrivateKey = serde_json::from_str(&data).unwrap();
+
+        assert_eq!(
+            private_key.0.as_bytes(),
+            private_2.0.as_bytes()
         );
     }
 }

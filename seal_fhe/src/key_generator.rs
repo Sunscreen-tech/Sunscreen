@@ -316,17 +316,33 @@ unsafe impl Sync for SecretKey {}
 unsafe impl Send for SecretKey {}
 
 impl SecretKey {
+    fn new() -> Result<Self> {
+        let mut handle: *mut c_void = null_mut();
+
+        convert_seal_error(unsafe { bindgen::SecretKey_Create1(&mut handle) })?;
+
+        Ok(Self { handle })
+    }
+
     /**
      * Returns the handle to the underlying SEAL object.
      */
     pub fn get_handle(&self) -> *mut c_void {
         self.handle
     }
+}
 
+impl PartialEq for SecretKey {
+    fn eq(&self, other: &Self) -> bool {
+        self.as_bytes() == other.as_bytes()
+    }
+}
+
+impl ToBytes for SecretKey {
     /**
      * Returns the key as a byte array.
      */
-    pub fn as_bytes(&self) -> Result<Vec<u8>> {
+    fn as_bytes(&self) -> Result<Vec<u8>> {
         let mut num_bytes: i64 = 0;
 
         convert_seal_error(unsafe {
@@ -354,10 +370,29 @@ impl SecretKey {
     }
 }
 
+impl FromBytes for SecretKey {
+    fn from_bytes(context: &Context, bytes: &[u8]) -> Result<Self> {
+        let key = SecretKey::new()?;
+        let mut bytes_read = 0;
+
+        convert_seal_error(unsafe {
+            bindgen::SecretKey_Load(
+                key.handle,
+                context.handle,
+                bytes.as_ptr() as *mut u8,
+                bytes.len() as u64,
+                &mut bytes_read,
+            )
+        })?;
+
+        Ok(key)
+    }
+}
+
 impl Drop for SecretKey {
     fn drop(&mut self) {
         convert_seal_error(unsafe { bindgen::SecretKey_Destroy(self.handle) })
-            .expect("Fatal error in PublicKey::drop")
+            .expect("Fatal error in SecretKey::drop")
     }
 }
 
@@ -371,6 +406,17 @@ impl Serialize for SecretKey {
             .map_err(|e| S::Error::custom(format!("Failed to get secret key bytes: {}", e)))?;
 
         serializer.serialize_bytes(&data)
+    }
+}
+
+impl Clone for SecretKey {
+    fn clone(&self) -> Self {
+        let mut handle: *mut c_void = null_mut();
+
+        convert_seal_error(unsafe { bindgen::SecretKey_Create2(self.handle, &mut handle) })
+            .expect("Fatal error in SecretKey::clone");
+
+        Self { handle }
     }
 }
 

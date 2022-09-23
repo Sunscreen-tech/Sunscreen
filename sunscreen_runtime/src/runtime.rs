@@ -150,8 +150,12 @@ impl Runtime {
                     galois_key: galois_keys,
                     relin_key: relin_keys,
                 };
+                let private_key = PrivateKey(WithContext {
+                    params: self.params.clone(),
+                    data: keygen.secret_key(),
+                });
 
-                (public_keys, PrivateKey(keygen.secret_key()))
+                (public_keys, private_key)
             }
         };
 

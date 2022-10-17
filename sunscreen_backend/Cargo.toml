@@ -1,6 +1,6 @@
 [package]
 name = "sunscreen_backend"
-version = "0.6.1"
+version = "0.7.0"
 edition = "2021"
 
 authors = ["Sunscreen LLC"]
@@ -18,9 +18,9 @@ readme = "crates-io.md"
 
 [dependencies]
 crossbeam = "0.8.1"
-seal_fhe = { version = "0.6", path = "../seal_fhe" }
-sunscreen_fhe_program = { version = "0.6", path = "../sunscreen_fhe_program" }
-sunscreen_runtime = { version = "0.6", path = "../sunscreen_runtime" }
+seal_fhe = { version = "0.7", path = "../seal_fhe" }
+sunscreen_fhe_program = { version = "0.7", path = "../sunscreen_fhe_program" }
+sunscreen_runtime = { version = "0.7", path = "../sunscreen_runtime" }
 petgraph = "0.6.0"
 log = "0.4.14"
 env_logger = "0.9.0"

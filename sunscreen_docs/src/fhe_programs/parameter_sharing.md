@@ -13,7 +13,9 @@ Some other scenarios where you might want unified parameters include:
 ## Specifying multiple FHE programs
 Let's assume we want to run `function1`, `function2`, and `function3` on an encrypted data set.
 
-```rust, no_run
+```rust,no_run
+# use sunscreen::fhe_program;
+#
 #[fhe_program(scheme = "bfv")]
 fn function1() {
 }
@@ -29,7 +31,21 @@ fn function3() {
 
 As usual, we declare each of our functions as an FHE program with the appropriate attribute (`#[fhe_program(scheme = "bfv")])`).
 
- ```rust, no_run
+ ```rust,no_run
+# use sunscreen::{fhe_program, Compiler, Error};
+#
+# #[fhe_program(scheme = "bfv")]
+# fn function1() {
+# }
+#
+# #[fhe_program(scheme = "bfv")]
+# fn function2() {
+# }
+#
+# #[fhe_program(scheme = "bfv")]
+# fn function3() {
+# }
+#
 fn main() -> Result<(), Error> {
     let app = Compiler::new()
         .fhe_program(function1)

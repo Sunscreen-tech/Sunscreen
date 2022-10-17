@@ -94,12 +94,18 @@
     },
     "debug.allowBreakpointsEverywhere": true,
     "cSpell.words": [
+        "Bincode",
         "ciphertext",
         "ciphertexts",
         "Iliashenko",
         "petgraph",
+        "println",
         "relinearization",
         "relinearizations",
-        "relinearize"
+        "relinearize",
+        "struct",
+        "usize",
+        "Walkthrough",
+        "Xeon"
     ]
 }

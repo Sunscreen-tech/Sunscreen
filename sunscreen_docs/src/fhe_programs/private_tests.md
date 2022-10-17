@@ -1,5 +1,5 @@
 # Statistics on encrypted data
-Let's look at how to compute various statistics over an encrypted data set. You can imagine more exciting applications such as a private version of 23andme where the testing provider runs various tests on your encrypted genetic data so that only you know the results!
+Let's look at how to compute various statistics over an encrypted data set. You can imagine more exciting applications such as a private version of 23andMe where the testing provider runs various tests on your encrypted genetic data so that only you know the results!
 
 For this example, we'll demonstrate some basic statistical computations (mean and variance) over a small encrypted data set. The computations presented here are so trivial that the user is better off calculating the results themselves on their own plaintext data; FHE isn't really needed. A more realistic scenario would involve computations that are too intensive for the user to compute herself (i.e. you need a lot of computational power) and/or the test provider holding proprietary tests that they don't wish to share directly with the user. 
 
@@ -152,7 +152,7 @@ impl Bob {
 }
 ```
 
-He declares `mean_fhe` and `variance_fhe` as FHE programs with the appropriate attribute (`[fhe_program(scheme = "bfv")]`). As`mean_fhe` and `variance_fhe` compute the mean and variance over an encrypted data set, they both take in `Cipher<Fractional<64>>`s and return a `Cipher<Fractional<64>>`.
+He declares `mean_fhe` and `variance_fhe` as FHE programs with the appropriate attribute (`#[fhe_program(scheme = "bfv")]`). As`mean_fhe` and `variance_fhe` compute the mean and variance over an encrypted data set, they both take in `Cipher<Fractional<64>>`s and return a `Cipher<Fractional<64>>`.
 
 Since Bob is responsible for computing the mean and variance, he'll have to run the compiled `mean_fhe` and `variance_fhe` programs. Thus, in `new`, he compiles `mean_fhe` and `variance_fhe` and saves them as runnable programs. Finally, he constructs and saves a `runtime` so that he can later run these programs.
 
@@ -229,7 +229,7 @@ impl Alice {
 }
 ```
 
-In `new`, Alice retrieves the scheme parameters and creates a key pair for herself. She obtains the serialized scheme parameters (`serialized_params`), `deserialize`s them, and uses them to consruct a `runtime`. Once Alice has constructed a `runtime`, she's ready to generate her `public_key` and `private_key`.
+In `new`, Alice retrieves the scheme parameters and creates a key pair for herself. She obtains the serialized scheme parameters (`serialized_params`), `deserialize`s them, and uses them to construct a `runtime`. Once Alice has constructed a `runtime`, she's ready to generate her `public_key` and `private_key`.
 
 Alice then creates her data set (via `create_dataset`); we need `try_from` here to help us perform the appropriate type conversion. Now she's ready to encrypt her `data` using her `public_key`. She saves the encrypted version as `ciphertext` and finally `serialize`s it.
 
@@ -266,7 +266,7 @@ Bob retrieves Alice's serialized data (`serialized_input`) along with Alice's se
 Finally, Alice can determine the mean and variance over her data set via `deserialize_decrypt_and_prints_results`.
 
 ### Performance
-The entire program (not including compilation time) takes ~2.54 s on an Intel Xeon @ 3.0 GHz (with 8 cores and 16 GB RAM) and ~8.71 s on a Macbook Air M1.
+The entire program (not including compilation time) takes ~2.54 s on an Intel Xeon @ 3.0 GHz (with 8 cores and 16 GB RAM) and ~8.71 s on a MacBook Air M1.
 
 ## What's missing?
 For more interesting examples (i.e. larger data sets and more complex statistical computations), you'll likely need to go in and change the default plaintext modulus value to be larger.

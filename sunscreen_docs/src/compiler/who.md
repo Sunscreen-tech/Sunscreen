@@ -7,6 +7,7 @@ Our compiler was primarily designed with your web3 needs in mind!
 You likely need all of the following features:
 - Exact computation (since you're working with account balances and currency transfer)
 - Compatibility with efficient ZKP schemes for trustless decentralized applications (we plan to provide the appropriate libraries for this)
+- Program chaining (helpful for smart contract composability)
 - Support for fractions/rationals/big integers
 - Fast arithmetic
 - Exceptional performance overall

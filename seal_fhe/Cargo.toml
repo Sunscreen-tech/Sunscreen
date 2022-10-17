@@ -1,6 +1,6 @@
 [package]
 name = "seal_fhe"
-version = "0.6.0"
+version = "0.7.0"
 edition = "2021"
 
 authors = ["Sunscreen LLC"]
@@ -9,7 +9,7 @@ license = "AGPL-3.0-only"
 description = "This crate contains Rust bindings for Microsoft's SEAL Fully Homomorphic Encryption (FHE) library."
 homepage = "https://sunscreen.tech"
 repository = "https://github.com/Sunscreen-tech/Sunscreen"
-documentation = "https://docs.sunscreen.tech/sunscreen"
+documentation = "https://docs.sunscreen.tech"
 keywords = ["FHE", "BFV", "lattice", "cryptography"]
 categories = ["cryptography"]
 readme = "crates-io.md"

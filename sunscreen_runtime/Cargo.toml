@@ -1,6 +1,6 @@
 [package]
 name = "sunscreen_runtime"
-version = "0.6.1"
+version = "0.7.0"
 edition = "2021"
 
 authors = ["Sunscreen LLC"]
@@ -9,7 +9,7 @@ license = "AGPL-3.0-only"
 description = "This crate provides a runtime for performing various FHE operations within Sunscreen."
 homepage = "https://sunscreen.tech"
 repository = "https://github.com/Sunscreen-tech/Sunscreen"
-documentation = "https://docs.sunscreen.tech/sunscreen"
+documentation = "https://docs.sunscreen.tech"
 keywords = ["FHE", "BFV", "lattice", "cryptography"]
 categories = ["cryptography"]
 readme = "crates-io.md"
@@ -20,8 +20,8 @@ readme = "crates-io.md"
 bincode = "1.3.3"
 crossbeam = "0.8.1"
 log = "0.4.14"
-seal_fhe = { version = "0.6", path = "../seal_fhe" }
-sunscreen_fhe_program = { version = "0.6", path = "../sunscreen_fhe_program"  }
+seal_fhe = { version = "0.7", path = "../seal_fhe" }
+sunscreen_fhe_program = { version = "0.7", path = "../sunscreen_fhe_program"  }
 petgraph = "0.6.0"
 num_cpus = "1.13.0"
 rayon = "1.5.1"

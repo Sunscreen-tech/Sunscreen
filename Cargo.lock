@@ -1067,7 +1067,7 @@ checksum = "d29ab0c6d3fc0ee92fe66e2d99f700eab17a8d57d1c1d3b748380fb20baa78cd"
 
 [[package]]
 name = "seal_fhe"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "bindgen",
  "cmake",
@@ -1189,7 +1189,7 @@ checksum = "73473c0e59e6d5812c5dfe2a064a6444949f089e20eec9a2e5506596494e4623"
 
 [[package]]
 name = "sunscreen"
-version = "0.6.1"
+version = "0.7.0"
 dependencies = [
  "bumpalo",
  "float-cmp",
@@ -1207,7 +1207,7 @@ dependencies = [
 
 [[package]]
 name = "sunscreen_backend"
-version = "0.6.1"
+version = "0.7.0"
 dependencies = [
  "crossbeam",
  "env_logger",
@@ -1221,7 +1221,7 @@ dependencies = [
 
 [[package]]
 name = "sunscreen_compiler_macros"
-version = "0.6.1"
+version = "0.7.0"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1231,7 +1231,7 @@ dependencies = [
 
 [[package]]
 name = "sunscreen_fhe_program"
-version = "0.6.1"
+version = "0.7.0"
 dependencies = [
  "petgraph",
  "seal_fhe",
@@ -1241,7 +1241,7 @@ dependencies = [
 
 [[package]]
 name = "sunscreen_runtime"
-version = "0.6.1"
+version = "0.7.0"
 dependencies = [
  "bincode",
  "crossbeam",

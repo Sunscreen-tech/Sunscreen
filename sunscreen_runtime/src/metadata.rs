@@ -14,7 +14,7 @@ use std::str::FromStr;
 /**
  * A type which represents the fully qualified name and version of a datatype.
  */
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Type {
     /**
      * The fully qualified name of the type (including crate name)
@@ -56,24 +56,22 @@ impl<'de> Visitor<'de> for TypeNameVisitor {
     where
         E: de::Error,
     {
-        let splits: Vec<&str> = s.split(",").collect();
+        let splits: Vec<&str> = s.split(',').collect();
 
         if splits.len() != 3 {
             Err(de::Error::invalid_value(de::Unexpected::Str(s), &self))
+        } else if let Err(_) = Version::parse(splits[1]) {
+            Err(de::Error::invalid_value(
+                de::Unexpected::Str(splits[1]),
+                &self,
+            ))
+        } else if bool::from_str(splits[2]).is_err() {
+            Err(de::Error::invalid_value(
+                de::Unexpected::Str(splits[2]),
+                &self,
+            ))
         } else {
-            if let Err(_) = Version::parse(splits[1]) {
-                Err(de::Error::invalid_value(
-                    de::Unexpected::Str(splits[1]),
-                    &self,
-                ))
-            } else if let Err(_) = bool::from_str(splits[2]) {
-                Err(de::Error::invalid_value(
-                    de::Unexpected::Str(splits[2]),
-                    &self,
-                ))
-            } else {
-                Ok(s.to_owned())
-            }
+            Ok(s.to_owned())
         }
     }
 }
@@ -85,7 +83,7 @@ impl<'de> Deserialize<'de> for Type {
     {
         let type_string = deserializer.deserialize_string(TypeNameVisitor)?;
 
-        let mut splits = type_string.split(",");
+        let mut splits = type_string.split(',');
 
         let typename = splits.next().ok_or(D::Error::custom(""))?;
         let version = Version::parse(splits.next().ok_or(D::Error::custom(""))?)
@@ -110,7 +108,7 @@ impl<'de> Deserialize<'de> for Type {
  * to consumers without revealing this FHE program's implementation. This allows
  * users to encrypt their data in a verifiable manner.
  */
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CallSignature {
     /**
      * The type of each argument in the FHE program.
@@ -138,7 +136,7 @@ pub struct CallSignature {
     pub num_ciphertexts: Vec<usize>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 /**
  * A key type required for an Fhe Program to function correctly.
  */
@@ -158,7 +156,7 @@ pub enum RequiredKeys {
     PublicKey,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 /**
  * The parameter set required for a given FHE program to run efficiently and correctly.
  */
@@ -267,7 +265,7 @@ impl Params {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 /**
  * A serializable list of requirements for an Fhe Program.
  */

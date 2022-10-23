@@ -1,7 +1,7 @@
 use seal_fhe::Error as SealError;
 use sunscreen_runtime::FheProgramRunFailure as RuntimeError;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 /**
  * Represents an error that can occur in this crate.
  */

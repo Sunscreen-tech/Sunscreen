@@ -1,6 +1,6 @@
 use crate::Type;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 /**
  * Represents an error that can occur in this crate.
  */

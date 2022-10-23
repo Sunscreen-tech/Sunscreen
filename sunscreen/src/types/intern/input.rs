@@ -92,7 +92,7 @@ fn can_create_inputs() {
         let mut offset = 0;
 
         assert_eq!(scalar_node.ids.len(), 2);
-        assert_eq!(scalar_node.ids[0].index(), offset + 0);
+        assert_eq!(scalar_node.ids[0].index(), offset);
         assert_eq!(scalar_node.ids[1].index(), offset + 1);
 
         offset += 2;
@@ -103,7 +103,7 @@ fn can_create_inputs() {
 
         for i in 0..6 {
             assert_eq!(array_node[i].ids.len(), 2);
-            assert_eq!(array_node[i].ids[0].index(), offset + 2 * i + 0);
+            assert_eq!(array_node[i].ids[0].index(), offset + 2 * i);
             assert_eq!(array_node[i].ids[1].index(), offset + 2 * i + 1);
         }
 
@@ -117,7 +117,7 @@ fn can_create_inputs() {
                 assert_eq!(multi_dim_array_node[i][j].ids.len(), 2);
                 assert_eq!(
                     multi_dim_array_node[i][j].ids[0].index(),
-                    offset + 6 * 2 * i + 2 * j + 0
+                    offset + 6 * 2 * i + 2 * j
                 );
                 assert_eq!(
                     multi_dim_array_node[i][j].ids[1].index(),

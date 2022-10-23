@@ -12,7 +12,7 @@ use sunscreen_backend::noise_model::{
 use sunscreen_fhe_program::{FheProgram, Operation, SchemeType};
 pub use sunscreen_runtime::Params;
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 /**
  * A constraint on the plaintext
  */
@@ -84,7 +84,7 @@ fn can_make_required_keys(fhe_program: &FheProgram, params: &Params) -> Result<b
     let modulus_chain = params
         .coeff_modulus
         .iter()
-        .map(|x| Modulus::new(*x).map_err(|e| Error::from(e)))
+        .map(|x| Modulus::new(*x).map_err(Error::from))
         .collect::<Result<Vec<Modulus>>>()?;
 
     let enc_params = BfvEncryptionParametersBuilder::new()
@@ -147,8 +147,8 @@ pub fn determine_params(
             coeff_modulus: coeff.iter().map(|v| v.value()).collect(),
             lattice_dimension: *n,
             plain_modulus: plaintext_modulus.value(),
-            security_level: security_level,
-            scheme_type: scheme_type,
+            security_level,
+            scheme_type,
         };
 
         trace!(
@@ -163,7 +163,7 @@ pub fn determine_params(
             trace!("Running backend compilation for {}", program.name());
             let ir = program.build(&params)?.compile();
 
-            ir.validate().map_err(|e| Error::FheProgramError(e))?;
+            ir.validate().map_err(Error::FheProgramError)?;
             trace!("Built and validated {}", program.name());
 
             match can_make_required_keys(&ir, &params) {

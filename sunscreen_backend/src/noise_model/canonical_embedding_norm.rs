@@ -35,7 +35,7 @@ impl CanonicalEmbeddingNormModel {
      * * have a plain modulus < 2
      */
     pub fn new(params: &Params) -> Result<Self> {
-        if params.coeff_modulus.len() < 1 {
+        if params.coeff_modulus.is_empty() {
             return Err(Error::InvalidParams);
         }
 
@@ -87,9 +87,7 @@ impl NoiseModel for CanonicalEmbeddingNormModel {
         let noise = t * (n * (t - 1f64) / 2f64)
             + 2f64 * super::NOISE_STD_DEV * f64::sqrt(12f64 * n * n + 9f64 * n);
 
-        let invariant_noise = noise / q;
-
-        invariant_noise
+        noise / q
     }
 
     fn add_ct_ct(&self, a_invariant_noise: f64, b_invariant_noise: f64) -> f64 {

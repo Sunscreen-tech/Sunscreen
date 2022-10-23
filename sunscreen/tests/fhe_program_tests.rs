@@ -92,7 +92,7 @@ fn capture_fhe_program_input_args() {
             type_name.clone(),
             type_name.clone(),
             type_name.clone(),
-            type_name.clone(),
+            type_name,
         ],
         returns: vec![],
         num_ciphertexts: vec![],
@@ -115,7 +115,7 @@ fn can_add() {
     let type_name = Cipher::<Signed>::type_name();
 
     let expected_signature = CallSignature {
-        arguments: vec![type_name.clone(), type_name.clone(), type_name.clone()],
+        arguments: vec![type_name.clone(), type_name.clone(), type_name],
         returns: vec![],
         num_ciphertexts: vec![],
     };
@@ -225,7 +225,7 @@ fn can_mul() {
     let type_name = Cipher::<Signed>::type_name();
 
     let expected_signature = CallSignature {
-        arguments: vec![type_name.clone(), type_name.clone(), type_name.clone()],
+        arguments: vec![type_name.clone(), type_name.clone(), type_name],
         returns: vec![],
         num_ciphertexts: vec![],
     };
@@ -287,7 +287,7 @@ fn can_collect_output() {
 
     let expected_signature = CallSignature {
         arguments: vec![type_name.clone(), type_name.clone()],
-        returns: vec![type_name.clone()],
+        returns: vec![type_name],
         num_ciphertexts: vec![1],
     };
     assert_eq!(fhe_program_with_args.signature(), expected_signature);
@@ -356,7 +356,7 @@ fn can_collect_multiple_outputs() {
 
     let expected_signature = CallSignature {
         arguments: vec![type_name.clone(), type_name.clone()],
-        returns: vec![type_name.clone(), type_name.clone()],
+        returns: vec![type_name.clone(), type_name],
         num_ciphertexts: vec![1, 1],
     };
     assert_eq!(fhe_program_with_args.signature(), expected_signature);

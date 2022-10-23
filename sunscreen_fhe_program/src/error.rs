@@ -7,7 +7,7 @@ use crate::{EdgeInfo, OutputType};
  */
 pub type OpName = String;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 /**
  * Represents an error that can occur in this crate.
  */
@@ -27,7 +27,7 @@ pub enum Error {
 /**
  * An error in an [`FheProgram`](crate::FheProgram).
  */
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum IRError {
     /**
      * The IR has a cycle.
@@ -43,7 +43,7 @@ pub enum IRError {
 /**
  * An error on a node in an [`FheProgram`](crate::FheProgram).
  */
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum NodeError {
     /**
      * The node is missing an expected operand of the contained type.

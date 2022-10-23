@@ -61,7 +61,7 @@ pub fn create_ciphertext_with_noise_level(
 ) -> Result<Ciphertext> {
     let encoder = BFVScalarEncoder::new();
 
-    let encryptor = Encryptor::with_public_and_secret_key(&context, &public_key, &private_key)?;
+    let encryptor = Encryptor::with_public_and_secret_key(context, public_key, private_key)?;
 
     let target_noise_level = match noise_level {
         TargetNoiseLevel::Fresh => {
@@ -80,8 +80,8 @@ pub fn create_ciphertext_with_noise_level(
         target_noise_level
     );
 
-    let decryptor = Decryptor::new(&context, &private_key)?;
-    let evaluator = BFVEvaluator::new(&context)?;
+    let decryptor = Decryptor::new(context, private_key)?;
+    let evaluator = BFVEvaluator::new(context)?;
 
     let p = encoder.encode_unsigned(1)?;
     let c_initial = encryptor.encrypt(&p)?;
@@ -271,8 +271,7 @@ fn create_inputs_for_program(
     // is meaningful or not. Just run a bunch of 1 values through the fhe_program and measure the
     // noise. We choose 1, as it avoids transparent ciphertexts when
     // multiplying plaintexts.
-    Ok(ir
-        .graph
+    ir.graph
         .node_weights()
         .filter(|n| match n.operation {
             Operation::InputCiphertext(_) => true,
@@ -292,7 +291,7 @@ fn create_inputs_for_program(
             Operation::InputPlaintext(_) => Ok(encoder.encode_unsigned(1)?.into()),
             _ => unreachable!(),
         })
-        .collect::<Result<Vec<SealData>>>()?)
+        .collect::<Result<Vec<SealData>>>()
 }
 
 fn make_relin_galois_keys(
@@ -366,7 +365,7 @@ impl MeasuredModel {
         // run_program_unchecked
         let outputs = unsafe {
             run_program_unchecked(
-                &ir,
+                ir,
                 &inputs,
                 &evaluator,
                 &relin_keys.as_ref(),
@@ -377,7 +376,7 @@ impl MeasuredModel {
         let mut noise_levels = vec![];
 
         for (i, o) in outputs.iter().enumerate() {
-            let invariant_noise = decryptor.invariant_noise(&o).unwrap();
+            let invariant_noise = decryptor.invariant_noise(o).unwrap();
 
             // The model expects noise budgets to be in terms of invariant
             // noise, not the budget.

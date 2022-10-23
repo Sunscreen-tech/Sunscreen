@@ -5,14 +5,12 @@ use syn::{parse_macro_input, DeriveInput, Ident, LitStr};
 pub fn derive_typename(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
 
-    let out = derive_typename_inner(input).into();
-
-    out
+    derive_typename_inner(input).into()
 }
 
 fn derive_typename_inner(parse_stream: DeriveInput) -> TokenStream {
     let name = &parse_stream.ident;
-    let name_contents = LitStr::new(&format!("{{}}::{}", name.to_string()), name.span());
+    let name_contents = LitStr::new(&format!("{{}}::{}", name), name.span());
     let crate_name = std::env::var("CARGO_CRATE_NAME").unwrap();
 
     // If the sunscreen crate itself tries to derive types, then it needs to refer
@@ -23,7 +21,7 @@ fn derive_typename_inner(parse_stream: DeriveInput) -> TokenStream {
         Ident::new("sunscreen", Span::call_site())
     };
 
-    TokenStream::from(quote! {
+    quote! {
         impl #sunscreen_path ::types::TypeName for #name {
             fn type_name() -> #sunscreen_path ::types::Type {
                 let version = env!("CARGO_PKG_VERSION");
@@ -47,5 +45,5 @@ fn derive_typename_inner(parse_stream: DeriveInput) -> TokenStream {
                 }
             }
         }
-    })
+    }
 }

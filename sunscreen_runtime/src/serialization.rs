@@ -6,7 +6,7 @@ use serde::{
     Deserialize, Serialize,
 };
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 /**
  * A data type that contains parameters for reconstructing a context
  * during deserialization (needed by SEAL).
@@ -140,17 +140,15 @@ where
                         .map_err(|e| serde::de::Error::custom(format!("{}", e)))?;
 
                     Ok(WithContext::<T> { params, data })
+                } else if params_empty {
+                    Err(serde::de::Error::missing_field("params"))
                 } else {
-                    if params_empty {
-                        Err(serde::de::Error::missing_field("params"))
-                    } else {
-                        Err(serde::de::Error::missing_field("key"))
-                    }
+                    Err(serde::de::Error::missing_field("key"))
                 }
             }
         }
 
-        const FIELDS: &'static [&'static str] = &["params", "key"];
+        const FIELDS: &[&str] = &["params", "key"];
         deserializer.deserialize_struct(
             "WithContext",
             FIELDS,
@@ -179,7 +177,7 @@ where
 
     let seal_context = Context::new(&encryption_params, false, params.security_level)?;
 
-    let data = T::from_bytes(&seal_context, &data)?;
+    let data = T::from_bytes(&seal_context, data)?;
 
     Ok(data)
 }

@@ -126,7 +126,7 @@ impl From<MapFheTypeError> for ExtractReturnTypesError {
 pub fn extract_return_types(ret: &ReturnType) -> Result<Vec<Type>, ExtractReturnTypesError> {
     let return_types = match ret {
         ReturnType::Type(_, t) => match &**t {
-            Type::Tuple(t) => t.elems.iter().map(|x| x.clone()).collect::<Vec<Type>>(),
+            Type::Tuple(t) => t.elems.iter().cloned().collect::<Vec<Type>>(),
             Type::Paren(t) => {
                 vec![*t.elem.clone()]
             }

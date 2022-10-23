@@ -498,12 +498,10 @@ impl<const INT_BITS: usize> TryIntoPlaintext for Fractional<INT_BITS> {
 
             let coeff = if sign == 0 {
                 bit_value
+            } else if bit_value > 0 {
+                params.plain_modulus - bit_value
             } else {
-                if bit_value > 0 {
-                    params.plain_modulus - bit_value
-                } else {
-                    0
-                }
+                0
             };
 
             seal_plaintext.set_coefficient(coeff_index as usize, coeff);
@@ -732,9 +730,9 @@ mod tests {
         let b = Fractional::<64>::from(1.5);
 
         // Allow 1 ULP of error
-        assert!((a + b).approx_eq(4.64.into(), (0.0, 1)));
-        assert!((3.14 + b).approx_eq(4.64.into(), (0.0, 1)));
-        assert!((a + 1.5).approx_eq(4.64.into(), (0.0, 1)));
+        assert!((a + b).approx_eq(4.64, (0.0, 1)));
+        assert!((3.14 + b).approx_eq(4.64, (0.0, 1)));
+        assert!((a + 1.5).approx_eq(4.64, (0.0, 1)));
     }
 
     #[test]
@@ -743,9 +741,9 @@ mod tests {
         let b = Fractional::<64>::from(1.5);
 
         // Allow 1 ULP of error
-        assert!((a * b).approx_eq(4.71.into(), (0.0, 1)));
-        assert!((3.14 * b).approx_eq(4.71.into(), (0.0, 1)));
-        assert!((a * 1.5).approx_eq(4.71.into(), (0.0, 1)));
+        assert!((a * b).approx_eq(4.71, (0.0, 1)));
+        assert!((3.14 * b).approx_eq(4.71, (0.0, 1)));
+        assert!((a * 1.5).approx_eq(4.71, (0.0, 1)));
     }
 
     #[test]
@@ -754,9 +752,9 @@ mod tests {
         let b = Fractional::<64>::from(1.5);
 
         // Allow 1 ULP of error
-        assert!((a - b).approx_eq(1.64.into(), (0.0, 1)));
-        assert!((3.14 - b).approx_eq(1.64.into(), (0.0, 1)));
-        assert!((a - 1.5).approx_eq(1.64.into(), (0.0, 1)));
+        assert!((a - b).approx_eq(1.64, (0.0, 1)));
+        assert!((3.14 - b).approx_eq(1.64, (0.0, 1)));
+        assert!((a - 1.5).approx_eq(1.64, (0.0, 1)));
     }
 
     #[test]
@@ -764,7 +762,7 @@ mod tests {
         let a = Fractional::<64>::from(3.14);
 
         // Allow 1 ULP of error
-        assert!((a / 1.5).approx_eq((3.14 / 1.5).into(), (0.0, 1)));
+        assert!((a / 1.5).approx_eq(3.14 / 1.5, (0.0, 1)));
     }
 
     #[test]

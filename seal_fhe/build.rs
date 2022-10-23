@@ -1,5 +1,3 @@
-use bindgen;
-
 use cmake::Config;
 use emsdk::Config as EmConfig;
 
@@ -92,9 +90,9 @@ fn main() {
     };
 
     if target == "wasm32-unknown-emscripten" {
-        compile_wasm(&profile, &out_path);
+        compile_wasm(profile, &out_path);
     } else {
-        compile_native(&profile, &out_path);
+        compile_native(profile, &out_path);
     }
 
     let mut builder = bindgen::builder()

@@ -18,7 +18,7 @@ fn help() {
     println!("9.5");
     println!(">> ans / 5");
     println!("1.9");
-    println!("");
+    println!();
 }
 
 enum Term {
@@ -57,7 +57,7 @@ fn parse_input(line: &str) -> Result<ParseResult, Error> {
         return Ok(ParseResult::Exit);
     }
 
-    let mut terms = line.split(" ");
+    let mut terms = line.split(' ');
 
     let left = terms.next().ok_or(Error::ParseError)?;
 
@@ -101,7 +101,7 @@ fn encrypt_term(runtime: &Runtime, public_key: &PublicKey, input: Term) -> Term 
         Term::Ans => Term::Ans,
         Term::F64(v) => Term::Encrypted(
             runtime
-                .encrypt(Rational::try_from(v).unwrap(), &public_key)
+                .encrypt(Rational::try_from(v).unwrap(), public_key)
                 .unwrap(),
         ),
         _ => {
@@ -142,7 +142,7 @@ fn alice(
             let line = line.trim();
 
             // Read the line and parse it into operands and an operator.
-            let parsed = parse_input(&line);
+            let parsed = parse_input(line);
 
             let Expression { left, right, op } = match parsed {
                 Ok(ParseResult::Expression(val)) => val,
@@ -166,7 +166,7 @@ fn alice(
                 .send(Expression {
                     left: encrypt_left,
                     right: encrypt_right,
-                    op: op,
+                    op,
                 })
                 .unwrap();
 

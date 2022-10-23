@@ -169,7 +169,7 @@ fn main() -> Result<(), sunscreen::Error> {
     let (public_key, private_key) = runtime.generate_keys()?;
     let a_enc = runtime.encrypt(a_batched, &public_key)?;
 
-    let args: Vec<FheProgramInput> = vec![a_enc.clone().into(), a_enc.clone().into()];
+    let args: Vec<FheProgramInput> = vec![a_enc.clone().into(), a_enc.into()];
 
     // Run our dot product homomorphically, decrypt and verify the result.
     let start = Instant::now();

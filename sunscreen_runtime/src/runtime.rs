@@ -53,20 +53,20 @@ impl Runtime {
 
         let val = match (&self.context, &ciphertext.inner) {
             (Context::Seal(context), InnerCiphertext::Seal(ciphertexts)) => {
-                let decryptor = Decryptor::new(&context, &private_key.0)?;
+                let decryptor = Decryptor::new(context, &private_key.0)?;
 
                 let plaintexts = ciphertexts
                     .iter()
                     .map(|c| {
                         if decryptor
-                            .invariant_noise_budget(&c)
-                            .map_err(|e| Error::SealError(e))?
+                            .invariant_noise_budget(c)
+                            .map_err(Error::SealError)?
                             == 0
                         {
                             return Err(Error::TooMuchNoise);
                         }
 
-                        decryptor.decrypt(c).map_err(|e| Error::SealError(e))
+                        decryptor.decrypt(c).map_err(Error::SealError)
                     })
                     .collect::<Result<Vec<SealPlaintext>>>()?
                     .drain(0..)
@@ -102,7 +102,7 @@ impl Runtime {
     pub fn measure_noise_budget(&self, c: &Ciphertext, private_key: &PrivateKey) -> Result<u32> {
         match (&self.context, &c.inner) {
             (Context::Seal(ctx), InnerCiphertext::Seal(ciphertexts)) => {
-                let decryptor = Decryptor::new(&ctx, &private_key.0)?;
+                let decryptor = Decryptor::new(ctx, &private_key.0)?;
 
                 Ok(ciphertexts
                     .iter()
@@ -127,7 +127,7 @@ impl Runtime {
     pub fn generate_keys(&self) -> Result<(PublicKey, PrivateKey)> {
         let keys = match &self.context {
             Context::Seal(context) => {
-                let keygen = KeyGenerator::new(&context)?;
+                let keygen = KeyGenerator::new(context)?;
 
                 let galois_keys = keygen.create_galois_keys().ok().map(|v| WithContext {
                     params: self.params.clone(),
@@ -243,10 +243,7 @@ impl Runtime {
         {
             return Err(Error::ArgumentMismatch {
                 expected: expected_args.clone(),
-                actual: arguments
-                    .iter()
-                    .map(|a| a.type_name_instance().clone())
-                    .collect(),
+                actual: arguments.iter().map(|a| a.type_name_instance()).collect(),
             });
         }
 
@@ -258,7 +255,7 @@ impl Runtime {
 
         match &self.context {
             Context::Seal(context) => {
-                let evaluator = BFVEvaluator::new(&context)?;
+                let evaluator = BFVEvaluator::new(context)?;
 
                 let mut inputs: Vec<SealData> = vec![];
 
@@ -344,7 +341,7 @@ impl Runtime {
 
                 let ciphertexts = inner_plain
                     .iter()
-                    .map(|p| encryptor.encrypt(p).map_err(|e| Error::SealError(e)))
+                    .map(|p| encryptor.encrypt(p).map_err(Error::SealError))
                     .collect::<Result<Vec<SealCiphertext>>>()?
                     .drain(0..)
                     .map(|c| WithContext {

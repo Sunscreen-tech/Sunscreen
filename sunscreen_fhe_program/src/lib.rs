@@ -125,7 +125,7 @@ impl TryFrom<u8> for SchemeType {
     }
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 /**
  * The type of output from an Fhe Program's graph node.
  */
@@ -178,7 +178,7 @@ impl NodeInfo {
     }
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 /**
  * Contains information about an edge between nodes in the FHE program graph.
  */
@@ -298,9 +298,7 @@ impl FheProgram {
     }
 
     fn append_0_input_node(&mut self, operation: Operation) -> NodeIndex {
-        let new_node = self.graph.add_node(NodeInfo::new(operation));
-
-        new_node
+        self.graph.add_node(NodeInfo::new(operation))
     }
 
     /**
@@ -388,7 +386,7 @@ impl FheProgram {
 
     /**
      * Appends an operation that rotates ciphertext `x` right by the literal node at `y` places.
-     *      
+     *
      * # Remarks
      * Recall that BFV has 2 rows in a Batched vector. This rotates each row.
      * CKKS has one large vector.
@@ -585,7 +583,7 @@ impl FheProgram {
             closure_set.insert(mapped_id);
         }
 
-        while visit.len() > 0 {
+        while !visit.is_empty() {
             let node = visit.pop().expect("Fatal error: prune queue was empty.");
 
             for edge in closure.neighbors(node) {
@@ -613,7 +611,7 @@ impl FheProgram {
                     None
                 }
             },
-            |_, e| Some(e.clone()),
+            |_, e| Some(*e),
         );
 
         Self {
@@ -628,7 +626,7 @@ impl FheProgram {
     pub fn validate(&self) -> Result<()> {
         let errors = validation::validate_ir(self);
 
-        if errors.len() > 0 {
+        if !errors.is_empty() {
             return Err(Error::IRError(errors));
         }
 
@@ -943,7 +941,7 @@ impl TransformList {
         match x {
             NodeIndex(x) => x,
             DeferredIndex(x) => self.inserted_node_ids[x]
-                .expect(&format!("Fatal error: No such deferred node index :{}", x)),
+                .unwrap_or_else(|| panic!("Fatal error: No such deferred node index :{}", x)),
         }
     }
 }
@@ -1144,7 +1142,7 @@ mod tests {
         let l2 = ir.append_input_literal(Literal::from(5u64));
         ir.append_multiply(add, l2);
 
-        let pruned = ir.prune(&vec![add]);
+        let pruned = ir.prune(&[add]);
 
         let mut expected_ir = FheProgram::new(SchemeType::Bfv);
         let ct = expected_ir.append_input_ciphertext(0);
@@ -1172,7 +1170,7 @@ mod tests {
         let rem = ir.append_input_ciphertext(1);
         ir.remove_node(rem);
 
-        let pruned = ir.prune(&vec![add]);
+        let pruned = ir.prune(&[add]);
 
         let mut expected_ir = FheProgram::new(SchemeType::Bfv);
         let ct = expected_ir.append_input_ciphertext(0);
@@ -1196,7 +1194,7 @@ mod tests {
         ir.append_output_ciphertext(neg2);
         ir.append_output_ciphertext(neg3);
 
-        let pruned = ir.prune(&vec![o1, neg2]);
+        let pruned = ir.prune(&[o1, neg2]);
 
         let mut expected_ir = FheProgram::new(SchemeType::Bfv);
         let ct1 = expected_ir.append_input_ciphertext(0);
@@ -1223,7 +1221,7 @@ mod tests {
         ir.append_output_ciphertext(neg2);
         ir.append_output_ciphertext(neg3);
 
-        let pruned = ir.prune(&vec![]);
+        let pruned = ir.prune(&[]);
 
         let mut expected_ir = FheProgram::new(SchemeType::Bfv);
         let _ct1 = expected_ir.append_input_ciphertext(0);
@@ -1235,7 +1233,8 @@ mod tests {
 
     #[test]
     fn can_roundtrip_scheme_type() {
-        for s in [SchemeType::Bfv] {
+        let schemes = [SchemeType::Bfv];
+        for s in schemes {
             let s_2: u8 = s.into();
             let s_2 = SchemeType::try_from(s_2).unwrap();
 

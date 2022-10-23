@@ -1,7 +1,7 @@
 use self::Scheme::*;
 use crate::error::*;
 
-#[derive(Copy, Clone, PartialEq)]
+#[derive(Copy, Clone, PartialEq, Eq)]
 pub enum Scheme {
     Bfv,
 }

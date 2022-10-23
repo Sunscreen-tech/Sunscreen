@@ -42,7 +42,7 @@ impl PartialEq for Modulus {
  * Microsoft SEAL when constructing a SEALContext object. Normal users should not
  * have to specify the security level explicitly anywhere.
  */
-#[derive(Debug, Copy, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[repr(i32)]
 pub enum SecurityLevel {
     /// 128-bit security level according to HomomorphicEncryption.org standard.
@@ -302,7 +302,7 @@ mod tests {
 
     #[test]
     fn can_create_custom_coefficient_modulus() {
-        let modulus = CoefficientModulus::create(8192, &vec![50, 30, 30, 50, 50]).unwrap();
+        let modulus = CoefficientModulus::create(8192, &[50, 30, 30, 50, 50]).unwrap();
 
         assert_eq!(modulus.len(), 5);
         assert_eq!(modulus[0].value(), 1125899905744897);

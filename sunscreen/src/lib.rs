@@ -106,7 +106,7 @@ impl Application {
      * It is an implementation detail of compilation.
      */
     pub(crate) fn new(programs: HashMap<String, CompiledFheProgram>) -> Result<Self> {
-        if programs.len() == 0 {
+        if programs.is_empty() {
             return Err(Error::NoPrograms);
         }
 
@@ -233,7 +233,7 @@ pub enum Operation {
     Output,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
 /**
  * Information about an edge in the frontend IR.
  */
@@ -475,7 +475,7 @@ impl Context {
                 }
                 _ => None,
             })
-            .nth(0);
+            .next();
 
         match existing_literal {
             Some(x) => x,
@@ -563,7 +563,7 @@ impl FrontendCompilation {
             },
         );
 
-        fhe_program.graph = StableGraph::from(mapped_graph);
+        fhe_program.graph = mapped_graph;
 
         compile_inplace(fhe_program)
     }

@@ -27,7 +27,7 @@ where
     T: Add<Output = T> + Sub<Output = T> + Mul<Output = T> + Div<f64, Output = T> + Copy,
 {
     let mean_data = mean(data);
-    let mut variance = data.clone();
+    let mut variance = *data;
 
     for i in 0..data.len() {
         let tmp = mean_data - data[i];

@@ -237,7 +237,7 @@ impl<const LANES: usize> TryFromPlaintext for Batched<LANES> {
                 row_0
                     .iter()
                     .take(LANES)
-                    .map(|x| *x)
+                    .copied()
                     .collect::<Vec<i64>>()
                     .try_into()
                     .map_err(|_| {
@@ -249,7 +249,7 @@ impl<const LANES: usize> TryFromPlaintext for Batched<LANES> {
                 row_1
                     .iter()
                     .take(LANES)
-                    .map(|x| *x)
+                    .copied()
                     .collect::<Vec<i64>>()
                     .try_into()
                     .map_err(|_| {
@@ -405,12 +405,12 @@ impl<const LANES: usize> Shl<u64> for Batched<LANES> {
             self.data[0]
                 .iter()
                 .skip(x as usize)
-                .map(|x| *x)
+                .copied()
                 .collect::<Vec<i64>>(),
             self.data[0]
                 .iter()
                 .take(x as usize)
-                .map(|x| *x)
+                .copied()
                 .collect::<Vec<i64>>(),
         ]
         .concat()
@@ -421,12 +421,12 @@ impl<const LANES: usize> Shl<u64> for Batched<LANES> {
             self.data[1]
                 .iter()
                 .skip(x as usize)
-                .map(|x| *x)
+                .copied()
                 .collect::<Vec<i64>>(),
             self.data[1]
                 .iter()
                 .take(x as usize)
-                .map(|x| *x)
+                .copied()
                 .collect::<Vec<i64>>(),
         ]
         .concat()
@@ -445,12 +445,12 @@ impl<const LANES: usize> Shr<u64> for Batched<LANES> {
             self.data[0]
                 .iter()
                 .skip(LANES - x as usize)
-                .map(|x| *x)
+                .copied()
                 .collect::<Vec<i64>>(),
             self.data[0]
                 .iter()
                 .take(LANES - x as usize)
-                .map(|x| *x)
+                .copied()
                 .collect::<Vec<i64>>(),
         ]
         .concat()
@@ -461,12 +461,12 @@ impl<const LANES: usize> Shr<u64> for Batched<LANES> {
             self.data[1]
                 .iter()
                 .skip(LANES - x as usize)
-                .map(|x| *x)
+                .copied()
                 .collect::<Vec<i64>>(),
             self.data[1]
                 .iter()
                 .take(LANES - x as usize)
-                .map(|x| *x)
+                .copied()
                 .collect::<Vec<i64>>(),
         ]
         .concat()
@@ -645,7 +645,7 @@ mod tests {
             security_level: SecurityLevel::TC128,
         };
 
-        let x = Batched::<4>::try_from(data.clone()).unwrap();
+        let x = Batched::<4>::try_from(data).unwrap();
 
         let plaintext = x.try_into_plaintext(&params).unwrap();
         let y = Batched::<4>::try_from_plaintext(&plaintext, &params).unwrap();

@@ -12,7 +12,7 @@ pub struct Config {
 impl Config {
     pub fn new<P: AsRef<Path>>(path: P) -> Self {
         Self {
-            path: path.as_ref().canonicalize().unwrap().to_owned(),
+            path: path.as_ref().canonicalize().unwrap(),
             defines: HashMap::new(),
             emcc_args: vec![],
         }

@@ -153,7 +153,7 @@ fn can_add_cipher_cipher() {
         .compile()
         .unwrap();
 
-    let runtime = Runtime::new(&app.params()).unwrap();
+    let runtime = Runtime::new(app.params()).unwrap();
 
     let (public_key, private_key) = runtime.generate_keys().unwrap();
 
@@ -204,7 +204,7 @@ fn can_sub_cipher_cipher() {
 
     let a = Batched::<4>::try_from(data.clone()).unwrap();
     let a_c = runtime.encrypt(a, &public_key).unwrap();
-    let b = Batched::<4>::try_from(data.clone()).unwrap();
+    let b = Batched::<4>::try_from(data).unwrap();
     let b_c = runtime.encrypt(b, &public_key).unwrap();
 
     let args: Vec<FheProgramInput> = vec![a_c.into(), b_c.into()];
@@ -288,7 +288,7 @@ fn can_neg_cipher_cipher() {
 
     let data = [vec![1, 2, 3, 4], vec![5, 6, 7, 8]];
 
-    let a = Batched::<4>::try_from(data.clone()).unwrap();
+    let a = Batched::<4>::try_from(data).unwrap();
     let a_c = runtime.encrypt(a, &public_key).unwrap();
 
     let args: Vec<FheProgramInput> = vec![a_c.into()];

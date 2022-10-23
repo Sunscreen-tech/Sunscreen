@@ -169,7 +169,7 @@ impl Parse for Attrs {
             .unwrap_or(Ok(1))?;
 
         Ok(Self {
-            scheme: Scheme::parse(&scheme_type).map_err(|_e| {
+            scheme: Scheme::parse(scheme_type).map_err(|_e| {
                 Error::new_spanned(vars, format!("Unknown scheme '{}'", &scheme_type))
             })?,
             chain_count,

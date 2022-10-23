@@ -80,7 +80,7 @@ impl InnerPlaintext {
      */
     pub fn as_seal_plaintext(&self) -> Result<&[WithContext<SealPlaintext>]> {
         match self {
-            Self::Seal(d) => Ok(&d),
+            Self::Seal(d) => Ok(d),
         }
     }
 }
@@ -135,7 +135,7 @@ impl Plaintext {
      * error if the inner plaintext is not a Seal plaintext.
      */
     pub fn inner_as_seal_plaintext(&self) -> Result<&[WithContext<SealPlaintext>]> {
-        Ok(self.inner.as_seal_plaintext()?)
+        self.inner.as_seal_plaintext()
     }
 }
 

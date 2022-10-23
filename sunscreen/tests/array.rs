@@ -194,7 +194,7 @@ fn cipher_plain_arrays() {
 fn can_mutate_array() {
     #[fhe_program(scheme = "bfv")]
     fn mult(mut a: [Cipher<Signed>; 6]) -> Cipher<Signed> {
-        let mut a = a.clone();
+        let mut a = a;
 
         for i in 0..a.len() {
             a[i] = a[i] * 2
@@ -241,7 +241,7 @@ fn can_mutate_array() {
 fn can_return_array() {
     #[fhe_program(scheme = "bfv")]
     fn mult(mut a: [Cipher<Signed>; 6]) -> [Cipher<Signed>; 6] {
-        let mut a = a.clone();
+        let mut a = a;
 
         for i in 0..a.len() {
             a[i] = a[i] * 2

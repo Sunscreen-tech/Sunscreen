@@ -15,7 +15,7 @@ use seal_fhe::{
     Ciphertext, Error as SealError, Evaluator, GaloisKeys, Plaintext, RelinearizationKeys,
 };
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 /**
  * An error that occurs while running an Fhe Program.
  */
@@ -216,7 +216,7 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
                     let a = get_ciphertext(&data, left.index())?;
                     let b = get_ciphertext(&data, right.index())?;
 
-                    let c = evaluator.add(&a, &b)?;
+                    let c = evaluator.add(a, b)?;
 
                     data[index.index()].store(Some(Arc::new(c.into())));
                 }
@@ -226,7 +226,7 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
                     let a = get_ciphertext(&data, left.index())?;
                     let b = get_plaintext(&data, right.index())?;
 
-                    let c = evaluator.add_plain(&a, &b)?;
+                    let c = evaluator.add_plain(a, b)?;
 
                     data[index.index()].store(Some(Arc::new(c.into())));
                 }
@@ -236,7 +236,7 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
                     let a = get_ciphertext(&data, left.index())?;
                     let b = get_ciphertext(&data, right.index())?;
 
-                    let c = evaluator.multiply(&a, &b)?;
+                    let c = evaluator.multiply(a, b)?;
 
                     data[index.index()].store(Some(Arc::new(c.into())));
                 }
@@ -246,7 +246,7 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
                     let a = get_ciphertext(&data, left.index())?;
                     let b = get_plaintext(&data, right.index())?;
 
-                    let c = evaluator.multiply_plain(&a, &b)?;
+                    let c = evaluator.multiply_plain(a, b)?;
 
                     data[index.index()].store(Some(Arc::new(c.into())));
                 }
@@ -259,7 +259,7 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
 
                     let x = get_ciphertext(&data, input.index())?;
 
-                    let y = evaluator.rotate_columns(&x, galois_keys)?;
+                    let y = evaluator.rotate_columns(x, galois_keys)?;
 
                     data[index.index()].store(Some(Arc::new(y.into())));
                 }
@@ -272,7 +272,7 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
 
                     let a = get_ciphertext(&data, input.index())?;
 
-                    let c = evaluator.relinearize(&a, relin_keys)?;
+                    let c = evaluator.relinearize(a, relin_keys)?;
 
                     data[index.index()].store(Some(Arc::new(c.into())));
                 }
@@ -281,7 +281,7 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
 
                     let x = get_ciphertext(&data, x_id.index())?;
 
-                    let y = evaluator.negate(&x)?;
+                    let y = evaluator.negate(x)?;
 
                     data[index.index()].store(Some(Arc::new(y.into())));
                 }
@@ -291,7 +291,7 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
                     let a = get_ciphertext(&data, left.index())?;
                     let b = get_ciphertext(&data, right.index())?;
 
-                    let c = evaluator.sub(&a, &b)?;
+                    let c = evaluator.sub(a, b)?;
 
                     data[index.index()].store(Some(Arc::new(c.into())));
                 }
@@ -301,14 +301,14 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
                     let a = get_ciphertext(&data, left.index())?;
                     let b = get_plaintext(&data, right.index())?;
 
-                    let c = evaluator.sub_plain(&a, &b)?;
+                    let c = evaluator.sub_plain(a, b)?;
 
                     data[index.index()].store(Some(Arc::new(c.into())));
                 }
                 Literal(x) => {
                     match x {
                         Literal::Plaintext(p) => {
-                            let p = InnerPlaintext::from_bytes(&p)
+                            let p = InnerPlaintext::from_bytes(p)
                                 .map_err(|_| FheProgramRunFailure::MalformedPlaintext)?;
 
                             match p {
@@ -378,7 +378,7 @@ where
     F: Fn(NodeIndex) -> Result<(), FheProgramRunFailure> + Sync + Send,
 {
     let ir = if let Some(x) = run_to {
-        Cow::Owned(ir.prune(&vec![x])) // MOO
+        Cow::Owned(ir.prune(&[x])) // MOO
     } else {
         Cow::Borrowed(ir) // moo
     };

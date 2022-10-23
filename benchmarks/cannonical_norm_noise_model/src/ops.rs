@@ -185,7 +185,7 @@ fn create_ciphertext(
         }
     }
 
-    return Err(Error::ImpossibleNoiseFloor);
+    Err(Error::ImpossibleNoiseFloor)
 }
 
 pub fn add_noise(

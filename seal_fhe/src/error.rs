@@ -8,7 +8,7 @@ use crate::bindgen::{
 /**
  * A type representing all errors that can occur in SEAL.
  */
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Error {
     /// No error
     Ok,

@@ -225,14 +225,14 @@ fn get_left_right_operands(
         .edges_directed(index, Direction::Incoming)
         .filter(|e| *e.weight() == EdgeInfo::LeftOperand)
         .map(|e| e.source())
-        .nth(0);
+        .next();
 
     let right = ir
         .graph
         .edges_directed(index, Direction::Incoming)
         .filter(|e| *e.weight() == EdgeInfo::RightOperand)
         .map(|e| e.source())
-        .nth(0);
+        .next();
 
     (left, right)
 }
@@ -242,7 +242,7 @@ pub fn get_unary_operand(ir: &FheProgram, index: NodeIndex) -> Option<NodeIndex>
         .edges_directed(index, Direction::Incoming)
         .filter(|e| *e.weight() == EdgeInfo::UnaryOperand)
         .map(|e| e.source())
-        .nth(0)
+        .next()
 }
 
 #[cfg(test)]

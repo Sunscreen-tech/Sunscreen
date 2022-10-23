@@ -30,7 +30,7 @@ pub fn fhe_program_impl(
 
     let chain_count = attr_params.chain_count;
 
-    let unwrapped_inputs = match extract_fn_arguments(&inputs) {
+    let unwrapped_inputs = match extract_fn_arguments(inputs) {
         Ok(v) => v,
         Err(e) => {
             return proc_macro::TokenStream::from(match e {
@@ -77,7 +77,7 @@ pub fn fhe_program_impl(
 
     let fhe_program_returns = match return_types
         .iter()
-        .map(|t| map_fhe_type(t))
+        .map(map_fhe_type)
         .collect::<Result<Vec<Type>, MapFheTypeError>>()
     {
         Ok(v) => v,
@@ -111,7 +111,7 @@ pub fn fhe_program_impl(
 
     let fhe_program_name_literal = format!("{}", fhe_program_name);
 
-    let fhe_program = proc_macro::TokenStream::from(quote! {
+    proc_macro::TokenStream::from(quote! {
         #[allow(non_camel_case_types)]
         #[derive(Clone)]
         #vis struct #fhe_program_struct_name {
@@ -201,7 +201,5 @@ pub fn fhe_program_impl(
         #vis const #fhe_program_name: #fhe_program_struct_name = #fhe_program_struct_name {
             chain_count: #chain_count
         };
-    });
-
-    fhe_program
+    })
 }

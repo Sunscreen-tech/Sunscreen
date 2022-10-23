@@ -76,7 +76,7 @@ impl Compiler {
     where
         F: FheProgramFn + Clone + 'static,
     {
-        self.fhe_program_fns.push(Box::new(fhe_program_fn.clone()));
+        self.fhe_program_fns.push(Box::new(fhe_program_fn));
 
         self
     }
@@ -148,7 +148,7 @@ impl Compiler {
      *
      */
     pub fn compile(self) -> Result<Application> {
-        if self.fhe_program_fns.len() == 0 {
+        if self.fhe_program_fns.is_empty() {
             return Err(Error::NoPrograms);
         }
 
@@ -158,7 +158,7 @@ impl Compiler {
         if self
             .fhe_program_fns
             .iter()
-            .any(|p| p.scheme_type() != self.fhe_program_fns.iter().next().unwrap().scheme_type())
+            .any(|p| p.scheme_type() != self.fhe_program_fns.first().unwrap().scheme_type())
         {
             return Err(Error::SchemeMismatch);
         }
@@ -197,21 +197,17 @@ impl Compiler {
             ));
         }
 
-        let scheme = self.fhe_program_fns.iter().next().unwrap().scheme_type();
+        let scheme = self.fhe_program_fns.first().unwrap().scheme_type();
 
         let params = match self.params_mode {
-            ParamsMode::Manual(p) => (p),
-            ParamsMode::Search => {
-                let params = determine_params(
-                    &self.fhe_program_fns,
-                    self.plain_modulus_constraint,
-                    self.security_level,
-                    self.noise_margin,
-                    scheme,
-                )?;
-
-                params
-            }
+            ParamsMode::Manual(p) => p,
+            ParamsMode::Search => determine_params(
+                &self.fhe_program_fns,
+                self.plain_modulus_constraint,
+                self.security_level,
+                self.noise_margin,
+                scheme,
+            )?,
         };
 
         let fhe_programs = self
@@ -245,6 +241,6 @@ impl Compiler {
             })
             .collect::<Result<HashMap<String, CompiledFheProgram>>>()?;
 
-        Ok(Application::new(fhe_programs)?)
+        Application::new(fhe_programs)
     }
 }

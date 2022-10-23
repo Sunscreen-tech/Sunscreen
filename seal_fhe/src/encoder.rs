@@ -285,7 +285,7 @@ mod tests {
         let params = BfvEncryptionParametersBuilder::new()
             .set_poly_modulus_degree(8192)
             .set_coefficient_modulus(
-                CoefficientModulus::create(8192, &vec![50, 30, 30, 50, 50]).unwrap(),
+                CoefficientModulus::create(8192, &[50, 30, 30, 50, 50]).unwrap(),
             )
             .set_plain_modulus(PlainModulus::batching(8192, 20).unwrap())
             .build()
@@ -303,7 +303,7 @@ mod tests {
         let params = BfvEncryptionParametersBuilder::new()
             .set_poly_modulus_degree(8192)
             .set_coefficient_modulus(
-                CoefficientModulus::create(8192, &vec![50, 30, 30, 50, 50]).unwrap(),
+                CoefficientModulus::create(8192, &[50, 30, 30, 50, 50]).unwrap(),
             )
             .set_plain_modulus(PlainModulus::batching(8192, 20).unwrap())
             .build()
@@ -321,7 +321,7 @@ mod tests {
         let params = BfvEncryptionParametersBuilder::new()
             .set_poly_modulus_degree(8192)
             .set_coefficient_modulus(
-                CoefficientModulus::create(8192, &vec![50, 30, 30, 50, 50]).unwrap(),
+                CoefficientModulus::create(8192, &[50, 30, 30, 50, 50]).unwrap(),
             )
             .set_plain_modulus(PlainModulus::batching(8192, 20).unwrap())
             .build()
@@ -348,7 +348,7 @@ mod tests {
         let params = BfvEncryptionParametersBuilder::new()
             .set_poly_modulus_degree(8192)
             .set_coefficient_modulus(
-                CoefficientModulus::create(8192, &vec![50, 30, 30, 50, 50]).unwrap(),
+                CoefficientModulus::create(8192, &[50, 30, 30, 50, 50]).unwrap(),
             )
             .set_plain_modulus(PlainModulus::batching(8192, 20).unwrap())
             .build()

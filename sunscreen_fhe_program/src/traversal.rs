@@ -19,7 +19,7 @@ pub fn get_left_right_operands(ir: &FheProgram, index: NodeIndex) -> (NodeIndex,
         .edges_directed(index, Direction::Incoming)
         .filter(|e| *e.weight() == EdgeInfo::LeftOperand)
         .map(|e| e.source())
-        .nth(0)
+        .next()
         .unwrap();
 
     let right = ir
@@ -27,7 +27,7 @@ pub fn get_left_right_operands(ir: &FheProgram, index: NodeIndex) -> (NodeIndex,
         .edges_directed(index, Direction::Incoming)
         .filter(|e| *e.weight() == EdgeInfo::RightOperand)
         .map(|e| e.source())
-        .nth(0)
+        .next()
         .unwrap();
 
     (left, right)
@@ -48,6 +48,6 @@ pub fn get_unary_operand(ir: &FheProgram, index: NodeIndex) -> NodeIndex {
         .edges_directed(index, Direction::Incoming)
         .filter(|e| *e.weight() == EdgeInfo::UnaryOperand)
         .map(|e| e.source())
-        .nth(0)
+        .next()
         .unwrap()
 }

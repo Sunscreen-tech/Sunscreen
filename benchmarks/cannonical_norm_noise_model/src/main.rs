@@ -74,6 +74,7 @@ impl Results {
         Self { output_file }
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn output_row(
         &mut self,
         params: &Params,
@@ -85,8 +86,8 @@ impl Results {
         modeled: &Stats,
         diff: &Stats,
     ) {
-        let n_a = n_a.map(|x| x.to_string()).unwrap_or("".to_owned());
-        let n_b = n_b.map(|x| x.to_string()).unwrap_or("".to_owned());
+        let n_a = n_a.map(|x| x.to_string()).unwrap_or_else(|| "".to_owned());
+        let n_b = n_b.map(|x| x.to_string()).unwrap_or_else(|| "".to_owned());
 
         let security_level = match params.security_level {
             SecurityLevel::TC128 => 128,
@@ -118,6 +119,12 @@ impl Results {
             diff.max
         )
         .unwrap();
+    }
+}
+
+impl Default for Results {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

@@ -1,3 +1,5 @@
+#![allow(clippy::approx_constant)]
+
 use float_cmp::ApproxEq;
 use sunscreen::{
     fhe_program,
@@ -378,7 +380,7 @@ fn can_div_cipher_const() {
 
         let c: Fractional<64> = runtime.decrypt(&result[0], &private_key).unwrap();
 
-        assert!(c.approx_eq((a / 3.14).try_into().unwrap(), (0.0, 1)));
+        assert!(c.approx_eq(a / 3.14, (0.0, 1)));
     };
 
     test_div(-3.14);

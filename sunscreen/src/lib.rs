@@ -126,7 +126,7 @@ impl Application {
     /**
      * Gets the [`CompiledFheProgram`] with the given name or [`None`] if not present.
      */
-    pub fn get_program<'a, N>(&self, name: N) -> Option<&CompiledFheProgram>
+    pub fn get_program<N>(&self, name: N) -> Option<&CompiledFheProgram>
     where
         N: AsRef<str>,
     {
@@ -461,21 +461,14 @@ impl Context {
     pub fn add_literal(&mut self, literal: Literal) -> NodeIndex {
         // See if we already have a node for the given literal. If so, just return it.
         // If not, make a new one.
-        let existing_literal = self
-            .compilation
-            .graph
-            .node_indices()
-            .filter_map(|i| match &self.compilation.graph[i] {
-                Operation::Literal(x) => {
-                    if *x == literal {
-                        Some(i)
-                    } else {
-                        None
-                    }
-                }
-                _ => None,
-            })
-            .next();
+        let existing_literal =
+            self.compilation
+                .graph
+                .node_indices()
+                .find(|&i| match &self.compilation.graph[i] {
+                    Operation::Literal(x) => *x == literal,
+                    _ => false,
+                });
 
         match existing_literal {
             Some(x) => x,

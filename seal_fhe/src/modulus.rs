@@ -71,9 +71,9 @@ impl TryFrom<i32> for SecurityLevel {
     }
 }
 
-impl Into<i32> for SecurityLevel {
-    fn into(self) -> i32 {
-        match self {
+impl From<SecurityLevel> for i32 {
+    fn from(val: SecurityLevel) -> Self {
+        match val {
             SecurityLevel::TC128 => 128,
             SecurityLevel::TC192 => 192,
             SecurityLevel::TC256 => 256,
@@ -169,7 +169,7 @@ impl CoefficientModulus {
      * PolyModulusDegree.The return value will be a vector consisting of
      * Modulus elements representing distinct prime numbers of bit-lengths
      * as given in the bitSizes parameter. The bit sizes of the prime numbers
-     * can be at most 60 bits.     
+     * can be at most 60 bits.
      */
     pub fn create(degree: u64, bit_sizes: &[i32]) -> Result<Vec<Modulus>> {
         let mut bit_sizes = bit_sizes.to_owned();
@@ -238,7 +238,7 @@ impl CoefficientModulus {
 
         unsafe { bindgen::CoeffModulus_MaxBitCount(degree, security_level as i32, &mut bits) };
 
-        assert_eq!(bits > 0, true);
+        assert!(bits > 0);
 
         bits as u32
     }

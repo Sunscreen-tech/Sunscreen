@@ -232,7 +232,7 @@ mod tests {
                 let modeled_noise_budget =
                     crate::noise_model::noise_to_noise_budget(modeled_noise) as u32;
 
-                assert_eq!(modeled_noise_budget < measured_noise_budget, true);
+                assert!(modeled_noise_budget < measured_noise_budget);
             }
         }
     }
@@ -273,7 +273,7 @@ mod tests {
                 let modeled_noise_budget =
                     crate::noise_model::noise_to_noise_budget(s_noise) as u32;
 
-                assert_eq!(modeled_noise_budget < measured_noise_budget, true);
+                assert!(modeled_noise_budget < measured_noise_budget);
             }
         }
     }
@@ -312,7 +312,7 @@ mod tests {
                 let modeled_noise_budget =
                     crate::noise_model::noise_to_noise_budget(s_noise) as u32;
 
-                assert_eq!(modeled_noise_budget < measured_noise_budget, true);
+                assert!(modeled_noise_budget < measured_noise_budget);
             }
         }
     }
@@ -368,7 +368,7 @@ mod tests {
                     .checked_sub(post_multiply_modeled_noise)
                     .unwrap();
 
-                assert_eq!(modeled_noise > actual_noise, true);
+                assert!(modeled_noise > actual_noise);
             }
         }
     }
@@ -420,7 +420,7 @@ mod tests {
                     .checked_sub(measured_noise_budget)
                     .unwrap();
 
-                assert_eq!(modeled_noise > actual_noise, true);
+                assert!(modeled_noise > actual_noise);
             }
         }
     }

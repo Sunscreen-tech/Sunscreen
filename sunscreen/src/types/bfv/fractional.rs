@@ -465,7 +465,7 @@ impl<const INT_BITS: usize> TryIntoPlaintext for Fractional<INT_BITS> {
 
         // Coerce the f64 into a u64 so we can extract out the
         // sign, mantissa, and exponent.
-        let as_u64: u64 = unsafe { std::mem::transmute(self.val) };
+        let as_u64: u64 = self.val.to_bits();
 
         let sign_mask = 0x1 << 63;
         let mantissa_mask = 0xFFFFFFFFFFFFF;
@@ -568,9 +568,9 @@ impl<const INT_BITS: usize> From<f64> for Fractional<INT_BITS> {
     }
 }
 
-impl<const INT_BITS: usize> Into<f64> for Fractional<INT_BITS> {
-    fn into(self) -> f64 {
-        self.val
+impl<const INT_BITS: usize> From<Fractional<INT_BITS>> for f64 {
+    fn from(frac: Fractional<INT_BITS>) -> Self {
+        frac.val
     }
 }
 
@@ -684,6 +684,9 @@ impl<const INT_BITS: usize> Neg for Fractional<INT_BITS> {
 
 #[cfg(test)]
 mod tests {
+
+    #![allow(clippy::approx_constant)]
+
     use super::*;
     use crate::{SchemeType, SecurityLevel};
     use float_cmp::ApproxEq;

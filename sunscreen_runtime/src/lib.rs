@@ -44,6 +44,13 @@ impl InnerPlaintext {
     }
 
     /**
+     * Returns whether or not there are any plaintexts inside this wrapper.
+     */
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
+    /**
      * Decompose the N plaintexts inside this wrapper into N wrappers
      * with 1 plaintext each. Useful for creating plaintext constants
      * in FHE programs.

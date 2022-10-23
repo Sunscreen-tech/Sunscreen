@@ -15,8 +15,8 @@ where
 {
     let mut sum = data[0];
 
-    for i in 1..data.len() {
-        sum = sum + data[i];
+    for &x in data.iter().skip(1) {
+        sum = sum + x;
     }
 
     sum / (data.len() as f64)

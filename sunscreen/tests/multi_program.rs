@@ -46,10 +46,10 @@ fn can_reference_program_strongly_or_stringly() {
     assert_eq!(mul.name(), "mul");
     assert_eq!(add.name(), "add");
 
-    assert_eq!(app.get_program(mul).is_some(), true);
-    assert_eq!(app.get_program("mul").is_some(), true);
-    assert_eq!(app.get_program(add).is_some(), true);
-    assert_eq!(app.get_program("add").is_some(), true);
+    assert!(app.get_program(mul).is_some());
+    assert!(app.get_program("mul").is_some());
+    assert!(app.get_program(add).is_some());
+    assert!(app.get_program("add").is_some());
 }
 
 #[test]
@@ -71,8 +71,8 @@ fn get_programs_iterates_every_program() {
         .unwrap();
 
     assert_eq!(app.get_programs().count(), 2);
-    assert_eq!(app.get_programs().any(|(k, _)| k == "mul"), true);
-    assert_eq!(app.get_programs().any(|(k, _)| k == "add"), true);
+    assert!(app.get_programs().any(|(k, _)| k == "mul"));
+    assert!(app.get_programs().any(|(k, _)| k == "add"));
 }
 
 #[test]

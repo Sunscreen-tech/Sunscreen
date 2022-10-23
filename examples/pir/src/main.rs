@@ -1,3 +1,5 @@
+#![allow(clippy::needless_range_loop)]
+
 use sunscreen::{
     fhe_program,
     types::{bfv::Signed, Cipher},
@@ -73,9 +75,9 @@ impl Server {
         let mut database = [[Signed::from(0); SQRT_DATABASE_SIZE]; SQRT_DATABASE_SIZE];
         let mut val = Signed::from(400);
 
-        for i in 0..SQRT_DATABASE_SIZE {
-            for j in 0..SQRT_DATABASE_SIZE {
-                database[i][j] = val;
+        for row in database.iter_mut() {
+            for entry in row.iter_mut() {
+                *entry = val;
                 val = val + 1;
             }
         }

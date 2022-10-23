@@ -137,9 +137,9 @@ impl From<i64> for Signed {
     }
 }
 
-impl Into<i64> for Signed {
-    fn into(self) -> i64 {
-        self.val
+impl From<Signed> for i64 {
+    fn from(signed: Signed) -> Self {
+        signed.val
     }
 }
 

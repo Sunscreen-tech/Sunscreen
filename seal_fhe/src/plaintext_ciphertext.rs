@@ -253,6 +253,7 @@ impl Plaintext {
     /**
      * Returns the number of coefficients this plaintext can hold.
      */
+    #[allow(clippy::len_without_is_empty)]
     pub fn len(&self) -> usize {
         let mut size: u64 = 0;
 

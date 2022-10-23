@@ -81,17 +81,9 @@ impl From<SealError> for FheProgramRunFailure {
  * The input and outputs of this method are vectors containing [`seal_fhe::Ciphertext`] values, not the
  * high-level [`Ciphertext`] types. You must first unpack them from the high-level types.
  *
- * # Panics
+ * # Safety
  * Calling this method on a malformed [`FheProgram`] may
- * result in a panic.
- *
- * # Non-termination
- * Calling this method on a malformed [`FheProgram`] may
- * result in non-termination.
- *
- * # Undefined behavior
- * Calling this method on a malformed [`FheProgram`] may
- * result in undefined behavior.
+ * result in panics, non-termination, or undefined behavior.
  */
 pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
     ir: &FheProgram,
@@ -100,10 +92,10 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
     relin_keys: &Option<&RelinearizationKeys>,
     galois_keys: &Option<&GaloisKeys>,
 ) -> Result<Vec<Ciphertext>, FheProgramRunFailure> {
-    fn get_data<'a>(
-        data: &'a [AtomicCell<Option<Arc<SealData>>>],
+    fn get_data(
+        data: &[AtomicCell<Option<Arc<SealData>>>],
         index: usize,
-    ) -> Result<&'a Arc<SealData>, FheProgramRunFailure> {
+    ) -> Result<&Arc<SealData>, FheProgramRunFailure> {
         let data = data.get(index).ok_or(FheProgramRunFailure::MissingData)?;
 
         // This is correct so long as the IR program is indeed a DAG executed in topological order
@@ -117,10 +109,10 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
         }
     }
 
-    fn get_ciphertext<'a>(
-        data: &'a [AtomicCell<Option<Arc<SealData>>>],
+    fn get_ciphertext(
+        data: &[AtomicCell<Option<Arc<SealData>>>],
         index: usize,
-    ) -> Result<&'a Ciphertext, FheProgramRunFailure> {
+    ) -> Result<&Ciphertext, FheProgramRunFailure> {
         let val = get_data(data, index)?.as_ref();
 
         match val {
@@ -129,10 +121,10 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
         }
     }
 
-    fn get_plaintext<'a>(
-        data: &'a [AtomicCell<Option<Arc<SealData>>>],
+    fn get_plaintext(
+        data: &[AtomicCell<Option<Arc<SealData>>>],
         index: usize,
-    ) -> Result<&'a Plaintext, FheProgramRunFailure> {
+    ) -> Result<&Plaintext, FheProgramRunFailure> {
         let val = get_data(data, index)?.as_ref();
 
         match val {
@@ -306,24 +298,20 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
                     data[index.index()].store(Some(Arc::new(c.into())));
                 }
                 Literal(x) => {
-                    match x {
-                        Literal::Plaintext(p) => {
-                            let p = InnerPlaintext::from_bytes(p)
-                                .map_err(|_| FheProgramRunFailure::MalformedPlaintext)?;
+                    if let Literal::Plaintext(p) = x {
+                        let p = InnerPlaintext::from_bytes(p)
+                            .map_err(|_| FheProgramRunFailure::MalformedPlaintext)?;
 
-                            match p {
-                                InnerPlaintext::Seal(p) => {
-                                    // Plaintext literals should always have exactly one plaintext.
-                                    if p.len() != 1 {
-                                        return Err(FheProgramRunFailure::MalformedPlaintext);
-                                    }
-
-                                    data[index.index()]
-                                        .store(Some(Arc::new(p[0].data.clone().into())))
+                        match p {
+                            InnerPlaintext::Seal(p) => {
+                                // Plaintext literals should always have exactly one plaintext.
+                                if p.len() != 1 {
+                                    return Err(FheProgramRunFailure::MalformedPlaintext);
                                 }
-                            };
-                        }
-                        _ => {}
+
+                                data[index.index()].store(Some(Arc::new(p[0].data.clone().into())))
+                            }
+                        };
                     }
                 }
                 OutputCiphertext => {
@@ -416,7 +404,7 @@ where
 
     rayon::scope(|s| {
         for node_id in initial_ready {
-            fn run_internal<'a, F>(
+            fn run_internal<F>(
                 node_id: NodeIndex,
                 ir: &FheProgram,
                 deps: &[AtomicUsize],

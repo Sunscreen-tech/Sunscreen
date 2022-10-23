@@ -101,10 +101,10 @@ fn can_create_inputs() {
 
         assert_eq!(array_node.len(), 6);
 
-        for i in 0..6 {
-            assert_eq!(array_node[i].ids.len(), 2);
-            assert_eq!(array_node[i].ids[0].index(), offset + 2 * i);
-            assert_eq!(array_node[i].ids[1].index(), offset + 2 * i + 1);
+        for (i, node) in array_node.into_iter().enumerate() {
+            assert_eq!(node.ids.len(), 2);
+            assert_eq!(node.ids[0].index(), offset + 2 * i);
+            assert_eq!(node.ids[1].index(), offset + 2 * i + 1);
         }
 
         let multi_dim_array_node: [[FheProgramNode<Cipher<Rational>>; 6]; 6] =
@@ -112,17 +112,11 @@ fn can_create_inputs() {
 
         offset += 12;
 
-        for i in 0..6 {
-            for j in 0..6 {
-                assert_eq!(multi_dim_array_node[i][j].ids.len(), 2);
-                assert_eq!(
-                    multi_dim_array_node[i][j].ids[0].index(),
-                    offset + 6 * 2 * i + 2 * j
-                );
-                assert_eq!(
-                    multi_dim_array_node[i][j].ids[1].index(),
-                    offset + 6 * 2 * i + 2 * j + 1
-                );
+        for (i, row) in multi_dim_array_node.into_iter().enumerate() {
+            for (j, entry) in row.into_iter().enumerate() {
+                assert_eq!(entry.ids.len(), 2);
+                assert_eq!(entry.ids[0].index(), offset + 6 * 2 * i + 2 * j);
+                assert_eq!(entry.ids[1].index(), offset + 6 * 2 * i + 2 * j + 1);
             }
         }
 

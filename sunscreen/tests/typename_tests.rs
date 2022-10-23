@@ -4,6 +4,7 @@ use sunscreen::{
 };
 
 #[test]
+#[allow(clippy::blacklisted_name)]
 fn derive_typename_example() {
     #[derive(DeriveTypeName)]
     struct Foo {

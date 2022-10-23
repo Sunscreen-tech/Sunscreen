@@ -44,7 +44,7 @@ struct Expression {
 enum ParseResult {
     Help,
     Exit,
-    Expression(Expression),
+    Expression(Box<Expression>),
 }
 
 enum Error {
@@ -107,11 +107,11 @@ fn parse_input(line: &str) -> Result<ParseResult, Error> {
         Term::F64(right)
     };
 
-    Ok(ParseResult::Expression(Expression {
+    Ok(ParseResult::Expression(Box::new(Expression {
         left: left_term,
         op: operand,
         right: right_term,
-    }))
+    })))
 }
 
 fn encrypt_term(runtime: &Runtime, public_key: &PublicKey, input: Term) -> Term {
@@ -163,7 +163,7 @@ fn alice(
             let parsed = parse_input(line);
 
             let Expression { left, right, op } = match parsed {
-                Ok(ParseResult::Expression(val)) => val,
+                Ok(ParseResult::Expression(val)) => *val,
                 Ok(ParseResult::Exit) => std::process::exit(0),
                 Ok(ParseResult::Help) => {
                     help();

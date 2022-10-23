@@ -100,13 +100,13 @@ pub enum SchemeType {
     Bfv,
 }
 
-impl Into<u8> for SchemeType {
+impl From<SchemeType> for u8 {
     /**
      * Creates a serializable byte representation of the scheme type.
      */
-    fn into(self) -> u8 {
-        match self {
-            Self::Bfv => 0,
+    fn from(val: SchemeType) -> Self {
+        match val {
+            SchemeType::Bfv => 0,
         }
     }
 }
@@ -535,10 +535,7 @@ impl FheProgram {
     pub fn get_outputs(&self) -> impl Iterator<Item = NodeIndex> + '_ {
         self.graph
             .node_indices()
-            .filter(|g| match self.graph[*g].operation {
-                Operation::OutputCiphertext => true,
-                _ => false,
-            })
+            .filter(|g| matches!(self.graph[*g].operation, Operation::OutputCiphertext))
     }
 
     /**
@@ -547,13 +544,7 @@ impl FheProgram {
     pub fn num_inputs(&self) -> usize {
         self.graph
             .node_weights()
-            .filter(|n| {
-                if let Operation::InputCiphertext(_) = n.operation {
-                    true
-                } else {
-                    false
-                }
-            })
+            .filter(|n| matches!(n.operation, Operation::InputCiphertext(_)))
             .count()
     }
 
@@ -599,11 +590,10 @@ impl FheProgram {
         let pruned = compact_graph.filter_map(
             |id, n| {
                 // Don't prune input nodes.
-                let is_input = match n.operation {
-                    Operation::InputPlaintext(_) => true,
-                    Operation::InputCiphertext(_) => true,
-                    _ => false,
-                };
+                let is_input = matches!(
+                    n.operation,
+                    Operation::InputPlaintext(_) | Operation::InputCiphertext(_)
+                );
 
                 if closure_set.contains(&revmap[id.index()]) || is_input {
                     Some(n.clone())
@@ -637,13 +627,9 @@ impl FheProgram {
      * Whether or not this FHE program needs relin keys to run. Needed for relinearization.
      */
     pub fn requires_relin_keys(&self) -> bool {
-        self.graph.node_weights().any(|n| {
-            if let Operation::Relinearize = n.operation {
-                true
-            } else {
-                false
-            }
-        })
+        self.graph
+            .node_weights()
+            .any(|n| matches!(n.operation, Operation::Relinearize))
     }
 
     /**
@@ -651,11 +637,11 @@ impl FheProgram {
      * operations.
      */
     pub fn requires_galois_keys(&self) -> bool {
-        self.graph.node_weights().any(|n| match n.operation {
-            Operation::ShiftRight => true,
-            Operation::ShiftLeft => true,
-            Operation::SwapRows => true,
-            _ => false,
+        self.graph.node_weights().any(|n| {
+            matches!(
+                n.operation,
+                Operation::ShiftRight | Operation::ShiftLeft | Operation::SwapRows
+            )
         })
     }
 }
@@ -797,15 +783,15 @@ pub enum TransformNodeIndex {
  */
 pub type DeferredIndex = usize;
 
-impl Into<TransformNodeIndex> for DeferredIndex {
-    fn into(self) -> TransformNodeIndex {
-        TransformNodeIndex::DeferredIndex(self)
+impl From<DeferredIndex> for TransformNodeIndex {
+    fn from(val: DeferredIndex) -> Self {
+        TransformNodeIndex::DeferredIndex(val)
     }
 }
 
-impl Into<TransformNodeIndex> for NodeIndex {
-    fn into(self) -> TransformNodeIndex {
-        TransformNodeIndex::NodeIndex(self)
+impl From<NodeIndex> for TransformNodeIndex {
+    fn from(val: NodeIndex) -> Self {
+        TransformNodeIndex::NodeIndex(val)
     }
 }
 

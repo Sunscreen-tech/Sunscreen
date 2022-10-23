@@ -645,7 +645,7 @@ mod tests {
 
             let no_relin_noise = noise_before - decryptor.invariant_noise_budget(&a_c_2).unwrap();
 
-            assert_eq!(relin_noise < no_relin_noise, true)
+            assert!(relin_noise < no_relin_noise)
         });
     }
 
@@ -675,7 +675,7 @@ mod tests {
 
             let no_relin_noise = noise_before - decryptor.invariant_noise_budget(&a_c_2).unwrap();
 
-            assert_eq!(relin_noise < no_relin_noise, true)
+            assert!(relin_noise < no_relin_noise)
         });
     }
 

@@ -40,6 +40,9 @@ jobs:
     # Check the submitted change meets style guidelines
     - name: Cargo Format
       run: cargo fmt --check
+    # Check the submitted change passes the clippy linter
+    - name: Cargo Clippy
+      run: cargo clippy --release --all-targets -- --deny warnings
     # Build and run the tests
     - name: Build and run tests
       run: cargo test --verbose --release

@@ -53,6 +53,12 @@ pub struct Compiler {
     noise_margin: u32,
 }
 
+impl Default for Compiler {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Compiler {
     /**
      * Creates a new [`Compiler`] builder.

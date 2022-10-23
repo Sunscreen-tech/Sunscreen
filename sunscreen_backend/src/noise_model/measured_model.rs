@@ -273,10 +273,11 @@ fn create_inputs_for_program(
     // multiplying plaintexts.
     ir.graph
         .node_weights()
-        .filter(|n| match n.operation {
-            Operation::InputCiphertext(_) => true,
-            Operation::InputPlaintext(_) => true,
-            _ => false,
+        .filter(|n| {
+            matches!(
+                n.operation,
+                Operation::InputCiphertext(_) | Operation::InputPlaintext(_)
+            )
         })
         .zip(noise_targets)
         .map(|(n, target)| match n.operation {

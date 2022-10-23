@@ -60,7 +60,7 @@ impl<'de> Visitor<'de> for TypeNameVisitor {
 
         if splits.len() != 3 {
             Err(de::Error::invalid_value(de::Unexpected::Str(s), &self))
-        } else if let Err(_) = Version::parse(splits[1]) {
+        } else if Version::parse(splits[1]).is_err() {
             Err(de::Error::invalid_value(
                 de::Unexpected::Str(splits[1]),
                 &self,
@@ -85,11 +85,11 @@ impl<'de> Deserialize<'de> for Type {
 
         let mut splits = type_string.split(',');
 
-        let typename = splits.next().ok_or(D::Error::custom(""))?;
-        let version = Version::parse(splits.next().ok_or(D::Error::custom(""))?)
+        let typename = splits.next().ok_or_else(|| D::Error::custom(""))?;
+        let version = Version::parse(splits.next().ok_or_else(|| D::Error::custom(""))?)
             .map_err(|e| de::Error::custom(format!("Failed to parse version: {}", e)))?;
 
-        let is_encrypted = bool::from_str(splits.next().ok_or(D::Error::custom(""))?)
+        let is_encrypted = bool::from_str(splits.next().ok_or_else(|| D::Error::custom(""))?)
             .map_err(|e| de::Error::custom(format!("Failed to parse boolean: {}", e)))?;
 
         Ok(Self {

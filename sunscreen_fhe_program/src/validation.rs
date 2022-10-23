@@ -206,12 +206,9 @@ fn validate_unary_op_has_correct_operands(ir: &FheProgram, index: NodeIndex) -> 
 
     let operand = get_unary_operand(ir, index);
 
-    match operand {
-        None => {
-            errors.push(NodeError::MissingOperand(EdgeInfo::UnaryOperand));
-        }
-        _ => {}
-    };
+    if operand.is_none() {
+        errors.push(NodeError::MissingOperand(EdgeInfo::UnaryOperand));
+    }
 
     errors
 }

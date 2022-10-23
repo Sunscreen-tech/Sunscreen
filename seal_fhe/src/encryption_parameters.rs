@@ -310,6 +310,12 @@ impl BfvEncryptionParametersBuilder {
     }
 }
 
+impl Default for BfvEncryptionParametersBuilder {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Drop for EncryptionParameters {
     fn drop(&mut self) {
         unsafe { bindgen::EncParams_Destroy(self.handle) };

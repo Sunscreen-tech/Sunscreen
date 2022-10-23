@@ -22,12 +22,12 @@ fn overflow_does_not_bleed_into_other_lanes() {
         let p_2 = decryptor.decrypt(&c_2).unwrap();
         let out = encoder.decode_unsigned(&p_2).unwrap();
 
-        for i in 0..out.len() {
+        for (i, lane) in out.into_iter().enumerate() {
             if i == 1 {
                 // This lane overflowed...
-                assert_eq!(out[i], 105_881);
+                assert_eq!(lane, 105_881);
             } else {
-                assert_eq!(out[i], 10_000);
+                assert_eq!(lane, 10_000);
             }
         }
     })
@@ -100,8 +100,8 @@ fn lanes_have_same_modulus() {
         let p_2 = decryptor.decrypt(&c_2).unwrap();
         let out = encoder.decode_unsigned(&p_2).unwrap();
 
-        for i in 0..out.len() {
-            assert_eq!(out[i], 105_881);
+        for lane in out {
+            assert_eq!(lane, 105_881);
         }
     })
 }
@@ -129,8 +129,8 @@ fn lane_modulus_is_not_power_of_2() {
         let p_2 = decryptor.decrypt(&c_2).unwrap();
         let out = encoder.decode_unsigned(&p_2).unwrap();
 
-        for i in 0..out.len() {
-            assert_eq!(out[i], 0);
+        for lane in out {
+            assert_eq!(lane, 0);
         }
     })
 }

@@ -7,7 +7,7 @@ use seal_fhe::{
     PlainModulus,
 };
 use sunscreen_backend::noise_model::{
-    noise_budget_to_noise, predict_noise, MeasuredModel, NoiseModel, TargetNoiseLevel,
+    noise_budget_to_noise, predict_noise, MeasuredModel, TargetNoiseLevel,
 };
 use sunscreen_fhe_program::{FheProgram, Operation, SchemeType};
 pub use sunscreen_runtime::Params;
@@ -98,19 +98,13 @@ fn can_make_required_keys(fhe_program: &FheProgram, params: &Params) -> Result<b
     let keygen = KeyGenerator::new(&context).unwrap();
 
     let create_galois = if fhe_program.requires_galois_keys() {
-        match keygen.create_galois_keys() {
-            Ok(_) => true,
-            Err(_) => false,
-        }
+        keygen.create_galois_keys().is_ok()
     } else {
         true
     };
 
     let create_relin = if fhe_program.requires_relin_keys() {
-        match keygen.create_relinearization_keys() {
-            Ok(_) => true,
-            Err(_) => false,
-        }
+        keygen.create_relinearization_keys().is_ok()
     } else {
         true
     };
@@ -183,10 +177,11 @@ pub fn determine_params(
                 let noise_targets = ir
                     .graph
                     .node_weights()
-                    .filter(|n| match n.operation {
-                        Operation::InputCiphertext(_) => true,
-                        Operation::InputPlaintext(_) => true,
-                        _ => false,
+                    .filter(|n| {
+                        matches!(
+                            n.operation,
+                            Operation::InputCiphertext(_) | Operation::InputPlaintext(_)
+                        )
                     })
                     .map(|n| match n.operation {
                         Operation::InputCiphertext(_) => {
@@ -212,8 +207,6 @@ pub fn determine_params(
                         continue 'params_loop;
                     }
                 };
-
-                let model: Box<dyn NoiseModel + Sync> = Box::new(model);
 
                 let output_noises = predict_noise(&model, &ir);
 

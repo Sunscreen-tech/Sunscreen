@@ -119,7 +119,7 @@ impl BFVEncoder {
         Ok(plaintext)
     }
 
-    /**  
+    /**
      * Inverse of encode. This function "unbatches" a given plaintext into a matrix
      * of integers modulo the plaintext modulus, and stores the result in the destination
      * parameter. The input plaintext must have degrees less than the polynomial modulus,
@@ -157,7 +157,7 @@ impl BFVEncoder {
         Ok(data)
     }
 
-    /**  
+    /**
      * Inverse of encode. This function "unbatches" a given plaintext into a matrix
      * of integers modulo the plaintext modulus, and stores the result in the destination
      * parameter. The input plaintext must have degrees less than the polynomial modulus,
@@ -269,10 +269,16 @@ impl BFVScalarEncoder {
         convert_seal_error(unsafe { bindgen::Plaintext_CoeffCount(p.get_handle(), &mut len) })?;
 
         convert_seal_error(unsafe {
-            bindgen::Plaintext_CoeffAt(p.get_handle(), 0, std::mem::transmute(&mut coeff))
+            bindgen::Plaintext_CoeffAt(p.get_handle(), 0, &mut coeff as *mut i64 as *mut u64)
         })?;
 
         Ok(coeff)
+    }
+}
+
+impl Default for BFVScalarEncoder {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

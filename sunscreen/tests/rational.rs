@@ -1,3 +1,5 @@
+#![allow(clippy::approx_constant)]
+
 use sunscreen::{
     fhe_program,
     types::{bfv::Rational, Cipher},

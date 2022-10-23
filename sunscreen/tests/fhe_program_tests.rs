@@ -49,7 +49,7 @@ fn panicing_fhe_program_clears_ctx() {
         CURRENT_CTX.with(|ctx| {
             let old = ctx.take();
 
-            assert_eq!(old.is_some(), true);
+            assert!(old.is_some());
             ctx.replace(old);
         });
 
@@ -69,12 +69,12 @@ fn panicing_fhe_program_clears_ctx() {
         let _context = panic_fhe_program.build(&get_params()).unwrap();
     });
 
-    assert_eq!(panic_result.is_err(), true);
+    assert!(panic_result.is_err());
 
     CURRENT_CTX.with(|ctx| {
         let old = ctx.take();
 
-        assert_eq!(old.is_none(), true);
+        assert!(old.is_none());
     });
 }
 

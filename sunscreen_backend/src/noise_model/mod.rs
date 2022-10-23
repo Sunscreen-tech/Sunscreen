@@ -34,7 +34,7 @@ pub const NOISE_MAX: f64 = NOISE_STD_DEV * NOISE_NUM_STD_DEVIATIONS;
  * Panics if the FHE program is not well formed. You should call
  * validate before using this function to ascertain this.
  */
-pub fn predict_noise(model: &Box<dyn NoiseModel + Sync>, fhe_program: &FheProgram) -> Vec<f64> {
+pub fn predict_noise(model: &(dyn NoiseModel + Sync), fhe_program: &FheProgram) -> Vec<f64> {
     let mut noise_levels: Vec<AtomicCell<f64>> = Vec::with_capacity(fhe_program.graph.node_count());
 
     for _ in 0..fhe_program.graph.node_count() {

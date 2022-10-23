@@ -104,7 +104,7 @@ impl Parse for Attrs {
                 Expr::Assign(a) => {
                     let key = match &*a.left {
                         Expr::Path(p) =>
-                            p.path.get_ident().ok_or(Error::new_spanned(p, "Key should contain only a single path element (e.g, foo, not foo::bar)".to_owned()))?.to_string(),
+                            p.path.get_ident().ok_or_else(||Error::new_spanned(p, "Key should contain only a single path element (e.g, foo, not foo::bar)".to_owned()))?.to_string(),
                         _ => { return Err(Error::new_spanned(&a.left, "Key should be a plain identifier")) }
                     };
 
@@ -137,7 +137,7 @@ impl Parse for Attrs {
                     let key = p
                         .path
                         .get_ident()
-                        .ok_or(Error::new_spanned(p, "Unknown identifier"))?
+                        .ok_or_else(|| Error::new_spanned(p, "Unknown identifier"))?
                         .to_string();
 
                     if !VALUE_KEYS.iter().any(|x| *x == key) {
@@ -157,10 +157,7 @@ impl Parse for Attrs {
 
         let scheme_type = attrs
             .get("scheme")
-            .ok_or(Error::new_spanned(
-                &vars,
-                "required `scheme` is missing".to_owned(),
-            ))?
+            .ok_or_else(|| Error::new_spanned(&vars, "required `scheme` is missing".to_owned()))?
             .as_str()?;
 
         let chain_count = attrs

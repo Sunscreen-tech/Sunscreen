@@ -159,7 +159,7 @@ where
     }
 }
 
-fn deserialize_with_params<'de, T>(params: &Params, data: &[u8]) -> Result<T, seal_fhe::Error>
+fn deserialize_with_params<T>(params: &Params, data: &[u8]) -> Result<T, seal_fhe::Error>
 where
     T: FromBytes,
 {

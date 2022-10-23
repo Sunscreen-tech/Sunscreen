@@ -280,9 +280,9 @@ impl<const LANES: usize> TryFrom<[Vec<i64>; 2]> for Batched<LANES> {
     }
 }
 
-impl<const LANES: usize> Into<[Vec<i64>; 2]> for Batched<LANES> {
-    fn into(self) -> [Vec<i64>; 2] {
-        [self.data[0].into(), self.data[1].into()]
+impl<const LANES: usize> From<Batched<LANES>> for [Vec<i64>; 2] {
+    fn from(val: Batched<LANES>) -> Self {
+        [val.data[0].into(), val.data[1].into()]
     }
 }
 
@@ -292,9 +292,9 @@ impl<const LANES: usize> From<[[i64; LANES]; 2]> for Batched<LANES> {
     }
 }
 
-impl<const LANES: usize> Into<[[i64; LANES]; 2]> for Batched<LANES> {
-    fn into(self) -> [[i64; LANES]; 2] {
-        [self.data[0], self.data[1]]
+impl<const LANES: usize> From<Batched<LANES>> for [[i64; LANES]; 2] {
+    fn from(val: Batched<LANES>) -> Self {
+        [val.data[0], val.data[1]]
     }
 }
 

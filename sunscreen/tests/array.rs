@@ -1,3 +1,5 @@
+#![allow(clippy::needless_range_loop)]
+
 use sunscreen::{
     fhe_program,
     types::{bfv::Signed, Cipher},

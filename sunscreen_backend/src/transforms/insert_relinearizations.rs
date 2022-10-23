@@ -64,36 +64,24 @@ mod tests {
         let relin_nodes = ir
             .graph
             .node_indices()
-            .filter(|i| match query.get_node(*i).operation {
-                Operation::Relinearize => true,
-                _ => false,
-            })
+            .filter(|i| matches!(query.get_node(*i).operation, Operation::Relinearize))
             .collect::<Vec<NodeIndex>>();
 
         // Should have 2 relin nodes added.
         assert_eq!(relin_nodes.len(), 2);
 
         // Every relin should have 1 predacessor.
-        assert_eq!(
-            relin_nodes
-                .iter()
-                .all(|id| { query.neighbors_directed(*id, Direction::Incoming).count() == 1 }),
-            true
-        );
+        assert!(relin_nodes
+            .iter()
+            .all(|id| { query.neighbors_directed(*id, Direction::Incoming).count() == 1 }),);
 
         // Every relin's predacessor should be a multiply
-        assert_eq!(
-            relin_nodes.iter().all(|id| {
-                query
-                    .neighbors_directed(*id, Direction::Incoming)
-                    .map(|id| query.get_node(id))
-                    .all(|node| match node.operation {
-                        Operation::Multiply => true,
-                        _ => false,
-                    })
-            }),
-            true
-        );
+        assert!(relin_nodes.iter().all(|id| {
+            query
+                .neighbors_directed(*id, Direction::Incoming)
+                .map(|id| query.get_node(id))
+                .all(|node| matches!(node.operation, Operation::Multiply))
+        }));
 
         // The first relin node should point to add_2
         assert_eq!(
@@ -112,16 +100,8 @@ mod tests {
         );
 
         // The first relin node should point to add_2
-        assert_eq!(
-            query
-                .neighbors_directed(relin_nodes[0], Direction::Outgoing)
-                .all(|i| {
-                    match query.get_node(i).operation {
-                        Operation::Add => true,
-                        _ => false,
-                    }
-                }),
-            true
-        );
+        assert!(query
+            .neighbors_directed(relin_nodes[0], Direction::Outgoing)
+            .all(|i| { matches!(query.get_node(i).operation, Operation::Add) }),);
     }
 }

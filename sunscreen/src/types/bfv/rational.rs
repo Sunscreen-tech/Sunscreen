@@ -88,9 +88,8 @@ impl TryFrom<f64> for Rational {
     type Error = Error;
 
     fn try_from(val: f64) -> Result<Self, Self::Error> {
-        let val = Rational64::approximate_float(val).ok_or(Error::FheTypeError(
-            "Failed to parse float into rational".to_owned(),
-        ))?;
+        let val = Rational64::approximate_float(val)
+            .ok_or_else(|| Error::FheTypeError("Failed to parse float into rational".to_owned()))?;
 
         Ok(Self {
             num: Signed::from(*val.numer()),
@@ -99,10 +98,10 @@ impl TryFrom<f64> for Rational {
     }
 }
 
-impl Into<f64> for Rational {
-    fn into(self) -> f64 {
-        let num: i64 = self.num.into();
-        let den: i64 = self.den.into();
+impl From<Rational> for f64 {
+    fn from(val: Rational) -> Self {
+        let num: i64 = val.num.into();
+        let den: i64 = val.den.into();
 
         num as f64 / den as f64
     }

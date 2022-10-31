@@ -132,6 +132,7 @@ pub fn fhe_program_impl(
                 let mut context = Context::new(params);
 
                 CURRENT_CTX.with(|ctx| {
+                    #[allow(clippy::type_complexity)]
                     #[forbid(unused_variables)]
                     let internal = | #(#fhe_program_args)* | -> #fhe_program_return
                         #body

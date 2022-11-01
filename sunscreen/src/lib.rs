@@ -41,6 +41,7 @@
 mod error;
 mod fhe_compiler;
 mod params;
+mod zkp_compiler;
 
 /**
  * This module contains types used during [`fhe_program`] construction.
@@ -83,6 +84,9 @@ pub use sunscreen_runtime::{
     FheProgramInputTrait, FheProgramMetadata, InnerCiphertext, InnerPlaintext, Params, Plaintext,
     PrivateKey, PublicKey, RequiredKeys, Runtime, WithContext,
 };
+pub use sunscreen_zkp_compiler::{ZkpContext, ZkpFrontendCompilation};
+pub use sunscreen_zkp_compiler_macros::*;
+pub use zkp_compiler::ZkpProgramFn;
 
 #[derive(Clone, Serialize, Deserialize)]
 /**

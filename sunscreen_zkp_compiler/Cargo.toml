@@ -1,0 +1,13 @@
+[package]
+name = "sunscreen_zkp_compiler"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+bumpalo = "3.11.1"
+petgraph = "0.6.2"
+semver = "1.0.14"
+sunscreen_compiler_common = { path = "../sunscreen_compiler_common" }
+sunscreen_zkp_compiler_macros = { path = "../sunscreen_zkp_compiler_macros" }

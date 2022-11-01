@@ -1,0 +1,16 @@
+[package]
+name = "sunscreen_bulletproofs_backend"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+bulletproofs = { version = "4.0.0", features = ["yoloproofs"] }
+merlin = "3.0.0"
+
+[dependencies.curve25519-dalek]
+version = "4"
+features = ["u64_backend", "serde"]
+default-features = false
+package = "curve25519-dalek-ng"

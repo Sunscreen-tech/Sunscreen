@@ -69,6 +69,11 @@ pub mod intern;
  */
 mod ops;
 
+/**
+ * Contains types used in creating zero-knowledge proof R1CS circuits.
+ */
+pub mod zkp;
+
 use crate::types::ops::*;
 
 pub use sunscreen_runtime::{

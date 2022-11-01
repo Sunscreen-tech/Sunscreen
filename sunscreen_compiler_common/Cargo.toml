@@ -1,0 +1,11 @@
+[package]
+name = "sunscreen_compiler_common"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+petgraph = "0.6.2"
+semver = "1.0.14"
+serde = "1.0.147"

@@ -1,0 +1,196 @@
+use std::collections::HashSet;
+
+use petgraph::{
+    dot::Dot,
+    stable_graph::{Edges, Neighbors, NodeIndex, StableGraph},
+    visit::IntoNodeIdentifiers,
+    Directed, Direction,
+};
+
+use crate::Render;
+
+/**
+ * A wrapper for ascertaining the structure of the underlying [`FheProgram`].
+ * This type is used in [`FheProgram::forward_traverse`] and
+ * [`FheProgram::reverse_traverse`] callbacks.
+ */
+pub struct GraphQuery<'a, N, E>(&'a StableGraph<N, E>);
+
+impl<'a, N, E> GraphQuery<'a, N, E> {
+    /**
+     * Creates a new [`GraphQuery`] from a reference to an [`FheProgram`].
+     */
+    pub fn new(ir: &'a StableGraph<N, E>) -> Self {
+        Self(ir)
+    }
+
+    pub fn get_node(&self, x: NodeIndex) -> &N {
+        &self.0[x]
+    }
+
+    pub fn neighbors_directed(&self, x: NodeIndex, direction: Direction) -> Neighbors<E> {
+        self.0.neighbors_directed(x, direction)
+    }
+
+    pub fn edges_directed(&self, x: NodeIndex, direction: Direction) -> Edges<E, Directed> {
+        self.0.edges_directed(x, direction)
+    }
+}
+
+pub trait TransformList<N, E>
+where
+    N: Copy,
+    E: Copy,
+{
+    fn apply(&mut self, graph: &mut StableGraph<N, E>);
+}
+
+/**
+ * A specialized topological DAG traversal that allows the following graph
+ * mutations during traversal:
+ * * Delete the current node
+ * * Insert nodoes after current node
+ * * Add new nodes with no dependencies
+ *
+ * Any other graph mutation will likely result in unvisited nodes.
+ *
+ * * `callback`: A closure that receives the current node index and an object allowing
+ *   you to make graph queryes. This closure returns a transform list.
+ *   [`forward_traverse`](Self::forward_traverse) will apply these transformations
+ *   before continuing the traversal.
+ */
+pub fn forward_traverse<N, E, F, T>(graph: &mut StableGraph<N, E>, callback: F)
+where
+    N: Copy,
+    E: Copy,
+    T: TransformList<N, E>,
+    F: FnMut(GraphQuery<N, E>, NodeIndex) -> T,
+{
+    traverse(graph, true, callback);
+}
+
+/**
+ * A specialized reverse topological DAG traversal that allows the following graph
+ * mutations during traversal:
+ * * Delete the current node
+ * * Insert nodoes after current node
+ * * Add new nodes with no dependencies
+ *
+ * Any other graph mutation will likely result in unvisited nodes.
+ *
+ * * `callback`: A closure that receives the current node index and an object allowing
+ *   you to make graph queryes. This closure returns a transform list.
+ *   [`reverse_traverse`](Self::reverse_traverse) will apply these transformations
+ *   before continuing the traversal.
+ */
+pub fn reverse_traverse<N, E, F, T>(graph: &mut StableGraph<N, E>, callback: F)
+where
+    N: Copy,
+    E: Copy,
+    T: TransformList<N, E>,
+    F: FnMut(GraphQuery<N, E>, NodeIndex) -> T,
+{
+    traverse(graph, false, callback);
+}
+
+fn traverse<N, E, T, F>(graph: &mut StableGraph<N, E>, forward: bool, mut callback: F)
+where
+    N: Copy,
+    E: Copy,
+    F: FnMut(GraphQuery<N, E>, NodeIndex) -> T,
+    T: TransformList<N, E>,
+{
+    let mut ready: HashSet<NodeIndex> = HashSet::new();
+    let mut visited: HashSet<NodeIndex> = HashSet::new();
+    let prev_direction = if forward {
+        Direction::Incoming
+    } else {
+        Direction::Outgoing
+    };
+    let next_direction = if forward {
+        Direction::Outgoing
+    } else {
+        Direction::Incoming
+    };
+
+    let mut ready_nodes: Vec<NodeIndex> = graph
+        .node_identifiers()
+        .filter(|&x| graph.neighbors_directed(x, prev_direction).next().is_none())
+        .collect();
+
+    for i in &ready_nodes {
+        ready.insert(*i);
+    }
+
+    while let Some(n) = ready_nodes.pop() {
+        visited.insert(n);
+
+        // Remember the next nodes from the current node in case it gets deletes.
+        let next_nodes: Vec<NodeIndex> = graph.neighbors_directed(n, next_direction).collect();
+
+        let mut transforms = callback(GraphQuery(graph), n);
+
+        // Apply the transforms the callback produced
+        transforms.apply(graph);
+
+        let node_ready = |n: NodeIndex| {
+            graph
+                .neighbors_directed(n, prev_direction)
+                .all(|m| visited.contains(&m))
+        };
+
+        // If the node still exists, push all its ready dependents
+        if graph.contains_node(n) {
+            for i in graph.neighbors_directed(n, next_direction) {
+                if !ready.contains(&i) && node_ready(i) {
+                    ready.insert(i);
+                    ready_nodes.push(i);
+                }
+            }
+        }
+
+        // Iterate through the next nodes that existed before visitin this node.
+        for i in next_nodes {
+            if !ready.contains(&i) && node_ready(i) {
+                ready.insert(i);
+                ready_nodes.push(i);
+            }
+        }
+
+        // Iterate through any sources/sinks the callback may have added.
+        let sources = graph
+            .node_identifiers()
+            .filter(|&x| graph.neighbors_directed(x, prev_direction).next().is_none());
+
+        for i in sources {
+            if !ready.contains(&i) {
+                ready.insert(i);
+                ready_nodes.push(i);
+            }
+        }
+    }
+}
+
+impl<N, E> Render for StableGraph<N, E>
+where
+    N: Render + std::fmt::Debug,
+    E: Render + std::fmt::Debug,
+{
+    fn render(&self) -> String {
+        let data = Dot::with_attr_getters(
+            self,
+            &[
+                petgraph::dot::Config::NodeNoLabel,
+                petgraph::dot::Config::EdgeNoLabel,
+            ],
+            &|_, e| format!("label=\"{}\"", e.weight().render()),
+            &|_, n| {
+                let (index, info) = n;
+
+                format!("label=\"{}: {}\"", index.index(), info.render())
+            },
+        );
+
+        format!("{:?}", data)
+    }
+}

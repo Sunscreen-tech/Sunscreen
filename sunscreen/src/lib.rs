@@ -38,8 +38,8 @@
 //! ```
 //!
 
-mod compiler;
 mod error;
+mod fhe_compiler;
 mod params;
 
 /**
@@ -72,8 +72,8 @@ use sunscreen_fhe_program::{
     EdgeInfo, FheProgram, Literal as FheProgramLiteral, NodeInfo, Operation as FheProgramOperation,
 };
 
-pub use compiler::{Compiler, FheProgramFn};
 pub use error::{Error, Result};
+pub use fhe_compiler::{Compiler, FheProgramFn};
 pub use params::PlainModulusConstraint;
 pub use seal_fhe::Plaintext as SealPlaintext;
 pub use sunscreen_compiler_macros::*;

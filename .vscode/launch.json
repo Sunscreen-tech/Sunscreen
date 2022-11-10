@@ -193,6 +193,25 @@
         {
             "type": "lldb",
             "request": "launch",
+            "name": "Debug unit tests in library 'sunscreen_compiler_common'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=sunscreen_compiler_common"
+                ],
+                "filter": {
+                    "name": "sunscreen_compiler_common",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
             "name": "Debug unit tests in library 'sunscreen'",
             "cargo": {
                 "args": [
@@ -279,25 +298,6 @@
                 ],
                 "filter": {
                     "name": "rational",
-                    "kind": "test"
-                }
-            },
-            "args": [],
-            "cwd": "${workspaceFolder}"
-        },
-        {
-            "type": "lldb",
-            "request": "launch",
-            "name": "Debug integration test 'zkp_program_tests'",
-            "cargo": {
-                "args": [
-                    "test",
-                    "--no-run",
-                    "--test=zkp_program_tests",
-                    "--package=sunscreen"
-                ],
-                "filter": {
-                    "name": "zkp_program_tests",
                     "kind": "test"
                 }
             },
@@ -728,82 +728,6 @@
                 "filter": {
                     "name": "pir",
                     "kind": "bin"
-                }
-            },
-            "args": [],
-            "cwd": "${workspaceFolder}"
-        },
-        {
-            "type": "lldb",
-            "request": "launch",
-            "name": "Debug unit tests in library 'sunscreen_zkp_compiler'",
-            "cargo": {
-                "args": [
-                    "test",
-                    "--no-run",
-                    "--lib",
-                    "--package=sunscreen_zkp_compiler"
-                ],
-                "filter": {
-                    "name": "sunscreen_zkp_compiler",
-                    "kind": "lib"
-                }
-            },
-            "args": [],
-            "cwd": "${workspaceFolder}"
-        },
-        {
-            "type": "lldb",
-            "request": "launch",
-            "name": "Debug unit tests in library 'sunscreen_compiler_common'",
-            "cargo": {
-                "args": [
-                    "test",
-                    "--no-run",
-                    "--lib",
-                    "--package=sunscreen_compiler_common"
-                ],
-                "filter": {
-                    "name": "sunscreen_compiler_common",
-                    "kind": "lib"
-                }
-            },
-            "args": [],
-            "cwd": "${workspaceFolder}"
-        },
-        {
-            "type": "lldb",
-            "request": "launch",
-            "name": "Debug unit tests in library 'sunscreen_compiler_macros_common'",
-            "cargo": {
-                "args": [
-                    "test",
-                    "--no-run",
-                    "--lib",
-                    "--package=sunscreen_compiler_macros_common"
-                ],
-                "filter": {
-                    "name": "sunscreen_compiler_macros_common",
-                    "kind": "lib"
-                }
-            },
-            "args": [],
-            "cwd": "${workspaceFolder}"
-        },
-        {
-            "type": "lldb",
-            "request": "launch",
-            "name": "Debug unit tests in library 'sunscreen_bulletproofs_backend'",
-            "cargo": {
-                "args": [
-                    "test",
-                    "--no-run",
-                    "--lib",
-                    "--package=sunscreen_bulletproofs_backend"
-                ],
-                "filter": {
-                    "name": "sunscreen_bulletproofs_backend",
-                    "kind": "lib"
                 }
             },
             "args": [],

@@ -1,16 +1,11 @@
 use rlp::encode_list;
 use seal_fhe::SecurityLevel;
 pub use semver::Version;
-use serde::{
-    de::{self, Error as DeError, Visitor},
-    Deserialize, Deserializer, Serialize, Serializer,
-};
+use serde::{Deserialize, Serialize};
 use sunscreen_compiler_common::Type;
 use sunscreen_fhe_program::{FheProgram, SchemeType};
 
 use crate::{Error, Result};
-
-use std::str::FromStr;
 
 /**
  * Indicates the type signatures of an Fhe Program. Serves as a piece of the [`FheProgramMetadata`].

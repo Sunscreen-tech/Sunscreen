@@ -339,8 +339,8 @@ mod tests {
         // We can't check for edge equality, since left and right
         // operands can get permuted for commutative operations.
         let equals = is_isomorphic_matching(
-            &Graph::from(fe.0.clone()),
-            &Graph::from(expected.0.clone()),
+            &Graph::from(fe.0),
+            &Graph::from(expected.0),
             |x, y| x == y,
             |x, y| x == y,
         );

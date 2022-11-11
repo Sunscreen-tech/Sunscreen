@@ -1,10 +1,11 @@
 use std::collections::HashSet;
 
 use petgraph::{
+    data::DataMap,
     dot::Dot,
     stable_graph::{Edges, Neighbors, NodeIndex, StableGraph},
     visit::IntoNodeIdentifiers,
-    Directed, Direction, data::DataMap,
+    Directed, Direction,
 };
 
 use crate::Render;

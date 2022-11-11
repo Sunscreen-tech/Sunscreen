@@ -1,6 +1,138 @@
 {
+    "version": "0.2.0",
     "configurations": [
-
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'cannonical_norm_noise_model'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=cannonical_norm_noise_model",
+                    "--package=cannonical_norm_noise_model"
+                ],
+                "filter": {
+                    "name": "cannonical_norm_noise_model",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'cannonical_norm_noise_model'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=cannonical_norm_noise_model",
+                    "--package=cannonical_norm_noise_model"
+                ],
+                "filter": {
+                    "name": "cannonical_norm_noise_model",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'seal_fhe'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=seal_fhe"
+                ],
+                "filter": {
+                    "name": "seal_fhe",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'test_common'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=test_common",
+                    "--package=seal_fhe"
+                ],
+                "filter": {
+                    "name": "test_common",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'assumptions'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=assumptions",
+                    "--package=seal_fhe"
+                ],
+                "filter": {
+                    "name": "assumptions",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'emsdk'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=emsdk"
+                ],
+                "filter": {
+                    "name": "emsdk",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'sunscreen_backend'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=sunscreen_backend"
+                ],
+                "filter": {
+                    "name": "sunscreen_backend",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
         {
             "type": "lldb",
             "request": "launch",
@@ -42,11 +174,12 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug serialization tests in library 'sunscreen_runtime'",
+            "name": "Debug integration test 'serialization'",
             "cargo": {
                 "args": [
                     "test",
                     "--no-run",
+                    "--test=serialization",
                     "--package=sunscreen_runtime"
                 ],
                 "filter": {
@@ -60,57 +193,17 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug unit tests in library 'sunscreen_backend'",
+            "name": "Debug unit tests in library 'sunscreen_compiler_common'",
             "cargo": {
                 "args": [
                     "test",
                     "--no-run",
                     "--lib",
-                    "--package=sunscreen_backend"
+                    "--package=sunscreen_compiler_common"
                 ],
                 "filter": {
-                    "name": "sunscreen_backend",
+                    "name": "sunscreen_compiler_common",
                     "kind": "lib"
-                }
-            },
-            "args": [],
-            "cwd": "${workspaceFolder}",
-            "env": {
-                "RUST_LOG": "TRACE",
-            }
-        },
-        {
-            "type": "lldb",
-            "request": "launch",
-            "name": "Debug unit tests in library 'seal_fhe'",
-            "cargo": {
-                "args": [
-                    "test",
-                    "--no-run",
-                    "--lib",
-                    "--package=seal_fhe"
-                ],
-                "filter": {
-                    "name": "seal_fhe",
-                    "kind": "lib"
-                }
-            },
-            "args": [],
-            "cwd": "${workspaceFolder}"
-        },
-        {
-            "type": "lldb",
-            "request": "launch",
-            "name": "Debug assumption tests in library 'seal_fhe'",
-            "cargo": {
-                "args": [
-                    "test",
-                    "--no-run",
-                    "--package=seal_fhe"
-                ],
-                "filter": {
-                    "name": "assumptions",
-                    "kind": "test"
                 }
             },
             "args": [],
@@ -138,11 +231,88 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug edge_cases tests in library 'sunscreen'",
+            "name": "Debug integration test 'fhe_program_tests'",
             "cargo": {
                 "args": [
                     "test",
                     "--no-run",
+                    "--test=fhe_program_tests",
+                    "--package=sunscreen"
+                ],
+                "filter": {
+                    "name": "fhe_program_tests",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'fractional'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=fractional",
+                    "--package=sunscreen"
+                ],
+                "filter": {
+                    "name": "fractional",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'simd'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=simd",
+                    "--package=sunscreen"
+                ],
+                "filter": {
+                    "name": "simd",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'rational'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=rational",
+                    "--package=sunscreen"
+                ],
+                "filter": {
+                    "name": "rational",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'edge_cases'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=edge_cases",
                     "--package=sunscreen"
                 ],
                 "filter": {
@@ -156,60 +326,13 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug signed integration tests in library 'sunscreen'",
+            "name": "Debug integration test 'multi_program'",
             "cargo": {
                 "args": [
                     "test",
                     "--no-run",
-                    "--package=sunscreen",
-                ],
-                "filter": {
-                    "name": "signed",
-                    "kind": "test"
-                }
-            },
-            "args": [],
-            "cwd": "${workspaceFolder}"
-        },
-        {
-            "type": "lldb",
-            "request": "launch",
-            "name": "Debug array integration tests in library 'sunscreen'",
-            "cargo": {
-                "args": [
-                    "test",
-                    "--no-run",
-                    "--test=array",
-                    "--package=sunscreen",
-                ],
-            },
-            "args": [],
-            "cwd": "${workspaceFolder}"
-        },
-        {
-            "type": "lldb",
-            "request": "launch",
-            "name": "Debug simd integration tests in library 'sunscreen'",
-            "cargo": {
-                "args": [
-                    "test",
-                    "--no-run",
-                    "--test=simd",
-                    "--package=sunscreen",
-                ],
-            },
-            "args": ["can_rotate_left_cipher"],
-            "cwd": "${workspaceFolder}"
-        },
-        {
-            "type": "lldb",
-            "request": "launch",
-            "name": "Debug multi_program integration tests in library 'sunscreen'",
-            "cargo": {
-                "args": [
-                    "test",
-                    "--no-run",
-                    "--package=sunscreen",
+                    "--test=multi_program",
+                    "--package=sunscreen"
                 ],
                 "filter": {
                     "name": "multi_program",
@@ -222,12 +345,70 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug chaining integration tests in library 'sunscreen'",
+            "name": "Debug integration test 'array'",
             "cargo": {
                 "args": [
                     "test",
                     "--no-run",
-                    "--package=sunscreen",
+                    "--test=array",
+                    "--package=sunscreen"
+                ],
+                "filter": {
+                    "name": "array",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'encrypt_decrypt'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=encrypt_decrypt",
+                    "--package=sunscreen"
+                ],
+                "filter": {
+                    "name": "encrypt_decrypt",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'typename_tests'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=typename_tests",
+                    "--package=sunscreen"
+                ],
+                "filter": {
+                    "name": "typename_tests",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'chaining'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=chaining",
+                    "--package=sunscreen"
                 ],
                 "filter": {
                     "name": "chaining",
@@ -240,15 +421,16 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug fractional integration tests in library 'sunscreen'",
+            "name": "Debug integration test 'signed'",
             "cargo": {
                 "args": [
                     "test",
                     "--no-run",
-                    "--package=sunscreen",
+                    "--test=signed",
+                    "--package=sunscreen"
                 ],
                 "filter": {
-                    "name": "fractional",
+                    "name": "signed",
                     "kind": "test"
                 }
             },
@@ -258,147 +440,16 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug rational integration tests in library 'sunscreen'",
-            "cargo": {
-                "args": [
-                    "test",
-                    "--no-run",
-                    "--package=sunscreen",
-                ],
-                "filter": {
-                    "name": "rational",
-                    "kind": "test"
-                }
-            },
-            "args": [],
-            "cwd": "${workspaceFolder}"
-        },
-        {
-            "type": "lldb",
-            "request": "launch",
-            "name": "Debug batched integration tests in library 'sunscreen'",
-            "cargo": {
-                "args": [
-                    "test",
-                    "--no-run",
-                    "--package=sunscreen",
-                ],
-                "filter": {
-                    "name": "batched",
-                    "kind": "test"
-                }
-            },
-            "args": [],
-            "cwd": "${workspaceFolder}"
-        },
-        {
-            "type": "lldb",
-            "request": "launch",
-            "name": "Debug tests in library 'sunscreen_compiler_macros'",
-            "cargo": {
-                "args": [
-                    "test",
-                    "--no-run",
-                    "--package=sunscreen_compiler_macros"
-                ],
-                "filter": {
-                    "name": "fhe_program_tests",
-                    "kind": "test"
-                }
-            },
-            "args": [],
-            "cwd": "${workspaceFolder}"
-        },
-        {
-            "type": "lldb",
-            "request": "launch",
-            "name": "Debug unit tests in library 'sunscreen_compiler_macros'",
-            "cargo": {
-                "args": [
-                    "test",
-                    "--no-run",
-                    "--lib",
-                    "--package=sunscreen_compiler_macros"
-                ],
-                "filter": {
-                    "name": "sunscreen_compiler_macros",
-                    "kind": "lib"
-                }
-            },
-            "args": [],
-            "cwd": "${workspaceFolder}"
-        },
-        {
-            "type": "lldb",
-            "request": "launch",
-            "name": "Debug binary 'calculator'",
-            "args": [],
-            "program": "${workspaceFolder}/target/debug/calculator",
-            "cwd": "${workspaceFolder}"
-        },
-        {
-            "type": "lldb",
-            "request": "launch",
-            "name": "Debug binary 'dot_prod'",
+            "name": "Debug executable 'amm'",
             "cargo": {
                 "args": [
                     "build",
-                    "--package=dot_prod"
-                ],
-                "filter": {
-                    "kind": "bin",
-                    "name": "dot_prod"
-                }
-            },
-            "args": [],
-            "cwd": "${workspaceFolder}"
-        },
-        {
-            "type": "lldb",
-            "request": "launch",
-            "name": "Debug binary 'chi_sq'",
-            "cargo": {
-                "args": [
-                    "build",
-                    "--package=chi_sq"
-                ],
-                "filter": {
-                    "kind": "bin",
-                    "name": "chi_sq"
-                }
-            },
-            "args": [],
-            "cwd": "${workspaceFolder}"
-        },
-        {
-            "type": "lldb",
-            "request": "launch",
-            "name": "Debug binary 'mean_variance'",
-            "cargo": {
-                "args": [
-                    "build",
-                    "--package=mean_variance"
-                ],
-                "filter": {
-                    "kind": "bin",
-                    "name": "mean_variance"
-                }
-            },
-            "args": [],
-            "cwd": "${workspaceFolder}"
-        },
-        {
-            "type": "lldb",
-            "request": "launch",
-            "name": "Debug binary 'amm'",
-            "cargo": {
-                "args": [
-                    "build",
+                    "--bin=amm",
                     "--package=amm"
                 ],
                 "filter": {
-                    "kind": "bin",
-                    "name": "amm"
+                    "name": "amm",
+                    "kind": "bin"
                 }
             },
             "args": [],
@@ -407,15 +458,276 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug binary 'pir'",
+            "name": "Debug unit tests in executable 'amm'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=amm",
+                    "--package=amm"
+                ],
+                "filter": {
+                    "name": "amm",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'simple_multiply'",
             "cargo": {
                 "args": [
                     "build",
+                    "--bin=simple_multiply",
+                    "--package=simple_multiply"
+                ],
+                "filter": {
+                    "name": "simple_multiply",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'simple_multiply'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=simple_multiply",
+                    "--package=simple_multiply"
+                ],
+                "filter": {
+                    "name": "simple_multiply",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'calculator_rational'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=calculator_rational",
+                    "--package=calculator_rational"
+                ],
+                "filter": {
+                    "name": "calculator_rational",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'calculator_rational'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=calculator_rational",
+                    "--package=calculator_rational"
+                ],
+                "filter": {
+                    "name": "calculator_rational",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'calculator_fractional'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=calculator_fractional",
+                    "--package=calculator_fractional"
+                ],
+                "filter": {
+                    "name": "calculator_fractional",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'calculator_fractional'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=calculator_fractional",
+                    "--package=calculator_fractional"
+                ],
+                "filter": {
+                    "name": "calculator_fractional",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'chi_sq'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=chi_sq",
+                    "--package=chi_sq"
+                ],
+                "filter": {
+                    "name": "chi_sq",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'chi_sq'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=chi_sq",
+                    "--package=chi_sq"
+                ],
+                "filter": {
+                    "name": "chi_sq",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'dot_prod'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=dot_prod",
+                    "--package=dot_prod"
+                ],
+                "filter": {
+                    "name": "dot_prod",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'dot_prod'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=dot_prod",
+                    "--package=dot_prod"
+                ],
+                "filter": {
+                    "name": "dot_prod",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'mean_variance'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=mean_variance",
+                    "--package=mean_variance"
+                ],
+                "filter": {
+                    "name": "mean_variance",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'mean_variance'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=mean_variance",
+                    "--package=mean_variance"
+                ],
+                "filter": {
+                    "name": "mean_variance",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'pir'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=pir",
                     "--package=pir"
                 ],
                 "filter": {
-                    "kind": "bin",
-                    "name": "pir"
+                    "name": "pir",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'pir'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=pir",
+                    "--package=pir"
+                ],
+                "filter": {
+                    "name": "pir",
+                    "kind": "bin"
                 }
             },
             "args": [],

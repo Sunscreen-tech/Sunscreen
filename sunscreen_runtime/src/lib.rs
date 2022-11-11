@@ -270,17 +270,6 @@ pub trait BfvType: FheType {}
 /**
  * A trait the gives a name an version to a given type
  */
-pub trait TypeName {
-    /**
-     * Returns the [`Type`] of the `&self`. Lives only on the instance so you can be object-safe
-     * for use in `dyn TypeName`.
-     */
-    fn type_name() -> Type;
-}
-
-/**
- * A trait the gives a name an version to a given type
- */
 pub trait TypeNameInstance {
     /**
      * Returns the [`Type`] of the `&self`. Lives only on the instance so you can be object-safe

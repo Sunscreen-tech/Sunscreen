@@ -59,20 +59,6 @@ where
     }
 }
 
-impl<T, const N: usize> TypeName for [T; N]
-where
-    T: TypeName,
-{
-    fn type_name() -> Type {
-        let inner_type = T::type_name();
-
-        Type {
-            name: format!("[{};{}]", inner_type.name, N),
-            ..inner_type
-        }
-    }
-}
-
 impl<T, const N: usize> TypeNameInstance for [T; N]
 where
     T: TypeName,

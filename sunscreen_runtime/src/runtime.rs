@@ -3,14 +3,17 @@ use crate::metadata::*;
 use crate::{
     run_program_unchecked, serialization::WithContext, Ciphertext, FheProgramInput,
     InnerCiphertext, InnerPlaintext, Plaintext, PrivateKey, PublicKey, SealCiphertext, SealData,
-    SealPlaintext, TryFromPlaintext, TryIntoPlaintext, TypeName, TypeNameInstance,
+    SealPlaintext, TryFromPlaintext, TryIntoPlaintext, TypeNameInstance,
 };
+
 use sunscreen_fhe_program::SchemeType;
 
 use seal_fhe::{
     BFVEvaluator, BfvEncryptionParametersBuilder, Context as SealContext, Decryptor, Encryptor,
     KeyGenerator, Modulus,
 };
+
+pub use sunscreen_compiler_common::{Type, TypeName};
 
 enum Context {
     Seal(SealContext),

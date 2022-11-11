@@ -131,11 +131,11 @@ impl<'de> Deserialize<'de> for Type {
         let type_string = deserializer.deserialize_string(TypeNameVisitor)?;
 
         let mut splits = type_string.split(',');
-        let typename = splits.next().ok_or_else(|| D::Error::custom(""))?;
-        let version = Version::parse(splits.next().ok_or_else(|| D::Error::custom(""))?)
+        let typename = splits.next().ok_or_else(|| D::Error::custom("Malformed `Type`: missing name."))?;
+        let version = Version::parse(splits.next().ok_or_else(|| D::Error::custom("Malformed `Type`: missing version."))?)
             .map_err(|e| de::Error::custom(format!("Failed to parse version: {}", e)))?;
 
-        let is_encrypted = bool::from_str(splits.next().ok_or_else(|| D::Error::custom(""))?)
+        let is_encrypted = bool::from_str(splits.next().ok_or_else(|| D::Error::custom("Malformed `Type`: missing is_encrypted."))?)
             .map_err(|e| de::Error::custom(format!("Failed to parse boolean: {}", e)))?;
 
         Ok(Self {

@@ -75,13 +75,13 @@ where
  * A specialized topological DAG traversal that allows the following graph
  * mutations during traversal:
  * * Delete the current node
- * * Insert nodoes after current node
+ * * Insert nodes after current node
  * * Add new nodes with no dependencies
  *
  * Any other graph mutation will likely result in unvisited nodes.
  *
  * * `callback`: A closure that receives the current node index and an object allowing
- *   you to make graph queryes. This closure returns a transform list.
+ *   you to make graph queries. This closure returns a transform list.
  *   [`forward_traverse`](Self::forward_traverse) will apply these transformations
  *   before continuing the traversal.
  */
@@ -99,13 +99,13 @@ where
  * A specialized reverse topological DAG traversal that allows the following graph
  * mutations during traversal:
  * * Delete the current node
- * * Insert nodoes after current node
+ * * Insert nodes after current node
  * * Add new nodes with no dependencies
  *
  * Any other graph mutation will likely result in unvisited nodes.
  *
  * * `callback`: A closure that receives the current node index and an object allowing
- *   you to make graph queryes. This closure returns a transform list.
+ *   you to make graph queries. This closure returns a transform list.
  *   [`reverse_traverse`](Self::reverse_traverse) will apply these transformations
  *   before continuing the traversal.
  */
@@ -144,14 +144,12 @@ where
         .filter(|&x| graph.neighbors_directed(x, prev_direction).next().is_none())
         .collect();
 
-    for i in &ready_nodes {
-        ready.insert(*i);
-    }
-
+    ready.extend(ready_nodes.iter());
+    
     while let Some(n) = ready_nodes.pop() {
         visited.insert(n);
 
-        // Remember the next nodes from the current node in case it gets deletes.
+        // Remember the next nodes from the current node in case it gets deleted.
         let next_nodes: Vec<NodeIndex> = graph.neighbors_directed(n, next_direction).collect();
 
         let mut transforms = callback(GraphQuery(graph), n);
@@ -175,7 +173,7 @@ where
             }
         }
 
-        // Iterate through the next nodes that existed before visitin this node.
+        // Iterate through the next nodes that existed before visiting this node.
         for i in next_nodes {
             if !ready.contains(&i) && node_ready(i) {
                 ready.insert(i);

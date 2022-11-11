@@ -2,27 +2,75 @@ use petgraph::stable_graph::NodeIndex;
 
 use crate::graph::TransformList;
 
+/**
+ * The index type for referring to nodes in the current transform list
+ * that have not yet been added to the graph.
+ */
 pub type DeferredIndex = usize;
 
 #[derive(Clone, Copy)]
+/**
+ * The index of a graph node, either in the compilation graph or 
+ * resulting from a previous unapplied transformation.
+ */
 pub enum TransformNodeIndex {
+    /**
+     * Refers to the node in the compilation graph at the contained 
+     * index.
+     */
     NodeIndex(NodeIndex),
+    
+    /**
+     * Refers to the node resulting from a previous [`AddNode`] 
+     * transform.
+     */
     DeferredIndex(DeferredIndex),
 }
 
+/**
+ * A request to transform the graph as appropriate.
+ */
 pub enum Transform<N, E> {
+    /**
+     * Add an edge between two nodes at the given edges.
+     * 
+     * # Remarks
+     * The tuple is of the form (from, to, edge).
+     */
     AddEdge(TransformNodeIndex, TransformNodeIndex, E),
+
+    /**
+     * Add the given node to the compilation graph.
+     */
     AddNode(N),
+
+    /**
+     * Remove the node at the given index. This will implicitly remove
+     * any edges referencing the node.
+     */
     RemoveNode(TransformNodeIndex),
+
+    /**
+     * Remove an edge between two nodes.
+     * 
+     * # Remarks
+     * The tuple is of the form (from, to)
+     */
     RemoveEdge(TransformNodeIndex, TransformNodeIndex),
 }
 
+/**
+ * A datastructure for holding a sequence of graph transformations.
+ */
 pub struct GraphTransforms<N, E> {
     transforms: Vec<Transform<N, E>>,
     inserted_node_ids: Vec<Option<NodeIndex>>,
 }
 
 impl<N, E> GraphTransforms<N, E> {
+    /**
+     * Creates a new [`GraphTransforms`].
+     */
     pub fn new() -> Self {
         Self {
             transforms: vec![],
@@ -54,6 +102,16 @@ impl<N, E> GraphTransforms<N, E> {
         self.transforms.push(t);
 
         self.transforms.len() - 1
+    }
+}
+
+impl<N, E> Default for GraphTransforms<N, E>
+where
+    N: Copy,
+    E: Copy,
+{
+    fn default() -> Self {
+        Self::new()
     }
 }
 

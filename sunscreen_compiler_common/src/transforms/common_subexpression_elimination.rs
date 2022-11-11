@@ -39,7 +39,7 @@ fn get_binary_operands<O: Operation>(
             let left_edge = edge_infos[0].source();
             let right_edge = edge_infos[1].source();
 
-            return (left_edge, right_edge);
+            (left_edge, right_edge)
         }
         EdgeInfo::Right => {
             assert!(edge_infos[1].weight().is_left());
@@ -47,12 +47,26 @@ fn get_binary_operands<O: Operation>(
             let left_edge = edge_infos[1].source();
             let right_edge = edge_infos[0].source();
 
-            return (left_edge, right_edge);
+            (left_edge, right_edge)
         }
         _ => panic!("Unexpected edge type"),
-    };
+    }
 }
 
+/**
+ * For the given compilation graph, perform common subexpression 
+ * elimination (CSE).
+ * 
+ * # Remarks
+ * CSE is an optimization that collapses and reuses redundance 
+ * computations. For example:
+ * ```
+ * a = b + c * d
+ * e = c * d + 42
+ * ```
+ * The `c * d` subexpression can be computed once and shared between
+ * the two expressions.
+ */
 pub fn common_subexpression_elimination<O: Operation>(
     graph: &mut StableGraph<NodeInfo<O>, EdgeInfo>,
 ) {

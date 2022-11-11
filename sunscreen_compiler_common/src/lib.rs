@@ -1,5 +1,14 @@
+#![deny(missing_docs)]
+#![deny(rustdoc::broken_intra_doc_links)]
+
+//! This crate contains common types and infrastructure for Sunscreen's
+//! compilers.
+
 mod context;
 mod graph;
+/**
+ * A set of generic compiler transforms.
+ */
 pub mod transforms;
 
 pub use context::*;
@@ -20,6 +29,9 @@ use std::str::FromStr;
  * tooling (e.g. DotViz, HTML, etc.)
  */
 pub trait Render {
+    /**
+     * Render this object into a visual representation.
+     */
     fn render(&self) -> String;
 }
 
@@ -30,10 +42,19 @@ pub trait Render {
  * Also provides functions that describe properties of an operation.
  */
 pub trait Operation: Clone + Copy + Debug + Hash + PartialEq + Eq {
+    /**
+     * Whether or not this operation commutes.
+     */
     fn is_commutative(&self) -> bool;
 
+    /**
+     * Whether or not this operation has 2 operands.
+     */
     fn is_binary(&self) -> bool;
 
+    /**
+     * Whether or not this operation has 1 operand.
+     */
     fn is_unary(&self) -> bool;
 }
 

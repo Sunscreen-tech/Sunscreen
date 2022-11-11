@@ -18,30 +18,56 @@ pub struct GraphQuery<'a, N, E>(&'a StableGraph<N, E>);
 
 impl<'a, N, E> GraphQuery<'a, N, E> {
     /**
-     * Creates a new [`GraphQuery`] from a reference to an [`FheProgram`].
+     * Creates a new [`GraphQuery`] from a reference to a
+     * [`StableGraph`].
      */
     pub fn new(ir: &'a StableGraph<N, E>) -> Self {
         Self(ir)
     }
 
+    /**
+     * Gets a node from its index.
+     */
     pub fn get_node(&self, x: NodeIndex) -> &N {
         &self.0[x]
     }
 
+    /**
+     * Gets information about the immediate parent or child nodes of 
+     * the node at the given index.
+     * 
+     * # Remarks
+     * [`Direction::Outgoing`] gives children, while
+     * [`Direction::Incoming`] gives parents.
+     */
     pub fn neighbors_directed(&self, x: NodeIndex, direction: Direction) -> Neighbors<E> {
         self.0.neighbors_directed(x, direction)
     }
 
+    /**
+     * Gets edges pointing at the parent or child nodes of the node at
+     * the given index.
+     * 
+     * # Remarks
+     * [`Direction::Outgoing`] gives children, while
+     * [`Direction::Incoming`] gives parents.
+     */
     pub fn edges_directed(&self, x: NodeIndex, direction: Direction) -> Edges<E, Directed> {
         self.0.edges_directed(x, direction)
     }
 }
 
+/**
+ * A list of transformations that should be applied to the graph.
+ */
 pub trait TransformList<N, E>
 where
     N: Copy,
     E: Copy,
 {
+    /**
+     * Apply the transformations.
+     */
     fn apply(&mut self, graph: &mut StableGraph<N, E>);
 }
 

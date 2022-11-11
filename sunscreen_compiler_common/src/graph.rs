@@ -10,9 +10,9 @@ use petgraph::{
 use crate::Render;
 
 /**
- * A wrapper for ascertaining the structure of the underlying [`FheProgram`].
- * This type is used in [`FheProgram::forward_traverse`] and
- * [`FheProgram::reverse_traverse`] callbacks.
+ * A wrapper for ascertaining the structure of the underlying graph.
+ * This type is used in [`forward_traverse`] and
+ * [`reverse_traverse`] callbacks.
  */
 pub struct GraphQuery<'a, N, E>(&'a StableGraph<N, E>);
 
@@ -82,7 +82,7 @@ where
  *
  * * `callback`: A closure that receives the current node index and an object allowing
  *   you to make graph queries. This closure returns a transform list.
- *   [`forward_traverse`](Self::forward_traverse) will apply these transformations
+ *   [`forward_traverse`] will apply these transformations
  *   before continuing the traversal.
  */
 pub fn forward_traverse<N, E, F, T>(graph: &mut StableGraph<N, E>, callback: F)
@@ -106,7 +106,7 @@ where
  *
  * * `callback`: A closure that receives the current node index and an object allowing
  *   you to make graph queries. This closure returns a transform list.
- *   [`reverse_traverse`](Self::reverse_traverse) will apply these transformations
+ *   [`reverse_traverse`] will apply these transformations
  *   before continuing the traversal.
  */
 pub fn reverse_traverse<N, E, F, T>(graph: &mut StableGraph<N, E>, callback: F)

@@ -21,7 +21,7 @@ pub enum TransformNodeIndex {
     NodeIndex(NodeIndex),
     
     /**
-     * Refers to the node resulting from a previous [`AddNode`] 
+     * Refers to the node resulting from a previous [`Transform::AddNode`] 
      * transform.
      */
     DeferredIndex(DeferredIndex),

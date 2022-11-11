@@ -81,7 +81,8 @@ pub fn common_subexpression_elimination<O: Operation>(
         // type that share an edge with another node, consolidate them into
         // one and fix up their outputs.
         for e in query.neighbors_directed(index, Direction::Outgoing) {
-            let child_node = query.get_node(e);
+            // Unwrapping is okay because index e is a node in the graph.
+            let child_node = query.get_node(e).unwrap();
 
             // Moves all the edges from removed_node to node_to_add and
             // deleted removed_node

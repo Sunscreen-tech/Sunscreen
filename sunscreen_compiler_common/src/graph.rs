@@ -4,7 +4,7 @@ use petgraph::{
     dot::Dot,
     stable_graph::{Edges, Neighbors, NodeIndex, StableGraph},
     visit::IntoNodeIdentifiers,
-    Directed, Direction,
+    Directed, Direction, data::DataMap,
 };
 
 use crate::Render;
@@ -28,8 +28,8 @@ impl<'a, N, E> GraphQuery<'a, N, E> {
     /**
      * Gets a node from its index.
      */
-    pub fn get_node(&self, x: NodeIndex) -> &N {
-        &self.0[x]
+    pub fn get_node(&self, x: NodeIndex) -> Option<&N> {
+        self.0.node_weight(x)
     }
 
     /**

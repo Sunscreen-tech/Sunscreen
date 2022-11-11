@@ -33,9 +33,9 @@ impl<'a, N, E> GraphQuery<'a, N, E> {
     }
 
     /**
-     * Gets information about the immediate parent or child nodes of 
+     * Gets information about the immediate parent or child nodes of
      * the node at the given index.
-     * 
+     *
      * # Remarks
      * [`Direction::Outgoing`] gives children, while
      * [`Direction::Incoming`] gives parents.
@@ -47,7 +47,7 @@ impl<'a, N, E> GraphQuery<'a, N, E> {
     /**
      * Gets edges pointing at the parent or child nodes of the node at
      * the given index.
-     * 
+     *
      * # Remarks
      * [`Direction::Outgoing`] gives children, while
      * [`Direction::Incoming`] gives parents.
@@ -145,7 +145,7 @@ where
         .collect();
 
     ready.extend(ready_nodes.iter());
-    
+
     while let Some(n) = ready_nodes.pop() {
         visited.insert(n);
 

@@ -54,11 +54,11 @@ fn get_binary_operands<O: Operation>(
 }
 
 /**
- * For the given compilation graph, perform common subexpression 
+ * For the given compilation graph, perform common subexpression
  * elimination (CSE).
- * 
+ *
  * # Remarks
- * CSE is an optimization that collapses and reuses redundance 
+ * CSE is an optimization that collapses and reuses redundance
  * computations. For example:
  * ```ignore
  * a = b + c * d

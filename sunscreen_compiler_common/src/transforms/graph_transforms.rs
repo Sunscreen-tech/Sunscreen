@@ -10,18 +10,18 @@ pub type DeferredIndex = usize;
 
 #[derive(Clone, Copy)]
 /**
- * The index of a graph node, either in the compilation graph or 
+ * The index of a graph node, either in the compilation graph or
  * resulting from a previous unapplied transformation.
  */
 pub enum TransformNodeIndex {
     /**
-     * Refers to the node in the compilation graph at the contained 
+     * Refers to the node in the compilation graph at the contained
      * index.
      */
     NodeIndex(NodeIndex),
-    
+
     /**
-     * Refers to the node resulting from a previous [`Transform::AddNode`] 
+     * Refers to the node resulting from a previous [`Transform::AddNode`]
      * transform.
      */
     DeferredIndex(DeferredIndex),
@@ -33,7 +33,7 @@ pub enum TransformNodeIndex {
 pub enum Transform<N, E> {
     /**
      * Add an edge between two nodes at the given edges.
-     * 
+     *
      * # Remarks
      * The tuple is of the form (from, to, edge).
      */
@@ -52,7 +52,7 @@ pub enum Transform<N, E> {
 
     /**
      * Remove an edge between two nodes.
-     * 
+     *
      * # Remarks
      * The tuple is of the form (from, to)
      */

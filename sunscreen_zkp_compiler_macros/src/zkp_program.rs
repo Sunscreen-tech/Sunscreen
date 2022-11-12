@@ -95,12 +95,11 @@ pub fn zkp_program_impl(
             fn build(&self) -> sunscreen::Result<sunscreen::ZkpFrontendCompilation> {
                 use std::cell::RefCell;
                 use std::mem::transmute;
-                use sunscreen::{CURRENT_CTX, ZkpContext, Error, INDEX_ARENA, Result, types::{zkp::ProgramNode, TypeName}};
+                use sunscreen::{CURRENT_ZKP_CTX, ZkpContext, Error, INDEX_ARENA, Result, types::{zkp::ProgramNode, TypeName}};
 
-                // TODO: Other schemes.
                 let mut context = ZkpContext::new();
 
-                CURRENT_CTX.with(|ctx| {
+                CURRENT_ZKP_CTX.with(|ctx| {
                     #[allow(clippy::type_complexity)]
                     #[forbid(unused_variables)]
                     let internal = | #(#zkp_program_args)* |
@@ -108,7 +107,7 @@ pub fn zkp_program_impl(
                     ;
 
                     // Transmute away the lifetime to 'static. So long as we are careful with internal()
-                    // panicing, this is safe because we set the context back to none before the funtion
+                    // panicing, this is safe because we set the context back to none before the function
                     // returns.
                     ctx.swap(&RefCell::new(Some(unsafe { transmute(&mut context) })));
 

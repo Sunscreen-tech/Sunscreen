@@ -1373,6 +1373,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sunscreen_backend",
+ "sunscreen_compiler_common",
  "sunscreen_compiler_macros",
  "sunscreen_fhe_program",
  "sunscreen_runtime",

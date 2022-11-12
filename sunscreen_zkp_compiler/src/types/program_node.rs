@@ -8,7 +8,7 @@ use std::{
 use crate::{
     fe_compiler::ZkpContextOps,
     types::{NumFieldElements, INDEX_ARENA},
-    with_ctx,
+    with_zkp_ctx,
 };
 
 use super::{AddVar, DivVar, MulVar, NativeField, NegVar, RemVar, SubVar, ZkpType};
@@ -51,7 +51,7 @@ where
         let mut ids = Vec::with_capacity(T::NUM_NATIVE_FIELD_ELEMENTS);
 
         for _ in 0..T::NUM_NATIVE_FIELD_ELEMENTS {
-            ids.push(with_ctx(|ctx| ctx.add_public_input()));
+            ids.push(with_zkp_ctx(|ctx| ctx.add_public_input()));
         }
 
         Self::new(&ids)

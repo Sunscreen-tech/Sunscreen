@@ -84,9 +84,9 @@ pub use sunscreen_runtime::{
     FheProgramInputTrait, FheProgramMetadata, InnerCiphertext, InnerPlaintext, Params, Plaintext,
     PrivateKey, PublicKey, RequiredKeys, Runtime, WithContext,
 };
-pub use sunscreen_zkp_compiler::{ZkpContext, ZkpFrontendCompilation};
+pub use sunscreen_zkp_compiler::{ZkpContext, ZkpFrontendCompilation, CURRENT_ZKP_CTX, with_zkp_ctx};
 pub use sunscreen_zkp_compiler_macros::*;
-pub use zkp_compiler::ZkpProgramFn;
+pub use zkp_compiler::{ZkpProgramFn};
 
 #[derive(Clone, Serialize, Deserialize)]
 /**

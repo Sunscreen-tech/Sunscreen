@@ -3,7 +3,7 @@ use sunscreen_compiler_common::{Type, TypeName};
 use crate::{
     fe_compiler::ZkpContextOps,
     types::{AddVar, ProgramNode},
-    with_ctx,
+    with_zkp_ctx,
 };
 
 use super::{MulVar, NegVar, NumFieldElements, ZkpType};
@@ -28,7 +28,7 @@ impl ZkpType for NativeField {}
 
 impl AddVar for NativeField {
     fn add(lhs: ProgramNode<Self>, rhs: ProgramNode<Self>) -> ProgramNode<Self> {
-        with_ctx(|ctx| {
+        with_zkp_ctx(|ctx| {
             let o = ctx.add_addition(lhs.ids[0], rhs.ids[0]);
 
             ProgramNode::new(&[o])
@@ -38,7 +38,7 @@ impl AddVar for NativeField {
 
 impl MulVar for NativeField {
     fn mul(lhs: ProgramNode<Self>, rhs: ProgramNode<Self>) -> ProgramNode<Self> {
-        with_ctx(|ctx| {
+        with_zkp_ctx(|ctx| {
             let o = ctx.add_multiplication(lhs.ids[0], rhs.ids[0]);
 
             ProgramNode::new(&[o])
@@ -48,7 +48,7 @@ impl MulVar for NativeField {
 
 impl NegVar for NativeField {
     fn neg(lhs: ProgramNode<Self>) -> ProgramNode<Self> {
-        with_ctx(|ctx| {
+        with_zkp_ctx(|ctx| {
             let o = ctx.add_negate(lhs.ids[0]);
 
             ProgramNode::new(&[o])

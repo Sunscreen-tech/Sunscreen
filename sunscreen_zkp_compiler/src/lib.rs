@@ -7,24 +7,24 @@ use std::cell::RefCell;
 
 thread_local! {
     /**
-     * While constructing an [`fhe_program`], this refers to the current intermediate
-     * representation. An implementation detail of the [`fhe_program`] macro.
+     * Contains the graph of a ZKP program during compilation. An 
+     * implementation detail and not for public consumption.
      */
-    pub static CURRENT_CTX: RefCell<Option<&'static mut ZkpContext>> = RefCell::new(None);
+    pub static CURRENT_ZKP_CTX: RefCell<Option<&'static mut ZkpContext>> = RefCell::new(None);
 }
 
 /**
  * Runs the specified closure, injecting the current [`fhe_program`] context.
  */
-pub fn with_ctx<F, R>(f: F) -> R
+pub fn with_zkp_ctx<F, R>(f: F) -> R
 where
     F: FnOnce(&mut ZkpContext) -> R,
 {
-    CURRENT_CTX.with(|ctx| {
+    CURRENT_ZKP_CTX.with(|ctx| {
         let mut option = ctx.borrow_mut();
         let ctx = option
             .as_mut()
-            .expect("Called Ciphertext::new() outside of a context.");
+            .expect("Called with_zkp_ctx() outside of a context.");
 
         f(ctx)
     })

@@ -1,3 +1,29 @@
+use sunscreen_runtime::CallSignature;
+
+use crate::Result;
+
+use std::cell::RefCell;
+
+/**
+ * An internal representation of a ZKP program specification.
+ */
+pub trait ZkpProgramFn {
+    /**
+     * Create a circuit from this specification.
+     */
+    fn build(&self) -> Result<ZkpFrontendCompilation>;
+
+    /**
+     * Gets the call signature for this program.
+     */
+    fn signature(&self) -> CallSignature;
+
+    /**
+     * Gets the name of this program.
+     */
+    fn name(&self) -> &str;
+}
+
 use std::fmt::Debug;
 
 use petgraph::stable_graph::NodeIndex;
@@ -60,7 +86,21 @@ impl Operation {
     }
 }
 
+/**
+ * An implementation detail of a ZKP program. During compilation, it holds 
+ * the graph of the program currently being constructed in an
+ * [`#[zkp_program]`](crate::zkp_program) function.
+ * 
+ * # Remarks
+ * For internal use only.
+ */
 pub type ZkpContext = Context<Operation>;
+/**
+ * Contains the results of compiling a [`#[zkp_program]`](crate::zkp_program) function.
+ * 
+ * # Remarks
+ * For internal use only.
+ */
 pub type ZkpFrontendCompilation = FrontendCompilation<Operation>;
 
 pub trait ZkpContextOps {
@@ -101,3 +141,28 @@ impl Render for Operation {
 }
 
 pub fn fe_compile(fe_compilation: ZkpFrontendCompilation) {}
+
+thread_local! {
+    /**
+     * Contains the graph of a ZKP program during compilation. An 
+     * implementation detail and not for public consumption.
+     */
+    pub static CURRENT_ZKP_CTX: RefCell<Option<&'static mut ZkpContext>> = RefCell::new(None);
+}
+
+/**
+ * Runs the specified closure, injecting the current [`fhe_program`] context.
+ */
+pub fn with_zkp_ctx<F, R>(f: F) -> R
+where
+    F: FnOnce(&mut ZkpContext) -> R,
+{
+    CURRENT_ZKP_CTX.with(|ctx| {
+        let mut option = ctx.borrow_mut();
+        let ctx = option
+            .as_mut()
+            .expect("Called with_zkp_ctx() outside of a context.");
+
+        f(ctx)
+    })
+}

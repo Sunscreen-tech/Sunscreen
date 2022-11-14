@@ -5,19 +5,31 @@ use std::{
     ops::{Add, Div, Mul, Neg, Rem, Sub},
 };
 
-use crate::{
-    fe_compiler::ZkpContextOps,
-    types::{NumFieldElements, INDEX_ARENA},
-    with_zkp_ctx,
+use crate::{zkp::{
+    ZkpContextOps, with_zkp_ctx},
+    types::zkp::{AddVar, DivVar, MulVar, NativeField, NegVar, RemVar, SubVar, ZkpType}, INDEX_ARENA,
 };
 
-use super::{AddVar, DivVar, MulVar, NativeField, NegVar, RemVar, SubVar, ZkpType};
-
 #[derive(Clone, Copy)]
+/**
+ * An implementation detail of the ZKP compiler. Each expression in a ZKP
+ * program is expressed in terms of `ProgramNode`, which proxy and compose
+ * the parse graph for a ZKP program.
+ * 
+ * They proxy operations (+, -, /, etc) to their underlying type T to 
+ * manipulate the program graph as appropriate.
+ * 
+ * # Remarks
+ * For internal use only.
+ */
 pub struct ProgramNode<T>
 where
     T: ZkpType,
 {
+    /**
+     * The indices in the graph that compose the type backing this 
+     * `ProgramNode`.
+     */
     pub ids: &'static [NodeIndex],
     _phantom: PhantomData<T>,
 }
@@ -26,6 +38,9 @@ impl<T> ProgramNode<T>
 where
     T: ZkpType,
 {
+    /**
+     * Create a new Program node from the given indicies in the
+     */
     pub fn new(ids: &[NodeIndex]) -> Self {
         INDEX_ARENA.with(|allocator| {
             let allocator = allocator.borrow();

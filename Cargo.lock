@@ -1377,7 +1377,6 @@ dependencies = [
  "sunscreen_compiler_macros",
  "sunscreen_fhe_program",
  "sunscreen_runtime",
- "sunscreen_zkp_compiler",
 ]
 
 [[package]]
@@ -1454,17 +1453,6 @@ dependencies = [
  "sunscreen",
  "sunscreen_compiler_common",
  "sunscreen_fhe_program",
-]
-
-[[package]]
-name = "sunscreen_zkp_compiler"
-version = "0.1.0"
-dependencies = [
- "bumpalo",
- "petgraph",
- "semver",
- "sunscreen_compiler_common",
- "sunscreen_compiler_macros",
 ]
 
 [[package]]

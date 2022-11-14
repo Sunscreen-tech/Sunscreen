@@ -1,4 +1,3 @@
-use crate::error::{Error, Result};
 use proc_macro2::Span;
 use syn::{
     parse::{Parse, ParseStream},
@@ -6,8 +5,6 @@ use syn::{
     spanned::Spanned,
     Error as SynError, Expr, Lit, LitInt, LitStr, Result as SynResult, Token,
 };
-
-use crate::internals::symbols::VALUE_KEYS;
 
 use std::collections::HashMap;
 
@@ -187,16 +184,6 @@ impl TryFrom<&AttrValue> for Scheme {
     }
 }
 
-impl Scheme {
-    pub fn parse(s: &str) -> Result<Self> {
-        Ok(match s {
-            "bfv" => Scheme::Bfv,
-            _ => Err(Error::UnknownScheme(s.to_owned()))?,
-        })
-    }
-}
-
-
 pub struct FheProgramAttrs {
     pub scheme: Scheme,
     pub chain_count: usize,
@@ -236,17 +223,20 @@ pub enum BackendType {
     Bulletproofs,
 }
 
-impl TryFrom<&str> for BackendType {
-    type Error = Error;
+impl TryFrom<&AttrValue> for BackendType {
+    type Error = SynError;
 
-    fn try_from(value: &str) -> Result<Self> {
-        match value {
+    fn try_from(value: &AttrValue) -> SynResult<Self> {
+        let as_str = value.as_str()?;
+
+        match as_str {
             "bulletproofs" => Ok(BackendType::Bulletproofs),
-            _ => Err(Error::UnknownBackend(value.to_owned())),
+            _ => Err(SynError::new(value.span(), format!("Unknown backend `{}`", as_str.to_owned()))),
         }
     }
 }
 
+#[allow(unused)]
 pub struct ZkpProgramAttrs {
     backend_type: BackendType,
 }
@@ -266,8 +256,7 @@ impl Parse for ZkpProgramAttrs {
         let backend_type = attrs.get("backend").ok_or_else(|| {
             SynError::new(input.span(), "required 'backend' is missing".to_owned())
         })?;
-        let backend_type = BackendType::try_from(backend_type.as_str()?)
-            .map_err(|e| SynError::new(backend_type.span(), format!("{}", e)))?;
+        let backend_type = BackendType::try_from(backend_type)?;
 
         Ok(Self { backend_type })
     }

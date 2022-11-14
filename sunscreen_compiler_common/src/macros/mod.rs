@@ -10,7 +10,13 @@ mod type_name;
 pub use type_name::derive_typename_impl;
 
 #[derive(Debug)]
+/**
+ * A type error that occurs in a program specification.
+ */
 pub enum ProgramTypeError {
+    /**
+     * The given type is illegal.
+     */
     IllegalType(Span),
 }
 
@@ -68,12 +74,34 @@ pub fn create_program_node(var_name: &str, arg_type: &Type) -> TokenStream2 {
 }
 
 #[derive(Debug)]
+/**
+ * Errors that can occur when extracting the function signature of a 
+ * program.
+ */
 pub enum ExtractFnArgumentsError {
+    /**
+     * The method contains a reference to `self` or `&self`.
+     * 
+     * # Remarks
+     * FHE and ZKP programs must be pure functions.
+     */
     ContainsSelf(Span),
+
+    /**
+     * The given type is not allowed.
+     */
     IllegalType(Span),
+
+    /**
+     * The given type pattern is not of the a qualified path to a type.
+     */
     IllegalPat(Span),
 }
 
+/**
+ * Validate and parse the arguments of a function, returning a Vec of 
+ * the types and identifiers.
+ */
 pub fn extract_fn_arguments(
     args: &Punctuated<FnArg, Token!(,)>,
 ) -> Result<Vec<(&Type, &Ident)>, ExtractFnArgumentsError> {
@@ -107,7 +135,23 @@ pub fn extract_fn_arguments(
 }
 
 #[derive(Debug)]
+/**
+ * Errors that can occur when extracting the return value of an FHE
+ * program.
+ */
 pub enum ExtractReturnTypesError {
+    /**
+     * The given return type is not allowed.
+     * 
+     * # Remarks
+     * ZKP programs don't return values.
+     * 
+     * FHE programs must return either
+     * * nothing (weird, but legal).
+     * * a single FHE type.
+     * * a tuple of FHE types.
+     * 
+     */
     IllegalType(Span),
 }
 
@@ -163,6 +207,10 @@ pub fn pack_return_type(return_types: &[Type]) -> Type {
     }
 }
 
+/**
+ * Emits code to create output nodes for each returned value in an
+ * FHE program.
+ */
 pub fn emit_output_capture(return_types: &[Type]) -> TokenStream2 {
     match return_types.len() {
         1 => quote_spanned! { return_types[0].span() => v.output(); },
@@ -180,6 +228,9 @@ pub fn emit_output_capture(return_types: &[Type]) -> TokenStream2 {
     }
 }
 
+/**
+ * Emits the call signature of an FHE or ZKP program.
+ */
 pub fn emit_signature(args: &[Type], return_types: &[Type]) -> TokenStream2 {
     let arg_type_names = args
         .iter()

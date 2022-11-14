@@ -1,6 +1,6 @@
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::{quote, quote_spanned};
-use sunscreen_compiler_macros_common::{
+use sunscreen_compiler_common::macros::{
     create_program_node, emit_signature, extract_fn_arguments, extract_return_types, lift_type,
     ExtractFnArgumentsError, ExtractReturnTypesError,
 };

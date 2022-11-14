@@ -1,7 +1,10 @@
 use proc_macro2::{Span, TokenStream};
 use quote::quote;
-use syn::{parse_macro_input, DeriveInput, Ident, LitStr};
+use syn::{DeriveInput, Ident, LitStr};
 
+/**
+ * The implementation for #[derive(TypeName)]
+ */
 pub fn derive_typename_impl(parse_stream: DeriveInput) -> TokenStream {
     let name = &parse_stream.ident;
     let name_contents = LitStr::new(&format!("{{}}::{}", name), name.span());

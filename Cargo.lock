@@ -1409,8 +1409,11 @@ name = "sunscreen_compiler_common"
 version = "0.1.0"
 dependencies = [
  "petgraph",
+ "proc-macro2",
+ "quote",
  "semver",
  "serde",
+ "syn",
 ]
 
 [[package]]
@@ -1420,15 +1423,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "serde_json",
- "syn",
-]
-
-[[package]]
-name = "sunscreen_compiler_macros_common"
-version = "0.1.0"
-dependencies = [
- "proc-macro2",
- "quote",
  "syn",
 ]
 
@@ -1479,15 +1473,15 @@ version = "0.1.0"
 dependencies = [
  "proc-macro2",
  "quote",
- "sunscreen_compiler_macros_common",
+ "sunscreen_compiler_common",
  "syn",
 ]
 
 [[package]]
 name = "syn"
-version = "1.0.100"
+version = "1.0.103"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "52205623b1b0f064a4e71182c3b18ae902267282930c6d5462c91b859668426e"
+checksum = "a864042229133ada95abf3b54fdc62ef5ccabe9515b64717bcb9a1919e59445d"
 dependencies = [
  "proc-macro2",
  "quote",

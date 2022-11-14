@@ -1,6 +1,6 @@
 #![recursion_limit = "128"]
 
-use sunscreen_compiler_macros_common::derive_typename_impl;
+use sunscreen_compiler_common::macros::derive_typename_impl;
 use syn::{parse_macro_input, DeriveInput};
 use zkp_program::zkp_program_impl;
 

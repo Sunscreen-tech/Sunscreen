@@ -7,9 +7,15 @@
 mod context;
 mod graph;
 /**
+ * Helper methods for macros.
+ */
+pub mod macros;
+
+/**
  * A set of generic compiler transforms.
  */
 pub mod transforms;
+
 
 pub use context::*;
 pub use graph::*;

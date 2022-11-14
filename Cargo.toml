@@ -19,7 +19,6 @@ members = [
     "sunscreen_runtime",
     "sunscreen_zkp_compiler",
     "sunscreen_zkp_compiler_macros",
-    "sunscreen_compiler_macros_common",
     "sunscreen_compiler_common",
     "sunscreen_bulletproofs_backend"
 ]

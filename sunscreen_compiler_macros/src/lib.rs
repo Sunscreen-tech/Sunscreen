@@ -11,6 +11,7 @@ mod fhe_program;
 mod fhe_program_transforms;
 mod internals;
 mod type_name;
+mod zkp_program;
 
 #[proc_macro_derive(TypeName)]
 /**
@@ -64,4 +65,15 @@ pub fn fhe_program(
     input: proc_macro::TokenStream,
 ) -> proc_macro::TokenStream {
     fhe_program::fhe_program_impl(metadata, input)
+}
+
+#[proc_macro_attribute]
+/**
+ * Specifies a function to be a ZKP program. TODO: docs.
+ */
+pub fn zkp_program(
+    metadata: proc_macro::TokenStream,
+    input: proc_macro::TokenStream,
+) -> proc_macro::TokenStream {
+    zkp_program::zkp_program_impl(metadata, input)
 }

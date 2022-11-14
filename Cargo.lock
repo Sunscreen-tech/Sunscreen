@@ -1378,7 +1378,6 @@ dependencies = [
  "sunscreen_fhe_program",
  "sunscreen_runtime",
  "sunscreen_zkp_compiler",
- "sunscreen_zkp_compiler_macros",
 ]
 
 [[package]]
@@ -1423,7 +1422,9 @@ dependencies = [
  "proc-macro2",
  "quote",
  "serde_json",
+ "sunscreen_compiler_common",
  "syn",
+ "thiserror",
 ]
 
 [[package]]
@@ -1464,17 +1465,7 @@ dependencies = [
  "petgraph",
  "semver",
  "sunscreen_compiler_common",
- "sunscreen_zkp_compiler_macros",
-]
-
-[[package]]
-name = "sunscreen_zkp_compiler_macros"
-version = "0.1.0"
-dependencies = [
- "proc-macro2",
- "quote",
- "sunscreen_compiler_common",
- "syn",
+ "sunscreen_compiler_macros",
 ]
 
 [[package]]

@@ -1,6 +1,6 @@
 use crate::{
     fhe_program_transforms::*,
-    internals::{attr::Attrs, case::Scheme},
+    internals::{attr::{FheProgramAttrs, Scheme}},
 };
 use proc_macro2::{Span, TokenStream};
 use quote::{quote, quote_spanned};
@@ -18,7 +18,7 @@ pub fn fhe_program_impl(
     let inputs = &input_fn.sig.inputs;
     let ret = &input_fn.sig.output;
 
-    let attr_params = parse_macro_input!(metadata as Attrs);
+    let attr_params = parse_macro_input!(metadata as FheProgramAttrs);
 
     let scheme_type = match attr_params.scheme {
         Scheme::Bfv => {

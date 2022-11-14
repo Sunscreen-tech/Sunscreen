@@ -10,4 +10,4 @@ bumpalo = "3.11.1"
 petgraph = "0.6.2"
 semver = "1.0.14"
 sunscreen_compiler_common = { path = "../sunscreen_compiler_common" }
-sunscreen_zkp_compiler_macros = { path = "../sunscreen_zkp_compiler_macros" }
+sunscreen_compiler_macros = { path = "../sunscreen_compiler_macros" }

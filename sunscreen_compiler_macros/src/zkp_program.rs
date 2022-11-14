@@ -1,18 +1,18 @@
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::{quote, quote_spanned};
 use sunscreen_compiler_common::macros::{
-    create_program_node, emit_signature, extract_fn_arguments, extract_return_types, lift_type,
-    ExtractFnArgumentsError, ExtractReturnTypesError,
+    create_program_node, emit_signature, extract_fn_arguments, lift_type,
+    ExtractFnArgumentsError,
 };
-use syn::{parse::Parse, parse_macro_input, spanned::Spanned, ItemFn, ReturnType, Type};
+use syn::{parse_macro_input, spanned::Spanned, ItemFn, ReturnType, Type};
 
-use crate::internals::attr::Attrs;
+use crate::internals::attr::{ZkpProgramAttrs};
 
 pub fn zkp_program_impl(
     metadata: proc_macro::TokenStream,
     input: proc_macro::TokenStream,
 ) -> proc_macro::TokenStream {
-    let attr_params = parse_macro_input!(metadata as Attrs);
+    let _attr_params = parse_macro_input!(metadata as ZkpProgramAttrs);
     let input_fn = parse_macro_input!(input as ItemFn);
 
     let zkp_program_name = &input_fn.sig.ident;

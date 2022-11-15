@@ -16,7 +16,6 @@ pub mod macros;
  */
 pub mod transforms;
 
-
 pub use context::*;
 pub use graph::*;
 
@@ -47,7 +46,7 @@ pub trait Render {
  *
  * Also provides functions that describe properties of an operation.
  */
-pub trait Operation: Clone + Copy + Debug + Hash + PartialEq + Eq {
+pub trait Operation: Clone + Debug + Hash + PartialEq + Eq {
     /**
      * Whether or not this operation commutes.
      */

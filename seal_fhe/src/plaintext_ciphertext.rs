@@ -1,3 +1,4 @@
+use core::hash::Hash;
 use std::ffi::{c_void, CString};
 use std::ptr::null_mut;
 
@@ -7,7 +8,7 @@ use crate::{bindgen, serialization::CompressionType, Context, FromBytes, ToBytes
 use serde::ser::Error;
 use serde::{Serialize, Serializer};
 
-#[derive(Debug)]
+#[derive(Debug, Eq)]
 /**
  * Class to store a plaintext element. The data for the plaintext is
  * a polynomial with coefficients modulo the plaintext modulus. The degree
@@ -62,6 +63,15 @@ impl PartialEq for Plaintext {
             true
         } else {
             false
+        }
+    }
+}
+
+impl Hash for Plaintext {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        for i in 0..self.len() {
+            let c = self.get_coefficient(i);
+            state.write_u64(c);
         }
     }
 }

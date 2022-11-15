@@ -1,9 +1,10 @@
 use crate::{
+    fhe::with_fhe_ctx,
     types::{
         intern::FheLiteral, ops::*, Cipher, FheType, LaneCount, NumCiphertexts, SwapRows, Type,
         TypeName,
     },
-    with_ctx, INDEX_ARENA,
+    INDEX_ARENA,
 };
 use petgraph::stable_graph::NodeIndex;
 
@@ -93,7 +94,7 @@ impl<T: NumCiphertexts> FheProgramNode<T> {
      * Returns the plain modulus parameter for the given BFV scheme
      */
     pub fn get_plain_modulus() -> u64 {
-        with_ctx(|ctx| ctx.params.plain_modulus)
+        with_fhe_ctx(|ctx| ctx.data.plain_modulus)
     }
 }
 

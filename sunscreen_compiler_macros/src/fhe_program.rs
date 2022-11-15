@@ -1,6 +1,6 @@
 use crate::{
     fhe_program_transforms::*,
-    internals::{attr::{FheProgramAttrs, Scheme}},
+    internals::attr::{FheProgramAttrs, Scheme},
 };
 use proc_macro2::{Span, TokenStream};
 use quote::{quote, quote_spanned};
@@ -119,19 +119,19 @@ pub fn fhe_program_impl(
         }
 
         impl sunscreen::FheProgramFn for #fhe_program_struct_name {
-            fn build(&self, params: &sunscreen::Params) -> sunscreen::Result<sunscreen::FrontendCompilation> {
+            fn build(&self, params: &sunscreen::Params) -> sunscreen::Result<sunscreen::fhe::FheFrontendCompilation> {
                 use std::cell::RefCell;
                 use std::mem::transmute;
-                use sunscreen::{CURRENT_CTX, Context, Error, INDEX_ARENA, Result, Params, SchemeType, Value, types::{intern::{FheProgramNode, Input, Output}, NumCiphertexts, Type, TypeName, SwapRows, LaneCount, TypeNameInstance}};
+                use sunscreen::{fhe::{CURRENT_FHE_CTX, FheContext}, Error, INDEX_ARENA, Result, Params, SchemeType, Value, types::{intern::{FheProgramNode, Input, Output}, NumCiphertexts, Type, TypeName, SwapRows, LaneCount, TypeNameInstance}};
 
                 if SchemeType::Bfv != params.scheme_type {
                     return Err(Error::IncorrectScheme)
                 }
 
                 // TODO: Other schemes.
-                let mut context = Context::new(params);
+                let mut context = FheContext::new(params.clone());
 
-                CURRENT_CTX.with(|ctx| {
+                CURRENT_FHE_CTX.with(|ctx| {
                     #[allow(clippy::type_complexity)]
                     #[forbid(unused_variables)]
                     let internal = | #(#fhe_program_args)* | -> #fhe_program_return
@@ -168,7 +168,7 @@ pub fn fhe_program_impl(
                     ctx.swap(&RefCell::new(None));
                 });
 
-                Ok(context.compilation)
+                Ok(context.graph)
             }
 
             fn signature(&self) -> sunscreen::CallSignature {

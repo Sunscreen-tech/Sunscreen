@@ -1,12 +1,11 @@
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::{quote, quote_spanned};
 use sunscreen_compiler_common::macros::{
-    create_program_node, emit_signature, extract_fn_arguments, lift_type,
-    ExtractFnArgumentsError,
+    create_program_node, emit_signature, extract_fn_arguments, lift_type, ExtractFnArgumentsError,
 };
 use syn::{parse_macro_input, spanned::Spanned, ItemFn, ReturnType, Type};
 
-use crate::internals::attr::{ZkpProgramAttrs};
+use crate::internals::attr::ZkpProgramAttrs;
 
 pub fn zkp_program_impl(
     metadata: proc_macro::TokenStream,
@@ -97,7 +96,7 @@ pub fn zkp_program_impl(
                 use std::mem::transmute;
                 use sunscreen::{CURRENT_ZKP_CTX, ZkpContext, Error, INDEX_ARENA, Result, types::{zkp::ProgramNode, TypeName}};
 
-                let mut context = ZkpContext::new();
+                let mut context = ZkpContext::new(0);
 
                 CURRENT_ZKP_CTX.with(|ctx| {
                     #[allow(clippy::type_complexity)]

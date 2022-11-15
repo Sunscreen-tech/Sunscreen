@@ -1,3 +1,5 @@
+use std::hash::Hash;
+
 use crate::Params;
 use seal_fhe::{BfvEncryptionParametersBuilder, Context, FromBytes, Modulus, ToBytes};
 use serde::{
@@ -24,6 +26,15 @@ where
      * The key itself.
      */
     pub data: T,
+}
+
+impl<T> Hash for WithContext<T>
+where
+    T: Hash + ToBytes + FromBytes + PartialEq,
+{
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.data.hash(state)
+    }
 }
 
 impl<T> std::ops::Deref for WithContext<T>

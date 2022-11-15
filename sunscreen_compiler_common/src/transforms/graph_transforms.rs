@@ -107,8 +107,8 @@ impl<N, E> GraphTransforms<N, E> {
 
 impl<N, E> Default for GraphTransforms<N, E>
 where
-    N: Copy,
-    E: Copy,
+    N: Clone,
+    E: Clone,
 {
     fn default() -> Self {
         Self::new()
@@ -117,18 +117,18 @@ where
 
 impl<N, E> TransformList<N, E> for GraphTransforms<N, E>
 where
-    N: Copy,
-    E: Copy,
+    N: Clone,
+    E: Clone,
 {
     fn apply(&mut self, graph: &mut petgraph::stable_graph::StableGraph<N, E>) {
         for t in &self.transforms {
             let inserted_node = match t {
-                Transform::AddNode(n) => Some(graph.add_node(*n)),
+                Transform::AddNode(n) => Some(graph.add_node(n.clone())),
                 Transform::AddEdge(start, end, info) => {
                     let start = self.materialize_index(*start);
                     let end = self.materialize_index(*end);
 
-                    graph.add_edge(start, end, *info);
+                    graph.add_edge(start, end, info.clone());
 
                     None
                 }

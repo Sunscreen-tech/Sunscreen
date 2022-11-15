@@ -10,5 +10,5 @@ petgraph = "0.6.2"
 proc-macro2 = "1.0.47"
 quote = "1.0.21"
 semver = "1.0.14"
-serde = "1.0.147"
+serde = { version = "1.0.147", features = ["derive"] }
 syn = { version = "1.0.103", features = ["full"] }

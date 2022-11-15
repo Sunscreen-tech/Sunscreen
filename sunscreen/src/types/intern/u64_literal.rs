@@ -1,4 +1,7 @@
-use crate::{with_ctx, Literal};
+use crate::{
+    fhe::{with_fhe_ctx, FheContextOps},
+    Literal,
+};
 use petgraph::stable_graph::NodeIndex;
 
 #[derive(Clone, Copy)]
@@ -13,6 +16,6 @@ impl U64LiteralRef {
      * graph, a reference to the existing literal is returned.
      */
     pub fn node(val: u64) -> NodeIndex {
-        with_ctx(|ctx| ctx.add_literal(Literal::U64(val)))
+        with_fhe_ctx(|ctx| ctx.add_literal(Literal::U64(val)))
     }
 }

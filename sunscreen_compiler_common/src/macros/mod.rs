@@ -75,13 +75,13 @@ pub fn create_program_node(var_name: &str, arg_type: &Type) -> TokenStream2 {
 
 #[derive(Debug)]
 /**
- * Errors that can occur when extracting the function signature of a 
+ * Errors that can occur when extracting the function signature of a
  * program.
  */
 pub enum ExtractFnArgumentsError {
     /**
      * The method contains a reference to `self` or `&self`.
-     * 
+     *
      * # Remarks
      * FHE and ZKP programs must be pure functions.
      */
@@ -99,7 +99,7 @@ pub enum ExtractFnArgumentsError {
 }
 
 /**
- * Validate and parse the arguments of a function, returning a Vec of 
+ * Validate and parse the arguments of a function, returning a Vec of
  * the types and identifiers.
  */
 pub fn extract_fn_arguments(
@@ -142,15 +142,15 @@ pub fn extract_fn_arguments(
 pub enum ExtractReturnTypesError {
     /**
      * The given return type is not allowed.
-     * 
+     *
      * # Remarks
      * ZKP programs don't return values.
-     * 
+     *
      * FHE programs must return either
      * * nothing (weird, but legal).
      * * a single FHE type.
      * * a tuple of FHE types.
-     * 
+     *
      */
     IllegalType(Span),
 }

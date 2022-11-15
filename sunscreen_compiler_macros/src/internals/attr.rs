@@ -176,7 +176,10 @@ impl TryFrom<&AttrValue> for Scheme {
         let scheme = match as_str {
             "bfv" => Self::Bfv,
             _ => {
-                return Err(SynError::new(value.span(), format!("Unknown scheme {}", as_str)));
+                return Err(SynError::new(
+                    value.span(),
+                    format!("Unknown scheme {}", as_str),
+                ));
             }
         };
 
@@ -218,7 +221,6 @@ impl Parse for FheProgramAttrs {
     }
 }
 
-
 pub enum BackendType {
     Bulletproofs,
 }
@@ -231,7 +233,10 @@ impl TryFrom<&AttrValue> for BackendType {
 
         match as_str {
             "bulletproofs" => Ok(BackendType::Bulletproofs),
-            _ => Err(SynError::new(value.span(), format!("Unknown backend `{}`", as_str.to_owned()))),
+            _ => Err(SynError::new(
+                value.span(),
+                format!("Unknown backend `{}`", as_str.to_owned()),
+            )),
         }
     }
 }

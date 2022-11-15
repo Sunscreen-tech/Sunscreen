@@ -1,8 +1,8 @@
 use sunscreen_compiler_macros::TypeName;
 
-use crate::{zkp::{
-    ZkpContextOps, with_zkp_ctx},
+use crate::{
     types::zkp::{AddVar, ProgramNode},
+    zkp::{with_zkp_ctx, ZkpContextOps},
 };
 
 use super::{MulVar, NegVar, NumFieldElements, ZkpType};

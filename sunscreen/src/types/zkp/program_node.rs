@@ -5,9 +5,10 @@ use std::{
     ops::{Add, Div, Mul, Neg, Rem, Sub},
 };
 
-use crate::{zkp::{
-    ZkpContextOps, with_zkp_ctx},
-    types::zkp::{AddVar, DivVar, MulVar, NativeField, NegVar, RemVar, SubVar, ZkpType}, INDEX_ARENA,
+use crate::{
+    types::zkp::{AddVar, DivVar, MulVar, NativeField, NegVar, RemVar, SubVar, ZkpType},
+    zkp::{with_zkp_ctx, ZkpContextOps},
+    INDEX_ARENA,
 };
 
 #[derive(Clone, Copy)]
@@ -15,10 +16,10 @@ use crate::{zkp::{
  * An implementation detail of the ZKP compiler. Each expression in a ZKP
  * program is expressed in terms of `ProgramNode`, which proxy and compose
  * the parse graph for a ZKP program.
- * 
- * They proxy operations (+, -, /, etc) to their underlying type T to 
+ *
+ * They proxy operations (+, -, /, etc) to their underlying type T to
  * manipulate the program graph as appropriate.
- * 
+ *
  * # Remarks
  * For internal use only.
  */
@@ -27,7 +28,7 @@ where
     T: ZkpType,
 {
     /**
-     * The indices in the graph that compose the type backing this 
+     * The indices in the graph that compose the type backing this
      * `ProgramNode`.
      */
     pub ids: &'static [NodeIndex],

@@ -87,17 +87,17 @@ impl Operation {
 }
 
 /**
- * An implementation detail of a ZKP program. During compilation, it holds 
+ * An implementation detail of a ZKP program. During compilation, it holds
  * the graph of the program currently being constructed in an
  * [`#[zkp_program]`](crate::zkp_program) function.
- * 
+ *
  * # Remarks
  * For internal use only.
  */
-pub type ZkpContext = Context<Operation>;
+pub type ZkpContext = Context<Operation, u32>;
 /**
  * Contains the results of compiling a [`#[zkp_program]`](crate::zkp_program) function.
- * 
+ *
  * # Remarks
  * For internal use only.
  */
@@ -115,8 +115,8 @@ pub trait ZkpContextOps {
 
 impl ZkpContextOps for ZkpContext {
     fn add_public_input(&mut self) -> NodeIndex {
-        let node = self.add_node(Operation::PublicInput(NodeIndex::from(self.next_input_id)));
-        self.next_input_id += 1;
+        let node = self.add_node(Operation::PublicInput(NodeIndex::from(self.data)));
+        self.data += 1;
 
         node
     }
@@ -144,7 +144,7 @@ pub fn fe_compile(fe_compilation: ZkpFrontendCompilation) {}
 
 thread_local! {
     /**
-     * Contains the graph of a ZKP program during compilation. An 
+     * Contains the graph of a ZKP program during compilation. An
      * implementation detail and not for public consumption.
      */
     pub static CURRENT_ZKP_CTX: RefCell<Option<&'static mut ZkpContext>> = RefCell::new(None);

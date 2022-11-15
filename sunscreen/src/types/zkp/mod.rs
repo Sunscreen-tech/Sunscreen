@@ -1,8 +1,8 @@
 mod native_field;
 mod program_node;
 
-pub use native_field::{*};
-pub use program_node::{*};
+pub use native_field::*;
+pub use program_node::*;
 
 /**
  * A trait for adding two ZKP values together
@@ -93,7 +93,7 @@ pub trait NumFieldElements {
 }
 
 /**
- * Encapsulates all the traits required for a type to be used in ZKP 
+ * Encapsulates all the traits required for a type to be used in ZKP
  * programs.
  */
 pub trait ZkpType: NumFieldElements {}

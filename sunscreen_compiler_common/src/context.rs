@@ -1,12 +1,15 @@
 use std::fmt::Debug;
 use std::ops::{Deref, DerefMut};
 
+use petgraph::algo::is_isomorphic_matching;
 use petgraph::stable_graph::{NodeIndex, StableGraph};
 use petgraph::visit::{EdgeRef, IntoEdgeReferences, IntoNodeReferences};
+use petgraph::Graph;
+use serde::{Deserialize, Serialize};
 
 use crate::{Operation, Render};
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Deserialize, Serialize, Debug, PartialEq, Eq)]
 /**
  * Information about a node in the compilation graph.
  */
@@ -29,7 +32,7 @@ where
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, Serialize)]
 /**
  * Information about how one compiler graph node relates to another.
  */
@@ -79,7 +82,7 @@ impl Render for EdgeInfo {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Deserialize, Serialize)]
 /**
  * The result of a frontend compiler.
  */
@@ -95,6 +98,20 @@ where
 
     fn deref(&self) -> &Self::Target {
         &self.0
+    }
+}
+
+impl<O> PartialEq for FrontendCompilation<O>
+where
+    O: Operation,
+{
+    fn eq(&self, b: &Self) -> bool {
+        is_isomorphic_matching(
+            &Graph::from(self.0.clone()),
+            &Graph::from(b.0.clone()),
+            |n1, n2| n1 == n2,
+            |e1, e2| e1 == e2,
+        )
     }
 }
 
@@ -154,7 +171,7 @@ where
 /**
  * A compilation context. This stores the current parse graph.
  */
-pub struct Context<O>
+pub struct Context<O, D>
 where
     O: Operation,
 {
@@ -165,22 +182,22 @@ where
 
     #[allow(unused)]
     /**
-     * Consumers can use this to uniquely number their inputs.
+     * Data given by the consumer.
      */
-    pub next_input_id: u32,
+    pub data: D,
 }
 
-impl<O> Context<O>
+impl<O, D> Context<O, D>
 where
     O: Operation,
 {
     /**
      * Create a new [`Context`].
      */
-    pub fn new() -> Self {
+    pub fn new(data: D) -> Self {
         Self {
             graph: FrontendCompilation::<O>::new(),
-            next_input_id: 0,
+            data,
         }
     }
 
@@ -219,14 +236,5 @@ where
         self.graph.add_edge(parent, node, EdgeInfo::Unary);
 
         node
-    }
-}
-
-impl<O> Default for Context<O>
-where
-    O: Operation,
-{
-    fn default() -> Self {
-        Self::new()
     }
 }

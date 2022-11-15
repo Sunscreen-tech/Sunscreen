@@ -1,6 +1,6 @@
 use crate::{
+    fhe::{with_fhe_ctx, FheContextOps},
     types::{intern::FheProgramNode, NumCiphertexts},
-    with_ctx,
 };
 
 /**
@@ -34,7 +34,7 @@ where
         let mut ids = Vec::with_capacity(self.ids.len());
 
         for i in 0..self.ids.len() {
-            ids.push(with_ctx(|ctx| ctx.add_output(self.ids[i])));
+            ids.push(with_fhe_ctx(|ctx| ctx.add_output(self.ids[i])));
         }
 
         FheProgramNode::new(&ids)

@@ -64,9 +64,7 @@ mod zkp;
 pub mod types;
 
 use fhe::{FheOperation, Literal};
-use petgraph::{
-    stable_graph::{StableGraph},
-};
+use petgraph::stable_graph::StableGraph;
 use serde::{Deserialize, Serialize};
 
 use std::cell::RefCell;

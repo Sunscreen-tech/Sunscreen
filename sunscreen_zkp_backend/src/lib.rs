@@ -1,2 +1,2 @@
-#[cfg(feature="bulletproofs")]
+#[cfg(feature = "bulletproofs")]
 pub mod bulletproofs;

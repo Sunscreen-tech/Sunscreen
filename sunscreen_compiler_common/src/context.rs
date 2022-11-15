@@ -105,6 +105,8 @@ impl<O> PartialEq for FrontendCompilation<O>
 where
     O: Operation,
 {
+    /// FOR TESTING ONLY!!!
+    /// Graph isomorphism is an NP-Complete problem!
     fn eq(&self, b: &Self) -> bool {
         is_isomorphic_matching(
             &Graph::from(self.0.clone()),

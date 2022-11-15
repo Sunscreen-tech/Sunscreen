@@ -30,7 +30,7 @@ sunscreen_backend = { version = "0.7", path = "../sunscreen_backend" }
 sunscreen_fhe_program = { version = "0.7", path = "../sunscreen_fhe_program" }
 sunscreen_runtime = { version = "0.7", path = "../sunscreen_runtime" }
 seal_fhe = { version = "0.7", path = "../seal_fhe" }
-serde = { version = "1.0.130", features = ["derive"] }
+serde = { version = "1.0.147", features = ["derive"] }
 
 [dev-dependencies]
 sunscreen_compiler_common = { path = "../sunscreen_compiler_common" }

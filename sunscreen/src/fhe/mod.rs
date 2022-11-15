@@ -99,7 +99,7 @@ pub enum FheOperation {
     SwapRows,
 
     /**
-     * This node indicates the previous node's result should be a result of the [`fhe_program`].
+     * This node indicates the previous node's result should be a result of the [`fhe_program`](crate::fhe_program).
      */
     Output,
 }
@@ -135,9 +135,10 @@ impl OperationTrait for FheOperation {
 }
 
 /**
- * The context for constructing the [`fhe_program`] graph during compilation.
+ * The context for constructing the [`fhe_program`](crate::fhe_program) graph during compilation.
  *
- * This is an implementation detail of the [`fhe_program`] macro, and you shouldn't need
+ * This is an implementation detail of the 
+ * [`fhe_program`](crate::fhe_program) macro, and you shouldn't need
  * to construct one.
  */
 pub type FheContext = Context<FheOperation, Params>;
@@ -156,7 +157,8 @@ thread_local! {
 }
 
 /**
- * Runs the specified closure, injecting the current [`fhe_program`] context.
+ * Runs the specified closure, injecting the current 
+ * [`fhe_program`](crate::fhe_program) context.
  */
 pub fn with_fhe_ctx<F, R>(f: F) -> R
 where
@@ -187,7 +189,8 @@ pub trait FheContextOps {
     fn add_plaintext_input(&mut self) -> NodeIndex;
 
     /**
-     * Adds a plaintext literal to the [`fhe_program`] graph.
+     * Adds a plaintext literal to the 
+     * [`fhe_program`](crate::fhe_program) graph.
      */
     fn add_plaintext_literal(&mut self, plaintext: InnerPlaintext) -> NodeIndex;
 

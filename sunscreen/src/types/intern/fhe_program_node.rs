@@ -37,8 +37,8 @@ use std::ops::{Add, Div, Mul, Neg, Shl, Shr, Sub};
  * construction.
  *
  * # Undefined behavior
- * These types must be constructed while a [`crate::CURRENT_CTX`] refers to a valid
- * [`crate::Context`]. Furthermore, no [`FheProgramNode`] should outlive the said context.
+ * These types must be constructed while [`CURRENT_FHE_CTX`][crate::fhe::CURRENT_FHE_CTX] refers to a valid
+ * [`FheContext`](crate::fhe::FheContext). Furthermore, no [`FheProgramNode`] should outlive the said context.
  * Violating any of these conditions may result in memory corruption or
  * use-after-free.
  */

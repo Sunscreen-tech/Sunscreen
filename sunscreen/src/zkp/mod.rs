@@ -149,7 +149,8 @@ thread_local! {
 }
 
 /**
- * Runs the specified closure, injecting the current [`fhe_program`] context.
+ * Runs the specified closure, injecting the current 
+ * [`fhe_program`](crate::fhe_program) context.
  */
 pub fn with_zkp_ctx<F, R>(f: F) -> R
 where

@@ -16,7 +16,8 @@ pub trait Input {
      * You should not call this, but rather allow the [`fhe_program`](crate::fhe_program) macro to do this on your behalf.
      *
      * # Undefined behavior
-     * This type references memory in a backing [`crate::Context`] and without carefully ensuring FheProgramNodes
+     * This type references memory in a backing 
+     * [`FheContext`](crate::fhe::FheContext) and without carefully ensuring FheProgramNodes
      * never outlive the backing context, use-after-free can occur.
      *
      */

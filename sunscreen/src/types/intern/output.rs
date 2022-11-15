@@ -19,8 +19,8 @@ pub trait Output {
      *
      * # Undefined behavior
      * This type references memory in a backing
-     * [`FheContext`](crate::fhe::FheContext) and without carefully 
-     * ensuring FheProgramNodes never outlive the backing context, 
+     * [`FheContext`](crate::fhe::FheContext) and without carefully
+     * ensuring FheProgramNodes never outlive the backing context,
      * use-after-free can occur.
      */
     fn output(&self) -> Self::Output;

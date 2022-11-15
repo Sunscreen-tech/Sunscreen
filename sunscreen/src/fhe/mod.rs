@@ -137,7 +137,7 @@ impl OperationTrait for FheOperation {
 /**
  * The context for constructing the [`fhe_program`](crate::fhe_program) graph during compilation.
  *
- * This is an implementation detail of the 
+ * This is an implementation detail of the
  * [`fhe_program`](crate::fhe_program) macro, and you shouldn't need
  * to construct one.
  */
@@ -157,7 +157,7 @@ thread_local! {
 }
 
 /**
- * Runs the specified closure, injecting the current 
+ * Runs the specified closure, injecting the current
  * [`fhe_program`](crate::fhe_program) context.
  */
 pub fn with_fhe_ctx<F, R>(f: F) -> R
@@ -189,7 +189,7 @@ pub trait FheContextOps {
     fn add_plaintext_input(&mut self) -> NodeIndex;
 
     /**
-     * Adds a plaintext literal to the 
+     * Adds a plaintext literal to the
      * [`fhe_program`](crate::fhe_program) graph.
      */
     fn add_plaintext_literal(&mut self, plaintext: InnerPlaintext) -> NodeIndex;

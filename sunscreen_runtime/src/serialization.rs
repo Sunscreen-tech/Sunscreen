@@ -8,7 +8,7 @@ use serde::{
     Deserialize, Serialize,
 };
 
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Hash, Eq, Clone)]
 /**
  * A data type that contains parameters for reconstructing a context
  * during deserialization (needed by SEAL).
@@ -26,15 +26,6 @@ where
      * The key itself.
      */
     pub data: T,
-}
-
-impl<T> Hash for WithContext<T>
-where
-    T: Hash + ToBytes + FromBytes + PartialEq,
-{
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.data.hash(state)
-    }
 }
 
 impl<T> std::ops::Deref for WithContext<T>

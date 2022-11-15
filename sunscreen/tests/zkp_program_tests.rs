@@ -1,5 +1,4 @@
 use sunscreen::{types::zkp::NativeField, zkp_program, ZkpProgramFn};
-use sunscreen_compiler_common::Render;
 
 #[test]
 fn can_add_and_mul_native_fields() {
@@ -8,5 +7,5 @@ fn can_add_and_mul_native_fields() {
         a + b * a
     }
 
-    let result = add_mul.build().unwrap();
+    add_mul.build().unwrap();
 }

@@ -6,7 +6,7 @@ use std::{
 };
 
 use crate::{
-    types::zkp::{AddVar, DivVar, MulVar, NativeField, NegVar, RemVar, SubVar, ZkpType},
+    types::zkp::{AddVar, DivVar, MulVar, NegVar, RemVar, SubVar, ZkpType},
     zkp::{with_zkp_ctx, ZkpContextOps},
     INDEX_ARENA,
 };

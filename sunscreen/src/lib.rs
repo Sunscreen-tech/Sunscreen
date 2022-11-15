@@ -65,19 +65,12 @@ pub mod types;
 
 use fhe::{FheOperation, Literal};
 use petgraph::{
-    algo::is_isomorphic_matching,
-    stable_graph::{NodeIndex, StableGraph},
-    Graph,
+    stable_graph::{StableGraph},
 };
 use serde::{Deserialize, Serialize};
 
 use std::cell::RefCell;
 use std::collections::HashMap;
-
-use sunscreen_backend::compile_inplace;
-use sunscreen_fhe_program::{
-    EdgeInfo, FheProgram, Literal as FheProgramLiteral, NodeInfo, Operation as FheProgramOperation,
-};
 
 pub use error::{Error, Result};
 pub use fhe_compiler::{Compiler, FheProgramFn};

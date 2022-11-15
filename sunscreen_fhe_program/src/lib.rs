@@ -37,7 +37,7 @@ use TransformNodeIndex::*;
 
 use std::collections::HashSet;
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Serialize, Hash, Deserialize, PartialEq, Eq)]
 /**
  * Sunscreen supports the BFV scheme.
  */

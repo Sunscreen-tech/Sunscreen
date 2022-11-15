@@ -140,8 +140,6 @@ impl Render for Operation {
     }
 }
 
-pub fn fe_compile(fe_compilation: ZkpFrontendCompilation) {}
-
 thread_local! {
     /**
      * Contains the graph of a ZKP program during compilation. An

@@ -2,7 +2,7 @@ use sunscreen::{
     fhe::{FheFrontendCompilation, CURRENT_FHE_CTX},
     fhe_program,
     types::{bfv::Signed, Cipher, TypeName},
-    CallSignature, FheProgramFn, FrontendCompilation, Params, SchemeType, SecurityLevel,
+    CallSignature, FheProgramFn, Params, SchemeType, SecurityLevel,
 };
 
 use serde_json::json;

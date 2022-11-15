@@ -1,7 +1,5 @@
-pub use crate::{
-    types::{intern::FheProgramNode, Cipher, FheType, NumCiphertexts, TypeName},
-    with_ctx,
-};
+use crate::fhe::{with_fhe_ctx, FheContextOps};
+pub use crate::types::{intern::FheProgramNode, Cipher, FheType, NumCiphertexts, TypeName};
 
 /**
  * Create an input node from an Fhe Program input argument.
@@ -18,7 +16,8 @@ pub trait Input {
      * You should not call this, but rather allow the [`fhe_program`](crate::fhe_program) macro to do this on your behalf.
      *
      * # Undefined behavior
-     * This type references memory in a backing [`crate::Context`] and without carefully ensuring FheProgramNodes
+     * This type references memory in a backing
+     * [`FheContext`](crate::fhe::FheContext) and without carefully ensuring FheProgramNodes
      * never outlive the backing context, use-after-free can occur.
      *
      */
@@ -36,9 +35,9 @@ where
 
         for _ in 0..T::NUM_CIPHERTEXTS {
             if T::type_name().is_encrypted {
-                ids.push(with_ctx(|ctx| ctx.add_ciphertext_input()));
+                ids.push(with_fhe_ctx(|ctx| ctx.add_ciphertext_input()));
             } else {
-                ids.push(with_ctx(|ctx| ctx.add_plaintext_input()));
+                ids.push(with_fhe_ctx(|ctx| ctx.add_plaintext_input()));
             }
         }
 
@@ -69,16 +68,17 @@ where
 #[test]
 fn can_create_inputs() {
     use crate::{
+        fhe::{FheContext, FheOperation, CURRENT_FHE_CTX},
         types::{bfv::Rational, intern::FheProgramNode},
-        Context, Operation, Params, SchemeType, SecurityLevel, CURRENT_CTX,
+        Params, SchemeType, SecurityLevel,
     };
     use std::cell::RefCell;
     use std::mem::transmute;
 
     use petgraph::stable_graph::NodeIndex;
 
-    CURRENT_CTX.with(|ctx| {
-        let mut context = Context::new(&Params {
+    CURRENT_FHE_CTX.with(|ctx| {
+        let mut context = FheContext::new(Params {
             lattice_dimension: 0,
             coeff_modulus: vec![],
             plain_modulus: 0,
@@ -122,26 +122,26 @@ fn can_create_inputs() {
 
         offset += 2 * 6 * 6;
 
-        assert_eq!(context.compilation.graph.node_count(), offset);
+        assert_eq!(context.graph.node_count(), offset);
 
         for i in 0..2 {
             assert_eq!(
-                context.compilation.graph[NodeIndex::from(i)],
-                Operation::InputPlaintext
+                context.graph[NodeIndex::from(i)].operation,
+                FheOperation::InputPlaintext
             );
         }
 
         for i in 2..14 {
             assert_eq!(
-                context.compilation.graph[NodeIndex::from(i)],
-                Operation::InputPlaintext
+                context.graph[NodeIndex::from(i)].operation,
+                FheOperation::InputPlaintext
             );
         }
 
-        for i in 14..context.compilation.graph.node_count() {
+        for i in 14..context.graph.node_count() {
             assert_eq!(
-                context.compilation.graph[NodeIndex::from(i as u32)],
-                Operation::InputCiphertext
+                context.graph[NodeIndex::from(i as u32)].operation,
+                FheOperation::InputCiphertext
             );
         }
     });

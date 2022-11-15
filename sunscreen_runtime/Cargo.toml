@@ -27,7 +27,7 @@ petgraph = "0.6.0"
 num_cpus = "1.13.0"
 rayon = "1.5.1"
 rlp = "0.5.1"
-serde = "1.0.130"
+serde = "1.0.147"
 semver = "1.0.4"
 
 [dev-dependencies]

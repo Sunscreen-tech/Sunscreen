@@ -307,6 +307,25 @@
         {
             "type": "lldb",
             "request": "launch",
+            "name": "Debug integration test 'zkp_program_tests'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=zkp_program_tests",
+                    "--package=sunscreen"
+                ],
+                "filter": {
+                    "name": "zkp_program_tests",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
             "name": "Debug integration test 'edge_cases'",
             "cargo": {
                 "args": [

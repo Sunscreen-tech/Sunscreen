@@ -22,7 +22,7 @@ pub use serialization::WithContext;
 use seal_fhe::{Ciphertext as SealCiphertext, Plaintext as SealPlaintext};
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Hash, Serialize, Deserialize, Eq)]
 /**
  * The underlying backend implementation of a plaintext (e.g. SEAL's [`Plaintext`](seal_fhe::Plaintext)).
  */

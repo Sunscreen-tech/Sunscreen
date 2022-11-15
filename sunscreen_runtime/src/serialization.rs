@@ -1,3 +1,5 @@
+use std::hash::Hash;
+
 use crate::Params;
 use seal_fhe::{BfvEncryptionParametersBuilder, Context, FromBytes, Modulus, ToBytes};
 use serde::{
@@ -6,7 +8,7 @@ use serde::{
     Deserialize, Serialize,
 };
 
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Hash, Eq, Clone)]
 /**
  * A data type that contains parameters for reconstructing a context
  * during deserialization (needed by SEAL).

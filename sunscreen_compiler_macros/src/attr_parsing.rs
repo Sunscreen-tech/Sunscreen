@@ -1,15 +1,12 @@
-use proc_macro2::Span;
-use syn::{
-    parse::{Parse, ParseStream},
-    punctuated::Punctuated,
-    spanned::Spanned,
-    Error as SynError, Expr, Lit, LitInt, LitStr, Result as SynResult, Token,
-};
-
 use std::collections::HashMap;
 
-#[derive(Debug)]
-enum AttrValue {
+use proc_macro2::Span;
+use syn::{
+    parse::ParseStream, punctuated::Punctuated, spanned::Spanned, Error as SynError, Expr, Lit,
+    LitInt, LitStr, Result as SynResult, Token,
+};
+
+pub enum AttrValue {
     /**
      * The attribute value is a string.
      */
@@ -69,7 +66,7 @@ impl AttrValue {
             Self::String(_, val) => Ok(val),
             _ => Err(SynError::new(
                 self.span(),
-                format!("Expected String, got {}", self.get_type()),
+                format!("Expected string literal, got {}", self.get_type()),
             )),
         }
     }
@@ -79,7 +76,7 @@ impl AttrValue {
             Self::USize(_, val) => Ok(*val),
             _ => Err(SynError::new(
                 self.span(),
-                format!("Expected String, got {}", self.get_type()),
+                format!("Expected usize literal, got {}", self.get_type()),
             )),
         }
     }
@@ -105,7 +102,7 @@ impl AttrValue {
  * }
  * ```
  */
-fn try_parse_dict(input: ParseStream) -> SynResult<HashMap<String, AttrValue>> {
+pub fn try_parse_dict(input: ParseStream) -> SynResult<HashMap<String, AttrValue>> {
     // parses a,b,c, or a,b,c where a,b and c are Indent
     let vars = Punctuated::<Expr, Token![,]>::parse_terminated(input)?;
 
@@ -160,109 +157,4 @@ fn try_parse_dict(input: ParseStream) -> SynResult<HashMap<String, AttrValue>> {
     }
 
     Ok(attrs)
-}
-
-#[derive(Copy, Clone, PartialEq, Eq)]
-pub enum Scheme {
-    Bfv,
-}
-
-impl TryFrom<&AttrValue> for Scheme {
-    type Error = SynError;
-
-    fn try_from(value: &AttrValue) -> SynResult<Self> {
-        let as_str = value.as_str()?;
-
-        let scheme = match as_str {
-            "bfv" => Self::Bfv,
-            _ => {
-                return Err(SynError::new(
-                    value.span(),
-                    format!("Unknown scheme {}", as_str),
-                ));
-            }
-        };
-
-        Ok(scheme)
-    }
-}
-
-pub struct FheProgramAttrs {
-    pub scheme: Scheme,
-    pub chain_count: usize,
-}
-
-impl Parse for FheProgramAttrs {
-    fn parse(input: ParseStream) -> SynResult<Self> {
-        let attrs = try_parse_dict(input)?;
-
-        const VALUE_KEYS: &[&str] = &["scheme", "chain_count"];
-
-        for i in attrs.keys() {
-            if !VALUE_KEYS.iter().any(|x| x == i) {
-                return Err(SynError::new(input.span(), &format!("Unknown key '{}'", i)));
-            }
-        }
-
-        let scheme: Scheme = attrs
-            .get("scheme")
-            .ok_or_else(|| SynError::new(input.span(), "required `scheme` is missing".to_owned()))?
-            .try_into()?;
-
-        let chain_count = attrs
-            .get("chain_count")
-            .map(|x| x.as_usize())
-            .unwrap_or(Ok(1))?;
-
-        Ok(Self {
-            scheme,
-            chain_count,
-        })
-    }
-}
-
-pub enum BackendType {
-    Bulletproofs,
-}
-
-impl TryFrom<&AttrValue> for BackendType {
-    type Error = SynError;
-
-    fn try_from(value: &AttrValue) -> SynResult<Self> {
-        let as_str = value.as_str()?;
-
-        match as_str {
-            "bulletproofs" => Ok(BackendType::Bulletproofs),
-            _ => Err(SynError::new(
-                value.span(),
-                format!("Unknown backend `{}`", as_str.to_owned()),
-            )),
-        }
-    }
-}
-
-#[allow(unused)]
-pub struct ZkpProgramAttrs {
-    backend_type: BackendType,
-}
-
-impl Parse for ZkpProgramAttrs {
-    fn parse(input: ParseStream) -> SynResult<Self> {
-        let attrs = try_parse_dict(input)?;
-
-        const VALUE_KEYS: &[&str] = &["backend"];
-
-        for i in attrs.keys() {
-            if !VALUE_KEYS.iter().any(|x| x == i) {
-                return Err(SynError::new(input.span(), &format!("Unknown key '{}'", i)));
-            }
-        }
-
-        let backend_type = attrs.get("backend").ok_or_else(|| {
-            SynError::new(input.span(), "required 'backend' is missing".to_owned())
-        })?;
-        let backend_type = BackendType::try_from(backend_type)?;
-
-        Ok(Self { backend_type })
-    }
 }

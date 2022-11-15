@@ -18,7 +18,7 @@ readme = "crates-io.md"
 
 [dependencies]
 petgraph = { version = "0.6.0", features = ["serde-1"] }
-serde = { version = "1.0.130", features = ["derive"] }
+serde = { version = "1.0.147", features = ["derive"] }
 seal_fhe = { version = "0.7", path = "../seal_fhe" }
 
 [dev-dependencies]

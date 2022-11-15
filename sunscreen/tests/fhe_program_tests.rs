@@ -1,8 +1,8 @@
 use sunscreen::{
+    fhe::{FheFrontendCompilation, CURRENT_FHE_CTX},
     fhe_program,
     types::{bfv::Signed, Cipher, TypeName},
-    CallSignature, FheProgramFn, FrontendCompilation, Params, SchemeType, SecurityLevel,
-    CURRENT_CTX,
+    CallSignature, FheProgramFn, Params, SchemeType, SecurityLevel,
 };
 
 use serde_json::json;
@@ -46,7 +46,7 @@ fn fhe_program_gets_called() {
 fn panicing_fhe_program_clears_ctx() {
     #[fhe_program(scheme = "bfv")]
     fn panic_fhe_program() {
-        CURRENT_CTX.with(|ctx| {
+        CURRENT_FHE_CTX.with(|ctx| {
             let old = ctx.take();
 
             assert!(old.is_some());
@@ -71,7 +71,7 @@ fn panicing_fhe_program_clears_ctx() {
 
     assert!(panic_result.is_err());
 
-    CURRENT_CTX.with(|ctx| {
+    CURRENT_FHE_CTX.with(|ctx| {
         let old = ctx.take();
 
         assert!(old.is_none());
@@ -102,7 +102,7 @@ fn capture_fhe_program_input_args() {
 
     let context = fhe_program_with_args.build(&get_params()).unwrap();
 
-    assert_eq!(context.graph.node_count(), 4);
+    assert_eq!(context.0.node_count(), 4);
 }
 
 #[test]
@@ -122,48 +122,45 @@ fn can_add() {
     assert_eq!(fhe_program_with_args.signature(), expected_signature);
     assert_eq!(fhe_program_with_args.scheme_type(), SchemeType::Bfv);
 
-    let context: FrontendCompilation = fhe_program_with_args.build(&get_params()).unwrap();
+    let context = fhe_program_with_args.build(&get_params()).unwrap();
 
     let expected = json!({
-
-        "graph": {
-            "nodes": [
-                "InputCiphertext",
-                "InputCiphertext",
-                "InputCiphertext",
-                "Add",
-                "Add"
+        "nodes": [
+            { "operation": "InputCiphertext" },
+            { "operation": "InputCiphertext" },
+            { "operation": "InputCiphertext" },
+            { "operation": "Add" },
+            { "operation": "Add" }
+        ],
+        "node_holes": [],
+        "edge_property": "directed",
+        "edges": [
+            [
+                0,
+                3,
+                "Left"
             ],
-            "node_holes": [],
-            "edge_property": "directed",
-            "edges": [
-                [
-                    0,
-                    3,
-                    "Left"
-                ],
-                [
-                    1,
-                    3,
-                    "Right"
-                ],
-                [
-                    3,
-                    4,
-                    "Left"
-                ],
-                [
-                    2,
-                    4,
-                    "Right"
-                ]
+            [
+                1,
+                3,
+                "Right"
+            ],
+            [
+                3,
+                4,
+                "Left"
+            ],
+            [
+                2,
+                4,
+                "Right"
             ]
-        },
+        ]
     });
 
     assert_eq!(
         context,
-        serde_json::from_value::<FrontendCompilation>(expected).unwrap()
+        serde_json::from_value::<FheFrontendCompilation>(expected).unwrap()
     );
 }
 
@@ -182,36 +179,33 @@ fn can_add_plaintext() {
     assert_eq!(fhe_program_with_args.signature(), expected_signature);
     assert_eq!(fhe_program_with_args.scheme_type(), SchemeType::Bfv);
 
-    let context: FrontendCompilation = fhe_program_with_args.build(&get_params()).unwrap();
+    let context = fhe_program_with_args.build(&get_params()).unwrap();
 
     let expected = json!({
-
-        "graph": {
-            "nodes": [
-                "InputCiphertext",
-                "InputPlaintext",
-                "AddPlaintext",
+        "nodes": [
+            { "operation": "InputCiphertext" },
+            { "operation": "InputPlaintext" },
+            { "operation": "AddPlaintext" },
+        ],
+        "node_holes": [],
+        "edge_property": "directed",
+        "edges": [
+            [
+                0,
+                2,
+                "Left"
             ],
-            "node_holes": [],
-            "edge_property": "directed",
-            "edges": [
-                [
-                    0,
-                    2,
-                    "Left"
-                ],
-                [
-                    1,
-                    2,
-                    "Right"
-                ],
-            ]
-        },
+            [
+                1,
+                2,
+                "Right"
+            ],
+        ]
     });
 
     assert_eq!(
         context,
-        serde_json::from_value::<FrontendCompilation>(expected).unwrap()
+        serde_json::from_value::<FheFrontendCompilation>(expected).unwrap()
     );
 }
 
@@ -235,44 +229,42 @@ fn can_mul() {
     let context = fhe_program_with_args.build(&get_params()).unwrap();
 
     let expected = json!({
-        "graph": {
-            "nodes": [
-                "InputCiphertext",
-                "InputCiphertext",
-                "InputCiphertext",
-                "Multiply",
-                "Multiply"
+        "nodes": [
+            { "operation": "InputCiphertext" },
+            { "operation": "InputCiphertext" },
+            { "operation": "InputCiphertext" },
+            { "operation": "Multiply" },
+            { "operation": "Multiply" }
+        ],
+        "node_holes": [],
+        "edge_property": "directed",
+        "edges": [
+            [
+                0,
+                3,
+                "Left"
             ],
-            "node_holes": [],
-            "edge_property": "directed",
-            "edges": [
-                [
-                    0,
-                    3,
-                    "Left"
-                ],
-                [
-                    1,
-                    3,
-                    "Right"
-                ],
-                [
-                    3,
-                    4,
-                    "Left"
-                ],
-                [
-                    2,
-                    4,
-                    "Right"
-                ]
+            [
+                1,
+                3,
+                "Right"
+            ],
+            [
+                3,
+                4,
+                "Left"
+            ],
+            [
+                2,
+                4,
+                "Right"
             ]
-        },
+        ]
     });
 
     assert_eq!(
         context,
-        serde_json::from_value::<FrontendCompilation>(expected).unwrap()
+        serde_json::from_value::<FheFrontendCompilation>(expected).unwrap()
     );
 }
 
@@ -296,13 +288,12 @@ fn can_collect_output() {
     let context = fhe_program_with_args.build(&get_params()).unwrap();
 
     let expected = json!({
-      "graph": {
         "nodes": [
-          "InputCiphertext",
-          "InputCiphertext",
-          "Multiply",
-          "Add",
-          "Output"
+          { "operation": "InputCiphertext" },
+          { "operation": "InputCiphertext" },
+          { "operation": "Multiply" },
+          { "operation": "Add" },
+          { "operation": "Output" },
         ],
         "node_holes": [],
         "edge_property": "directed",
@@ -333,12 +324,13 @@ fn can_collect_output() {
             "Unary"
           ]
         ]
-      },
     });
+
+    dbg!(serde_json::to_string(&context).unwrap());
 
     assert_eq!(
         context,
-        serde_json::from_value::<FrontendCompilation>(expected).unwrap()
+        serde_json::from_value::<FheFrontendCompilation>(expected).unwrap()
     );
 }
 
@@ -365,14 +357,13 @@ fn can_collect_multiple_outputs() {
     let context = fhe_program_with_args.build(&get_params()).unwrap();
 
     let expected = json!({
-        "graph": {
           "nodes": [
-            "InputCiphertext",
-            "InputCiphertext",
-            "Multiply",
-            "Add",
-            "Output",
-            "Output"
+            { "operation": "InputCiphertext" },
+            { "operation": "InputCiphertext"    },
+            { "operation": "Multiply" },
+            { "operation": "Add" },
+            { "operation": "Output" },
+            { "operation": "Output" },
           ],
           "node_holes": [],
           "edge_property": "directed",
@@ -408,11 +399,10 @@ fn can_collect_multiple_outputs() {
               "Unary"
             ]
           ]
-        },
     });
 
     assert_eq!(
         context,
-        serde_json::from_value::<FrontendCompilation>(expected).unwrap()
+        serde_json::from_value::<FheFrontendCompilation>(expected).unwrap()
     );
 }

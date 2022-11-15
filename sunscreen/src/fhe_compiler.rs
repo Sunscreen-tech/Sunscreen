@@ -1,7 +1,8 @@
+use crate::fhe::{FheCompile, FheFrontendCompilation};
 use crate::params::{determine_params, PlainModulusConstraint};
 use crate::{
-    Application, CallSignature, Error, FheProgramMetadata, FrontendCompilation, Params,
-    RequiredKeys, Result, SchemeType, SecurityLevel,
+    Application, CallSignature, Error, FheProgramMetadata, Params, RequiredKeys, Result,
+    SchemeType, SecurityLevel,
 };
 use std::collections::{HashMap, HashSet};
 use sunscreen_runtime::CompiledFheProgram;
@@ -24,7 +25,7 @@ pub trait FheProgramFn {
     /**
      * Compile the `#[fhe_program]`.
      */
-    fn build(&self, params: &Params) -> Result<FrontendCompilation>;
+    fn build(&self, params: &Params) -> Result<FheFrontendCompilation>;
 
     /**
      * Get the scheme type.

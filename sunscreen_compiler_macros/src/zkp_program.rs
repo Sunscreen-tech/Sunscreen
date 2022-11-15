@@ -1,34 +1,33 @@
-use crate::{
-    fhe_program_transforms::*,
-    internals::attr::{FheProgramAttrs, Scheme},
-};
-use proc_macro2::{Span, TokenStream};
+use proc_macro2::{Ident, Span, TokenStream};
 use quote::{quote, quote_spanned};
-use syn::{parse_macro_input, spanned::Spanned, Ident, ItemFn, Type};
+use sunscreen_compiler_common::macros::{
+    create_program_node, emit_signature, extract_fn_arguments, lift_type, ExtractFnArgumentsError,
+};
+use syn::{parse_macro_input, spanned::Spanned, ItemFn, ReturnType, Type};
 
-pub fn fhe_program_impl(
+use crate::internals::attr::ZkpProgramAttrs;
+
+pub fn zkp_program_impl(
     metadata: proc_macro::TokenStream,
     input: proc_macro::TokenStream,
 ) -> proc_macro::TokenStream {
+    let _attr_params = parse_macro_input!(metadata as ZkpProgramAttrs);
     let input_fn = parse_macro_input!(input as ItemFn);
 
-    let fhe_program_name = &input_fn.sig.ident;
+    let zkp_program_name = &input_fn.sig.ident;
     let vis = &input_fn.vis;
     let body = &input_fn.block;
     let inputs = &input_fn.sig.inputs;
     let ret = &input_fn.sig.output;
 
-    let attr_params = parse_macro_input!(metadata as FheProgramAttrs);
-
-    let scheme_type = match attr_params.scheme {
-        Scheme::Bfv => {
-            quote! {
-                sunscreen::SchemeType::Bfv
-            }
+    match ret {
+        ReturnType::Default => {}
+        _ => {
+            return proc_macro::TokenStream::from(quote_spanned! {
+                ret.span() => compile_error!("ZKP programs may not return values.")
+            });
         }
     };
-
-    let chain_count = attr_params.chain_count;
 
     let unwrapped_inputs = match extract_fn_arguments(inputs) {
         Ok(v) => v,
@@ -52,11 +51,11 @@ pub fn fhe_program_impl(
         .map(|(t, _)| (**t).clone())
         .collect::<Vec<Type>>();
 
-    let fhe_program_args = unwrapped_inputs
+    let zkp_program_args = unwrapped_inputs
         .iter()
         .map(|i| {
             let (ty, name) = i;
-            let ty = map_fhe_type(ty).unwrap();
+            let ty = lift_type(ty).unwrap();
 
             quote! {
                 #name: #ty,
@@ -64,38 +63,12 @@ pub fn fhe_program_impl(
         })
         .collect::<Vec<TokenStream>>();
 
-    let return_types = match extract_return_types(ret) {
-        Ok(v) => v,
-        Err(ExtractReturnTypesError::IllegalType(s)) => {
-            return proc_macro::TokenStream::from(
-                quote_spanned! {s => compile_error! {"FHE programs may return a single value or a tuple of values. Each type must be an FHE type or array of such."}},
-            );
-        }
-    };
-
-    let output_capture = emit_output_capture(&return_types);
-
-    let fhe_program_returns = match return_types
-        .iter()
-        .map(map_fhe_type)
-        .collect::<Result<Vec<Type>, MapFheTypeError>>()
-    {
-        Ok(v) => v,
-        Err(MapFheTypeError::IllegalType(s)) => {
-            return proc_macro::TokenStream::from(
-                quote_spanned! {s => compile_error! {"Each return type for an FHE program must be either an array or named struct type."}},
-            );
-        }
-    };
-
-    let fhe_program_return = pack_return_type(&fhe_program_returns);
-
-    let signature = emit_signature(&argument_types, &return_types);
+    let signature = emit_signature(&argument_types, &[]);
 
     let var_decl = unwrapped_inputs.iter().enumerate().map(|(i, t)| {
         let var_name = format!("c_{}", i);
 
-        create_fhe_program_node(&var_name, t.0)
+        create_program_node(&var_name, t.0)
     });
 
     let args = unwrapped_inputs.iter().enumerate().map(|(i, t)| {
@@ -106,40 +79,34 @@ pub fn fhe_program_impl(
         }
     });
 
-    let fhe_program_struct_name =
-        Ident::new(&format!("{}_struct", fhe_program_name), Span::call_site());
+    let zkp_program_struct_name =
+        Ident::new(&format!("{}_struct", zkp_program_name), Span::call_site());
 
-    let fhe_program_name_literal = format!("{}", fhe_program_name);
+    let zkp_program_name_literal = format!("{}", zkp_program_name);
 
     proc_macro::TokenStream::from(quote! {
         #[allow(non_camel_case_types)]
         #[derive(Clone)]
-        #vis struct #fhe_program_struct_name {
-            chain_count: usize
+        #vis struct #zkp_program_struct_name {
         }
 
-        impl sunscreen::FheProgramFn for #fhe_program_struct_name {
-            fn build(&self, params: &sunscreen::Params) -> sunscreen::Result<sunscreen::fhe::FheFrontendCompilation> {
+        impl sunscreen::ZkpProgramFn for #zkp_program_struct_name {
+            fn build(&self) -> sunscreen::Result<sunscreen::ZkpFrontendCompilation> {
                 use std::cell::RefCell;
                 use std::mem::transmute;
-                use sunscreen::{fhe::{CURRENT_FHE_CTX, FheContext}, Error, INDEX_ARENA, Result, Params, SchemeType, Value, types::{intern::{FheProgramNode, Input, Output}, NumCiphertexts, Type, TypeName, SwapRows, LaneCount, TypeNameInstance}};
+                use sunscreen::{CURRENT_ZKP_CTX, ZkpContext, Error, INDEX_ARENA, Result, types::{zkp::ProgramNode, TypeName}};
 
-                if SchemeType::Bfv != params.scheme_type {
-                    return Err(Error::IncorrectScheme)
-                }
+                let mut context = ZkpContext::new(0);
 
-                // TODO: Other schemes.
-                let mut context = FheContext::new(params.clone());
-
-                CURRENT_FHE_CTX.with(|ctx| {
+                CURRENT_ZKP_CTX.with(|ctx| {
                     #[allow(clippy::type_complexity)]
                     #[forbid(unused_variables)]
-                    let internal = | #(#fhe_program_args)* | -> #fhe_program_return
+                    let internal = | #(#zkp_program_args)* |
                         #body
                     ;
 
                     // Transmute away the lifetime to 'static. So long as we are careful with internal()
-                    // panicing, this is safe because we set the context back to none before the funtion
+                    // panicing, this is safe because we set the context back to none before the function
                     // returns.
                     ctx.swap(&RefCell::new(Some(unsafe { transmute(&mut context) })));
 
@@ -149,10 +116,10 @@ pub fn fhe_program_impl(
                         internal(#(#args),*)
                     });
 
-                    // when panicing or not, we need to collect our indicies arena and
+                    // when panicing or not, we need to clear our indicies arena and
                     // unset the context reference.
                     match panic_res {
-                        Ok(v) => { #output_capture },
+                        Ok(v) => { },
                         Err(err) => {
                             INDEX_ARENA.with(|allocator| {
                                 allocator.borrow_mut().reset()
@@ -172,25 +139,15 @@ pub fn fhe_program_impl(
             }
 
             fn signature(&self) -> sunscreen::CallSignature {
-                use sunscreen::types::NumCiphertexts;
-
                 #signature
             }
 
-            fn scheme_type(&self) -> sunscreen::SchemeType {
-                #scheme_type
-            }
-
             fn name(&self) -> &str {
-                #fhe_program_name_literal
-            }
-
-            fn chain_count(&self) -> usize {
-                self.chain_count
+                #zkp_program_name_literal
             }
         }
 
-        impl AsRef<str> for #fhe_program_struct_name {
+        impl AsRef<str> for #zkp_program_struct_name {
             fn as_ref(&self) -> &str {
                 use sunscreen::FheProgramFn;
 
@@ -199,8 +156,7 @@ pub fn fhe_program_impl(
         }
 
         #[allow(non_upper_case_globals)]
-        #vis const #fhe_program_name: #fhe_program_struct_name = #fhe_program_struct_name {
-            chain_count: #chain_count
+        #vis const #zkp_program_name: #zkp_program_struct_name = #zkp_program_struct_name {
         };
     })
 }

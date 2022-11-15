@@ -62,8 +62,8 @@ impl<'a, N, E> GraphQuery<'a, N, E> {
  */
 pub trait TransformList<N, E>
 where
-    N: Copy,
-    E: Copy,
+    N: Clone,
+    E: Clone,
 {
     /**
      * Apply the transformations.
@@ -87,8 +87,8 @@ where
  */
 pub fn forward_traverse<N, E, F, T>(graph: &mut StableGraph<N, E>, callback: F)
 where
-    N: Copy,
-    E: Copy,
+    N: Clone,
+    E: Clone,
     T: TransformList<N, E>,
     F: FnMut(GraphQuery<N, E>, NodeIndex) -> T,
 {
@@ -111,8 +111,8 @@ where
  */
 pub fn reverse_traverse<N, E, F, T>(graph: &mut StableGraph<N, E>, callback: F)
 where
-    N: Copy,
-    E: Copy,
+    N: Clone,
+    E: Clone,
     T: TransformList<N, E>,
     F: FnMut(GraphQuery<N, E>, NodeIndex) -> T,
 {
@@ -121,8 +121,8 @@ where
 
 fn traverse<N, E, T, F>(graph: &mut StableGraph<N, E>, forward: bool, mut callback: F)
 where
-    N: Copy,
-    E: Copy,
+    N: Clone,
+    E: Clone,
     F: FnMut(GraphQuery<N, E>, NodeIndex) -> T,
     T: TransformList<N, E>,
 {

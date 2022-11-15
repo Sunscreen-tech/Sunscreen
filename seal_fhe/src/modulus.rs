@@ -42,7 +42,7 @@ impl PartialEq for Modulus {
  * Microsoft SEAL when constructing a SEALContext object. Normal users should not
  * have to specify the security level explicitly anywhere.
  */
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Copy, Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
 #[repr(i32)]
 pub enum SecurityLevel {
     /// 128-bit security level according to HomomorphicEncryption.org standard.

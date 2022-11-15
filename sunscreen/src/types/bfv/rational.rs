@@ -1,9 +1,10 @@
+use crate::fhe::{with_fhe_ctx, FheContextOps};
 use crate::types::{
     bfv::Signed, intern::FheProgramNode, ops::*, BfvType, Cipher, FheType, GraphCipherAdd,
     GraphCipherDiv, GraphCipherMul, GraphCipherSub, NumCiphertexts, TryFromPlaintext,
     TryIntoPlaintext, TypeName,
 };
-use crate::{with_ctx, FheProgramInputTrait, InnerPlaintext, Params, Plaintext, TypeName};
+use crate::{FheProgramInputTrait, InnerPlaintext, Params, Plaintext, TypeName};
 use std::cmp::Eq;
 use std::ops::*;
 use sunscreen_runtime::Error;
@@ -274,7 +275,7 @@ impl GraphCipherAdd for Rational {
         a: FheProgramNode<Cipher<Self::Left>>,
         b: FheProgramNode<Cipher<Self::Right>>,
     ) -> FheProgramNode<Cipher<Self::Left>> {
-        with_ctx(|ctx| {
+        with_fhe_ctx(|ctx| {
             // Scale each numinator by the other's denominator.
             let num_a_2 = ctx.add_multiplication(a.ids[0], b.ids[1]);
             let num_b_2 = ctx.add_multiplication(a.ids[1], b.ids[0]);
@@ -297,7 +298,7 @@ impl GraphCipherPlainAdd for Rational {
         a: FheProgramNode<Cipher<Self::Left>>,
         b: FheProgramNode<Self::Right>,
     ) -> FheProgramNode<Cipher<Self::Left>> {
-        with_ctx(|ctx| {
+        with_fhe_ctx(|ctx| {
             // Scale each numinator by the other's denominator.
             let num_a_2 = ctx.add_multiplication_plaintext(a.ids[0], b.ids[1]);
             let num_b_2 = ctx.add_multiplication_plaintext(a.ids[1], b.ids[0]);
@@ -320,14 +321,14 @@ impl GraphCipherConstAdd for Rational {
         a: FheProgramNode<Cipher<Self::Left>>,
         b: Self::Right,
     ) -> FheProgramNode<Cipher<Self::Left>> {
-        with_ctx(|ctx| {
+        with_fhe_ctx(|ctx| {
             let b = Self::try_from(b).unwrap();
 
             let b_num =
-                ctx.add_plaintext_literal(b.num.try_into_plaintext(&ctx.params).unwrap().inner);
+                ctx.add_plaintext_literal(b.num.try_into_plaintext(&ctx.data).unwrap().inner);
 
             let b_den =
-                ctx.add_plaintext_literal(b.den.try_into_plaintext(&ctx.params).unwrap().inner);
+                ctx.add_plaintext_literal(b.den.try_into_plaintext(&ctx.data).unwrap().inner);
 
             // Scale each numinator by the other's denominator.
             let num_a_2 = ctx.add_multiplication_plaintext(a.ids[0], b_den);
@@ -351,7 +352,7 @@ impl GraphCipherSub for Rational {
         a: FheProgramNode<Cipher<Self::Left>>,
         b: FheProgramNode<Cipher<Self::Right>>,
     ) -> FheProgramNode<Cipher<Self::Left>> {
-        with_ctx(|ctx| {
+        with_fhe_ctx(|ctx| {
             // Scale each numinator by the other's denominator.
             let num_a_2 = ctx.add_multiplication(a.ids[0], b.ids[1]);
             let num_b_2 = ctx.add_multiplication(a.ids[1], b.ids[0]);
@@ -374,7 +375,7 @@ impl GraphCipherPlainSub for Rational {
         a: FheProgramNode<Cipher<Self::Left>>,
         b: FheProgramNode<Self::Right>,
     ) -> FheProgramNode<Cipher<Self::Left>> {
-        with_ctx(|ctx| {
+        with_fhe_ctx(|ctx| {
             // Scale each numinator by the other's denominator.
             let num_a_2 = ctx.add_multiplication_plaintext(a.ids[0], b.ids[1]);
             let num_b_2 = ctx.add_multiplication_plaintext(a.ids[1], b.ids[0]);
@@ -397,7 +398,7 @@ impl GraphPlainCipherSub for Rational {
         a: FheProgramNode<Self::Left>,
         b: FheProgramNode<Cipher<Self::Right>>,
     ) -> FheProgramNode<Cipher<Self::Left>> {
-        with_ctx(|ctx| {
+        with_fhe_ctx(|ctx| {
             // Scale each numinator by the other's denominator.
             let num_a_2 = ctx.add_multiplication_plaintext(b.ids[0], a.ids[1]);
             let num_b_2 = ctx.add_multiplication_plaintext(b.ids[1], a.ids[0]);
@@ -420,13 +421,13 @@ impl GraphCipherConstSub for Rational {
         a: FheProgramNode<Cipher<Self::Left>>,
         b: Self::Right,
     ) -> FheProgramNode<Cipher<Self::Left>> {
-        with_ctx(|ctx| {
+        with_fhe_ctx(|ctx| {
             let b = Self::try_from(b).unwrap();
 
             let b_num =
-                ctx.add_plaintext_literal(b.num.try_into_plaintext(&ctx.params).unwrap().inner);
+                ctx.add_plaintext_literal(b.num.try_into_plaintext(&ctx.data).unwrap().inner);
             let b_den =
-                ctx.add_plaintext_literal(b.den.try_into_plaintext(&ctx.params).unwrap().inner);
+                ctx.add_plaintext_literal(b.den.try_into_plaintext(&ctx.data).unwrap().inner);
 
             // Scale each numinator by the other's denominator.
             let num_a_2 = ctx.add_multiplication_plaintext(a.ids[0], b_den);
@@ -450,13 +451,13 @@ impl GraphConstCipherSub for Rational {
         a: Self::Left,
         b: FheProgramNode<Cipher<Self::Right>>,
     ) -> FheProgramNode<Cipher<Self::Right>> {
-        with_ctx(|ctx| {
+        with_fhe_ctx(|ctx| {
             let a = Self::try_from(a).unwrap();
 
             let a_num =
-                ctx.add_plaintext_literal(a.num.try_into_plaintext(&ctx.params).unwrap().inner);
+                ctx.add_plaintext_literal(a.num.try_into_plaintext(&ctx.data).unwrap().inner);
             let a_den =
-                ctx.add_plaintext_literal(a.den.try_into_plaintext(&ctx.params).unwrap().inner);
+                ctx.add_plaintext_literal(a.den.try_into_plaintext(&ctx.data).unwrap().inner);
 
             // Scale each numinator by the other's denominator.
             let num_b_2 = ctx.add_multiplication_plaintext(b.ids[0], a_den);
@@ -480,7 +481,7 @@ impl GraphCipherMul for Rational {
         a: FheProgramNode<Cipher<Self::Left>>,
         b: FheProgramNode<Cipher<Self::Right>>,
     ) -> FheProgramNode<Cipher<Self::Left>> {
-        with_ctx(|ctx| {
+        with_fhe_ctx(|ctx| {
             // Scale each numinator by the other's denominator.
             let mul_num = ctx.add_multiplication(a.ids[0], b.ids[0]);
             let mul_den = ctx.add_multiplication(a.ids[1], b.ids[1]);
@@ -500,7 +501,7 @@ impl GraphCipherPlainMul for Rational {
         a: FheProgramNode<Cipher<Self::Left>>,
         b: FheProgramNode<Self::Right>,
     ) -> FheProgramNode<Cipher<Self::Left>> {
-        with_ctx(|ctx| {
+        with_fhe_ctx(|ctx| {
             // Scale each numinator by the other's denominator.
             let mul_num = ctx.add_multiplication_plaintext(a.ids[0], b.ids[0]);
             let mul_den = ctx.add_multiplication_plaintext(a.ids[1], b.ids[1]);
@@ -520,13 +521,13 @@ impl GraphCipherConstMul for Rational {
         a: FheProgramNode<Cipher<Self::Left>>,
         b: Self::Right,
     ) -> FheProgramNode<Cipher<Self::Left>> {
-        with_ctx(|ctx| {
+        with_fhe_ctx(|ctx| {
             let b = Self::try_from(b).unwrap();
 
             let num_b =
-                ctx.add_plaintext_literal(b.num.try_into_plaintext(&ctx.params).unwrap().inner);
+                ctx.add_plaintext_literal(b.num.try_into_plaintext(&ctx.data).unwrap().inner);
             let den_b =
-                ctx.add_plaintext_literal(b.den.try_into_plaintext(&ctx.params).unwrap().inner);
+                ctx.add_plaintext_literal(b.den.try_into_plaintext(&ctx.data).unwrap().inner);
 
             // Scale each numinator by the other's denominator.
             let mul_num = ctx.add_multiplication_plaintext(a.ids[0], num_b);
@@ -547,7 +548,7 @@ impl GraphCipherDiv for Rational {
         a: FheProgramNode<Cipher<Self::Left>>,
         b: FheProgramNode<Cipher<Self::Right>>,
     ) -> FheProgramNode<Cipher<Self::Left>> {
-        with_ctx(|ctx| {
+        with_fhe_ctx(|ctx| {
             // Scale each numinator by the other's denominator.
             let mul_num = ctx.add_multiplication(a.ids[0], b.ids[1]);
             let mul_den = ctx.add_multiplication(a.ids[1], b.ids[0]);
@@ -567,7 +568,7 @@ impl GraphCipherPlainDiv for Rational {
         a: FheProgramNode<Cipher<Self::Left>>,
         b: FheProgramNode<Self::Right>,
     ) -> FheProgramNode<Cipher<Self::Left>> {
-        with_ctx(|ctx| {
+        with_fhe_ctx(|ctx| {
             // Scale each numinator by the other's denominator.
             let mul_num = ctx.add_multiplication_plaintext(a.ids[0], b.ids[1]);
             let mul_den = ctx.add_multiplication_plaintext(a.ids[1], b.ids[0]);
@@ -587,7 +588,7 @@ impl GraphPlainCipherDiv for Rational {
         a: FheProgramNode<Self::Left>,
         b: FheProgramNode<Cipher<Self::Right>>,
     ) -> FheProgramNode<Cipher<Self::Left>> {
-        with_ctx(|ctx| {
+        with_fhe_ctx(|ctx| {
             // Scale each numinator by the other's denominator.
             let mul_num = ctx.add_multiplication_plaintext(b.ids[1], a.ids[0]);
             let mul_den = ctx.add_multiplication_plaintext(b.ids[0], a.ids[1]);
@@ -607,13 +608,13 @@ impl GraphCipherConstDiv for Rational {
         a: FheProgramNode<Cipher<Self::Left>>,
         b: Self::Right,
     ) -> FheProgramNode<Cipher<Self::Left>> {
-        with_ctx(|ctx| {
+        with_fhe_ctx(|ctx| {
             let b = Self::try_from(b).unwrap();
 
             let num_b =
-                ctx.add_plaintext_literal(b.num.try_into_plaintext(&ctx.params).unwrap().inner);
+                ctx.add_plaintext_literal(b.num.try_into_plaintext(&ctx.data).unwrap().inner);
             let den_b =
-                ctx.add_plaintext_literal(b.den.try_into_plaintext(&ctx.params).unwrap().inner);
+                ctx.add_plaintext_literal(b.den.try_into_plaintext(&ctx.data).unwrap().inner);
 
             // Scale each numinator by the other's denominator.
             let mul_num = ctx.add_multiplication_plaintext(a.ids[0], den_b);
@@ -634,13 +635,13 @@ impl GraphConstCipherDiv for Rational {
         a: Self::Left,
         b: FheProgramNode<Cipher<Self::Right>>,
     ) -> FheProgramNode<Cipher<Self::Right>> {
-        with_ctx(|ctx| {
+        with_fhe_ctx(|ctx| {
             let a = Self::try_from(a).unwrap();
 
             let num_a =
-                ctx.add_plaintext_literal(a.num.try_into_plaintext(&ctx.params).unwrap().inner);
+                ctx.add_plaintext_literal(a.num.try_into_plaintext(&ctx.data).unwrap().inner);
             let den_a =
-                ctx.add_plaintext_literal(a.den.try_into_plaintext(&ctx.params).unwrap().inner);
+                ctx.add_plaintext_literal(a.den.try_into_plaintext(&ctx.data).unwrap().inner);
 
             // Scale each numinator by the other's denominator.
             let mul_num = ctx.add_multiplication_plaintext(b.ids[1], num_a);
@@ -657,7 +658,7 @@ impl GraphCipherNeg for Rational {
     type Val = Self;
 
     fn graph_cipher_neg(a: FheProgramNode<Cipher<Self::Val>>) -> FheProgramNode<Cipher<Self::Val>> {
-        with_ctx(|ctx| {
+        with_fhe_ctx(|ctx| {
             let neg = ctx.add_negate(a.ids[0]);
             let ids = [neg, a.ids[1]];
 

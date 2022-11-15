@@ -1,11 +1,12 @@
 use crate::{
+    fhe::{with_fhe_ctx, FheContextOps, Literal},
     types::{
         intern::{Cipher, FheProgramNode},
         ops::*,
         BfvType, FheType, LaneCount, NumCiphertexts, SwapRows, TryFromPlaintext, TryIntoPlaintext,
         Type, TypeName, TypeNameInstance, Version,
     },
-    with_ctx, FheProgramInputTrait, InnerPlaintext, Literal, Params, Plaintext, WithContext,
+    FheProgramInputTrait, InnerPlaintext, Params, Plaintext, WithContext,
 };
 use seal_fhe::{
     BFVEncoder, BfvEncryptionParametersBuilder, Context as SealContext, Modulus,
@@ -509,7 +510,7 @@ impl<const LANES: usize> GraphCipherAdd for Batched<LANES> {
         a: FheProgramNode<Cipher<Self::Left>>,
         b: FheProgramNode<Cipher<Self::Right>>,
     ) -> FheProgramNode<Cipher<Self::Left>> {
-        with_ctx(|ctx| {
+        with_fhe_ctx(|ctx| {
             let n = ctx.add_addition(a.ids[0], b.ids[0]);
 
             FheProgramNode::new(&[n])
@@ -525,7 +526,7 @@ impl<const LANES: usize> GraphCipherSub for Batched<LANES> {
         a: FheProgramNode<Cipher<Self::Left>>,
         b: FheProgramNode<Cipher<Self::Right>>,
     ) -> FheProgramNode<Cipher<Self::Left>> {
-        with_ctx(|ctx| {
+        with_fhe_ctx(|ctx| {
             let n = ctx.add_subtraction(a.ids[0], b.ids[0]);
 
             FheProgramNode::new(&[n])
@@ -541,7 +542,7 @@ impl<const LANES: usize> GraphCipherMul for Batched<LANES> {
         a: FheProgramNode<Cipher<Self::Left>>,
         b: FheProgramNode<Cipher<Self::Right>>,
     ) -> FheProgramNode<Cipher<Self::Left>> {
-        with_ctx(|ctx| {
+        with_fhe_ctx(|ctx| {
             let n = ctx.add_multiplication(a.ids[0], b.ids[0]);
 
             FheProgramNode::new(&[n])
@@ -557,8 +558,8 @@ impl<const LANES: usize> GraphCipherConstMul for Batched<LANES> {
         a: FheProgramNode<Cipher<Self::Left>>,
         b: Self::Right,
     ) -> FheProgramNode<Cipher<Self::Left>> {
-        with_ctx(|ctx| {
-            let b = Self::from(b).try_into_plaintext(&ctx.params).unwrap();
+        with_fhe_ctx(|ctx| {
+            let b = Self::from(b).try_into_plaintext(&ctx.data).unwrap();
             let l = ctx.add_plaintext_literal(b.inner);
             let n = ctx.add_multiplication_plaintext(a.ids[0], l);
 
@@ -569,7 +570,7 @@ impl<const LANES: usize> GraphCipherConstMul for Batched<LANES> {
 
 impl<const LANES: usize> GraphCipherSwapRows for Batched<LANES> {
     fn graph_cipher_swap_rows(x: FheProgramNode<Cipher<Self>>) -> FheProgramNode<Cipher<Self>> {
-        with_ctx(|ctx| {
+        with_fhe_ctx(|ctx| {
             let n = ctx.add_swap_rows(x.ids[0]);
 
             FheProgramNode::new(&[n])
@@ -582,7 +583,7 @@ impl<const LANES: usize> GraphCipherRotateLeft for Batched<LANES> {
         x: FheProgramNode<Cipher<Self>>,
         y: u64,
     ) -> FheProgramNode<Cipher<Self>> {
-        with_ctx(|ctx| {
+        with_fhe_ctx(|ctx| {
             let y = ctx.add_literal(Literal::U64(y));
             let n = ctx.add_rotate_left(x.ids[0], y);
 
@@ -596,7 +597,7 @@ impl<const LANES: usize> GraphCipherRotateRight for Batched<LANES> {
         x: FheProgramNode<Cipher<Self>>,
         y: u64,
     ) -> FheProgramNode<Cipher<Self>> {
-        with_ctx(|ctx| {
+        with_fhe_ctx(|ctx| {
             let y = ctx.add_literal(Literal::U64(y));
             let n = ctx.add_rotate_right(x.ids[0], y);
 
@@ -609,7 +610,7 @@ impl<const LANES: usize> GraphCipherNeg for Batched<LANES> {
     type Val = Self;
 
     fn graph_cipher_neg(x: FheProgramNode<Cipher<Self>>) -> FheProgramNode<Cipher<Self::Val>> {
-        with_ctx(|ctx| {
+        with_fhe_ctx(|ctx| {
             let n = ctx.add_negate(x.ids[0]);
 
             FheProgramNode::new(&[n])

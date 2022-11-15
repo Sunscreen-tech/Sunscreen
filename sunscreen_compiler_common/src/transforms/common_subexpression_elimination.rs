@@ -75,7 +75,7 @@ pub fn common_subexpression_elimination<O: Operation>(
 
         // Key is left/unary+right operand and operation. Value is
         // the node that matches such a key.
-        let mut visited_nodes = HashMap::<(NodeIndex, Option<NodeIndex>, O), NodeIndex>::new();
+        let mut visited_nodes = HashMap::<(NodeIndex, Option<NodeIndex>, &O), NodeIndex>::new();
 
         // Look through out immediate children. If we find any of the
         // type that share an edge with another node, consolidate them into
@@ -101,31 +101,31 @@ pub fn common_subexpression_elimination<O: Operation>(
                 )));
             };
 
-            let child_op = child_node.operation;
+            let child_op = &child_node.operation;
 
             if child_op.is_binary() {
                 let (left, right) = get_binary_operands(&query, e);
 
-                match visited_nodes.get(&(left, Some(right), child_node.operation)) {
+                match visited_nodes.get(&(left, Some(right), child_op)) {
                     Some(equiv_node) => {
                         move_edges(*equiv_node, e);
                     }
                     None => {
-                        visited_nodes.insert((left, Some(right), child_node.operation), e);
+                        visited_nodes.insert((left, Some(right), child_op), e);
 
                         if child_op.is_commutative() {
-                            visited_nodes.insert((right, Some(left), child_node.operation), e);
+                            visited_nodes.insert((right, Some(left), child_op), e);
                         }
                     }
                 };
             } else if child_op.is_unary() {
                 // Unary
-                let equiv_node = visited_nodes.get(&(index, None, child_node.operation));
+                let equiv_node = visited_nodes.get(&(index, None, child_op));
 
                 match equiv_node {
                     Some(equiv_node) => move_edges(*equiv_node, e),
                     None => {
-                        visited_nodes.insert((index, None, child_node.operation), e);
+                        visited_nodes.insert((index, None, child_op), e);
                     }
                 }
             }

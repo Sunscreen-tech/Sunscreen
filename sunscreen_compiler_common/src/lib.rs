@@ -7,6 +7,11 @@
 mod context;
 mod graph;
 /**
+ * Helper methods for macros.
+ */
+pub mod macros;
+
+/**
  * A set of generic compiler transforms.
  */
 pub mod transforms;
@@ -41,7 +46,7 @@ pub trait Render {
  *
  * Also provides functions that describe properties of an operation.
  */
-pub trait Operation: Clone + Copy + Debug + Hash + PartialEq + Eq {
+pub trait Operation: Clone + Debug + Hash + PartialEq + Eq {
     /**
      * Whether or not this operation commutes.
      */

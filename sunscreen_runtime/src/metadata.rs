@@ -63,7 +63,7 @@ pub enum RequiredKeys {
     PublicKey,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Hash, Deserialize, PartialEq, Eq)]
 /**
  * The parameter set required for a given FHE program to run efficiently and correctly.
  */

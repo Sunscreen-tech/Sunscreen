@@ -160,11 +160,101 @@ fn try_uint_to_scalar<const N: usize>(x: &UInt<N>) -> Result<Scalar> {
         }
     }
     
-    let scalar = Scalar::from_bits(scalar_data);
+    let scalar = Scalar::from_canonical_bytes(scalar_data);
 
-    if !scalar.is_canonical() {
-        return Err(Error::OutOfRange(x.to_string()));
+    scalar.ok_or_else(|| Error::OutOfRange(x.to_string()))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn can_convert_small_u512_to_scalar() {
+        fn scalar_to_u512(x: &Scalar) -> BigInt {
+            let mut data = x.to_bytes().to_vec();
+
+            data.extend([0u8; 32].iter());
+
+            BigInt::from_le_slice(&data)
+        }
+
+        let a = BigInt::from_words([
+            0x1234567890abcdef,
+            0x0,
+            0x0,
+            0x0,
+            0x0,
+            0x0,
+            0x0,
+            0x0,
+        ]);
+
+        let scalar = try_uint_to_scalar(&a).unwrap();
+
+        assert_eq!(a, scalar_to_u512(&scalar));
     }
 
-    Ok(scalar)
+    #[test]
+    fn big_u512_to_scalar_fails() {
+        let a = BigInt::from_words([
+            0x1234567890abcdef,
+            0x0,
+            0x0,
+            0x8000000000000000,
+            0x0,
+            0x0,
+            0x0,
+            0x8000000000000000,
+        ]);
+
+        assert!(try_uint_to_scalar(&a).is_err());
+    }
+
+    #[test]
+    fn medium_u512_to_scalar_fails() {
+        let a = BigInt::from_words([
+            0x1234567890abcdef,
+            0x0,
+            0x0,
+            0x8000000000000000,
+            0x0,
+            0x0,
+            0x0,
+            0x0,
+        ]);
+
+        assert!(try_uint_to_scalar(&a).is_err());
+    }
+
+    #[test]
+    fn barely_too_bit_u512_to_scalar_fails() {
+        // l = 2^252+27742317777372353535851937790883648493
+        let l = BigInt::from_words([
+            6346243789798364141,
+            1503914060200516822,
+            0x0,
+            0x1000000000000000,
+            0x0,
+            0x0,
+            0x0,
+            0x0,
+        ]);
+
+        let l_min_1 = l.wrapping_sub(&BigInt::ONE);
+
+        assert!(try_uint_to_scalar(&l).is_err());
+
+        fn scalar_to_u512(x: &Scalar) -> BigInt {
+            let mut data = x.to_bytes().to_vec();
+
+            data.extend([0u8; 32].iter());
+
+            BigInt::from_le_slice(&data)
+        }
+
+        let scalar = try_uint_to_scalar(&l_min_1).unwrap();
+
+        assert_eq!(l_min_1, scalar_to_u512(&scalar));
+    }
 }

@@ -71,6 +71,12 @@ where
     fn apply(&mut self, graph: &mut StableGraph<N, E>);
 }
 
+// Make a surrogate implementation of the trait for traversal functions
+// that don't mutate the graph.
+impl<N, E> TransformList<N, E> for () where N: Clone, E: Clone {
+    fn apply(&mut self, graph: &mut StableGraph<N, E>) { }
+}
+
 /**
  * A specialized topological DAG traversal that allows the following graph
  * mutations during traversal:
@@ -80,19 +86,21 @@ where
  *
  * Any other graph mutation will likely result in unvisited nodes.
  *
- * * `callback`: A closure that receives the current node index and an object allowing
- *   you to make graph queries. This closure returns a transform list.
- *   [`forward_traverse`] will apply these transformations
- *   before continuing the traversal.
+ * * `callback`: A closure that receives the current node index and an 
+ *   object allowing you to make graph queries. This closure returns a    
+ *   transform list or an error.
+ *   On success, [`reverse_traverse`] will apply these transformations
+ *   before continuing the traversal. Errors will be propagated to the
+ *   caller.
  */
-pub fn forward_traverse<N, E, F, T>(graph: &mut StableGraph<N, E>, callback: F)
+pub fn forward_traverse<N, E, F, T, Err>(graph: &mut StableGraph<N, E>, callback: F) -> Result<(), Err>
 where
     N: Clone,
     E: Clone,
     T: TransformList<N, E>,
-    F: FnMut(GraphQuery<N, E>, NodeIndex) -> T,
+    F: FnMut(GraphQuery<N, E>, NodeIndex) -> Result<T, Err>,
 {
-    traverse(graph, true, callback);
+    traverse(graph, true, callback)
 }
 
 /**
@@ -104,26 +112,28 @@ where
  *
  * Any other graph mutation will likely result in unvisited nodes.
  *
- * * `callback`: A closure that receives the current node index and an object allowing
- *   you to make graph queries. This closure returns a transform list.
- *   [`reverse_traverse`] will apply these transformations
- *   before continuing the traversal.
+ * * `callback`: A closure that receives the current node index and an 
+ *   object allowing you to make graph queries. This closure returns a    
+ *   transform list or an error.
+ *   On success, [`reverse_traverse`] will apply these transformations
+ *   before continuing the traversal. Errors will be propagated to the
+ *   caller.
  */
-pub fn reverse_traverse<N, E, F, T>(graph: &mut StableGraph<N, E>, callback: F)
+pub fn reverse_traverse<N, E, F, T, Err>(graph: &mut StableGraph<N, E>, callback: F)  -> Result<(), Err>
 where
     N: Clone,
     E: Clone,
     T: TransformList<N, E>,
-    F: FnMut(GraphQuery<N, E>, NodeIndex) -> T,
+    F: FnMut(GraphQuery<N, E>, NodeIndex) -> Result<T, Err>,
 {
-    traverse(graph, false, callback);
+    traverse(graph, false, callback)
 }
 
-fn traverse<N, E, T, F>(graph: &mut StableGraph<N, E>, forward: bool, mut callback: F)
+fn traverse<N, E, T, F, Err>(graph: &mut StableGraph<N, E>, forward: bool, mut callback: F) -> Result<(), Err>
 where
     N: Clone,
     E: Clone,
-    F: FnMut(GraphQuery<N, E>, NodeIndex) -> T,
+    F: FnMut(GraphQuery<N, E>, NodeIndex) -> Result<T, Err>,
     T: TransformList<N, E>,
 {
     let mut ready: HashSet<NodeIndex> = HashSet::new();
@@ -152,7 +162,7 @@ where
         // Remember the next nodes from the current node in case it gets deleted.
         let next_nodes: Vec<NodeIndex> = graph.neighbors_directed(n, next_direction).collect();
 
-        let mut transforms = callback(GraphQuery(graph), n);
+        let mut transforms = callback(GraphQuery(graph), n)?;
 
         // Apply the transforms the callback produced
         transforms.apply(graph);
@@ -193,6 +203,8 @@ where
             }
         }
     }
+
+    Ok(())
 }
 
 impl<N, E> Render for StableGraph<N, E>

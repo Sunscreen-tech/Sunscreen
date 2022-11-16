@@ -1,24 +1,98 @@
 use bulletproofs::{
-    r1cs::{ConstraintSystem, Prover, R1CSProof, Variable, Verifier},
+    r1cs::{ConstraintSystem, Prover, R1CSProof, LinearCombination},
     BulletproofGens, PedersenGens,
 };
-use curve25519_dalek::scalar::Scalar;
+use crypto_bigint::{UInt, Limb};
+use curve25519_dalek::scalar::{Scalar};
 use merlin::Transcript;
-use std::task::Context;
+use sunscreen_compiler_common::forward_traverse;
 
-struct MulProof(R1CSProof);
+use crate::{ZkpProverBackend, ZkpBackendCompilationResult, Operation, Error, Result, BigInt, Proof};
 
-impl MulProof {
-    fn make_gens() -> (Transcript, PedersenGens, BulletproofGens) {
-        let mut transcript = Transcript::new(b"Horse");
-        transcript.append_message(b"dom-sep", b"MulProof");
+pub struct BulletproofsR1CSCircuit {
+    nodes: Vec<Option<LinearCombination>>,
+}
 
-        let pc_gens = PedersenGens::default();
-        let bp_gens = BulletproofGens::new(128, 1);
+pub struct BulletproofsR1CSProof(R1CSProof);
 
-        (transcript, pc_gens, bp_gens)
+impl Proof for BulletproofsR1CSProof {}
+
+impl BulletproofsR1CSCircuit {
+    pub fn new(circuit_size: usize) -> Self {
+        Self {
+            nodes: vec![None; circuit_size]
+        }
     }
 
+    fn make_transcript(len: usize) -> Transcript {
+        let mut transcript = Transcript::new(b"R1CS");
+        transcript.append_message(b"dom-sep", b"R1CS proof");
+        transcript.append_u64(b"gen-len", len as u64);
+
+        transcript
+    }
+
+    fn make_gens(len: usize) -> (PedersenGens, BulletproofGens) {
+        let pc_gens = PedersenGens::default();
+        let bp_gens = BulletproofGens::new(len, 1);
+
+        (pc_gens, bp_gens)
+    }
+
+    fn gen_circuit<CS, I>(&mut self, graph: &mut ZkpBackendCompilationResult, cs: &mut CS, get_input: I) -> Result<()>
+    where CS: ConstraintSystem, I: Fn(usize) -> Option<Scalar> {
+
+        // The graph won't actually be mutated. 
+        forward_traverse(&mut graph.0, |query, idx| {
+            let node = query.get_node(idx).unwrap();
+
+            match node.operation {
+                Operation::Input(x) => {
+                    let input = get_input(x);
+
+                    self.nodes[idx.index()] = Some(cs.allocate(input)?.into());
+                }
+                Operation::Add => {
+
+                }
+                _ => {}
+            }
+
+            Ok::<(), Error>(())
+        })?;
+
+        Ok(())
+    }
+}
+
+impl ZkpProverBackend for BulletproofsR1CSCircuit {
+    fn prove(mut graph: ZkpBackendCompilationResult, inputs: &[BigInt]) -> Result<Box<dyn crate::Proof>> {
+        let expected_input_count = graph.node_weights().filter(|x| matches!(x.operation, Operation::Input(_))).count();
+
+        if expected_input_count != inputs.len() {
+            return Err(Error::InputsMismatch);
+        }
+
+        let multiplier_count = graph.node_weights().filter(|n| matches!(n.operation, Operation::Input(_) | Operation::Mul) ).count();
+
+        // Convert the inputs to Scalars
+        let inputs = inputs.iter().map(|x| try_uint_to_scalar(x)).collect::<Result<Vec<Scalar>>>()?;
+
+        let transcript = Self::make_transcript(multiplier_count);
+        let (pedersen_gens, bulletproof_gens) = BulletproofsR1CSCircuit::make_gens(multiplier_count);
+
+        let mut circuit = Self::new(multiplier_count);
+
+        let mut prover = Prover::new(&pedersen_gens, transcript);
+
+        circuit.gen_circuit(&mut graph, &mut prover, |x| { Some(inputs[x]) })?;
+
+        Ok(Box::new(BulletproofsR1CSProof(prover.prove(&bulletproof_gens)?)))
+    }
+}
+
+/*
+impl MulProof {
     pub fn prove(x: Scalar, y: Scalar, o: Scalar) -> Self {
         let (transcript, pc_gens, bp_gens) = Self::make_gens();
 
@@ -63,15 +137,34 @@ impl MulProof {
 
         cs.constrain(o - outputs[0]);
     }
-}
+}*/
 
-#[test]
-fn can_use_bulletproofs_contstraints() {
-    let proof = MulProof::prove(Scalar::from(7u32), Scalar::from(9u32), Scalar::from(63u32));
+fn try_uint_to_scalar<const N: usize>(x: &UInt<N>) -> Result<Scalar> {
+    let as_words = x.as_words();
+    const LIMB_SIZE: usize = std::mem::size_of::<Limb>();
+    const SCALAR_SIZE: usize = std::mem::size_of::<Scalar>();
 
-    assert!(proof.verify());
+    let num_scalar_words = SCALAR_SIZE / LIMB_SIZE;
 
-    let proof = MulProof::prove(Scalar::from(7u32), Scalar::from(9u32), Scalar::from(64u32));
+    let (lower, upper) = as_words.split_at(num_scalar_words);
+    
+    let mut scalar_data = [0u8; 32];
+    
+    for (i, val) in lower.iter().enumerate() {
+        scalar_data[LIMB_SIZE * i..][..LIMB_SIZE].copy_from_slice(&val.to_le_bytes());
+    }
+    
+    for i in upper {
+        if *i != 0 {
+            return Err(Error::OutOfRange(x.to_string()));
+        }
+    }
+    
+    let scalar = Scalar::from_bits(scalar_data);
 
-    assert!(!proof.verify());
+    if !scalar.is_canonical() {
+        return Err(Error::OutOfRange(x.to_string()));
+    }
+
+    Ok(scalar)
 }

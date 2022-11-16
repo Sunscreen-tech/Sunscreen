@@ -2,7 +2,7 @@ use petgraph::stable_graph::NodeIndex;
 use serde::{Deserialize, Serialize};
 use sunscreen_backend::compile_inplace;
 use sunscreen_compiler_common::{
-    Context, EdgeInfo, FrontendCompilation, Operation as OperationTrait,
+    Context, EdgeInfo, CompilationResult, Operation as OperationTrait,
 };
 use sunscreen_fhe_program::{
     EdgeInfo as FheProgramEdgeInfo, FheProgram, Literal as FheProgramLiteral, NodeInfo,
@@ -146,7 +146,7 @@ pub type FheContext = Context<FheOperation, Params>;
 /**
  *
  */
-pub type FheFrontendCompilation = FrontendCompilation<FheOperation>;
+pub type FheFrontendCompilation = CompilationResult<FheOperation>;
 
 thread_local! {
     /**

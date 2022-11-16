@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::convert::Infallible;
 
 use petgraph::{
     stable_graph::{EdgeReference, NodeIndex, StableGraph},
@@ -131,13 +132,13 @@ pub fn common_subexpression_elimination<O: Operation>(
             }
         }
 
-        transforms
-    });
+        Ok(transforms) as Result<GraphTransforms<NodeInfo<O>, EdgeInfo>, Infallible>
+    }).expect("Traverse closure should be infallible.");
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::FrontendCompilation;
+    use crate::CompilationResult;
 
     use super::Operation as OperationTrait;
     use super::*;
@@ -166,12 +167,12 @@ mod tests {
         }
     }
 
-    fn get_graph() -> FrontendCompilation<Operation> {
+    fn get_graph() -> CompilationResult<Operation> {
         fn make_node(operation: Operation) -> NodeInfo<Operation> {
             NodeInfo { operation }
         }
 
-        let mut fe = FrontendCompilation::new();
+        let mut fe = CompilationResult::new();
 
         // Layer 1
         let in_1 = fe.add_node(make_node(Operation::PublicInput(NodeIndex::from(0))));
@@ -256,12 +257,12 @@ mod tests {
         fe
     }
 
-    fn get_expected() -> FrontendCompilation<Operation> {
+    fn get_expected() -> CompilationResult<Operation> {
         fn make_node(operation: Operation) -> NodeInfo<Operation> {
             NodeInfo { operation }
         }
 
-        let mut fe = FrontendCompilation::new();
+        let mut fe = CompilationResult::new();
 
         // Layer 1
         let in_1 = fe.add_node(make_node(Operation::PublicInput(NodeIndex::from(0))));

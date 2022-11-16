@@ -28,7 +28,7 @@ use std::fmt::Debug;
 
 use petgraph::stable_graph::NodeIndex;
 use sunscreen_compiler_common::{
-    Context, FrontendCompilation, Operation as OperationTrait, Render,
+    Context, CompilationResult, Operation as OperationTrait, Render,
 };
 
 #[derive(Clone, Copy, Debug, Hash, PartialEq, Eq)]
@@ -101,7 +101,7 @@ pub type ZkpContext = Context<Operation, u32>;
  * # Remarks
  * For internal use only.
  */
-pub type ZkpFrontendCompilation = FrontendCompilation<Operation>;
+pub type ZkpFrontendCompilation = CompilationResult<Operation>;
 
 pub trait ZkpContextOps {
     fn add_public_input(&mut self) -> NodeIndex;

@@ -1,13 +1,15 @@
 use bulletproofs::{
-    r1cs::{ConstraintSystem, Prover, R1CSProof, LinearCombination},
+    r1cs::{ConstraintSystem, LinearCombination, Prover, R1CSProof},
     BulletproofGens, PedersenGens,
 };
-use crypto_bigint::{UInt, Limb};
-use curve25519_dalek::scalar::{Scalar};
+use crypto_bigint::{Limb, UInt};
+use curve25519_dalek::scalar::Scalar;
 use merlin::Transcript;
 use sunscreen_compiler_common::forward_traverse;
 
-use crate::{ZkpProverBackend, ZkpBackendCompilationResult, Operation, Error, Result, BigInt, Proof};
+use crate::{
+    BigInt, Error, Operation, Proof, Result, ZkpBackendCompilationResult, ZkpProverBackend,
+};
 
 pub struct BulletproofsR1CSCircuit {
     nodes: Vec<Option<LinearCombination>>,
@@ -17,14 +19,10 @@ pub struct BulletproofsR1CSProof(R1CSProof);
 
 impl Proof for BulletproofsR1CSProof {}
 
-#[cfg(not(target_endian = "little"))]
-compile_error!("This crate currently requires a little endian target architecture.");
-
-
 impl BulletproofsR1CSCircuit {
     pub fn new(circuit_size: usize) -> Self {
         Self {
-            nodes: vec![None; circuit_size]
+            nodes: vec![None; circuit_size],
         }
     }
 
@@ -43,10 +41,17 @@ impl BulletproofsR1CSCircuit {
         (pc_gens, bp_gens)
     }
 
-    fn gen_circuit<CS, I>(&mut self, graph: &mut ZkpBackendCompilationResult, cs: &mut CS, get_input: I) -> Result<()>
-    where CS: ConstraintSystem, I: Fn(usize) -> Option<Scalar> {
-
-        // The graph won't actually be mutated. 
+    fn gen_circuit<CS, I>(
+        &mut self,
+        graph: &mut ZkpBackendCompilationResult,
+        cs: &mut CS,
+        get_input: I,
+    ) -> Result<()>
+    where
+        CS: ConstraintSystem,
+        I: Fn(usize) -> Option<Scalar>,
+    {
+        // The graph won't actually be mutated.
         forward_traverse(&mut graph.0, |query, idx| {
             let node = query.get_node(idx).unwrap();
 
@@ -56,9 +61,7 @@ impl BulletproofsR1CSCircuit {
 
                     self.nodes[idx.index()] = Some(cs.allocate(input)?.into());
                 }
-                Operation::Add => {
-
-                }
+                Operation::Add => {}
                 _ => {}
             }
 
@@ -70,28 +73,43 @@ impl BulletproofsR1CSCircuit {
 }
 
 impl ZkpProverBackend for BulletproofsR1CSCircuit {
-    fn prove(mut graph: ZkpBackendCompilationResult, inputs: &[BigInt]) -> Result<Box<dyn crate::Proof>> {
-        let expected_input_count = graph.node_weights().filter(|x| matches!(x.operation, Operation::Input(_))).count();
+    fn prove(
+        mut graph: ZkpBackendCompilationResult,
+        inputs: &[BigInt],
+    ) -> Result<Box<dyn crate::Proof>> {
+        let expected_input_count = graph
+            .node_weights()
+            .filter(|x| matches!(x.operation, Operation::Input(_)))
+            .count();
 
         if expected_input_count != inputs.len() {
             return Err(Error::InputsMismatch);
         }
 
-        let multiplier_count = graph.node_weights().filter(|n| matches!(n.operation, Operation::Input(_) | Operation::Mul) ).count();
+        let multiplier_count = graph
+            .node_weights()
+            .filter(|n| matches!(n.operation, Operation::Input(_) | Operation::Mul))
+            .count();
 
         // Convert the inputs to Scalars
-        let inputs = inputs.iter().map(|x| try_uint_to_scalar(x)).collect::<Result<Vec<Scalar>>>()?;
+        let inputs = inputs
+            .iter()
+            .map(try_uint_to_scalar)
+            .collect::<Result<Vec<Scalar>>>()?;
 
         let transcript = Self::make_transcript(multiplier_count);
-        let (pedersen_gens, bulletproof_gens) = BulletproofsR1CSCircuit::make_gens(multiplier_count);
+        let (pedersen_gens, bulletproof_gens) =
+            BulletproofsR1CSCircuit::make_gens(multiplier_count);
 
         let mut circuit = Self::new(multiplier_count);
 
         let mut prover = Prover::new(&pedersen_gens, transcript);
 
-        circuit.gen_circuit(&mut graph, &mut prover, |x| { Some(inputs[x]) })?;
+        circuit.gen_circuit(&mut graph, &mut prover, |x| Some(inputs[x]))?;
 
-        Ok(Box::new(BulletproofsR1CSProof(prover.prove(&bulletproof_gens)?)))
+        Ok(Box::new(BulletproofsR1CSProof(
+            prover.prove(&bulletproof_gens)?,
+        )))
     }
 }
 
@@ -150,20 +168,22 @@ fn try_uint_to_scalar<const N: usize>(x: &UInt<N>) -> Result<Scalar> {
 
     let num_scalar_words = SCALAR_SIZE / LIMB_SIZE;
 
+    // UInt<N> values are little endian. Thus, we attempt to convert the
+    // lower 256 bits to a scalar and assert the upper bytes are zero.
     let (lower, upper) = as_words.split_at(num_scalar_words);
-    
+
     let mut scalar_data = [0u8; 32];
-    
+
     for (i, val) in lower.iter().enumerate() {
         scalar_data[LIMB_SIZE * i..][..LIMB_SIZE].copy_from_slice(&val.to_le_bytes());
     }
-    
+
     for i in upper {
         if *i != 0 {
             return Err(Error::OutOfRange(x.to_string()));
         }
     }
-    
+
     let scalar = Scalar::from_canonical_bytes(scalar_data);
 
     scalar.ok_or_else(|| Error::OutOfRange(x.to_string()))
@@ -183,16 +203,7 @@ mod tests {
             BigInt::from_le_slice(&data)
         }
 
-        let a = BigInt::from_words([
-            0x1234567890abcdef,
-            0x0,
-            0x0,
-            0x0,
-            0x0,
-            0x0,
-            0x0,
-            0x0,
-        ]);
+        let a = BigInt::from_words([0x1234567890abcdef, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0]);
 
         let scalar = try_uint_to_scalar(&a).unwrap();
 

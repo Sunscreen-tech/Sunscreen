@@ -5,10 +5,16 @@ mod error;
 
 use std::any::Any;
 
-use crypto_bigint::{U512};
-pub use error::*;
 pub use crypto_bigint::UInt;
-use sunscreen_compiler_common::{Operation as OperationTrait, CompilationResult};
+use crypto_bigint::U512;
+pub use error::*;
+use sunscreen_compiler_common::{CompilationResult, Operation as OperationTrait};
+
+// Converting between U512 and backend numeric types requires an
+// assumption about endianess. We require little endian for now unless
+// there's demand for carefully writing endian-aware code.
+#[cfg(not(target_endian = "little"))]
+compile_error!("This crate currently requires a little endian target architecture.");
 
 pub trait Node {}
 
@@ -38,12 +44,12 @@ pub enum Operation {
 
     Neg,
 
-    Constraint(BigInt)
+    Constraint(BigInt),
 }
 
 impl OperationTrait for Operation {
     fn is_binary(&self) -> bool {
-        matches!(self, Operation::Add | Operation::Sub | Operation:: Mul)
+        matches!(self, Operation::Add | Operation::Sub | Operation::Mul)
     }
 
     fn is_commutative(&self) -> bool {

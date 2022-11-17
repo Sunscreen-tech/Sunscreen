@@ -1431,6 +1431,7 @@ dependencies = [
  "semver",
  "serde",
  "syn",
+ "thiserror",
 ]
 
 [[package]]

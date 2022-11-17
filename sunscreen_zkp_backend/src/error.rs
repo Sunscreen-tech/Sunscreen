@@ -13,7 +13,7 @@ pub enum Error {
     InputsMismatch,
 
     #[error("The given proof isn't valid for the backend proof system.")]
-    IncorrectProofType
+    IncorrectProofType,
 }
 
 pub type Result<T> = std::result::Result<T, Error>;

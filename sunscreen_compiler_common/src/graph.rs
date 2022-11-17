@@ -2,12 +2,13 @@ use std::collections::HashSet;
 
 use petgraph::{
     dot::Dot,
-    stable_graph::{Edges, Neighbors, NodeIndex, StableGraph},
-    visit::IntoNodeIdentifiers,
+    stable_graph::{Edges, Neighbors, NodeIndex, StableGraph, EdgeReference},
+    visit::{IntoNodeIdentifiers, EdgeRef},
     Directed, Direction,
 };
+use thiserror::Error;
 
-use crate::Render;
+use crate::{Render, NodeInfo, EdgeInfo, Operation};
 
 /**
  * A wrapper for ascertaining the structure of the underlying graph.
@@ -74,7 +75,7 @@ where
 // Make a surrogate implementation of the trait for traversal functions
 // that don't mutate the graph.
 impl<N, E> TransformList<N, E> for () where N: Clone, E: Clone {
-    fn apply(&mut self, graph: &mut StableGraph<N, E>) { }
+    fn apply(&mut self, _graph: &mut StableGraph<N, E>) { }
 }
 
 /**
@@ -229,4 +230,71 @@ where
 
         format!("{:?}", data)
     }
+}
+
+#[derive(Debug, Error)]
+/**
+ * An error that can occur when querying various aspects about an 
+ * operation graph.
+ */
+pub enum GraphQueryError {
+    #[error("The given graph node wasn't a binary operation.")]
+    /**
+     * The given operation is not a binary operation.
+     */
+    NotBinaryOperation,
+
+    #[error("No node exists at the given index")]
+    /**
+     * No node exists at the given index.
+     */
+    NoSuchNode,
+
+    #[error("The given node doesn't have 1 left and 1 right edge")]
+    /**
+     * The given node doesn't have 1 left and 1 right edge.
+     */
+    IncorrectBinaryOperandEdges
+}
+
+/**
+ * Returns the left and right node indices to a binary operation.
+ * 
+ * # Errors
+ * - No node exists at the given index.
+ * - The node at the given index isn't a binary operation.
+ * - The node at the given index doesn't have a 1 left and 1 right parent
+ */
+pub fn get_binary_operands<O>(graph: &StableGraph<NodeInfo<O>, EdgeInfo>, index: NodeIndex) -> Result<(NodeIndex, NodeIndex), GraphQueryError>
+where O: Operation
+{
+    let node = graph.node_weight(index).ok_or(GraphQueryError::NoSuchNode)?;
+
+    if !node.operation.is_binary() {
+        return Err(GraphQueryError::NotBinaryOperation);
+    }
+
+    let parent_edges = graph.edges_directed(index, Direction::Incoming).collect::<Vec<EdgeReference<EdgeInfo>>>();
+    
+    if parent_edges.len() != 2 {
+        return Err(GraphQueryError::IncorrectBinaryOperandEdges);   
+    }
+
+    let left = parent_edges.iter().filter_map(|e| {
+        if matches!(e.weight(), EdgeInfo::Left) {
+            Some(e.source())
+        } else {
+            None
+        }
+    }).next();
+
+    let right = parent_edges.iter().filter_map(|e| {
+        if matches!(e.weight(), EdgeInfo::Right) {
+            Some(e.source())
+        } else {
+            None
+        }
+    }).next();
+
+    Ok((left.ok_or(GraphQueryError::IncorrectBinaryOperandEdges)?, right.ok_or(GraphQueryError::IncorrectBinaryOperandEdges)?))
 }

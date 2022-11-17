@@ -17,6 +17,10 @@ pub struct BulletproofsR1CSProof(R1CSProof);
 
 impl Proof for BulletproofsR1CSProof {}
 
+#[cfg(not(target_endian = "little"))]
+compile_error!("This crate currently requires a little endian target architecture.");
+
+
 impl BulletproofsR1CSCircuit {
     pub fn new(circuit_size: usize) -> Self {
         Self {

@@ -19,7 +19,7 @@ pub struct GraphQuery<'a, N, E>(&'a StableGraph<N, E>);
 
 impl<'a, N, E> From<&'a StableGraph<N, E>> for GraphQuery<'a, N, E> {
     fn from(x: &'a StableGraph<N, E>) -> Self {
-        Self(&x)
+        Self(x)
     }
 }
 
@@ -382,7 +382,7 @@ where
             return Err(GraphQueryError::IncorrectBinaryOperandEdges);
         }
 
-        let left = parent_edges.iter().next();
+        let left = parent_edges.first();
 
         Ok(left
             .ok_or(GraphQueryError::IncorrectUnaryOperandEdge)?

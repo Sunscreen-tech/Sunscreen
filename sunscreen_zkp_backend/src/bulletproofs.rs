@@ -7,9 +7,7 @@ use bulletproofs::{
 use crypto_bigint::{Limb, UInt};
 use curve25519_dalek::scalar::Scalar;
 use merlin::Transcript;
-use petgraph::{
-    stable_graph::{NodeIndex},
-};
+use petgraph::stable_graph::NodeIndex;
 use sunscreen_compiler_common::forward_traverse;
 
 use crate::{
@@ -78,12 +76,12 @@ impl BulletproofsR1CSCircuit {
 
                     let left = self.nodes[left.index()]
                         .as_ref()
-                        .expect(&dependency_not_found_msg(left))
+                        .unwrap_or_else(|| panic!("{}", dependency_not_found_msg(left)))
                         .clone();
 
                     let right = self.nodes[right.index()]
                         .as_ref()
-                        .expect(&dependency_not_found_msg(right))
+                        .unwrap_or_else(|| panic!("{}", dependency_not_found_msg(right)))
                         .clone();
 
                     self.nodes[idx.index()] = Some(left + right);
@@ -93,12 +91,12 @@ impl BulletproofsR1CSCircuit {
 
                     let left = self.nodes[left.index()]
                         .as_ref()
-                        .expect(&dependency_not_found_msg(left))
+                        .unwrap_or_else(|| panic!("{}", dependency_not_found_msg(left)))
                         .clone();
 
                     let right = self.nodes[right.index()]
                         .as_ref()
-                        .expect(&dependency_not_found_msg(right))
+                        .unwrap_or_else(|| panic!("{}", dependency_not_found_msg(right)))
                         .clone();
 
                     self.nodes[idx.index()] = Some(left - right);
@@ -108,7 +106,7 @@ impl BulletproofsR1CSCircuit {
 
                     let left = self.nodes[left.index()]
                         .as_ref()
-                        .expect(&dependency_not_found_msg(left))
+                        .unwrap_or_else(|| panic!("{}", dependency_not_found_msg(left)))
                         .clone();
 
                     self.nodes[idx.index()] = Some(-left);
@@ -118,12 +116,12 @@ impl BulletproofsR1CSCircuit {
 
                     let left = self.nodes[left.index()]
                         .as_ref()
-                        .expect(&dependency_not_found_msg(left))
+                        .unwrap_or_else(|| panic!("{}", dependency_not_found_msg(left)))
                         .clone();
 
                     let right = self.nodes[right.index()]
                         .as_ref()
-                        .expect(&dependency_not_found_msg(right))
+                        .unwrap_or_else(|| panic!("{}", dependency_not_found_msg(right)))
                         .clone();
 
                     let (_, _, o) = cs.multiply(left, right);
@@ -138,7 +136,7 @@ impl BulletproofsR1CSCircuit {
                     for o in operands {
                         let o = self.nodes[o.index()]
                             .as_ref()
-                            .expect(&dependency_not_found_msg(o))
+                            .unwrap_or_else(|| panic!("{}", dependency_not_found_msg(o)))
                             .clone();
 
                         cs.constrain(o - x);
@@ -347,13 +345,30 @@ mod tests {
         let in_1 = add_node(BackendOperation::Input(1), &[]);
         let in_2 = add_node(BackendOperation::Input(2), &[]);
 
-        let mul_1 = add_node(BackendOperation::Mul, &[(in_0, EdgeInfo::Left), (in_1, EdgeInfo::Right)]);
-        let add_1 = add_node(BackendOperation::Add, &[(in_2, EdgeInfo::Left), (mul_1, EdgeInfo::Right)]);
+        let mul_1 = add_node(
+            BackendOperation::Mul,
+            &[(in_0, EdgeInfo::Left), (in_1, EdgeInfo::Right)],
+        );
+        let add_1 = add_node(
+            BackendOperation::Add,
+            &[(in_2, EdgeInfo::Left), (mul_1, EdgeInfo::Right)],
+        );
 
-        let _ = add_node(BackendOperation::Constraint(BigInt::from_u32(42)), &[(add_1, EdgeInfo::Unordered)]);
+        let _ = add_node(
+            BackendOperation::Constraint(BigInt::from_u32(42)),
+            &[(add_1, EdgeInfo::Unordered)],
+        );
 
         // 10 * 4 + 2 == 42
-        let proof = BulletproofsR1CSCircuit::prove(graph.clone(), &[BigInt::from_u32(10), BigInt::from_u32(4), BigInt::from_u32(2)]).unwrap();
+        let proof = BulletproofsR1CSCircuit::prove(
+            graph.clone(),
+            &[
+                BigInt::from_u32(10),
+                BigInt::from_u32(4),
+                BigInt::from_u32(2),
+            ],
+        )
+        .unwrap();
 
         BulletproofsR1CSCircuit::verify(graph, proof).unwrap();
     }

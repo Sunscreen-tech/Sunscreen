@@ -2,13 +2,13 @@ use std::collections::HashSet;
 
 use petgraph::{
     dot::Dot,
-    stable_graph::{Edges, Neighbors, NodeIndex, StableGraph, EdgeReference},
-    visit::{IntoNodeIdentifiers, EdgeRef},
+    stable_graph::{EdgeReference, Edges, Neighbors, NodeIndex, StableGraph},
+    visit::{EdgeRef, IntoNodeIdentifiers},
     Directed, Direction,
 };
 use thiserror::Error;
 
-use crate::{Render, NodeInfo, EdgeInfo, Operation};
+use crate::{EdgeInfo, NodeInfo, Operation, Render};
 
 /**
  * A wrapper for ascertaining the structure of the underlying graph.
@@ -16,6 +16,12 @@ use crate::{Render, NodeInfo, EdgeInfo, Operation};
  * [`reverse_traverse`] callbacks.
  */
 pub struct GraphQuery<'a, N, E>(&'a StableGraph<N, E>);
+
+impl<'a, N, E> From<&'a StableGraph<N, E>> for GraphQuery<'a, N, E> {
+    fn from(x: &'a StableGraph<N, E>) -> Self {
+        Self(&x)
+    }
+}
 
 impl<'a, N, E> GraphQuery<'a, N, E> {
     /**
@@ -74,8 +80,12 @@ where
 
 // Make a surrogate implementation of the trait for traversal functions
 // that don't mutate the graph.
-impl<N, E> TransformList<N, E> for () where N: Clone, E: Clone {
-    fn apply(&mut self, _graph: &mut StableGraph<N, E>) { }
+impl<N, E> TransformList<N, E> for ()
+where
+    N: Clone,
+    E: Clone,
+{
+    fn apply(&mut self, _graph: &mut StableGraph<N, E>) {}
 }
 
 /**
@@ -87,14 +97,17 @@ impl<N, E> TransformList<N, E> for () where N: Clone, E: Clone {
  *
  * Any other graph mutation will likely result in unvisited nodes.
  *
- * * `callback`: A closure that receives the current node index and an 
+ * * `callback`: A closure that receives the current node index and an
  *   object allowing you to make graph queries. This closure returns a    
  *   transform list or an error.
  *   On success, [`reverse_traverse`] will apply these transformations
  *   before continuing the traversal. Errors will be propagated to the
  *   caller.
  */
-pub fn forward_traverse<N, E, F, T, Err>(graph: &mut StableGraph<N, E>, callback: F) -> Result<(), Err>
+pub fn forward_traverse<N, E, F, T, Err>(
+    graph: &mut StableGraph<N, E>,
+    callback: F,
+) -> Result<(), Err>
 where
     N: Clone,
     E: Clone,
@@ -113,14 +126,17 @@ where
  *
  * Any other graph mutation will likely result in unvisited nodes.
  *
- * * `callback`: A closure that receives the current node index and an 
+ * * `callback`: A closure that receives the current node index and an
  *   object allowing you to make graph queries. This closure returns a    
  *   transform list or an error.
  *   On success, [`reverse_traverse`] will apply these transformations
  *   before continuing the traversal. Errors will be propagated to the
  *   caller.
  */
-pub fn reverse_traverse<N, E, F, T, Err>(graph: &mut StableGraph<N, E>, callback: F)  -> Result<(), Err>
+pub fn reverse_traverse<N, E, F, T, Err>(
+    graph: &mut StableGraph<N, E>,
+    callback: F,
+) -> Result<(), Err>
 where
     N: Clone,
     E: Clone,
@@ -130,7 +146,11 @@ where
     traverse(graph, false, callback)
 }
 
-fn traverse<N, E, T, F, Err>(graph: &mut StableGraph<N, E>, forward: bool, mut callback: F) -> Result<(), Err>
+fn traverse<N, E, T, F, Err>(
+    graph: &mut StableGraph<N, E>,
+    forward: bool,
+    mut callback: F,
+) -> Result<(), Err>
 where
     N: Clone,
     E: Clone,
@@ -234,15 +254,27 @@ where
 
 #[derive(Debug, Error)]
 /**
- * An error that can occur when querying various aspects about an 
+ * An error that can occur when querying various aspects about an
  * operation graph.
  */
 pub enum GraphQueryError {
-    #[error("The given graph node wasn't a binary operation.")]
+    #[error("The given graph node wasn't a binary operation")]
     /**
      * The given operation is not a binary operation.
      */
     NotBinaryOperation,
+
+    #[error("The given graph node wasn't a unary operation")]
+    /**
+     * The given graph node wasn't a unary operation.
+     */
+    NotUnaryOperation,
+
+    #[error("The given graph node wasn't an unordered operation")]
+    /**
+     * The given graph node wasn't an unordered operation.
+     */
+    NotUnorderedOperation,
 
     #[error("No node exists at the given index")]
     /**
@@ -254,47 +286,142 @@ pub enum GraphQueryError {
     /**
      * The given node doesn't have 1 left and 1 right edge.
      */
-    IncorrectBinaryOperandEdges
+    IncorrectBinaryOperandEdges,
+
+    #[error("The given node doesn't have exactly 1 unary edge")]
+    /**
+     * The given node doesn't have exactly 1 unary edge.
+     */
+    IncorrectUnaryOperandEdge,
+
+    #[error("The given node has a non-unordered edge")]
+    /**
+     * The given node has a non-unordered edge.
+     */
+    IncorrectUnorderedOperandEdge,
 }
 
-/**
- * Returns the left and right node indices to a binary operation.
- * 
- * # Errors
- * - No node exists at the given index.
- * - The node at the given index isn't a binary operation.
- * - The node at the given index doesn't have a 1 left and 1 right parent
- */
-pub fn get_binary_operands<O>(graph: &StableGraph<NodeInfo<O>, EdgeInfo>, index: NodeIndex) -> Result<(NodeIndex, NodeIndex), GraphQueryError>
-where O: Operation
+impl<'a, O> GraphQuery<'a, NodeInfo<O>, EdgeInfo>
+where
+    O: Operation,
 {
-    let node = graph.node_weight(index).ok_or(GraphQueryError::NoSuchNode)?;
+    /**
+     * Returns the left and right node indices to a binary operation.
+     *
+     * # Errors
+     * - No node exists at the given index.
+     * - The node at the given index isn't a binary operation.
+     * - The node at the given index doesn't have a 1 left and 1 right parent
+     */
+    pub fn get_binary_operands(
+        &self,
+        index: NodeIndex,
+    ) -> Result<(NodeIndex, NodeIndex), GraphQueryError> {
+        let node = self.get_node(index).ok_or(GraphQueryError::NoSuchNode)?;
 
-    if !node.operation.is_binary() {
-        return Err(GraphQueryError::NotBinaryOperation);
+        if !node.operation.is_binary() {
+            return Err(GraphQueryError::NotBinaryOperation);
+        }
+
+        let parent_edges = self
+            .edges_directed(index, Direction::Incoming)
+            .collect::<Vec<EdgeReference<EdgeInfo>>>();
+
+        if parent_edges.len() != 2 {
+            return Err(GraphQueryError::IncorrectBinaryOperandEdges);
+        }
+
+        let left = parent_edges
+            .iter()
+            .filter_map(|e| {
+                if matches!(e.weight(), EdgeInfo::Left) {
+                    Some(e.source())
+                } else {
+                    None
+                }
+            })
+            .next();
+
+        let right = parent_edges
+            .iter()
+            .filter_map(|e| {
+                if matches!(e.weight(), EdgeInfo::Right) {
+                    Some(e.source())
+                } else {
+                    None
+                }
+            })
+            .next();
+
+        Ok((
+            left.ok_or(GraphQueryError::IncorrectBinaryOperandEdges)?,
+            right.ok_or(GraphQueryError::IncorrectBinaryOperandEdges)?,
+        ))
     }
 
-    let parent_edges = graph.edges_directed(index, Direction::Incoming).collect::<Vec<EdgeReference<EdgeInfo>>>();
-    
-    if parent_edges.len() != 2 {
-        return Err(GraphQueryError::IncorrectBinaryOperandEdges);   
+    /**
+     * Returns the unary operand node index to a unary operation.
+     *
+     * # Errors
+     * - No node exists at the given index.
+     * - The node at the given index isn't a unary operation.
+     * - The node at the given index doesn't have a single unary operand.
+     */
+    pub fn get_unary_operand(&self, index: NodeIndex) -> Result<NodeIndex, GraphQueryError> {
+        let node = self.get_node(index).ok_or(GraphQueryError::NoSuchNode)?;
+
+        if !node.operation.is_unary() {
+            return Err(GraphQueryError::NotUnaryOperation);
+        }
+
+        let parent_edges = self
+            .edges_directed(index, Direction::Incoming)
+            .collect::<Vec<EdgeReference<EdgeInfo>>>();
+
+        if parent_edges.len() != 1 {
+            return Err(GraphQueryError::IncorrectBinaryOperandEdges);
+        }
+
+        let left = parent_edges.iter().next();
+
+        Ok(left
+            .ok_or(GraphQueryError::IncorrectUnaryOperandEdge)?
+            .source())
     }
 
-    let left = parent_edges.iter().filter_map(|e| {
-        if matches!(e.weight(), EdgeInfo::Left) {
-            Some(e.source())
-        } else {
-            None
-        }
-    }).next();
+    /**
+     * Returns the unordered operands to the given operation.
+     *
+     * # Remarks
+     * As these operands are unordered, their order is undefined. Use
+     * [`EdgeInfo::Ordered`] if you need a defined order.
+     *
+     * * # Errors
+     * - No node exists at the given index.
+     * - The node at the given index isn't a unary operation.
+     * - The node at the given index doesn't have a single unary operand.
+     */
+    pub fn get_unordered_operands(
+        &self,
+        index: NodeIndex,
+    ) -> Result<Vec<NodeIndex>, GraphQueryError> {
+        let node = self.get_node(index).ok_or(GraphQueryError::NoSuchNode)?;
 
-    let right = parent_edges.iter().filter_map(|e| {
-        if matches!(e.weight(), EdgeInfo::Right) {
-            Some(e.source())
-        } else {
-            None
+        if !node.operation.is_unordered() {
+            return Err(GraphQueryError::NotUnorderedOperation);
         }
-    }).next();
 
-    Ok((left.ok_or(GraphQueryError::IncorrectBinaryOperandEdges)?, right.ok_or(GraphQueryError::IncorrectBinaryOperandEdges)?))
+        let parent_edges = self
+            .edges_directed(index, Direction::Incoming)
+            .collect::<Vec<EdgeReference<EdgeInfo>>>();
+
+        if !parent_edges
+            .iter()
+            .all(|e| matches!(e.weight(), EdgeInfo::Unordered))
+        {
+            return Err(GraphQueryError::IncorrectUnaryOperandEdge);
+        }
+
+        Ok(parent_edges.iter().map(|x| x.source()).collect())
+    }
 }

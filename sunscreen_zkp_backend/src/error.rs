@@ -1,3 +1,4 @@
+use sunscreen_compiler_common::GraphQueryError;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -14,6 +15,9 @@ pub enum Error {
 
     #[error("The given proof isn't valid for the backend proof system.")]
     IncorrectProofType,
+
+    #[error("The backend graph is malformed {0}")]
+    GraphQueryError(#[from] GraphQueryError),
 }
 
 pub type Result<T> = std::result::Result<T, Error>;

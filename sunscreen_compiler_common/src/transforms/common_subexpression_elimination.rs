@@ -133,7 +133,8 @@ pub fn common_subexpression_elimination<O: Operation>(
         }
 
         Ok(transforms) as Result<GraphTransforms<NodeInfo<O>, EdgeInfo>, Infallible>
-    }).expect("Traverse closure should be infallible.");
+    })
+    .expect("Traverse closure should be infallible.");
 }
 
 #[cfg(test)]
@@ -164,6 +165,10 @@ mod tests {
 
         fn is_unary(&self) -> bool {
             matches!(self, Operation::Neg)
+        }
+
+        fn is_unordered(&self) -> bool {
+            false
         }
     }
 

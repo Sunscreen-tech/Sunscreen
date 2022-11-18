@@ -18,18 +18,18 @@ compile_error!("This crate currently requires a little endian target architectur
 
 pub trait Node {}
 
-pub trait Proof: Any {}
+pub type Proof = dyn Any;
 
 pub trait FieldValue {}
 
 type BigInt = U512;
 
 pub trait ZkpProverBackend {
-    fn prove(graph: ZkpBackendCompilationResult, inputs: &[BigInt]) -> Result<Box<dyn Proof>>;
+    fn prove(graph: ZkpBackendCompilationResult, inputs: &[BigInt]) -> Result<Box<Proof>>;
 }
 
 pub trait ZkpVerifierBackend {
-    fn verify(graph: &ZkpBackendCompilationResult, proof: Box<dyn Proof>) -> Result<()>;
+    fn verify(graph: ZkpBackendCompilationResult, proof: Box<Proof>) -> Result<()>;
 }
 
 #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
@@ -58,6 +58,10 @@ impl OperationTrait for Operation {
 
     fn is_unary(&self) -> bool {
         matches!(self, Operation::Neg)
+    }
+
+    fn is_unordered(&self) -> bool {
+        matches!(self, Operation::Constraint(_))
     }
 }
 

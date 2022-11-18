@@ -51,6 +51,16 @@ pub enum EdgeInfo {
      * The source node is the only unary operand of the target.
      */
     Unary,
+
+    /**
+     * The source node is one of N unordered operands.
+     */
+    Unordered,
+
+    /**
+     * The source is node is i of N ordered operands.
+     */
+    Ordered(usize),
 }
 
 impl EdgeInfo {

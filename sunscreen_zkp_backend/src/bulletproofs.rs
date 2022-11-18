@@ -1,4 +1,4 @@
-use std::any::Any;
+use std::any::TypeId;
 
 use bulletproofs::{
     r1cs::{ConstraintSystem, LinearCombination, Prover, R1CSProof, Verifier},
@@ -8,8 +8,7 @@ use crypto_bigint::{Limb, UInt};
 use curve25519_dalek::scalar::Scalar;
 use merlin::Transcript;
 use petgraph::{
-    stable_graph::{IndexType, NodeIndex},
-    visit::EdgeRef,
+    stable_graph::{NodeIndex},
 };
 use sunscreen_compiler_common::forward_traverse;
 
@@ -137,7 +136,7 @@ impl BulletproofsR1CSCircuit {
                     let x = try_uint_to_scalar(&x)?;
 
                     for o in operands {
-                        let o = self.nodes[idx.index()]
+                        let o = self.nodes[o.index()]
                             .as_ref()
                             .expect(&dependency_not_found_msg(o))
                             .clone();
@@ -180,7 +179,7 @@ impl ZkpProverBackend for BulletproofsR1CSCircuit {
         let (pedersen_gens, bulletproof_gens) =
             BulletproofsR1CSCircuit::make_gens(multiplier_count);
 
-        let mut circuit = Self::new(multiplier_count);
+        let mut circuit = Self::new(graph.node_count());
 
         let mut prover = Prover::new(&pedersen_gens, transcript);
 
@@ -194,7 +193,10 @@ impl ZkpProverBackend for BulletproofsR1CSCircuit {
 
 impl ZkpVerifierBackend for BulletproofsR1CSCircuit {
     fn verify(mut graph: ZkpBackendCompilationResult, proof: Box<Proof>) -> Result<()> {
-        let proof: Box<R1CSProof> = match proof.downcast() {
+        dbg!(proof.type_id());
+        dbg!(TypeId::of::<BulletproofsR1CSProof>());
+
+        let proof: Box<BulletproofsR1CSProof> = match proof.downcast() {
             Ok(v) => v,
             Err(_) => {
                 return Err(Error::IncorrectProofType);
@@ -210,63 +212,15 @@ impl ZkpVerifierBackend for BulletproofsR1CSCircuit {
         let (pedersen_gens, bulletproof_gens) =
             BulletproofsR1CSCircuit::make_gens(multiplier_count);
 
-        let mut circuit = Self::new(multiplier_count);
+        let mut circuit = Self::new(graph.node_count());
 
         let mut verifier = Verifier::new(transcript);
 
-        circuit.gen_circuit(&mut graph, &mut verifier, |x| None)?;
+        circuit.gen_circuit(&mut graph, &mut verifier, |_| None)?;
 
-        Ok(verifier.verify(&proof, &pedersen_gens, &bulletproof_gens)?)
+        Ok(verifier.verify(&proof.0, &pedersen_gens, &bulletproof_gens)?)
     }
 }
-
-/*
-impl MulProof {
-    pub fn prove(x: Scalar, y: Scalar, o: Scalar) -> Self {
-        let (transcript, pc_gens, bp_gens) = Self::make_gens();
-
-        let mut prover = Prover::new(&pc_gens, transcript);
-
-        let inputs = vec![
-            prover.allocate(Some(x)).unwrap(),
-            prover.allocate(Some(y)).unwrap(),
-        ];
-
-        let outputs = vec![prover.allocate(Some(o)).unwrap()];
-
-        Self::gadget(&mut prover, inputs, outputs);
-
-        Self(prover.prove(&bp_gens).unwrap())
-    }
-
-    pub fn verify(&self) -> bool {
-        let (transcript, pc_gens, bp_gens) = Self::make_gens();
-
-        let mut verifier = Verifier::new(transcript);
-
-        let inputs = vec![
-            verifier.allocate(None).unwrap(),
-            verifier.allocate(None).unwrap(),
-        ];
-
-        let outputs = vec![verifier.allocate(None).unwrap()];
-
-        Self::gadget(&mut verifier, inputs, outputs);
-
-        verifier.verify(&self.0, &pc_gens, &bp_gens).is_ok()
-    }
-
-    fn gadget<CS: ConstraintSystem>(cs: &mut CS, inputs: Vec<Variable>, outputs: Vec<Variable>) {
-        let (_, _, o) = cs.multiply(
-            inputs[0] + Scalar::from(0u32),
-            inputs[1] + Scalar::from(0u32),
-        );
-
-        inputs[0];
-
-        cs.constrain(o - outputs[0]);
-    }
-}*/
 
 fn try_uint_to_scalar<const N: usize>(x: &UInt<N>) -> Result<Scalar> {
     let as_words = x.as_words();
@@ -298,7 +252,10 @@ fn try_uint_to_scalar<const N: usize>(x: &UInt<N>) -> Result<Scalar> {
 
 #[cfg(test)]
 mod tests {
+    use sunscreen_compiler_common::{EdgeInfo, NodeInfo};
+
     use super::*;
+    use crate::Operation as BackendOperation;
 
     fn scalar_to_u512(x: &Scalar) -> BigInt {
         let mut data = x.to_bytes().to_vec();
@@ -373,5 +330,31 @@ mod tests {
     }
 
     #[test]
-    fn can_run_simple_proof() {}
+    fn can_run_simple_proof() {
+        let mut graph = ZkpBackendCompilationResult::new();
+
+        let mut add_node = |op: BackendOperation, edges: &[(NodeIndex, EdgeInfo)]| {
+            let n = graph.add_node(NodeInfo { operation: op });
+
+            for (source, edge) in edges {
+                graph.add_edge(*source, n, *edge);
+            }
+
+            n
+        };
+
+        let in_0 = add_node(BackendOperation::Input(0), &[]);
+        let in_1 = add_node(BackendOperation::Input(1), &[]);
+        let in_2 = add_node(BackendOperation::Input(2), &[]);
+
+        let mul_1 = add_node(BackendOperation::Mul, &[(in_0, EdgeInfo::Left), (in_1, EdgeInfo::Right)]);
+        let add_1 = add_node(BackendOperation::Add, &[(in_2, EdgeInfo::Left), (mul_1, EdgeInfo::Right)]);
+
+        let _ = add_node(BackendOperation::Constraint(BigInt::from_u32(42)), &[(add_1, EdgeInfo::Unordered)]);
+
+        // 10 * 4 + 2 == 42
+        let proof = BulletproofsR1CSCircuit::prove(graph.clone(), &[BigInt::from_u32(10), BigInt::from_u32(4), BigInt::from_u32(2)]).unwrap();
+
+        BulletproofsR1CSCircuit::verify(graph, proof).unwrap();
+    }
 }

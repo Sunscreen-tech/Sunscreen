@@ -164,7 +164,7 @@ where
     O: Operation,
 {
     /**
-     * Create a new [`FrontendCompilation`]
+     * Create a new [`CompilationResult`]
      */
     pub fn new() -> Self {
         Self(StableGraph::new())

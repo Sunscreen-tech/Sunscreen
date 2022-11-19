@@ -1,5 +1,3 @@
-use std::any::TypeId;
-
 use bulletproofs::{
     r1cs::{ConstraintSystem, LinearCombination, Prover, R1CSProof, Verifier},
     BulletproofGens, PedersenGens,
@@ -50,7 +48,7 @@ impl BulletproofsR1CSCircuit {
      */
     fn gen_circuit<CS, I>(
         &mut self,
-        graph: &mut ZkpBackendCompilationResult,
+        graph: &ZkpBackendCompilationResult,
         cs: &mut CS,
         get_input: I,
     ) -> Result<()>
@@ -59,7 +57,7 @@ impl BulletproofsR1CSCircuit {
         I: Fn(usize) -> Option<Scalar>,
     {
         // The graph won't actually be mutated.
-        forward_traverse(&mut graph.0, |query, idx| {
+        forward_traverse(&graph.0, |query, idx| {
             let node = query.get_node(idx).unwrap();
 
             let dependency_not_found_msg =
@@ -152,7 +150,7 @@ impl BulletproofsR1CSCircuit {
 }
 
 impl ZkpProverBackend for BulletproofsR1CSCircuit {
-    fn prove(mut graph: ZkpBackendCompilationResult, inputs: &[BigInt]) -> Result<Box<Proof>> {
+    fn prove(graph: &ZkpBackendCompilationResult, inputs: &[BigInt]) -> Result<Box<Proof>> {
         let expected_input_count = graph
             .node_weights()
             .filter(|x| matches!(x.operation, Operation::Input(_)))
@@ -181,7 +179,7 @@ impl ZkpProverBackend for BulletproofsR1CSCircuit {
 
         let mut prover = Prover::new(&pedersen_gens, transcript);
 
-        circuit.gen_circuit(&mut graph, &mut prover, |x| Some(inputs[x]))?;
+        circuit.gen_circuit(graph, &mut prover, |x| Some(inputs[x]))?;
 
         Ok(Box::new(BulletproofsR1CSProof(
             prover.prove(&bulletproof_gens)?,
@@ -190,10 +188,7 @@ impl ZkpProverBackend for BulletproofsR1CSCircuit {
 }
 
 impl ZkpVerifierBackend for BulletproofsR1CSCircuit {
-    fn verify(mut graph: ZkpBackendCompilationResult, proof: Box<Proof>) -> Result<()> {
-        dbg!(proof.type_id());
-        dbg!(TypeId::of::<BulletproofsR1CSProof>());
-
+    fn verify(graph: &ZkpBackendCompilationResult, proof: Box<Proof>) -> Result<()> {
         let proof: Box<BulletproofsR1CSProof> = match proof.downcast() {
             Ok(v) => v,
             Err(_) => {
@@ -214,7 +209,7 @@ impl ZkpVerifierBackend for BulletproofsR1CSCircuit {
 
         let mut verifier = Verifier::new(transcript);
 
-        circuit.gen_circuit(&mut graph, &mut verifier, |_| None)?;
+        circuit.gen_circuit(graph, &mut verifier, |_| None)?;
 
         Ok(verifier.verify(&proof.0, &pedersen_gens, &bulletproof_gens)?)
     }
@@ -361,7 +356,7 @@ mod tests {
 
         // 10 * 4 + 2 == 42
         let proof = BulletproofsR1CSCircuit::prove(
-            graph.clone(),
+            &graph,
             &[
                 BigInt::from_u32(10),
                 BigInt::from_u32(4),
@@ -370,6 +365,6 @@ mod tests {
         )
         .unwrap();
 
-        BulletproofsR1CSCircuit::verify(graph, proof).unwrap();
+        BulletproofsR1CSCircuit::verify(&graph, proof).unwrap();
     }
 }

@@ -132,7 +132,7 @@ pub fn common_subexpression_elimination<O: Operation>(
             }
         }
 
-        Ok(transforms) as Result<GraphTransforms<NodeInfo<O>, EdgeInfo>, Infallible>
+        Ok::<_, Infallible>(transforms)
     })
     .expect("Traverse closure should be infallible.");
 }

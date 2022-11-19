@@ -92,17 +92,14 @@ where
  * Call the supplied callback for each node in the given graph in
  * topological order.
  */
-pub fn forward_traverse<N, E, F, Err>(
-    graph: &StableGraph<N, E>,
-    callback: F,
-) -> Result<(), Err>
+pub fn forward_traverse<N, E, F, Err>(graph: &StableGraph<N, E>, callback: F) -> Result<(), Err>
 where
     N: Clone,
     E: Clone,
     F: FnMut(GraphQuery<N, E>, NodeIndex) -> Result<(), Err>,
 {
     let graph: *const StableGraph<N, E> = graph;
-    
+
     // Traverse won't mutate the graph since F returns ().
     unsafe { traverse(graph as *mut StableGraph<N, E>, true, callback) }
 }
@@ -111,17 +108,14 @@ where
  * Call the supplied callback for each node in the given graph in
  * reverse topological order.
  */
-pub fn reverse_traverse<N, E, F, Err>(
-    graph: &StableGraph<N, E>,
-    callback: F,
-) -> Result<(), Err>
+pub fn reverse_traverse<N, E, F, Err>(graph: &StableGraph<N, E>, callback: F) -> Result<(), Err>
 where
     N: Clone,
     E: Clone,
     F: FnMut(GraphQuery<N, E>, NodeIndex) -> Result<(), Err>,
 {
     let graph: *const StableGraph<N, E> = graph;
-    
+
     // Traverse won't mutate the graph since F returns ().
     unsafe { traverse(graph as *mut StableGraph<N, E>, false, callback) }
 }
@@ -423,7 +417,7 @@ where
             .edges_directed(index, Direction::Incoming)
             .collect::<Vec<EdgeReference<EdgeInfo>>>();
 
-        if parent_edges.len() != 1 {
+        if parent_edges.len() != 1 || !matches!(&parent_edges[0].weight(), EdgeInfo::Unary) {
             return Err(GraphQueryError::IncorrectBinaryOperandEdges);
         }
 
@@ -464,7 +458,7 @@ where
             .iter()
             .all(|e| matches!(e.weight(), EdgeInfo::Unordered))
         {
-            return Err(GraphQueryError::IncorrectUnaryOperandEdge);
+            return Err(GraphQueryError::IncorrectUnorderedOperandEdge);
         }
 
         Ok(parent_edges.iter().map(|x| x.source()).collect())

@@ -25,11 +25,11 @@ pub trait FieldValue {}
 type BigInt = U512;
 
 pub trait ZkpProverBackend {
-    fn prove(graph: ZkpBackendCompilationResult, inputs: &[BigInt]) -> Result<Box<Proof>>;
+    fn prove(graph: &ZkpBackendCompilationResult, inputs: &[BigInt]) -> Result<Box<Proof>>;
 }
 
 pub trait ZkpVerifierBackend {
-    fn verify(graph: ZkpBackendCompilationResult, proof: Box<Proof>) -> Result<()>;
+    fn verify(graph: &ZkpBackendCompilationResult, proof: Box<Proof>) -> Result<()>;
 }
 
 #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]

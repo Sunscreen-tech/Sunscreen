@@ -7,9 +7,15 @@ edition = "2021"
 
 [dependencies]
 bulletproofs = { version = "4.0.0", features = ["yoloproofs"], optional = true }
+crypto-bigint = "0.4.9"
 merlin = { version = "3.0.0", optional = true}
+thiserror = "1.0.37"
+bumpalo = "3.11.1"
+petgraph = "0.6.2"
+sunscreen_compiler_common = { path = "../sunscreen_compiler_common" }
 
 [features]
+default = ["bulletproofs"]
 bulletproofs = [
     "dep:bulletproofs",
     "dep:merlin"

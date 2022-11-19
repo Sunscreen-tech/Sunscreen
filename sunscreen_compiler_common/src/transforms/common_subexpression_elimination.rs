@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::convert::Infallible;
 
 use petgraph::{
     stable_graph::{EdgeReference, NodeIndex, StableGraph},
@@ -6,7 +7,7 @@ use petgraph::{
     Direction,
 };
 
-use crate::graph::{forward_traverse, GraphQuery};
+use crate::graph::{forward_traverse_mut, GraphQuery};
 
 use crate::{
     transforms::{GraphTransforms, Transform, TransformNodeIndex},
@@ -70,7 +71,7 @@ fn get_binary_operands<O: Operation>(
 pub fn common_subexpression_elimination<O: Operation>(
     graph: &mut StableGraph<NodeInfo<O>, EdgeInfo>,
 ) {
-    forward_traverse(graph, |query, index| {
+    forward_traverse_mut(graph, |query, index| {
         let mut transforms: GraphTransforms<NodeInfo<O>, EdgeInfo> = GraphTransforms::new();
 
         // Key is left/unary+right operand and operation. Value is
@@ -131,13 +132,14 @@ pub fn common_subexpression_elimination<O: Operation>(
             }
         }
 
-        transforms
-    });
+        Ok::<_, Infallible>(transforms)
+    })
+    .expect("Traverse closure should be infallible.");
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::FrontendCompilation;
+    use crate::CompilationResult;
 
     use super::Operation as OperationTrait;
     use super::*;
@@ -164,14 +166,18 @@ mod tests {
         fn is_unary(&self) -> bool {
             matches!(self, Operation::Neg)
         }
+
+        fn is_unordered(&self) -> bool {
+            false
+        }
     }
 
-    fn get_graph() -> FrontendCompilation<Operation> {
+    fn get_graph() -> CompilationResult<Operation> {
         fn make_node(operation: Operation) -> NodeInfo<Operation> {
             NodeInfo { operation }
         }
 
-        let mut fe = FrontendCompilation::new();
+        let mut fe = CompilationResult::new();
 
         // Layer 1
         let in_1 = fe.add_node(make_node(Operation::PublicInput(NodeIndex::from(0))));
@@ -256,12 +262,12 @@ mod tests {
         fe
     }
 
-    fn get_expected() -> FrontendCompilation<Operation> {
+    fn get_expected() -> CompilationResult<Operation> {
         fn make_node(operation: Operation) -> NodeInfo<Operation> {
             NodeInfo { operation }
         }
 
-        let mut fe = FrontendCompilation::new();
+        let mut fe = CompilationResult::new();
 
         // Layer 1
         let in_1 = fe.add_node(make_node(Operation::PublicInput(NodeIndex::from(0))));

@@ -51,6 +51,16 @@ pub enum EdgeInfo {
      * The source node is the only unary operand of the target.
      */
     Unary,
+
+    /**
+     * The source node is one of N unordered operands.
+     */
+    Unordered,
+
+    /**
+     * The source is node is i of N ordered operands.
+     */
+    Ordered(usize),
 }
 
 impl EdgeInfo {
@@ -86,11 +96,11 @@ impl Render for EdgeInfo {
 /**
  * The result of a frontend compiler.
  */
-pub struct FrontendCompilation<O>(pub StableGraph<NodeInfo<O>, EdgeInfo>)
+pub struct CompilationResult<O>(pub StableGraph<NodeInfo<O>, EdgeInfo>)
 where
     O: Operation;
 
-impl<O> Deref for FrontendCompilation<O>
+impl<O> Deref for CompilationResult<O>
 where
     O: Operation,
 {
@@ -101,7 +111,7 @@ where
     }
 }
 
-impl<O> PartialEq for FrontendCompilation<O>
+impl<O> PartialEq for CompilationResult<O>
 where
     O: Operation,
 {
@@ -117,7 +127,7 @@ where
     }
 }
 
-impl<O> Debug for FrontendCompilation<O>
+impl<O> Debug for CompilationResult<O>
 where
     O: Operation,
 {
@@ -140,7 +150,7 @@ where
     }
 }
 
-impl<O> DerefMut for FrontendCompilation<O>
+impl<O> DerefMut for CompilationResult<O>
 where
     O: Operation,
 {
@@ -149,19 +159,19 @@ where
     }
 }
 
-impl<O> FrontendCompilation<O>
+impl<O> CompilationResult<O>
 where
     O: Operation,
 {
     /**
-     * Create a new [`FrontendCompilation`]
+     * Create a new [`CompilationResult`]
      */
     pub fn new() -> Self {
         Self(StableGraph::new())
     }
 }
 
-impl<O> Default for FrontendCompilation<O>
+impl<O> Default for CompilationResult<O>
 where
     O: Operation,
 {
@@ -180,7 +190,7 @@ where
     /**
      * The parse graph.
      */
-    pub graph: FrontendCompilation<O>,
+    pub graph: CompilationResult<O>,
 
     #[allow(unused)]
     /**
@@ -198,7 +208,7 @@ where
      */
     pub fn new(data: D) -> Self {
         Self {
-            graph: FrontendCompilation::<O>::new(),
+            graph: CompilationResult::<O>::new(),
             data,
         }
     }

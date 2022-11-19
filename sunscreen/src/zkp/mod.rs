@@ -27,9 +27,7 @@ pub trait ZkpProgramFn {
 use std::fmt::Debug;
 
 use petgraph::stable_graph::NodeIndex;
-use sunscreen_compiler_common::{
-    Context, FrontendCompilation, Operation as OperationTrait, Render,
-};
+use sunscreen_compiler_common::{CompilationResult, Context, Operation as OperationTrait, Render};
 
 #[derive(Clone, Copy, Debug, Hash, PartialEq, Eq)]
 pub enum Operation {
@@ -53,6 +51,10 @@ impl OperationTrait for Operation {
 
     fn is_unary(&self) -> bool {
         matches!(self, Operation::Neg)
+    }
+
+    fn is_unordered(&self) -> bool {
+        false
     }
 }
 
@@ -101,7 +103,7 @@ pub type ZkpContext = Context<Operation, u32>;
  * # Remarks
  * For internal use only.
  */
-pub type ZkpFrontendCompilation = FrontendCompilation<Operation>;
+pub type ZkpFrontendCompilation = CompilationResult<Operation>;
 
 pub trait ZkpContextOps {
     fn add_public_input(&mut self) -> NodeIndex;

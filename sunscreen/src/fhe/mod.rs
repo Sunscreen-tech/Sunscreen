@@ -2,7 +2,7 @@ use petgraph::stable_graph::NodeIndex;
 use serde::{Deserialize, Serialize};
 use sunscreen_backend::compile_inplace;
 use sunscreen_compiler_common::{
-    Context, EdgeInfo, FrontendCompilation, Operation as OperationTrait,
+    CompilationResult, Context, EdgeInfo, Operation as OperationTrait,
 };
 use sunscreen_fhe_program::{
     EdgeInfo as FheProgramEdgeInfo, FheProgram, Literal as FheProgramLiteral, NodeInfo,
@@ -132,6 +132,10 @@ impl OperationTrait for FheOperation {
     fn is_unary(&self) -> bool {
         matches!(self, FheOperation::Negate | FheOperation::SwapRows)
     }
+
+    fn is_unordered(&self) -> bool {
+        false
+    }
 }
 
 /**
@@ -146,7 +150,7 @@ pub type FheContext = Context<FheOperation, Params>;
 /**
  *
  */
-pub type FheFrontendCompilation = FrontendCompilation<FheOperation>;
+pub type FheFrontendCompilation = CompilationResult<FheOperation>;
 
 thread_local! {
     /**
@@ -384,6 +388,8 @@ impl FheCompile for FheFrontendCompilation {
                 EdgeInfo::Left => FheProgramEdgeInfo::LeftOperand,
                 EdgeInfo::Right => FheProgramEdgeInfo::RightOperand,
                 EdgeInfo::Unary => FheProgramEdgeInfo::UnaryOperand,
+                EdgeInfo::Unordered => unreachable!("FHE programs have no unordered edges."),
+                EdgeInfo::Ordered(_) => unreachable!("FHE programs have no ordered edges."),
             },
         );
 

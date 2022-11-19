@@ -54,10 +54,8 @@ jobs:
       run: cargo run --release --bin dot_prod
     - name: Verify examples (pir)
       run: cargo run --release --bin pir
-    - name: Build sunscreen
-      run: cargo build --release --package sunscreen
-    - name: Build bincode
-      run: cargo build --release --package bincode
+    - name: Build sunscreen and bincode
+      run: cargo build --release --package sunscreen --package bincode
     - name: Build mdBook
       run: cargo build --release
       working-directory: ./mdBook

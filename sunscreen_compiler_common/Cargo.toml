@@ -6,9 +6,10 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-petgraph = "0.6.2"
+petgraph = { version = "0.6.2", features = ["serde-1"] }
 proc-macro2 = "1.0.47"
 quote = "1.0.21"
 semver = "1.0.14"
 serde = { version = "1.0.147", features = ["derive"] }
 syn = { version = "1.0.103", features = ["full"] }
+thiserror = "1.0.37"

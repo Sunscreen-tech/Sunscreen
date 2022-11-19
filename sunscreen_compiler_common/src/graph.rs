@@ -89,6 +89,44 @@ where
 }
 
 /**
+ * Call the supplied callback for each node in the given graph in
+ * topological order.
+ */
+pub fn forward_traverse<N, E, F, Err>(
+    graph: &StableGraph<N, E>,
+    callback: F,
+) -> Result<(), Err>
+where
+    N: Clone,
+    E: Clone,
+    F: FnMut(GraphQuery<N, E>, NodeIndex) -> Result<(), Err>,
+{
+    let graph: *const StableGraph<N, E> = graph;
+    
+    // Traverse won't mutate the graph since F returns ().
+    unsafe { traverse(graph as *mut StableGraph<N, E>, true, callback) }
+}
+
+/**
+ * Call the supplied callback for each node in the given graph in
+ * reverse topological order.
+ */
+pub fn reverse_traverse<N, E, F, Err>(
+    graph: &StableGraph<N, E>,
+    callback: F,
+) -> Result<(), Err>
+where
+    N: Clone,
+    E: Clone,
+    F: FnMut(GraphQuery<N, E>, NodeIndex) -> Result<(), Err>,
+{
+    let graph: *const StableGraph<N, E> = graph;
+    
+    // Traverse won't mutate the graph since F returns ().
+    unsafe { traverse(graph as *mut StableGraph<N, E>, false, callback) }
+}
+
+/**
  * A specialized topological DAG traversal that allows the following graph
  * mutations during traversal:
  * * Delete the current node
@@ -104,7 +142,7 @@ where
  *   before continuing the traversal. Errors will be propagated to the
  *   caller.
  */
-pub fn forward_traverse<N, E, F, T, Err>(
+pub fn forward_traverse_mut<N, E, F, T, Err>(
     graph: &mut StableGraph<N, E>,
     callback: F,
 ) -> Result<(), Err>
@@ -114,7 +152,7 @@ where
     T: TransformList<N, E>,
     F: FnMut(GraphQuery<N, E>, NodeIndex) -> Result<T, Err>,
 {
-    traverse(graph, true, callback)
+    unsafe { traverse(graph, true, callback) }
 }
 
 /**
@@ -133,7 +171,7 @@ where
  *   before continuing the traversal. Errors will be propagated to the
  *   caller.
  */
-pub fn reverse_traverse<N, E, F, T, Err>(
+pub fn reverse_traverse_mut<N, E, F, T, Err>(
     graph: &mut StableGraph<N, E>,
     callback: F,
 ) -> Result<(), Err>
@@ -143,11 +181,16 @@ where
     T: TransformList<N, E>,
     F: FnMut(GraphQuery<N, E>, NodeIndex) -> Result<T, Err>,
 {
-    traverse(graph, false, callback)
+    unsafe { traverse(graph, false, callback) }
 }
 
-fn traverse<N, E, T, F, Err>(
-    graph: &mut StableGraph<N, E>,
+/**
+ * Internal traversal implementation that allows for mutable traversal.
+ * If the callback always returns an empty transform list or (), then
+ * graph won't be mutated.
+ */
+unsafe fn traverse<N, E, T, F, Err>(
+    graph: *mut StableGraph<N, E>,
     forward: bool,
     mut callback: F,
 ) -> Result<(), Err>
@@ -157,6 +200,8 @@ where
     F: FnMut(GraphQuery<N, E>, NodeIndex) -> Result<T, Err>,
     T: TransformList<N, E>,
 {
+    // The one unsafe line in the function...
+    let graph = &mut *graph;
     let mut ready: HashSet<NodeIndex> = HashSet::new();
     let mut visited: HashSet<NodeIndex> = HashSet::new();
     let prev_direction = if forward {

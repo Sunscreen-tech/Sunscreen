@@ -7,7 +7,7 @@ use petgraph::{
     Direction,
 };
 
-use crate::graph::{forward_traverse, GraphQuery};
+use crate::graph::{forward_traverse_mut, GraphQuery};
 
 use crate::{
     transforms::{GraphTransforms, Transform, TransformNodeIndex},
@@ -71,7 +71,7 @@ fn get_binary_operands<O: Operation>(
 pub fn common_subexpression_elimination<O: Operation>(
     graph: &mut StableGraph<NodeInfo<O>, EdgeInfo>,
 ) {
-    forward_traverse(graph, |query, index| {
+    forward_traverse_mut(graph, |query, index| {
         let mut transforms: GraphTransforms<NodeInfo<O>, EdgeInfo> = GraphTransforms::new();
 
         // Key is left/unary+right operand and operation. Value is

@@ -366,5 +366,32 @@ mod tests {
         .unwrap();
 
         BulletproofsR1CSCircuit::verify(&graph, proof).unwrap();
+
+        // 8 * 5 + 2 == 42
+        let proof = BulletproofsR1CSCircuit::prove(
+            &graph,
+            &[
+                BigInt::from_u32(8),
+                BigInt::from_u32(5),
+                BigInt::from_u32(2),
+            ],
+        )
+        .unwrap();
+
+        BulletproofsR1CSCircuit::verify(&graph, proof).unwrap();
+
+        // 8 * 5 + 3 == 42.
+        // Verification should fail.
+        let proof = BulletproofsR1CSCircuit::prove(
+            &graph,
+            &[
+                BigInt::from_u32(8),
+                BigInt::from_u32(5),
+                BigInt::from_u32(3),
+            ],
+        )
+        .unwrap();
+
+        assert!(BulletproofsR1CSCircuit::verify(&graph, proof).is_err());
     }
 }

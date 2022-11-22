@@ -2,7 +2,7 @@ use crate::fhe::{FheCompile, FheFrontendCompilation};
 use crate::params::{determine_params, PlainModulusConstraint};
 use crate::{
     Application, CallSignature, Error, FheProgramMetadata, Params, RequiredKeys, Result,
-    SchemeType, SecurityLevel, ZkpProgramFn,
+    SchemeType, SecurityLevel, ZkpFrontendCompilation, ZkpProgramFn,
 };
 use std::collections::{HashMap, HashSet};
 use std::marker::PhantomData;
@@ -75,7 +75,7 @@ fn into<T, U>(x: Compiler<T>) -> Compiler<U> {
         plain_modulus_constraint: x.plain_modulus_constraint,
         security_level: x.security_level,
         noise_margin: x.noise_margin,
-        _phantom: PhantomData
+        _phantom: PhantomData,
     }
 }
 
@@ -123,9 +123,9 @@ impl Compiler<()> {
 }
 
 impl<T> Compiler<T> {
-    fn compile_internal(self) -> Result<Application<()>> {
+    fn compile_fhe(&self) -> Result<HashMap<String, CompiledFheProgram>> {
         if self.fhe_program_fns.is_empty() {
-            return Err(Error::NoPrograms);
+            return Ok(HashMap::new());
         }
 
         // Check that all programs use the same scheme type.
@@ -175,8 +175,8 @@ impl<T> Compiler<T> {
 
         let scheme = self.fhe_program_fns.first().unwrap().scheme_type();
 
-        let params = match self.params_mode {
-            ParamsMode::Manual(p) => p,
+        let params = match &self.params_mode {
+            ParamsMode::Manual(p) => p.clone(),
             ParamsMode::Search => determine_params(
                 &self.fhe_program_fns,
                 self.plain_modulus_constraint,
@@ -217,6 +217,10 @@ impl<T> Compiler<T> {
             })
             .collect::<Result<HashMap<_, _>>>()?;
 
+        Ok(fhe_programs)
+    }
+
+    fn compile_zkp(&self) -> Result<HashMap<String, ZkpFrontendCompilation>> {
         let zkp_programs = self
             .zkp_program_fns
             .iter()
@@ -227,7 +231,11 @@ impl<T> Compiler<T> {
             })
             .collect::<Result<HashMap<_, _>>>()?;
 
-        Application::new(fhe_programs, zkp_programs)
+        Ok(zkp_programs)
+    }
+
+    fn compile_internal(self) -> Result<Application<()>> {
+        Ok(Application::new(self.compile_fhe()?, self.compile_zkp()?)?)
     }
 }
 
@@ -445,11 +453,9 @@ mod tests {
     #[test]
     fn fhe_program_yields_fhe_compiler() {
         #[fhe_program(scheme = "bfv")]
-        fn kitty() {
-        }
+        fn kitty() {}
 
-        let c = Compiler::new()
-            .fhe_program(kitty);
+        let c = Compiler::new().fhe_program(kitty);
 
         assert_eq!(c.type_id(), TypeId::of::<Compiler<Fhe>>());
     }
@@ -457,11 +463,9 @@ mod tests {
     #[test]
     fn zkp_program_yields_zkp_compiler() {
         #[zkp_program(backend = "bulletproofs")]
-        fn kitty() {
-        }
+        fn kitty() {}
 
-        let c = Compiler::new()
-            .zkp_program(kitty);
+        let c = Compiler::new().zkp_program(kitty);
 
         assert_eq!(c.type_id(), TypeId::of::<Compiler<Zkp>>());
     }
@@ -469,17 +473,50 @@ mod tests {
     #[test]
     fn fhe_zkp_program_yields_fhezkp_compiler() {
         #[zkp_program(backend = "bulletproofs")]
-        fn kitty() {
-        }
+        fn kitty() {}
 
         #[fhe_program(scheme = "bfv")]
-        fn doggie() {
-        }
+        fn doggie() {}
 
-        let c = Compiler::new()
-            .zkp_program(kitty)
-            .fhe_program(doggie);
+        let c = Compiler::new().zkp_program(kitty).fhe_program(doggie);
 
         assert_eq!(c.type_id(), TypeId::of::<Compiler<FheZkp>>());
+    }
+
+    #[test]
+    fn compiling_fhe_program_yields_fhe_application() {
+        #[fhe_program(scheme = "bfv")]
+        fn kitty() {}
+
+        let app = Compiler::new().fhe_program(kitty).compile().unwrap();
+
+        assert_eq!(app.type_id(), TypeId::of::<Application<Fhe>>());
+    }
+
+    #[test]
+    fn compiling_zkp_program_yields_zkp_application() {
+        #[zkp_program(backend = "bulletproofs")]
+        fn kitty() {}
+
+        let app = Compiler::new().zkp_program(kitty).compile().unwrap();
+
+        assert_eq!(app.type_id(), TypeId::of::<Application<Zkp>>());
+    }
+
+    #[test]
+    fn compiling_fhe_and_zkp_program_yields_fhezkp_application() {
+        #[zkp_program(backend = "bulletproofs")]
+        fn kitty() {}
+
+        #[fhe_program(scheme = "bfv")]
+        fn doggie() {}
+
+        let app = Compiler::new()
+            .zkp_program(kitty)
+            .fhe_program(doggie)
+            .compile()
+            .unwrap();
+
+        assert_eq!(app.type_id(), TypeId::of::<Application<FheZkp>>());
     }
 }

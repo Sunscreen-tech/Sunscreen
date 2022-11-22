@@ -80,9 +80,9 @@ pub use sunscreen_compiler_macros::*;
 pub use sunscreen_fhe_program::{SchemeType, SecurityLevel};
 pub use sunscreen_runtime::{
     CallSignature, Ciphertext, CompiledFheProgram, Error as RuntimeError, FheProgramInput,
-    FheProgramInputTrait, FheProgramMetadata, Runtime, FheRuntime, FheZkpRuntime, GenericRuntime,
+    FheProgramInputTrait, FheProgramMetadata, FheRuntime, FheZkpRuntime, GenericRuntime,
     InnerCiphertext, InnerPlaintext, Params, Plaintext, PrivateKey, PublicKey, RequiredKeys,
-    WithContext, ZkpRuntime,
+    Runtime, WithContext, ZkpRuntime,
 };
 pub use zkp::ZkpProgramFn;
 pub use zkp::{with_zkp_ctx, ZkpContext, ZkpFrontendCompilation, CURRENT_ZKP_CTX};

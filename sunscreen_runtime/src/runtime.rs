@@ -26,12 +26,14 @@ enum Context {
  */
 pub mod marker {
     /**
-     * A marker trait that denotes a [`Runtime`] can perform FHE operations.
+     * A marker trait that denotes a [`Runtime`](super::Runtime) can 
+     * perform FHE operations.
      */
     pub trait Fhe {}
 
     /**
-     * A marker trait that denotes a [`Runtime`] can perform ZKP operations.
+     * A marker trait that denotes a [`Runtime`](super::Runtime) can 
+     * perform ZKP operations.
      */
     pub trait Zkp {}
 }

@@ -32,7 +32,7 @@ use sunscreen::{
     fhe_program,
     types::{bfv::Rational, Cipher},
     Ciphertext, CompiledFheProgram, Compiler, Params, PrivateKey, PublicKey,
-    Runtime,
+    Runtime, FheRuntime,
 };
 
 #[fhe_program(scheme = "bfv")]
@@ -63,6 +63,7 @@ Notice that the other values in `swap_nu` (i.e. the pool reserves for ETH `total
 #     Error,
 #     PublicKey,
 #     Runtime,
+#     FheRuntime
 # };
 # 
 /// Alice is a party that would like to trade some NU for ETH.
@@ -74,7 +75,7 @@ struct Alice {
     private_key: PrivateKey,
 
     /// Alice's runtime
-    runtime: Runtime,
+    runtime: FheRuntime,
 }
 ```
 Alice wants to swap some encrypted (i.e. hidden) amount of NU for an encrypted (i.e. hidden) amount of ETH. She'll need a public/private key pair to do this (since she needs to encrypt her order with respect to her public key).
@@ -87,6 +88,7 @@ Alice wants to swap some encrypted (i.e. hidden) amount of NU for an encrypted (
 #     Error,
 #     PublicKey,
 #     Runtime,
+#     FheRuntime
 # };
 # 
 # /// Alice is a party that would like to trade some NU for ETH.
@@ -98,12 +100,12 @@ Alice wants to swap some encrypted (i.e. hidden) amount of NU for an encrypted (
 #     private_key: PrivateKey,
 # 
 #     /// Alice's runtime
-#     runtime: Runtime,
+#     runtime: FheRuntime,
 # }
 # 
 impl Alice {
     pub fn setup(params: &Params) -> Result<Alice, Error> {
-        let runtime = Runtime::new(params)?;
+        let runtime = Runtime::new_fhe(params)?;
 
         let (public_key, private_key) = runtime.generate_keys()?;
 
@@ -152,6 +154,7 @@ Let's look at the miner next.
 #     Error,
 #     PublicKey,
 #     Runtime,
+#     FheRuntime,
 # };
 /// Imagine this is a miner in a blockchain application. They're responsible
 /// for processing transactions
@@ -160,7 +163,7 @@ struct Miner {
     pub compiled_swap_nu: CompiledFheProgram,
 
     /// The Miner's runtime
-    runtime: Runtime,
+    runtime: FheRuntime,
 }
 ```
  Recall that the miner is responsible for processing Alice's order; thus, he'll have to run the compiled `swap_nu` program (`compiled_swap_nu`).
@@ -173,6 +176,7 @@ struct Miner {
 #     Error,
 #     PublicKey,
 #     Runtime,
+#     FheRuntime,
 # };
 # 
 # #[fhe_program(scheme = "bfv")]
@@ -193,7 +197,7 @@ struct Miner {
 #     pub compiled_swap_nu: CompiledFheProgram,
 # 
 #     /// The Miner's runtime
-#     runtime: Runtime,
+#     runtime: FheRuntime,
 # }
 #
 impl Miner {
@@ -202,10 +206,10 @@ impl Miner {
             .fhe_program(swap_nu)
             .compile()?;
 
-        let runtime = Runtime::new(app.params())?;
+        let runtime = Runtime::new_fhe(app.params())?;
 
         Ok(Miner {
-            compiled_swap_nu: app.get_program(swap_nu).unwrap().clone(),
+            compiled_swap_nu: app.get_fhe_program(swap_nu).unwrap().clone(),
             runtime,
         })
     }
@@ -237,6 +241,7 @@ The miner can run the token swap contract (see `run_contract`) by calling `runti
 #     Error,
 #     PublicKey,
 #     Runtime,
+#     FheRuntime,
 # };
 # 
 #  #[fhe_program(scheme = "bfv")]
@@ -257,7 +262,7 @@ The miner can run the token swap contract (see `run_contract`) by calling `runti
 #     pub compiled_swap_nu: CompiledFheProgram,
 # 
 #     /// The Miner's runtime
-#     runtime: Runtime,
+#     runtime: FheRuntime,
 # }
 # 
 # impl Miner {
@@ -266,10 +271,10 @@ The miner can run the token swap contract (see `run_contract`) by calling `runti
 #             .fhe_program(swap_nu)
 #             .compile()?;
 # 
-#         let runtime = Runtime::new(app.params())?;
+#         let runtime = Runtime::new_fhe(app.params())?;
 # 
 #         Ok(Miner {
-#             compiled_swap_nu: app.get_program(swap_nu).unwrap().clone(),
+#             compiled_swap_nu: app.get_fhe_program(swap_nu).unwrap().clone(),
 #             runtime,
 #         })
 #     }
@@ -294,12 +299,12 @@ The miner can run the token swap contract (see `run_contract`) by calling `runti
 #     private_key: PrivateKey,
 # 
 #     /// Alice's runtime
-#     runtime: Runtime,
+#     runtime: FheRuntime,
 # }
 # 
 # impl Alice {
 #     pub fn setup(params: &Params) -> Result<Alice, Error> {
-#         let runtime = Runtime::new(params)?;
+#         let runtime = Runtime::new_fhe(params)?;
 # 
 #         let (public_key, private_key) = runtime.generate_keys()?;
 # 

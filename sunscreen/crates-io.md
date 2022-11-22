@@ -26,14 +26,14 @@ fn main() -> Result<(), Error> {
         .fhe_program(simple_multiply)
         .compile()?;
 
-    let runtime = Runtime::new(app.params())?;
+    let runtime = Runtime::new_fhe(app.params())?;
 
     let (public_key, private_key) = runtime.generate_keys()?;
 
     let a = runtime.encrypt(Signed::from(15), &public_key)?;
     let b = runtime.encrypt(Signed::from(5), &public_key)?;
 
-    let results = runtime.run(app.get_program(simple_multiply).unwrap(), vec![a, b], &public_key)?;
+    let results = runtime.run(app.get_fhe_program(simple_multiply).unwrap(), vec![a, b], &public_key)?;
 
     let c: Signed = runtime.decrypt(&results[0], &private_key)?;
 

@@ -18,7 +18,7 @@ To create a runtime, you simply call `Runtime::new`, passing a `Params` object. 
 #        .compile()
 #        .unwrap();
 #
-    let runtime = Runtime::new(app.params()).unwrap();
+    let runtime = Runtime::new_fhe(app.params()).unwrap();
 # }
 ```
 

@@ -17,17 +17,17 @@ In our simple example, we called `runtime.run` to execute our FHE program
 #       .compile()
 #       .unwrap();
 #
-#   let runtime = Runtime::new(app.params()).unwrap();
+#   let runtime = Runtime::new_fhe(app.params()).unwrap();
 #   let (public_key, _) = runtime.generate_keys().unwrap();
     let a_enc = runtime.encrypt(Signed::from(5), &public_key).unwrap();
     let b_enc = runtime.encrypt(Signed::from(15), &public_key).unwrap();
 
-    let results = runtime.run(app.get_program(multiply).unwrap(), vec![a_enc, b_enc], &public_key).unwrap();
+    let results = runtime.run(app.get_fhe_program(multiply).unwrap(), vec![a_enc, b_enc], &public_key).unwrap();
 # }
 ```
 
 Let's break down the arguments to `runtime.run`:
-1. The first `app.get_program(multiply).unwrap()` argument is the compiled `multiply` program you wish to run.
+1. The first `app.get_fhe_program(multiply).unwrap()` argument is the compiled `multiply` program you wish to run.
 2. The second `vec![a, b]` argument contains the input arguments to the program in a [`Vec`](https://doc.rust-lang.org/std/vec/struct.Vec.html).
 3. The final `public_key` argument is the public key used to generate the encrypted program inputs (i.e. `a_enc` and `b_enc`).
 
@@ -54,7 +54,7 @@ If your FHE program only accepts ciphertexts (a common scenario), it's sufficien
 #         .compile()
 #         .unwrap();
 #
-#     let runtime = Runtime::new(app.params()).unwrap();
+#     let runtime = Runtime::new_fhe(app.params()).unwrap();
 #     let (public_key, _) = runtime.generate_keys().unwrap();
 
     let a_enc = runtime.encrypt(Signed::from(5), &public_key).unwrap();
@@ -63,7 +63,7 @@ If your FHE program only accepts ciphertexts (a common scenario), it's sufficien
     // We make a Vec<FheProgramInput> by calling `.into()`
     // on each value.
     let args: Vec<FheProgramInput> = vec![a_enc.into(), Signed::from(15).into()];
-    let results = runtime.run(app.get_program(multiply).unwrap(), args, &public_key).unwrap();
+    let results = runtime.run(app.get_fhe_program(multiply).unwrap(), args, &public_key).unwrap();
 # }
 ```
 

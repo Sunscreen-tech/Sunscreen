@@ -1,3 +1,5 @@
+use std::marker::PhantomData;
+
 use crate::error::*;
 use crate::metadata::*;
 use crate::{
@@ -20,21 +22,83 @@ enum Context {
 }
 
 /**
- * Contains all the elements needed to encrypt, decrypt, generate keys, and evaluate FHE programs.
+ * Marker traits.
  */
-pub struct Runtime {
+pub mod marker {
     /**
-     * The parameters used to construct the scheme used in this runtime.
+     * A marker trait that denotes a [`Runtime`](super::Runtime) can
+     * perform FHE operations.
      */
-    params: Params,
+    pub trait Fhe {}
 
     /**
-     * The context associated with the BFV scheme.
+     * A marker trait that denotes a [`Runtime`](super::Runtime) can
+     * perform ZKP operations.
      */
+    pub trait Zkp {}
+}
+
+/**
+ * A surrogate type for creating FHE-enabled [`Runtime`]s.
+ */
+pub struct Fhe {}
+impl marker::Fhe for Fhe {}
+
+/**
+ * A surrogate type for creating ZKP-enabled [`Runtime`]s.
+ */
+pub struct Zkp {}
+impl marker::Zkp for Zkp {}
+
+/**
+ * A surrogate type for creating [`Runtime`]s supporting both FHE and ZKP.
+ */
+pub struct FheZkp {}
+impl marker::Fhe for FheZkp {}
+impl marker::Zkp for FheZkp {}
+
+struct FheRuntimeData {
+    params: Params,
     context: Context,
 }
 
-impl Runtime {
+enum RuntimeData {
+    Fhe(FheRuntimeData),
+    Zkp,
+}
+
+impl RuntimeData {
+    /**
+     * Gets the inner Fhe's runtime data or panics if this value isn't
+     * the [`RuntimeData::Fhe`] variant.
+     *
+     * # Panics
+     * * If this value isn't a [`RuntimeData::Fhe`].
+     */
+    fn unwrap_fhe(&self) -> &FheRuntimeData {
+        match self {
+            Self::Fhe(x) => x,
+            _ => panic!("Expected RuntimeData::Fhe."),
+        }
+    }
+}
+
+/**
+ * The generalized runtime type that provides ZKP and FHE functionality
+ * depending on the generic parameter `T`. As a user, you should instead
+ * use [`FheRuntime`], [`ZkpRuntime`], or [`FheZkpRuntime`] depending on
+ * your needs. See [`Runtime`].
+ *
+ */
+pub struct GenericRuntime<T> {
+    runtime_data: RuntimeData,
+    _phantom: PhantomData<T>,
+}
+
+impl<T> GenericRuntime<T>
+where
+    T: self::marker::Fhe,
+{
     /**
      * Decrypts the given ciphertext into the type P.
      */
@@ -54,7 +118,9 @@ impl Runtime {
             });
         }
 
-        let val = match (&self.context, &ciphertext.inner) {
+        let fhe_data = self.runtime_data.unwrap_fhe();
+
+        let val = match (&fhe_data.context, &ciphertext.inner) {
             (Context::Seal(context), InnerCiphertext::Seal(ciphertexts)) => {
                 let decryptor = Decryptor::new(context, &private_key.0)?;
 
@@ -74,7 +140,7 @@ impl Runtime {
                     .collect::<Result<Vec<SealPlaintext>>>()?
                     .drain(0..)
                     .map(|p| WithContext {
-                        params: self.params.clone(),
+                        params: fhe_data.params.clone(),
                         data: p,
                     })
                     .collect();
@@ -84,7 +150,7 @@ impl Runtime {
                         data_type: P::type_name(),
                         inner: InnerPlaintext::Seal(plaintexts),
                     },
-                    &self.params,
+                    &fhe_data.params,
                 )?
             }
         };
@@ -103,7 +169,9 @@ impl Runtime {
      * ciphertexts.
      */
     pub fn measure_noise_budget(&self, c: &Ciphertext, private_key: &PrivateKey) -> Result<u32> {
-        match (&self.context, &c.inner) {
+        let fhe_data = self.runtime_data.unwrap_fhe();
+
+        match (&fhe_data.context, &c.inner) {
             (Context::Seal(ctx), InnerCiphertext::Seal(ciphertexts)) => {
                 let decryptor = Decryptor::new(ctx, &private_key.0)?;
 
@@ -128,12 +196,14 @@ impl Runtime {
      * See [`PublicKey`] for more information.
      */
     pub fn generate_keys(&self) -> Result<(PublicKey, PrivateKey)> {
-        let keys = match &self.context {
+        let fhe_data = self.runtime_data.unwrap_fhe();
+
+        let keys = match &fhe_data.context {
             Context::Seal(context) => {
                 let keygen = KeyGenerator::new(context)?;
 
                 let galois_keys = keygen.create_galois_keys().ok().map(|v| WithContext {
-                    params: self.params.clone(),
+                    params: fhe_data.params.clone(),
                     data: v,
                 });
 
@@ -141,20 +211,20 @@ impl Runtime {
                     .create_relinearization_keys()
                     .ok()
                     .map(|v| WithContext {
-                        params: self.params.clone(),
+                        params: fhe_data.params.clone(),
                         data: v,
                     });
 
                 let public_keys = PublicKey {
                     public_key: WithContext {
-                        params: self.params.clone(),
+                        params: fhe_data.params.clone(),
                         data: keygen.create_public_key(),
                     },
                     galois_key: galois_keys,
                     relin_key: relin_keys,
                 };
                 let private_key = PrivateKey(WithContext {
-                    params: self.params.clone(),
+                    params: fhe_data.params.clone(),
                     data: keygen.secret_key(),
                 });
 
@@ -166,38 +236,12 @@ impl Runtime {
     }
 
     /**
-     * Create a new Runtime.
-     */
-    pub fn new(params: &Params) -> Result<Self> {
-        match params.scheme_type {
-            SchemeType::Bfv => {
-                let bfv_params = BfvEncryptionParametersBuilder::new()
-                    .set_plain_modulus_u64(params.plain_modulus)
-                    .set_poly_modulus_degree(params.lattice_dimension)
-                    .set_coefficient_modulus(
-                        params
-                            .coeff_modulus
-                            .iter()
-                            .map(|v| Modulus::new(*v).unwrap())
-                            .collect::<Vec<Modulus>>(),
-                    )
-                    .build()?;
-
-                let context = SealContext::new(&bfv_params, true, params.security_level)?;
-
-                Ok(Self {
-                    context: Context::Seal(context),
-                    params: params.clone(),
-                })
-            }
-        }
-    }
-
-    /**
      * Returns the metadata for this runtime's associated FHE program.
      */
     pub fn params(&self) -> &Params {
-        &self.params
+        let fhe_data = self.runtime_data.unwrap_fhe();
+
+        &fhe_data.params
     }
 
     /**
@@ -256,7 +300,9 @@ impl Runtime {
             return Err(Error::ReturnTypeMetadataError);
         }
 
-        match &self.context {
+        let fhe_data = self.runtime_data.unwrap_fhe();
+
+        match &fhe_data.context {
             Context::Seal(context) => {
                 let evaluator = BFVEvaluator::new(context)?;
 
@@ -272,7 +318,7 @@ impl Runtime {
                             }
                         },
                         FheProgramInput::Plaintext(p) => {
-                            let p = p.try_into_plaintext(&self.params)?;
+                            let p = p.try_into_plaintext(&fhe_data.params)?;
 
                             match p.inner {
                                 InnerPlaintext::Seal(mut p) => {
@@ -313,7 +359,7 @@ impl Runtime {
                             raw_ciphertexts
                                 .drain(0..*ciphertext_count)
                                 .map(|c| WithContext {
-                                    params: self.params.clone(),
+                                    params: fhe_data.params.clone(),
                                     data: c,
                                 })
                                 .collect(),
@@ -336,9 +382,11 @@ impl Runtime {
     where
         P: TryIntoPlaintext + TypeName,
     {
-        let plaintext = val.try_into_plaintext(&self.params)?;
+        let fhe_data = self.runtime_data.unwrap_fhe();
 
-        let ciphertext = match (&self.context, plaintext.inner) {
+        let plaintext = val.try_into_plaintext(&fhe_data.params)?;
+
+        let ciphertext = match (&fhe_data.context, plaintext.inner) {
             (Context::Seal(context), InnerPlaintext::Seal(inner_plain)) => {
                 let encryptor = Encryptor::with_public_key(context, &public_key.public_key.data)?;
 
@@ -348,7 +396,7 @@ impl Runtime {
                     .collect::<Result<Vec<SealCiphertext>>>()?
                     .drain(0..)
                     .map(|c| WithContext {
-                        params: self.params.clone(),
+                        params: fhe_data.params.clone(),
                         data: c,
                     })
                     .collect();
@@ -366,3 +414,97 @@ impl Runtime {
         Ok(ciphertext)
     }
 }
+
+impl GenericRuntime<()> {
+    #[deprecated]
+    /**
+     * Create a new Runtime supporting only FHE operations.
+     *
+     * # Deprecated
+     * Please use [`new_fhe`](Runtime::new_fhe) instead.
+     */
+    pub fn new(params: &Params) -> Result<FheRuntime> {
+        Self::new_fhe(params)
+    }
+
+    /**
+     * Create a new Runtime supporting only FHE operations.
+     */
+    pub fn new_fhe(params: &Params) -> Result<FheRuntime> {
+        match params.scheme_type {
+            SchemeType::Bfv => {
+                let bfv_params = BfvEncryptionParametersBuilder::new()
+                    .set_plain_modulus_u64(params.plain_modulus)
+                    .set_poly_modulus_degree(params.lattice_dimension)
+                    .set_coefficient_modulus(
+                        params
+                            .coeff_modulus
+                            .iter()
+                            .map(|v| Modulus::new(*v).unwrap())
+                            .collect::<Vec<Modulus>>(),
+                    )
+                    .build()?;
+
+                let context = SealContext::new(&bfv_params, true, params.security_level)?;
+
+                Ok(GenericRuntime {
+                    runtime_data: RuntimeData::Fhe(FheRuntimeData {
+                        context: Context::Seal(context),
+                        params: params.clone(),
+                    }),
+                    _phantom: PhantomData,
+                })
+            }
+        }
+    }
+
+    /**
+     * Creates a new Runtime supporting only ZKP operations
+     */
+    pub fn new_zkp() -> Result<ZkpRuntime> {
+        Ok(GenericRuntime {
+            runtime_data: RuntimeData::Zkp,
+            _phantom: PhantomData,
+        })
+    }
+
+    /**
+     * Creates a new Runtime supporting both ZKP and FHE operations.
+     */
+    pub fn new_fhe_zkp(params: &Params) -> Result<FheZkpRuntime> {
+        let runtime = Self::new_fhe(params)?;
+
+        Ok(GenericRuntime {
+            runtime_data: runtime.runtime_data,
+            _phantom: PhantomData,
+        })
+    }
+}
+
+/**
+ * A runtime capable of both FHE and ZKP operations.
+ */
+pub type FheZkpRuntime = GenericRuntime<FheZkp>;
+
+/**
+ * A runtime capable of only FHE operations.
+ */
+pub type FheRuntime = GenericRuntime<FheZkp>;
+
+/**
+ * A runtime capable of only ZKP operations.
+ */
+pub type ZkpRuntime = GenericRuntime<FheZkp>;
+
+/**
+ * An type containing the `Runtime::new_*` constructor methods to create
+ * the appropriate runtime:
+ *
+ * * [`Runtime::new_fhe`] constructs an [`FheRuntime`] capable of
+ *   performing FHE-related tasks, but not ZKP tasks.
+ * * [`Runtime::new_zkp`] constructs a [`ZkpRuntime`] capable of
+ *   performing ZKP tasks, but not FHE.
+ * * [`Runtime::new_fhe_zkp`] constructs a [`FheZkpRuntime`] that
+ *   can do both.
+ */
+pub type Runtime = GenericRuntime<()>;

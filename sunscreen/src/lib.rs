@@ -22,14 +22,14 @@
 //!       .compile()
 //!       .unwrap();
 //!
-//!   let runtime = Runtime::new(app.params()).unwrap();
+//!   let runtime = Runtime::new_fhe(app.params()).unwrap();
 //!
 //!   let (public_key, private_key) = runtime.generate_keys().unwrap();
 //!
 //!   let a = runtime.encrypt(Signed::from(15), &public_key).unwrap();
 //!   let b = runtime.encrypt(Signed::from(5), &public_key).unwrap();
 //!
-//!   let results = runtime.run(app.get_program(simple_multiply).unwrap(), vec![a, b], &public_key).unwrap();
+//!   let results = runtime.run(app.get_fhe_program(simple_multiply).unwrap(), vec![a, b], &public_key).unwrap();
 //!
 //!   let c: Signed = runtime.decrypt(&results[0], &private_key).unwrap();
 //!
@@ -38,13 +38,13 @@
 //! ```
 //!
 
+mod compiler;
 mod error;
 /**
  * This module contains types used internally when compiling
  * [`fhe_program`]s.
  */
 pub mod fhe;
-mod fhe_compiler;
 mod params;
 mod zkp;
 
@@ -66,33 +66,38 @@ pub mod types;
 use fhe::{FheOperation, Literal};
 use petgraph::stable_graph::StableGraph;
 use serde::{Deserialize, Serialize};
+use sunscreen_runtime::{marker, Fhe, FheZkp, Zkp};
 
 use std::cell::RefCell;
 use std::collections::HashMap;
+use std::marker::PhantomData;
 
+pub use compiler::{Compiler, FheProgramFn};
 pub use error::{Error, Result};
-pub use fhe_compiler::{Compiler, FheProgramFn};
 pub use params::PlainModulusConstraint;
 pub use seal_fhe::Plaintext as SealPlaintext;
 pub use sunscreen_compiler_macros::*;
 pub use sunscreen_fhe_program::{SchemeType, SecurityLevel};
 pub use sunscreen_runtime::{
     CallSignature, Ciphertext, CompiledFheProgram, Error as RuntimeError, FheProgramInput,
-    FheProgramInputTrait, FheProgramMetadata, InnerCiphertext, InnerPlaintext, Params, Plaintext,
-    PrivateKey, PublicKey, RequiredKeys, Runtime, WithContext,
+    FheProgramInputTrait, FheProgramMetadata, FheRuntime, FheZkpRuntime, InnerCiphertext,
+    InnerPlaintext, Params, Plaintext, PrivateKey, PublicKey, RequiredKeys, Runtime, WithContext,
+    ZkpRuntime,
 };
 pub use zkp::ZkpProgramFn;
 pub use zkp::{with_zkp_ctx, ZkpContext, ZkpFrontendCompilation, CURRENT_ZKP_CTX};
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone)]
 /**
  * The outcome of successful compilation. Contains one or more [`CompiledFheProgram`].
  */
-pub struct Application {
-    programs: HashMap<String, CompiledFheProgram>,
+pub struct Application<T> {
+    fhe_programs: HashMap<String, CompiledFheProgram>,
+    zkp_programs: HashMap<String, ZkpFrontendCompilation>,
+    _phantom: PhantomData<T>,
 }
 
-impl Application {
+impl Application<()> {
     /**
      * Constructs a new Application from the given HashMap of programs. The
      * keys of this contain FHE program names and the values are the
@@ -105,24 +110,38 @@ impl Application {
      * You should generally not call this function
      * It is an implementation detail of compilation.
      */
-    pub(crate) fn new(programs: HashMap<String, CompiledFheProgram>) -> Result<Self> {
-        if programs.is_empty() {
+    pub(crate) fn new(
+        fhe_programs: HashMap<String, CompiledFheProgram>,
+        zkp_programs: HashMap<String, ZkpFrontendCompilation>,
+    ) -> Result<Self> {
+        if fhe_programs.is_empty() && zkp_programs.is_empty() {
             return Err(Error::NoPrograms);
         }
 
-        Ok(Self { programs })
+        Ok(Self {
+            fhe_programs,
+            zkp_programs,
+            _phantom: PhantomData,
+        })
     }
+}
 
+impl<T> Application<T>
+where
+    T: marker::Fhe,
+{
     /**
      * Returns the [`Params`] suitable for running each contained [`CompiledFheProgram`].
      * These parameters were chosen during compilation.
+     *
+     * # Remarks
+     * If no [`fhe_program`] was specified, this function returns [`None`].
      */
     pub fn params(&self) -> &Params {
-        // We can safely unwrap the iterator because we ensured we have at
-        // least 1 program during construction.
-        &self.programs.values().next().unwrap().metadata.params
+        &self.fhe_programs.values().next().unwrap().metadata.params
     }
 
+    #[deprecated]
     /**
      * Gets the [`CompiledFheProgram`] with the given name or [`None`] if not present.
      */
@@ -130,14 +149,45 @@ impl Application {
     where
         N: AsRef<str>,
     {
-        self.programs.get(name.as_ref())
+        self.get_fhe_program(name)
+    }
+
+    /**
+     * Gets the [`CompiledFheProgram`] with the given name or [`None`] if not present.
+     */
+    pub fn get_fhe_program<N>(&self, name: N) -> Option<&CompiledFheProgram>
+    where
+        N: AsRef<str>,
+    {
+        self.fhe_programs.get(name.as_ref())
+    }
+
+    #[deprecated]
+    /**
+     * Returns an iterator over all the compiled programs.
+     *
+     * # Deprecated
+     * Please use [`get_fhe_programs`](Self::get_fhe_programs) instead.
+     */
+    pub fn get_programs(&self) -> impl Iterator<Item = (&String, &CompiledFheProgram)> {
+        self.get_fhe_programs()
     }
 
     /**
      * Returns an iterator over all the compiled programs.
      */
-    pub fn get_programs(&self) -> impl Iterator<Item = (&String, &CompiledFheProgram)> {
-        self.programs.iter()
+    pub fn get_fhe_programs(&self) -> impl Iterator<Item = (&String, &CompiledFheProgram)> {
+        self.fhe_programs.iter()
+    }
+}
+
+impl<T> Application<T> {
+    pub(crate) fn convert<U>(self) -> Application<U> {
+        Application {
+            fhe_programs: self.fhe_programs,
+            zkp_programs: self.zkp_programs,
+            _phantom: PhantomData,
+        }
     }
 }
 
@@ -195,3 +245,18 @@ thread_local! {
      */
     pub static INDEX_ARENA: RefCell<bumpalo::Bump> = RefCell::new(bumpalo::Bump::new());
 }
+
+/**
+ * An application with FHE programs.
+ */
+pub type FheApplication = Application<Fhe>;
+
+/**
+ * An application with ZKP programs.
+ */
+pub type ZkpApplication = Application<Zkp>;
+
+/**
+ * An application with FHE and ZKP programs.
+ */
+pub type FheZkpApplication = Application<FheZkp>;

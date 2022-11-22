@@ -136,10 +136,10 @@ use std::ops::*;
  *
  * ```rust
  * # use sunscreen::types::bfv::Fractional;
- * # use sunscreen::{Ciphertext, PublicKey, PrivateKey, Runtime, Result};
+ * # use sunscreen::{Ciphertext, PublicKey, PrivateKey, FheRuntime, Result};
  *
  * fn normalize(
- *   runtime: &Runtime,
+ *   runtime: &FheRuntime,
  *   ciphertext: &Ciphertext,
  *   private_key: &PrivateKey,
  *   public_key: &PublicKey

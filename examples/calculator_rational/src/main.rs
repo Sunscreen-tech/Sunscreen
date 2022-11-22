@@ -3,10 +3,11 @@
 use std::io::{self, Write};
 use std::sync::mpsc::{Receiver, Sender};
 use std::thread::{self, JoinHandle};
+use sunscreen::FheRuntime;
 use sunscreen::{
     fhe_program,
     types::{bfv::Rational, Cipher},
-    Application, Ciphertext, Compiler, Params, PlainModulusConstraint, PublicKey, Runtime,
+    Ciphertext, Compiler, FheApplication, Params, PlainModulusConstraint, PublicKey, Runtime,
     RuntimeError,
 };
 
@@ -98,7 +99,7 @@ fn parse_input(line: &str) -> Result<ParseResult, Error> {
     }))
 }
 
-fn encrypt_term(runtime: &Runtime, public_key: &PublicKey, input: Term) -> Term {
+fn encrypt_term(runtime: &FheRuntime, public_key: &PublicKey, input: Term) -> Term {
     match input {
         Term::Ans => Term::Ans,
         Term::F64(v) => Term::Encrypted(
@@ -127,7 +128,7 @@ fn alice(
         // Bob needs to send us the scheme parameters compatible with his FHE program.
         let params = recv_params.recv().unwrap();
 
-        let runtime = Runtime::new(&params).unwrap();
+        let runtime = Runtime::new_fhe(&params).unwrap();
 
         let (public_key, private_key) = runtime.generate_keys().unwrap();
 
@@ -189,7 +190,7 @@ fn alice(
     })
 }
 
-fn compile_fhe_programs() -> Application {
+fn compile_fhe_programs() -> FheApplication {
     #[fhe_program(scheme = "bfv")]
     fn add(a: Cipher<Rational>, b: Cipher<Rational>) -> Cipher<Rational> {
         a + b
@@ -237,7 +238,7 @@ fn bob(
 
         let public_key = recv_pub.recv().unwrap();
 
-        let runtime = Runtime::new(app.params()).unwrap();
+        let runtime = Runtime::new_fhe(app.params()).unwrap();
 
         let mut ans = runtime
             .encrypt(Rational::try_from(0f64).unwrap(), &public_key)
@@ -261,28 +262,28 @@ fn bob(
             let mut c = match op {
                 Operand::Add => runtime
                     .run(
-                        app.get_program("add").unwrap(),
+                        app.get_fhe_program("add").unwrap(),
                         vec![left, right],
                         &public_key,
                     )
                     .unwrap(),
                 Operand::Sub => runtime
                     .run(
-                        app.get_program("sub").unwrap(),
+                        app.get_fhe_program("sub").unwrap(),
                         vec![left, right],
                         &public_key,
                     )
                     .unwrap(),
                 Operand::Mul => runtime
                     .run(
-                        app.get_program("mul").unwrap(),
+                        app.get_fhe_program("mul").unwrap(),
                         vec![left, right],
                         &public_key,
                     )
                     .unwrap(),
                 Operand::Div => runtime
                     .run(
-                        app.get_program("div").unwrap(),
+                        app.get_fhe_program("div").unwrap(),
                         vec![left, right],
                         &public_key,
                     )

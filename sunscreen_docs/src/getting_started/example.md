@@ -72,7 +72,7 @@ fn main() -> Result<(), Error> {
         .fhe_program(simple_multiply)
         .compile()?;
 
-    let runtime = Runtime::new(app.params())?;
+    let runtime = Runtime::new_fhe(app.params())?;
 
     let (public_key, private_key) = runtime.generate_keys()?;
 
@@ -106,14 +106,14 @@ fn main() -> Result<(), Error> {
         .fhe_program(simple_multiply)
         .compile()?;
 
-    let runtime = Runtime::new(app.params())?;
+    let runtime = Runtime::new_fhe(app.params())?;
 
     let (public_key, private_key) = runtime.generate_keys()?;
 
     let a = runtime.encrypt(Signed::from(15), &public_key)?;
     let b = runtime.encrypt(Signed::from(5), &public_key)?;
     
-    let results = runtime.run(app.get_program(simple_multiply).unwrap(), vec![a, b], &public_key)?;
+    let results = runtime.run(app.get_fhe_program(simple_multiply).unwrap(), vec![a, b], &public_key)?;
     
     let c: Signed = runtime.decrypt(&results[0], &private_key)?;
     assert_eq!(c, 75.into());
@@ -122,7 +122,7 @@ fn main() -> Result<(), Error> {
 }
 ```
 
-We call `runtime.run(...)` to execute our FHE program. For the first argument, we pass in our previously compiled program. We retrieve this program by calling `app.get_program()` and unwrapping the result. The second argument is always a [Vec](https://doc.rust-lang.org/std/vec/struct.Vec.html) containing the arguments to the FHE program. In this case, we pass in the encrypted `a` and `b` values. You'll need to pass in the `public_key` as well.
+We call `runtime.run(...)` to execute our FHE program. For the first argument, we pass in our previously compiled program. We retrieve this program by calling `app.get_fhe_program()` and unwrapping the result. The second argument is always a [Vec](https://doc.rust-lang.org/std/vec/struct.Vec.html) containing the arguments to the FHE program. In this case, we pass in the encrypted `a` and `b` values. You'll need to pass in the `public_key` as well.
 
 What would happen if we forgot to encrypt one of our values or gave an encrypted `Fractional` value where the program wanted an encrypted `Signed` value? Fortunately, the `run` method first performs some sanity checks to ensure the arguments match the call signature. If the types of the values we pass in don't match the signature, the `run` method returns an error `Result`. The `?` propagates this error, but our program exits because this is the `main()` method!
 

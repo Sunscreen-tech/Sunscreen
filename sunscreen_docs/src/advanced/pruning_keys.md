@@ -28,7 +28,7 @@ Each compiled FHE program contains a list the keys it needs at runtime in `fhe_p
 #        .compile()
 #        .unwrap();
 #
-#    let runtime = Runtime::new(app.params()).unwrap();
+#    let runtime = Runtime::new_fhe(app.params()).unwrap();
 let (public_key, private_key) = runtime.generate_keys().unwrap();
 
 // Shadow and overwrite the public_key, removing the galois_key and relin_key

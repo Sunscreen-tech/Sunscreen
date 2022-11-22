@@ -22,7 +22,7 @@ fn can_encode_rational_numbers() {
         .compile()
         .unwrap();
 
-    let runtime = Runtime::new(app.params()).unwrap();
+    let runtime = Runtime::new_fhe(app.params()).unwrap();
 
     let (public_key, private_key) = runtime.generate_keys().unwrap();
 
@@ -31,7 +31,7 @@ fn can_encode_rational_numbers() {
         .unwrap();
 
     let result = runtime
-        .run(app.get_program(no_op).unwrap(), vec![a], &public_key)
+        .run(app.get_fhe_program(no_op).unwrap(), vec![a], &public_key)
         .unwrap();
 
     let c: Rational = runtime.decrypt(&result[0], &private_key).unwrap();
@@ -62,7 +62,7 @@ fn can_add_cipher_cipher() {
         .compile()
         .unwrap();
 
-    let runtime = Runtime::new(app.params()).unwrap();
+    let runtime = Runtime::new_fhe(app.params()).unwrap();
 
     let (public_key, private_key) = runtime.generate_keys().unwrap();
 
@@ -72,7 +72,11 @@ fn can_add_cipher_cipher() {
     let b_c = runtime.encrypt(b, &public_key).unwrap();
 
     let result = runtime
-        .run(app.get_program(add).unwrap(), vec![a_c, b_c], &public_key)
+        .run(
+            app.get_fhe_program(add).unwrap(),
+            vec![a_c, b_c],
+            &public_key,
+        )
         .unwrap();
 
     let c: Rational = runtime.decrypt(&result[0], &private_key).unwrap();
@@ -94,7 +98,7 @@ fn can_add_cipher_plain() {
         .compile()
         .unwrap();
 
-    let runtime = Runtime::new(app.params()).unwrap();
+    let runtime = Runtime::new_fhe(app.params()).unwrap();
 
     let (public_key, private_key) = runtime.generate_keys().unwrap();
 
@@ -105,7 +109,7 @@ fn can_add_cipher_plain() {
     let args: Vec<FheProgramInput> = vec![a_c.into(), b.into()];
 
     let result = runtime
-        .run(app.get_program(add).unwrap(), args, &public_key)
+        .run(app.get_fhe_program(add).unwrap(), args, &public_key)
         .unwrap();
 
     let c: Rational = runtime.decrypt(&result[0], &private_key).unwrap();
@@ -127,7 +131,7 @@ fn can_add_plain_cipher() {
         .compile()
         .unwrap();
 
-    let runtime = Runtime::new(app.params()).unwrap();
+    let runtime = Runtime::new_fhe(app.params()).unwrap();
 
     let (public_key, private_key) = runtime.generate_keys().unwrap();
 
@@ -138,7 +142,7 @@ fn can_add_plain_cipher() {
     let args: Vec<FheProgramInput> = vec![a_c.into(), b.into()];
 
     let result = runtime
-        .run(app.get_program(add).unwrap(), args, &public_key)
+        .run(app.get_fhe_program(add).unwrap(), args, &public_key)
         .unwrap();
 
     let c: Rational = runtime.decrypt(&result[0], &private_key).unwrap();
@@ -160,7 +164,7 @@ fn can_add_cipher_literal() {
         .compile()
         .unwrap();
 
-    let runtime = Runtime::new(app.params()).unwrap();
+    let runtime = Runtime::new_fhe(app.params()).unwrap();
 
     let (public_key, private_key) = runtime.generate_keys().unwrap();
 
@@ -170,7 +174,7 @@ fn can_add_cipher_literal() {
     let args: Vec<FheProgramInput> = vec![a_c.into()];
 
     let result = runtime
-        .run(app.get_program(add).unwrap(), args, &public_key)
+        .run(app.get_fhe_program(add).unwrap(), args, &public_key)
         .unwrap();
 
     let c: Rational = runtime.decrypt(&result[0], &private_key).unwrap();
@@ -192,7 +196,7 @@ fn can_add_literal_cipher() {
         .compile()
         .unwrap();
 
-    let runtime = Runtime::new(app.params()).unwrap();
+    let runtime = Runtime::new_fhe(app.params()).unwrap();
 
     let (public_key, private_key) = runtime.generate_keys().unwrap();
 
@@ -202,7 +206,7 @@ fn can_add_literal_cipher() {
     let args: Vec<FheProgramInput> = vec![a_c.into()];
 
     let result = runtime
-        .run(app.get_program(add).unwrap(), args, &public_key)
+        .run(app.get_fhe_program(add).unwrap(), args, &public_key)
         .unwrap();
 
     let c: Rational = runtime.decrypt(&result[0], &private_key).unwrap();
@@ -231,7 +235,7 @@ fn can_sub_cipher_cipher() {
         .compile()
         .unwrap();
 
-    let runtime = Runtime::new(app.params()).unwrap();
+    let runtime = Runtime::new_fhe(app.params()).unwrap();
 
     let (public_key, private_key) = runtime.generate_keys().unwrap();
 
@@ -241,7 +245,11 @@ fn can_sub_cipher_cipher() {
     let b_c = runtime.encrypt(b, &public_key).unwrap();
 
     let result = runtime
-        .run(app.get_program(sub).unwrap(), vec![a_c, b_c], &public_key)
+        .run(
+            app.get_fhe_program(sub).unwrap(),
+            vec![a_c, b_c],
+            &public_key,
+        )
         .unwrap();
 
     let c: Rational = runtime.decrypt(&result[0], &private_key).unwrap();
@@ -263,7 +271,7 @@ fn can_sub_cipher_plain() {
         .compile()
         .unwrap();
 
-    let runtime = Runtime::new(app.params()).unwrap();
+    let runtime = Runtime::new_fhe(app.params()).unwrap();
 
     let (public_key, private_key) = runtime.generate_keys().unwrap();
 
@@ -274,7 +282,7 @@ fn can_sub_cipher_plain() {
     let args: Vec<FheProgramInput> = vec![a_c.into(), b.into()];
 
     let result = runtime
-        .run(app.get_program(sub).unwrap(), args, &public_key)
+        .run(app.get_fhe_program(sub).unwrap(), args, &public_key)
         .unwrap();
 
     let c: Rational = runtime.decrypt(&result[0], &private_key).unwrap();
@@ -296,7 +304,7 @@ fn can_sub_plain_cipher() {
         .compile()
         .unwrap();
 
-    let runtime = Runtime::new(app.params()).unwrap();
+    let runtime = Runtime::new_fhe(app.params()).unwrap();
 
     let (public_key, private_key) = runtime.generate_keys().unwrap();
 
@@ -308,7 +316,7 @@ fn can_sub_plain_cipher() {
     let args: Vec<FheProgramInput> = vec![a.into(), b_c.into()];
 
     let result = runtime
-        .run(app.get_program(sub).unwrap(), args, &public_key)
+        .run(app.get_fhe_program(sub).unwrap(), args, &public_key)
         .unwrap();
 
     let c: Rational = runtime.decrypt(&result[0], &private_key).unwrap();
@@ -330,7 +338,7 @@ fn can_sub_cipher_literal() {
         .compile()
         .unwrap();
 
-    let runtime = Runtime::new(app.params()).unwrap();
+    let runtime = Runtime::new_fhe(app.params()).unwrap();
 
     let (public_key, private_key) = runtime.generate_keys().unwrap();
 
@@ -340,7 +348,7 @@ fn can_sub_cipher_literal() {
     let args: Vec<FheProgramInput> = vec![a_c.into()];
 
     let result = runtime
-        .run(app.get_program(sub).unwrap(), args, &public_key)
+        .run(app.get_fhe_program(sub).unwrap(), args, &public_key)
         .unwrap();
 
     let c: Rational = runtime.decrypt(&result[0], &private_key).unwrap();
@@ -362,7 +370,7 @@ fn can_sub_literal_cipher() {
         .compile()
         .unwrap();
 
-    let runtime = Runtime::new(app.params()).unwrap();
+    let runtime = Runtime::new_fhe(app.params()).unwrap();
 
     let (public_key, private_key) = runtime.generate_keys().unwrap();
 
@@ -372,7 +380,7 @@ fn can_sub_literal_cipher() {
     let args: Vec<FheProgramInput> = vec![a_c.into()];
 
     let result = runtime
-        .run(app.get_program(sub).unwrap(), args, &public_key)
+        .run(app.get_fhe_program(sub).unwrap(), args, &public_key)
         .unwrap();
 
     let c: Rational = runtime.decrypt(&result[0], &private_key).unwrap();
@@ -401,7 +409,7 @@ fn can_mul_cipher_cipher() {
         .compile()
         .unwrap();
 
-    let runtime = Runtime::new(app.params()).unwrap();
+    let runtime = Runtime::new_fhe(app.params()).unwrap();
 
     let (public_key, private_key) = runtime.generate_keys().unwrap();
 
@@ -411,7 +419,11 @@ fn can_mul_cipher_cipher() {
     let b_c = runtime.encrypt(b, &public_key).unwrap();
 
     let result = runtime
-        .run(app.get_program(mul).unwrap(), vec![a_c, b_c], &public_key)
+        .run(
+            app.get_fhe_program(mul).unwrap(),
+            vec![a_c, b_c],
+            &public_key,
+        )
         .unwrap();
 
     let c: Rational = runtime.decrypt(&result[0], &private_key).unwrap();
@@ -433,7 +445,7 @@ fn can_mul_cipher_plain() {
         .compile()
         .unwrap();
 
-    let runtime = Runtime::new(app.params()).unwrap();
+    let runtime = Runtime::new_fhe(app.params()).unwrap();
 
     let (public_key, private_key) = runtime.generate_keys().unwrap();
 
@@ -444,7 +456,7 @@ fn can_mul_cipher_plain() {
     let args: Vec<FheProgramInput> = vec![a_c.into(), b.into()];
 
     let result = runtime
-        .run(app.get_program(mul).unwrap(), args, &public_key)
+        .run(app.get_fhe_program(mul).unwrap(), args, &public_key)
         .unwrap();
 
     let c: Rational = runtime.decrypt(&result[0], &private_key).unwrap();
@@ -466,7 +478,7 @@ fn can_mul_plain_cipher() {
         .compile()
         .unwrap();
 
-    let runtime = Runtime::new(app.params()).unwrap();
+    let runtime = Runtime::new_fhe(app.params()).unwrap();
 
     let (public_key, private_key) = runtime.generate_keys().unwrap();
 
@@ -478,7 +490,7 @@ fn can_mul_plain_cipher() {
     let args: Vec<FheProgramInput> = vec![a.into(), b_c.into()];
 
     let result = runtime
-        .run(app.get_program(mul).unwrap(), args, &public_key)
+        .run(app.get_fhe_program(mul).unwrap(), args, &public_key)
         .unwrap();
 
     let c: Rational = runtime.decrypt(&result[0], &private_key).unwrap();
@@ -500,7 +512,7 @@ fn can_mul_cipher_literal() {
         .compile()
         .unwrap();
 
-    let runtime = Runtime::new(app.params()).unwrap();
+    let runtime = Runtime::new_fhe(app.params()).unwrap();
 
     let (public_key, private_key) = runtime.generate_keys().unwrap();
 
@@ -510,7 +522,7 @@ fn can_mul_cipher_literal() {
     let args: Vec<FheProgramInput> = vec![a_c.into()];
 
     let result = runtime
-        .run(app.get_program(mul).unwrap(), args, &public_key)
+        .run(app.get_fhe_program(mul).unwrap(), args, &public_key)
         .unwrap();
 
     let c: Rational = runtime.decrypt(&result[0], &private_key).unwrap();
@@ -532,7 +544,7 @@ fn can_mul_literal_cipher() {
         .compile()
         .unwrap();
 
-    let runtime = Runtime::new(app.params()).unwrap();
+    let runtime = Runtime::new_fhe(app.params()).unwrap();
 
     let (public_key, private_key) = runtime.generate_keys().unwrap();
 
@@ -542,7 +554,7 @@ fn can_mul_literal_cipher() {
     let args: Vec<FheProgramInput> = vec![a_c.into()];
 
     let result = runtime
-        .run(app.get_program(mul).unwrap(), args, &public_key)
+        .run(app.get_fhe_program(mul).unwrap(), args, &public_key)
         .unwrap();
 
     let c: Rational = runtime.decrypt(&result[0], &private_key).unwrap();
@@ -571,7 +583,7 @@ fn can_div_cipher_cipher() {
         .compile()
         .unwrap();
 
-    let runtime = Runtime::new(app.params()).unwrap();
+    let runtime = Runtime::new_fhe(app.params()).unwrap();
 
     let (public_key, private_key) = runtime.generate_keys().unwrap();
 
@@ -581,7 +593,11 @@ fn can_div_cipher_cipher() {
     let b_c = runtime.encrypt(b, &public_key).unwrap();
 
     let result = runtime
-        .run(app.get_program(div).unwrap(), vec![a_c, b_c], &public_key)
+        .run(
+            app.get_fhe_program(div).unwrap(),
+            vec![a_c, b_c],
+            &public_key,
+        )
         .unwrap();
 
     let c: Rational = runtime.decrypt(&result[0], &private_key).unwrap();
@@ -603,7 +619,7 @@ fn can_div_cipher_plain() {
         .compile()
         .unwrap();
 
-    let runtime = Runtime::new(app.params()).unwrap();
+    let runtime = Runtime::new_fhe(app.params()).unwrap();
 
     let (public_key, private_key) = runtime.generate_keys().unwrap();
 
@@ -614,7 +630,7 @@ fn can_div_cipher_plain() {
     let args: Vec<FheProgramInput> = vec![a_c.into(), b.into()];
 
     let result = runtime
-        .run(app.get_program(div).unwrap(), args, &public_key)
+        .run(app.get_fhe_program(div).unwrap(), args, &public_key)
         .unwrap();
 
     let c: Rational = runtime.decrypt(&result[0], &private_key).unwrap();
@@ -636,7 +652,7 @@ fn can_div_plain_cipher() {
         .compile()
         .unwrap();
 
-    let runtime = Runtime::new(app.params()).unwrap();
+    let runtime = Runtime::new_fhe(app.params()).unwrap();
 
     let (public_key, private_key) = runtime.generate_keys().unwrap();
 
@@ -648,7 +664,7 @@ fn can_div_plain_cipher() {
     let args: Vec<FheProgramInput> = vec![a.into(), b_c.into()];
 
     let result = runtime
-        .run(app.get_program(div).unwrap(), args, &public_key)
+        .run(app.get_fhe_program(div).unwrap(), args, &public_key)
         .unwrap();
 
     let c: Rational = runtime.decrypt(&result[0], &private_key).unwrap();
@@ -670,7 +686,7 @@ fn can_div_cipher_literal() {
         .compile()
         .unwrap();
 
-    let runtime = Runtime::new(app.params()).unwrap();
+    let runtime = Runtime::new_fhe(app.params()).unwrap();
 
     let (public_key, private_key) = runtime.generate_keys().unwrap();
 
@@ -680,7 +696,7 @@ fn can_div_cipher_literal() {
     let args: Vec<FheProgramInput> = vec![a_c.into()];
 
     let result = runtime
-        .run(app.get_program(div).unwrap(), args, &public_key)
+        .run(app.get_fhe_program(div).unwrap(), args, &public_key)
         .unwrap();
 
     let c: Rational = runtime.decrypt(&result[0], &private_key).unwrap();
@@ -702,7 +718,7 @@ fn can_div_literal_cipher() {
         .compile()
         .unwrap();
 
-    let runtime = Runtime::new(app.params()).unwrap();
+    let runtime = Runtime::new_fhe(app.params()).unwrap();
 
     let (public_key, private_key) = runtime.generate_keys().unwrap();
 
@@ -712,7 +728,7 @@ fn can_div_literal_cipher() {
     let args: Vec<FheProgramInput> = vec![a_c.into()];
 
     let result = runtime
-        .run(app.get_program(div).unwrap(), args, &public_key)
+        .run(app.get_fhe_program(div).unwrap(), args, &public_key)
         .unwrap();
 
     let c: Rational = runtime.decrypt(&result[0], &private_key).unwrap();
@@ -741,7 +757,7 @@ fn can_neg_cipher() {
         .compile()
         .unwrap();
 
-    let runtime = Runtime::new(app.params()).unwrap();
+    let runtime = Runtime::new_fhe(app.params()).unwrap();
 
     let (public_key, private_key) = runtime.generate_keys().unwrap();
 
@@ -751,7 +767,7 @@ fn can_neg_cipher() {
     let args: Vec<FheProgramInput> = vec![a_c.into()];
 
     let result = runtime
-        .run(app.get_program(neg).unwrap(), args, &public_key)
+        .run(app.get_fhe_program(neg).unwrap(), args, &public_key)
         .unwrap();
 
     let c: Rational = runtime.decrypt(&result[0], &private_key).unwrap();

@@ -119,7 +119,7 @@ Alice wants to retrieve an item from the database privately. She'll need a publi
 #     fhe_program,
 #     types::{bfv::Signed, Cipher},
 #     Ciphertext, CompiledFheProgram, Compiler, Error, FheProgramInput, Params, PrivateKey,
-#     PublicKey, Runtime,
+#     PublicKey, Runtime, FheRuntime
 # };
 #
 # const SQRT_DATABASE_SIZE: usize = 10;
@@ -134,12 +134,12 @@ Alice wants to retrieve an item from the database privately. She'll need a publi
 #     private_key: PrivateKey,
 # 
 #     /// Alice's runtime
-#     runtime: Runtime,
+#     runtime: FheRuntime,
 # }
 #
 impl Alice {
     pub fn setup(params: &Params) -> Result<Alice, Error> {
-        let runtime = Runtime::new(params)?;
+        let runtime = Runtime::new_fhe(params)?;
 
         let (public_key, private_key) = runtime.generate_keys()?;
 
@@ -211,7 +211,7 @@ Recall that the server is responsible for retrieving Alice's item from the datab
 #     fhe_program,
 #     types::{bfv::Signed, Cipher},
 #     Ciphertext, CompiledFheProgram, Compiler, Error, FheProgramInput, Params, PrivateKey,
-#     PublicKey, Runtime,
+#     PublicKey, Runtime, FheRuntime
 # };
 #
 # #[fhe_program(scheme = "bfv")]
@@ -257,7 +257,7 @@ Recall that the server is responsible for retrieving Alice's item from the datab
 #     pub compiled_lookup: CompiledFheProgram,
 #
 #     /// The server's runtime
-#     runtime: Runtime,
+#     runtime: FheRuntime,
 # }
 #
 impl Server {
@@ -266,10 +266,10 @@ impl Server {
             .fhe_program(lookup)
             .compile()?;
 
-        let runtime = Runtime::new(app.params())?;
+        let runtime = Runtime::new_fhe(app.params())?;
 
         Ok(Server {
-            compiled_lookup: app.get_program(lookup).unwrap().clone(),
+            compiled_lookup: app.get_fhe_program(lookup).unwrap().clone(),
             runtime,
         })
     }
@@ -318,7 +318,7 @@ Once all that's done, the server can `run` the FHE program by passing in the `co
 #     fhe_program,
 #     types::{bfv::Signed, Cipher},
 #     Ciphertext, CompiledFheProgram, Compiler, Error, FheProgramInput, Params, PrivateKey,
-#     PublicKey, Runtime,
+#     PublicKey, Runtime, FheRuntime
 # };
 #
 # const SQRT_DATABASE_SIZE: usize = 10;
@@ -368,12 +368,12 @@ Once all that's done, the server can `run` the FHE program by passing in the `co
 #     private_key: PrivateKey,
 # 
 #     /// Alice's runtime
-#     runtime: Runtime,
+#     runtime: FheRuntime,
 # }
 #
 # impl Alice { 
 #     pub fn setup(params: &Params) -> Result<Alice, Error> { 
-#         let runtime = Runtime::new(params)?; 
+#         let runtime = Runtime::new_fhe(params)?; 
 #  
 #         let (public_key, private_key) = runtime.generate_keys()?; 
 #  
@@ -416,7 +416,7 @@ Once all that's done, the server can `run` the FHE program by passing in the `co
 #     pub compiled_lookup: CompiledFheProgram,
 #
 #     /// The server's runtime
-#     runtime: Runtime,
+#     runtime: FheRuntime,
 # }
 #
 # impl Server { 
@@ -425,10 +425,10 @@ Once all that's done, the server can `run` the FHE program by passing in the `co
 #             .fhe_program(lookup)
 #             .compile()?; 
 #  
-#         let runtime = Runtime::new(app.params())?; 
+#         let runtime = Runtime::new_fhe(app.params())?; 
 #  
 #         Ok(Server { 
-#             compiled_lookup: app.get_program(lookup).unwrap().clone(), 
+#             compiled_lookup: app.get_fhe_program(lookup).unwrap().clone(), 
 #             runtime, 
 #         }) 
 #     } 

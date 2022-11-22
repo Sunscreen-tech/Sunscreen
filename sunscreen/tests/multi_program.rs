@@ -21,8 +21,14 @@ fn compiling_multiple_programs_yields_same_params() {
         .compile()
         .unwrap();
 
-    assert_eq!(*app.params(), app.get_program(add).unwrap().metadata.params);
-    assert_eq!(*app.params(), app.get_program(mul).unwrap().metadata.params);
+    assert_eq!(
+        *app.params(),
+        app.get_fhe_program(add).unwrap().metadata.params
+    );
+    assert_eq!(
+        *app.params(),
+        app.get_fhe_program(mul).unwrap().metadata.params
+    );
 }
 
 #[test]
@@ -46,10 +52,10 @@ fn can_reference_program_strongly_or_stringly() {
     assert_eq!(mul.name(), "mul");
     assert_eq!(add.name(), "add");
 
-    assert!(app.get_program(mul).is_some());
-    assert!(app.get_program("mul").is_some());
-    assert!(app.get_program(add).is_some());
-    assert!(app.get_program("add").is_some());
+    assert!(app.get_fhe_program(mul).is_some());
+    assert!(app.get_fhe_program("mul").is_some());
+    assert!(app.get_fhe_program(add).is_some());
+    assert!(app.get_fhe_program("add").is_some());
 }
 
 #[test]
@@ -70,9 +76,9 @@ fn get_programs_iterates_every_program() {
         .compile()
         .unwrap();
 
-    assert_eq!(app.get_programs().count(), 2);
-    assert!(app.get_programs().any(|(k, _)| k == "mul"));
-    assert!(app.get_programs().any(|(k, _)| k == "add"));
+    assert_eq!(app.get_fhe_programs().count(), 2);
+    assert!(app.get_fhe_programs().any(|(k, _)| k == "mul"));
+    assert!(app.get_fhe_programs().any(|(k, _)| k == "add"));
 }
 
 #[test]

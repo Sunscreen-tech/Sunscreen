@@ -6,9 +6,9 @@ use std::thread::{self, JoinHandle};
 use sunscreen::{
     fhe_program,
     types::{bfv::Fractional, Cipher},
-    Application, Ciphertext, Compiler, Params, PlainModulusConstraint, PublicKey, Runtime,
-    RuntimeError,
+    Ciphertext, Compiler, GenericRuntime, Params, PlainModulusConstraint, PublicKey, RuntimeError,
 };
+use sunscreen::{FheApplication, FheRuntime};
 
 fn help() {
     println!("This is a privacy preserving calculator. You can add, subtract, multiply, divide decimal values. The operation is sent to Bob in cleartext while the operands
@@ -116,7 +116,7 @@ fn parse_input(line: &str) -> Result<ParseResult, Error> {
     }))
 }
 
-fn encrypt_term(runtime: &Runtime, public_key: &PublicKey, input: Term) -> Term {
+fn encrypt_term(runtime: &FheRuntime, public_key: &PublicKey, input: Term) -> Term {
     match input {
         Term::Ans => Term::Ans,
         Term::F64(v) => Term::Encrypted(
@@ -145,7 +145,7 @@ fn alice(
         // Bob needs to send us the scheme parameters compatible with his FHE programs.
         let params = recv_params.recv().unwrap();
 
-        let runtime = Runtime::new(&params).unwrap();
+        let runtime = GenericRuntime::new_fhe(&params).unwrap();
 
         let (public_key, private_key) = runtime.generate_keys().unwrap();
 
@@ -207,7 +207,7 @@ fn alice(
     })
 }
 
-fn compile_fhe_programs() -> Application {
+fn compile_fhe_programs() -> FheApplication {
     #[fhe_program(scheme = "bfv")]
     fn add(a: Cipher<Fractional<64>>, b: Cipher<Fractional<64>>) -> Cipher<Fractional<64>> {
         a + b
@@ -247,7 +247,7 @@ fn bob(
 
         let public_key = recv_pub.recv().unwrap();
 
-        let runtime = Runtime::new(app.params()).unwrap();
+        let runtime = GenericRuntime::new_fhe(app.params()).unwrap();
 
         let mut ans = runtime
             .encrypt(Fractional::<64>::try_from(0f64).unwrap(), &public_key)
@@ -271,21 +271,21 @@ fn bob(
             let mut c = match op {
                 Operand::Add => runtime
                     .run(
-                        app.get_program("add").unwrap(),
+                        app.get_fhe_program("add").unwrap(),
                         vec![left, right],
                         &public_key,
                     )
                     .unwrap(),
                 Operand::Sub => runtime
                     .run(
-                        app.get_program("sub").unwrap(),
+                        app.get_fhe_program("sub").unwrap(),
                         vec![left, right],
                         &public_key,
                     )
                     .unwrap(),
                 Operand::Mul => runtime
                     .run(
-                        app.get_program("mul").unwrap(),
+                        app.get_fhe_program("mul").unwrap(),
                         vec![left, right],
                         &public_key,
                     )
@@ -294,7 +294,7 @@ fn bob(
                 // multiply.
                 Operand::Div => runtime
                     .run(
-                        app.get_program("mul").unwrap(),
+                        app.get_fhe_program("mul").unwrap(),
                         vec![left, right],
                         &public_key,
                     )

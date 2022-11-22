@@ -153,7 +153,6 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
             match &node.operation {
                 InputCiphertext(id) => {
                     data[index.index()].store(Some(inputs[*id].clone()));
-                    // moo
                 }
                 InputPlaintext(id) => {
                     data[index.index()].store(Some(inputs[*id].clone()));

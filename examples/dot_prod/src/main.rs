@@ -5,7 +5,7 @@
 use sunscreen::{
     fhe_program,
     types::{bfv::Batched, Cipher, LaneCount, SwapRows},
-    Compiler, FheProgramInput, PlainModulusConstraint, Runtime,
+    Compiler, FheProgramInput, GenericRuntime, PlainModulusConstraint,
 };
 
 use std::ops::*;
@@ -164,7 +164,7 @@ fn main() -> Result<(), sunscreen::Error> {
 
     println!("Compiled in {}s", end.as_secs_f64());
 
-    let runtime = Runtime::new(app.params())?;
+    let runtime = GenericRuntime::new_fhe(app.params())?;
 
     let (public_key, private_key) = runtime.generate_keys()?;
     let a_enc = runtime.encrypt(a_batched, &public_key)?;
@@ -173,7 +173,7 @@ fn main() -> Result<(), sunscreen::Error> {
 
     // Run our dot product homomorphically, decrypt and verify the result.
     let start = Instant::now();
-    let results = runtime.run(app.get_program(dot_product).unwrap(), args, &public_key)?;
+    let results = runtime.run(app.get_fhe_program(dot_product).unwrap(), args, &public_key)?;
     let end = start.elapsed();
 
     let fhe_dot: Batched<VECLENDIV2> = runtime.decrypt(&results[0], &private_key)?;

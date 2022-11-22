@@ -1,7 +1,7 @@
 use sunscreen::{
     fhe_program,
     types::{bfv::Signed, Cipher},
-    Compiler, Error, Runtime,
+    Compiler, Error, GenericRuntime,
 };
 
 /**
@@ -46,7 +46,7 @@ fn main() -> Result<(), Error> {
      * decryption, and running an FHE program. We need to pass
      * the scheme parameters our compiler chose.
      */
-    let runtime = Runtime::new(app.params())?;
+    let runtime = GenericRuntime::new_fhe(app.params())?;
 
     /*
      * Here, we generate a public and private key pair. Normally, Alice does this,
@@ -62,7 +62,7 @@ fn main() -> Result<(), Error> {
      * `Vec` containing the encrypted outputs of the FHE program.
      */
     let results = runtime.run(
-        app.get_program(simple_multiply).unwrap(),
+        app.get_fhe_program(simple_multiply).unwrap(),
         vec![a, b],
         &public_key,
     )?;

@@ -3,8 +3,8 @@ use std::ops::{Add, Div, Mul, Sub};
 use sunscreen::{
     fhe_program,
     types::{bfv::Fractional, Cipher},
-    Ciphertext, CompiledFheProgram, Compiler, Error as SunscreenError, Params, PrivateKey,
-    PublicKey, Runtime, RuntimeError,
+    Ciphertext, CompiledFheProgram, Compiler, Error as SunscreenError, FheRuntime, GenericRuntime,
+    Params, PrivateKey, PublicKey, RuntimeError,
 };
 
 const DATA_POINTS: usize = 15;
@@ -66,7 +66,7 @@ pub struct Bob {
     params: Params,
     mean_fhe: CompiledFheProgram,
     variance_fhe: CompiledFheProgram,
-    runtime: Runtime,
+    runtime: FheRuntime,
 }
 
 impl Bob {
@@ -86,10 +86,10 @@ impl Bob {
             .fhe_program(variance_fhe)
             .compile()?;
 
-        let mean_program = app.get_program(mean_fhe).unwrap();
-        let variance_program = app.get_program(variance_fhe).unwrap();
+        let mean_program = app.get_fhe_program(mean_fhe).unwrap();
+        let variance_program = app.get_fhe_program(variance_fhe).unwrap();
 
-        let runtime = Runtime::new(app.params())?;
+        let runtime = GenericRuntime::new_fhe(app.params())?;
 
         Ok(Self {
             params: app.params().to_owned(),
@@ -127,7 +127,7 @@ impl Bob {
 }
 
 pub struct Alice {
-    runtime: Runtime,
+    runtime: FheRuntime,
     public_key: PublicKey,
     private_key: PrivateKey,
 }
@@ -135,7 +135,7 @@ pub struct Alice {
 impl Alice {
     pub fn new(serialized_params: &[u8]) -> Result<Self, Error> {
         let params = bincode::deserialize(serialized_params)?;
-        let runtime = Runtime::new(&params)?;
+        let runtime = GenericRuntime::new_fhe(&params)?;
 
         let (public_key, private_key) = runtime.generate_keys()?;
 

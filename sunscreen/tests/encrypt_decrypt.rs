@@ -14,7 +14,7 @@ fn can_encrypt_decrypt() {
         .compile()
         .unwrap();
 
-    let runtime = Runtime::new(app.params()).unwrap();
+    let runtime = GenericRuntime::new_fhe(app.params()).unwrap();
 
     let (public_key, private_key) = runtime.generate_keys().unwrap();
 
@@ -22,7 +22,7 @@ fn can_encrypt_decrypt() {
     let b = runtime.encrypt(Signed::from(5), &public_key).unwrap();
 
     let result = runtime
-        .run(app.get_program(foo).unwrap(), vec![a, b], &public_key)
+        .run(app.get_fhe_program(foo).unwrap(), vec![a, b], &public_key)
         .unwrap();
 
     let c: Signed = runtime.decrypt(&result[0], &private_key).unwrap();

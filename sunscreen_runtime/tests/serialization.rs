@@ -1,11 +1,11 @@
 use seal_fhe::{CoefficientModulus, SecurityLevel};
 use sunscreen::types::bfv::Signed;
 use sunscreen_fhe_program::SchemeType;
-use sunscreen_runtime::{Ciphertext, Params, Runtime};
+use sunscreen_runtime::{Ciphertext, GenericRuntime, Params};
 
 #[test]
 fn can_roundtrip_ciphertexts_bincode() {
-    let runtime = Runtime::new(&Params {
+    let runtime = GenericRuntime::new_fhe(&Params {
         lattice_dimension: 8192,
         plain_modulus: 1024,
         coeff_modulus: CoefficientModulus::bfv_default(8192, SecurityLevel::TC128)
@@ -35,7 +35,7 @@ fn can_roundtrip_ciphertexts_bincode() {
 
 #[test]
 fn can_roundtrip_ciphertexts_json() {
-    let runtime = Runtime::new(&Params {
+    let runtime = GenericRuntime::new_fhe(&Params {
         lattice_dimension: 8192,
         plain_modulus: 1024,
         coeff_modulus: CoefficientModulus::bfv_default(8192, SecurityLevel::TC128)

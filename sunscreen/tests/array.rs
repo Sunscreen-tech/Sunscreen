@@ -3,7 +3,7 @@
 use sunscreen::{
     fhe_program,
     types::{bfv::Signed, Cipher},
-    Compiler, FheProgramInput, PlainModulusConstraint, Runtime,
+    Compiler, FheProgramInput, GenericRuntime, PlainModulusConstraint,
 };
 
 #[test]
@@ -28,7 +28,7 @@ fn can_add_array_elements() {
         .compile()
         .unwrap();
 
-    let runtime = Runtime::new(app.params()).unwrap();
+    let runtime = GenericRuntime::new_fhe(app.params()).unwrap();
 
     let (public_key, private_key) = runtime.generate_keys().unwrap();
 
@@ -37,7 +37,7 @@ fn can_add_array_elements() {
     let a_c = runtime.encrypt([a, b], &public_key).unwrap();
 
     let result = runtime
-        .run(app.get_program(add).unwrap(), vec![a_c], &public_key)
+        .run(app.get_fhe_program(add).unwrap(), vec![a_c], &public_key)
         .unwrap();
 
     let c: Signed = runtime.decrypt(&result[0], &private_key).unwrap();
@@ -71,7 +71,7 @@ fn multidimensional_arrays() {
         .compile()
         .unwrap();
 
-    let runtime = Runtime::new(app.params()).unwrap();
+    let runtime = GenericRuntime::new_fhe(app.params()).unwrap();
 
     let (public_key, private_key) = runtime.generate_keys().unwrap();
 
@@ -90,7 +90,7 @@ fn multidimensional_arrays() {
 
     let result = runtime
         .run(
-            app.get_program(determinant).unwrap(),
+            app.get_fhe_program(determinant).unwrap(),
             vec![a_c],
             &public_key,
         )
@@ -116,7 +116,7 @@ fn multidimensional_is_row_major() {
         .compile()
         .unwrap();
 
-    let runtime = Runtime::new(app.params()).unwrap();
+    let runtime = GenericRuntime::new_fhe(app.params()).unwrap();
 
     let (public_key, private_key) = runtime.generate_keys().unwrap();
 
@@ -135,7 +135,7 @@ fn multidimensional_is_row_major() {
 
     let result = runtime
         .run(
-            app.get_program(determinant).unwrap(),
+            app.get_fhe_program(determinant).unwrap(),
             vec![a_c],
             &public_key,
         )
@@ -167,7 +167,7 @@ fn cipher_plain_arrays() {
         .compile()
         .unwrap();
 
-    let runtime = Runtime::new(app.params()).unwrap();
+    let runtime = GenericRuntime::new_fhe(app.params()).unwrap();
 
     let (public_key, private_key) = runtime.generate_keys().unwrap();
 
@@ -184,7 +184,7 @@ fn cipher_plain_arrays() {
     let args: Vec<FheProgramInput> = vec![select_c.into(), data.into()];
 
     let result = runtime
-        .run(app.get_program(dot).unwrap(), args, &public_key)
+        .run(app.get_fhe_program(dot).unwrap(), args, &public_key)
         .unwrap();
 
     let c: Signed = runtime.decrypt(&result[0], &private_key).unwrap();
@@ -218,7 +218,7 @@ fn can_mutate_array() {
         .compile()
         .unwrap();
 
-    let runtime = Runtime::new(app.params()).unwrap();
+    let runtime = GenericRuntime::new_fhe(app.params()).unwrap();
 
     let (public_key, private_key) = runtime.generate_keys().unwrap();
 
@@ -231,7 +231,7 @@ fn can_mutate_array() {
     let a_enc = runtime.encrypt(a, &public_key).unwrap();
 
     let result = runtime
-        .run(app.get_program(mult).unwrap(), vec![a_enc], &public_key)
+        .run(app.get_fhe_program(mult).unwrap(), vec![a_enc], &public_key)
         .unwrap();
 
     let c: Signed = runtime.decrypt(&result[0], &private_key).unwrap();
@@ -259,7 +259,7 @@ fn can_return_array() {
         .compile()
         .unwrap();
 
-    let runtime = Runtime::new(app.params()).unwrap();
+    let runtime = GenericRuntime::new_fhe(app.params()).unwrap();
 
     let (public_key, private_key) = runtime.generate_keys().unwrap();
 
@@ -272,7 +272,7 @@ fn can_return_array() {
     let a_enc = runtime.encrypt(a, &public_key).unwrap();
 
     let result = runtime
-        .run(app.get_program(mult).unwrap(), vec![a_enc], &public_key)
+        .run(app.get_fhe_program(mult).unwrap(), vec![a_enc], &public_key)
         .unwrap();
 
     let c: [Signed; 6] = runtime.decrypt(&result[0], &private_key).unwrap();

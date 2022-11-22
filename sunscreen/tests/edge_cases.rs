@@ -16,7 +16,7 @@ fn unused_cipher_parameter_1() {
         .compile()
         .unwrap();
 
-    let runtime = Runtime::new(app.params()).unwrap();
+    let runtime = GenericRuntime::new_fhe(app.params()).unwrap();
 
     let (public_key, private_key) = runtime.generate_keys().unwrap();
 
@@ -25,7 +25,7 @@ fn unused_cipher_parameter_1() {
 
     let result = runtime
         .run(
-            app.get_program(add).unwrap(),
+            app.get_fhe_program(add).unwrap(),
             vec![a.clone(), a, b],
             &public_key,
         )
@@ -49,7 +49,7 @@ fn unused_cipher_parameter_2() {
         .compile()
         .unwrap();
 
-    let runtime = Runtime::new(app.params()).unwrap();
+    let runtime = GenericRuntime::new_fhe(app.params()).unwrap();
 
     let (public_key, private_key) = runtime.generate_keys().unwrap();
 
@@ -58,7 +58,7 @@ fn unused_cipher_parameter_2() {
 
     let result = runtime
         .run(
-            app.get_program(add).unwrap(),
+            app.get_fhe_program(add).unwrap(),
             vec![a.clone(), a, b],
             &public_key,
         )
@@ -82,7 +82,7 @@ fn unused_cipher_parameter_3() {
         .compile()
         .unwrap();
 
-    let runtime = Runtime::new(app.params()).unwrap();
+    let runtime = GenericRuntime::new_fhe(app.params()).unwrap();
 
     let (public_key, private_key) = runtime.generate_keys().unwrap();
 
@@ -91,7 +91,7 @@ fn unused_cipher_parameter_3() {
 
     let result = runtime
         .run(
-            app.get_program(add).unwrap(),
+            app.get_fhe_program(add).unwrap(),
             vec![a, b.clone(), b],
             &public_key,
         )
@@ -115,7 +115,7 @@ fn unused_plain_parameter_1() {
         .compile()
         .unwrap();
 
-    let runtime = Runtime::new(app.params()).unwrap();
+    let runtime = GenericRuntime::new_fhe(app.params()).unwrap();
 
     let (public_key, private_key) = runtime.generate_keys().unwrap();
 
@@ -125,7 +125,7 @@ fn unused_plain_parameter_1() {
     let args: Vec<FheProgramInput> = vec![Signed::from(0).into(), a.into(), b.into()];
 
     let result = runtime
-        .run(app.get_program(add).unwrap(), args, &public_key)
+        .run(app.get_fhe_program(add).unwrap(), args, &public_key)
         .unwrap();
 
     let c: Signed = runtime.decrypt(&result[0], &private_key).unwrap();
@@ -146,7 +146,7 @@ fn unused_plain_parameter_2() {
         .compile()
         .unwrap();
 
-    let runtime = Runtime::new(app.params()).unwrap();
+    let runtime = GenericRuntime::new_fhe(app.params()).unwrap();
 
     let (public_key, private_key) = runtime.generate_keys().unwrap();
 
@@ -156,7 +156,7 @@ fn unused_plain_parameter_2() {
     let args: Vec<FheProgramInput> = vec![a.into(), Signed::from(0).into(), b.into()];
 
     let result = runtime
-        .run(app.get_program(add).unwrap(), args, &public_key)
+        .run(app.get_fhe_program(add).unwrap(), args, &public_key)
         .unwrap();
 
     let c: Signed = runtime.decrypt(&result[0], &private_key).unwrap();
@@ -177,7 +177,7 @@ fn unused_plain_parameter_3() {
         .compile()
         .unwrap();
 
-    let runtime = Runtime::new(app.params()).unwrap();
+    let runtime = GenericRuntime::new_fhe(app.params()).unwrap();
 
     let (public_key, private_key) = runtime.generate_keys().unwrap();
 
@@ -187,7 +187,7 @@ fn unused_plain_parameter_3() {
     let args: Vec<FheProgramInput> = vec![a.into(), b.into(), Signed::from(0).into()];
 
     let result = runtime
-        .run(app.get_program(add).unwrap(), args, &public_key)
+        .run(app.get_fhe_program(add).unwrap(), args, &public_key)
         .unwrap();
 
     let c: Signed = runtime.decrypt(&result[0], &private_key).unwrap();

@@ -1,7 +1,7 @@
 use sunscreen::{
     fhe_program,
     types::{bfv::Batched, Cipher, SwapRows},
-    Compiler, FheProgramInput, PlainModulusConstraint, Runtime,
+    Compiler, FheProgramInput, GenericRuntime, PlainModulusConstraint,
 };
 
 use std::ops::*;
@@ -27,7 +27,7 @@ fn can_swap_rows_cipher() {
         .compile()
         .unwrap();
 
-    let runtime = Runtime::new(app.params()).unwrap();
+    let runtime = GenericRuntime::new_fhe(app.params()).unwrap();
 
     let (public_key, private_key) = runtime.generate_keys().unwrap();
 
@@ -39,7 +39,7 @@ fn can_swap_rows_cipher() {
     let args: Vec<FheProgramInput> = vec![a_c.into()];
 
     let result = runtime
-        .run(app.get_program(swap_rows).unwrap(), args, &public_key)
+        .run(app.get_fhe_program(swap_rows).unwrap(), args, &public_key)
         .unwrap();
 
     let c: Batched<4> = runtime.decrypt(&result[0], &private_key).unwrap();
@@ -71,7 +71,7 @@ fn can_rotate_left_cipher() {
         .compile()
         .unwrap();
 
-    let runtime = Runtime::new(app.params()).unwrap();
+    let runtime = GenericRuntime::new_fhe(app.params()).unwrap();
 
     let (public_key, private_key) = runtime.generate_keys().unwrap();
 
@@ -83,7 +83,7 @@ fn can_rotate_left_cipher() {
     let args: Vec<FheProgramInput> = vec![a_c.into()];
 
     let result = runtime
-        .run(app.get_program(add).unwrap(), args, &public_key)
+        .run(app.get_fhe_program(add).unwrap(), args, &public_key)
         .unwrap();
 
     let c: Batched<4> = runtime.decrypt(&result[0], &private_key).unwrap();
@@ -112,7 +112,7 @@ fn can_rotate_right_cipher() {
         .compile()
         .unwrap();
 
-    let runtime = Runtime::new(app.params()).unwrap();
+    let runtime = GenericRuntime::new_fhe(app.params()).unwrap();
 
     let (public_key, private_key) = runtime.generate_keys().unwrap();
 
@@ -124,7 +124,7 @@ fn can_rotate_right_cipher() {
     let args: Vec<FheProgramInput> = vec![a_c.into()];
 
     let result = runtime
-        .run(app.get_program(add).unwrap(), args, &public_key)
+        .run(app.get_fhe_program(add).unwrap(), args, &public_key)
         .unwrap();
 
     let c: Batched<4> = runtime.decrypt(&result[0], &private_key).unwrap();
@@ -153,7 +153,7 @@ fn can_add_cipher_cipher() {
         .compile()
         .unwrap();
 
-    let runtime = Runtime::new(app.params()).unwrap();
+    let runtime = GenericRuntime::new_fhe(app.params()).unwrap();
 
     let (public_key, private_key) = runtime.generate_keys().unwrap();
 
@@ -167,7 +167,7 @@ fn can_add_cipher_cipher() {
     let args: Vec<FheProgramInput> = vec![a_c.into(), b_c.into()];
 
     let result = runtime
-        .run(app.get_program(add).unwrap(), args, &public_key)
+        .run(app.get_fhe_program(add).unwrap(), args, &public_key)
         .unwrap();
 
     let c: Batched<4> = runtime.decrypt(&result[0], &private_key).unwrap();
@@ -196,7 +196,7 @@ fn can_sub_cipher_cipher() {
         .compile()
         .unwrap();
 
-    let runtime = Runtime::new(app.params()).unwrap();
+    let runtime = GenericRuntime::new_fhe(app.params()).unwrap();
 
     let (public_key, private_key) = runtime.generate_keys().unwrap();
 
@@ -210,7 +210,7 @@ fn can_sub_cipher_cipher() {
     let args: Vec<FheProgramInput> = vec![a_c.into(), b_c.into()];
 
     let result = runtime
-        .run(app.get_program(sub).unwrap(), args, &public_key)
+        .run(app.get_fhe_program(sub).unwrap(), args, &public_key)
         .unwrap();
 
     let c: Batched<4> = runtime.decrypt(&result[0], &private_key).unwrap();
@@ -239,7 +239,7 @@ fn can_mul_cipher_cipher() {
         .compile()
         .unwrap();
 
-    let runtime = Runtime::new(app.params()).unwrap();
+    let runtime = GenericRuntime::new_fhe(app.params()).unwrap();
 
     let (public_key, private_key) = runtime.generate_keys().unwrap();
 
@@ -253,7 +253,7 @@ fn can_mul_cipher_cipher() {
     let args: Vec<FheProgramInput> = vec![a_c.into(), b_c.into()];
 
     let result = runtime
-        .run(app.get_program(mul).unwrap(), args, &public_key)
+        .run(app.get_fhe_program(mul).unwrap(), args, &public_key)
         .unwrap();
 
     let c: Batched<4> = runtime.decrypt(&result[0], &private_key).unwrap();
@@ -282,7 +282,7 @@ fn can_neg_cipher_cipher() {
         .compile()
         .unwrap();
 
-    let runtime = Runtime::new(app.params()).unwrap();
+    let runtime = GenericRuntime::new_fhe(app.params()).unwrap();
 
     let (public_key, private_key) = runtime.generate_keys().unwrap();
 
@@ -294,7 +294,7 @@ fn can_neg_cipher_cipher() {
     let args: Vec<FheProgramInput> = vec![a_c.into()];
 
     let result = runtime
-        .run(app.get_program(mul).unwrap(), args, &public_key)
+        .run(app.get_fhe_program(mul).unwrap(), args, &public_key)
         .unwrap();
 
     let c: Batched<4> = runtime.decrypt(&result[0], &private_key).unwrap();

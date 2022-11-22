@@ -63,6 +63,22 @@ impl Default for Compiler<()> {
     }
 }
 
+/**
+ * A private method for converting between Compiler types. We don't want
+ * to expose this as part of the public API, hence we don't `impl From`.
+ */
+fn into<T, U>(x: Compiler<T>) -> Compiler<U> {
+    Compiler {
+        fhe_program_fns: x.fhe_program_fns,
+        zkp_program_fns: x.zkp_program_fns,
+        params_mode: x.params_mode,
+        plain_modulus_constraint: x.plain_modulus_constraint,
+        security_level: x.security_level,
+        noise_margin: x.noise_margin,
+        _phantom: PhantomData
+    }
+}
+
 impl Compiler<()> {
     /**
      * Creates a new [`Compiler`] builder.
@@ -90,7 +106,7 @@ impl Compiler<()> {
     {
         self.fhe_program_fns.push(Box::new(fhe_program_fn));
 
-        unsafe { std::mem::transmute(self) }
+        into(self)
     }
 
     /**
@@ -102,7 +118,7 @@ impl Compiler<()> {
     {
         self.zkp_program_fns.push(Box::new(zkp_program_fn));
 
-        unsafe { std::mem::transmute(self) }
+        into(self)
     }
 }
 
@@ -225,7 +241,7 @@ impl Compiler<Fhe> {
     {
         self.fhe_program_fns.push(Box::new(fhe_program_fn));
 
-        unsafe { std::mem::transmute(self) }
+        into(self)
     }
 
     /**
@@ -237,7 +253,7 @@ impl Compiler<Fhe> {
     {
         self.fhe_program_fns.push(Box::new(fhe_program_fn));
 
-        unsafe { std::mem::transmute(self) }
+        into(self)
     }
 }
 
@@ -251,7 +267,7 @@ impl Compiler<Zkp> {
     {
         self.fhe_program_fns.push(Box::new(fhe_program_fn));
 
-        unsafe { std::mem::transmute(self) }
+        into(self)
     }
 
     /**
@@ -263,7 +279,7 @@ impl Compiler<Zkp> {
     {
         self.fhe_program_fns.push(Box::new(fhe_program_fn));
 
-        unsafe { std::mem::transmute(self) }
+        into(self)
     }
 }
 
@@ -277,7 +293,7 @@ impl Compiler<FheZkp> {
     {
         self.fhe_program_fns.push(Box::new(fhe_program_fn));
 
-        unsafe { std::mem::transmute(self) }
+        into(self)
     }
 
     /**
@@ -289,7 +305,7 @@ impl Compiler<FheZkp> {
     {
         self.fhe_program_fns.push(Box::new(fhe_program_fn));
 
-        unsafe { std::mem::transmute(self) }
+        into(self)
     }
 }
 
@@ -405,5 +421,65 @@ impl Compiler<FheZkp> {
         let app = self.compile_internal()?;
 
         Ok(Application::<FheZkp>::to_application(app))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::any::{Any, TypeId};
+
+    use sunscreen_compiler_macros::{fhe_program, zkp_program};
+
+    use super::*;
+
+    // Needed to make the fhe_program macro work.
+    use crate as sunscreen;
+
+    #[test]
+    fn raw_compiler_has_correct_type() {
+        let c = Compiler::new();
+
+        assert_eq!(c.type_id(), TypeId::of::<Compiler<()>>());
+    }
+
+    #[test]
+    fn fhe_program_yields_fhe_compiler() {
+        #[fhe_program(scheme = "bfv")]
+        fn kitty() {
+        }
+
+        let c = Compiler::new()
+            .fhe_program(kitty);
+
+        assert_eq!(c.type_id(), TypeId::of::<Compiler<Fhe>>());
+    }
+
+    #[test]
+    fn zkp_program_yields_zkp_compiler() {
+        #[zkp_program(backend = "bulletproofs")]
+        fn kitty() {
+        }
+
+        let c = Compiler::new()
+            .zkp_program(kitty);
+
+        assert_eq!(c.type_id(), TypeId::of::<Compiler<Zkp>>());
+    }
+
+    #[test]
+    fn fhe_zkp_program_yields_fhezkp_compiler() {
+        #[zkp_program(backend = "bulletproofs")]
+        fn kitty() {
+        }
+
+        #[fhe_program(scheme = "bfv")]
+        fn doggie() {
+        }
+
+        let c = Compiler::new()
+            .zkp_program(kitty)
+            .fhe_program(doggie);
+
+        assert_eq!(c.type_id(), TypeId::of::<Compiler<FheZkp>>());
     }
 }

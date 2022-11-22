@@ -7,7 +7,7 @@
 //! # Examples
 //! This example is further annotated in `examples/simple_multiply`.
 //! ```
-//! # use sunscreen::{fhe_program, Compiler, types::{bfv::Signed, Cipher}, PlainModulusConstraint, Params, FheRuntime};
+//! # use sunscreen::{fhe_program, Compiler, types::{bfv::Signed, Cipher}, PlainModulusConstraint, Params, Runtime};
 //!
 //! #[fhe_program(scheme = "bfv")]
 //! fn simple_multiply(a: Cipher<Signed>, b: Cipher<Signed>) -> Cipher<Signed> {
@@ -22,7 +22,7 @@
 //!       .compile()
 //!       .unwrap();
 //!
-//!   let runtime = FheRuntime::new_fhe(app.params()).unwrap();
+//!   let runtime = Runtime::new_fhe(app.params()).unwrap();
 //!
 //!   let (public_key, private_key) = runtime.generate_keys().unwrap();
 //!
@@ -80,7 +80,7 @@ pub use sunscreen_compiler_macros::*;
 pub use sunscreen_fhe_program::{SchemeType, SecurityLevel};
 pub use sunscreen_runtime::{
     CallSignature, Ciphertext, CompiledFheProgram, Error as RuntimeError, FheProgramInput,
-    FheProgramInputTrait, FheProgramMetadata, FheRuntime, FheZkpRuntime, GenericRuntime,
+    FheProgramInputTrait, FheProgramMetadata, Runtime, FheRuntime, FheZkpRuntime, GenericRuntime,
     InnerCiphertext, InnerPlaintext, Params, Plaintext, PrivateKey, PublicKey, RequiredKeys,
     WithContext, ZkpRuntime,
 };

@@ -468,7 +468,10 @@ impl GenericRuntime<()> {
     pub fn new_fhe_zkp(params: &Params) -> Result<FheZkpRuntime> {
         let runtime = Self::new_fhe(params)?;
 
-        Ok(unsafe { std::mem::transmute(runtime) })
+        Ok(GenericRuntime {
+            runtime_data: runtime.runtime_data,
+            _phantom: PhantomData,
+        })
     }
 }
 

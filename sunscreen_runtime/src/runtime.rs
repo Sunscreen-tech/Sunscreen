@@ -26,13 +26,13 @@ enum Context {
  */
 pub mod marker {
     /**
-     * A marker trait that denotes a [`Runtime`](super::Runtime) can 
+     * A marker trait that denotes a [`Runtime`](super::Runtime) can
      * perform FHE operations.
      */
     pub trait Fhe {}
 
     /**
-     * A marker trait that denotes a [`Runtime`](super::Runtime) can 
+     * A marker trait that denotes a [`Runtime`](super::Runtime) can
      * perform ZKP operations.
      */
     pub trait Zkp {}
@@ -88,7 +88,7 @@ impl RuntimeData {
  * depending on the generic parameter `T`. As a user, you should instead
  * use [`FheRuntime`], [`ZkpRuntime`], or [`FheZkpRuntime`] depending on
  * your needs. See [`Runtime`].
- * 
+ *
  */
 pub struct GenericRuntime<T> {
     runtime_data: RuntimeData,
@@ -497,9 +497,9 @@ pub type FheRuntime = GenericRuntime<FheZkp>;
 pub type ZkpRuntime = GenericRuntime<FheZkp>;
 
 /**
- * An type containing the `Runtime::new_*` constructor methods to create 
+ * An type containing the `Runtime::new_*` constructor methods to create
  * the appropriate runtime:
- * 
+ *
  * * [`Runtime::new_fhe`] constructs an [`FheRuntime`] capable of
  *   performing FHE-related tasks, but not ZKP tasks.
  * * [`Runtime::new_zkp`] constructs a [`ZkpRuntime`] capable of

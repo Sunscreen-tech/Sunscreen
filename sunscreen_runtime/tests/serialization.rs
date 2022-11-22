@@ -1,7 +1,7 @@
 use seal_fhe::{CoefficientModulus, SecurityLevel};
 use sunscreen::types::bfv::Signed;
 use sunscreen_fhe_program::SchemeType;
-use sunscreen_runtime::{Ciphertext, Runtime, Params};
+use sunscreen_runtime::{Ciphertext, Params, Runtime};
 
 #[test]
 fn can_roundtrip_ciphertexts_bincode() {

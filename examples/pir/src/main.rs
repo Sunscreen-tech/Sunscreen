@@ -3,8 +3,8 @@
 use sunscreen::{
     fhe_program,
     types::{bfv::Signed, Cipher},
-    Ciphertext, CompiledFheProgram, Compiler, Error, FheProgramInput, FheRuntime, Runtime,
-    Params, PrivateKey, PublicKey,
+    Ciphertext, CompiledFheProgram, Compiler, Error, FheProgramInput, FheRuntime, Params,
+    PrivateKey, PublicKey, Runtime,
 };
 
 const SQRT_DATABASE_SIZE: usize = 10;

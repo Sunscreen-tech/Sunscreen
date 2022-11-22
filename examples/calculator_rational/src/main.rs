@@ -7,8 +7,8 @@ use sunscreen::FheRuntime;
 use sunscreen::{
     fhe_program,
     types::{bfv::Rational, Cipher},
-    Ciphertext, Compiler, FheApplication, Runtime, Params, PlainModulusConstraint,
-    PublicKey, RuntimeError,
+    Ciphertext, Compiler, FheApplication, Params, PlainModulusConstraint, PublicKey, Runtime,
+    RuntimeError,
 };
 
 fn help() {

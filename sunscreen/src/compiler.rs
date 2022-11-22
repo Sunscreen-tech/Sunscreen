@@ -63,22 +63,6 @@ impl Default for Compiler<()> {
     }
 }
 
-/**
- * A private method for converting between Compiler types. We don't want
- * to expose this as part of the public API, hence we don't `impl From`.
- */
-fn into<T, U>(x: Compiler<T>) -> Compiler<U> {
-    Compiler {
-        fhe_program_fns: x.fhe_program_fns,
-        zkp_program_fns: x.zkp_program_fns,
-        params_mode: x.params_mode,
-        plain_modulus_constraint: x.plain_modulus_constraint,
-        security_level: x.security_level,
-        noise_margin: x.noise_margin,
-        _phantom: PhantomData,
-    }
-}
-
 impl Compiler<()> {
     /**
      * Creates a new [`Compiler`] builder.
@@ -106,7 +90,7 @@ impl Compiler<()> {
     {
         self.fhe_program_fns.push(Box::new(fhe_program_fn));
 
-        into(self)
+        self.convert()
     }
 
     /**
@@ -118,11 +102,27 @@ impl Compiler<()> {
     {
         self.zkp_program_fns.push(Box::new(zkp_program_fn));
 
-        into(self)
+        self.convert()
     }
 }
 
 impl<T> Compiler<T> {
+    /**
+     * A private method for converting between Compiler types. We don't want
+     * to expose this as part of the public API, hence we don't `impl From`.
+     */
+    fn convert<U>(self) -> Compiler<U> {
+        Compiler {
+            fhe_program_fns: self.fhe_program_fns,
+            zkp_program_fns: self.zkp_program_fns,
+            params_mode: self.params_mode,
+            plain_modulus_constraint: self.plain_modulus_constraint,
+            security_level: self.security_level,
+            noise_margin: self.noise_margin,
+            _phantom: PhantomData,
+        }
+    }
+
     fn compile_fhe(&self) -> Result<HashMap<String, CompiledFheProgram>> {
         if self.fhe_program_fns.is_empty() {
             return Ok(HashMap::new());
@@ -249,7 +249,7 @@ impl Compiler<Fhe> {
     {
         self.fhe_program_fns.push(Box::new(fhe_program_fn));
 
-        into(self)
+        self.convert()
     }
 
     /**
@@ -261,7 +261,7 @@ impl Compiler<Fhe> {
     {
         self.fhe_program_fns.push(Box::new(fhe_program_fn));
 
-        into(self)
+        self.convert()
     }
 }
 
@@ -275,7 +275,7 @@ impl Compiler<Zkp> {
     {
         self.fhe_program_fns.push(Box::new(fhe_program_fn));
 
-        into(self)
+        self.convert()
     }
 
     /**
@@ -287,7 +287,7 @@ impl Compiler<Zkp> {
     {
         self.fhe_program_fns.push(Box::new(fhe_program_fn));
 
-        into(self)
+        self.convert()
     }
 }
 
@@ -301,7 +301,7 @@ impl Compiler<FheZkp> {
     {
         self.fhe_program_fns.push(Box::new(fhe_program_fn));
 
-        into(self)
+        self.convert()
     }
 
     /**
@@ -313,7 +313,7 @@ impl Compiler<FheZkp> {
     {
         self.fhe_program_fns.push(Box::new(fhe_program_fn));
 
-        into(self)
+        self.convert()
     }
 }
 

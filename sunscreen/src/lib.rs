@@ -38,13 +38,13 @@
 //! ```
 //!
 
+mod compiler;
 mod error;
 /**
  * This module contains types used internally when compiling
  * [`fhe_program`]s.
  */
 pub mod fhe;
-mod fhe_compiler;
 mod params;
 mod zkp;
 
@@ -72,17 +72,17 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::marker::PhantomData;
 
+pub use compiler::{Compiler, FheProgramFn};
 pub use error::{Error, Result};
-pub use fhe_compiler::{Compiler, FheProgramFn};
 pub use params::PlainModulusConstraint;
 pub use seal_fhe::Plaintext as SealPlaintext;
 pub use sunscreen_compiler_macros::*;
 pub use sunscreen_fhe_program::{SchemeType, SecurityLevel};
 pub use sunscreen_runtime::{
     CallSignature, Ciphertext, CompiledFheProgram, Error as RuntimeError, FheProgramInput,
-    FheProgramInputTrait, FheProgramMetadata, FheRuntime, FheZkpRuntime, Runtime,
-    InnerCiphertext, InnerPlaintext, Params, Plaintext, PrivateKey, PublicKey, RequiredKeys,
-    WithContext, ZkpRuntime,
+    FheProgramInputTrait, FheProgramMetadata, FheRuntime, FheZkpRuntime, InnerCiphertext,
+    InnerPlaintext, Params, Plaintext, PrivateKey, PublicKey, RequiredKeys, Runtime, WithContext,
+    ZkpRuntime,
 };
 pub use zkp::ZkpProgramFn;
 pub use zkp::{with_zkp_ctx, ZkpContext, ZkpFrontendCompilation, CURRENT_ZKP_CTX};

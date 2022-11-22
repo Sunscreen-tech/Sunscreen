@@ -7,7 +7,7 @@ use sunscreen::FheRuntime;
 use sunscreen::{
     fhe_program,
     types::{bfv::Rational, Cipher},
-    Ciphertext, Compiler, FheApplication, GenericRuntime, Params, PlainModulusConstraint,
+    Ciphertext, Compiler, FheApplication, Runtime, Params, PlainModulusConstraint,
     PublicKey, RuntimeError,
 };
 
@@ -128,7 +128,7 @@ fn alice(
         // Bob needs to send us the scheme parameters compatible with his FHE program.
         let params = recv_params.recv().unwrap();
 
-        let runtime = GenericRuntime::new_fhe(&params).unwrap();
+        let runtime = Runtime::new_fhe(&params).unwrap();
 
         let (public_key, private_key) = runtime.generate_keys().unwrap();
 
@@ -238,7 +238,7 @@ fn bob(
 
         let public_key = recv_pub.recv().unwrap();
 
-        let runtime = GenericRuntime::new_fhe(app.params()).unwrap();
+        let runtime = Runtime::new_fhe(app.params()).unwrap();
 
         let mut ans = runtime
             .encrypt(Rational::try_from(0f64).unwrap(), &public_key)

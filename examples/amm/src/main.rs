@@ -1,7 +1,7 @@
 use sunscreen::{
     fhe_program,
     types::{bfv::Rational, Cipher},
-    Ciphertext, CompiledFheProgram, Compiler, Error, FheRuntime, GenericRuntime, Params,
+    Ciphertext, CompiledFheProgram, Compiler, Error, FheRuntime, Runtime, Params,
     PrivateKey, PublicKey,
 };
 
@@ -28,7 +28,7 @@ impl Miner {
     pub fn setup() -> Result<Miner, Error> {
         let app = Compiler::new().fhe_program(swap_nu).compile()?;
 
-        let runtime = GenericRuntime::new_fhe(app.params())?;
+        let runtime = Runtime::new_fhe(app.params())?;
 
         Ok(Miner {
             compiled_swap_nu: app.get_fhe_program(swap_nu).unwrap().clone(),
@@ -63,7 +63,7 @@ struct Alice {
 
 impl Alice {
     pub fn setup(params: &Params) -> Result<Alice, Error> {
-        let runtime = GenericRuntime::new_fhe(params)?;
+        let runtime = Runtime::new_fhe(params)?;
 
         let (public_key, private_key) = runtime.generate_keys()?;
 

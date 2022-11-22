@@ -16,7 +16,7 @@ fn unused_cipher_parameter_1() {
         .compile()
         .unwrap();
 
-    let runtime = GenericRuntime::new_fhe(app.params()).unwrap();
+    let runtime = Runtime::new_fhe(app.params()).unwrap();
 
     let (public_key, private_key) = runtime.generate_keys().unwrap();
 
@@ -49,7 +49,7 @@ fn unused_cipher_parameter_2() {
         .compile()
         .unwrap();
 
-    let runtime = GenericRuntime::new_fhe(app.params()).unwrap();
+    let runtime = Runtime::new_fhe(app.params()).unwrap();
 
     let (public_key, private_key) = runtime.generate_keys().unwrap();
 
@@ -82,7 +82,7 @@ fn unused_cipher_parameter_3() {
         .compile()
         .unwrap();
 
-    let runtime = GenericRuntime::new_fhe(app.params()).unwrap();
+    let runtime = Runtime::new_fhe(app.params()).unwrap();
 
     let (public_key, private_key) = runtime.generate_keys().unwrap();
 
@@ -115,7 +115,7 @@ fn unused_plain_parameter_1() {
         .compile()
         .unwrap();
 
-    let runtime = GenericRuntime::new_fhe(app.params()).unwrap();
+    let runtime = Runtime::new_fhe(app.params()).unwrap();
 
     let (public_key, private_key) = runtime.generate_keys().unwrap();
 
@@ -146,7 +146,7 @@ fn unused_plain_parameter_2() {
         .compile()
         .unwrap();
 
-    let runtime = GenericRuntime::new_fhe(app.params()).unwrap();
+    let runtime = Runtime::new_fhe(app.params()).unwrap();
 
     let (public_key, private_key) = runtime.generate_keys().unwrap();
 
@@ -177,7 +177,7 @@ fn unused_plain_parameter_3() {
         .compile()
         .unwrap();
 
-    let runtime = GenericRuntime::new_fhe(app.params()).unwrap();
+    let runtime = Runtime::new_fhe(app.params()).unwrap();
 
     let (public_key, private_key) = runtime.generate_keys().unwrap();
 

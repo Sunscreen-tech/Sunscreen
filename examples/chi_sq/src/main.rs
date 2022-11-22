@@ -17,7 +17,7 @@ use sunscreen::{
         bfv::{Batched, Signed},
         Cipher, FheType, TypeName,
     },
-    Compiler, Error, FheProgramFn, FheProgramInput, GenericRuntime, PlainModulusConstraint,
+    Compiler, Error, FheProgramFn, FheProgramInput, Runtime, PlainModulusConstraint,
 };
 
 use std::marker::PhantomData;
@@ -182,7 +182,7 @@ where
 
     println!("\t\tCompile time {}s", elapsed);
 
-    let runtime = GenericRuntime::new_fhe(app.params())?;
+    let runtime = Runtime::new_fhe(app.params())?;
 
     let n_0 = U::from(n_0);
     let n_1 = U::from(n_1);

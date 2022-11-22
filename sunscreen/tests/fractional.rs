@@ -4,7 +4,7 @@ use float_cmp::ApproxEq;
 use sunscreen::{
     fhe_program,
     types::{bfv::Fractional, Cipher},
-    Compiler, FheProgramInput, GenericRuntime, PlainModulusConstraint,
+    Compiler, FheProgramInput, Runtime, PlainModulusConstraint,
 };
 
 use std::ops::*;
@@ -56,7 +56,7 @@ fn can_add() {
         .compile()
         .unwrap();
 
-    let runtime = GenericRuntime::new_fhe(app.params()).unwrap();
+    let runtime = Runtime::new_fhe(app.params()).unwrap();
 
     let (public_key, private_key) = runtime.generate_keys().unwrap();
 
@@ -162,7 +162,7 @@ fn can_mul() {
         .compile()
         .unwrap();
 
-    let runtime = GenericRuntime::new_fhe(app.params()).unwrap();
+    let runtime = Runtime::new_fhe(app.params()).unwrap();
 
     let (public_key, private_key) = runtime.generate_keys().unwrap();
 
@@ -288,7 +288,7 @@ fn can_sub() {
         .compile()
         .unwrap();
 
-    let runtime = GenericRuntime::new_fhe(app.params()).unwrap();
+    let runtime = Runtime::new_fhe(app.params()).unwrap();
 
     let (public_key, private_key) = runtime.generate_keys().unwrap();
 
@@ -363,7 +363,7 @@ fn can_div_cipher_const() {
         .compile()
         .unwrap();
 
-    let runtime = GenericRuntime::new_fhe(app.params()).unwrap();
+    let runtime = Runtime::new_fhe(app.params()).unwrap();
 
     let (public_key, private_key) = runtime.generate_keys().unwrap();
 
@@ -407,7 +407,7 @@ fn can_negate() {
         .compile()
         .unwrap();
 
-    let runtime = GenericRuntime::new_fhe(app.params()).unwrap();
+    let runtime = Runtime::new_fhe(app.params()).unwrap();
 
     let (public_key, private_key) = runtime.generate_keys().unwrap();
 

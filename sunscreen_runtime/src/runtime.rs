@@ -84,7 +84,11 @@ impl RuntimeData {
 }
 
 /**
- * Contains all the elements needed to encrypt, decrypt, generate keys, and evaluate FHE programs.
+ * The generalized runtime type that provides ZKP and FHE functionality
+ * depending on the generic parameter `T`. As a user, you should instead
+ * use [`FheRuntime`], [`ZkpRuntime`], or [`FheZkpRuntime`] depending on
+ * your needs. See [`Runtime`].
+ * 
  */
 pub struct GenericRuntime<T> {
     runtime_data: RuntimeData,
@@ -493,8 +497,14 @@ pub type FheRuntime = GenericRuntime<FheZkp>;
 pub type ZkpRuntime = GenericRuntime<FheZkp>;
 
 /**
- * An unconstructed runtime type which allows you to call
- * the `Runtime::new_*` methods to create one capable of the desired
- * operations.
+ * An type containing the `Runtime::new_*` constructor methods to create 
+ * the appropriate runtime:
+ * 
+ * * [`Runtime::new_fhe`] constructs an [`FheRuntime`] capable of
+ *   performing FHE-related tasks, but not ZKP tasks.
+ * * [`Runtime::new_zkp`] constructs a [`ZkpRuntime`] capable of
+ *   performing ZKP tasks, but not FHE.
+ * * [`Runtime::new_fhe_zkp`] constructs a [`FheZkpRuntime`] that
+ *   can do both.
  */
 pub type Runtime = GenericRuntime<()>;

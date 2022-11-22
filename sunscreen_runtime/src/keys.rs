@@ -61,7 +61,7 @@ mod tests {
 
     #[test]
     fn can_roundtrip_seal_public_key() {
-        let runtime = GenericRuntime::new_fhe(&Params {
+        let runtime = Runtime::new_fhe(&Params {
             lattice_dimension: 8192,
             security_level: SecurityLevel::TC128,
             plain_modulus: 1234,
@@ -92,7 +92,7 @@ mod tests {
 
     #[test]
     fn can_roundtrip_seal_galois_keys() {
-        let runtime = GenericRuntime::new_fhe(&Params {
+        let runtime = Runtime::new_fhe(&Params {
             lattice_dimension: 8192,
             security_level: SecurityLevel::TC128,
             plain_modulus: PlainModulus::batching(8192, 20).unwrap().value(),
@@ -123,7 +123,7 @@ mod tests {
 
     #[test]
     fn can_roundtrip_seal_relin_keys() {
-        let runtime = GenericRuntime::new_fhe(&Params {
+        let runtime = Runtime::new_fhe(&Params {
             lattice_dimension: 8192,
             security_level: SecurityLevel::TC128,
             plain_modulus: PlainModulus::batching(8192, 20).unwrap().value(),
@@ -154,7 +154,7 @@ mod tests {
 
     #[test]
     fn can_roundtrip_all_keys() {
-        let runtime = GenericRuntime::new_fhe(&Params {
+        let runtime = Runtime::new_fhe(&Params {
             lattice_dimension: 8192,
             security_level: SecurityLevel::TC128,
             plain_modulus: PlainModulus::batching(8192, 20).unwrap().value(),

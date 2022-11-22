@@ -388,7 +388,7 @@ impl Compiler<Fhe> {
     pub fn compile(self) -> Result<Application<Fhe>> {
         let app = self.compile_internal()?;
 
-        Ok(Application::<Fhe>::to_application(app))
+        Ok(app.convert())
     }
 }
 
@@ -401,7 +401,7 @@ impl Compiler<Zkp> {
     pub fn compile(self) -> Result<Application<Zkp>> {
         let app = self.compile_internal()?;
 
-        Ok(Application::<Zkp>::to_application(app))
+        Ok(app.convert())
     }
 }
 
@@ -428,7 +428,7 @@ impl Compiler<FheZkp> {
     pub fn compile(self) -> Result<Application<FheZkp>> {
         let app = self.compile_internal()?;
 
-        Ok(Application::<FheZkp>::to_application(app))
+        Ok(app.convert())
     }
 }
 

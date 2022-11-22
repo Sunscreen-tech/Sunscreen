@@ -14,7 +14,7 @@ fn can_encrypt_decrypt() {
         .compile()
         .unwrap();
 
-    let runtime = GenericRuntime::new_fhe(app.params()).unwrap();
+    let runtime = Runtime::new_fhe(app.params()).unwrap();
 
     let (public_key, private_key) = runtime.generate_keys().unwrap();
 

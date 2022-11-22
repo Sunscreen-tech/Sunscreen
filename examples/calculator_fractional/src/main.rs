@@ -6,7 +6,7 @@ use std::thread::{self, JoinHandle};
 use sunscreen::{
     fhe_program,
     types::{bfv::Fractional, Cipher},
-    Ciphertext, Compiler, GenericRuntime, Params, PlainModulusConstraint, PublicKey, RuntimeError,
+    Ciphertext, Compiler, Runtime, Params, PlainModulusConstraint, PublicKey, RuntimeError,
 };
 use sunscreen::{FheApplication, FheRuntime};
 
@@ -145,7 +145,7 @@ fn alice(
         // Bob needs to send us the scheme parameters compatible with his FHE programs.
         let params = recv_params.recv().unwrap();
 
-        let runtime = GenericRuntime::new_fhe(&params).unwrap();
+        let runtime = Runtime::new_fhe(&params).unwrap();
 
         let (public_key, private_key) = runtime.generate_keys().unwrap();
 
@@ -247,7 +247,7 @@ fn bob(
 
         let public_key = recv_pub.recv().unwrap();
 
-        let runtime = GenericRuntime::new_fhe(app.params()).unwrap();
+        let runtime = Runtime::new_fhe(app.params()).unwrap();
 
         let mut ans = runtime
             .encrypt(Fractional::<64>::try_from(0f64).unwrap(), &public_key)

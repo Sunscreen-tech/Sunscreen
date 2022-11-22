@@ -1,7 +1,7 @@
 use sunscreen::{
     fhe_program,
     types::{bfv::Signed, Cipher},
-    Compiler, FheProgramInput, GenericRuntime, PlainModulusConstraint,
+    Compiler, FheProgramInput, Runtime, PlainModulusConstraint,
 };
 
 use std::ops::*;
@@ -27,7 +27,7 @@ fn can_add_cipher_cipher() {
         .compile()
         .unwrap();
 
-    let runtime = GenericRuntime::new_fhe(app.params()).unwrap();
+    let runtime = Runtime::new_fhe(app.params()).unwrap();
 
     let (public_key, private_key) = runtime.generate_keys().unwrap();
 
@@ -61,7 +61,7 @@ fn can_add_cipher_plain() {
         .compile()
         .unwrap();
 
-    let runtime = GenericRuntime::new_fhe(app.params()).unwrap();
+    let runtime = Runtime::new_fhe(app.params()).unwrap();
 
     let (public_key, private_key) = runtime.generate_keys().unwrap();
 
@@ -94,7 +94,7 @@ fn can_add_plain_cipher() {
         .compile()
         .unwrap();
 
-    let runtime = GenericRuntime::new_fhe(app.params()).unwrap();
+    let runtime = Runtime::new_fhe(app.params()).unwrap();
 
     let (public_key, private_key) = runtime.generate_keys().unwrap();
 
@@ -127,7 +127,7 @@ fn can_add_cipher_literal() {
         .compile()
         .unwrap();
 
-    let runtime = GenericRuntime::new_fhe(app.params()).unwrap();
+    let runtime = Runtime::new_fhe(app.params()).unwrap();
 
     let (public_key, private_key) = runtime.generate_keys().unwrap();
 
@@ -158,7 +158,7 @@ fn can_add_literal_cipher() {
         .compile()
         .unwrap();
 
-    let runtime = GenericRuntime::new_fhe(app.params()).unwrap();
+    let runtime = Runtime::new_fhe(app.params()).unwrap();
 
     let (public_key, private_key) = runtime.generate_keys().unwrap();
 
@@ -196,7 +196,7 @@ fn can_sub_cipher_cipher() {
         .compile()
         .unwrap();
 
-    let runtime = GenericRuntime::new_fhe(app.params()).unwrap();
+    let runtime = Runtime::new_fhe(app.params()).unwrap();
 
     let (public_key, private_key) = runtime.generate_keys().unwrap();
 
@@ -230,7 +230,7 @@ fn can_sub_cipher_plain() {
         .compile()
         .unwrap();
 
-    let runtime = GenericRuntime::new_fhe(app.params()).unwrap();
+    let runtime = Runtime::new_fhe(app.params()).unwrap();
 
     let (public_key, private_key) = runtime.generate_keys().unwrap();
 
@@ -263,7 +263,7 @@ fn can_sub_plain_cipher() {
         .compile()
         .unwrap();
 
-    let runtime = GenericRuntime::new_fhe(app.params()).unwrap();
+    let runtime = Runtime::new_fhe(app.params()).unwrap();
 
     let (public_key, private_key) = runtime.generate_keys().unwrap();
 
@@ -296,7 +296,7 @@ fn can_sub_cipher_literal() {
         .compile()
         .unwrap();
 
-    let runtime = GenericRuntime::new_fhe(app.params()).unwrap();
+    let runtime = Runtime::new_fhe(app.params()).unwrap();
 
     let (public_key, private_key) = runtime.generate_keys().unwrap();
 
@@ -327,7 +327,7 @@ fn can_sub_literal_cipher() {
         .compile()
         .unwrap();
 
-    let runtime = GenericRuntime::new_fhe(app.params()).unwrap();
+    let runtime = Runtime::new_fhe(app.params()).unwrap();
 
     let (public_key, private_key) = runtime.generate_keys().unwrap();
 
@@ -365,7 +365,7 @@ fn can_mul_cipher_cipher() {
         .compile()
         .unwrap();
 
-    let runtime = GenericRuntime::new_fhe(app.params()).unwrap();
+    let runtime = Runtime::new_fhe(app.params()).unwrap();
 
     let (public_key, private_key) = runtime.generate_keys().unwrap();
 
@@ -399,7 +399,7 @@ fn can_mul_cipher_plain() {
         .compile()
         .unwrap();
 
-    let runtime = GenericRuntime::new_fhe(app.params()).unwrap();
+    let runtime = Runtime::new_fhe(app.params()).unwrap();
 
     let (public_key, private_key) = runtime.generate_keys().unwrap();
 
@@ -432,7 +432,7 @@ fn can_mul_plain_cipher() {
         .compile()
         .unwrap();
 
-    let runtime = GenericRuntime::new_fhe(app.params()).unwrap();
+    let runtime = Runtime::new_fhe(app.params()).unwrap();
 
     let (public_key, private_key) = runtime.generate_keys().unwrap();
 
@@ -465,7 +465,7 @@ fn can_mul_cipher_literal() {
         .compile()
         .unwrap();
 
-    let runtime = GenericRuntime::new_fhe(app.params()).unwrap();
+    let runtime = Runtime::new_fhe(app.params()).unwrap();
 
     let (public_key, private_key) = runtime.generate_keys().unwrap();
 
@@ -496,7 +496,7 @@ fn can_mul_literal_cipher() {
         .compile()
         .unwrap();
 
-    let runtime = GenericRuntime::new_fhe(app.params()).unwrap();
+    let runtime = Runtime::new_fhe(app.params()).unwrap();
 
     let (public_key, private_key) = runtime.generate_keys().unwrap();
 

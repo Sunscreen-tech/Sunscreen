@@ -3,7 +3,7 @@ use std::ops::{Add, Div, Mul, Sub};
 use sunscreen::{
     fhe_program,
     types::{bfv::Fractional, Cipher},
-    Ciphertext, CompiledFheProgram, Compiler, Error as SunscreenError, FheRuntime, GenericRuntime,
+    Ciphertext, CompiledFheProgram, Compiler, Error as SunscreenError, FheRuntime, Runtime,
     Params, PrivateKey, PublicKey, RuntimeError,
 };
 
@@ -89,7 +89,7 @@ impl Bob {
         let mean_program = app.get_fhe_program(mean_fhe).unwrap();
         let variance_program = app.get_fhe_program(variance_fhe).unwrap();
 
-        let runtime = GenericRuntime::new_fhe(app.params())?;
+        let runtime = Runtime::new_fhe(app.params())?;
 
         Ok(Self {
             params: app.params().to_owned(),
@@ -135,7 +135,7 @@ pub struct Alice {
 impl Alice {
     pub fn new(serialized_params: &[u8]) -> Result<Self, Error> {
         let params = bincode::deserialize(serialized_params)?;
-        let runtime = GenericRuntime::new_fhe(&params)?;
+        let runtime = Runtime::new_fhe(&params)?;
 
         let (public_key, private_key) = runtime.generate_keys()?;
 

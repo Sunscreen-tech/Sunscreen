@@ -3,7 +3,7 @@
 use sunscreen::{
     fhe_program,
     types::{bfv::Signed, Cipher},
-    Compiler, FheProgramInput, GenericRuntime, PlainModulusConstraint,
+    Compiler, FheProgramInput, Runtime, PlainModulusConstraint,
 };
 
 #[test]
@@ -28,7 +28,7 @@ fn can_add_array_elements() {
         .compile()
         .unwrap();
 
-    let runtime = GenericRuntime::new_fhe(app.params()).unwrap();
+    let runtime = Runtime::new_fhe(app.params()).unwrap();
 
     let (public_key, private_key) = runtime.generate_keys().unwrap();
 
@@ -71,7 +71,7 @@ fn multidimensional_arrays() {
         .compile()
         .unwrap();
 
-    let runtime = GenericRuntime::new_fhe(app.params()).unwrap();
+    let runtime = Runtime::new_fhe(app.params()).unwrap();
 
     let (public_key, private_key) = runtime.generate_keys().unwrap();
 
@@ -116,7 +116,7 @@ fn multidimensional_is_row_major() {
         .compile()
         .unwrap();
 
-    let runtime = GenericRuntime::new_fhe(app.params()).unwrap();
+    let runtime = Runtime::new_fhe(app.params()).unwrap();
 
     let (public_key, private_key) = runtime.generate_keys().unwrap();
 
@@ -167,7 +167,7 @@ fn cipher_plain_arrays() {
         .compile()
         .unwrap();
 
-    let runtime = GenericRuntime::new_fhe(app.params()).unwrap();
+    let runtime = Runtime::new_fhe(app.params()).unwrap();
 
     let (public_key, private_key) = runtime.generate_keys().unwrap();
 
@@ -218,7 +218,7 @@ fn can_mutate_array() {
         .compile()
         .unwrap();
 
-    let runtime = GenericRuntime::new_fhe(app.params()).unwrap();
+    let runtime = Runtime::new_fhe(app.params()).unwrap();
 
     let (public_key, private_key) = runtime.generate_keys().unwrap();
 
@@ -259,7 +259,7 @@ fn can_return_array() {
         .compile()
         .unwrap();
 
-    let runtime = GenericRuntime::new_fhe(app.params()).unwrap();
+    let runtime = Runtime::new_fhe(app.params()).unwrap();
 
     let (public_key, private_key) = runtime.generate_keys().unwrap();
 

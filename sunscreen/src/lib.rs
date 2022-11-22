@@ -80,9 +80,9 @@ pub use sunscreen_compiler_macros::*;
 pub use sunscreen_fhe_program::{SchemeType, SecurityLevel};
 pub use sunscreen_runtime::{
     CallSignature, Ciphertext, CompiledFheProgram, Error as RuntimeError, FheProgramInput,
-    FheProgramInputTrait, FheProgramMetadata, FheRuntime, FheZkpRuntime, GenericRuntime,
+    FheProgramInputTrait, FheProgramMetadata, FheRuntime, FheZkpRuntime, Runtime,
     InnerCiphertext, InnerPlaintext, Params, Plaintext, PrivateKey, PublicKey, RequiredKeys,
-    Runtime, WithContext, ZkpRuntime,
+    WithContext, ZkpRuntime,
 };
 pub use zkp::ZkpProgramFn;
 pub use zkp::{with_zkp_ctx, ZkpContext, ZkpFrontendCompilation, CURRENT_ZKP_CTX};
@@ -181,31 +181,11 @@ where
     }
 }
 
-impl Application<Zkp> {
-    pub(crate) fn to_application(other: Application<()>) -> Application<Zkp> {
-        Self {
-            fhe_programs: other.fhe_programs,
-            zkp_programs: other.zkp_programs,
-            _phantom: PhantomData,
-        }
-    }
-}
-
-impl Application<Fhe> {
-    pub(crate) fn to_application(other: Application<()>) -> Application<Fhe> {
-        Self {
-            fhe_programs: other.fhe_programs,
-            zkp_programs: other.zkp_programs,
-            _phantom: PhantomData,
-        }
-    }
-}
-
-impl Application<FheZkp> {
-    pub(crate) fn to_application(other: Application<()>) -> Application<FheZkp> {
-        Self {
-            fhe_programs: other.fhe_programs,
-            zkp_programs: other.zkp_programs,
+impl<T> Application<T> {
+    pub(crate) fn convert<U>(self) -> Application<U> {
+        Application {
+            fhe_programs: self.fhe_programs,
+            zkp_programs: self.zkp_programs,
             _phantom: PhantomData,
         }
     }

@@ -235,7 +235,7 @@ impl<T> Compiler<T> {
     }
 
     fn compile_internal(self) -> Result<Application<()>> {
-        Ok(Application::new(self.compile_fhe()?, self.compile_zkp()?)?)
+        Application::new(self.compile_fhe()?, self.compile_zkp()?)
     }
 }
 

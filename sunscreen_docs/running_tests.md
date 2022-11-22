@@ -15,12 +15,11 @@ cargo build --release
 Build sunscreen (do this from your Sunscreen repo)
 
 ```
-cargo build --package sunscreen --package bincode
+cargo build --release --package sunscreen --package bincode
 ```
 
 # Run the tests
 ```
-../mdBook/target/release/mdbook test -L dependency=/Users/rickweber/Projects/Sunscreen/target/debug/deps --extern sunscreen=/Users/rickweber/Projects/Sunscreen/target/debug/libsunscreen.rlib --extern bincode=/Users/rickweber/Projects/Sunscreen/target/debug/libbincode.rlib
+../mdBook/target/release/mdbook test -L dependency=/Users/rickweber/Projects/Sunscreen/target/release/deps --extern sunscreen=/Users/rickweber/Projects/Sunscreen/target/release/libsunscreen.rlib --extern bincode=/Users/rickweber/Projects/Sunscreen/target/release/libbincode.rlib
 ```
 
-The path prefix to the Sunscreen directory will be different on your machine. Look in your `Sunscreen/target/debug/deps/` directory to get the actual name of `libbincode-xxx.rlib`.

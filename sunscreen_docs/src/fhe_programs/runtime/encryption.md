@@ -17,7 +17,7 @@ To encrypt data, simply call `encrypt()` on `Runtime`:
 #        .compile()
 #        .unwrap();
 #
-#    let runtime = Runtime::new(app.params()).unwrap();
+#    let runtime = Runtime::new_fhe(app.params()).unwrap();
 #    let (public_key, private_key) = runtime.generate_keys().unwrap();
 #
     let val = Signed::from(15);

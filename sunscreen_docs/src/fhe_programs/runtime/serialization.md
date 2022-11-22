@@ -25,7 +25,7 @@ The process to serialize and deserialize any type is the same, but this example 
 #        .compile()
 #        .unwrap();
 #
-#    let runtime = Runtime::new(app.params()).unwrap();
+#    let runtime = Runtime::new_fhe(app.params()).unwrap();
 #    let (public_key, _) = runtime.generate_keys().unwrap();
     let c = runtime
         .encrypt(Signed::from(20), &public_key)

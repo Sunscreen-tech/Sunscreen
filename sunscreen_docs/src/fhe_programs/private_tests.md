@@ -107,7 +107,7 @@ The testing provider (Bob) will compute the mean and variance of a user's encryp
 #     fhe_program,
 #     types::{bfv::Fractional, Cipher},
 #     Ciphertext, CompiledFheProgram, Compiler, Error as SunscreenError, Params, PrivateKey,
-#     PublicKey, Runtime, RuntimeError,
+#     PublicKey, Runtime, FheRuntime, RuntimeError,
 # };
 # 
 # const DATA_POINTS: usize = 15;
@@ -169,7 +169,7 @@ The testing provider (Bob) will compute the mean and variance of a user's encryp
 #    params: Params,
 #    mean_fhe: CompiledFheProgram,
 #    variance_fhe: CompiledFheProgram,
-#    runtime: Runtime,
+#    runtime: FheRuntime,
 # }
 #
 impl Bob {
@@ -189,10 +189,10 @@ impl Bob {
             .fhe_program(variance_fhe)
             .compile()?;
 
-        let mean_program = app.get_program(mean_fhe).unwrap();
-        let variance_program = app.get_program(variance_fhe).unwrap();
+        let mean_program = app.get_fhe_program(mean_fhe).unwrap();
+        let variance_program = app.get_fhe_program(variance_fhe).unwrap();
 
-        let runtime = Runtime::new(app.params())?;
+        let runtime = Runtime::new_fhe(app.params())?;
 
         Ok(Self {
             params: app.params().to_owned(),
@@ -265,7 +265,7 @@ Alice will need to generate a public/private key pair to encrypt her data with.
 #     fhe_program,
 #     types::{bfv::Fractional, Cipher},
 #     Ciphertext, CompiledFheProgram, Compiler, Error as SunscreenError, Params, PrivateKey,
-#     PublicKey, Runtime, RuntimeError,
+#     PublicKey, Runtime, FheRuntime, RuntimeError,
 # };
 #
 # const DATA_POINTS: usize = 15;
@@ -294,7 +294,7 @@ Alice will need to generate a public/private key pair to encrypt her data with.
 #     }
 # }
 # pub struct Alice {
-#    runtime: Runtime,
+#    runtime: FheRuntime,
 #    public_key: PublicKey,
 #    private_key: PrivateKey,
 # }
@@ -302,7 +302,7 @@ Alice will need to generate a public/private key pair to encrypt her data with.
 impl Alice {
     pub fn new(serialized_params: &[u8]) -> Result<Self, Error> {
         let params = bincode::deserialize(serialized_params)?;
-        let runtime = Runtime::new(&params)?;
+        let runtime = Runtime::new_fhe(&params)?;
 
         let (public_key, private_key) = runtime.generate_keys()?;
 
@@ -371,7 +371,7 @@ We won't use this until the very end but `deserialize_decrypt_and_print_results`
 #     fhe_program,
 #     types::{bfv::Fractional, Cipher},
 #     Ciphertext, CompiledFheProgram, Compiler, Error as SunscreenError, Params, PrivateKey,
-#     PublicKey, Runtime, RuntimeError,
+#     PublicKey, Runtime, FheRuntime, RuntimeError,
 # };
 # 
 # const DATA_POINTS: usize = 15;
@@ -433,7 +433,7 @@ We won't use this until the very end but `deserialize_decrypt_and_print_results`
 #     params: Params,
 #     mean_fhe: CompiledFheProgram,
 #     variance_fhe: CompiledFheProgram,
-#     runtime: Runtime,
+#     runtime: FheRuntime,
 # }
 # 
 # impl Bob {
@@ -453,10 +453,10 @@ We won't use this until the very end but `deserialize_decrypt_and_print_results`
 #             .fhe_program(variance_fhe)
 #             .compile()?;
 # 
-#         let mean_program = app.get_program(mean_fhe).unwrap();
-#         let variance_program = app.get_program(variance_fhe).unwrap();
+#         let mean_program = app.get_fhe_program(mean_fhe).unwrap();
+#         let variance_program = app.get_fhe_program(variance_fhe).unwrap();
 # 
-#         let runtime = Runtime::new(app.params())?;
+#         let runtime = Runtime::new_fhe(app.params())?;
 # 
 #         Ok(Self {
 #             params: app.params().to_owned(),
@@ -494,7 +494,7 @@ We won't use this until the very end but `deserialize_decrypt_and_print_results`
 # }
 # 
 # pub struct Alice {
-#     runtime: Runtime,
+#     runtime: FheRuntime,
 #     public_key: PublicKey,
 #     private_key: PrivateKey,
 # }
@@ -502,7 +502,7 @@ We won't use this until the very end but `deserialize_decrypt_and_print_results`
 # impl Alice {
 #     pub fn new(serialized_params: &[u8]) -> Result<Self, Error> {
 #         let params = bincode::deserialize(serialized_params)?;
-#         let runtime = Runtime::new(&params)?;
+#         let runtime = Runtime::new_fhe(&params)?;
 # 
 #         let (public_key, private_key) = runtime.generate_keys()?;
 # 

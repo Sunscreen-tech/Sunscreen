@@ -250,7 +250,7 @@ fn main() {
 
     // 3. Make our runtime, generate keys, encrypt our data, run our
     // program, and check the result
-    let runtime = Runtime::new(&fhe_program.metadata.params).unwrap();
+    let runtime = Runtime::new_fhe(&fhe_program.metadata.params).unwrap();
 
     let (public_key, private_key) = runtime.generate_keys().unwrap();
     let a_enc = runtime.encrypt(a_batched, &public_key).unwrap();

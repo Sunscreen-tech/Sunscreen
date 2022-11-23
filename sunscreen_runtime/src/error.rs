@@ -1,36 +1,43 @@
 use static_assertions::const_assert;
 
 use crate::Type;
+use sunscreen_zkp_backend::Error as ZkpError;
+use thiserror::Error;
 
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 /**
  * Represents an error that can occur in this crate.
  */
 pub enum Error {
+    #[error("The specified FheProgram is malformed")]
     /**
      * An issue with an [`FheProgram`](sunscreen_fhe_program::FheProgram).
      */
     #[error("The FHE program is malformed: {0}")]
     IRError(#[from] sunscreen_fhe_program::Error),
 
+    #[error("A SEAL internal error occurred")]
     /**
      * An error occurred in the SEAL library.
      */
     #[error("SEAL encountered an error {0}")]
     SealError(#[from] seal_fhe::Error),
 
+    #[error("The specified circuit requires relinearization keys, but were not provided.")]
     /**
      * Tried to run an Fhe Program that requires relinearization keys, but didn't provide any.
      */
     #[error("Relinearization keys were required, but not present")]
     MissingRelinearizationKeys,
 
+    #[error("The specified circuit requires Galois keys, but were not provided.")]
     /**
      * Tried to run an Fhe Program that requires Galois keys, but didn't provide any.
      */
     #[error("Galois keys were required, but not present")]
     MissingGaloisKeys,
 
+    #[error("The number of ciphertext inputs were provided to an FHE program.")]
     /**
      * Returned when:
      * * The wrong number of ciphertexts were provided as parameters to an Fhe Program.
@@ -39,12 +46,14 @@ pub enum Error {
     #[error("An incorrect number of ciphertexts were given to the FHE program")]
     IncorrectCiphertextCount,
 
+    #[error("The given ciphertext was generated under different scheme parameters than the current runtime.")]
     /**
      * An argument is incompatible with the parameters in the runtime.
      */
     #[error("The given value is incompatible with the context.")]
     ParameterMismatch,
 
+    #[error("The given arguments {actual:#?} did not match the call signature {expected:#?}.")]
     /**
      * The given arguments do not match the call signature of the FHE program.
      */
@@ -57,6 +66,7 @@ pub enum Error {
     #[error("Type mismatch, expected {:#?} found {:#?}", self.unwrap_type_mismatch_data().0, self.unwrap_type_mismatch_data().1)]
     TypeMismatch(Box<(Type, Type)>),
 
+    #[error("ReturnTypeMetadataError. Either this program wasn't created with Sunscreen or an internal error occurred.")]
     /**
      * The vector indicating the number of ciphertexts in the return types isn't the same length
      * as the signature's return type. Running valid FHE programs created by the Sunscreen compiler
@@ -65,18 +75,21 @@ pub enum Error {
     #[error("Data returned from FHE program doesn't match return signature")]
     ReturnTypeMetadataError,
 
+    #[error("Decryption failed due to excess noise.")]
     /**
      * Decryption failed because the cipher text had too much noise.
      */
     #[error("Too much noise")]
     TooMuchNoise,
 
+    #[error("A failure occurred when running the FHE program.")]
     /**
      * Executing an Fhe Program failed.
      */
     #[error("Running FHE program failed {0}")]
     FheProgramRunError(#[from] crate::run::FheProgramRunFailure),
 
+    #[error("Failed to convert the given value into the appropriate type.")]
     /**
      * This variant wraps some error specific to the representation of FheTypes. For example,
      * a type encoding even numbers would return this if you pass an odd number.
@@ -84,36 +97,47 @@ pub enum Error {
     #[error("Type encoding error: {0}")]
     FheTypeError(Box<String>),
 
+    #[error("Failed to deserialize a `Params` object.")]
     /**
      * Failed to deserialize bytes as a [`Params`](crate::Params) object.
      */
     #[error("Failed to deserialize parameters")]
     ParamDeserializationError,
 
+    #[error("The given plaintext is empty.")]
     /**
      * The given [`Plaintext`](crate::Plaintext) had no data.
      */
     #[error("Plaintext has no data")]
     NoPlaintextData,
 
+    #[error("The given plaintext is malformed.")]
     /**
      * The given [`Plaintext`](crate::Plaintext) had an incorrect array count.
      */
     #[error("Plaintext is malformed")]
     MalformedPlaintext,
 
+    #[error("A bincode serialization error occurred.")]
     /**
      * An error occurred when serializing/deserializing with bincode.
      */
     #[error("Bincode serialization failed: {0}")]
     BincodeError(Box<String>),
 
+    #[error("The given value is not a plaintext.")]
     /**
      * Called [`inner_as_seal_plaintext`](crate::InnerPlaintext.inner_as_seal_plaintext)
      * on non-Seal plaintext.
      */
     #[error("Not a SEAL plaintext")]
     NotASealPlaintext,
+
+    #[error("An error occurred when creating or verifying a proof.")]
+    /**
+     * An error occurred when creating or verifying a proof.
+     */
+    ZkpError(#[from] ZkpError),
 }
 
 const_assert!(std::mem::size_of::<Error>() <= 16);

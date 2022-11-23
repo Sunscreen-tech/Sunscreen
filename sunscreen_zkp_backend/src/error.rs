@@ -1,7 +1,7 @@
 use sunscreen_compiler_common::GraphQueryError;
 use thiserror::Error;
 
-#[derive(Debug, Error)]
+#[derive(Clone, Debug, Error, PartialEq, Eq)]
 pub enum Error {
     #[cfg(feature = "bulletproofs")]
     #[error("Bulletproofs R1CS error: {0:#?}")]

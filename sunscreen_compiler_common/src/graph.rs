@@ -291,7 +291,7 @@ where
     }
 }
 
-#[derive(Debug, Error)]
+#[derive(Clone, Debug, Error, PartialEq, Eq)]
 /**
  * An error that can occur when querying various aspects about an
  * operation graph.

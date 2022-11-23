@@ -1377,6 +1377,7 @@ dependencies = [
  "sunscreen_compiler_macros",
  "sunscreen_fhe_program",
  "sunscreen_runtime",
+ "sunscreen_zkp_backend",
  "thiserror",
 ]
 
@@ -1449,6 +1450,7 @@ dependencies = [
  "sunscreen",
  "sunscreen_compiler_common",
  "sunscreen_fhe_program",
+ "sunscreen_zkp_backend",
  "thiserror",
 ]
 
@@ -1462,6 +1464,7 @@ dependencies = [
  "curve25519-dalek-ng",
  "merlin",
  "petgraph",
+ "serde",
  "sunscreen_compiler_common",
  "thiserror",
 ]

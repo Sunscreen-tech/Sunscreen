@@ -67,6 +67,7 @@ use fhe::{FheOperation, Literal};
 use petgraph::stable_graph::StableGraph;
 use serde::{Deserialize, Serialize};
 use sunscreen_runtime::{marker, Fhe, FheZkp, Zkp};
+use sunscreen_zkp_backend::CompiledZkpProgram;
 
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -93,7 +94,7 @@ pub use zkp::{with_zkp_ctx, ZkpContext, ZkpFrontendCompilation, CURRENT_ZKP_CTX}
  */
 pub struct Application<T> {
     fhe_programs: HashMap<String, CompiledFheProgram>,
-    zkp_programs: HashMap<String, ZkpFrontendCompilation>,
+    zkp_programs: HashMap<String, CompiledZkpProgram>,
     _phantom: PhantomData<T>,
 }
 
@@ -112,7 +113,7 @@ impl Application<()> {
      */
     pub(crate) fn new(
         fhe_programs: HashMap<String, CompiledFheProgram>,
-        zkp_programs: HashMap<String, ZkpFrontendCompilation>,
+        zkp_programs: HashMap<String, CompiledZkpProgram>,
     ) -> Result<Self> {
         if fhe_programs.is_empty() && zkp_programs.is_empty() {
             return Err(Error::NoPrograms);
@@ -178,6 +179,29 @@ where
      */
     pub fn get_fhe_programs(&self) -> impl Iterator<Item = (&String, &CompiledFheProgram)> {
         self.fhe_programs.iter()
+    }
+}
+
+impl<T> Application<T>
+where
+    T: marker::Zkp,
+{
+    /**
+     * Returns the [`CompiledZkpProgram`] with the given name
+     * or [`None`] if not present.
+     */
+    pub fn get_zkp_program<N>(&self, name: N) -> Option<&CompiledZkpProgram>
+    where
+        N: AsRef<str>,
+    {
+        self.zkp_programs.get(name.as_ref())
+    }
+
+    /**
+     * Returns an iterator over all [`CompiledZkpProgram`]s.
+     */
+    pub fn get_zkp_programs(&self) -> impl Iterator<Item = (&String, &CompiledZkpProgram)> {
+        self.zkp_programs.iter()
     }
 }
 

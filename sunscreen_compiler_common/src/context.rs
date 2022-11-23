@@ -249,4 +249,11 @@ where
 
         node
     }
+
+    /**
+     * Add an edge between `from` and `to`.
+     */
+    pub fn add_edge(&mut self, from: NodeIndex, to: NodeIndex, edge: EdgeInfo) {
+        self.graph.add_edge(from, to, edge);
+    }
 }

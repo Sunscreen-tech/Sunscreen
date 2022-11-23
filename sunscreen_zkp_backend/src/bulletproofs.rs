@@ -1,22 +1,102 @@
+use std::ops::{Add, Mul, Neg, Sub};
+
 use bulletproofs::{
-    r1cs::{ConstraintSystem, LinearCombination, Prover, R1CSProof, Verifier},
+    r1cs::{ConstraintSystem, LinearCombination, Prover, R1CSError, R1CSProof, Verifier},
     BulletproofGens, PedersenGens,
 };
 use crypto_bigint::{Limb, UInt};
 use curve25519_dalek::scalar::Scalar;
 use merlin::Transcript;
 use petgraph::stable_graph::NodeIndex;
+use serde::{Deserialize, Serialize};
 use sunscreen_compiler_common::forward_traverse;
 
 use crate::{
-    BigInt, Error, Operation, Proof, Result, ZkpBackendCompilationResult, ZkpProverBackend,
+    exec::Operation, BigInt, Error, ExecutableZkpProgram, Proof, Result, ZkpProverBackend,
     ZkpVerifierBackend,
 };
 
-pub struct BulletproofsR1CSCircuit {
-    nodes: Vec<Option<LinearCombination>>,
+#[derive(Clone)]
+enum Node {
+    LinearCombination(LinearCombination),
+    Scalar(Scalar),
 }
 
+impl From<Scalar> for Node {
+    fn from(x: Scalar) -> Self {
+        Self::Scalar(x)
+    }
+}
+
+impl From<LinearCombination> for Node {
+    fn from(x: LinearCombination) -> Self {
+        Self::LinearCombination(x)
+    }
+}
+
+impl Add<Node> for Node {
+    type Output = Self;
+
+    fn add(self, rhs: Node) -> Self::Output {
+        use Node::*;
+
+        match (self, rhs) {
+            (LinearCombination(x), LinearCombination(y)) => Node::LinearCombination(x + y),
+            (LinearCombination(x), Scalar(y)) => Node::LinearCombination(x + y),
+            (Scalar(x), LinearCombination(y)) => Node::LinearCombination(y + x),
+            (Scalar(x), Scalar(y)) => Node::Scalar(x + y),
+        }
+    }
+}
+
+impl Mul<Node> for Node {
+    type Output = Self;
+
+    fn mul(self, rhs: Node) -> Self::Output {
+        use Node::*;
+
+        match (self, rhs) {
+            (LinearCombination(_), LinearCombination(_)) => panic!("Illegal operation."),
+            (LinearCombination(x), Scalar(y)) => (x * y).into(),
+            (Scalar(x), LinearCombination(y)) => (y * x).into(),
+            (Scalar(x), Scalar(y)) => (x * y).into(),
+        }
+    }
+}
+
+impl Sub<Node> for Node {
+    type Output = Node;
+
+    fn sub(self, rhs: Node) -> Self::Output {
+        use Node::*;
+
+        match (self, rhs) {
+            (LinearCombination(x), LinearCombination(y)) => (x - y).into(),
+            (LinearCombination(x), Scalar(y)) => (x - y).into(),
+            (Scalar(x), LinearCombination(y)) => (-y + x).into(),
+            (Scalar(x), Scalar(y)) => (x - y).into(),
+        }
+    }
+}
+
+impl Neg for Node {
+    type Output = Node;
+
+    fn neg(self) -> Self::Output {
+        use Node::*;
+
+        match self {
+            LinearCombination(x) => (-x).into(),
+            Scalar(x) => (-x).into(),
+        }
+    }
+}
+
+pub struct BulletproofsR1CSCircuit {
+    nodes: Vec<Option<Node>>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
 pub struct BulletproofsR1CSProof(R1CSProof);
 
 impl BulletproofsR1CSCircuit {
@@ -48,7 +128,7 @@ impl BulletproofsR1CSCircuit {
      */
     fn gen_circuit<CS, I>(
         &mut self,
-        graph: &ZkpBackendCompilationResult,
+        graph: &ExecutableZkpProgram,
         cs: &mut CS,
         get_input: I,
     ) -> Result<()>
@@ -66,8 +146,9 @@ impl BulletproofsR1CSCircuit {
             match node.operation {
                 Operation::Input(x) => {
                     let input = get_input(x);
+                    let input: LinearCombination = cs.allocate(input)?.into();
 
-                    self.nodes[idx.index()] = Some(cs.allocate(input)?.into());
+                    self.nodes[idx.index()] = Some(input.into());
                 }
                 Operation::Add => {
                     let (left, right) = query.get_binary_operands(idx)?;
@@ -122,9 +203,16 @@ impl BulletproofsR1CSCircuit {
                         .unwrap_or_else(|| panic!("{}", dependency_not_found_msg(right)))
                         .clone();
 
-                    let (_, _, o) = cs.multiply(left, right);
+                    if let (Node::LinearCombination(x), Node::LinearCombination(y)) =
+                        (&left, &right)
+                    {
+                        let (_, _, o) = cs.multiply(x.clone(), y.clone());
+                        let o: LinearCombination = o.into();
 
-                    self.nodes[idx.index()] = Some(o.into());
+                        self.nodes[idx.index()] = Some(o.into());
+                    } else {
+                        self.nodes[idx.index()] = Some(left * right);
+                    }
                 }
                 Operation::Constraint(x) => {
                     let operands = query.get_unordered_operands(idx)?;
@@ -137,8 +225,28 @@ impl BulletproofsR1CSCircuit {
                             .unwrap_or_else(|| panic!("{}", dependency_not_found_msg(o)))
                             .clone();
 
-                        cs.constrain(o - x);
+                        match o {
+                            Node::LinearCombination(o) => {
+                                cs.constrain(o - x);
+                            }
+                            Node::Scalar(o) => {
+                                // Don't know why you would do this, but whatever.
+                                if x != o {
+                                    let err_string =
+                                        format!("Constant {:#?} does not equal {:#?}", x, o);
+
+                                    return Err(R1CSError::GadgetError {
+                                        description: err_string,
+                                    })?;
+                                }
+                            }
+                        }
                     }
+                }
+                Operation::Constant(x) => {
+                    let x = try_uint_to_scalar(&x)?;
+
+                    self.nodes[idx.index()] = Some(x.into());
                 }
             }
 
@@ -150,7 +258,7 @@ impl BulletproofsR1CSCircuit {
 }
 
 impl ZkpProverBackend for BulletproofsR1CSCircuit {
-    fn prove(graph: &ZkpBackendCompilationResult, inputs: &[BigInt]) -> Result<Box<Proof>> {
+    fn prove(graph: &ExecutableZkpProgram, inputs: &[BigInt]) -> Result<Proof> {
         let expected_input_count = graph
             .node_weights()
             .filter(|x| matches!(x.operation, Operation::Input(_)))
@@ -181,17 +289,17 @@ impl ZkpProverBackend for BulletproofsR1CSCircuit {
 
         circuit.gen_circuit(graph, &mut prover, |x| Some(inputs[x]))?;
 
-        Ok(Box::new(BulletproofsR1CSProof(
+        Ok(Proof::Bulletproofs(Box::new(BulletproofsR1CSProof(
             prover.prove(&bulletproof_gens)?,
-        )))
+        ))))
     }
 }
 
 impl ZkpVerifierBackend for BulletproofsR1CSCircuit {
-    fn verify(graph: &ZkpBackendCompilationResult, proof: Box<Proof>) -> Result<()> {
-        let proof: Box<BulletproofsR1CSProof> = match proof.downcast() {
-            Ok(v) => v,
-            Err(_) => {
+    fn verify(graph: &ExecutableZkpProgram, proof: &Proof) -> Result<()> {
+        let proof = match proof {
+            Proof::Bulletproofs(x) => x,
+            _ => {
                 return Err(Error::IncorrectProofType);
             }
         };
@@ -248,7 +356,7 @@ mod tests {
     use sunscreen_compiler_common::{EdgeInfo, NodeInfo};
 
     use super::*;
-    use crate::Operation as BackendOperation;
+    use crate::exec::Operation as BackendOperation;
 
     fn scalar_to_u512(x: &Scalar) -> BigInt {
         let mut data = x.to_bytes().to_vec();
@@ -324,7 +432,7 @@ mod tests {
 
     #[test]
     fn can_run_simple_proof() {
-        let mut graph = ZkpBackendCompilationResult::new();
+        let mut graph = ExecutableZkpProgram::new();
 
         let mut add_node = |op: BackendOperation, edges: &[(NodeIndex, EdgeInfo)]| {
             let n = graph.add_node(NodeInfo { operation: op });
@@ -365,7 +473,7 @@ mod tests {
         )
         .unwrap();
 
-        BulletproofsR1CSCircuit::verify(&graph, proof).unwrap();
+        BulletproofsR1CSCircuit::verify(&graph, &proof).unwrap();
 
         // 8 * 5 + 2 == 42
         let proof = BulletproofsR1CSCircuit::prove(
@@ -378,7 +486,7 @@ mod tests {
         )
         .unwrap();
 
-        BulletproofsR1CSCircuit::verify(&graph, proof).unwrap();
+        BulletproofsR1CSCircuit::verify(&graph, &proof).unwrap();
 
         // 8 * 5 + 3 == 42.
         // Verification should fail.
@@ -392,6 +500,6 @@ mod tests {
         )
         .unwrap();
 
-        assert!(BulletproofsR1CSCircuit::verify(&graph, proof).is_err());
+        assert!(BulletproofsR1CSCircuit::verify(&graph, &proof).is_err());
     }
 }

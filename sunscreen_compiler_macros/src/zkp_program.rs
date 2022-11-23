@@ -94,7 +94,7 @@ pub fn zkp_program_impl(
             fn build(&self) -> sunscreen::Result<sunscreen::ZkpFrontendCompilation> {
                 use std::cell::RefCell;
                 use std::mem::transmute;
-                use sunscreen::{CURRENT_ZKP_CTX, ZkpContext, Error, INDEX_ARENA, Result, types::{zkp::ProgramNode, TypeName}};
+                use sunscreen::{CURRENT_ZKP_CTX, ZkpContext, Error, INDEX_ARENA, Result, types::{zkp::{ProgramNode, ConstrainEq}, TypeName}};
 
                 let mut context = ZkpContext::new(0);
 

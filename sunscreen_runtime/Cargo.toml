@@ -23,6 +23,7 @@ log = "0.4.14"
 seal_fhe = { version = "0.7", path = "../seal_fhe" }
 sunscreen_fhe_program = { version = "0.7", path = "../sunscreen_fhe_program"  }
 sunscreen_compiler_common = { path = "../sunscreen_compiler_common" }
+sunscreen_zkp_backend = { path = "../sunscreen_zkp_backend" }
 petgraph = "0.6.0"
 num_cpus = "1.13.0"
 rayon = "1.5.1"

@@ -1221,6 +1221,8 @@ dependencies = [
  "link-cplusplus",
  "serde",
  "serde_json",
+ "static_assertions",
+ "thiserror",
 ]
 
 [[package]]
@@ -1424,6 +1426,7 @@ dependencies = [
  "serde",
  "serde_json",
  "static_assertions",
+ "thiserror",
 ]
 
 [[package]]
@@ -1441,9 +1444,11 @@ dependencies = [
  "semver",
  "serde",
  "serde_json",
+ "static_assertions",
  "sunscreen",
  "sunscreen_compiler_common",
  "sunscreen_fhe_program",
+ "thiserror",
 ]
 
 [[package]]

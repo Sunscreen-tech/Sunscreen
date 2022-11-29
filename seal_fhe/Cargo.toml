@@ -19,6 +19,8 @@ readme = "crates-io.md"
 
 [dependencies]
 serde={ version = "1.0.147", features = ["derive"] }
+thiserror = "1.0.37"
+static_assertions = "1.1.0"
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 link-cplusplus="1.0.5"

@@ -63,10 +63,10 @@ impl TryFrom<i32> for SecurityLevel {
             128 => SecurityLevel::TC128,
             192 => SecurityLevel::TC192,
             256 => SecurityLevel::TC256,
-            _ => Err(Error::SerializationError(format!(
+            _ => Err(Error::SerializationError(Box::new(format!(
                 "Invalid security level: {}",
                 val
-            )))?,
+            ))))?,
         })
     }
 }

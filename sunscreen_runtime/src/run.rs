@@ -15,7 +15,7 @@ use seal_fhe::{
     Ciphertext, Error as SealError, Evaluator, GaloisKeys, Plaintext, RelinearizationKeys,
 };
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, thiserror::Error)]
 /**
  * An error that occurs while running an Fhe Program.
  */
@@ -23,43 +23,45 @@ pub enum FheProgramRunFailure {
     /**
      * An error occurred in a SEAL evaluator.
      */
+    #[error("A SEAL error occurred")]
     SealError,
 
     /**
      * The FHE program needed Galois keys, but none were provided.
      */
+    #[error("Needed Galois keys, but not present")]
     MissingGaloisKeys,
 
     /**
      * The FHE program needed relin keys, but none were provided.
      */
+    #[error("Needed relinearization keys, but not present")]
     MissingRelinearizationKeys,
-
-    /**
-     * Running the FHE program caused a panic unwind.
-     */
-    Panic,
 
     /**
      * Expected the output of an Fhe Program node to be a ciphertext, but
      * it wasn't.
      */
+    #[error("Expected a ciphertext")]
     ExpectedCiphertext,
 
     /**
      * Expected the output of an Fhe Program node to be a plaintext, but
      * it wasn't.
      */
+    #[error("Expected a plaintext")]
     ExpectedPlaintext,
 
     /**
      * A plaintext literal was malformed.
      */
+    #[error("Malformed plaintext")]
     MalformedPlaintext,
 
     /**
      * Internal error: no data found for a parent node.
      */
+    #[error("Internal error: missing data")]
     MissingData,
 }
 

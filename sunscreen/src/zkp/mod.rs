@@ -1,4 +1,5 @@
 use sunscreen_runtime::CallSignature;
+use sunscreen_zkp_backend::{BigInt, CompiledZkpProgram, Operation as JitOperation};
 
 use crate::Result;
 
@@ -27,13 +28,17 @@ pub trait ZkpProgramFn {
 use std::fmt::Debug;
 
 use petgraph::stable_graph::NodeIndex;
-use sunscreen_compiler_common::{CompilationResult, Context, Operation as OperationTrait, Render};
+use sunscreen_compiler_common::{
+    CompilationResult, Context, EdgeInfo, NodeInfo, Operation as OperationTrait, Render,
+};
 
 #[derive(Clone, Copy, Debug, Hash, PartialEq, Eq)]
 pub enum Operation {
-    PrivateInput(NodeIndex),
-    PublicInput(NodeIndex),
-    HiddenInput(NodeIndex),
+    PrivateInput(usize),
+    PublicInput(usize),
+    HiddenInput(usize),
+    Constraint(BigInt),
+    Constant(BigInt),
     Add,
     Sub,
     Mul,
@@ -96,7 +101,7 @@ impl Operation {
  * # Remarks
  * For internal use only.
  */
-pub type ZkpContext = Context<Operation, u32>;
+pub type ZkpContext = Context<Operation, usize>;
 /**
  * Contains the results of compiling a [`#[zkp_program]`](crate::zkp_program) function.
  *
@@ -113,11 +118,17 @@ pub trait ZkpContextOps {
     fn add_multiplication(&mut self, left: NodeIndex, right: NodeIndex) -> NodeIndex;
 
     fn add_negate(&mut self, left: NodeIndex) -> NodeIndex;
+
+    fn add_subtraction(&mut self, left: NodeIndex, right: NodeIndex) -> NodeIndex;
+
+    fn add_constraint(&mut self, left: NodeIndex, val: &BigInt) -> NodeIndex;
+
+    fn add_constant(&mut self, val: &BigInt) -> NodeIndex;
 }
 
 impl ZkpContextOps for ZkpContext {
     fn add_public_input(&mut self) -> NodeIndex {
-        let node = self.add_node(Operation::PublicInput(NodeIndex::from(self.data)));
+        let node = self.add_node(Operation::PublicInput(self.data));
         self.data += 1;
 
         node
@@ -133,6 +144,22 @@ impl ZkpContextOps for ZkpContext {
 
     fn add_negate(&mut self, left: NodeIndex) -> NodeIndex {
         self.add_unary_operation(Operation::Neg, left)
+    }
+
+    fn add_subtraction(&mut self, left: NodeIndex, right: NodeIndex) -> NodeIndex {
+        self.add_binary_operation(Operation::Sub, left, right)
+    }
+
+    fn add_constraint(&mut self, left: NodeIndex, val: &BigInt) -> NodeIndex {
+        let constraint = self.add_node(Operation::Constraint(*val));
+
+        self.add_edge(left, constraint, EdgeInfo::Unordered);
+
+        constraint
+    }
+
+    fn add_constant(&mut self, val: &BigInt) -> NodeIndex {
+        self.add_node(Operation::Constant(*val))
     }
 }
 
@@ -166,4 +193,33 @@ where
 
         f(ctx)
     })
+}
+
+/**
+ * Takes the parsed frontend program and turns into a format ready to be
+ * run.
+ */
+pub(crate) fn compile(program: &ZkpFrontendCompilation) -> CompiledZkpProgram {
+    let jit = program.0.map(
+        |_, n| {
+            let operation = match n.operation {
+                Operation::PrivateInput(x) => JitOperation::PrivateInput(x),
+                Operation::PublicInput(x) => JitOperation::PublicInput(x),
+                Operation::HiddenInput(_) => {
+                    unimplemented!()
+                }
+                Operation::Add => JitOperation::Add,
+                Operation::Mul => JitOperation::Mul,
+                Operation::Neg => JitOperation::Neg,
+                Operation::Sub => JitOperation::Sub,
+                Operation::Constraint(x) => JitOperation::Constraint(x),
+                Operation::Constant(x) => JitOperation::Constant(x),
+            };
+
+            NodeInfo { operation }
+        },
+        |_, e| *e,
+    );
+
+    CompilationResult(jit)
 }

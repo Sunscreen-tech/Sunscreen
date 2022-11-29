@@ -1,12 +1,13 @@
 use crate::fhe::{FheCompile, FheFrontendCompilation};
 use crate::params::{determine_params, PlainModulusConstraint};
 use crate::{
-    Application, CallSignature, Error, FheProgramMetadata, Params, RequiredKeys, Result,
-    SchemeType, SecurityLevel, ZkpFrontendCompilation, ZkpProgramFn,
+    zkp, Application, CallSignature, Error, FheProgramMetadata, Params, RequiredKeys, Result,
+    SchemeType, SecurityLevel, ZkpProgramFn,
 };
 use std::collections::{HashMap, HashSet};
 use std::marker::PhantomData;
 use sunscreen_runtime::{marker, CompiledFheProgram, Fhe, FheZkp, Zkp};
+use sunscreen_zkp_backend::CompiledZkpProgram;
 
 #[derive(Debug, Clone)]
 enum ParamsMode {
@@ -217,12 +218,13 @@ impl<T> Compiler<T> {
         Ok(fhe_programs)
     }
 
-    fn compile_zkp(&self) -> Result<HashMap<String, ZkpFrontendCompilation>> {
+    fn compile_zkp(&self) -> Result<HashMap<String, CompiledZkpProgram>> {
         let zkp_programs = self
             .zkp_program_fns
             .iter()
             .map(|prog| {
                 let result = prog.build()?;
+                let result = zkp::compile(&result);
 
                 Ok((prog.name().to_owned(), result))
             })

@@ -6,6 +6,7 @@ use petgraph::{
     visit::{EdgeRef, IntoNodeIdentifiers},
     Directed, Direction,
 };
+use static_assertions::const_assert;
 use thiserror::Error;
 
 use crate::{EdgeInfo, NodeInfo, Operation, Render};
@@ -291,7 +292,7 @@ where
     }
 }
 
-#[derive(Debug, Error)]
+#[derive(Clone, Debug, Error, PartialEq, Eq)]
 /**
  * An error that can occur when querying various aspects about an
  * operation graph.
@@ -339,6 +340,8 @@ pub enum GraphQueryError {
      */
     IncorrectUnorderedOperandEdge,
 }
+
+const_assert!(std::mem::size_of::<GraphQueryError>() <= 8);
 
 impl<'a, O> GraphQuery<'a, NodeInfo<O>, EdgeInfo>
 where

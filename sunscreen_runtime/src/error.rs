@@ -1,6 +1,7 @@
 use static_assertions::const_assert;
 
 use crate::Type;
+use sunscreen_zkp_backend::Error as ZkpError;
 
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 /**
@@ -114,9 +115,15 @@ pub enum Error {
      */
     #[error("Not a SEAL plaintext")]
     NotASealPlaintext,
+
+    /**
+     * An error occurred when creating or verifying a proof.
+     */
+    #[error("ZKP error: {0}")]
+    ZkpError(#[from] ZkpError),
 }
 
-const_assert!(std::mem::size_of::<Error>() <= 16);
+const_assert!(std::mem::size_of::<Error>() <= 24);
 
 impl Error {
     /**

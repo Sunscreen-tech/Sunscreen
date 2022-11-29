@@ -2,13 +2,15 @@
 pub mod bulletproofs;
 
 mod error;
-
-use std::any::Any;
+mod exec;
+mod jit;
 
 pub use crypto_bigint::UInt;
 use crypto_bigint::U512;
 pub use error::*;
-use sunscreen_compiler_common::{CompilationResult, Operation as OperationTrait};
+pub use exec::ExecutableZkpProgram;
+pub use jit::{jit, CompiledZkpProgram, Operation};
+use serde::{Deserialize, Serialize};
 
 // Converting between U512 and backend numeric types requires an
 // assumption about endianess. We require little endian for now unless
@@ -18,51 +20,31 @@ compile_error!("This crate currently requires a little endian target architectur
 
 pub trait Node {}
 
-pub type Proof = dyn Any;
+#[derive(Clone, Serialize, Deserialize)]
+/**
+ * An R1CS proof.
+ */
+pub enum Proof {
+    #[cfg(feature = "bulletproofs")]
+    /**
+     * A Bulletproofs R1CS proof.
+     */
+    Bulletproofs(Box<bulletproofs::BulletproofsR1CSProof>),
+
+    /**
+     * A custom proof type provided by an external crate.
+     */
+    Custom { name: String, data: Vec<u8> },
+}
 
 pub trait FieldValue {}
 
-type BigInt = U512;
+pub type BigInt = U512;
 
 pub trait ZkpProverBackend {
-    fn prove(graph: &ZkpBackendCompilationResult, inputs: &[BigInt]) -> Result<Box<Proof>>;
+    fn prove(graph: &ExecutableZkpProgram, inputs: &[BigInt]) -> Result<Proof>;
 }
 
 pub trait ZkpVerifierBackend {
-    fn verify(graph: &ZkpBackendCompilationResult, proof: Box<Proof>) -> Result<()>;
+    fn verify(graph: &ExecutableZkpProgram, proof: &Proof) -> Result<()>;
 }
-
-#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
-pub enum Operation {
-    Input(usize),
-
-    Add,
-
-    Mul,
-
-    Sub,
-
-    Neg,
-
-    Constraint(BigInt),
-}
-
-impl OperationTrait for Operation {
-    fn is_binary(&self) -> bool {
-        matches!(self, Operation::Add | Operation::Sub | Operation::Mul)
-    }
-
-    fn is_commutative(&self) -> bool {
-        matches!(self, Operation::Add | Operation::Mul)
-    }
-
-    fn is_unary(&self) -> bool {
-        matches!(self, Operation::Neg)
-    }
-
-    fn is_unordered(&self) -> bool {
-        matches!(self, Operation::Constraint(_))
-    }
-}
-
-pub type ZkpBackendCompilationResult = CompilationResult<Operation>;

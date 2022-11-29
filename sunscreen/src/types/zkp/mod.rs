@@ -83,6 +83,41 @@ where
 }
 
 /**
+ * A trait for adding an equality constraint to a type.
+ */
+pub trait ConstrainEqVarVar
+where
+    Self: Sized + ZkpType,
+{
+    /**
+     * Asserts that lhs equals rhs.
+     */
+    fn constraint_eq(lhs: ProgramNode<Self>, rhs: ProgramNode<Self>) -> ProgramNode<Self>;
+}
+
+/**
+ * The given FHE type can be turned into a program node. Useful for declaring
+ * constants.
+ */
+pub trait IntoProgramNode
+where
+    Self: Sized,
+{
+    /**
+     * The type of [`ProgramNode`] this becomes.
+     */
+    type Output: ZkpType;
+
+    /**
+     * Turns the given value into a [`ProgramNode`].
+     *
+     * # Panics
+     * Calling this function outside of a ZKP program will panic.
+     */
+    fn into_program_node(self) -> ProgramNode<Self::Output>;
+}
+
+/**
  * The number of native field elements needed to represent a ZKP type.
  */
 pub trait NumFieldElements {

@@ -16,6 +16,13 @@ use seal_fhe::{
 };
 
 pub use sunscreen_compiler_common::{Type, TypeName};
+use sunscreen_zkp_backend::bulletproofs::BulletproofsR1CSCircuit;
+use sunscreen_zkp_backend::jit;
+use sunscreen_zkp_backend::BigInt;
+use sunscreen_zkp_backend::CompiledZkpProgram;
+use sunscreen_zkp_backend::Proof;
+use sunscreen_zkp_backend::ZkpProverBackend;
+use sunscreen_zkp_backend::ZkpVerifierBackend;
 
 enum Context {
     Seal(SealContext),
@@ -415,6 +422,29 @@ where
     }
 }
 
+impl<T> GenericRuntime<T>
+where
+    T: marker::Zkp,
+{
+    /**
+     * Prove the given `inputs` satisfy `program`.
+     */
+    pub fn prove(&self, program: &CompiledZkpProgram, inputs: &[BigInt]) -> Result<Proof> {
+        let prog = jit(program);
+
+        Ok(BulletproofsR1CSCircuit::prove(&prog, inputs)?)
+    }
+
+    /**
+     * Verify that the given `proof` satisfies the given `program`.
+     */
+    pub fn verify(&self, program: &CompiledZkpProgram, proof: &Proof) -> Result<()> {
+        let prog = jit(program);
+
+        Ok(BulletproofsR1CSCircuit::verify(&prog, proof)?)
+    }
+}
+
 impl GenericRuntime<()> {
     #[deprecated]
     /**
@@ -489,12 +519,12 @@ pub type FheZkpRuntime = GenericRuntime<FheZkp>;
 /**
  * A runtime capable of only FHE operations.
  */
-pub type FheRuntime = GenericRuntime<FheZkp>;
+pub type FheRuntime = GenericRuntime<Fhe>;
 
 /**
  * A runtime capable of only ZKP operations.
  */
-pub type ZkpRuntime = GenericRuntime<FheZkp>;
+pub type ZkpRuntime = GenericRuntime<Zkp>;
 
 /**
  * An type containing the `Runtime::new_*` constructor methods to create

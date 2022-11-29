@@ -6,10 +6,12 @@ use std::{
 };
 
 use crate::{
-    types::zkp::{AddVar, DivVar, MulVar, NegVar, RemVar, SubVar, ZkpType},
+    types::zkp::{AddVar, DivVar, IntoProgramNode, MulVar, NegVar, RemVar, SubVar, ZkpType},
     zkp::{with_zkp_ctx, ZkpContextOps},
     INDEX_ARENA,
 };
+
+use super::ConstrainEqVarVar;
 
 #[derive(Clone, Copy)]
 /**
@@ -137,5 +139,47 @@ where
 
     fn neg(self) -> Self::Output {
         <T as NegVar>::neg(self)
+    }
+}
+
+impl<T> IntoProgramNode for ProgramNode<T>
+where
+    T: ZkpType,
+{
+    type Output = T;
+
+    fn into_program_node(self) -> ProgramNode<Self::Output> {
+        self
+    }
+}
+
+/**
+ * Constrain this value to a value on the RHS.
+ */
+pub trait ConstrainEq<Rhs> {
+    /**
+     * The return value will be `ProgramNode<Self::Output>`
+     */
+    type Output: ZkpType;
+
+    /**
+     * Constrains this value to equal the right hand side.
+     */
+    fn constrain_eq(self, rhs: Rhs) -> ProgramNode<Self::Output>;
+}
+
+impl<T, U, V> ConstrainEq<T> for U
+where
+    T: ZkpType + Sized + IntoProgramNode<Output = V>,
+    U: IntoProgramNode<Output = V> + Sized,
+    V: ZkpType + Sized + ConstrainEqVarVar,
+{
+    type Output = V;
+
+    /**
+     * Constrains this native field to equal the right hand side
+     */
+    fn constrain_eq(self, rhs: T) -> ProgramNode<Self::Output> {
+        V::constraint_eq(self.into_program_node(), rhs.into_program_node())
     }
 }

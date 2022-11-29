@@ -155,14 +155,12 @@ impl<const LANES: usize> TryIntoPlaintext for Batched<LANES> {
         params: &Params,
     ) -> std::result::Result<Plaintext, sunscreen_runtime::Error> {
         if (params.lattice_dimension / 2) as usize % LANES != 0 {
-            return Err(RuntimeError::FheTypeError(
-                "LANES must be a power two".to_owned(),
-            ));
+            return Err(RuntimeError::fhe_type_error("LANES must be a power two"));
         }
 
         if 2 * LANES > params.lattice_dimension as usize {
-            return Err(RuntimeError::FheTypeError(
-                "LANES must be <= polynomial degree / 2".to_owned(),
+            return Err(RuntimeError::fhe_type_error(
+                "LANES must be <= polynomial degree / 2",
             ));
         }
 
@@ -205,8 +203,8 @@ impl<const LANES: usize> TryFromPlaintext for Batched<LANES> {
         let plaintext = plaintext.inner_as_seal_plaintext()?;
 
         if plaintext.len() != 1 {
-            return Err(sunscreen_runtime::Error::FheTypeError(
-                "Expected 1 plaintext".to_owned(),
+            return Err(sunscreen_runtime::Error::fhe_type_error(
+                "Expected 1 plaintext",
             ));
         }
 
@@ -242,7 +240,7 @@ impl<const LANES: usize> TryFromPlaintext for Batched<LANES> {
                     .collect::<Vec<i64>>()
                     .try_into()
                     .map_err(|_| {
-                        RuntimeError::FheTypeError(format!(
+                        RuntimeError::fhe_type_error(&format!(
                             "Failed to convert Vec to [i64;{}]",
                             LANES
                         ))
@@ -254,7 +252,7 @@ impl<const LANES: usize> TryFromPlaintext for Batched<LANES> {
                     .collect::<Vec<i64>>()
                     .try_into()
                     .map_err(|_| {
-                        RuntimeError::FheTypeError(format!(
+                        RuntimeError::fhe_type_error(&format!(
                             "Failed to convert Vec to [i64;{}]",
                             LANES
                         ))
@@ -271,10 +269,16 @@ impl<const LANES: usize> TryFrom<[Vec<i64>; 2]> for Batched<LANES> {
         Ok(Self {
             data: [
                 data[0].clone().try_into().map_err(|_| {
-                    RuntimeError::FheTypeError(format!("Failed to convert Vec to [i64;{}]", LANES))
+                    RuntimeError::fhe_type_error(&format!(
+                        "Failed to convert Vec to [i64;{}]",
+                        LANES
+                    ))
                 })?,
                 data[1].clone().try_into().map_err(|_| {
-                    RuntimeError::FheTypeError(format!("Failed to convert Vec to [i64;{}]", LANES))
+                    RuntimeError::fhe_type_error(&format!(
+                        "Failed to convert Vec to [i64;{}]",
+                        LANES
+                    ))
                 })?,
             ],
         })

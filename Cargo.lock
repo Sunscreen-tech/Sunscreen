@@ -1377,6 +1377,7 @@ dependencies = [
  "sunscreen_compiler_macros",
  "sunscreen_fhe_program",
  "sunscreen_runtime",
+ "thiserror",
 ]
 
 [[package]]

@@ -153,9 +153,7 @@ impl<T> Compiler<T> {
 
         // Check that every chain_count > 0.
         if self.fhe_program_fns.iter().any(|p| p.chain_count() == 0) {
-            return Err(Error::Unsupported(
-                "Chain count must be greater than zero.".to_owned(),
-            ));
+            return Err(Error::unsupported("Chain count must be greater than zero."));
         }
 
         // Check that either the max chain count is 1, or that only
@@ -167,9 +165,8 @@ impl<T> Compiler<T> {
             .fold(0, |max, p| usize::max(p.chain_count(), max));
 
         if max_chain > 1 && self.fhe_program_fns.len() > 1 {
-            return Err(Error::Unsupported(
-                "Cannot chain programs and specify more than one program in the same app."
-                    .to_owned(),
+            return Err(Error::unsupported(
+                "Cannot chain programs and specify more than one program in the same app.",
             ));
         }
 

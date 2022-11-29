@@ -384,8 +384,6 @@ where
         .map(|n| AtomicUsize::new(ir.graph.neighbors_directed(n, Direction::Incoming).count()))
         .collect::<Vec<AtomicUsize>>();
 
-    let items_remaining = AtomicUsize::new(ir.graph.node_count());
-
     // We must eagerly evaluate the iterator (i.e. collect) since
     // the dependency counts will be changing during iteration. Lazy
     // iteration causes a race condition between the filter_map closer
@@ -413,7 +411,6 @@ where
                 ir: &FheProgram,
                 deps: &[AtomicUsize],
                 returned_result: &AtomicCell<Result<(), FheProgramRunFailure>>,
-                items_remaining: &AtomicUsize,
                 callback: &F,
             ) where
                 F: Fn(NodeIndex) -> Result<(), FheProgramRunFailure> + Sync + Send,
@@ -440,14 +437,7 @@ where
                         if old_val == 1 {
                             s.spawn(move |_| {
                                 log::trace!("Node {} ready", e.index());
-                                run_internal(
-                                    e,
-                                    ir,
-                                    deps,
-                                    returned_result,
-                                    items_remaining,
-                                    callback,
-                                );
+                                run_internal(e, ir, deps, returned_result, callback);
                             });
                         }
                     }
@@ -456,7 +446,6 @@ where
 
             let deps = &deps;
             let returned_result = &returned_result;
-            let items_remaining = &items_remaining;
             let callback = &callback;
 
             s.spawn(move |_| {
@@ -465,7 +454,6 @@ where
                     ir,
                     deps,
                     returned_result,
-                    items_remaining,
                     callback,
                 );
             });

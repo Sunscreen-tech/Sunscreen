@@ -57,9 +57,17 @@ pub enum IRError {
 impl std::fmt::Display for IRError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::IRHasCycles => { write!(f, "This FHE program has one or more cycles") },
+            Self::IRHasCycles => {
+                write!(f, "This FHE program has one or more cycles")
+            }
             Self::NodeError(x) => {
-                write!(f, "Node {}:{} encountered an error: {}", x.1, x.0.index(), x.2)
+                write!(
+                    f,
+                    "Node {}:{} encountered an error: {}",
+                    x.1,
+                    x.0.index(),
+                    x.2
+                )
             }
         }
     }
@@ -110,15 +118,23 @@ impl std::fmt::Display for NodeError {
         match self {
             Self::MissingOperand(e) => {
                 write!(f, "This node is missing operand of type {e:#?}")
-            },
+            }
             Self::MissingParent(idx) => {
                 write!(f, "This node is missing a parent at index {}", idx.index())
-            },
+            }
             Self::ParentHasIncorrectOutputType(x) => {
-                write!(f, "For the {:#?} operand, expected an output of {:#?} but found {:#?}.", x.0, x.1, x.2)
-            },
+                write!(
+                    f,
+                    "For the {:#?} operand, expected an output of {:#?} but found {:#?}.",
+                    x.0, x.1, x.2
+                )
+            }
             Self::WrongOperandCount(x) => {
-                write!(f, "Incorrect operand count. Expected {}. Found {}.", x.0, x.1)
+                write!(
+                    f,
+                    "Incorrect operand count. Expected {}. Found {}.",
+                    x.0, x.1
+                )
             }
         }
     }
@@ -128,7 +144,11 @@ impl NodeError {
     /**
      * Creates a [`NodeError::ParentHasIncorrectOutputType`].
      */
-    pub fn parent_has_incorrect_output_type(edge: EdgeInfo, expected: OutputType, actual: OutputType) -> Self {
+    pub fn parent_has_incorrect_output_type(
+        edge: EdgeInfo,
+        expected: OutputType,
+        actual: OutputType,
+    ) -> Self {
         Self::ParentHasIncorrectOutputType(Box::new((edge, expected, actual)))
     }
 

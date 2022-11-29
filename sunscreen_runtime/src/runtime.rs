@@ -112,10 +112,7 @@ where
         };
 
         if expected_type != ciphertext.data_type {
-            return Err(Error::type_mismatch(
-                &expected_type,
-                &ciphertext.data_type,
-            ));
+            return Err(Error::type_mismatch(&expected_type, &ciphertext.data_type));
         }
 
         let fhe_data = self.runtime_data.unwrap_fhe();
@@ -288,8 +285,12 @@ where
             .enumerate()
             .any(|(i, a)| a.type_name_instance() != expected_args[i])
         {
-            return Err(Error::argument_mismatch(expected_args,
-                &arguments.iter().map(|a| a.type_name_instance()).collect::<Vec<Type>>(),
+            return Err(Error::argument_mismatch(
+                expected_args,
+                &arguments
+                    .iter()
+                    .map(|a| a.type_name_instance())
+                    .collect::<Vec<Type>>(),
             ));
         }
 

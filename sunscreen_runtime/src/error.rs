@@ -127,23 +127,30 @@ impl Error {
     }
 
     /**
-     * Create an [`Error::TypeMismatch`]
+     * Create an [`Error::TypeMismatch`].
      */
     pub fn type_mismatch(expected: &Type, actual: &Type) -> Self {
         Self::TypeMismatch(Box::new((expected.clone(), actual.clone())))
     }
 
-    fn unwrap_argument_mismatch_data(&self) -> &Box<(Vec<Type>, Vec<Type>)> {
+    /**
+     * Create an [`Error::FheTypeError`].
+     */
+    pub fn fhe_type_error(msg: &str) -> Self {
+        Self::FheTypeError(Box::new(msg.to_owned()))
+    }
+
+    fn unwrap_argument_mismatch_data(&self) -> &(Vec<Type>, Vec<Type>) {
         match self {
             Self::ArgumentMismatch(d) => d,
-            _ => panic!("Not an argument mismatch")
+            _ => panic!("Not an argument mismatch"),
         }
     }
 
-    fn unwrap_type_mismatch_data(&self) -> &Box<(Type, Type)> {
+    fn unwrap_type_mismatch_data(&self) -> &(Type, Type) {
         match self {
             Self::TypeMismatch(d) => d,
-            _ => panic!("Not a type mismatch")
+            _ => panic!("Not a type mismatch"),
         }
     }
 }

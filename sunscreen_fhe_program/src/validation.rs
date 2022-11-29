@@ -28,74 +28,60 @@ pub(crate) fn validate_nodes(ir: &FheProgram) -> Vec<IRError> {
     for i in ir.graph.node_indices() {
         let node_info = &ir.graph[i];
         let node_errors = match ir.graph[i].operation {
-            Add => {
-                Some(validate_binary_op_has_correct_operands(
-                        ir,
-                        i,
-                        OutputType::Ciphertext,
-                        OutputType::Ciphertext,
-                    ))
-            }
-            Sub => {
-                Some(validate_binary_op_has_correct_operands(
-                        ir,
-                        i,
-                        OutputType::Ciphertext,
-                        OutputType::Ciphertext,
-                    ))
-            }
-            SubPlaintext => {
-                Some(validate_binary_op_has_correct_operands(
-                        ir,
-                        i,
-                        OutputType::Ciphertext,
-                        OutputType::Plaintext,
-                    ))
-            }
-            Multiply => {
-                Some(validate_binary_op_has_correct_operands(
-                        ir,
-                        i,
-                        OutputType::Ciphertext,
-                        OutputType::Ciphertext,
-                    ))
-            }
-            MultiplyPlaintext => {
-                Some(validate_binary_op_has_correct_operands(
-                        ir,
-                        i,
-                        OutputType::Ciphertext,
-                        OutputType::Plaintext,
-                    ))
-            }
-            AddPlaintext => {
-                Some(validate_binary_op_has_correct_operands(
-                        ir,
-                        i,
-                        OutputType::Ciphertext,
-                        OutputType::Plaintext,
-                    ))
-            }
-            ShiftLeft => { None }
-            ShiftRight => { None }
-            Negate => {
-                Some(validate_unary_op_has_correct_operands(ir, i))
-            }
-            InputCiphertext(_) => { None }
-            InputPlaintext(_) => { None }
-            OutputCiphertext => {
-                Some(validate_unary_op_has_correct_operands(ir, i))
-            }
-            Relinearize => {
-                Some(validate_unary_op_has_correct_operands(ir, i))
-            }
-            Literal(_) => { None }
-            SwapRows => { None }
+            Add => Some(validate_binary_op_has_correct_operands(
+                ir,
+                i,
+                OutputType::Ciphertext,
+                OutputType::Ciphertext,
+            )),
+            Sub => Some(validate_binary_op_has_correct_operands(
+                ir,
+                i,
+                OutputType::Ciphertext,
+                OutputType::Ciphertext,
+            )),
+            SubPlaintext => Some(validate_binary_op_has_correct_operands(
+                ir,
+                i,
+                OutputType::Ciphertext,
+                OutputType::Plaintext,
+            )),
+            Multiply => Some(validate_binary_op_has_correct_operands(
+                ir,
+                i,
+                OutputType::Ciphertext,
+                OutputType::Ciphertext,
+            )),
+            MultiplyPlaintext => Some(validate_binary_op_has_correct_operands(
+                ir,
+                i,
+                OutputType::Ciphertext,
+                OutputType::Plaintext,
+            )),
+            AddPlaintext => Some(validate_binary_op_has_correct_operands(
+                ir,
+                i,
+                OutputType::Ciphertext,
+                OutputType::Plaintext,
+            )),
+            ShiftLeft => None,
+            ShiftRight => None,
+            Negate => Some(validate_unary_op_has_correct_operands(ir, i)),
+            InputCiphertext(_) => None,
+            InputPlaintext(_) => None,
+            OutputCiphertext => Some(validate_unary_op_has_correct_operands(ir, i)),
+            Relinearize => Some(validate_unary_op_has_correct_operands(ir, i)),
+            Literal(_) => None,
+            SwapRows => None,
         };
 
         if let Some(node_errors) = node_errors {
-          errors.append(&mut node_errors.into_iter().map(|e| IRError::node_error(i, node_info.to_string(), e))
-          .collect())
+            errors.append(
+                &mut node_errors
+                    .into_iter()
+                    .map(|e| IRError::node_error(i, node_info.to_string(), e))
+                    .collect(),
+            )
         }
     }
 

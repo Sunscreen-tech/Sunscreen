@@ -1,6 +1,6 @@
 use static_assertions::const_assert;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 /**
  * Represents an error that can occur in this crate.
  */
@@ -9,75 +9,84 @@ pub enum Error {
      * When compiling an FHE program with the ParamsMode::Search option, you must specify a
      * PlainModulusConstraint.
      */
+    #[error("Missing plaintext modulus constraint")]
     MissingPlainModulusConstraint,
 
     /**
      * No parameters were found that satisfy the given FHE program.
      */
+    #[error("Failed to find satisfying parameters")]
     NoParams,
 
     /**
      * Attempted to compile the given FHE program with the wrong scheme.
      */
+    #[error("Incorrect scheme")]
     IncorrectScheme,
 
     /**
-     * No FHE programs were given to the compiler.
+     * No FHE or ZKP programs were given to the compiler.
      */
+    #[error("No programs")]
     NoPrograms,
 
     /**
      * Not all FHE programs passed to compilation used the same scheme.
      */
+    #[error("Scheme mismatch")]
     SchemeMismatch,
 
     /**
      * Multiple FHE programs with the same name were compiled.
      */
+    #[error("Name collision")]
     NameCollision,
 
     /**
      * Failed to created an encryption scheme using the given parameters.
      */
+    #[error("Cannot create encryption scheme from parameters")]
     SealEncryptionParameterError,
 
     /**
      * The a constraint cannot be satisfied.
      */
+    #[error("The given constraint cannot be satisfied")]
     UnsatisfiableConstraint,
 
     /**
      * An internal error occurred in the SEAL library.
      */
-    SealError(seal_fhe::Error),
+    #[error("SEAL error: {0}")]
+    SealError(#[from] seal_fhe::Error),
 
     /**
      * An Error occurred in the Sunscreen runtime.
      */
-    RuntimeError(crate::RuntimeError),
+    #[error("Runtime error: {0}")]
+    RuntimeError(#[from] crate::RuntimeError),
 
     /**
      * The compiled Sunscreen FHE program is malformed.
      */
+    #[error("FHE program error: {0}")]
     FheProgramError(sunscreen_fhe_program::Error),
 
     /**
      * The given configuration is not supported.
      */
-    Unsupported(String),
+    #[error("Unsupported: {0}")]
+    Unsupported(Box<String>),
 }
 
-// const_assert!(std::mem::size_of::<Error>() < 32);
+const_assert!(std::mem::size_of::<Error>() <= 24);
 
-impl From<seal_fhe::Error> for Error {
-    fn from(err: seal_fhe::Error) -> Self {
-        Self::SealError(err)
-    }
-}
-
-impl From<crate::RuntimeError> for Error {
-    fn from(err: crate::RuntimeError) -> Self {
-        Self::RuntimeError(err)
+impl Error {
+    /**
+     * Create an [`Error::Unsupported`]
+     */
+    pub fn unsupported(msg: &str) -> Self {
+        Self::Unsupported(Box::new(msg.to_owned()))
     }
 }
 

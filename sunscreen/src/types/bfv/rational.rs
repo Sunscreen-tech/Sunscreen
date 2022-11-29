@@ -90,7 +90,7 @@ impl TryFrom<f64> for Rational {
 
     fn try_from(val: f64) -> Result<Self, Self::Error> {
         let val = Rational64::approximate_float(val)
-            .ok_or_else(|| Error::FheTypeError("Failed to parse float into rational".to_owned()))?;
+            .ok_or_else(|| Error::fhe_type_error("Failed to parse float into rational"))?;
 
         Ok(Self {
             num: Signed::from(*val.numer()),

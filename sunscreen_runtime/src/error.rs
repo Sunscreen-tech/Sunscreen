@@ -11,13 +11,13 @@ pub enum Error {
      * An issue with an [`FheProgram`](sunscreen_fhe_program::FheProgram).
      */
     #[error("The FHE program is malformed: {0}")]
-    IRError(sunscreen_fhe_program::Error),
+    IRError(#[from] sunscreen_fhe_program::Error),
 
     /**
      * An error occurred in the SEAL library.
      */
     #[error("SEAL encountered an error {0}")]
-    SealError(seal_fhe::Error),
+    SealError(#[from] seal_fhe::Error),
 
     /**
      * Tried to run an Fhe Program that requires relinearization keys, but didn't provide any.
@@ -75,7 +75,7 @@ pub enum Error {
      * Executing an Fhe Program failed.
      */
     #[error("Running FHE program failed {0}")]
-    FheProgramRunError(crate::run::FheProgramRunFailure),
+    FheProgramRunError(#[from] crate::run::FheProgramRunFailure),
 
     /**
      * This variant wraps some error specific to the representation of FheTypes. For example,
@@ -151,24 +151,6 @@ impl Error {
 impl From<bincode::Error> for Error {
     fn from(err: bincode::Error) -> Self {
         Self::BincodeError(Box::new(format!("{}", err)))
-    }
-}
-
-impl From<sunscreen_fhe_program::Error> for Error {
-    fn from(err: sunscreen_fhe_program::Error) -> Self {
-        Self::IRError(err)
-    }
-}
-
-impl From<seal_fhe::Error> for Error {
-    fn from(err: seal_fhe::Error) -> Self {
-        Self::SealError(err)
-    }
-}
-
-impl From<crate::run::FheProgramRunFailure> for Error {
-    fn from(err: crate::run::FheProgramRunFailure) -> Self {
-        Self::FheProgramRunError(err)
     }
 }
 

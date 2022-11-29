@@ -1,4 +1,5 @@
 use crate::{InnerPlaintext, SealData};
+use static_assertions::const_assert;
 use sunscreen_fhe_program::{traversal::*, FheProgram, Literal, Operation::*};
 
 use crossbeam::atomic::AtomicCell;
@@ -64,6 +65,8 @@ pub enum FheProgramRunFailure {
     #[error("Internal error: missing data")]
     MissingData,
 }
+
+const_assert!(std::mem::size_of::<FheProgramRunFailure>() <= 16);
 
 impl From<SealError> for FheProgramRunFailure {
     fn from(_: SealError) -> Self {

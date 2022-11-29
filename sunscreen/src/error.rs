@@ -67,7 +67,7 @@ pub enum Error {
     Unsupported(String),
 }
 
-const_assert!(std::mem::size_of::<Error>() < 32);
+// const_assert!(std::mem::size_of::<Error>() < 32);
 
 impl From<seal_fhe::Error> for Error {
     fn from(err: seal_fhe::Error) -> Self {

@@ -1340,6 +1340,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "static_assertions"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
+
+[[package]]
 name = "subtle"
 version = "2.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1363,6 +1369,7 @@ dependencies = [
  "seal_fhe",
  "serde",
  "serde_json",
+ "static_assertions",
  "sunscreen_backend",
  "sunscreen_compiler_common",
  "sunscreen_compiler_macros",
@@ -1416,6 +1423,7 @@ dependencies = [
  "seal_fhe",
  "serde",
  "serde_json",
+ "static_assertions",
 ]
 
 [[package]]

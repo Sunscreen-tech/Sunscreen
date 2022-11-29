@@ -1,3 +1,5 @@
+use static_assertions::const_assert;
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 /**
  * Represents an error that can occur in this crate.
@@ -64,6 +66,8 @@ pub enum Error {
      */
     Unsupported(String),
 }
+
+const_assert!(std::mem::size_of::<Error>() < 32);
 
 impl From<seal_fhe::Error> for Error {
     fn from(err: seal_fhe::Error) -> Self {

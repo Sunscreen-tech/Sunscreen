@@ -20,6 +20,8 @@ readme = "crates-io.md"
 petgraph = { version = "0.6.0", features = ["serde-1"] }
 serde = { version = "1.0.147", features = ["derive"] }
 seal_fhe = { version = "0.7", path = "../seal_fhe" }
+static_assertions = "1.1.0"
+thiserror = "1.0.37"
 
 [dev-dependencies]
 serde_json = "1.0.74"

@@ -435,14 +435,12 @@ impl<const INT_BITS: usize> TryIntoPlaintext for Fractional<INT_BITS> {
         params: &Params,
     ) -> std::result::Result<Plaintext, sunscreen_runtime::Error> {
         if self.val.is_nan() {
-            return Err(sunscreen_runtime::Error::FheTypeError(
-                "Value is NaN.".to_owned(),
-            ));
+            return Err(sunscreen_runtime::Error::fhe_type_error("Value is NaN."));
         }
 
         if self.val.is_infinite() {
-            return Err(sunscreen_runtime::Error::FheTypeError(
-                "Value is infinite.".to_owned(),
+            return Err(sunscreen_runtime::Error::fhe_type_error(
+                "Value is infinite.",
             ));
         }
 
@@ -481,9 +479,7 @@ impl<const INT_BITS: usize> TryIntoPlaintext for Fractional<INT_BITS> {
         let sign = (as_u64 & sign_mask) >> 63;
 
         if power + 1 > INT_BITS as i64 {
-            return Err(sunscreen_runtime::Error::FheTypeError(
-                "Out of range".to_owned(),
-            ));
+            return Err(sunscreen_runtime::Error::fhe_type_error("Out of range"));
         }
 
         for i in 0..f64::MANTISSA_DIGITS {

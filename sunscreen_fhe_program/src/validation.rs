@@ -27,116 +27,62 @@ pub(crate) fn validate_nodes(ir: &FheProgram) -> Vec<IRError> {
 
     for i in ir.graph.node_indices() {
         let node_info = &ir.graph[i];
-        match ir.graph[i].operation {
-            Add => {
-                errors.append(
-                    &mut validate_binary_op_has_correct_operands(
-                        ir,
-                        i,
-                        OutputType::Ciphertext,
-                        OutputType::Ciphertext,
-                    )
-                    .iter()
-                    .map(|e| IRError::NodeError(i, node_info.to_string(), *e))
-                    .collect(),
-                );
-            }
-            Sub => {
-                errors.append(
-                    &mut validate_binary_op_has_correct_operands(
-                        ir,
-                        i,
-                        OutputType::Ciphertext,
-                        OutputType::Ciphertext,
-                    )
-                    .iter()
-                    .map(|e| IRError::NodeError(i, node_info.to_string(), *e))
-                    .collect(),
-                );
-            }
-            SubPlaintext => {
-                errors.append(
-                    &mut validate_binary_op_has_correct_operands(
-                        ir,
-                        i,
-                        OutputType::Ciphertext,
-                        OutputType::Plaintext,
-                    )
-                    .iter()
-                    .map(|e| IRError::NodeError(i, node_info.to_string(), *e))
-                    .collect(),
-                );
-            }
-            Multiply => {
-                errors.append(
-                    &mut validate_binary_op_has_correct_operands(
-                        ir,
-                        i,
-                        OutputType::Ciphertext,
-                        OutputType::Ciphertext,
-                    )
-                    .iter()
-                    .map(|e| IRError::NodeError(i, node_info.to_string(), *e))
-                    .collect(),
-                );
-            }
-            MultiplyPlaintext => {
-                errors.append(
-                    &mut validate_binary_op_has_correct_operands(
-                        ir,
-                        i,
-                        OutputType::Ciphertext,
-                        OutputType::Plaintext,
-                    )
-                    .iter()
-                    .map(|e| IRError::NodeError(i, node_info.to_string(), *e))
-                    .collect(),
-                );
-            }
-            AddPlaintext => {
-                errors.append(
-                    &mut validate_binary_op_has_correct_operands(
-                        ir,
-                        i,
-                        OutputType::Ciphertext,
-                        OutputType::Plaintext,
-                    )
-                    .iter()
-                    .map(|e| IRError::NodeError(i, node_info.to_string(), *e))
-                    .collect(),
-                );
-            }
-            ShiftLeft => {}
-            ShiftRight => {}
-            Negate => {
-                errors.append(
-                    &mut validate_unary_op_has_correct_operands(ir, i)
-                        .iter()
-                        .map(|e| IRError::NodeError(i, node_info.to_string(), *e))
-                        .collect(),
-                );
-            }
-            InputCiphertext(_) => {}
-            InputPlaintext(_) => {}
-            OutputCiphertext => {
-                errors.append(
-                    &mut validate_unary_op_has_correct_operands(ir, i)
-                        .iter()
-                        .map(|e| IRError::NodeError(i, node_info.to_string(), *e))
-                        .collect(),
-                );
-            }
-            Relinearize => {
-                errors.append(
-                    &mut validate_unary_op_has_correct_operands(ir, i)
-                        .iter()
-                        .map(|e| IRError::NodeError(i, node_info.to_string(), *e))
-                        .collect(),
-                );
-            }
-            Literal(_) => {}
-            SwapRows => {}
+        let node_errors = match ir.graph[i].operation {
+            Add => Some(validate_binary_op_has_correct_operands(
+                ir,
+                i,
+                OutputType::Ciphertext,
+                OutputType::Ciphertext,
+            )),
+            Sub => Some(validate_binary_op_has_correct_operands(
+                ir,
+                i,
+                OutputType::Ciphertext,
+                OutputType::Ciphertext,
+            )),
+            SubPlaintext => Some(validate_binary_op_has_correct_operands(
+                ir,
+                i,
+                OutputType::Ciphertext,
+                OutputType::Plaintext,
+            )),
+            Multiply => Some(validate_binary_op_has_correct_operands(
+                ir,
+                i,
+                OutputType::Ciphertext,
+                OutputType::Ciphertext,
+            )),
+            MultiplyPlaintext => Some(validate_binary_op_has_correct_operands(
+                ir,
+                i,
+                OutputType::Ciphertext,
+                OutputType::Plaintext,
+            )),
+            AddPlaintext => Some(validate_binary_op_has_correct_operands(
+                ir,
+                i,
+                OutputType::Ciphertext,
+                OutputType::Plaintext,
+            )),
+            ShiftLeft => None,
+            ShiftRight => None,
+            Negate => Some(validate_unary_op_has_correct_operands(ir, i)),
+            InputCiphertext(_) => None,
+            InputPlaintext(_) => None,
+            OutputCiphertext => Some(validate_unary_op_has_correct_operands(ir, i)),
+            Relinearize => Some(validate_unary_op_has_correct_operands(ir, i)),
+            Literal(_) => None,
+            SwapRows => None,
         };
+
+        if let Some(node_errors) = node_errors {
+            errors.append(
+                &mut node_errors
+                    .into_iter()
+                    .map(|e| IRError::node_error(i, node_info.to_string(), e))
+                    .collect(),
+            )
+        }
     }
 
     errors
@@ -151,7 +97,7 @@ fn validate_binary_op_has_correct_operands(
     let operand_count = ir.graph.edges_directed(index, Direction::Incoming).count();
 
     if operand_count != 2 {
-        return vec![NodeError::WrongOperandCount(2, operand_count)];
+        return vec![NodeError::wrong_operand_count(2, operand_count)];
     }
 
     let mut errors = vec![];
@@ -166,7 +112,7 @@ fn validate_binary_op_has_correct_operands(
             if !ir.graph.contains_node(x) {
                 errors.push(NodeError::MissingParent(x))
             } else if ir.graph[x].output_type() != expected_left_output {
-                errors.push(NodeError::ParentHasIncorrectOutputType(
+                errors.push(NodeError::parent_has_incorrect_output_type(
                     EdgeInfo::LeftOperand,
                     ir.graph[x].output_type(),
                     expected_left_output,
@@ -183,7 +129,7 @@ fn validate_binary_op_has_correct_operands(
             if !ir.graph.contains_node(x) {
                 errors.push(NodeError::MissingParent(x))
             } else if ir.graph[x].output_type() != expected_right_output {
-                errors.push(NodeError::ParentHasIncorrectOutputType(
+                errors.push(NodeError::parent_has_incorrect_output_type(
                     EdgeInfo::RightOperand,
                     ir.graph[x].output_type(),
                     expected_right_output,
@@ -199,7 +145,7 @@ fn validate_unary_op_has_correct_operands(ir: &FheProgram, index: NodeIndex) -> 
     let operand_count = ir.graph.edges_directed(index, Direction::Incoming).count();
 
     if operand_count != 1 {
-        return vec![NodeError::WrongOperandCount(1, operand_count)];
+        return vec![NodeError::wrong_operand_count(1, operand_count)];
     }
 
     let mut errors = vec![];
@@ -354,7 +300,7 @@ mod tests {
         assert_eq!(errors.len(), 1);
         assert_eq!(
             errors[0],
-            IRError::NodeError(
+            IRError::node_error(
                 NodeIndex::from(2),
                 "Add".to_owned(),
                 NodeError::MissingOperand(EdgeInfo::RightOperand)
@@ -401,10 +347,10 @@ mod tests {
         assert_eq!(errors.len(), 1);
         assert_eq!(
             errors[0],
-            IRError::NodeError(
+            IRError::node_error(
                 NodeIndex::from(2),
                 "Add".to_owned(),
-                NodeError::WrongOperandCount(2, 1)
+                NodeError::wrong_operand_count(2, 1)
             )
         );
     }
@@ -458,10 +404,10 @@ mod tests {
         assert_eq!(errors.len(), 1);
         assert_eq!(
             errors[0],
-            IRError::NodeError(
+            IRError::node_error(
                 NodeIndex::from(2),
                 "Add".to_owned(),
-                NodeError::WrongOperandCount(2, 3)
+                NodeError::wrong_operand_count(2, 3)
             )
         );
     }

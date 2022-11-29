@@ -1,4 +1,5 @@
 use crate::{InnerPlaintext, SealData};
+use static_assertions::const_assert;
 use sunscreen_fhe_program::{traversal::*, FheProgram, Literal, Operation::*};
 
 use crossbeam::atomic::AtomicCell;
@@ -15,7 +16,7 @@ use seal_fhe::{
     Ciphertext, Error as SealError, Evaluator, GaloisKeys, Plaintext, RelinearizationKeys,
 };
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, thiserror::Error)]
 /**
  * An error that occurs while running an Fhe Program.
  */
@@ -23,45 +24,49 @@ pub enum FheProgramRunFailure {
     /**
      * An error occurred in a SEAL evaluator.
      */
+    #[error("A SEAL error occurred")]
     SealError,
 
     /**
      * The FHE program needed Galois keys, but none were provided.
      */
+    #[error("Needed Galois keys, but not present")]
     MissingGaloisKeys,
 
     /**
      * The FHE program needed relin keys, but none were provided.
      */
+    #[error("Needed relinearization keys, but not present")]
     MissingRelinearizationKeys,
-
-    /**
-     * Running the FHE program caused a panic unwind.
-     */
-    Panic,
 
     /**
      * Expected the output of an Fhe Program node to be a ciphertext, but
      * it wasn't.
      */
+    #[error("Expected a ciphertext")]
     ExpectedCiphertext,
 
     /**
      * Expected the output of an Fhe Program node to be a plaintext, but
      * it wasn't.
      */
+    #[error("Expected a plaintext")]
     ExpectedPlaintext,
 
     /**
      * A plaintext literal was malformed.
      */
+    #[error("Malformed plaintext")]
     MalformedPlaintext,
 
     /**
      * Internal error: no data found for a parent node.
      */
+    #[error("Internal error: missing data")]
     MissingData,
 }
+
+const_assert!(std::mem::size_of::<FheProgramRunFailure>() <= 16);
 
 impl From<SealError> for FheProgramRunFailure {
     fn from(_: SealError) -> Self {
@@ -379,8 +384,6 @@ where
         .map(|n| AtomicUsize::new(ir.graph.neighbors_directed(n, Direction::Incoming).count()))
         .collect::<Vec<AtomicUsize>>();
 
-    let items_remaining = AtomicUsize::new(ir.graph.node_count());
-
     // We must eagerly evaluate the iterator (i.e. collect) since
     // the dependency counts will be changing during iteration. Lazy
     // iteration causes a race condition between the filter_map closer
@@ -408,7 +411,6 @@ where
                 ir: &FheProgram,
                 deps: &[AtomicUsize],
                 returned_result: &AtomicCell<Result<(), FheProgramRunFailure>>,
-                items_remaining: &AtomicUsize,
                 callback: &F,
             ) where
                 F: Fn(NodeIndex) -> Result<(), FheProgramRunFailure> + Sync + Send,
@@ -435,14 +437,7 @@ where
                         if old_val == 1 {
                             s.spawn(move |_| {
                                 log::trace!("Node {} ready", e.index());
-                                run_internal(
-                                    e,
-                                    ir,
-                                    deps,
-                                    returned_result,
-                                    items_remaining,
-                                    callback,
-                                );
+                                run_internal(e, ir, deps, returned_result, callback);
                             });
                         }
                     }
@@ -451,7 +446,6 @@ where
 
             let deps = &deps;
             let returned_result = &returned_result;
-            let items_remaining = &items_remaining;
             let callback = &callback;
 
             s.spawn(move |_| {
@@ -460,7 +454,6 @@ where
                     ir,
                     deps,
                     returned_result,
-                    items_remaining,
                     callback,
                 );
             });

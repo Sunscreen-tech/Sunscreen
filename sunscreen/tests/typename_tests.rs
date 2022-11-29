@@ -4,14 +4,13 @@ use sunscreen::{
 };
 
 #[test]
-#[allow(clippy::blacklisted_name)]
 fn derive_typename_example() {
     #[derive(DeriveTypeName)]
     struct Foo {
         _cow: String,
     }
 
-    let foo = Foo {
+    let test_data = Foo {
         _cow: "moo".to_string(),
     };
 
@@ -27,5 +26,5 @@ fn derive_typename_example() {
     };
 
     assert_eq!(Foo::type_name(), expected);
-    assert_eq!(foo.type_name_instance(), expected);
+    assert_eq!(test_data.type_name_instance(), expected);
 }

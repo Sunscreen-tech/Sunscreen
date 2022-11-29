@@ -617,7 +617,7 @@ impl FheProgram {
         let errors = validation::validate_ir(self);
 
         if !errors.is_empty() {
-            return Err(Error::IRError(errors));
+            return Err(Error::ir_error(&errors));
         }
 
         Ok(())

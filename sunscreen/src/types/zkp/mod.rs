@@ -95,42 +95,6 @@ where
     fn constraint_eq(lhs: ProgramNode<Self>, rhs: ProgramNode<Self>) -> ProgramNode<Self>;
 }
 
-/*
-pub trait ConstrainEqVarConst
-where Self: Sized + ZkpType + IntoProgramNode
-{
-    /**
-     * Asserts that lhs equals rhs.
-     */
-    fn constraint_eq(lhs: ProgramNode<Self>, rhs: Self) -> ProgramNode<Self>;
-}
-
-impl<T> ConstrainEqVarConst for T
-where T: Sized + ZkpType + IntoProgramNode
-{
-    fn constraint_eq(lhs: ProgramNode<Self>, rhs: Self) -> ProgramNode<Self> {
-        lhs.constrain_eq(rhs.into_program_node())
-    }
-}
-
-pub trait ConstrainEqConstVar
-where Self: Sized + ZkpType + IntoProgramNode
-{
-    /**
-     * Asserts that lhs equals rhs.
-     */
-    fn constraint_eq(lhs: Self, rhs: ProgramNode<Self>) -> ProgramNode<Self>;
-}
-
-impl<T> ConstrainEqConstVar for T
-where T: Sized + ZkpType + IntoProgramNode
-{
-    fn constraint_eq(lhs: Self, rhs: ProgramNode<Self>) -> ProgramNode<Self> {
-        lhs.into_program_node().constrain_eq(rhs)
-    }
-}
- */
-
 /**
  * The given FHE type can be turned into a program node. Useful for declaring
  * constants.

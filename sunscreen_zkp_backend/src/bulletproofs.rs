@@ -342,13 +342,13 @@ fn try_uint_to_scalar<const N: usize>(x: &UInt<N>) -> Result<Scalar> {
 
     for i in upper {
         if *i != 0 {
-            return Err(Error::OutOfRange(x.to_string()));
+            return Err(Error::out_of_range(&x.to_string()));
         }
     }
 
     let scalar = Scalar::from_canonical_bytes(scalar_data);
 
-    scalar.ok_or_else(|| Error::OutOfRange(x.to_string()))
+    scalar.ok_or_else(|| Error::out_of_range(&x.to_string()))
 }
 
 #[cfg(test)]

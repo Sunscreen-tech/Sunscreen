@@ -13,3 +13,4 @@ semver = "1.0.14"
 serde = { version = "1.0.147", features = ["derive"] }
 syn = { version = "1.0.103", features = ["full"] }
 thiserror = "1.0.37"
+static_assertions = "1.1.0"

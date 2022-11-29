@@ -1404,6 +1404,7 @@ dependencies = [
  "quote",
  "semver",
  "serde",
+ "static_assertions",
  "syn",
  "thiserror",
 ]
@@ -1465,6 +1466,7 @@ dependencies = [
  "merlin",
  "petgraph",
  "serde",
+ "static_assertions",
  "sunscreen_compiler_common",
  "thiserror",
 ]

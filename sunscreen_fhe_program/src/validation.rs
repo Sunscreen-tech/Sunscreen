@@ -1,5 +1,5 @@
-use crate::{Operation::*, OutputTypeTrait};
 use crate::{EdgeInfo, FheProgram, IRError, NodeError, OutputType};
+use crate::{Operation::*, OutputTypeTrait};
 use petgraph::{algo::greedy_feedback_arc_set, stable_graph::NodeIndex, visit::EdgeRef, Direction};
 
 pub(crate) fn validate_ir(ir: &FheProgram) -> Vec<IRError> {
@@ -191,7 +191,7 @@ pub fn get_unary_operand(ir: &FheProgram, index: NodeIndex) -> Option<NodeIndex>
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{SchemeType, FheProgramTrait};
+    use crate::{FheProgramTrait, SchemeType};
 
     // FheProgram objects created with the API are guaranteed
     // to never produce errors. We may only deserialize an erroneous IR.

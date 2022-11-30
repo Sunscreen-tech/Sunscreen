@@ -1,11 +1,11 @@
 use core::hash::Hash;
-use std::ops::Deref;
 use serde::{Deserialize, Serialize};
+use std::ops::Deref;
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 /**
  * A non-NaN floating point value that defines [`Hash`] and [`Eq`] traits.
- * 
+ *
  * Two values are [`Eq`] if their bit patterns are the same and
  * [`Hash`] hashes the value as if it were a u64.
  */
@@ -22,7 +22,7 @@ impl Deref for NonNaNF64 {
 impl NonNaNF64 {
     /**
      * Creates a new NonNaNF64.
-     * 
+     *
      * # Panics
      * If val is NaN.
      */
@@ -47,7 +47,7 @@ impl PartialEq for NonNaNF64 {
     }
 }
 
-impl Eq for NonNaNF64 { }
+impl Eq for NonNaNF64 {}
 
 #[derive(Debug, Clone, Hash, Serialize, Deserialize, PartialEq, Eq)]
 /**

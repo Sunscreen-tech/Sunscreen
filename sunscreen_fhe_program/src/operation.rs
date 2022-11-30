@@ -99,15 +99,31 @@ impl ToString for Operation {
 
 impl OperationTrait for Operation {
     fn is_binary(&self) -> bool {
-        matches!(self, Self::Multiply | Self::MultiplyPlaintext | Self::Add | Self::AddPlaintext | Self::Sub | Self::SubPlaintext | Self::ShiftLeft | Self::ShiftRight)
+        matches!(
+            self,
+            Self::Multiply
+                | Self::MultiplyPlaintext
+                | Self::Add
+                | Self::AddPlaintext
+                | Self::Sub
+                | Self::SubPlaintext
+                | Self::ShiftLeft
+                | Self::ShiftRight
+        )
     }
 
     fn is_commutative(&self) -> bool {
-        matches!(self, Self::Multiply | Self::MultiplyPlaintext | Self::Add | Self::AddPlaintext)
+        matches!(
+            self,
+            Self::Multiply | Self::MultiplyPlaintext | Self::Add | Self::AddPlaintext
+        )
     }
 
     fn is_unary(&self) -> bool {
-        matches!(self, Self::Negate | Self::Relinearize | Self::SwapRows)
+        matches!(
+            self,
+            Self::Negate | Self::Relinearize | Self::SwapRows | Self::OutputCiphertext
+        )
     }
 
     fn is_unordered(&self) -> bool {

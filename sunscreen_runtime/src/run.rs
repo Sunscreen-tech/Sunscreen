@@ -1,7 +1,7 @@
 use crate::{InnerPlaintext, SealData};
 use static_assertions::const_assert;
-use sunscreen_fhe_program::{FheProgram, Literal, Operation::*};
 use sunscreen_compiler_common::{GraphQuery, GraphQueryError};
+use sunscreen_fhe_program::{FheProgram, Literal, Operation::*};
 
 use crossbeam::atomic::AtomicCell;
 use petgraph::{stable_graph::NodeIndex, Direction};
@@ -70,7 +70,7 @@ pub enum FheProgramRunFailure {
      * An error occurred when trying to query the graph.
      */
     #[error("Graph query error {0}")]
-    GraphQueryError(#[from] GraphQueryError)
+    GraphQueryError(#[from] GraphQueryError),
 }
 
 const_assert!(std::mem::size_of::<FheProgramRunFailure>() <= 16);
@@ -537,7 +537,7 @@ where
 mod tests {
     use super::*;
     use seal_fhe::*;
-    use sunscreen_fhe_program::{SchemeType, FheProgramTrait};
+    use sunscreen_fhe_program::{FheProgramTrait, SchemeType};
 
     fn setup_scheme(
         degree: u64,

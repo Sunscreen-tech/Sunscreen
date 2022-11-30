@@ -14,8 +14,8 @@ use petgraph::{
     algo::toposort,
     algo::tred::*,
     graph::{Graph, NodeIndex},
-    stable_graph::{StableGraph},
-    visit::{IntoNeighbors},
+    stable_graph::StableGraph,
+    visit::IntoNeighbors,
 };
 use serde::{Deserialize, Serialize};
 
@@ -142,7 +142,7 @@ pub trait OutputTypeTrait {
     fn output_type(&self) -> OutputType;
 }
 
-impl OutputTypeTrait for  NodeInfo<Operation> {
+impl OutputTypeTrait for NodeInfo<Operation> {
     fn output_type(&self) -> OutputType {
         match self.operation {
             Operation::InputPlaintext(_) => OutputType::Plaintext,
@@ -238,7 +238,6 @@ pub trait FheProgramTrait {
      */
     fn append_rotate_right(&mut self, x: NodeIndex, y: NodeIndex) -> NodeIndex;
 
-
     /**
      * Returns the node indices of output ciphertexts
      */
@@ -326,9 +325,11 @@ impl FheProgramTrait for FheProgram {
     }
 
     fn get_outputs(&self) -> Box<dyn Iterator<Item = NodeIndex> + '_> {
-        Box::new(self.graph
-            .node_indices()
-            .filter(|g| matches!(self.graph[*g].operation, Operation::OutputCiphertext)))
+        Box::new(
+            self.graph
+                .node_indices()
+                .filter(|g| matches!(self.graph[*g].operation, Operation::OutputCiphertext)),
+        )
     }
 
     fn num_inputs(&self) -> usize {
@@ -456,19 +457,18 @@ impl From<NodeIndex> for TransformNodeIndex {
 
 #[cfg(test)]
 mod tests {
-    use petgraph::{algo::is_isomorphic_matching};
+    use petgraph::algo::is_isomorphic_matching;
 
     use super::*;
 
     fn eq(a: &FheProgram, b: &FheProgram) -> bool {
-                is_isomorphic_matching(
-                    &Graph::from(a.graph.0.clone()),
-                    &Graph::from(b.graph.0.clone()),
-                    |n1, n2| n1 == n2,
-                    |e1, e2| e1 == e2,
-                )
-            }
-
+        is_isomorphic_matching(
+            &Graph::from(a.graph.0.clone()),
+            &Graph::from(b.graph.0.clone()),
+            |n1, n2| n1 == n2,
+            |e1, e2| e1 == e2,
+        )
+    }
 
     #[test]
     fn can_prune_ir() {

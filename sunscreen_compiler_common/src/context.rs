@@ -23,7 +23,10 @@ where
     pub operation: O,
 }
 
-impl<O> NodeInfo<O> where O: Operation {
+impl<O> NodeInfo<O>
+where
+    O: Operation,
+{
     /**
      * Creates a new [`NodeInfo`].
      */
@@ -43,11 +46,11 @@ where
 
 impl<O> ToString for NodeInfo<O>
 where
-    O: Operation
+    O: Operation,
 {
     fn to_string(&self) -> String {
         self.render()
-    }   
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, Serialize)]

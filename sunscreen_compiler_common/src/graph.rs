@@ -472,14 +472,17 @@ where
 mod tests {
     use std::convert::Infallible;
 
-    use crate::{Operation as OperationTrait, Context, transforms::{GraphTransforms, Transform}};
     use super::*;
+    use crate::{
+        transforms::{GraphTransforms, Transform},
+        Context, Operation as OperationTrait,
+    };
 
     #[derive(Clone, Debug, Hash, PartialEq, Eq)]
     enum Operation {
         Add,
         Mul,
-        In
+        In,
     }
 
     impl OperationTrait for Operation {
@@ -524,7 +527,8 @@ mod tests {
             visited.push(n);
 
             Ok::<_, Infallible>(())
-        }).unwrap();
+        })
+        .unwrap();
 
         assert_eq!(
             visited,
@@ -551,15 +555,9 @@ mod tests {
             .collect::<Vec<(NodeIndex, &NodeInfo<Operation>)>>();
 
         assert_eq!(nodes[0].1.operation, Operation::In);
-        assert_eq!(
-            nodes[1].1.operation,
-            Operation::In
-        );
+        assert_eq!(nodes[1].1.operation, Operation::In);
         assert_eq!(nodes[2].1.operation, Operation::Add);
-        assert_eq!(
-            nodes[3].1.operation,
-            Operation::In
-        );
+        assert_eq!(nodes[3].1.operation, Operation::In);
         assert_eq!(nodes[4].1.operation, Operation::Mul);
 
         assert_eq!(
@@ -607,7 +605,8 @@ mod tests {
         reverse_traverse(&ir.graph, |_, n| {
             visited.push(n);
             Ok::<_, Infallible>(())
-        }).unwrap();
+        })
+        .unwrap();
 
         assert_eq!(
             visited,
@@ -638,7 +637,8 @@ mod tests {
             } else {
                 Ok::<_, Infallible>(GraphTransforms::default())
             }
-        }).unwrap();
+        })
+        .unwrap();
 
         assert_eq!(
             visited,
@@ -663,10 +663,17 @@ mod tests {
 
             // Delete the addition
             if n.index() == 2 {
-                let mut transforms: GraphTransforms<NodeInfo<Operation>, EdgeInfo> = GraphTransforms::new();
-                let mul = transforms.push(Transform::AddNode(NodeInfo { operation: Operation::Mul }));
+                let mut transforms: GraphTransforms<NodeInfo<Operation>, EdgeInfo> =
+                    GraphTransforms::new();
+                let mul = transforms.push(Transform::AddNode(NodeInfo {
+                    operation: Operation::Mul,
+                }));
                 transforms.push(Transform::AddEdge(n.into(), mul.into(), EdgeInfo::Left));
-                transforms.push(Transform::AddEdge(NodeIndex::from(1).into(), mul.into(), EdgeInfo::Right));
+                transforms.push(Transform::AddEdge(
+                    NodeIndex::from(1).into(),
+                    mul.into(),
+                    EdgeInfo::Right,
+                ));
 
                 transforms.apply(&mut create_simple_dag().graph.0);
 
@@ -674,7 +681,8 @@ mod tests {
             } else {
                 Ok::<_, Infallible>(GraphTransforms::default())
             }
-        }).unwrap();
+        })
+        .unwrap();
 
         assert_eq!(
             visited,

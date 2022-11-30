@@ -209,7 +209,7 @@ mod tests {
     #[test]
     fn error_for_cycle() {
         let ir_str = serde_json::json!({
-          "scheme": "Bfv",
+          "data": "Bfv",
           "graph": {
             "nodes": [
               {
@@ -232,17 +232,17 @@ mod tests {
               [
                 0,
                 2,
-                "LeftOperand"
+                "Left"
               ],
               [
                 1,
                 2,
-                "RightOperand"
+                "Right"
               ],
               [
                 2,
                 0,
-                "RightOperand"
+                "Right"
               ]
             ]
           }
@@ -259,7 +259,7 @@ mod tests {
     #[test]
     fn add_wrong_operands() {
         let ir_str = serde_json::json!({
-          "scheme": "Bfv",
+          "data": "Bfv",
           "graph": {
             "nodes": [
               {
@@ -282,12 +282,12 @@ mod tests {
               [
                 0,
                 2,
-                "LeftOperand"
+                "Left"
               ],
               [
                 1,
                 2,
-                "LeftOperand"
+                "Left"
               ],
             ]
           }

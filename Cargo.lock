@@ -1391,6 +1391,7 @@ dependencies = [
  "num",
  "petgraph",
  "seal_fhe",
+ "sunscreen_compiler_common",
  "sunscreen_fhe_program",
  "sunscreen_runtime",
 ]

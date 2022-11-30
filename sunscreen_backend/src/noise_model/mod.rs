@@ -1,6 +1,7 @@
 use crossbeam::atomic::AtomicCell;
-use sunscreen_fhe_program::{traversal::*, FheProgram, Literal, Operation::*};
+use sunscreen_fhe_program::{FheProgram, Literal, Operation::*};
 use sunscreen_runtime::traverse;
+use sunscreen_compiler_common::{GraphQuery};
 
 use std::collections::HashMap;
 
@@ -56,12 +57,13 @@ pub fn predict_noise(model: &(dyn NoiseModel + Sync), fhe_program: &FheProgram) 
         fhe_program,
         |node_id| {
             let node = &fhe_program.graph[node_id];
+            let query = GraphQuery::new(&fhe_program.graph.0);
 
             let noise = match &node.operation {
                 InputCiphertext(_) => model.encrypt(),
                 InputPlaintext(_) => 0.0,
                 Add => {
-                    let (left, right) = get_left_right_operands(fhe_program, node_id);
+                    let (left, right) = query.get_binary_operands(node_id).unwrap();
 
                     model.add_ct_ct(
                         noise_levels[left.index()].load(),

@@ -189,7 +189,7 @@ where
     }
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 /**
  * A compilation context. This stores the current parse graph.
  */

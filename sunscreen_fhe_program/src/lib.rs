@@ -14,9 +14,8 @@ use petgraph::{
     algo::toposort,
     algo::tred::*,
     graph::{Graph, NodeIndex},
-    stable_graph::{Edges, Neighbors, StableGraph},
+    stable_graph::{StableGraph},
     visit::{IntoNeighbors},
-    Directed, Direction,
 };
 use serde::{Deserialize, Serialize};
 
@@ -25,8 +24,7 @@ pub use literal::*;
 pub use operation::*;
 pub use seal_fhe::SecurityLevel;
 
-use TransformNodeIndex::*;
-use sunscreen_compiler_common::{CompilationResult, Context, EdgeInfo, transforms::Transform, TransformList as TransformListTrait, NodeInfo};
+use sunscreen_compiler_common::{CompilationResult, Context, EdgeInfo, NodeInfo};
 
 use std::collections::HashSet;
 
@@ -458,8 +456,7 @@ impl From<NodeIndex> for TransformNodeIndex {
 
 #[cfg(test)]
 mod tests {
-    use petgraph::{visit::IntoNodeIdentifiers, algo::is_isomorphic_matching};
-    use sunscreen_compiler_common::{forward_traverse, transforms::GraphTransforms};
+    use petgraph::{algo::is_isomorphic_matching};
 
     use super::*;
 

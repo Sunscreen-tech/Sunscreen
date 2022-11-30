@@ -1,6 +1,7 @@
 use crate::{InnerPlaintext, SealData};
 use static_assertions::const_assert;
-use sunscreen_fhe_program::{traversal::*, FheProgram, Literal, Operation::*};
+use sunscreen_fhe_program::{FheProgram, Literal, Operation::*};
+use sunscreen_compiler_common::{GraphQuery, GraphQueryError};
 
 use crossbeam::atomic::AtomicCell;
 use petgraph::{stable_graph::NodeIndex, Direction};
@@ -64,6 +65,12 @@ pub enum FheProgramRunFailure {
      */
     #[error("Internal error: missing data")]
     MissingData,
+
+    /**
+     * An error occurred when trying to query the graph.
+     */
+    #[error("Graph query error {0}")]
+    GraphQueryError(#[from] GraphQueryError)
 }
 
 const_assert!(std::mem::size_of::<FheProgramRunFailure>() <= 16);
@@ -154,6 +161,7 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
         ir,
         |index| {
             let node = &ir.graph[index];
+            let query = GraphQuery::new(&ir.graph.0);
 
             match &node.operation {
                 InputCiphertext(id) => {
@@ -163,7 +171,7 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
                     data[index.index()].store(Some(inputs[*id].clone()));
                 }
                 ShiftLeft => {
-                    let (left, right) = get_left_right_operands(ir, index);
+                    let (left, right) = query.get_binary_operands(index)?;
 
                     let a = get_ciphertext(&data, left.index())?;
                     let b = match ir.graph[right].operation {
@@ -185,7 +193,7 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
                     data[index.index()].store(Some(Arc::new(c.into())));
                 }
                 ShiftRight => {
-                    let (left, right) = get_left_right_operands(ir, index);
+                    let (left, right) = query.get_binary_operands(index)?;
 
                     let a = get_ciphertext(&data, left.index())?;
                     let b = match ir.graph[right].operation {
@@ -207,7 +215,7 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
                     data[index.index()].store(Some(Arc::new(c.into())));
                 }
                 Add => {
-                    let (left, right) = get_left_right_operands(ir, index);
+                    let (left, right) = query.get_binary_operands(index)?;
 
                     let a = get_ciphertext(&data, left.index())?;
                     let b = get_ciphertext(&data, right.index())?;
@@ -217,7 +225,7 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
                     data[index.index()].store(Some(Arc::new(c.into())));
                 }
                 AddPlaintext => {
-                    let (left, right) = get_left_right_operands(ir, index);
+                    let (left, right) = query.get_binary_operands(index)?;
 
                     let a = get_ciphertext(&data, left.index())?;
                     let b = get_plaintext(&data, right.index())?;
@@ -227,7 +235,7 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
                     data[index.index()].store(Some(Arc::new(c.into())));
                 }
                 Multiply => {
-                    let (left, right) = get_left_right_operands(ir, index);
+                    let (left, right) = query.get_binary_operands(index)?;
 
                     let a = get_ciphertext(&data, left.index())?;
                     let b = get_ciphertext(&data, right.index())?;
@@ -237,7 +245,7 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
                     data[index.index()].store(Some(Arc::new(c.into())));
                 }
                 MultiplyPlaintext => {
-                    let (left, right) = get_left_right_operands(ir, index);
+                    let (left, right) = query.get_binary_operands(index)?;
 
                     let a = get_ciphertext(&data, left.index())?;
                     let b = get_plaintext(&data, right.index())?;
@@ -251,7 +259,7 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
                         .as_ref()
                         .ok_or(FheProgramRunFailure::MissingGaloisKeys)?;
 
-                    let input = get_unary_operand(ir, index);
+                    let input = query.get_unary_operand(index)?;
 
                     let x = get_ciphertext(&data, input.index())?;
 
@@ -264,7 +272,7 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
                         .as_ref()
                         .ok_or(FheProgramRunFailure::MissingRelinearizationKeys)?;
 
-                    let input = get_unary_operand(ir, index);
+                    let input = query.get_unary_operand(index)?;
 
                     let a = get_ciphertext(&data, input.index())?;
 
@@ -273,7 +281,7 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
                     data[index.index()].store(Some(Arc::new(c.into())));
                 }
                 Negate => {
-                    let x_id = get_unary_operand(ir, index);
+                    let x_id = query.get_unary_operand(index)?;
 
                     let x = get_ciphertext(&data, x_id.index())?;
 
@@ -282,7 +290,7 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
                     data[index.index()].store(Some(Arc::new(y.into())));
                 }
                 Sub => {
-                    let (left, right) = get_left_right_operands(ir, index);
+                    let (left, right) = query.get_binary_operands(index)?;
 
                     let a = get_ciphertext(&data, left.index())?;
                     let b = get_ciphertext(&data, right.index())?;
@@ -292,7 +300,7 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
                     data[index.index()].store(Some(Arc::new(c.into())));
                 }
                 SubPlaintext => {
-                    let (left, right) = get_left_right_operands(ir, index);
+                    let (left, right) = query.get_binary_operands(index)?;
 
                     let a = get_ciphertext(&data, left.index())?;
                     let b = get_plaintext(&data, right.index())?;
@@ -319,7 +327,7 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
                     }
                 }
                 OutputCiphertext => {
-                    let input = get_unary_operand(ir, index);
+                    let input = query.get_unary_operand(index)?;
 
                     let a = get_data(&data, input.index())?;
 
@@ -369,6 +377,8 @@ pub fn traverse<F>(
 where
     F: Fn(NodeIndex) -> Result<(), FheProgramRunFailure> + Sync + Send,
 {
+    use sunscreen_fhe_program::FheProgramTrait;
+
     let ir = if let Some(x) = run_to {
         Cow::Owned(ir.prune(&[x])) // MOO
     } else {

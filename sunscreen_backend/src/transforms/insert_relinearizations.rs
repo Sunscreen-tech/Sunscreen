@@ -1,31 +1,42 @@
-use sunscreen_fhe_program::{FheProgram, GraphQuery, IRTransform::*, Operation::*, TransformList};
+use std::convert::Infallible;
+
+use sunscreen_fhe_program::{FheProgram, Operation::{*, self}};
+use sunscreen_compiler_common::{GraphQuery, NodeInfo, EdgeInfo, transforms::{GraphTransforms, Transform}, forward_traverse_mut};
 
 use petgraph::{stable_graph::NodeIndex, visit::EdgeRef, Direction};
 
-pub fn apply_insert_relinearizations(ir: &mut FheProgram) {
-    let insert_relin = |id: NodeIndex, query: GraphQuery| {
-        let mut transforms = TransformList::new();
+type FheGraphQuery<'a> = GraphQuery<'a, NodeInfo<Operation>, EdgeInfo>;
 
-        let relin_node = transforms.push(AppendRelinearize(id.into()));
+pub fn apply_insert_relinearizations(ir: &mut FheProgram) {
+    let insert_relin = |id: NodeIndex, query: FheGraphQuery| {
+        let mut transforms = GraphTransforms::new();
+
+        let relin_node = transforms.push(Transform::AddNode(NodeInfo { operation: Operation::Relinearize }));
 
         for e in query.edges_directed(id, Direction::Outgoing) {
             let operand_type = e.weight();
 
-            transforms.push(RemoveEdge(id.into(), e.target().into()));
-            transforms.push(AddEdge(relin_node.into(), e.target().into(), *operand_type));
+            transforms.push(Transform::RemoveEdge(id.into(), e.target().into()));
+            transforms.push(Transform::AddEdge(relin_node.into(), e.target().into(), *operand_type));
         }
 
         transforms
     };
 
-    ir.forward_traverse(|query, id| match query.get_node(id).operation {
-        // We only need to insert relinearizations for ciphertext
-        // multiplications. Plaintext multiplications don't increase
-        // the number of polynomials (see
-        // multiply_plaintext_does_not_increase_polynomials) test in
-        // assumptions.rs
-        Multiply => insert_relin(id, query),
-        _ => TransformList::default(),
+    forward_traverse_mut(&mut ir.graph.0, |query, id| {
+        // Id is given to us, so the node should exist. Just 
+        // unwrap.
+        let transforms = match query.get_node(id).unwrap().operation {
+            // We only need to insert relinearizations for ciphertext
+            // multiplications. Plaintext multiplications don't increase
+            // the number of polynomials (see
+            // multiply_plaintext_does_not_increase_polynomials) test in
+            // assumptions.rs
+            Multiply => insert_relin(id, query),
+            _ => GraphTransforms::default(),
+        };
+
+        Ok::<_, Infallible>(transforms)
     });
 }
 
@@ -33,18 +44,19 @@ pub fn apply_insert_relinearizations(ir: &mut FheProgram) {
 mod tests {
     use super::*;
     use petgraph::stable_graph::NodeIndex;
-    use sunscreen_fhe_program::{GraphQuery, Literal as FheProgramLiteral, Operation, SchemeType};
+    use sunscreen_fhe_program::{Literal as FheProgramLiteral, Operation, SchemeType, FheProgramTrait};
+    use sunscreen_compiler_common::{GraphQuery};
 
     fn create_test_dag() -> FheProgram {
         let mut ir = FheProgram::new(SchemeType::Bfv);
 
-        let ct = ir.append_input_ciphertext(0);
-        let l1 = ir.append_input_literal(FheProgramLiteral::from(7i64));
-        let add = ir.append_add(ct, l1);
-        let l2 = ir.append_input_literal(FheProgramLiteral::from(5u64));
-        let mul = ir.append_multiply(add, l2);
-        let add_2 = ir.append_add(mul, l2);
-        ir.append_multiply(add_2, ct);
+        let ct = ir.add_input_ciphertext(0);
+        let l1 = ir.add_input_literal(FheProgramLiteral::from(7i64));
+        let add = ir.add_add(ct, l1);
+        let l2 = ir.add_input_literal(FheProgramLiteral::from(5u64));
+        let mul = ir.add_multiply(add, l2);
+        let add_2 = ir.add_add(mul, l2);
+        ir.add_multiply(add_2, ct);
 
         ir
     }
@@ -59,12 +71,12 @@ mod tests {
 
         assert_eq!(ir.graph.node_count(), 9);
 
-        let query = GraphQuery::new(&ir);
+        let query = GraphQuery::new(&ir.graph.0);
 
         let relin_nodes = ir
             .graph
             .node_indices()
-            .filter(|i| matches!(query.get_node(*i).operation, Operation::Relinearize))
+            .filter(|i| matches!(query.get_node(*i).unwrap().operation, Operation::Relinearize))
             .collect::<Vec<NodeIndex>>();
 
         // Should have 2 relin nodes added.
@@ -79,7 +91,7 @@ mod tests {
         assert!(relin_nodes.iter().all(|id| {
             query
                 .neighbors_directed(*id, Direction::Incoming)
-                .map(|id| query.get_node(id))
+                .map(|id| query.get_node(id).unwrap())
                 .all(|node| matches!(node.operation, Operation::Multiply))
         }));
 
@@ -102,6 +114,6 @@ mod tests {
         // The first relin node should point to add_2
         assert!(query
             .neighbors_directed(relin_nodes[0], Direction::Outgoing)
-            .all(|i| { matches!(query.get_node(i).operation, Operation::Add) }),);
+            .all(|i| { matches!(query.get_node(i).unwrap().operation, Operation::Add) }),);
     }
 }

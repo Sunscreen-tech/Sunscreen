@@ -8,6 +8,7 @@ use crate::{
     SealPlaintext, TryFromPlaintext, TryIntoPlaintext, TypeNameInstance,
 };
 
+use sunscreen_fhe_program::FheProgramTrait;
 use sunscreen_fhe_program::SchemeType;
 
 use seal_fhe::{

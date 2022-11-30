@@ -1,8 +1,9 @@
 use serde::{Deserialize, Serialize};
+use sunscreen_compiler_common::Operation as OperationTrait;
 
 use crate::Literal;
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Hash, Deserialize, PartialEq, Eq)]
 /**
  * An operation in the execution graph.
  */
@@ -88,4 +89,28 @@ pub enum Operation {
      * Represents a ciphertext output for the FHE program.
      */
     OutputCiphertext,
+}
+
+impl ToString for Operation {
+    fn to_string(&self) -> String {
+        format!("{self:#?}")
+    }
+}
+
+impl OperationTrait for Operation {
+    fn is_binary(&self) -> bool {
+        matches!(self, Self::Multiply | Self::MultiplyPlaintext | Self::Add | Self::AddPlaintext | Self::Sub | Self::SubPlaintext | Self::ShiftLeft | Self::ShiftRight)
+    }
+
+    fn is_commutative(&self) -> bool {
+        matches!(self, Self::Multiply | Self::MultiplyPlaintext | Self::Add | Self::AddPlaintext)
+    }
+
+    fn is_unary(&self) -> bool {
+        matches!(self, Self::Negate | Self::Relinearize | Self::SwapRows)
+    }
+
+    fn is_unordered(&self) -> bool {
+        false
+    }
 }

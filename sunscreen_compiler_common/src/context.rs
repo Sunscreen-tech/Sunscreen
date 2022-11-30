@@ -32,6 +32,15 @@ where
     }
 }
 
+impl<O> ToString for NodeInfo<O>
+where
+    O: Operation
+{
+    fn to_string(&self) -> String {
+        self.render()
+    }   
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, Serialize)]
 /**
  * Information about how one compiler graph node relates to another.
@@ -180,6 +189,7 @@ where
     }
 }
 
+#[derive(Serialize, Deserialize)]
 /**
  * A compilation context. This stores the current parse graph.
  */

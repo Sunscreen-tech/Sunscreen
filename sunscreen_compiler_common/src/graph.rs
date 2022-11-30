@@ -467,3 +467,225 @@ where
         Ok(parent_edges.iter().map(|x| x.source()).collect())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::convert::Infallible;
+
+    use crate::{Operation as OperationTrait, Context, transforms::{GraphTransforms, Transform}};
+    use super::*;
+
+    #[derive(Clone, Debug, Hash, PartialEq, Eq)]
+    enum Operation {
+        Add,
+        Mul,
+        In
+    }
+
+    impl OperationTrait for Operation {
+        fn is_binary(&self) -> bool {
+            matches!(self, Self::Add | Self::Mul)
+        }
+
+        fn is_commutative(&self) -> bool {
+            matches!(self, Self::Add | Self::Mul)
+        }
+
+        fn is_unary(&self) -> bool {
+            false
+        }
+
+        fn is_unordered(&self) -> bool {
+            false
+        }
+    }
+
+    type TestGraph = Context<Operation, ()>;
+
+    fn create_simple_dag() -> TestGraph {
+        let mut graph = TestGraph::new(());
+
+        let in_1 = graph.add_node(Operation::In);
+        let in_2 = graph.add_node(Operation::In);
+        let add = graph.add_binary_operation(Operation::Add, in_1, in_2);
+        let in_3 = graph.add_node(Operation::In);
+        graph.add_binary_operation(Operation::Mul, add, in_3);
+
+        graph
+    }
+
+    #[test]
+    fn can_forward_traverse() {
+        let ir = create_simple_dag();
+
+        let mut visited = vec![];
+
+        forward_traverse(&ir.graph, |_, n| {
+            visited.push(n);
+
+            Ok::<_, Infallible>(())
+        }).unwrap();
+
+        assert_eq!(
+            visited,
+            vec![
+                NodeIndex::from(3),
+                NodeIndex::from(1),
+                NodeIndex::from(0),
+                NodeIndex::from(2),
+                NodeIndex::from(4)
+            ]
+        );
+    }
+
+    #[test]
+    fn can_build_simple_dag() {
+        let ir = create_simple_dag();
+
+        assert_eq!(ir.graph.node_count(), 5);
+
+        let nodes = ir
+            .graph
+            .node_identifiers()
+            .map(|i| (i, &ir.graph[i]))
+            .collect::<Vec<(NodeIndex, &NodeInfo<Operation>)>>();
+
+        assert_eq!(nodes[0].1.operation, Operation::In);
+        assert_eq!(
+            nodes[1].1.operation,
+            Operation::In
+        );
+        assert_eq!(nodes[2].1.operation, Operation::Add);
+        assert_eq!(
+            nodes[3].1.operation,
+            Operation::In
+        );
+        assert_eq!(nodes[4].1.operation, Operation::Mul);
+
+        assert_eq!(
+            ir.graph
+                .neighbors_directed(nodes[0].0, Direction::Outgoing)
+                .next()
+                .unwrap(),
+            nodes[2].0
+        );
+        assert_eq!(
+            ir.graph
+                .neighbors_directed(nodes[1].0, Direction::Outgoing)
+                .next()
+                .unwrap(),
+            nodes[2].0
+        );
+        assert_eq!(
+            ir.graph
+                .neighbors_directed(nodes[2].0, Direction::Outgoing)
+                .next()
+                .unwrap(),
+            nodes[4].0
+        );
+        assert_eq!(
+            ir.graph
+                .neighbors_directed(nodes[3].0, Direction::Outgoing)
+                .next()
+                .unwrap(),
+            nodes[4].0
+        );
+        assert_eq!(
+            ir.graph
+                .neighbors_directed(nodes[4].0, Direction::Outgoing)
+                .next(),
+            None
+        );
+    }
+
+    #[test]
+    fn can_reverse_traverse() {
+        let ir = create_simple_dag();
+
+        let mut visited = vec![];
+
+        reverse_traverse(&ir.graph, |_, n| {
+            visited.push(n);
+            Ok::<_, Infallible>(())
+        }).unwrap();
+
+        assert_eq!(
+            visited,
+            vec![
+                NodeIndex::from(4),
+                NodeIndex::from(2),
+                NodeIndex::from(0),
+                NodeIndex::from(1),
+                NodeIndex::from(3)
+            ]
+        );
+    }
+
+    #[test]
+    fn can_delete_during_traversal() {
+        let mut ir = create_simple_dag();
+
+        let mut visited = vec![];
+
+        reverse_traverse_mut(&mut ir.graph, |_, n| {
+            visited.push(n);
+            // Delete the addition
+            if n.index() == 2 {
+                let mut transforms = GraphTransforms::new();
+                transforms.push(Transform::RemoveNode(n.into()));
+
+                Ok::<_, Infallible>(transforms)
+            } else {
+                Ok::<_, Infallible>(GraphTransforms::default())
+            }
+        }).unwrap();
+
+        assert_eq!(
+            visited,
+            vec![
+                NodeIndex::from(4),
+                NodeIndex::from(2),
+                NodeIndex::from(0),
+                NodeIndex::from(1),
+                NodeIndex::from(3)
+            ]
+        );
+    }
+
+    #[test]
+    fn can_append_during_traversal() {
+        let mut ir = create_simple_dag();
+
+        let mut visited = vec![];
+
+        forward_traverse_mut(&mut ir.graph, |_, n| {
+            visited.push(n);
+
+            // Delete the addition
+            if n.index() == 2 {
+                let mut transforms: GraphTransforms<NodeInfo<Operation>, EdgeInfo> = GraphTransforms::new();
+                let mul = transforms.push(Transform::AddNode(NodeInfo { operation: Operation::Mul }));
+                transforms.push(Transform::AddEdge(n.into(), mul.into(), EdgeInfo::Left));
+                transforms.push(Transform::AddEdge(NodeIndex::from(1).into(), mul.into(), EdgeInfo::Right));
+
+                transforms.apply(&mut create_simple_dag().graph.0);
+
+                Ok::<_, Infallible>(transforms)
+            } else {
+                Ok::<_, Infallible>(GraphTransforms::default())
+            }
+        }).unwrap();
+
+        assert_eq!(
+            visited,
+            vec![
+                NodeIndex::from(3),
+                NodeIndex::from(1),
+                NodeIndex::from(0),
+                NodeIndex::from(2),
+                NodeIndex::from(4),
+                NodeIndex::from(5),
+            ]
+        );
+    }
+}

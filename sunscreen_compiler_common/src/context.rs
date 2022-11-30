@@ -23,6 +23,15 @@ where
     pub operation: O,
 }
 
+impl<O> NodeInfo<O> where O: Operation {
+    /**
+     * Creates a new [`NodeInfo`].
+     */
+    pub fn new(operation: O) -> Self {
+        Self { operation }
+    }
+}
+
 impl<O> Render for NodeInfo<O>
 where
     O: Operation,

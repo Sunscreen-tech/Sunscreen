@@ -1,7 +1,7 @@
 use crossbeam::atomic::AtomicCell;
+use sunscreen_compiler_common::GraphQuery;
 use sunscreen_fhe_program::{FheProgram, Literal, Operation::*};
 use sunscreen_runtime::traverse;
-use sunscreen_compiler_common::{GraphQuery};
 
 use std::collections::HashMap;
 
@@ -71,12 +71,12 @@ pub fn predict_noise(model: &(dyn NoiseModel + Sync), fhe_program: &FheProgram) 
                     )
                 }
                 AddPlaintext => {
-                    let (left, _) = get_left_right_operands(fhe_program, node_id);
+                    let (left, _) = query.get_binary_operands(node_id).unwrap();
 
                     model.add_ct_pt(noise_levels[left.index()].load())
                 }
                 Multiply => {
-                    let (left, right) = get_left_right_operands(fhe_program, node_id);
+                    let (left, right) = query.get_binary_operands(node_id).unwrap();
 
                     model.mul_ct_ct(
                         noise_levels[left.index()].load(),
@@ -84,22 +84,22 @@ pub fn predict_noise(model: &(dyn NoiseModel + Sync), fhe_program: &FheProgram) 
                     )
                 }
                 MultiplyPlaintext => {
-                    let (left, _) = get_left_right_operands(fhe_program, node_id);
+                    let (left, _) = query.get_binary_operands(node_id).unwrap();
 
                     model.mul_ct_pt(noise_levels[left.index()].load())
                 }
                 Relinearize => {
-                    let x = get_unary_operand(fhe_program, node_id);
+                    let x = query.get_unary_operand(node_id).unwrap();
 
                     model.relinearize(noise_levels[x.index()].load())
                 }
                 Negate => {
-                    let x = get_unary_operand(fhe_program, node_id);
+                    let x = query.get_unary_operand(node_id).unwrap();
 
                     model.neg(noise_levels[x.index()].load())
                 }
                 Sub => {
-                    let (left, right) = get_left_right_operands(fhe_program, node_id);
+                    let (left, right) = query.get_binary_operands(node_id).unwrap();
 
                     model.sub_ct_ct(
                         noise_levels[left.index()].load(),
@@ -107,19 +107,19 @@ pub fn predict_noise(model: &(dyn NoiseModel + Sync), fhe_program: &FheProgram) 
                     )
                 }
                 SubPlaintext => {
-                    let (left, _) = get_left_right_operands(fhe_program, node_id);
+                    let (left, _) = query.get_binary_operands(node_id).unwrap();
 
                     model.sub_ct_pt(noise_levels[left.index()].load())
                 }
                 OutputCiphertext => {
-                    let x = get_unary_operand(fhe_program, node_id);
+                    let x = query.get_unary_operand(node_id).unwrap();
                     let output_id = node_id_to_output_id[&node_id.index()];
 
                     model.output(output_id, noise_levels[x.index()].load())
                 }
                 Literal(_) => 0.0,
                 ShiftLeft => {
-                    let (left, right) = get_left_right_operands(fhe_program, node_id);
+                    let (left, right) = query.get_binary_operands(node_id).unwrap();
 
                     let b = match fhe_program.graph[right].operation {
                         Literal(Literal::U64(v)) => v as i32,
@@ -132,7 +132,7 @@ pub fn predict_noise(model: &(dyn NoiseModel + Sync), fhe_program: &FheProgram) 
                     model.shift_left(noise_levels[left.index()].load(), b)
                 }
                 ShiftRight => {
-                    let (left, right) = get_left_right_operands(fhe_program, node_id);
+                    let (left, right) = query.get_binary_operands(node_id).unwrap();
 
                     let b = match fhe_program.graph[right].operation {
                         Literal(Literal::U64(v)) => v as i32,
@@ -145,7 +145,7 @@ pub fn predict_noise(model: &(dyn NoiseModel + Sync), fhe_program: &FheProgram) 
                     model.shift_right(noise_levels[left.index()].load(), b)
                 }
                 SwapRows => {
-                    let x = get_unary_operand(fhe_program, node_id);
+                    let x = query.get_unary_operand(node_id).unwrap();
 
                     model.swap_rows(noise_levels[x.index()].load())
                 }

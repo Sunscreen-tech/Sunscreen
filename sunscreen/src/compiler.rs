@@ -6,6 +6,7 @@ use crate::{
 };
 use std::collections::{HashMap, HashSet};
 use std::marker::PhantomData;
+use sunscreen_fhe_program::FheProgramTrait;
 use sunscreen_runtime::{marker, CompiledFheProgram, Fhe, FheZkp, Zkp};
 use sunscreen_zkp_backend::CompiledZkpProgram;
 

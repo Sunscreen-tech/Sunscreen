@@ -1,7 +1,14 @@
 use std::convert::Infallible;
 
-use sunscreen_fhe_program::{FheProgram, Operation::{*, self}};
-use sunscreen_compiler_common::{GraphQuery, NodeInfo, EdgeInfo, transforms::{GraphTransforms, Transform}, forward_traverse_mut};
+use sunscreen_compiler_common::{
+    forward_traverse_mut,
+    transforms::{GraphTransforms, Transform},
+    EdgeInfo, GraphQuery, NodeInfo,
+};
+use sunscreen_fhe_program::{
+    FheProgram,
+    Operation::{self, *},
+};
 
 use petgraph::{stable_graph::NodeIndex, visit::EdgeRef, Direction};
 
@@ -11,20 +18,32 @@ pub fn apply_insert_relinearizations(ir: &mut FheProgram) {
     let insert_relin = |id: NodeIndex, query: FheGraphQuery| {
         let mut transforms = GraphTransforms::new();
 
-        let relin_node = transforms.push(Transform::AddNode(NodeInfo { operation: Operation::Relinearize }));
+        let relin_node = transforms.push(Transform::AddNode(NodeInfo {
+            operation: Operation::Relinearize,
+        }));
+
+        transforms.push(Transform::AddEdge(
+            id.into(),
+            relin_node.into(),
+            EdgeInfo::Unary,
+        ));
 
         for e in query.edges_directed(id, Direction::Outgoing) {
             let operand_type = e.weight();
 
             transforms.push(Transform::RemoveEdge(id.into(), e.target().into()));
-            transforms.push(Transform::AddEdge(relin_node.into(), e.target().into(), *operand_type));
+            transforms.push(Transform::AddEdge(
+                relin_node.into(),
+                e.target().into(),
+                *operand_type,
+            ));
         }
 
         transforms
     };
 
     forward_traverse_mut(&mut ir.graph.0, |query, id| {
-        // Id is given to us, so the node should exist. Just 
+        // Id is given to us, so the node should exist. Just
         // unwrap.
         let transforms = match query.get_node(id).unwrap().operation {
             // We only need to insert relinearizations for ciphertext
@@ -37,15 +56,18 @@ pub fn apply_insert_relinearizations(ir: &mut FheProgram) {
         };
 
         Ok::<_, Infallible>(transforms)
-    });
+    })
+    .unwrap();
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use petgraph::stable_graph::NodeIndex;
-    use sunscreen_fhe_program::{Literal as FheProgramLiteral, Operation, SchemeType, FheProgramTrait};
-    use sunscreen_compiler_common::{GraphQuery};
+    use sunscreen_compiler_common::GraphQuery;
+    use sunscreen_fhe_program::{
+        FheProgramTrait, Literal as FheProgramLiteral, Operation, SchemeType,
+    };
 
     fn create_test_dag() -> FheProgram {
         let mut ir = FheProgram::new(SchemeType::Bfv);
@@ -76,7 +98,12 @@ mod tests {
         let relin_nodes = ir
             .graph
             .node_indices()
-            .filter(|i| matches!(query.get_node(*i).unwrap().operation, Operation::Relinearize))
+            .filter(|i| {
+                matches!(
+                    query.get_node(*i).unwrap().operation,
+                    Operation::Relinearize
+                )
+            })
             .collect::<Vec<NodeIndex>>();
 
         // Should have 2 relin nodes added.

@@ -537,7 +537,7 @@ where
 mod tests {
     use super::*;
     use seal_fhe::*;
-    use sunscreen_fhe_program::SchemeType;
+    use sunscreen_fhe_program::{SchemeType, FheProgramTrait};
 
     fn setup_scheme(
         degree: u64,
@@ -586,10 +586,10 @@ mod tests {
     fn simple_add() {
         let mut ir = FheProgram::new(SchemeType::Bfv);
 
-        let a = ir.append_input_ciphertext(0);
-        let b = ir.append_input_ciphertext(1);
-        let c = ir.append_add(a, b);
-        ir.append_output_ciphertext(c);
+        let a = ir.add_input_ciphertext(0);
+        let b = ir.add_input_ciphertext(1);
+        let c = ir.add_add(a, b);
+        ir.add_output_ciphertext(c);
 
         let degree = 8192;
 
@@ -626,10 +626,10 @@ mod tests {
     fn simple_mul() {
         let mut ir = FheProgram::new(SchemeType::Bfv);
 
-        let a = ir.append_input_ciphertext(0);
-        let b = ir.append_input_ciphertext(1);
-        let c = ir.append_multiply(a, b);
-        ir.append_output_ciphertext(c);
+        let a = ir.add_input_ciphertext(0);
+        let b = ir.add_input_ciphertext(1);
+        let c = ir.add_multiply(a, b);
+        ir.add_output_ciphertext(c);
 
         let degree = 8192;
 
@@ -673,11 +673,11 @@ mod tests {
     fn can_mul_and_relinearize() {
         let mut ir = FheProgram::new(SchemeType::Bfv);
 
-        let a = ir.append_input_ciphertext(0);
-        let b = ir.append_input_ciphertext(1);
-        let c = ir.append_multiply(a, b);
-        let d = ir.append_relinearize(c);
-        ir.append_output_ciphertext(d);
+        let a = ir.add_input_ciphertext(0);
+        let b = ir.add_input_ciphertext(1);
+        let c = ir.add_multiply(a, b);
+        let d = ir.add_relinearize(c);
+        ir.add_output_ciphertext(d);
 
         let degree = 8192;
 
@@ -721,26 +721,26 @@ mod tests {
     fn add_reduction() {
         let mut ir = FheProgram::new(SchemeType::Bfv);
 
-        let a = ir.append_input_ciphertext(0);
-        let b = ir.append_input_ciphertext(1);
-        let c = ir.append_input_ciphertext(0);
-        let d = ir.append_input_ciphertext(1);
-        let e = ir.append_input_ciphertext(0);
-        let f = ir.append_input_ciphertext(1);
-        let g = ir.append_input_ciphertext(0);
-        let h = ir.append_input_ciphertext(1);
+        let a = ir.add_input_ciphertext(0);
+        let b = ir.add_input_ciphertext(1);
+        let c = ir.add_input_ciphertext(0);
+        let d = ir.add_input_ciphertext(1);
+        let e = ir.add_input_ciphertext(0);
+        let f = ir.add_input_ciphertext(1);
+        let g = ir.add_input_ciphertext(0);
+        let h = ir.add_input_ciphertext(1);
 
-        let a_0 = ir.append_add(a, b);
-        let a_1 = ir.append_add(c, d);
-        let a_2 = ir.append_add(e, f);
-        let a_3 = ir.append_add(g, h);
+        let a_0 = ir.add_add(a, b);
+        let a_1 = ir.add_add(c, d);
+        let a_2 = ir.add_add(e, f);
+        let a_3 = ir.add_add(g, h);
 
-        let a_0_0 = ir.append_add(a_0, a_1);
-        let a_1_0 = ir.append_add(a_2, a_3);
+        let a_0_0 = ir.add_add(a_0, a_1);
+        let a_1_0 = ir.add_add(a_2, a_3);
 
-        let res = ir.append_add(a_0_0, a_1_0);
+        let res = ir.add_add(a_0_0, a_1_0);
 
-        ir.append_output_ciphertext(res);
+        ir.add_output_ciphertext(res);
 
         let degree = 8192;
 
@@ -784,12 +784,12 @@ mod tests {
     fn rotate_left() {
         let mut ir = FheProgram::new(SchemeType::Bfv);
 
-        let a = ir.append_input_ciphertext(0);
-        let l = ir.append_input_literal(Literal::U64(3));
+        let a = ir.add_input_ciphertext(0);
+        let l = ir.add_input_literal(Literal::U64(3));
 
-        let res = ir.append_rotate_left(a, l);
+        let res = ir.add_rotate_left(a, l);
 
-        ir.append_output_ciphertext(res);
+        ir.add_output_ciphertext(res);
 
         let degree = 4096;
 
@@ -829,12 +829,12 @@ mod tests {
     fn rotate_right() {
         let mut ir = FheProgram::new(SchemeType::Bfv);
 
-        let a = ir.append_input_ciphertext(0);
-        let l = ir.append_input_literal(Literal::U64(3));
+        let a = ir.add_input_ciphertext(0);
+        let l = ir.add_input_literal(Literal::U64(3));
 
         let res = ir.append_rotate_right(a, l);
 
-        ir.append_output_ciphertext(res);
+        ir.add_output_ciphertext(res);
 
         let degree = 4096;
 

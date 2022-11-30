@@ -475,7 +475,7 @@ mod tests {
         let mut ir = FheProgram::new(SchemeType::Bfv);
 
         let ct = ir.add_input_ciphertext(0);
-        let l1 = ir.add_input_literal(Literal::from(7i64));
+        let l1 = ir.add_input_literal(Literal::from(7u64));
         let add = ir.add_add(ct, l1);
         let l2 = ir.add_input_literal(Literal::from(5u64));
         ir.add_multiply(add, l2);
@@ -484,7 +484,7 @@ mod tests {
 
         let mut expected_ir = FheProgram::new(SchemeType::Bfv);
         let ct = expected_ir.add_input_ciphertext(0);
-        let l1 = expected_ir.add_input_literal(Literal::from(7i64));
+        let l1 = expected_ir.add_input_literal(Literal::from(7u64));
         expected_ir.add_add(ct, l1);
 
         assert!(eq(&pruned, &expected_ir));
@@ -497,7 +497,7 @@ mod tests {
         let ct = ir.add_input_ciphertext(0);
         let rem = ir.add_input_ciphertext(1);
         ir.graph.0.remove_node(rem);
-        let l1 = ir.add_input_literal(Literal::from(7i64));
+        let l1 = ir.add_input_literal(Literal::from(7u64));
         let rem = ir.add_input_ciphertext(1);
         ir.graph.0.remove_node(rem);
         let add = ir.add_add(ct, l1);
@@ -512,7 +512,7 @@ mod tests {
 
         let mut expected_ir = FheProgram::new(SchemeType::Bfv);
         let ct = expected_ir.add_input_ciphertext(0);
-        let l1 = expected_ir.add_input_literal(Literal::from(7i64));
+        let l1 = expected_ir.add_input_literal(Literal::from(7u64));
         expected_ir.add_add(ct, l1);
 
         assert!(eq(&pruned, &expected_ir));

@@ -73,7 +73,7 @@ mod tests {
         let mut ir = FheProgram::new(SchemeType::Bfv);
 
         let ct = ir.add_input_ciphertext(0);
-        let l1 = ir.add_input_literal(FheProgramLiteral::from(7i64));
+        let l1 = ir.add_input_literal(FheProgramLiteral::from(7u64));
         let add = ir.add_add(ct, l1);
         let l2 = ir.add_input_literal(FheProgramLiteral::from(5u64));
         let mul = ir.add_multiply(add, l2);

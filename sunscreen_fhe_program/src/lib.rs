@@ -153,14 +153,8 @@ impl OutputTypeTrait for NodeInfo<Operation> {
 }
 
 /**
- * The intermediate representation for an FHE program used in the compiler back-end.
- *
- * Other modules may transform these using the [forward_traverse](`Self::forward_traverse`)
- * and [reverse_traverse](`Self::reverse_traverse`) methods, or iterate over the graph
- * member for analysis or execution.
- *
- * The graph construction methods `append_*` take NodeIndex types as arguments. These
- * indices must refer to other nodes in the graph.
+ * The intermediate representation for an FHE program used in the 
+ * compiler back-end.
  */
 pub type FheProgram = Context<Operation, SchemeType>;
 
@@ -416,42 +410,6 @@ impl FheProgramTrait for FheProgram {
                 Operation::ShiftRight | Operation::ShiftLeft | Operation::SwapRows
             )
         })
-    }
-}
-
-/**
- * Transforms can refer to nodes that already exist in the graph or nodes that don't
- * yet exist in the graph, but will be inserted in a previous transform.
- */
-#[derive(Debug, Clone, Copy)]
-pub enum TransformNodeIndex {
-    /**
-     * This node index refers to a pre-existing node in the graph.
-     */
-    NodeIndex(NodeIndex),
-
-    /**
-     * This node index refers to a node in the [`TransformList`] that has not yet been
-     * added to the graph.
-     */
-    DeferredIndex(DeferredIndex),
-}
-
-/**
- * The index type of a node that exists in a transform list, but does not yet exist in
- * the intermediate representation graph.
- */
-pub type DeferredIndex = usize;
-
-impl From<DeferredIndex> for TransformNodeIndex {
-    fn from(val: DeferredIndex) -> Self {
-        TransformNodeIndex::DeferredIndex(val)
-    }
-}
-
-impl From<NodeIndex> for TransformNodeIndex {
-    fn from(val: NodeIndex) -> Self {
-        TransformNodeIndex::NodeIndex(val)
     }
 }
 

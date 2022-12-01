@@ -87,7 +87,7 @@ impl From<SealError> for FheProgramRunFailure {
  * Run the given [`FheProgram`] to completion with the given inputs. This
  * method performs no validation. You must verify the program is first valid. Programs produced
  * by the compiler are guaranteed to be valid, but deserialization does not make any such
- * guarantees. Call [`validate()`](sunscreen_fhe_program::FheProgram::validate()) to verify a program's correctness.
+ * guarantees. Call [`validate()`](sunscreen_fhe_program::FheProgramTrait::validate()) to verify a program's correctness.
  *
  * # Remarks
  * The input and outputs of this method are vectors containing [`seal_fhe::Ciphertext`] values, not the

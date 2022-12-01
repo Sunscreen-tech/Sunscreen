@@ -153,7 +153,7 @@ impl OutputTypeTrait for NodeInfo<Operation> {
 }
 
 /**
- * The intermediate representation for an FHE program used in the 
+ * The intermediate representation for an FHE program used in the
  * compiler back-end.
  */
 pub type FheProgram = Context<Operation, SchemeType>;

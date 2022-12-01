@@ -2,11 +2,10 @@ use petgraph::stable_graph::NodeIndex;
 use serde::{Deserialize, Serialize};
 use sunscreen_backend::compile_inplace;
 use sunscreen_compiler_common::{
-    CompilationResult, Context, EdgeInfo, Operation as OperationTrait,
+    CompilationResult, Context, EdgeInfo, NodeInfo, Operation as OperationTrait,
 };
 use sunscreen_fhe_program::{
-    EdgeInfo as FheProgramEdgeInfo, FheProgram, Literal as FheProgramLiteral, NodeInfo,
-    Operation as FheProgramOperation, SchemeType,
+    FheProgram, Literal as FheProgramLiteral, Operation as FheProgramOperation, SchemeType,
 };
 use sunscreen_runtime::{InnerPlaintext, Params};
 
@@ -385,15 +384,15 @@ impl FheCompile for FheFrontendCompilation {
                 FheOperation::AddPlaintext => NodeInfo::new(FheProgramOperation::AddPlaintext),
             },
             |_, e| match e {
-                EdgeInfo::Left => FheProgramEdgeInfo::LeftOperand,
-                EdgeInfo::Right => FheProgramEdgeInfo::RightOperand,
-                EdgeInfo::Unary => FheProgramEdgeInfo::UnaryOperand,
+                EdgeInfo::Left => EdgeInfo::Left,
+                EdgeInfo::Right => EdgeInfo::Right,
+                EdgeInfo::Unary => EdgeInfo::Unary,
                 EdgeInfo::Unordered => unreachable!("FHE programs have no unordered edges."),
                 EdgeInfo::Ordered(_) => unreachable!("FHE programs have no ordered edges."),
             },
         );
 
-        fhe_program.graph = mapped_graph;
+        fhe_program.graph = CompilationResult(mapped_graph);
 
         compile_inplace(fhe_program)
     }

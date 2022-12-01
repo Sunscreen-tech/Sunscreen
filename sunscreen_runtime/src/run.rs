@@ -1,6 +1,7 @@
 use crate::{InnerPlaintext, SealData};
 use static_assertions::const_assert;
-use sunscreen_fhe_program::{traversal::*, FheProgram, Literal, Operation::*};
+use sunscreen_compiler_common::{GraphQuery, GraphQueryError};
+use sunscreen_fhe_program::{FheProgram, Literal, Operation::*};
 
 use crossbeam::atomic::AtomicCell;
 use petgraph::{stable_graph::NodeIndex, Direction};
@@ -64,6 +65,12 @@ pub enum FheProgramRunFailure {
      */
     #[error("Internal error: missing data")]
     MissingData,
+
+    /**
+     * An error occurred when trying to query the graph.
+     */
+    #[error("Graph query error {0}")]
+    GraphQueryError(#[from] GraphQueryError),
 }
 
 const_assert!(std::mem::size_of::<FheProgramRunFailure>() <= 16);
@@ -80,7 +87,7 @@ impl From<SealError> for FheProgramRunFailure {
  * Run the given [`FheProgram`] to completion with the given inputs. This
  * method performs no validation. You must verify the program is first valid. Programs produced
  * by the compiler are guaranteed to be valid, but deserialization does not make any such
- * guarantees. Call [`validate()`](sunscreen_fhe_program::FheProgram::validate()) to verify a program's correctness.
+ * guarantees. Call [`validate()`](sunscreen_fhe_program::FheProgramTrait::validate()) to verify a program's correctness.
  *
  * # Remarks
  * The input and outputs of this method are vectors containing [`seal_fhe::Ciphertext`] values, not the
@@ -154,6 +161,7 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
         ir,
         |index| {
             let node = &ir.graph[index];
+            let query = GraphQuery::new(&ir.graph.0);
 
             match &node.operation {
                 InputCiphertext(id) => {
@@ -163,7 +171,7 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
                     data[index.index()].store(Some(inputs[*id].clone()));
                 }
                 ShiftLeft => {
-                    let (left, right) = get_left_right_operands(ir, index);
+                    let (left, right) = query.get_binary_operands(index)?;
 
                     let a = get_ciphertext(&data, left.index())?;
                     let b = match ir.graph[right].operation {
@@ -185,7 +193,7 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
                     data[index.index()].store(Some(Arc::new(c.into())));
                 }
                 ShiftRight => {
-                    let (left, right) = get_left_right_operands(ir, index);
+                    let (left, right) = query.get_binary_operands(index)?;
 
                     let a = get_ciphertext(&data, left.index())?;
                     let b = match ir.graph[right].operation {
@@ -207,7 +215,7 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
                     data[index.index()].store(Some(Arc::new(c.into())));
                 }
                 Add => {
-                    let (left, right) = get_left_right_operands(ir, index);
+                    let (left, right) = query.get_binary_operands(index)?;
 
                     let a = get_ciphertext(&data, left.index())?;
                     let b = get_ciphertext(&data, right.index())?;
@@ -217,7 +225,7 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
                     data[index.index()].store(Some(Arc::new(c.into())));
                 }
                 AddPlaintext => {
-                    let (left, right) = get_left_right_operands(ir, index);
+                    let (left, right) = query.get_binary_operands(index)?;
 
                     let a = get_ciphertext(&data, left.index())?;
                     let b = get_plaintext(&data, right.index())?;
@@ -227,7 +235,7 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
                     data[index.index()].store(Some(Arc::new(c.into())));
                 }
                 Multiply => {
-                    let (left, right) = get_left_right_operands(ir, index);
+                    let (left, right) = query.get_binary_operands(index)?;
 
                     let a = get_ciphertext(&data, left.index())?;
                     let b = get_ciphertext(&data, right.index())?;
@@ -237,7 +245,7 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
                     data[index.index()].store(Some(Arc::new(c.into())));
                 }
                 MultiplyPlaintext => {
-                    let (left, right) = get_left_right_operands(ir, index);
+                    let (left, right) = query.get_binary_operands(index)?;
 
                     let a = get_ciphertext(&data, left.index())?;
                     let b = get_plaintext(&data, right.index())?;
@@ -251,7 +259,7 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
                         .as_ref()
                         .ok_or(FheProgramRunFailure::MissingGaloisKeys)?;
 
-                    let input = get_unary_operand(ir, index);
+                    let input = query.get_unary_operand(index)?;
 
                     let x = get_ciphertext(&data, input.index())?;
 
@@ -264,7 +272,7 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
                         .as_ref()
                         .ok_or(FheProgramRunFailure::MissingRelinearizationKeys)?;
 
-                    let input = get_unary_operand(ir, index);
+                    let input = query.get_unary_operand(index)?;
 
                     let a = get_ciphertext(&data, input.index())?;
 
@@ -273,7 +281,7 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
                     data[index.index()].store(Some(Arc::new(c.into())));
                 }
                 Negate => {
-                    let x_id = get_unary_operand(ir, index);
+                    let x_id = query.get_unary_operand(index)?;
 
                     let x = get_ciphertext(&data, x_id.index())?;
 
@@ -282,7 +290,7 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
                     data[index.index()].store(Some(Arc::new(y.into())));
                 }
                 Sub => {
-                    let (left, right) = get_left_right_operands(ir, index);
+                    let (left, right) = query.get_binary_operands(index)?;
 
                     let a = get_ciphertext(&data, left.index())?;
                     let b = get_ciphertext(&data, right.index())?;
@@ -292,7 +300,7 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
                     data[index.index()].store(Some(Arc::new(c.into())));
                 }
                 SubPlaintext => {
-                    let (left, right) = get_left_right_operands(ir, index);
+                    let (left, right) = query.get_binary_operands(index)?;
 
                     let a = get_ciphertext(&data, left.index())?;
                     let b = get_plaintext(&data, right.index())?;
@@ -319,7 +327,7 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
                     }
                 }
                 OutputCiphertext => {
-                    let input = get_unary_operand(ir, index);
+                    let input = query.get_unary_operand(index)?;
 
                     let a = get_data(&data, input.index())?;
 
@@ -369,6 +377,8 @@ pub fn traverse<F>(
 where
     F: Fn(NodeIndex) -> Result<(), FheProgramRunFailure> + Sync + Send,
 {
+    use sunscreen_fhe_program::FheProgramTrait;
+
     let ir = if let Some(x) = run_to {
         Cow::Owned(ir.prune(&[x])) // MOO
     } else {
@@ -527,7 +537,7 @@ where
 mod tests {
     use super::*;
     use seal_fhe::*;
-    use sunscreen_fhe_program::SchemeType;
+    use sunscreen_fhe_program::{FheProgramTrait, SchemeType};
 
     fn setup_scheme(
         degree: u64,
@@ -576,10 +586,10 @@ mod tests {
     fn simple_add() {
         let mut ir = FheProgram::new(SchemeType::Bfv);
 
-        let a = ir.append_input_ciphertext(0);
-        let b = ir.append_input_ciphertext(1);
-        let c = ir.append_add(a, b);
-        ir.append_output_ciphertext(c);
+        let a = ir.add_input_ciphertext(0);
+        let b = ir.add_input_ciphertext(1);
+        let c = ir.add_add(a, b);
+        ir.add_output_ciphertext(c);
 
         let degree = 8192;
 
@@ -616,10 +626,10 @@ mod tests {
     fn simple_mul() {
         let mut ir = FheProgram::new(SchemeType::Bfv);
 
-        let a = ir.append_input_ciphertext(0);
-        let b = ir.append_input_ciphertext(1);
-        let c = ir.append_multiply(a, b);
-        ir.append_output_ciphertext(c);
+        let a = ir.add_input_ciphertext(0);
+        let b = ir.add_input_ciphertext(1);
+        let c = ir.add_multiply(a, b);
+        ir.add_output_ciphertext(c);
 
         let degree = 8192;
 
@@ -663,11 +673,11 @@ mod tests {
     fn can_mul_and_relinearize() {
         let mut ir = FheProgram::new(SchemeType::Bfv);
 
-        let a = ir.append_input_ciphertext(0);
-        let b = ir.append_input_ciphertext(1);
-        let c = ir.append_multiply(a, b);
-        let d = ir.append_relinearize(c);
-        ir.append_output_ciphertext(d);
+        let a = ir.add_input_ciphertext(0);
+        let b = ir.add_input_ciphertext(1);
+        let c = ir.add_multiply(a, b);
+        let d = ir.add_relinearize(c);
+        ir.add_output_ciphertext(d);
 
         let degree = 8192;
 
@@ -711,26 +721,26 @@ mod tests {
     fn add_reduction() {
         let mut ir = FheProgram::new(SchemeType::Bfv);
 
-        let a = ir.append_input_ciphertext(0);
-        let b = ir.append_input_ciphertext(1);
-        let c = ir.append_input_ciphertext(0);
-        let d = ir.append_input_ciphertext(1);
-        let e = ir.append_input_ciphertext(0);
-        let f = ir.append_input_ciphertext(1);
-        let g = ir.append_input_ciphertext(0);
-        let h = ir.append_input_ciphertext(1);
+        let a = ir.add_input_ciphertext(0);
+        let b = ir.add_input_ciphertext(1);
+        let c = ir.add_input_ciphertext(0);
+        let d = ir.add_input_ciphertext(1);
+        let e = ir.add_input_ciphertext(0);
+        let f = ir.add_input_ciphertext(1);
+        let g = ir.add_input_ciphertext(0);
+        let h = ir.add_input_ciphertext(1);
 
-        let a_0 = ir.append_add(a, b);
-        let a_1 = ir.append_add(c, d);
-        let a_2 = ir.append_add(e, f);
-        let a_3 = ir.append_add(g, h);
+        let a_0 = ir.add_add(a, b);
+        let a_1 = ir.add_add(c, d);
+        let a_2 = ir.add_add(e, f);
+        let a_3 = ir.add_add(g, h);
 
-        let a_0_0 = ir.append_add(a_0, a_1);
-        let a_1_0 = ir.append_add(a_2, a_3);
+        let a_0_0 = ir.add_add(a_0, a_1);
+        let a_1_0 = ir.add_add(a_2, a_3);
 
-        let res = ir.append_add(a_0_0, a_1_0);
+        let res = ir.add_add(a_0_0, a_1_0);
 
-        ir.append_output_ciphertext(res);
+        ir.add_output_ciphertext(res);
 
         let degree = 8192;
 
@@ -774,12 +784,12 @@ mod tests {
     fn rotate_left() {
         let mut ir = FheProgram::new(SchemeType::Bfv);
 
-        let a = ir.append_input_ciphertext(0);
-        let l = ir.append_input_literal(Literal::U64(3));
+        let a = ir.add_input_ciphertext(0);
+        let l = ir.add_input_literal(Literal::U64(3));
 
-        let res = ir.append_rotate_left(a, l);
+        let res = ir.add_rotate_left(a, l);
 
-        ir.append_output_ciphertext(res);
+        ir.add_output_ciphertext(res);
 
         let degree = 4096;
 
@@ -819,12 +829,12 @@ mod tests {
     fn rotate_right() {
         let mut ir = FheProgram::new(SchemeType::Bfv);
 
-        let a = ir.append_input_ciphertext(0);
-        let l = ir.append_input_literal(Literal::U64(3));
+        let a = ir.add_input_ciphertext(0);
+        let l = ir.add_input_literal(Literal::U64(3));
 
         let res = ir.append_rotate_right(a, l);
 
-        ir.append_output_ciphertext(res);
+        ir.add_output_ciphertext(res);
 
         let degree = 4096;
 

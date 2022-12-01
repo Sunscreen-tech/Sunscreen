@@ -1,6 +1,8 @@
 use log::{debug, trace};
 use seal_fhe::*;
-use sunscreen_fhe_program::{FheProgram, Operation, SchemeType as FheProgramSchemeType};
+use sunscreen_fhe_program::{
+    FheProgram, FheProgramTrait, Operation, SchemeType as FheProgramSchemeType,
+};
 use sunscreen_runtime::{run_program_unchecked, Params, SealData};
 
 use super::{noise_budget_to_noise, NoiseModel};
@@ -347,7 +349,7 @@ impl MeasuredModel {
 
         let decryptor = Decryptor::new(&context, &private_key).unwrap();
 
-        let evaluator = match ir.scheme {
+        let evaluator = match ir.data {
             FheProgramSchemeType::Bfv => BFVEvaluator::new(&context).unwrap(),
         };
 

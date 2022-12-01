@@ -9,7 +9,7 @@ use seal_fhe::{
 use sunscreen_backend::noise_model::{
     noise_budget_to_noise, predict_noise, MeasuredModel, TargetNoiseLevel,
 };
-use sunscreen_fhe_program::{FheProgram, Operation, SchemeType};
+use sunscreen_fhe_program::{FheProgram, FheProgramTrait, Operation, SchemeType};
 pub use sunscreen_runtime::Params;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

@@ -21,6 +21,7 @@ petgraph = { version = "0.6.0", features = ["serde-1"] }
 serde = { version = "1.0.147", features = ["derive"] }
 seal_fhe = { version = "0.7", path = "../seal_fhe" }
 static_assertions = "1.1.0"
+sunscreen_compiler_common = { path = "../sunscreen_compiler_common" }
 thiserror = "1.0.37"
 
 [dev-dependencies]

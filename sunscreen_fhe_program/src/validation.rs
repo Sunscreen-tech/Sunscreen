@@ -1,5 +1,5 @@
-use crate::Operation::*;
 use crate::{EdgeInfo, FheProgram, IRError, NodeError, OutputType};
+use crate::{Operation::*, OutputTypeTrait};
 use petgraph::{algo::greedy_feedback_arc_set, stable_graph::NodeIndex, visit::EdgeRef, Direction};
 
 pub(crate) fn validate_ir(ir: &FheProgram) -> Vec<IRError> {
@@ -15,7 +15,7 @@ pub(crate) fn validate_ir(ir: &FheProgram) -> Vec<IRError> {
 pub(crate) fn ir_has_no_cycle(ir: &FheProgram) -> Vec<IRError> {
     let mut errors = vec![];
 
-    if greedy_feedback_arc_set(&ir.graph).next().is_some() {
+    if greedy_feedback_arc_set(&ir.graph.0).next().is_some() {
         errors.push(IRError::IRHasCycles);
     }
 
@@ -79,7 +79,7 @@ pub(crate) fn validate_nodes(ir: &FheProgram) -> Vec<IRError> {
             errors.append(
                 &mut node_errors
                     .into_iter()
-                    .map(|e| IRError::node_error(i, node_info.to_string(), e))
+                    .map(|e| IRError::node_error(i, node_info.operation.to_string(), e))
                     .collect(),
             )
         }
@@ -106,14 +106,14 @@ fn validate_binary_op_has_correct_operands(
 
     match left {
         None => {
-            errors.push(NodeError::MissingOperand(EdgeInfo::LeftOperand));
+            errors.push(NodeError::MissingOperand(EdgeInfo::Left));
         }
         Some(x) => {
             if !ir.graph.contains_node(x) {
                 errors.push(NodeError::MissingParent(x))
             } else if ir.graph[x].output_type() != expected_left_output {
                 errors.push(NodeError::parent_has_incorrect_output_type(
-                    EdgeInfo::LeftOperand,
+                    EdgeInfo::Left,
                     ir.graph[x].output_type(),
                     expected_left_output,
                 ));
@@ -123,14 +123,14 @@ fn validate_binary_op_has_correct_operands(
 
     match right {
         None => {
-            errors.push(NodeError::MissingOperand(EdgeInfo::RightOperand));
+            errors.push(NodeError::MissingOperand(EdgeInfo::Right));
         }
         Some(x) => {
             if !ir.graph.contains_node(x) {
                 errors.push(NodeError::MissingParent(x))
             } else if ir.graph[x].output_type() != expected_right_output {
                 errors.push(NodeError::parent_has_incorrect_output_type(
-                    EdgeInfo::RightOperand,
+                    EdgeInfo::Right,
                     ir.graph[x].output_type(),
                     expected_right_output,
                 ));
@@ -153,7 +153,7 @@ fn validate_unary_op_has_correct_operands(ir: &FheProgram, index: NodeIndex) -> 
     let operand = get_unary_operand(ir, index);
 
     if operand.is_none() {
-        errors.push(NodeError::MissingOperand(EdgeInfo::UnaryOperand));
+        errors.push(NodeError::MissingOperand(EdgeInfo::Unary));
     }
 
     errors
@@ -166,14 +166,14 @@ fn get_left_right_operands(
     let left = ir
         .graph
         .edges_directed(index, Direction::Incoming)
-        .filter(|e| *e.weight() == EdgeInfo::LeftOperand)
+        .filter(|e| e.weight().is_left())
         .map(|e| e.source())
         .next();
 
     let right = ir
         .graph
         .edges_directed(index, Direction::Incoming)
-        .filter(|e| *e.weight() == EdgeInfo::RightOperand)
+        .filter(|e| e.weight().is_right())
         .map(|e| e.source())
         .next();
 
@@ -183,7 +183,7 @@ fn get_left_right_operands(
 pub fn get_unary_operand(ir: &FheProgram, index: NodeIndex) -> Option<NodeIndex> {
     ir.graph
         .edges_directed(index, Direction::Incoming)
-        .filter(|e| *e.weight() == EdgeInfo::UnaryOperand)
+        .filter(|e| e.weight().is_unary())
         .map(|e| e.source())
         .next()
 }
@@ -191,7 +191,7 @@ pub fn get_unary_operand(ir: &FheProgram, index: NodeIndex) -> Option<NodeIndex>
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::SchemeType;
+    use crate::{FheProgramTrait, SchemeType};
 
     // FheProgram objects created with the API are guaranteed
     // to never produce errors. We may only deserialize an erroneous IR.
@@ -199,9 +199,9 @@ mod tests {
     #[test]
     fn no_errors_for_ok_ir() {
         let mut ir = FheProgram::new(SchemeType::Bfv);
-        let a = ir.append_input_ciphertext(0);
-        let b = ir.append_input_ciphertext(1);
-        ir.append_add(a, b);
+        let a = ir.add_input_ciphertext(0);
+        let b = ir.add_input_ciphertext(1);
+        ir.add_add(a, b);
 
         assert_eq!(validate_ir(&ir).len(), 0);
     }
@@ -209,7 +209,7 @@ mod tests {
     #[test]
     fn error_for_cycle() {
         let ir_str = serde_json::json!({
-          "scheme": "Bfv",
+          "data": "Bfv",
           "graph": {
             "nodes": [
               {
@@ -232,17 +232,17 @@ mod tests {
               [
                 0,
                 2,
-                "LeftOperand"
+                "Left"
               ],
               [
                 1,
                 2,
-                "RightOperand"
+                "Right"
               ],
               [
                 2,
                 0,
-                "RightOperand"
+                "Right"
               ]
             ]
           }
@@ -259,7 +259,7 @@ mod tests {
     #[test]
     fn add_wrong_operands() {
         let ir_str = serde_json::json!({
-          "scheme": "Bfv",
+          "data": "Bfv",
           "graph": {
             "nodes": [
               {
@@ -282,12 +282,12 @@ mod tests {
               [
                 0,
                 2,
-                "LeftOperand"
+                "Left"
               ],
               [
                 1,
                 2,
-                "LeftOperand"
+                "Left"
               ],
             ]
           }
@@ -303,7 +303,7 @@ mod tests {
             IRError::node_error(
                 NodeIndex::from(2),
                 "Add".to_owned(),
-                NodeError::MissingOperand(EdgeInfo::RightOperand)
+                NodeError::MissingOperand(EdgeInfo::Right)
             )
         );
     }
@@ -311,7 +311,7 @@ mod tests {
     #[test]
     fn add_too_few_operands() {
         let ir_str = serde_json::json!({
-          "scheme": "Bfv",
+          "data": "Bfv",
           "graph": {
             "nodes": [
               {
@@ -334,7 +334,7 @@ mod tests {
               [
                 0,
                 2,
-                "LeftOperand"
+                "Left"
               ],
             ]
           }
@@ -358,7 +358,7 @@ mod tests {
     #[test]
     fn add_too_many_operands() {
         let ir_str = serde_json::json!({
-          "scheme": "Bfv",
+          "data": "Bfv",
           "graph": {
             "nodes": [
               {
@@ -381,17 +381,17 @@ mod tests {
               [
                 0,
                 2,
-                "LeftOperand"
+                "Left"
               ],
               [
                 0,
                 2,
-                "RightOperand"
+                "Right"
               ],
               [
                 0,
                 2,
-                "LeftOperand"
+                "Left"
               ],
             ]
           }

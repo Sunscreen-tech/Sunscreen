@@ -27,6 +27,18 @@ pub enum TransformNodeIndex {
     DeferredIndex(DeferredIndex),
 }
 
+impl From<NodeIndex> for TransformNodeIndex {
+    fn from(x: NodeIndex) -> Self {
+        Self::NodeIndex(x)
+    }
+}
+
+impl From<DeferredIndex> for TransformNodeIndex {
+    fn from(x: DeferredIndex) -> Self {
+        Self::DeferredIndex(x)
+    }
+}
+
 /**
  * A request to transform the graph as appropriate.
  */

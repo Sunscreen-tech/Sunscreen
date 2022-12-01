@@ -1,7 +1,7 @@
 mod insert_relinearizations;
 
 use petgraph::stable_graph::NodeIndex;
-use sunscreen_fhe_program::FheProgram;
+use sunscreen_fhe_program::{FheProgram, FheProgramTrait};
 
 use insert_relinearizations::apply_insert_relinearizations;
 

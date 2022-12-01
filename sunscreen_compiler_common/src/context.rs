@@ -23,12 +23,33 @@ where
     pub operation: O,
 }
 
+impl<O> NodeInfo<O>
+where
+    O: Operation,
+{
+    /**
+     * Creates a new [`NodeInfo`].
+     */
+    pub fn new(operation: O) -> Self {
+        Self { operation }
+    }
+}
+
 impl<O> Render for NodeInfo<O>
 where
     O: Operation,
 {
     fn render(&self) -> String {
         format!("{:?}", self)
+    }
+}
+
+impl<O> ToString for NodeInfo<O>
+where
+    O: Operation,
+{
+    fn to_string(&self) -> String {
+        self.render()
     }
 }
 
@@ -180,6 +201,7 @@ where
     }
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
 /**
  * A compilation context. This stores the current parse graph.
  */

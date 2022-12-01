@@ -52,8 +52,7 @@ Install [git](https://git-scm.com/download/win). Defaults are fine.
 
 ## Initialize submodules
 ```
-git submodule init
-git submodule update
+git submodule update --init --recursive
 ```
 
 # Dev workflows

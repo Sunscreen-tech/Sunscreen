@@ -5,10 +5,10 @@ mod error;
 mod exec;
 mod jit;
 
-use std::ops::{Add, Sub, Mul, Deref};
+use std::ops::{Add, Deref, Mul, Sub};
 
 pub use crypto_bigint::UInt;
-use crypto_bigint::{U512};
+use crypto_bigint::U512;
 pub use error::*;
 pub use exec::ExecutableZkpProgram;
 pub use jit::{jit, CompiledZkpProgram, Operation};
@@ -44,7 +44,10 @@ pub trait FieldValue {}
 #[derive(Debug, Clone, Copy, Hash, Eq, PartialEq)]
 pub struct BigInt(U512);
 
-impl<T> From<T> for BigInt where T: Into<U512> {
+impl<T> From<T> for BigInt
+where
+    T: Into<U512>,
+{
     fn from(x: T) -> Self {
         Self(x.into())
     }
@@ -62,7 +65,7 @@ impl BigInt {
     pub const fn from_words(val: [u64; 8]) -> Self {
         Self(U512::from_words(val))
     }
-    
+
     pub const fn from_u32(val: u32) -> Self {
         Self(U512::from_u32(val))
     }

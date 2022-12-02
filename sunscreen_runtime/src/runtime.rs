@@ -74,7 +74,7 @@ struct ZkpRuntimeData {
 enum RuntimeData {
     Fhe(FheRuntimeData),
     Zkp(ZkpRuntimeData),
-    FheZkp(FheRuntimeData, ZkpRuntimeData)
+    FheZkp(FheRuntimeData, ZkpRuntimeData),
 }
 
 impl RuntimeData {
@@ -97,10 +97,9 @@ impl RuntimeData {
         match self {
             Self::Zkp(x) => x,
             Self::FheZkp(_, x) => x,
-            _ => panic!("Expected RuntimeData::Zkp or RuntimeData::FheZkp.")
+            _ => panic!("Expected RuntimeData::Zkp or RuntimeData::FheZkp."),
         }
     }
-
 }
 
 /**
@@ -488,14 +487,21 @@ impl GenericRuntime<()> {
 
                 let context = SealContext::new(&bfv_params, true, params.security_level)?;
 
-                Ok(FheRuntimeData { params: params.clone(), context: Context::Seal(context)})
+                Ok(FheRuntimeData {
+                    params: params.clone(),
+                    context: Context::Seal(context),
+                })
             }
         }
     }
 
-    fn make_zkp_runtime_data<B>(backend: B) -> ZkpRuntimeData where B: ZkpBackend + Clone + 'static {
-        ZkpRuntimeData { backend: Box::new(backend.clone()) }
-   
+    fn make_zkp_runtime_data<B>(backend: &B) -> ZkpRuntimeData
+    where
+        B: ZkpBackend + Clone + 'static,
+    {
+        ZkpRuntimeData {
+            backend: Box::new(backend.clone()),
+        }
     }
 
     /**
@@ -511,9 +517,12 @@ impl GenericRuntime<()> {
     /**
      * Creates a new Runtime supporting only ZKP operations
      */
-    pub fn new_zkp<B>(backend: B) -> Result<ZkpRuntime> where B: ZkpBackend + Clone + 'static {
+    pub fn new_zkp<B>(backend: &B) -> Result<ZkpRuntime>
+    where
+        B: ZkpBackend + Clone + 'static,
+    {
         Ok(GenericRuntime {
-            runtime_data: RuntimeData::Zkp(Self::make_zkp_runtime_data( backend)),
+            runtime_data: RuntimeData::Zkp(Self::make_zkp_runtime_data(backend)),
             _phantom: PhantomData,
         })
     }
@@ -521,10 +530,13 @@ impl GenericRuntime<()> {
     /**
      * Creates a new Runtime supporting both ZKP and FHE operations.
      */
-    pub fn new_fhe_zkp<B>(params: &Params, zkp_backend: B) -> Result<FheZkpRuntime> where B: ZkpBackend + Clone + 'static {
+    pub fn new_fhe_zkp<B>(params: &Params, zkp_backend: &B) -> Result<FheZkpRuntime>
+    where
+        B: ZkpBackend + Clone + 'static,
+    {
         let runtime_data = RuntimeData::FheZkp(
             Self::make_fhe_runtime_data(params)?,
-            Self::make_zkp_runtime_data(zkp_backend)
+            Self::make_zkp_runtime_data(zkp_backend),
         );
 
         Ok(GenericRuntime {

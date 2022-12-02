@@ -1,8 +1,8 @@
-use std::ops::{Add, Mul, Neg, Sub, Deref};
+use std::ops::{Add, Deref, Mul, Neg, Sub};
 
 use bulletproofs::{
     r1cs::{ConstraintSystem, LinearCombination, Prover, R1CSError, R1CSProof, Verifier},
-    BulletproofGens, PedersenGens
+    BulletproofGens, PedersenGens,
 };
 use crypto_bigint::{Limb, UInt};
 use curve25519_dalek::scalar::Scalar;
@@ -12,7 +12,8 @@ use serde::{Deserialize, Serialize};
 use sunscreen_compiler_common::forward_traverse;
 
 use crate::{
-    exec::Operation, BigInt, Error, ExecutableZkpProgram, Proof, Result, ZkpBackend, jit, BackendField,
+    exec::Operation, jit, BackendField, BigInt, Error, ExecutableZkpProgram, Proof, Result,
+    ZkpBackend,
 };
 
 #[derive(Clone)]
@@ -294,8 +295,7 @@ impl ZkpBackend for BulletproofsBackend {
             .collect::<Result<Vec<Scalar>>>()?;
 
         let transcript = BulletproofsCircuit::make_transcript(multiplier_count);
-        let (pedersen_gens, bulletproof_gens) =
-            BulletproofsCircuit::make_gens(multiplier_count);
+        let (pedersen_gens, bulletproof_gens) = BulletproofsCircuit::make_gens(multiplier_count);
 
         let mut circuit = BulletproofsCircuit::new(graph.node_count());
 
@@ -322,8 +322,7 @@ impl ZkpBackend for BulletproofsBackend {
             .count();
 
         let transcript = BulletproofsCircuit::make_transcript(multiplier_count);
-        let (pedersen_gens, bulletproof_gens) =
-            BulletproofsCircuit::make_gens(multiplier_count);
+        let (pedersen_gens, bulletproof_gens) = BulletproofsCircuit::make_gens(multiplier_count);
 
         let mut circuit = BulletproofsCircuit::new(graph.node_count());
 
@@ -332,7 +331,6 @@ impl ZkpBackend for BulletproofsBackend {
         circuit.gen_circuit(graph, &mut verifier, |_| None)?;
 
         Ok(verifier.verify(&proof.0, &pedersen_gens, &bulletproof_gens)?)
-
     }
 
     fn jit(&self, prog: &crate::CompiledZkpProgram) -> Result<ExecutableZkpProgram> {
@@ -370,8 +368,7 @@ fn try_uint_to_scalar<const N: usize>(x: &UInt<N>) -> Result<Scalar> {
 
 impl BackendField for Scalar {}
 
-impl TryFrom<BigInt> for Scalar
-{
+impl TryFrom<BigInt> for Scalar {
     type Error = Error;
 
     fn try_from(value: BigInt) -> Result<Self> {
@@ -379,8 +376,7 @@ impl TryFrom<BigInt> for Scalar
     }
 }
 
-impl TryFrom<&BigInt> for Scalar
-{
+impl TryFrom<&BigInt> for Scalar {
     type Error = Error;
 
     fn try_from(value: &BigInt) -> Result<Self> {
@@ -502,42 +498,45 @@ mod tests {
         let backend = BulletproofsBackend::new();
 
         // 10 * 4 + 2 == 42
-        let proof = backend.prove(
-            &graph,
-            &[
-                BigInt::from_u32(10),
-                BigInt::from_u32(4),
-                BigInt::from_u32(2),
-            ],
-        )
-        .unwrap();
+        let proof = backend
+            .prove(
+                &graph,
+                &[
+                    BigInt::from_u32(10),
+                    BigInt::from_u32(4),
+                    BigInt::from_u32(2),
+                ],
+            )
+            .unwrap();
 
         backend.verify(&graph, &proof).unwrap();
 
         // 8 * 5 + 2 == 42
-        let proof = backend.prove(
-            &graph,
-            &[
-                BigInt::from_u32(8),
-                BigInt::from_u32(5),
-                BigInt::from_u32(2),
-            ],
-        )
-        .unwrap();
+        let proof = backend
+            .prove(
+                &graph,
+                &[
+                    BigInt::from_u32(8),
+                    BigInt::from_u32(5),
+                    BigInt::from_u32(2),
+                ],
+            )
+            .unwrap();
 
         backend.verify(&graph, &proof).unwrap();
 
         // 8 * 5 + 3 == 42.
         // Verification should fail.
-        let proof = backend.prove(
-            &graph,
-            &[
-                BigInt::from(U512::from_u32(8)),
-                BigInt::from(U512::from_u32(5)),
-                BigInt::from(U512::from_u32(3)),
-            ],
-        )
-        .unwrap();
+        let proof = backend
+            .prove(
+                &graph,
+                &[
+                    BigInt::from(U512::from_u32(8)),
+                    BigInt::from(U512::from_u32(5)),
+                    BigInt::from(U512::from_u32(3)),
+                ],
+            )
+            .unwrap();
 
         assert!(backend.verify(&graph, &proof).is_err());
     }

@@ -1,5 +1,5 @@
 use sunscreen::{types::zkp::NativeField, zkp_program, Compiler, Runtime, ZkpProgramFn};
-use sunscreen_zkp_backend::BigInt;
+use sunscreen_zkp_backend::{BigInt, bulletproofs::BulletproofsBackend};
 
 #[test]
 fn can_add_and_mul_native_fields() {
@@ -12,7 +12,7 @@ fn can_add_and_mul_native_fields() {
 
     let app = Compiler::new().zkp_program(add_mul).compile().unwrap();
 
-    let runtime = Runtime::new_zkp().unwrap();
+    let runtime = Runtime::new_zkp(BulletproofsBackend::new()).unwrap();
 
     let program = app.get_zkp_program(add_mul).unwrap();
 
@@ -38,7 +38,7 @@ fn get_input_mismatch_on_incorrect_args() {
 
     let app = Compiler::new().zkp_program(add_mul).compile().unwrap();
 
-    let runtime = Runtime::new_zkp().unwrap();
+    let runtime = Runtime::new_zkp(BulletproofsBackend::new()).unwrap();
 
     let program = app.get_zkp_program(add_mul).unwrap();
 

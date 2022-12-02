@@ -1,8 +1,8 @@
-use std::ops::{Add, Mul, Neg, Sub};
+use std::ops::{Add, Mul, Neg, Sub, Deref};
 
 use bulletproofs::{
     r1cs::{ConstraintSystem, LinearCombination, Prover, R1CSError, R1CSProof, Verifier},
-    BulletproofGens, PedersenGens,
+    BulletproofGens, PedersenGens
 };
 use crypto_bigint::{Limb, UInt};
 use curve25519_dalek::scalar::Scalar;
@@ -12,8 +12,7 @@ use serde::{Deserialize, Serialize};
 use sunscreen_compiler_common::forward_traverse;
 
 use crate::{
-    exec::Operation, BigInt, Error, ExecutableZkpProgram, Proof, Result, ZkpProverBackend,
-    ZkpVerifierBackend,
+    exec::Operation, BigInt, Error, ExecutableZkpProgram, Proof, Result, ZkpBackend, jit, BackendField,
 };
 
 #[derive(Clone)]
@@ -92,14 +91,14 @@ impl Neg for Node {
     }
 }
 
-pub struct BulletproofsR1CSCircuit {
+pub struct BulletproofsCircuit {
     nodes: Vec<Option<Node>>,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct BulletproofsR1CSProof(R1CSProof);
 
-impl BulletproofsR1CSCircuit {
+impl BulletproofsCircuit {
     pub fn new(circuit_size: usize) -> Self {
         Self {
             nodes: vec![None; circuit_size],
@@ -217,7 +216,7 @@ impl BulletproofsR1CSCircuit {
                 Operation::Constraint(x) => {
                     let operands = query.get_unordered_operands(idx)?;
 
-                    let x = try_uint_to_scalar(&x)?;
+                    let x: Scalar = x.try_into()?;
 
                     for o in operands {
                         let o = self.nodes[o.index()]
@@ -244,7 +243,7 @@ impl BulletproofsR1CSCircuit {
                     }
                 }
                 Operation::Constant(x) => {
-                    let x = try_uint_to_scalar(&x)?;
+                    let x: Scalar = x.try_into()?;
 
                     self.nodes[idx.index()] = Some(x.into());
                 }
@@ -257,8 +256,23 @@ impl BulletproofsR1CSCircuit {
     }
 }
 
-impl ZkpProverBackend for BulletproofsR1CSCircuit {
-    fn prove(graph: &ExecutableZkpProgram, inputs: &[BigInt]) -> Result<Proof> {
+#[derive(Debug, Clone)]
+pub struct BulletproofsBackend;
+
+impl BulletproofsBackend {
+    pub fn new() -> Self {
+        Self
+    }
+}
+
+impl Default for BulletproofsBackend {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl ZkpBackend for BulletproofsBackend {
+    fn prove(&self, graph: &ExecutableZkpProgram, inputs: &[BigInt]) -> Result<Proof> {
         let expected_input_count = graph
             .node_weights()
             .filter(|x| matches!(x.operation, Operation::Input(_)))
@@ -276,14 +290,14 @@ impl ZkpProverBackend for BulletproofsR1CSCircuit {
         // Convert the inputs to Scalars
         let inputs = inputs
             .iter()
-            .map(try_uint_to_scalar)
+            .map(|x| x.try_into())
             .collect::<Result<Vec<Scalar>>>()?;
 
-        let transcript = Self::make_transcript(multiplier_count);
+        let transcript = BulletproofsCircuit::make_transcript(multiplier_count);
         let (pedersen_gens, bulletproof_gens) =
-            BulletproofsR1CSCircuit::make_gens(multiplier_count);
+            BulletproofsCircuit::make_gens(multiplier_count);
 
-        let mut circuit = Self::new(graph.node_count());
+        let mut circuit = BulletproofsCircuit::new(graph.node_count());
 
         let mut prover = Prover::new(&pedersen_gens, transcript);
 
@@ -293,10 +307,8 @@ impl ZkpProverBackend for BulletproofsR1CSCircuit {
             prover.prove(&bulletproof_gens)?,
         ))))
     }
-}
 
-impl ZkpVerifierBackend for BulletproofsR1CSCircuit {
-    fn verify(graph: &ExecutableZkpProgram, proof: &Proof) -> Result<()> {
+    fn verify(&self, graph: &ExecutableZkpProgram, proof: &Proof) -> Result<()> {
         let proof = match proof {
             Proof::Bulletproofs(x) => x,
             _ => {
@@ -309,17 +321,22 @@ impl ZkpVerifierBackend for BulletproofsR1CSCircuit {
             .filter(|n| matches!(n.operation, Operation::Input(_) | Operation::Mul))
             .count();
 
-        let transcript = Self::make_transcript(multiplier_count);
+        let transcript = BulletproofsCircuit::make_transcript(multiplier_count);
         let (pedersen_gens, bulletproof_gens) =
-            BulletproofsR1CSCircuit::make_gens(multiplier_count);
+            BulletproofsCircuit::make_gens(multiplier_count);
 
-        let mut circuit = Self::new(graph.node_count());
+        let mut circuit = BulletproofsCircuit::new(graph.node_count());
 
         let mut verifier = Verifier::new(transcript);
 
         circuit.gen_circuit(graph, &mut verifier, |_| None)?;
 
         Ok(verifier.verify(&proof.0, &pedersen_gens, &bulletproof_gens)?)
+
+    }
+
+    fn jit(&self, prog: &crate::CompiledZkpProgram) -> Result<ExecutableZkpProgram> {
+        jit::<Scalar>(prog)
     }
 }
 
@@ -351,8 +368,29 @@ fn try_uint_to_scalar<const N: usize>(x: &UInt<N>) -> Result<Scalar> {
     scalar.ok_or_else(|| Error::out_of_range(&x.to_string()))
 }
 
+impl BackendField for Scalar {}
+
+impl TryFrom<BigInt> for Scalar
+{
+    type Error = Error;
+
+    fn try_from(value: BigInt) -> Result<Self> {
+        try_uint_to_scalar(value.deref())
+    }
+}
+
+impl TryFrom<&BigInt> for Scalar
+{
+    type Error = Error;
+
+    fn try_from(value: &BigInt) -> Result<Self> {
+        try_uint_to_scalar(value.deref())
+    }
+}
+
 #[cfg(test)]
 mod tests {
+    use crypto_bigint::U512;
     use sunscreen_compiler_common::{EdgeInfo, NodeInfo};
 
     use super::*;
@@ -363,14 +401,14 @@ mod tests {
 
         data.extend([0u8; 32].iter());
 
-        BigInt::from_le_slice(&data)
+        BigInt::from(U512::from_le_slice(&data))
     }
 
     #[test]
     fn can_convert_small_u512_to_scalar() {
         let a = BigInt::from_words([0x1234567890abcdef, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0]);
 
-        let scalar = try_uint_to_scalar(&a).unwrap();
+        let scalar = Scalar::try_from(a).unwrap();
 
         assert_eq!(a, scalar_to_u512(&scalar));
     }
@@ -388,7 +426,7 @@ mod tests {
             0x8000000000000000,
         ]);
 
-        assert!(try_uint_to_scalar(&a).is_err());
+        assert!(Scalar::try_from(&a).is_err());
     }
 
     #[test]
@@ -404,13 +442,12 @@ mod tests {
             0x0,
         ]);
 
-        assert!(try_uint_to_scalar(&a).is_err());
+        assert!(Scalar::try_from(&a).is_err());
     }
 
     #[test]
     fn barely_too_bit_u512_to_scalar_fails() {
-        // l = 2^252+27742317777372353535851937790883648493,
-        // the order of the Ristretto group.
+        // 2^252+27742317777372353535851937790883648493,
         let l = BigInt::from_words([
             6346243789798364141,
             1503914060200516822,
@@ -422,12 +459,12 @@ mod tests {
             0x0,
         ]);
 
-        assert!(try_uint_to_scalar(&l).is_err());
+        assert!(Scalar::try_from(&l).is_err());
 
-        let l_min_1 = l.wrapping_sub(&BigInt::ONE);
+        let l_min_1 = l.clone().0.wrapping_sub(&U512::ONE);
         let scalar = try_uint_to_scalar(&l_min_1).unwrap();
 
-        assert_eq!(l_min_1, scalar_to_u512(&scalar));
+        assert_eq!(BigInt::from(l_min_1), scalar_to_u512(&scalar));
     }
 
     #[test]
@@ -458,12 +495,14 @@ mod tests {
         );
 
         let _ = add_node(
-            BackendOperation::Constraint(BigInt::from_u32(42)),
+            BackendOperation::Constraint(BigInt::from(U512::from_u32(42))),
             &[(add_1, EdgeInfo::Unordered)],
         );
 
+        let backend = BulletproofsBackend::new();
+
         // 10 * 4 + 2 == 42
-        let proof = BulletproofsR1CSCircuit::prove(
+        let proof = backend.prove(
             &graph,
             &[
                 BigInt::from_u32(10),
@@ -473,10 +512,10 @@ mod tests {
         )
         .unwrap();
 
-        BulletproofsR1CSCircuit::verify(&graph, &proof).unwrap();
+        backend.verify(&graph, &proof).unwrap();
 
         // 8 * 5 + 2 == 42
-        let proof = BulletproofsR1CSCircuit::prove(
+        let proof = backend.prove(
             &graph,
             &[
                 BigInt::from_u32(8),
@@ -486,20 +525,20 @@ mod tests {
         )
         .unwrap();
 
-        BulletproofsR1CSCircuit::verify(&graph, &proof).unwrap();
+        backend.verify(&graph, &proof).unwrap();
 
         // 8 * 5 + 3 == 42.
         // Verification should fail.
-        let proof = BulletproofsR1CSCircuit::prove(
+        let proof = backend.prove(
             &graph,
             &[
-                BigInt::from_u32(8),
-                BigInt::from_u32(5),
-                BigInt::from_u32(3),
+                BigInt::from(U512::from_u32(8)),
+                BigInt::from(U512::from_u32(5)),
+                BigInt::from(U512::from_u32(3)),
             ],
         )
         .unwrap();
 
-        assert!(BulletproofsR1CSCircuit::verify(&graph, &proof).is_err());
+        assert!(backend.verify(&graph, &proof).is_err());
     }
 }

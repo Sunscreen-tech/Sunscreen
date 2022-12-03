@@ -457,7 +457,7 @@ mod tests {
 
         assert!(Scalar::try_from(&l).is_err());
 
-        let l_min_1 = l.clone().0.wrapping_sub(&U512::ONE);
+        let l_min_1 = l.0.wrapping_sub(&U512::ONE);
         let scalar = try_uint_to_scalar(&l_min_1).unwrap();
 
         assert_eq!(BigInt::from(l_min_1), scalar_to_u512(&scalar));

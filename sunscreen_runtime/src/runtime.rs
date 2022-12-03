@@ -17,13 +17,10 @@ use seal_fhe::{
 };
 
 pub use sunscreen_compiler_common::{Type, TypeName};
-use sunscreen_zkp_backend::bulletproofs::BulletproofsR1CSCircuit;
-use sunscreen_zkp_backend::jit;
 use sunscreen_zkp_backend::BigInt;
 use sunscreen_zkp_backend::CompiledZkpProgram;
 use sunscreen_zkp_backend::Proof;
-use sunscreen_zkp_backend::ZkpProverBackend;
-use sunscreen_zkp_backend::ZkpVerifierBackend;
+use sunscreen_zkp_backend::ZkpBackend;
 
 enum Context {
     Seal(SealContext),
@@ -70,9 +67,14 @@ struct FheRuntimeData {
     context: Context,
 }
 
+struct ZkpRuntimeData {
+    backend: Box<dyn ZkpBackend>,
+}
+
 enum RuntimeData {
     Fhe(FheRuntimeData),
-    Zkp,
+    Zkp(ZkpRuntimeData),
+    FheZkp(FheRuntimeData, ZkpRuntimeData),
 }
 
 impl RuntimeData {
@@ -86,7 +88,16 @@ impl RuntimeData {
     fn unwrap_fhe(&self) -> &FheRuntimeData {
         match self {
             Self::Fhe(x) => x,
-            _ => panic!("Expected RuntimeData::Fhe."),
+            Self::FheZkp(x, _) => x,
+            _ => panic!("Expected RuntimeData::Fhe or RuntimeData::FheZkp."),
+        }
+    }
+
+    fn unwrap_zkp(&self) -> &ZkpRuntimeData {
+        match self {
+            Self::Zkp(x) => x,
+            Self::FheZkp(_, x) => x,
+            _ => panic!("Expected RuntimeData::Zkp or RuntimeData::FheZkp."),
         }
     }
 }
@@ -431,18 +442,19 @@ where
      * Prove the given `inputs` satisfy `program`.
      */
     pub fn prove(&self, program: &CompiledZkpProgram, inputs: &[BigInt]) -> Result<Proof> {
-        let prog = jit(program);
-
-        Ok(BulletproofsR1CSCircuit::prove(&prog, inputs)?)
+        let backend = &self.runtime_data.unwrap_zkp().backend;
+        let prog = backend.jit(program)?;
+        Ok(backend.prove(&prog, inputs)?)
     }
 
     /**
      * Verify that the given `proof` satisfies the given `program`.
      */
     pub fn verify(&self, program: &CompiledZkpProgram, proof: &Proof) -> Result<()> {
-        let prog = jit(program);
+        let backend = &self.runtime_data.unwrap_zkp().backend;
+        let prog = backend.jit(program)?;
 
-        Ok(BulletproofsR1CSCircuit::verify(&prog, proof)?)
+        Ok(backend.verify(&prog, proof)?)
     }
 }
 
@@ -458,10 +470,7 @@ impl GenericRuntime<()> {
         Self::new_fhe(params)
     }
 
-    /**
-     * Create a new Runtime supporting only FHE operations.
-     */
-    pub fn new_fhe(params: &Params) -> Result<FheRuntime> {
+    fn make_fhe_runtime_data(params: &Params) -> Result<FheRuntimeData> {
         match params.scheme_type {
             SchemeType::Bfv => {
                 let bfv_params = BfvEncryptionParametersBuilder::new()
@@ -478,23 +487,42 @@ impl GenericRuntime<()> {
 
                 let context = SealContext::new(&bfv_params, true, params.security_level)?;
 
-                Ok(GenericRuntime {
-                    runtime_data: RuntimeData::Fhe(FheRuntimeData {
-                        context: Context::Seal(context),
-                        params: params.clone(),
-                    }),
-                    _phantom: PhantomData,
+                Ok(FheRuntimeData {
+                    params: params.clone(),
+                    context: Context::Seal(context),
                 })
             }
         }
     }
 
+    fn make_zkp_runtime_data<B>(backend: &B) -> ZkpRuntimeData
+    where
+        B: ZkpBackend + Clone + 'static,
+    {
+        ZkpRuntimeData {
+            backend: Box::new(backend.clone()),
+        }
+    }
+
+    /**
+     * Create a new Runtime supporting only FHE operations.
+     */
+    pub fn new_fhe(params: &Params) -> Result<FheRuntime> {
+        Ok(GenericRuntime {
+            runtime_data: RuntimeData::Fhe(Self::make_fhe_runtime_data(params)?),
+            _phantom: PhantomData,
+        })
+    }
+
     /**
      * Creates a new Runtime supporting only ZKP operations
      */
-    pub fn new_zkp() -> Result<ZkpRuntime> {
+    pub fn new_zkp<B>(backend: &B) -> Result<ZkpRuntime>
+    where
+        B: ZkpBackend + Clone + 'static,
+    {
         Ok(GenericRuntime {
-            runtime_data: RuntimeData::Zkp,
+            runtime_data: RuntimeData::Zkp(Self::make_zkp_runtime_data(backend)),
             _phantom: PhantomData,
         })
     }
@@ -502,11 +530,17 @@ impl GenericRuntime<()> {
     /**
      * Creates a new Runtime supporting both ZKP and FHE operations.
      */
-    pub fn new_fhe_zkp(params: &Params) -> Result<FheZkpRuntime> {
-        let runtime = Self::new_fhe(params)?;
+    pub fn new_fhe_zkp<B>(params: &Params, zkp_backend: &B) -> Result<FheZkpRuntime>
+    where
+        B: ZkpBackend + Clone + 'static,
+    {
+        let runtime_data = RuntimeData::FheZkp(
+            Self::make_fhe_runtime_data(params)?,
+            Self::make_zkp_runtime_data(zkp_backend),
+        );
 
         Ok(GenericRuntime {
-            runtime_data: runtime.runtime_data,
+            runtime_data,
             _phantom: PhantomData,
         })
     }

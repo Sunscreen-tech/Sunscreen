@@ -5,6 +5,8 @@ mod error;
 mod exec;
 mod jit;
 
+use std::ops::{Add, Deref, Mul, Sub};
+
 pub use crypto_bigint::UInt;
 use crypto_bigint::U512;
 pub use error::*;
@@ -39,12 +41,48 @@ pub enum Proof {
 
 pub trait FieldValue {}
 
-pub type BigInt = U512;
+#[derive(Debug, Clone, Copy, Hash, Eq, PartialEq)]
+pub struct BigInt(U512);
 
-pub trait ZkpProverBackend {
-    fn prove(graph: &ExecutableZkpProgram, inputs: &[BigInt]) -> Result<Proof>;
+impl<T> From<T> for BigInt
+where
+    T: Into<U512>,
+{
+    fn from(x: T) -> Self {
+        Self(x.into())
+    }
 }
 
-pub trait ZkpVerifierBackend {
-    fn verify(graph: &ExecutableZkpProgram, proof: &Proof) -> Result<()>;
+impl Deref for BigInt {
+    type Target = U512;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
 }
+
+impl BigInt {
+    pub const fn from_words(val: [u64; 8]) -> Self {
+        Self(U512::from_words(val))
+    }
+
+    pub const fn from_u32(val: u32) -> Self {
+        Self(U512::from_u32(val))
+    }
+
+    pub fn from_be_hex(hex_str: &str) -> Self {
+        Self(U512::from_be_hex(hex_str))
+    }
+
+    pub const ZERO: Self = Self(U512::ZERO);
+}
+
+pub trait ZkpBackend {
+    fn prove(&self, graph: &ExecutableZkpProgram, inputs: &[BigInt]) -> Result<Proof>;
+
+    fn verify(&self, graph: &ExecutableZkpProgram, proof: &Proof) -> Result<()>;
+
+    fn jit(&self, prog: &CompiledZkpProgram) -> Result<ExecutableZkpProgram>;
+}
+
+pub trait BackendField: Add + Sub + Mul + Clone + TryFrom<BigInt> {}

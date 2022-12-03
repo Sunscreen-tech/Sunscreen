@@ -1,6 +1,6 @@
 use crate::{
     exec::{ExecutableZkpProgram, Operation as ExecOperation},
-    BigInt,
+    BackendField, BigInt, Result,
 };
 use sunscreen_compiler_common::{CompilationResult, NodeInfo, Operation as OperationTrait};
 
@@ -49,7 +49,10 @@ pub type CompiledZkpProgram = CompilationResult<Operation>;
 /**
  * Just in time compile a [`CompiledZkpProgram`] into an [`ExecutableZkpProgram`]
  */
-pub fn jit(prog: &CompiledZkpProgram) -> ExecutableZkpProgram {
+pub fn jit<U>(prog: &CompiledZkpProgram) -> Result<ExecutableZkpProgram>
+where
+    U: BackendField,
+{
     let prog = prog.0.map(
         |_, n| {
             let operation = match n.operation {
@@ -68,5 +71,5 @@ pub fn jit(prog: &CompiledZkpProgram) -> ExecutableZkpProgram {
         |_, e| *e,
     );
 
-    CompilationResult(prog)
+    Ok(CompilationResult(prog))
 }

@@ -12,8 +12,8 @@ use serde::{Deserialize, Serialize};
 use sunscreen_compiler_common::forward_traverse;
 
 use crate::{
-    exec::Operation, jit, BackendField, BigInt, Error, ExecutableZkpProgram, Proof, Result,
-    ZkpBackend,
+    exec::Operation, jit_prover, BackendField, BigInt, Error, ExecutableZkpProgram, Proof, Result,
+    ZkpBackend, jit::jit_verifier,
 };
 
 #[derive(Clone)]
@@ -273,7 +273,7 @@ impl Default for BulletproofsBackend {
 }
 
 impl ZkpBackend for BulletproofsBackend {
-    fn prove(&self, graph: &ExecutableZkpProgram, inputs: &[BigInt]) -> Result<Proof> {
+fn prove(&self, graph: &ExecutableZkpProgram, inputs: &[BigInt]) -> Result<Proof> {
         let expected_input_count = graph
             .node_weights()
             .filter(|x| matches!(x.operation, Operation::Input(_)))
@@ -333,8 +333,18 @@ impl ZkpBackend for BulletproofsBackend {
         Ok(verifier.verify(&proof.0, &pedersen_gens, &bulletproof_gens)?)
     }
 
-    fn jit(&self, prog: &crate::CompiledZkpProgram) -> Result<ExecutableZkpProgram> {
-        jit::<Scalar>(prog)
+    fn jit_prover(&self, prog: &crate::CompiledZkpProgram, public_inputs: &[BigInt], private_inputs: &[BigInt]) -> Result<ExecutableZkpProgram> {
+        let public_inputs = public_inputs.iter().map(|x| Scalar::try_from(x)).collect::<Result<Vec<Scalar>>>()?;
+        let private_inputs = private_inputs.iter().map(|x| Scalar::try_from(x)).collect::<Result<Vec<Scalar>>>()?;
+        
+
+        jit_prover::<Scalar>(prog, &public_inputs, &private_inputs)
+    }
+
+    fn jit_verifier(&self, prog: &crate::CompiledZkpProgram, public_inputs: &[BigInt]) -> Result<ExecutableZkpProgram> {
+        let public_inputs = public_inputs.iter().map(|x| Scalar::try_from(x)).collect::<Result<Vec<Scalar>>>()?;
+
+        jit_verifier(prog, &public_inputs)
     }
 }
 

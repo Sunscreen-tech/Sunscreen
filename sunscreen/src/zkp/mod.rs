@@ -1,9 +1,11 @@
 use sunscreen_runtime::CallSignature;
-use sunscreen_zkp_backend::{BigInt, CompiledZkpProgram, Operation as JitOperation};
+use sunscreen_zkp_backend::{BigInt, CompiledZkpProgram, Gadget, Operation as JitOperation};
 
 use crate::Result;
 
-use std::cell::RefCell;
+use std::hash::Hash;
+use std::sync::Arc;
+use std::{cell::RefCell, any::Any};
 
 /**
  * An internal representation of a ZKP program specification.
@@ -32,17 +34,100 @@ use sunscreen_compiler_common::{
     CompilationResult, Context, EdgeInfo, NodeInfo, Operation as OperationTrait, Render,
 };
 
-#[derive(Clone, Copy, Debug, Hash, PartialEq, Eq)]
+#[derive(Clone)]
 pub enum Operation {
     PrivateInput(usize),
     PublicInput(usize),
     HiddenInput(usize),
     Constraint(BigInt),
     Constant(BigInt),
+    InvokeGadget(Arc<dyn Gadget>),
     Add,
     Sub,
     Mul,
     Neg,
+}
+
+impl Hash for Operation {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        match self {
+            Self::PrivateInput(x) => {
+                state.write_u8(0);
+                state.write_usize(*x);
+            },
+            Self::PublicInput(x) => {
+                state.write_u8(1);
+                state.write_usize(*x);
+            },
+            Self::HiddenInput(x) => {
+                state.write_u8(2);
+                state.write_usize(*x);
+            },
+            Self::Constraint(x) => {
+                state.write_u8(3);
+                x.hash(state);
+            },
+            Self::Constant(x) => {
+                state.write_u8(4);
+                x.hash(state);
+            },
+            Self::InvokeGadget(g) => {
+                state.write_u8(5);
+                g.type_id().hash(state);
+            },
+            Self::Add => {
+                state.write_u8(6)
+            }
+            Self::Sub => {
+                state.write_u8(7)
+            },
+            Self::Mul => {
+                state.write_u8(8)
+            },
+            Self::Neg => {
+                state.write_u8(9)
+            }
+        }
+    }
+}
+
+impl PartialEq for Operation {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::PrivateInput(x), Self::PrivateInput(y)) => { x == y },
+            (Self::PublicInput(x), Self::PublicInput(y)) => { x == y },
+            (Self::HiddenInput(x), Self::HiddenInput(y)) => { x == y },
+            (Self::Constraint(x), Self::Constraint(y)) => { x == y },
+            (Self::Constant(x), Self::Constant(y)) => { x == y },
+            (Self::InvokeGadget(x), Self::InvokeGadget(y)) => {
+                x.type_id() == y.type_id()
+            },
+            (Self::Add, Self::Add) => true,
+            (Self::Sub, Self::Sub) => true,
+            (Self::Mul, Self::Mul) => true,
+            (Self::Neg, Self::Neg) => true,
+            _ => false
+        }
+    }
+}
+
+impl Eq for Operation {}
+
+impl Debug for Operation {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::PrivateInput(x) => write!(f, "PrivateInput({x})"),
+            Self::PublicInput(x) => write!(f, "PublicInput({x})"),
+            Self::HiddenInput(x) => write!(f, "HiddenInput({x})"),
+            Self::Constraint(x) => write!(f, "Constraint({x:#?})"),
+            Self::Constant(x) => write!(f, "Constant({x:#?})"),
+            Self::InvokeGadget(g) => write!(f, "InvokeGadget({})", g.debug_name()),
+            Self::Add => write!(f, "Add"),
+            Self::Sub => write!(f, "Sub"),
+            Self::Mul => write!(f, "Mul"),
+            Self::Neg => write!(f, "Neg")
+        }
+    }
 }
 
 impl OperationTrait for Operation {
@@ -207,7 +292,8 @@ pub(crate) fn compile(program: &ZkpFrontendCompilation) -> CompiledZkpProgram {
                 Operation::PublicInput(x) => JitOperation::PublicInput(x),
                 Operation::HiddenInput(_) => {
                     unimplemented!()
-                }
+                },
+                Operation::InvokeGadget(ref g) => JitOperation::InvokeGadget(g.clone()),
                 Operation::Add => JitOperation::Add,
                 Operation::Mul => JitOperation::Mul,
                 Operation::Neg => JitOperation::Neg,

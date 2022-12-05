@@ -19,11 +19,18 @@ pub enum Error {
 
     #[error("The backend graph is malformed {0}")]
     GraphQueryError(#[from] GraphQueryError),
+
+    #[error("Gadget error: {0}")]
+    GadgetError(Box<String>),
 }
 
 impl Error {
     pub fn out_of_range(val: &str) -> Self {
         Self::OutOfRange(Box::new(val.to_owned()))
+    }
+
+    pub fn gadget_error(msg: &str) -> Self {
+        Self::GadgetError(Box::new(msg.to_owned()))
     }
 }
 

@@ -5,7 +5,7 @@ use crate::Result;
 
 use std::hash::Hash;
 use std::sync::Arc;
-use std::{cell::RefCell, any::Any};
+use std::{any::Any, cell::RefCell};
 
 /**
  * An internal representation of a ZKP program specification.
@@ -54,39 +54,31 @@ impl Hash for Operation {
             Self::PrivateInput(x) => {
                 state.write_u8(0);
                 state.write_usize(*x);
-            },
+            }
             Self::PublicInput(x) => {
                 state.write_u8(1);
                 state.write_usize(*x);
-            },
+            }
             Self::HiddenInput(x) => {
                 state.write_u8(2);
                 state.write_usize(*x);
-            },
+            }
             Self::Constraint(x) => {
                 state.write_u8(3);
                 x.hash(state);
-            },
+            }
             Self::Constant(x) => {
                 state.write_u8(4);
                 x.hash(state);
-            },
+            }
             Self::InvokeGadget(g) => {
                 state.write_u8(5);
                 g.type_id().hash(state);
-            },
-            Self::Add => {
-                state.write_u8(6)
             }
-            Self::Sub => {
-                state.write_u8(7)
-            },
-            Self::Mul => {
-                state.write_u8(8)
-            },
-            Self::Neg => {
-                state.write_u8(9)
-            }
+            Self::Add => state.write_u8(6),
+            Self::Sub => state.write_u8(7),
+            Self::Mul => state.write_u8(8),
+            Self::Neg => state.write_u8(9),
         }
     }
 }
@@ -94,19 +86,17 @@ impl Hash for Operation {
 impl PartialEq for Operation {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
-            (Self::PrivateInput(x), Self::PrivateInput(y)) => { x == y },
-            (Self::PublicInput(x), Self::PublicInput(y)) => { x == y },
-            (Self::HiddenInput(x), Self::HiddenInput(y)) => { x == y },
-            (Self::Constraint(x), Self::Constraint(y)) => { x == y },
-            (Self::Constant(x), Self::Constant(y)) => { x == y },
-            (Self::InvokeGadget(x), Self::InvokeGadget(y)) => {
-                x.type_id() == y.type_id()
-            },
+            (Self::PrivateInput(x), Self::PrivateInput(y)) => x == y,
+            (Self::PublicInput(x), Self::PublicInput(y)) => x == y,
+            (Self::HiddenInput(x), Self::HiddenInput(y)) => x == y,
+            (Self::Constraint(x), Self::Constraint(y)) => x == y,
+            (Self::Constant(x), Self::Constant(y)) => x == y,
+            (Self::InvokeGadget(x), Self::InvokeGadget(y)) => x.type_id() == y.type_id(),
             (Self::Add, Self::Add) => true,
             (Self::Sub, Self::Sub) => true,
             (Self::Mul, Self::Mul) => true,
             (Self::Neg, Self::Neg) => true,
-            _ => false
+            _ => false,
         }
     }
 }
@@ -125,7 +115,7 @@ impl Debug for Operation {
             Self::Add => write!(f, "Add"),
             Self::Sub => write!(f, "Sub"),
             Self::Mul => write!(f, "Mul"),
-            Self::Neg => write!(f, "Neg")
+            Self::Neg => write!(f, "Neg"),
         }
     }
 }
@@ -292,7 +282,7 @@ pub(crate) fn compile(program: &ZkpFrontendCompilation) -> CompiledZkpProgram {
                 Operation::PublicInput(x) => JitOperation::PublicInput(x),
                 Operation::HiddenInput(_) => {
                     unimplemented!()
-                },
+                }
                 Operation::InvokeGadget(ref g) => JitOperation::InvokeGadget(g.clone()),
                 Operation::Add => JitOperation::Add,
                 Operation::Mul => JitOperation::Mul,

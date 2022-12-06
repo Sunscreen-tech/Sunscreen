@@ -19,7 +19,8 @@ fn can_add_and_mul_native_fields() {
     let proof = runtime
         .prove(
             program,
-            &[], &[BigInt::from(10u8), BigInt::from(4u8), BigInt::from(2u8)],
+            &[],
+            &[BigInt::from(10u8), BigInt::from(4u8), BigInt::from(2u8)],
         )
         .unwrap();
 
@@ -46,6 +47,6 @@ fn get_input_mismatch_on_incorrect_args() {
 
     assert!(matches!(
         result,
-        Err(Error::ZkpError(ZkpError::InputsMismatch))
+        Err(Error::ZkpError(ZkpError::InputsMismatch(_)))
     ));
 }

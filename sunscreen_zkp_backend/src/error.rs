@@ -11,8 +11,8 @@ pub enum Error {
     #[error("Value {0} is out of range for the chosen backend")]
     OutOfRange(Box<String>),
 
-    #[error("The number of inputs passed to an R1CS circuit didn't match the number of inputs to the circuit.")]
-    InputsMismatch,
+    #[error("Argument mismatch: {0}")]
+    InputsMismatch(Box<String>),
 
     #[error("The given proof isn't valid for the backend proof system.")]
     IncorrectProofType,
@@ -22,6 +22,9 @@ pub enum Error {
 
     #[error("Gadget error: {0}")]
     GadgetError(Box<String>),
+
+    #[error("Malfromed ZKP program: {0}")]
+    MalformedZkpProgram(Box<String>),
 }
 
 impl Error {
@@ -31,6 +34,14 @@ impl Error {
 
     pub fn gadget_error(msg: &str) -> Self {
         Self::GadgetError(Box::new(msg.to_owned()))
+    }
+
+    pub fn malformed_zkp_program(msg: &str) -> Self {
+        Self::MalformedZkpProgram(Box::new(msg.to_owned()))
+    }
+
+    pub fn inputs_mismatch(msg: &str) -> Self {
+        Self::InputsMismatch(Box::new(msg.to_owned()))
     }
 }
 

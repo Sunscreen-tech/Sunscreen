@@ -441,7 +441,12 @@ where
     /**
      * Prove the given `inputs` satisfy `program`.
      */
-    pub fn prove(&self, program: &CompiledZkpProgram, public_inputs: &[BigInt], private_inputs: &[BigInt]) -> Result<Proof> {
+    pub fn prove(
+        &self,
+        program: &CompiledZkpProgram,
+        public_inputs: &[BigInt],
+        private_inputs: &[BigInt],
+    ) -> Result<Proof> {
         let backend = &self.runtime_data.unwrap_zkp().backend;
         let prog = backend.jit_prover(program, public_inputs, private_inputs)?;
 
@@ -453,7 +458,12 @@ where
     /**
      * Verify that the given `proof` satisfies the given `program`.
      */
-    pub fn verify(&self, program: &CompiledZkpProgram, proof: &Proof, public_inputs: &[BigInt]) -> Result<()> {
+    pub fn verify(
+        &self,
+        program: &CompiledZkpProgram,
+        proof: &Proof,
+        public_inputs: &[BigInt],
+    ) -> Result<()> {
         let backend = &self.runtime_data.unwrap_zkp().backend;
         let prog = backend.jit_verifier(program, public_inputs)?;
 

@@ -5,7 +5,10 @@ mod error;
 mod exec;
 mod jit;
 
-use std::{ops::{Add, Deref, Mul, Sub}, any::Any};
+use std::{
+    any::Any,
+    ops::{Add, Deref, Mul, Sub},
+};
 
 pub use crypto_bigint::UInt;
 use crypto_bigint::U512;
@@ -27,54 +30,54 @@ compile_error!("This crate currently requires a little endian target architectur
  * quantity. However, *something* must compute these additional inputs. Rather
  * than delegate this responsibility to the prover's application, we use
  * [`Gadget`]s.
- * 
- * `Gadget`s bear some resemblance to a function call in programming 
- * languages. They take `N` input values and compute `M` output values. These 
+ *
+ * `Gadget`s bear some resemblance to a function call in programming
+ * languages. They take `N` input values and compute `M` output values. These
  * outputs get assigned to the additional inputs. In addition to computing
  * these values, the `Gadget` describes the circuit to prove the hidden inputs
  * satisfy some constraints.
- * 
+ *
  * # Remarks
  * Gadget methods seem to accept a superfluous `&self` argument. This serves
- * to ensure the trait is object-safe. Although legal, implementors generally 
+ * to ensure the trait is object-safe. Although legal, implementors generally
  * won't have data.
- * 
+ *
  * # Example
  * Suppose we want to decompose a native field element `x` into 8-bit
  * unsigned binary. Directly computing this with e.g. Lagrange interpolation
  * is cost prohibitive because `x` lives in a very large field (e.g.
  * Bulletproofs Scalar values are O(2^255)).
- * 
+ *
  * We instead ask the prover to simply provide the binary decomposition
  * and prove that it's correct. To do this, we create a gadget. Its
- * [`compute_inputs`](Gadget::compute_inputs) method directly computes the 
- * decomposition with shifting and masking. Then, the 
+ * [`compute_inputs`](Gadget::compute_inputs) method directly computes the
+ * decomposition with shifting and masking. Then, the
  * [`gen_circuit`](Gadget::gen_circuit) method defined a circuit that proves
  * the following:
  * * Each hidden input is a 0 or 1
  * * x == 2^7 * b_7 + 2^6 * b_6 ... 2^0 * b_0
- * 
+ *
  * and outputs (b_0..b_7)
  */
 pub trait Gadget: Any {
     /**
      * Create the subcircuit for this gadget. Returns the a tuple containing
-     * the node indices of the added hidden inputs and gadget outputs 
+     * the node indices of the added hidden inputs and gadget outputs
      * respectively.
-     * 
+     *
      * # Remarks
      * If the following aren't true, proving will fail with a `GadgetError`.
-     * * The number of hidden inputs this circuit emits must equal 
+     * * The number of hidden inputs this circuit emits must equal
      *   [`get_input_count()`](Gadget::get_input_count).
      * * The number of outputs must equal
-     *   [`get_output_count()`](Gadget::get_output_count). 
+     *   [`get_output_count()`](Gadget::get_output_count).
      */
     fn gen_circuit(&self, node_indices: &[NodeIndex]) -> (Vec<NodeIndex>, Vec<NodeIndex>);
 
     /**
      * Compute the values for each of the hidden inputs from the given
      * gadget inputs.
-     * 
+     *
      * * # Remarks
      * The number of returned hidden input values must equal
      * [`get_input_count()`](Gadget::get_input_count).
@@ -82,7 +85,7 @@ pub trait Gadget: Any {
     fn compute_inputs(&self, gadget_inputs: &[BigInt]) -> Vec<BigInt>;
 
     /**
-     * Returns the expected number of outputs. 
+     * Returns the expected number of outputs.
      */
     fn get_output_count(&self) -> usize;
 
@@ -116,7 +119,7 @@ pub trait FieldValue {}
 #[derive(Debug, Clone, Copy, Hash, Eq, PartialEq)]
 pub struct BigInt(U512);
 
-impl<T> From<T> for BigInt
+impl<T> std::convert::From<T> for BigInt
 where
     T: Into<U512>,
 {
@@ -154,9 +157,46 @@ pub trait ZkpBackend {
 
     fn verify(&self, graph: &ExecutableZkpProgram, proof: &Proof) -> Result<()>;
 
-    fn jit_prover(&self, prog: &CompiledZkpProgram, public_inputs: &[BigInt], private_inputs: &[BigInt]) -> Result<ExecutableZkpProgram>;
+    fn jit_prover(
+        &self,
+        prog: &CompiledZkpProgram,
+        public_inputs: &[BigInt],
+        private_inputs: &[BigInt],
+    ) -> Result<ExecutableZkpProgram>;
 
-    fn jit_verifier(&self, prog: &CompiledZkpProgram, public_inputs: &[BigInt]) -> Result<ExecutableZkpProgram>;
+    fn jit_verifier(
+        &self,
+        prog: &CompiledZkpProgram,
+        public_inputs: &[BigInt],
+    ) -> Result<ExecutableZkpProgram>;
 }
 
-pub trait BackendField: Add + Sub + Mul + Clone + TryFrom<BigInt> {}
+pub trait BackendField: Add + Sub + Mul + Clone + TryFrom<BigInt> + ZkpInto<BigInt> {}
+
+/**
+ * See [`std::convert::From`]. This trait exists to avoid limitations 
+ * with foreign trait rules.
+ */
+pub trait ZkpFrom<T> {
+    /**
+     * See [`std::convert::From::from`].
+     */
+    fn from(val: T) -> Self;
+}
+
+/**
+ * See [`std::convert::Into`]. This trait exists to avoid limitations 
+ * with foreign trait rules.
+ */
+pub trait ZkpInto<T> {
+    /**
+     * See [`std::convert::Into::into`].
+     */
+    fn into(self) -> T;
+}
+
+impl<T, U> ZkpInto<T> for U where T: ZkpFrom<U> {
+    fn into(self) -> T {
+        T::from(self)
+    }
+}

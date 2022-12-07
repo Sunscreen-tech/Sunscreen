@@ -8,8 +8,7 @@ use petgraph::{stable_graph::NodeIndex, visit::EdgeRef, Direction};
 use sunscreen_compiler_common::{
     forward_traverse, forward_traverse_mut,
     transforms::{GraphTransforms, Transform},
-    CompilationResult, EdgeInfo, GraphQueryError, NodeInfo,
-    Operation as OperationTrait,
+    CompilationResult, EdgeInfo, GraphQueryError, NodeInfo, Operation as OperationTrait,
 };
 
 #[derive(Clone)]

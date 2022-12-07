@@ -153,13 +153,13 @@ impl BulletproofsCircuit {
                 Operation::HiddenInput(x) => {
                     let x = match x {
                         Some(x) => Some(Scalar::try_from(x)?),
-                        None => None
+                        None => None,
                     };
 
-                    let input:LinearCombination = cs.allocate(x)?.into();
+                    let input: LinearCombination = cs.allocate(x)?.into();
 
                     self.nodes[idx.index()] = Some(input.into());
-                },
+                }
                 Operation::Add => {
                     let (left, right) = query.get_binary_operands(idx)?;
 

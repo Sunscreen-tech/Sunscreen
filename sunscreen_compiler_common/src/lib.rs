@@ -63,10 +63,16 @@ pub trait Operation: Clone + Debug + Hash + PartialEq + Eq {
     fn is_unary(&self) -> bool;
 
     /**
-     * Whether or not the given operation accepts an arbitrary number of
+     * Whether or not this operation accepts an arbitrary number of
      * unordered operands.
      */
     fn is_unordered(&self) -> bool;
+
+    /**
+     * Whether or not this operation accepts an arbitrary number of
+     * ordered operands.
+     */
+    fn is_ordered(&self) -> bool;
 }
 
 /**

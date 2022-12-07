@@ -150,6 +150,16 @@ impl BulletproofsCircuit {
 
                     self.nodes[idx.index()] = Some(input.into());
                 }
+                Operation::HiddenInput(x) => {
+                    let x = match x {
+                        Some(x) => Some(Scalar::try_from(x)?),
+                        None => None
+                    };
+
+                    let input:LinearCombination = cs.allocate(x)?.into();
+
+                    self.nodes[idx.index()] = Some(input.into());
+                },
                 Operation::Add => {
                     let (left, right) = query.get_binary_operands(idx)?;
 
@@ -507,7 +517,10 @@ mod tests {
         let l_min_1 = l.0.wrapping_sub(&U512::ONE);
         let scalar = try_uint_to_scalar(&l_min_1).unwrap();
 
-        assert_eq!(BigInt(l_min_1), <BigInt as crate::ZkpFrom<Scalar>>::from(scalar));
+        assert_eq!(
+            BigInt(l_min_1),
+            <BigInt as crate::ZkpFrom<Scalar>>::from(scalar)
+        );
     }
 
     #[test]

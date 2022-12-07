@@ -316,6 +316,12 @@ pub enum GraphQueryError {
      */
     NotUnorderedOperation,
 
+    #[error("The given graph node wasn't an ordered operation")]
+    /**
+     * The given graph node wasn't an ordered operation.
+     */
+    NotOrderedOperation,
+
     #[error("No node exists at the given index")]
     /**
      * No node exists at the given index.
@@ -339,6 +345,12 @@ pub enum GraphQueryError {
      * The given node has a non-unordered edge.
      */
     IncorrectUnorderedOperandEdge,
+
+    #[error("The given node has a non-ordered edge")]
+    /**
+     * The given node has a non-ordered edge.
+     */
+    IncorrectOrderedOperandEdge,
 }
 
 const_assert!(std::mem::size_of::<GraphQueryError>() <= 8);
@@ -436,7 +448,8 @@ where
      *
      * # Remarks
      * As these operands are unordered, their order is undefined. Use
-     * [`EdgeInfo::Ordered`] if you need a defined order.
+     * [`EdgeInfo::Ordered`] and call
+     * [`GraphQuery::get_ordered_operands`] if you need a defined order.
      *
      * * # Errors
      * - No node exists at the given index.
@@ -465,6 +478,73 @@ where
         }
 
         Ok(parent_edges.iter().map(|x| x.source()).collect())
+    }
+
+    /**
+     * Returns the unordered operands to the given operation.
+     *
+     * # Remarks
+     * The operands node indices are returned in order.
+     *
+     * * # Errors
+     * - No node exists at the given index.
+     * - The node at the given index isn't a unary operation.
+     * - The node at the given index doesn't have a single unary operand.
+     */
+    pub fn get_ordered_operands(
+        &self,
+        index: NodeIndex,
+    ) -> Result<Vec<NodeIndex>, GraphQueryError> {
+        let node = self.get_node(index).ok_or(GraphQueryError::NoSuchNode)?;
+
+        if !node.operation.is_ordered() {
+            return Err(GraphQueryError::NotOrderedOperation);
+        }
+
+        let mut parent_edges = self
+            .edges_directed(index, Direction::Incoming)
+            .map(|x| match x.weight() {
+                EdgeInfo::Ordered(arg_id) => Ok(SortableEdge(x.source(), *arg_id)),
+                _ => Err(GraphQueryError::IncorrectOrderedOperandEdge),
+            })
+            .collect::<Result<Vec<SortableEdge>, _>>()?;
+
+        #[derive(Eq)]
+        struct SortableEdge(NodeIndex, usize);
+
+        impl PartialEq for SortableEdge {
+            fn eq(&self, other: &Self) -> bool {
+                self.1 == other.1
+            }
+        }
+
+        impl PartialOrd for SortableEdge {
+            fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+                self.1.partial_cmp(&other.1)
+            }
+        }
+
+        impl Ord for SortableEdge {
+            fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+                // PartialCmp will always return Some(_) for usize,
+                // which is the thing we're comparing.
+                self.partial_cmp(other).unwrap()
+            }
+        }
+
+        // Sort the edges by the argument index.
+        parent_edges.sort();
+
+        // Check that the argument indices form a range 0..N
+        for (i, e) in parent_edges.iter().enumerate() {
+            if e.1 != i {
+                return Err(GraphQueryError::IncorrectOrderedOperandEdge);
+            }
+        }
+
+        // Finally, return the parent node indices sorted by their
+        // argument index
+        Ok(parent_edges.iter().map(|x| x.0).collect())
     }
 }
 
@@ -499,6 +579,10 @@ mod tests {
         }
 
         fn is_unordered(&self) -> bool {
+            false
+        }
+
+        fn is_ordered(&self) -> bool {
             false
         }
     }

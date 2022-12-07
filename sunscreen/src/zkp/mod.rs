@@ -134,7 +134,11 @@ impl OperationTrait for Operation {
     }
 
     fn is_unordered(&self) -> bool {
-        false
+        matches!(self, Operation::Constant(_))
+    }
+
+    fn is_ordered(&self) -> bool {
+        matches!(self, Operation::InvokeGadget(_))
     }
 }
 

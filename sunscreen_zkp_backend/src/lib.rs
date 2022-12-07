@@ -7,7 +7,7 @@ mod jit;
 
 use std::{
     any::Any,
-    ops::{Add, Deref, Mul, Sub},
+    ops::{Add, Deref, Mul, Neg, Sub},
 };
 
 pub use crypto_bigint::UInt;
@@ -171,10 +171,19 @@ pub trait ZkpBackend {
     ) -> Result<ExecutableZkpProgram>;
 }
 
-pub trait BackendField: Add + Sub + Mul + Clone + TryFrom<BigInt> + ZkpInto<BigInt> {}
+pub trait BackendField:
+    Add<Self, Output = Self>
+    + Sub<Self, Output = Self>
+    + Mul<Self, Output = Self>
+    + Neg<Output = Self>
+    + Clone
+    + TryFrom<BigInt, Error = Error>
+    + ZkpInto<BigInt>
+{
+}
 
 /**
- * See [`std::convert::From`]. This trait exists to avoid limitations 
+ * See [`std::convert::From`]. This trait exists to avoid limitations
  * with foreign trait rules.
  */
 pub trait ZkpFrom<T> {
@@ -185,7 +194,7 @@ pub trait ZkpFrom<T> {
 }
 
 /**
- * See [`std::convert::Into`]. This trait exists to avoid limitations 
+ * See [`std::convert::Into`]. This trait exists to avoid limitations
  * with foreign trait rules.
  */
 pub trait ZkpInto<T> {
@@ -195,7 +204,10 @@ pub trait ZkpInto<T> {
     fn into(self) -> T;
 }
 
-impl<T, U> ZkpInto<T> for U where T: ZkpFrom<U> {
+impl<T, U> ZkpInto<T> for U
+where
+    T: ZkpFrom<U>,
+{
     fn into(self) -> T {
         T::from(self)
     }

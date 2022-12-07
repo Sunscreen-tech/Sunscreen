@@ -1,12 +1,15 @@
-use std::{any::Any, collections::HashMap, fmt::Debug, hash::Hash, sync::Arc};
+use std::{any::Any, collections::HashMap, convert::Infallible, fmt::Debug, hash::Hash, sync::Arc};
 
 use crate::{
     exec::{ExecutableZkpProgram, Operation as ExecOperation},
     BackendField, BigInt, Error, Gadget, Result,
 };
-use petgraph::stable_graph::NodeIndex;
+use petgraph::{stable_graph::NodeIndex, visit::EdgeRef, Direction};
 use sunscreen_compiler_common::{
-    forward_traverse, CompilationResult, GraphQuery, NodeInfo, Operation as OperationTrait, transforms::{self, GraphTransforms, Transform}, EdgeInfo,
+    forward_traverse, forward_traverse_mut,
+    transforms::{GraphTransforms, Transform},
+    CompilationResult, EdgeInfo, GraphQueryError, NodeInfo,
+    Operation as OperationTrait,
 };
 
 #[derive(Clone)]
@@ -118,6 +121,10 @@ impl OperationTrait for Operation {
     fn is_unordered(&self) -> bool {
         matches!(self, Operation::Constraint(_))
     }
+
+    fn is_ordered(&self) -> bool {
+        matches!(self, Operation::InvokeGadget(_))
+    }
 }
 
 /**
@@ -154,23 +161,12 @@ pub fn jit_prover<U>(
 where
     U: BackendField,
 {
-    let expected_public_inputs = prog
-        .node_weights()
-        .filter(|x| matches!(x.operation, Operation::PublicInput(_)))
-        .count();
+    let mut prog = prog.clone();
 
     let expected_private_inputs = prog
         .node_weights()
         .filter(|x| matches!(x.operation, Operation::PrivateInput(_)))
         .count();
-
-    if public_inputs.len() != expected_public_inputs {
-        return Err(Error::inputs_mismatch(&format!(
-            "Expected {} public inputs, received {}",
-            expected_public_inputs,
-            public_inputs.len()
-        )));
-    }
 
     if private_inputs.len() != expected_private_inputs {
         return Err(Error::inputs_mismatch(&format!(
@@ -180,42 +176,154 @@ where
         )));
     }
 
-    validate_zkp_program(prog)?;
+    constrain_public_inputs(&mut prog, public_inputs)?;
+
+    validate_zkp_program(&prog)?;
 
     let mut node_outputs: HashMap<NodeIndex, U> = HashMap::new();
 
-    forward_traverse(prog, |query, id| {
+    // Run the graph as a computation (not a ZKP) to compute all the
+    // gadget hidden input values.
+    forward_traverse(&prog, |query, id| {
         let node = query.get_node(id).unwrap();
 
-        let mut transforms: GraphTransforms<NodeInfo<Operation>, EdgeInfo> = GraphTransforms::new();
-
-        let transforms = match node.operation {
+        match node.operation {
             Operation::PublicInput(x) => {
                 if x >= public_inputs.len() {
-                    return Err(Error::malformed_zkp_program(&format!("JIT error: Node {:#?}: load public input {} out of bounds. (There are {} public inputs)", id, x, public_inputs.len())))
+                    return Err(Error::malformed_zkp_program(&format!("JIT error: Node {:#?}: load public input {} out of bounds. (There are {} public inputs)", id, x, public_inputs.len())));
                 }
 
                 let val = &public_inputs[x];
-                
+
                 node_outputs.insert(id, val.clone());
-                // Add constraint to assert the input equals the public input.
-                let const_node = transforms.push(Transform::AddNode(NodeInfo {operation: Operation::Constant(val.clone().into())} ));
-                let sub = transforms.push(Transform::AddNode(NodeInfo { operation: Operation::Sub }));
-            },
+            }
             Operation::PrivateInput(x) => {
                 if x >= public_inputs.len() {
-                    return Err(Error::malformed_zkp_program(&format!("JIT error: Node {:#?}: load public input {} out of bounds. (There are {} public inputs)", id, x, public_inputs.len())))
+                    return Err(Error::malformed_zkp_program(&format!("JIT error: Node {:#?}: load public input {} out of bounds. (There are {} public inputs)", id, x, public_inputs.len())));
                 }
 
                 node_outputs.insert(id, public_inputs[x].clone());
-            },
-            _ => {}
+            }
+            Operation::HiddenInput(_) => {} // Gadgets populate these outputs.
+            Operation::Add => {
+                let (left, right) = query.get_binary_operands(id)?;
+
+                let output = node_outputs[&left].clone() + node_outputs[&right].clone();
+
+                node_outputs.insert(id, output);
+            }
+            Operation::Mul => {
+                let (left, right) = query.get_binary_operands(id)?;
+
+                let output = node_outputs[&left].clone() * node_outputs[&right].clone();
+
+                node_outputs.insert(id, output);
+            }
+            Operation::Sub => {
+                let (left, right) = query.get_binary_operands(id)?;
+
+                let output = node_outputs[&left].clone() - node_outputs[&right].clone();
+
+                node_outputs.insert(id, output);
+            }
+            Operation::Neg => {
+                let left = query.get_unary_operand(id)?;
+
+                let output = -node_outputs[&left].clone();
+
+                node_outputs.insert(id, output);
+            }
+            Operation::Constraint(_) => {} // Constraints produce no outputs
+            Operation::Constant(x) => {
+                node_outputs.insert(id, U::try_from(x.clone())?);
+            }
+            Operation::InvokeGadget(ref g) => {
+                // Have the gadget tell us what the values are for the
+                // hidden inputs and assign their value.
+                let arg_indices = query.get_ordered_operands(id)?;
+
+                let args = arg_indices
+                    .iter()
+                    .map(|x| node_outputs[x].clone().into())
+                    .collect::<Vec<BigInt>>();
+
+                let hidden_inputs = g.compute_inputs(&args);
+
+                let mut next_nodes = query
+                    .edges_directed(id, Direction::Outgoing)
+                    .map(|x| {
+                        if !matches!(x.weight(), EdgeInfo::Unary) {
+                            return Err(GraphQueryError::NotUnaryOperation)?;
+                        }
+
+                        match prog[x.target()].operation {
+                            Operation::HiddenInput(arg_idx) => {
+                                Ok(SortableEdge(x.target(), arg_idx))
+                            }
+                            _ => Err(Error::malformed_zkp_program(&format!(
+                                "Node {:#?} is not a Operation::HiddenInput",
+                                x.target()
+                            ))),
+                        }
+                    })
+                    .collect::<Result<Vec<SortableEdge>>>()?;
+
+                #[derive(Eq)]
+                struct SortableEdge(NodeIndex, usize);
+
+                impl PartialEq for SortableEdge {
+                    fn eq(&self, other: &Self) -> bool {
+                        self.1 == other.1
+                    }
+                }
+
+                impl PartialOrd for SortableEdge {
+                    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+                        self.1.partial_cmp(&other.1)
+                    }
+                }
+
+                impl Ord for SortableEdge {
+                    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+                        self.1.cmp(&other.1)
+                    }
+                }
+
+                next_nodes.sort();
+
+                // Assert the HiddenInputs produce a range
+                // 0..hidden_inputs.len()
+                if hidden_inputs.len() != next_nodes.len() {
+                    return Err(Error::malformed_zkp_program(&format!(
+                        "Gadget {} at node id {:#?} has incorrect number of hidden inputs. Expected {}: actual: {}",
+                        g.debug_name(),
+                        id,
+                        args.len(),
+                        next_nodes.len()
+                    )));
+                }
+
+                // For each hidden node's index, assign the computed
+                // argument
+                for (i, e) in next_nodes.iter().enumerate() {
+                    // Continuing to assert the argument indices form
+                    // a range...
+                    if i != e.1 {
+                        return Err(Error::malformed_zkp_program(&format!(
+                            "Invalid hidden argument index. Expected: {} actual: {}",
+                            i, e.1
+                        )));
+                    }
+
+                    node_outputs.insert(e.0, args[i].try_into()?);
+                }
+            }
         };
 
-        Ok::<_, Error>(transforms)
+        Ok::<_, Error>(())
     })?;
 
-    unimplemented!();
+    jit_common(prog, public_inputs, Some(node_outputs))
 }
 
 pub fn jit_verifier<U>(
@@ -225,5 +333,110 @@ pub fn jit_verifier<U>(
 where
     U: BackendField,
 {
-    unimplemented!()
+    let mut prog = prog.clone();
+
+    constrain_public_inputs(&mut prog, public_inputs)?;
+
+    jit_common(prog, public_inputs, None)
+}
+
+fn jit_common<U>(
+    mut prog: CompiledZkpProgram,
+    public_inputs: &[U],
+    node_outputs: Option<HashMap<NodeIndex, U>>,
+) -> Result<ExecutableZkpProgram>
+where
+    U: BackendField,
+{
+    // Remove Gadgets, as we should have already extracted their outputs.
+    for n in prog
+        .node_indices()
+        .filter(|x| matches!(prog[*x].operation, Operation::InvokeGadget(_)))
+        .collect::<Vec<NodeIndex>>()
+    {
+        prog.remove_node(n);
+    }
+
+    let executable_graph = prog.map(
+        |id, n| match n.operation {
+            Operation::Add => NodeInfo::new(ExecOperation::Add),
+            Operation::Mul => NodeInfo::new(ExecOperation::Mul),
+            Operation::Sub => NodeInfo::new(ExecOperation::Sub),
+            Operation::Neg => NodeInfo::new(ExecOperation::Neg),
+            Operation::Constant(x) => NodeInfo::new(ExecOperation::Constant(x)),
+            Operation::Constraint(x) => NodeInfo::new(ExecOperation::Constraint(x)),
+            Operation::PublicInput(id) => NodeInfo::new(ExecOperation::Input(id)),
+            Operation::PrivateInput(id) => {
+                NodeInfo::new(ExecOperation::Input(public_inputs.len() + id))
+            }
+            Operation::HiddenInput(_) => match node_outputs.as_ref() {
+                Some(node_outputs) => NodeInfo::new(ExecOperation::HiddenInput(Some(
+                    node_outputs[&id].clone().into(),
+                ))),
+                None => NodeInfo::new(ExecOperation::HiddenInput(None)),
+            },
+            Operation::InvokeGadget(_) => unreachable!("Not all gadgets processed and removed"),
+        },
+        |_, e| *e,
+    );
+
+    Ok(CompilationResult(executable_graph))
+}
+
+fn constrain_public_inputs<U>(prog: &mut CompiledZkpProgram, public_inputs: &[U]) -> Result<()>
+where
+    U: BackendField,
+{
+    let mut arg_indices = prog
+        .node_weights()
+        .filter_map(|x| match x.operation {
+            Operation::PublicInput(x) => Some(x),
+            _ => None,
+        })
+        .collect::<Vec<usize>>();
+
+    // Caller should fallibly check this.
+    if public_inputs.len() != arg_indices.len() {
+        return Err(Error::inputs_mismatch(&format!(
+            "Expected {} public inputs, found {}",
+            arg_indices.len(),
+            public_inputs.len()
+        )));
+    }
+
+    arg_indices.sort();
+
+    for (i, j) in arg_indices.iter().enumerate() {
+        if i != *j {
+            return Err(Error::malformed_zkp_program(&format!(
+                "Public inputs do not form a range 0..{}",
+                arg_indices.len()
+            )));
+        }
+    }
+
+    forward_traverse_mut(prog, |query, id| {
+        let mut transforms = GraphTransforms::new();
+
+        match query.get_node(id).unwrap().operation {
+            Operation::PublicInput(x) => {
+                let as_bigint: BigInt = public_inputs[x].clone().into();
+
+                let constraint = transforms.push(Transform::AddNode(NodeInfo {
+                    operation: Operation::Constraint(as_bigint),
+                }));
+                transforms.push(Transform::AddEdge(
+                    id.into(),
+                    constraint.into(),
+                    EdgeInfo::Unordered,
+                ));
+            }
+            _ => {}
+        };
+
+        Ok::<_, Infallible>(transforms)
+    })
+    .unwrap();
+
+    Ok(())
 }

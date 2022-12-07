@@ -135,6 +135,10 @@ impl OperationTrait for FheOperation {
     fn is_unordered(&self) -> bool {
         false
     }
+
+    fn is_ordered(&self) -> bool {
+        false
+    }
 }
 
 /**

@@ -61,18 +61,18 @@ compile_error!("This crate currently requires a little endian target architectur
  */
 pub trait Gadget: Any {
     /**
-     * Create the subcircuit for this gadget. Returns the a tuple containing
-     * the node indices of the added hidden inputs and gadget outputs
-     * respectively.
+     * Create the subcircuit for this gadget.
+     * * `gadget_inputs` are the node indices of the gadget inputs.
+     * * `hidden_inputs` are the nodes of the gadget's hidden inputs.
+     * 
+     * Returns the node indices of the gadget outputs.
      *
      * # Remarks
      * If the following aren't true, proving will fail with a `GadgetError`.
-     * * The number of hidden inputs this circuit emits must equal
-     *   [`get_input_count()`](Gadget::get_input_count).
      * * The number of outputs must equal
      *   [`get_output_count()`](Gadget::get_output_count).
      */
-    fn gen_circuit(&self, node_indices: &[NodeIndex]) -> (Vec<NodeIndex>, Vec<NodeIndex>);
+    fn gen_circuit(&self, gadget_inputs: &[NodeIndex], hidden_inputs: &[NodeIndex]) -> Vec<NodeIndex>;
 
     /**
      * Compute the values for each of the hidden inputs from the given
@@ -89,7 +89,15 @@ pub trait Gadget: Any {
      */
     fn get_output_count(&self) -> usize;
 
-    fn get_input_count(&self) -> usize;
+    /**
+     * Returns the expected number of gadget inputs.
+     */
+    fn get_gadget_input_count(&self) -> usize;
+
+    /**
+     * Returns the expected number of hidden inputs.
+     */
+    fn get_hidden_input_count(&self) -> usize;
 
     /**
      * The gadget's name used to implement Operation's [`Debug`] trait.

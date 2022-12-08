@@ -5,6 +5,7 @@ use crate::Result;
 
 use std::hash::Hash;
 use std::sync::Arc;
+use std::vec;
 use std::{any::Any, cell::RefCell};
 
 /**
@@ -192,6 +193,8 @@ pub type ZkpFrontendCompilation = CompilationResult<Operation>;
 pub trait ZkpContextOps {
     fn add_public_input(&mut self) -> NodeIndex;
 
+    fn add_hidden_input(&mut self, gadget_arg_id: usize) -> NodeIndex;
+
     fn add_addition(&mut self, left: NodeIndex, right: NodeIndex) -> NodeIndex;
 
     fn add_multiplication(&mut self, left: NodeIndex, right: NodeIndex) -> NodeIndex;
@@ -203,6 +206,8 @@ pub trait ZkpContextOps {
     fn add_constraint(&mut self, left: NodeIndex, val: &BigInt) -> NodeIndex;
 
     fn add_constant(&mut self, val: &BigInt) -> NodeIndex;
+
+    fn add_invoke_gadget<G: Gadget>(&mut self, gadget: &Arc<G>) -> NodeIndex;
 }
 
 impl ZkpContextOps for ZkpContext {
@@ -211,6 +216,10 @@ impl ZkpContextOps for ZkpContext {
         self.data += 1;
 
         node
+    }
+
+    fn add_hidden_input(&mut self, gadget_arg_id: usize) -> NodeIndex {
+        self.add_node(Operation::HiddenInput(gadget_arg_id))
     }
 
     fn add_addition(&mut self, left: NodeIndex, right: NodeIndex) -> NodeIndex {
@@ -239,6 +248,10 @@ impl ZkpContextOps for ZkpContext {
 
     fn add_constant(&mut self, val: &BigInt) -> NodeIndex {
         self.add_node(Operation::Constant(*val))
+    }
+
+    fn add_invoke_gadget<G: Gadget>(&mut self, gadget: &Arc<G>) -> NodeIndex {
+        self.add_node(Operation::InvokeGadget(gadget.clone()))
     }
 }
 
@@ -302,4 +315,34 @@ pub(crate) fn compile(program: &ZkpFrontendCompilation) -> CompiledZkpProgram {
     );
 
     CompilationResult(jit)
+}
+
+/**
+ * Invokes a gadget and adds its sub-circuit to the graph.
+ * 
+ * # Panics
+ * * Calling this function inside a [`with_zkp_ctx`] callback
+ */
+pub fn invoke_gadget<G: Gadget>(g: G, gadget_inputs: &[NodeIndex]) {
+    let hidden_inputs_count = g.get_hidden_input_count();
+    let g = Arc::new(g);
+
+    let mut hidden_inputs = vec![];
+
+    with_zkp_ctx(|ctx| {
+        let gadget = ctx.add_invoke_gadget(&g);
+
+        for i in 0..hidden_inputs_count {
+            let hidden_input = ctx.add_hidden_input(i);
+            ctx.add_edge(gadget, hidden_input, EdgeInfo::Unary);
+
+            hidden_inputs.push(hidden_input);
+        }
+
+        for (i, gadget_input) in gadget_inputs.iter().enumerate() {
+            ctx.add_edge(*gadget_input, gadget, EdgeInfo::Ordered(i));
+        }
+    });
+
+    g.gen_circuit(gadget_inputs, &hidden_inputs);
 }

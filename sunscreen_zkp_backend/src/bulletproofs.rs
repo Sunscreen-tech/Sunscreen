@@ -12,8 +12,8 @@ use serde::{Deserialize, Serialize};
 use sunscreen_compiler_common::forward_traverse;
 
 use crate::{
-    exec::Operation, jit, BackendField, BigInt, Error, ExecutableZkpProgram, Proof, Result,
-    ZkpBackend,
+    exec::Operation, jit::jit_verifier, jit_prover, BackendField, BigInt, Error,
+    ExecutableZkpProgram, Proof, Result, ZkpBackend,
 };
 
 #[derive(Clone)]
@@ -150,6 +150,16 @@ impl BulletproofsCircuit {
 
                     self.nodes[idx.index()] = Some(input.into());
                 }
+                Operation::HiddenInput(x) => {
+                    let x = match x {
+                        Some(x) => Some(Scalar::try_from(x)?),
+                        None => None,
+                    };
+
+                    let input: LinearCombination = cs.allocate(x)?.into();
+
+                    self.nodes[idx.index()] = Some(input.into());
+                }
                 Operation::Add => {
                     let (left, right) = query.get_binary_operands(idx)?;
 
@@ -280,7 +290,11 @@ impl ZkpBackend for BulletproofsBackend {
             .count();
 
         if expected_input_count != inputs.len() {
-            return Err(Error::InputsMismatch);
+            return Err(Error::inputs_mismatch(&format!(
+                "Internal error: Bulletproofs runtime arguments mismatch. Expected {}, got {}.",
+                expected_input_count,
+                inputs.len()
+            )));
         }
 
         let multiplier_count = graph
@@ -333,8 +347,35 @@ impl ZkpBackend for BulletproofsBackend {
         Ok(verifier.verify(&proof.0, &pedersen_gens, &bulletproof_gens)?)
     }
 
-    fn jit(&self, prog: &crate::CompiledZkpProgram) -> Result<ExecutableZkpProgram> {
-        jit::<Scalar>(prog)
+    fn jit_prover(
+        &self,
+        prog: &crate::CompiledZkpProgram,
+        public_inputs: &[BigInt],
+        private_inputs: &[BigInt],
+    ) -> Result<ExecutableZkpProgram> {
+        let public_inputs = public_inputs
+            .iter()
+            .map(Scalar::try_from)
+            .collect::<Result<Vec<Scalar>>>()?;
+        let private_inputs = private_inputs
+            .iter()
+            .map(Scalar::try_from)
+            .collect::<Result<Vec<Scalar>>>()?;
+
+        jit_prover::<Scalar>(prog, &public_inputs, &private_inputs)
+    }
+
+    fn jit_verifier(
+        &self,
+        prog: &crate::CompiledZkpProgram,
+        public_inputs: &[BigInt],
+    ) -> Result<ExecutableZkpProgram> {
+        let public_inputs = public_inputs
+            .iter()
+            .map(Scalar::try_from)
+            .collect::<Result<Vec<Scalar>>>()?;
+
+        jit_verifier(prog, &public_inputs)
     }
 }
 
@@ -384,6 +425,30 @@ impl TryFrom<&BigInt> for Scalar {
     }
 }
 
+fn scalar_to_uint<const N: usize>(x: &Scalar) -> UInt<N> {
+    assert!(std::mem::size_of::<UInt<N>>() >= std::mem::size_of::<Scalar>());
+
+    let mut uint_data = x.as_bytes().to_vec();
+
+    let remainder = std::mem::size_of::<UInt<N>>() - std::mem::size_of::<Scalar>();
+
+    uint_data.extend((0..remainder).into_iter().map(|_| 0u8));
+
+    UInt::from_le_slice(&uint_data)
+}
+
+impl crate::ZkpFrom<Scalar> for BigInt {
+    fn from(val: Scalar) -> BigInt {
+        BigInt(scalar_to_uint(&val))
+    }
+}
+
+impl crate::ZkpFrom<&Scalar> for BigInt {
+    fn from(val: &Scalar) -> BigInt {
+        BigInt(scalar_to_uint(val))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crypto_bigint::U512;
@@ -392,21 +457,13 @@ mod tests {
     use super::*;
     use crate::exec::Operation as BackendOperation;
 
-    fn scalar_to_u512(x: &Scalar) -> BigInt {
-        let mut data = x.to_bytes().to_vec();
-
-        data.extend([0u8; 32].iter());
-
-        BigInt::from(U512::from_le_slice(&data))
-    }
-
     #[test]
     fn can_convert_small_u512_to_scalar() {
         let a = BigInt::from_words([0x1234567890abcdef, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0]);
 
         let scalar = Scalar::try_from(a).unwrap();
 
-        assert_eq!(a, scalar_to_u512(&scalar));
+        assert_eq!(a, <BigInt as crate::ZkpFrom<Scalar>>::from(scalar));
     }
 
     #[test]
@@ -460,7 +517,10 @@ mod tests {
         let l_min_1 = l.0.wrapping_sub(&U512::ONE);
         let scalar = try_uint_to_scalar(&l_min_1).unwrap();
 
-        assert_eq!(BigInt::from(l_min_1), scalar_to_u512(&scalar));
+        assert_eq!(
+            BigInt(l_min_1),
+            <BigInt as crate::ZkpFrom<Scalar>>::from(scalar)
+        );
     }
 
     #[test]
@@ -491,7 +551,7 @@ mod tests {
         );
 
         let _ = add_node(
-            BackendOperation::Constraint(BigInt::from(U512::from_u32(42))),
+            BackendOperation::Constraint(BigInt(U512::from_u32(42))),
             &[(add_1, EdgeInfo::Unordered)],
         );
 
@@ -531,9 +591,9 @@ mod tests {
             .prove(
                 &graph,
                 &[
-                    BigInt::from(U512::from_u32(8)),
-                    BigInt::from(U512::from_u32(5)),
-                    BigInt::from(U512::from_u32(3)),
+                    BigInt(U512::from_u32(8)),
+                    BigInt(U512::from_u32(5)),
+                    BigInt(U512::from_u32(3)),
                 ],
             )
             .unwrap();

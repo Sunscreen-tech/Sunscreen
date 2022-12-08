@@ -19,11 +19,12 @@ fn can_add_and_mul_native_fields() {
     let proof = runtime
         .prove(
             program,
+            &[],
             &[BigInt::from(10u8), BigInt::from(4u8), BigInt::from(2u8)],
         )
         .unwrap();
 
-    runtime.verify(program, &proof).unwrap();
+    runtime.verify(program, &proof, &[]).unwrap();
 }
 
 #[test]
@@ -42,10 +43,10 @@ fn get_input_mismatch_on_incorrect_args() {
 
     let program = app.get_zkp_program(add_mul).unwrap();
 
-    let result = runtime.prove(program, &[]);
+    let result = runtime.prove(program, &[], &[]);
 
     assert!(matches!(
         result,
-        Err(Error::ZkpError(ZkpError::InputsMismatch))
+        Err(Error::ZkpError(ZkpError::InputsMismatch(_)))
     ));
 }

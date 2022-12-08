@@ -11,19 +11,37 @@ pub enum Error {
     #[error("Value {0} is out of range for the chosen backend")]
     OutOfRange(Box<String>),
 
-    #[error("The number of inputs passed to an R1CS circuit didn't match the number of inputs to the circuit.")]
-    InputsMismatch,
+    #[error("Argument mismatch: {0}")]
+    InputsMismatch(Box<String>),
 
     #[error("The given proof isn't valid for the backend proof system.")]
     IncorrectProofType,
 
     #[error("The backend graph is malformed {0}")]
     GraphQueryError(#[from] GraphQueryError),
+
+    #[error("Gadget error: {0}")]
+    GadgetError(Box<String>),
+
+    #[error("Malfromed ZKP program: {0}")]
+    MalformedZkpProgram(Box<String>),
 }
 
 impl Error {
     pub fn out_of_range(val: &str) -> Self {
         Self::OutOfRange(Box::new(val.to_owned()))
+    }
+
+    pub fn gadget_error(msg: &str) -> Self {
+        Self::GadgetError(Box::new(msg.to_owned()))
+    }
+
+    pub fn malformed_zkp_program(msg: &str) -> Self {
+        Self::MalformedZkpProgram(Box::new(msg.to_owned()))
+    }
+
+    pub fn inputs_mismatch(msg: &str) -> Self {
+        Self::InputsMismatch(Box::new(msg.to_owned()))
     }
 }
 

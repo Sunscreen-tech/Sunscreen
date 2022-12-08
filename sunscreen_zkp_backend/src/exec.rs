@@ -5,6 +5,12 @@ use sunscreen_compiler_common::{CompilationResult, Operation as OperationTrait};
 pub enum Operation {
     Input(usize),
 
+    /**
+     * A hidden input. When running the prover's algorithm, this will
+     * be [`Some`]. Otherwise [`None`].
+     */
+    HiddenInput(Option<BigInt>),
+
     Add,
 
     Mul,
@@ -33,6 +39,10 @@ impl OperationTrait for Operation {
 
     fn is_unordered(&self) -> bool {
         matches!(self, Operation::Constraint(_))
+    }
+
+    fn is_ordered(&self) -> bool {
+        false
     }
 }
 

@@ -68,7 +68,7 @@ pub fn zkp_program_impl(
     let var_decl = unwrapped_inputs.iter().enumerate().map(|(i, t)| {
         let var_name = format!("c_{}", i);
 
-        create_program_node(&var_name, t.0)
+        create_program_node(&var_name, t.0, "private_input")
     });
 
     let args = unwrapped_inputs.iter().enumerate().map(|(i, t)| {
@@ -94,9 +94,9 @@ pub fn zkp_program_impl(
             fn build(&self) -> sunscreen::Result<sunscreen::ZkpFrontendCompilation> {
                 use std::cell::RefCell;
                 use std::mem::transmute;
-                use sunscreen::{CURRENT_ZKP_CTX, ZkpContext, Error, INDEX_ARENA, Result, types::{zkp::{ProgramNode, ConstrainEq}, TypeName}};
+                use sunscreen::{CURRENT_ZKP_CTX, ZkpContext, ZkpData, Error, INDEX_ARENA, Result, types::{zkp::{ProgramNode, ConstrainEq}, TypeName}};
 
-                let mut context = ZkpContext::new(0);
+                let mut context = ZkpContext::new(ZkpData::new());
 
                 CURRENT_ZKP_CTX.with(|ctx| {
                     #[allow(clippy::type_complexity)]

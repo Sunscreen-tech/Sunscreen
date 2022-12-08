@@ -129,4 +129,8 @@ impl OperationTrait for Operation {
     fn is_unordered(&self) -> bool {
         false
     }
+
+    fn is_ordered(&self) -> bool {
+        false
+    }
 }

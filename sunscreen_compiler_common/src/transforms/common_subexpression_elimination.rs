@@ -170,6 +170,10 @@ mod tests {
         fn is_unordered(&self) -> bool {
             false
         }
+
+        fn is_ordered(&self) -> bool {
+            false
+        }
     }
 
     fn get_graph() -> CompilationResult<Operation> {

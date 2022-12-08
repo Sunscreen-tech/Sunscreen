@@ -309,7 +309,8 @@ impl ZkpBackend for BulletproofsBackend {
             .collect::<Result<Vec<Scalar>>>()?;
 
         let transcript = BulletproofsCircuit::make_transcript(multiplier_count);
-        let (pedersen_gens, bulletproof_gens) = BulletproofsCircuit::make_gens(multiplier_count);
+
+        let (pedersen_gens, bulletproof_gens) = BulletproofsCircuit::make_gens(2 * multiplier_count);
 
         let mut circuit = BulletproofsCircuit::new(graph.node_count());
 
@@ -336,7 +337,7 @@ impl ZkpBackend for BulletproofsBackend {
             .count();
 
         let transcript = BulletproofsCircuit::make_transcript(multiplier_count);
-        let (pedersen_gens, bulletproof_gens) = BulletproofsCircuit::make_gens(multiplier_count);
+        let (pedersen_gens, bulletproof_gens) = BulletproofsCircuit::make_gens(2 * multiplier_count);
 
         let mut circuit = BulletproofsCircuit::new(graph.node_count());
 

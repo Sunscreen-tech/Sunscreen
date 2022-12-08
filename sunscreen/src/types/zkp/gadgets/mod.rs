@@ -1,3 +1,3 @@
-mod to_binary;
+mod binary;
 
-pub use to_binary::*;
+pub use binary::*;

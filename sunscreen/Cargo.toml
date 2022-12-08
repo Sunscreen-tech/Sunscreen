@@ -21,6 +21,7 @@ readme = "crates-io.md"
 
 [dependencies]
 bumpalo = "3.8.0"
+crypto-bigint = "0.4.9"
 log = "0.4.14"
 num = "0.4.0"
 petgraph = "0.6.0"

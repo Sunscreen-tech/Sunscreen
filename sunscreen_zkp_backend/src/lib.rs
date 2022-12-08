@@ -98,17 +98,19 @@ pub trait Gadget: Any {
     /**
      * Returns the expected number of gadget inputs.
      */
-    fn get_gadget_input_count(&self) -> usize;
+    fn gadget_input_count(&self) -> usize;
 
     /**
      * Returns the expected number of hidden inputs.
      */
-    fn get_hidden_input_count(&self) -> usize;
+    fn hidden_input_count(&self) -> usize;
 
     /**
      * The gadget's name used to implement Operation's [`Debug`] trait.
      */
-    fn debug_name(&self) -> &'static str;
+    fn debug_name(&self) -> &'static str {
+        std::any::type_name::<Self>()
+    }
 }
 
 #[derive(Clone, Serialize, Deserialize)]

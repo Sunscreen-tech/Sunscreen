@@ -1,7 +1,11 @@
 use sunscreen_zkp_backend::{BigInt, Gadget};
 
-use crate::{with_zkp_ctx, zkp::ZkpContextOps};
+use crate::{with_zkp_ctx, zkp::ZkpContextOps, invoke_gadget};
+use crypto_bigint::CheckedSub;
 
+/**
+ * Expands a field element into N-bit unsigned binary.
+ */
 pub struct ToUInt<const N: usize>;
 
 trait GetBit {
@@ -40,7 +44,7 @@ impl<const N: usize> Gadget for ToUInt<N> {
 
         let mut muls = vec![];
 
-        with_zkp_ctx(|ctx| {
+        let hidden_inputs = with_zkp_ctx(|ctx| {
             for i in 0..N {
                 let constant = BigInt::from(*BigInt::ONE << i);
                 let constant = ctx.add_constant(&constant);
@@ -64,20 +68,73 @@ impl<const N: usize> Gadget for ToUInt<N> {
                 ctx.add_constraint(sub, &BigInt::ZERO);
             }
 
-            hidden_inputs.to_owned()
-        })
+            hidden_inputs
+        });
+
+        // Stop the prover from cheating and passing non-binary for
+        // the expansion.
+        for i in hidden_inputs {
+            invoke_gadget(AssertBinary, &[*i]);
+        }
+
+        hidden_inputs.to_owned()
     }
 
-    fn get_gadget_input_count(&self) -> usize {
+    fn gadget_input_count(&self) -> usize {
         1
     }
 
-    fn get_hidden_input_count(&self) -> usize {
+    fn hidden_input_count(&self) -> usize {
         N
     }
+}
 
-    fn debug_name(&self) -> &'static str {
-        std::any::type_name::<Self>()
+/**
+ * Proves the given input is 0 or 1. We do this by:
+ * * Compute a_inv = 1 - a.
+ * * Constrain a + a_inv = 1
+ * * Constrain a * a_inv = 0
+ */
+pub struct AssertBinary;
+
+impl Gadget for AssertBinary {
+    fn compute_inputs(&self, gadget_inputs: &[BigInt]) -> Vec<BigInt> {
+        let val = gadget_inputs[0];
+
+        if val != BigInt::ONE && val != BigInt::ZERO {
+            panic!("{} is not binary", val.to_string());
+        }
+
+        vec![(*BigInt::ONE).checked_sub(&*val).unwrap().into()]
+    }
+
+    fn hidden_input_count(&self) -> usize {
+        1
+    }
+
+    fn gadget_input_count(&self) -> usize {
+        1
+    }
+
+    fn gen_circuit(
+            &self,
+            gadget_inputs: &[petgraph::stable_graph::NodeIndex],
+            hidden_inputs: &[petgraph::stable_graph::NodeIndex],
+        ) -> Vec<petgraph::stable_graph::NodeIndex> {
+        let a = gadget_inputs[0];
+        let a_not = hidden_inputs[0];
+
+        with_zkp_ctx(|ctx| {
+            let val = ctx.add_multiplication(a, a_not);
+
+            ctx.add_constraint(val, &BigInt::ZERO);
+
+            let sum = ctx.add_addition(a, a_not);
+
+            ctx.add_constraint(sum, &BigInt::ONE);
+        });
+
+        vec![]
     }
 }
 
@@ -93,6 +150,7 @@ mod tests {
 
     #[test]
     fn can_convert_to_binary() {
+        // Prove we know the value that decomposes into 0b101010
         #[zkp_program(backend = "bulletproofs")]
         fn test(a: NativeField) {
             let bits = a.to_unsigned::<6>();

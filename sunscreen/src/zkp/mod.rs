@@ -1,3 +1,4 @@
+use petgraph::Graph;
 use sunscreen_runtime::CallSignature;
 use sunscreen_zkp_backend::{BigInt, CompiledZkpProgram, Gadget, Operation as JitOperation};
 
@@ -348,6 +349,9 @@ pub(crate) fn compile(program: &ZkpFrontendCompilation) -> CompiledZkpProgram {
         |_, e| *e,
     );
 
+    // Convert in and out of Graph to compact all the node indices.
+    let jit = Graph::from(jit).into();
+
     CompilationResult(jit)
 }
 
@@ -359,8 +363,8 @@ pub(crate) fn compile(program: &ZkpFrontendCompilation) -> CompiledZkpProgram {
  * * `gadget_inputs.len() != g.get_gadget_input_count()`
  */
 pub fn invoke_gadget<G: Gadget>(g: G, gadget_inputs: &[NodeIndex]) -> Vec<NodeIndex> {
-    let hidden_inputs_count = g.get_hidden_input_count();
-    let gadget_input_count = g.get_gadget_input_count();
+    let hidden_inputs_count = g.hidden_input_count();
+    let gadget_input_count = g.gadget_input_count();
 
     assert_eq!(
         gadget_input_count,

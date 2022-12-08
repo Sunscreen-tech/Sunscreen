@@ -355,11 +355,11 @@ impl ZkpBackend for BulletproofsBackend {
     ) -> Result<ExecutableZkpProgram> {
         let public_inputs = public_inputs
             .iter()
-            .map(|x| Scalar::try_from(x))
+            .map(Scalar::try_from)
             .collect::<Result<Vec<Scalar>>>()?;
         let private_inputs = private_inputs
             .iter()
-            .map(|x| Scalar::try_from(x))
+            .map(Scalar::try_from)
             .collect::<Result<Vec<Scalar>>>()?;
 
         jit_prover::<Scalar>(prog, &public_inputs, &private_inputs)
@@ -372,7 +372,7 @@ impl ZkpBackend for BulletproofsBackend {
     ) -> Result<ExecutableZkpProgram> {
         let public_inputs = public_inputs
             .iter()
-            .map(|x| Scalar::try_from(x))
+            .map(Scalar::try_from)
             .collect::<Result<Vec<Scalar>>>()?;
 
         jit_verifier(prog, &public_inputs)
@@ -434,7 +434,7 @@ fn scalar_to_uint<const N: usize>(x: &Scalar) -> UInt<N> {
 
     uint_data.extend((0..remainder).into_iter().map(|_| 0u8));
 
-    UInt::from(UInt::from_le_slice(&uint_data))
+    UInt::from_le_slice(&uint_data)
 }
 
 impl crate::ZkpFrom<Scalar> for BigInt {

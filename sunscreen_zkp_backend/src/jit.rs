@@ -132,18 +132,7 @@ impl OperationTrait for Operation {
  */
 pub type CompiledZkpProgram = CompilationResult<Operation>;
 
-fn validate_zkp_program(prog: &CompiledZkpProgram) -> Result<()> {
-    // At the start of JITing, the program should have no hidden inputs.
-    // Gadgets will add these after invocation.
-    if prog
-        .node_weights()
-        .any(|x| matches!(x.operation, Operation::HiddenInput(_)))
-    {
-        return Err(Error::malformed_zkp_program(&format!(
-            "Hidden input created outside of gadget."
-        )));
-    }
-
+fn validate_zkp_program(_prog: &CompiledZkpProgram) -> Result<()> {
     // TODO: check for cycles, assert each node has correct inputs.
 
     Ok(())
@@ -234,7 +223,7 @@ where
             }
             Operation::Constraint(_) => {} // Constraints produce no outputs
             Operation::Constant(x) => {
-                node_outputs.insert(id, U::try_from(x.clone())?);
+                node_outputs.insert(id, U::try_from(x)?);
             }
             Operation::InvokeGadget(ref g) => {
                 // Have the gadget tell us what the values are for the
@@ -417,20 +406,17 @@ where
     forward_traverse_mut(prog, |query, id| {
         let mut transforms = GraphTransforms::new();
 
-        match query.get_node(id).unwrap().operation {
-            Operation::PublicInput(x) => {
-                let as_bigint: BigInt = public_inputs[x].clone().into();
+        if let Operation::PublicInput(x) = query.get_node(id).unwrap().operation {
+            let as_bigint: BigInt = public_inputs[x].clone().into();
 
-                let constraint = transforms.push(Transform::AddNode(NodeInfo {
-                    operation: Operation::Constraint(as_bigint),
-                }));
-                transforms.push(Transform::AddEdge(
-                    id.into(),
-                    constraint.into(),
-                    EdgeInfo::Unordered,
-                ));
-            }
-            _ => {}
+            let constraint = transforms.push(Transform::AddNode(NodeInfo {
+                operation: Operation::Constraint(as_bigint),
+            }));
+            transforms.push(Transform::AddEdge(
+                id.into(),
+                constraint.into(),
+                EdgeInfo::Unordered,
+            ));
         };
 
         Ok::<_, Infallible>(transforms)

@@ -359,7 +359,7 @@ pub(crate) fn compile(program: &ZkpFrontendCompilation) -> CompiledZkpProgram {
  * # Panics
  * * Calling this function inside a [`with_zkp_ctx`] callback
  */
-pub fn invoke_gadget<G: Gadget>(g: G, gadget_inputs: &[NodeIndex]) {
+pub fn _invoke_gadget<G: Gadget>(g: G, gadget_inputs: &[NodeIndex]) {
     let hidden_inputs_count = g.get_hidden_input_count();
     let g = Arc::new(g);
 

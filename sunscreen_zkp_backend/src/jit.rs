@@ -303,7 +303,7 @@ where
                         )));
                     }
 
-                    node_outputs.insert(e.0, args[i].try_into()?);
+                    node_outputs.insert(e.0, hidden_inputs[i].try_into()?);
                 }
             }
         };

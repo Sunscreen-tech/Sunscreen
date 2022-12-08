@@ -1,7 +1,9 @@
+mod gadgets;
 mod native_field;
 mod program_node;
 
 pub use native_field::*;
+use petgraph::stable_graph::NodeIndex;
 pub use program_node::*;
 
 /**
@@ -131,4 +133,36 @@ pub trait NumFieldElements {
  * Encapsulates all the traits required for a type to be used in ZKP
  * programs.
  */
-pub trait ZkpType: NumFieldElements {}
+pub trait ZkpType: NumFieldElements + Sized {}
+
+/**
+ * Methods for coercing ZKP data types.
+ */
+pub trait Coerce
+where
+    Self: ZkpType,
+{
+    /**
+     * Coerces a value low-level ZKP program nodes. Useful for turning gadget
+     * outputs back into typed data.
+     */
+    fn coerce(nodes: &[NodeIndex]) -> ProgramNode<Self>;
+}
+
+impl<T> Coerce for T
+where
+    T: ZkpType,
+{
+    fn coerce(nodes: &[NodeIndex]) -> ProgramNode<Self> {
+        if nodes.len() != T::NUM_NATIVE_FIELD_ELEMENTS {
+            panic!(
+                "Could not coerse node slice into {}. Expected {} nodes, actual {}",
+                std::any::type_name::<T>(),
+                T::NUM_NATIVE_FIELD_ELEMENTS,
+                nodes.len()
+            );
+        }
+
+        ProgramNode::new(nodes)
+    }
+}

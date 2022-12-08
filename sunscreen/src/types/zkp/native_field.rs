@@ -2,11 +2,14 @@ use sunscreen_compiler_macros::TypeName;
 use sunscreen_zkp_backend::BigInt;
 
 use crate::{
+    invoke_gadget,
     types::zkp::{AddVar, ProgramNode},
     zkp::{with_zkp_ctx, ZkpContextOps},
 };
 
-use super::{ConstrainEqVarVar, IntoProgramNode, MulVar, NegVar, NumFieldElements, ZkpType};
+use super::{
+    gadgets::ToUInt, ConstrainEqVarVar, IntoProgramNode, MulVar, NegVar, NumFieldElements, ZkpType,
+};
 
 // Shouldn't need Clone + Copy, but there appears to be a bug in the Rust
 // compiler that prevents ProgramNode from being Copy if we don't.
@@ -93,5 +96,30 @@ impl IntoProgramNode for NativeField {
 
     fn into_program_node(self) -> ProgramNode<Self> {
         with_zkp_ctx(|ctx| ProgramNode::new(&[ctx.add_constant(&self.val)]))
+    }
+}
+
+/**
+ * Methods for decomposing values into binary.
+ */
+pub trait ToBinary {
+    /**
+     * Decompose this value into unsigned N-bit binary. If the value
+     * is too large, the proof will fail to validate.
+     */
+    fn to_unsigned<const N: usize>(&self) -> [ProgramNode<NativeField>; N];
+}
+
+impl ToBinary for ProgramNode<NativeField> {
+    fn to_unsigned<const N: usize>(&self) -> [ProgramNode<NativeField>; N] {
+        let bits = invoke_gadget(ToUInt::<5>, self.ids);
+
+        let mut vals = [*self; N];
+
+        for (i, bit) in bits.iter().enumerate() {
+            vals[i] = Self::new(&[*bit]);
+        }
+
+        vals
     }
 }

@@ -1,4 +1,4 @@
-use sunscreen::{types::zkp::NativeField, zkp_program, Compiler, Runtime, ZkpProgramFn};
+use sunscreen::{types::zkp::NativeField, zkp_program, Compiler, Runtime};
 use sunscreen_zkp_backend::{bulletproofs::BulletproofsBackend, BigInt};
 
 #[test]

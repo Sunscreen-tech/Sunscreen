@@ -86,7 +86,9 @@ pub use sunscreen_runtime::{
     ZkpRuntime,
 };
 pub use zkp::ZkpProgramFn;
-pub use zkp::{with_zkp_ctx, ZkpContext, ZkpData, ZkpFrontendCompilation, CURRENT_ZKP_CTX};
+pub use zkp::{
+    invoke_gadget, with_zkp_ctx, ZkpContext, ZkpData, ZkpFrontendCompilation, CURRENT_ZKP_CTX,
+};
 
 #[derive(Clone)]
 /**

@@ -333,9 +333,7 @@ pub(crate) fn compile(program: &ZkpFrontendCompilation) -> CompiledZkpProgram {
             let operation = match n.operation {
                 Operation::PrivateInput(x) => JitOperation::PrivateInput(x),
                 Operation::PublicInput(x) => JitOperation::PublicInput(x),
-                Operation::HiddenInput(_) => {
-                    unimplemented!()
-                }
+                Operation::HiddenInput(x) => JitOperation::HiddenInput(x),
                 Operation::InvokeGadget(ref g) => JitOperation::InvokeGadget(g.clone()),
                 Operation::Add => JitOperation::Add,
                 Operation::Mul => JitOperation::Mul,
@@ -358,9 +356,20 @@ pub(crate) fn compile(program: &ZkpFrontendCompilation) -> CompiledZkpProgram {
  *
  * # Panics
  * * Calling this function inside a [`with_zkp_ctx`] callback
+ * * `gadget_inputs.len() != g.get_gadget_input_count()`
  */
-pub fn _invoke_gadget<G: Gadget>(g: G, gadget_inputs: &[NodeIndex]) {
+pub fn invoke_gadget<G: Gadget>(g: G, gadget_inputs: &[NodeIndex]) -> Vec<NodeIndex> {
     let hidden_inputs_count = g.get_hidden_input_count();
+    let gadget_input_count = g.get_gadget_input_count();
+
+    assert_eq!(
+        gadget_input_count,
+        gadget_inputs.len(),
+        "{} gadget input mismatch: Expected {gadget_input_count} arguments found {}",
+        g.debug_name(),
+        gadget_inputs.len()
+    );
+
     let g = Arc::new(g);
 
     let mut hidden_inputs = vec![];
@@ -380,5 +389,5 @@ pub fn _invoke_gadget<G: Gadget>(g: G, gadget_inputs: &[NodeIndex]) {
         }
     });
 
-    g.gen_circuit(gadget_inputs, &hidden_inputs);
+    g.gen_circuit(gadget_inputs, &hidden_inputs)
 }

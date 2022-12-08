@@ -42,6 +42,11 @@ compile_error!("This crate currently requires a little endian target architectur
  * to ensure the trait is object-safe. Although legal, implementors generally
  * won't have data.
  *
+ * The [`Gadget::get_gadget_input_count`] and
+ * [`Gadget::get_hidden_input_count`] methods are not marked as `const` to
+ * maintain object-safety, but implementors should ensure the values these
+ * functions return is always the same for a given gadget type.
+ *
  * # Example
  * Suppose we want to decompose a native field element `x` into 8-bit
  * unsigned binary. Directly computing this with e.g. Lagrange interpolation
@@ -68,9 +73,11 @@ pub trait Gadget: Any {
      * Returns the node indices of the gadget outputs.
      *
      * # Remarks
-     * If the following aren't true, proving will fail with a `GadgetError`.
-     * * The number of outputs must equal
-     *   [`get_output_count()`](Gadget::get_output_count).
+     * `gadget_inputs.len()` is guaranteed to equal
+     * `self.get_gadget_input_count()`.
+     *
+     * `hidden_inputs.len()` is guaranteed to equal
+     * `self.get_hidden_input_count()`
      */
     fn gen_circuit(
         &self,
@@ -87,11 +94,6 @@ pub trait Gadget: Any {
      * [`get_input_count()`](Gadget::get_input_count).
      */
     fn compute_inputs(&self, gadget_inputs: &[BigInt]) -> Vec<BigInt>;
-
-    /**
-     * Returns the expected number of outputs.
-     */
-    fn get_output_count(&self) -> usize;
 
     /**
      * Returns the expected number of gadget inputs.
@@ -162,6 +164,7 @@ impl BigInt {
     }
 
     pub const ZERO: Self = Self(U512::ZERO);
+    pub const ONE: Self = Self(U512::ONE);
 }
 
 pub trait ZkpBackend {

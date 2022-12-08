@@ -64,7 +64,7 @@ pub trait Gadget: Any {
      * Create the subcircuit for this gadget.
      * * `gadget_inputs` are the node indices of the gadget inputs.
      * * `hidden_inputs` are the nodes of the gadget's hidden inputs.
-     * 
+     *
      * Returns the node indices of the gadget outputs.
      *
      * # Remarks
@@ -72,7 +72,11 @@ pub trait Gadget: Any {
      * * The number of outputs must equal
      *   [`get_output_count()`](Gadget::get_output_count).
      */
-    fn gen_circuit(&self, gadget_inputs: &[NodeIndex], hidden_inputs: &[NodeIndex]) -> Vec<NodeIndex>;
+    fn gen_circuit(
+        &self,
+        gadget_inputs: &[NodeIndex],
+        hidden_inputs: &[NodeIndex],
+    ) -> Vec<NodeIndex>;
 
     /**
      * Compute the values for each of the hidden inputs from the given

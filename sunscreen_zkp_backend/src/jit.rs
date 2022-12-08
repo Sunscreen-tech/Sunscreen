@@ -197,11 +197,11 @@ where
                 node_outputs.insert(id, val.clone());
             }
             Operation::PrivateInput(x) => {
-                if x >= public_inputs.len() {
-                    return Err(Error::malformed_zkp_program(&format!("JIT error: Node {:#?}: load public input {} out of bounds. (There are {} public inputs)", id, x, public_inputs.len())));
+                if x >= private_inputs.len() {
+                    return Err(Error::malformed_zkp_program(&format!("JIT error: Node {:#?}: load private input {} out of bounds. (There are {} public inputs)", id, x, private_inputs.len())));
                 }
 
-                node_outputs.insert(id, public_inputs[x].clone());
+                node_outputs.insert(id, private_inputs[x].clone());
             }
             Operation::HiddenInput(_) => {} // Gadgets populate these outputs.
             Operation::Add => {

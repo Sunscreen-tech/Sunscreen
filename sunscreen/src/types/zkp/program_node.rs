@@ -65,11 +65,24 @@ where
     /**
      * Creates a public program input of type T.
      */
-    pub fn input() -> Self {
+    pub fn public_input() -> Self {
         let mut ids = Vec::with_capacity(T::NUM_NATIVE_FIELD_ELEMENTS);
 
         for _ in 0..T::NUM_NATIVE_FIELD_ELEMENTS {
             ids.push(with_zkp_ctx(|ctx| ctx.add_public_input()));
+        }
+
+        Self::new(&ids)
+    }
+
+    /**
+     * Creates a private program input of type T.
+     */
+    pub fn private_input() -> Self {
+        let mut ids = Vec::with_capacity(T::NUM_NATIVE_FIELD_ELEMENTS);
+
+        for _ in 0..T::NUM_NATIVE_FIELD_ELEMENTS {
+            ids.push(with_zkp_ctx(|ctx| ctx.add_private_input()));
         }
 
         Self::new(&ids)

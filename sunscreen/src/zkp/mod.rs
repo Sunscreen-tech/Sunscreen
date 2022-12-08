@@ -174,6 +174,33 @@ impl Operation {
 }
 
 /**
+ * An implementation detail of a ZKP program. During compilation, it
+ * tracks how many public and private inputs have been added.
+ */
+pub struct ZkpData {
+    next_public_input: usize,
+    next_private_input: usize,
+}
+
+impl ZkpData {
+    /**
+     * Creates a [`ZkpData`].
+     */
+    pub fn new() -> Self {
+        Self {
+            next_private_input: 0,
+            next_public_input: 0,
+        }
+    }
+}
+
+impl Default for ZkpData {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+/**
  * An implementation detail of a ZKP program. During compilation, it holds
  * the graph of the program currently being constructed in an
  * [`#[zkp_program]`](crate::zkp_program) function.
@@ -181,7 +208,7 @@ impl Operation {
  * # Remarks
  * For internal use only.
  */
-pub type ZkpContext = Context<Operation, usize>;
+pub type ZkpContext = Context<Operation, ZkpData>;
 /**
  * Contains the results of compiling a [`#[zkp_program]`](crate::zkp_program) function.
  *
@@ -192,6 +219,8 @@ pub type ZkpFrontendCompilation = CompilationResult<Operation>;
 
 pub trait ZkpContextOps {
     fn add_public_input(&mut self) -> NodeIndex;
+
+    fn add_private_input(&mut self) -> NodeIndex;
 
     fn add_hidden_input(&mut self, gadget_arg_id: usize) -> NodeIndex;
 
@@ -212,8 +241,15 @@ pub trait ZkpContextOps {
 
 impl ZkpContextOps for ZkpContext {
     fn add_public_input(&mut self) -> NodeIndex {
-        let node = self.add_node(Operation::PublicInput(self.data));
-        self.data += 1;
+        let node = self.add_node(Operation::PublicInput(self.data.next_public_input));
+        self.data.next_public_input += 1;
+
+        node
+    }
+
+    fn add_private_input(&mut self) -> NodeIndex {
+        let node = self.add_node(Operation::PrivateInput(self.data.next_private_input));
+        self.data.next_private_input += 1;
 
         node
     }
@@ -319,7 +355,7 @@ pub(crate) fn compile(program: &ZkpFrontendCompilation) -> CompiledZkpProgram {
 
 /**
  * Invokes a gadget and adds its sub-circuit to the graph.
- * 
+ *
  * # Panics
  * * Calling this function inside a [`with_zkp_ctx`] callback
  */

@@ -9,7 +9,7 @@ use curve25519_dalek::scalar::Scalar;
 use merlin::Transcript;
 use petgraph::stable_graph::NodeIndex;
 use serde::{Deserialize, Serialize};
-use sunscreen_compiler_common::forward_traverse;
+use sunscreen_compiler_common::{forward_traverse, GraphQuery};
 
 use crate::{
     exec::Operation, jit::jit_verifier, jit_prover, BackendField, BigInt, Error,
@@ -282,6 +282,33 @@ impl Default for BulletproofsBackend {
     }
 }
 
+fn constraint_count(graph: &ExecutableZkpProgram) -> Result<usize> {
+    let mut count = 0;
+
+    let query = GraphQuery::new(graph);
+
+    for i in graph.node_indices() {
+        let node = &graph[i];
+
+        match node.operation {
+            Operation::Constant(_) => count += 1,
+            Operation::Mul => {
+                let (left, right) = query.get_binary_operands(i)?;
+
+                // Constant operands don't contribute to constraints.
+                match (&graph[left].operation, &graph[right].operation) {
+                    (Operation::Constant(_), _) => {}
+                    (_, Operation::Constant(_)) => {}
+                    _ => count += 2,
+                }
+            }
+            _ => {}
+        }
+    }
+
+    Ok(count)
+}
+
 impl ZkpBackend for BulletproofsBackend {
     fn prove(&self, graph: &ExecutableZkpProgram, inputs: &[BigInt]) -> Result<Proof> {
         let expected_input_count = graph
@@ -297,10 +324,7 @@ impl ZkpBackend for BulletproofsBackend {
             )));
         }
 
-        let multiplier_count = graph
-            .node_weights()
-            .filter(|n| matches!(n.operation, Operation::Input(_) | Operation::Mul))
-            .count();
+        let constraint_count = constraint_count(graph)?;
 
         // Convert the inputs to Scalars
         let inputs = inputs
@@ -308,8 +332,10 @@ impl ZkpBackend for BulletproofsBackend {
             .map(|x| x.try_into())
             .collect::<Result<Vec<Scalar>>>()?;
 
-        let transcript = BulletproofsCircuit::make_transcript(multiplier_count);
-        let (pedersen_gens, bulletproof_gens) = BulletproofsCircuit::make_gens(multiplier_count);
+        let transcript = BulletproofsCircuit::make_transcript(constraint_count);
+
+        let (pedersen_gens, bulletproof_gens) =
+            BulletproofsCircuit::make_gens(2 * constraint_count);
 
         let mut circuit = BulletproofsCircuit::new(graph.node_count());
 
@@ -330,13 +356,11 @@ impl ZkpBackend for BulletproofsBackend {
             }
         };
 
-        let multiplier_count = graph
-            .node_weights()
-            .filter(|n| matches!(n.operation, Operation::Input(_) | Operation::Mul))
-            .count();
+        let constraint_count = constraint_count(graph)?;
 
-        let transcript = BulletproofsCircuit::make_transcript(multiplier_count);
-        let (pedersen_gens, bulletproof_gens) = BulletproofsCircuit::make_gens(multiplier_count);
+        let transcript = BulletproofsCircuit::make_transcript(constraint_count);
+        let (pedersen_gens, bulletproof_gens) =
+            BulletproofsCircuit::make_gens(2 * constraint_count);
 
         let mut circuit = BulletproofsCircuit::new(graph.node_count());
 

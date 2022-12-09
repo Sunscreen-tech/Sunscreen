@@ -4,7 +4,7 @@ use crate::{
     exec::{ExecutableZkpProgram, Operation as ExecOperation},
     BackendField, BigInt, Error, Gadget, Result,
 };
-use petgraph::{stable_graph::NodeIndex, visit::EdgeRef, Direction};
+use petgraph::{stable_graph::NodeIndex, visit::EdgeRef, Direction, Graph};
 use sunscreen_compiler_common::{
     forward_traverse, forward_traverse_mut,
     transforms::{GraphTransforms, Transform},
@@ -303,7 +303,7 @@ where
                         )));
                     }
 
-                    node_outputs.insert(e.0, args[i].try_into()?);
+                    node_outputs.insert(e.0, hidden_inputs[i].try_into()?);
                 }
             }
         };
@@ -367,6 +367,9 @@ where
         },
         |_, e| *e,
     );
+
+    // Convert in and out of Graph to compact all the node indices.
+    let executable_graph = Graph::from(executable_graph).into();
 
     Ok(CompilationResult(executable_graph))
 }

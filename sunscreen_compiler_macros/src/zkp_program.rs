@@ -149,7 +149,7 @@ pub fn zkp_program_impl(
 
         impl AsRef<str> for #zkp_program_struct_name {
             fn as_ref(&self) -> &str {
-                use sunscreen::FheProgramFn;
+                use sunscreen::ZkpProgramFn;
 
                 self.name()
             }

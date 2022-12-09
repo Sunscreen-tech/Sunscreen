@@ -1364,6 +1364,7 @@ name = "sunscreen"
 version = "0.7.0"
 dependencies = [
  "bumpalo",
+ "crypto-bigint",
  "float-cmp",
  "log",
  "num",

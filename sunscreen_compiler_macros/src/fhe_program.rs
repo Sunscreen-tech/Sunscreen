@@ -34,13 +34,15 @@ pub fn fhe_program_impl(
     let unwrapped_inputs = match extract_fn_arguments(inputs) {
         Ok(v) => {
             for arg in &v {
-                if arg.0.len() > 0 {
-                    return proc_macro::TokenStream::from(quote_spanned ! { arg.1.span() => compile_error!("FHE program arguments do not support attributes.")})
+                if !arg.0.is_empty() {
+                    return proc_macro::TokenStream::from(
+                        quote_spanned! { arg.1.span() => compile_error!("FHE program arguments do not support attributes.")},
+                    );
                 }
             }
 
             v
-        },
+        }
         Err(e) => {
             return proc_macro::TokenStream::from(match e {
                 ExtractFnArgumentsError::ContainsSelf(s) => {

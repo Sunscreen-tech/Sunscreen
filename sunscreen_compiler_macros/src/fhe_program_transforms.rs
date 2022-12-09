@@ -1,9 +1,6 @@
 use proc_macro2::{Span, TokenStream as TokenStream2};
 use quote::{format_ident, quote, quote_spanned};
-use syn::{
-    parse_quote, parse_quote_spanned, spanned::Spanned,
-    Index, ReturnType, Type,
-};
+use syn::{parse_quote, parse_quote_spanned, spanned::Spanned, Index, ReturnType, Type};
 
 #[derive(Debug)]
 pub enum MapFheTypeError {

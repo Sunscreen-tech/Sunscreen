@@ -1,8 +1,8 @@
 use proc_macro2::{Span, TokenStream as TokenStream2};
 use quote::{format_ident, quote, quote_spanned};
 use syn::{
-    parse_quote, parse_quote_spanned, punctuated::Punctuated, spanned::Spanned, FnArg, Ident,
-    Index, Pat, ReturnType, Token, Type, Attribute,
+    parse_quote, parse_quote_spanned, punctuated::Punctuated, spanned::Spanned, Attribute, FnArg,
+    Ident, Index, Pat, ReturnType, Token, Type,
 };
 
 mod type_name;
@@ -100,12 +100,18 @@ pub enum ExtractFnArgumentsError {
 }
 
 /**
+ * The attribute, type, and identifier information for a function
+ * argument.
+ */
+pub type FnArgInfo<'a> = (Vec<Attribute>, &'a Type, &'a Ident);
+
+/**
  * Validate and parse the arguments of a function, returning a Vec of
  * the types and identifiers.
  */
 pub fn extract_fn_arguments(
     args: &Punctuated<FnArg, Token!(,)>,
-) -> Result<Vec<(Vec<Attribute>, &Type, &Ident)>, ExtractFnArgumentsError> {
+) -> Result<Vec<FnArgInfo<'_>>, ExtractFnArgumentsError> {
     let mut unwrapped_inputs = vec![];
 
     for i in args {

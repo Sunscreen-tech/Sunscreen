@@ -166,8 +166,10 @@ mod tests {
 
         let prog = app.get_zkp_program(test).unwrap();
 
-        let proof = runtime.prove(prog, &[], &[BigInt::from(42u8)]).unwrap();
+        let proof = runtime
+            .prove(prog, &[], &[], &[BigInt::from(42u8)])
+            .unwrap();
 
-        runtime.verify(prog, &proof, &[]).unwrap();
+        runtime.verify(prog, &proof, &[], &[]).unwrap();
     }
 }

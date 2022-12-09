@@ -42,7 +42,7 @@ pub fn zkp_program_impl(
                     if a.0.len() == 1 {
                         let ident = a.0[0].path.get_ident();
     
-                        match ident.map(|x| x.to_string().as_str()) {
+                        match ident.map(|x| x.to_string()).as_ref().map(|x| x.as_str()) {
                             Some("public") => arg_kind = ArgumentKind::Public,
                             Some("constant") => arg_kind = ArgumentKind::Constant,
                             _ => {
@@ -99,7 +99,7 @@ pub fn zkp_program_impl(
     
         let zkp_program_name_literal = format!("{}", zkp_program_name);
     
-        proc_macro::TokenStream::from(quote! {
+        Ok(proc_macro::TokenStream::from(quote! {
             #[allow(non_camel_case_types)]
             #[derive(Clone)]
             #vis struct #zkp_program_struct_name {
@@ -173,13 +173,13 @@ pub fn zkp_program_impl(
             #[allow(non_upper_case_globals)]
             #vis const #zkp_program_name: #zkp_program_struct_name = #zkp_program_struct_name {
             };
-        })
+        }))
     }
 
     match parse_inner(attr_params, input_fn) {
         Ok(s) => s,
         Err(Error::CompileError(s, msg)) => proc_macro::TokenStream::from(quote_spanned! {
-            s => compile_error! { msg }
+            s => compile_error! { #msg }
         }),
     }
 }

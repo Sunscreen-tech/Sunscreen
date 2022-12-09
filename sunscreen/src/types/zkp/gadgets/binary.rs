@@ -49,14 +49,14 @@ impl<const N: usize> Gadget for ToUInt<N> {
                 let constant = BigInt::from(*BigInt::ONE << i);
                 let constant = ctx.add_constant(&constant);
 
-                muls.push(ctx.add_multiplication(hidden_inputs[i], constant));
+                muls.push(ctx.add_multiplication(*hidden_inputs.get(i).unwrap(), constant));
             }
 
             if muls.len() >= 2 {
                 let mut prev_addition = ctx.add_addition(muls[0], muls[1]);
 
-                for i in 2..muls.len() {
-                    prev_addition = ctx.add_addition(prev_addition, muls[i]);
+                for i in muls.iter().skip(2) {
+                    prev_addition = ctx.add_addition(prev_addition, *i);
                 }
 
                 let sub = ctx.add_subtraction(prev_addition, val);
@@ -102,7 +102,7 @@ impl Gadget for AssertBinary {
         let val = gadget_inputs[0];
 
         if val != BigInt::ONE && val != BigInt::ZERO {
-            panic!("{} is not binary", val.to_string());
+            panic!("{:#?} is not binary", val);
         }
 
         vec![(*BigInt::ONE).checked_sub(&*val).unwrap().into()]

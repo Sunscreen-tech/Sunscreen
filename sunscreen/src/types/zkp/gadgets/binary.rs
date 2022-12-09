@@ -1,6 +1,6 @@
 use sunscreen_zkp_backend::{BigInt, Gadget};
 
-use crate::{with_zkp_ctx, zkp::ZkpContextOps, invoke_gadget};
+use crate::{invoke_gadget, with_zkp_ctx, zkp::ZkpContextOps};
 use crypto_bigint::CheckedSub;
 
 /**
@@ -117,10 +117,10 @@ impl Gadget for AssertBinary {
     }
 
     fn gen_circuit(
-            &self,
-            gadget_inputs: &[petgraph::stable_graph::NodeIndex],
-            hidden_inputs: &[petgraph::stable_graph::NodeIndex],
-        ) -> Vec<petgraph::stable_graph::NodeIndex> {
+        &self,
+        gadget_inputs: &[petgraph::stable_graph::NodeIndex],
+        hidden_inputs: &[petgraph::stable_graph::NodeIndex],
+    ) -> Vec<petgraph::stable_graph::NodeIndex> {
         let a = gadget_inputs[0];
         let a_not = hidden_inputs[0];
 

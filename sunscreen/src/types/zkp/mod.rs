@@ -156,7 +156,7 @@ where
     fn coerce(nodes: &[NodeIndex]) -> ProgramNode<Self> {
         if nodes.len() != T::NUM_NATIVE_FIELD_ELEMENTS {
             panic!(
-                "Could not coerse node slice into {}. Expected {} nodes, actual {}",
+                "Could not coerce node slice into {}. Expected {} nodes, actual {}",
                 std::any::type_name::<T>(),
                 T::NUM_NATIVE_FIELD_ELEMENTS,
                 nodes.len()

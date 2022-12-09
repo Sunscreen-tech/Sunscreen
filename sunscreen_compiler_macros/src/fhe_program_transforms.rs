@@ -1,8 +1,8 @@
 use proc_macro2::{Span, TokenStream as TokenStream2};
 use quote::{format_ident, quote, quote_spanned};
 use syn::{
-    parse_quote, parse_quote_spanned, punctuated::Punctuated, spanned::Spanned, FnArg, Ident,
-    Index, Pat, ReturnType, Token, Type,
+    parse_quote, parse_quote_spanned, spanned::Spanned,
+    Index, ReturnType, Type,
 };
 
 #[derive(Debug)]
@@ -62,45 +62,6 @@ pub fn create_fhe_program_node(var_name: &str, arg_type: &Type) -> TokenStream2 
     quote_spanned! {arg_type.span() =>
         let #var_name: #mapped_type = #type_annotation::input();
     }
-}
-
-#[derive(Debug)]
-pub enum ExtractFnArgumentsError {
-    ContainsSelf(Span),
-    IllegalType(Span),
-    IllegalPat(Span),
-}
-
-pub fn extract_fn_arguments(
-    args: &Punctuated<FnArg, Token!(,)>,
-) -> Result<Vec<(&Type, &Ident)>, ExtractFnArgumentsError> {
-    let mut unwrapped_inputs = vec![];
-
-    for i in args {
-        let input_type = match i {
-            FnArg::Receiver(_) => {
-                return Err(ExtractFnArgumentsError::ContainsSelf(i.span()));
-            }
-            FnArg::Typed(t) => match (&*t.ty, &*t.pat) {
-                (Type::Path(_), Pat::Ident(i)) => (&*t.ty, &i.ident),
-                (Type::Array(_), Pat::Ident(i)) => (&*t.ty, &i.ident),
-                _ => {
-                    match &*t.pat {
-                        Pat::Ident(_) => {}
-                        _ => {
-                            return Err(ExtractFnArgumentsError::IllegalPat(t.span()));
-                        }
-                    };
-
-                    return Err(ExtractFnArgumentsError::IllegalType(t.span()));
-                }
-            },
-        };
-
-        unwrapped_inputs.push(input_type);
-    }
-
-    Ok(unwrapped_inputs)
 }
 
 #[derive(Debug)]
@@ -381,46 +342,6 @@ mod test {
         };
 
         assert_syn_eq(&actual, &expected);
-    }
-
-    #[test]
-    fn can_extract_arguments() {
-        let type_name = quote! {
-            a: [[Cipher<Rational>; 7]; 6], b: Cipher<Rational>
-        };
-
-        let args: Punctuated<FnArg, Token!(,)> = parse_quote!(#type_name);
-
-        let extracted = extract_fn_arguments(&args).unwrap();
-
-        let expected_t0: Type = parse_quote! { [[Cipher<Rational>; 7]; 6] };
-        let expected_t1: Type = parse_quote! { Cipher<Rational> };
-        let expected_i0: Ident = parse_quote! { a };
-        let expected_i1: Ident = parse_quote! { b };
-
-        assert_eq!(extracted.len(), 2);
-        assert_syn_eq(extracted[0].0, &expected_t0);
-        assert_syn_eq(extracted[0].1, &expected_i0);
-        assert_syn_eq(extracted[1].0, &expected_t1);
-        assert_syn_eq(extracted[1].1, &expected_i1);
-    }
-
-    #[test]
-    fn disallows_self_arguments() {
-        let type_name = quote! {
-            &self, a: [[Cipher<Rational>; 7]; 6], b: Cipher<Rational>
-        };
-
-        let args: Punctuated<FnArg, Token!(,)> = parse_quote!(#type_name);
-
-        let extracted = extract_fn_arguments(&args);
-
-        match extracted {
-            Err(ExtractFnArgumentsError::ContainsSelf(_)) => {}
-            _ => {
-                panic!("Expected ExtractFnArgumentsError::ContainsSelf");
-            }
-        };
     }
 
     #[test]

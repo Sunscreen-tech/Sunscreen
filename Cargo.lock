@@ -1420,6 +1420,7 @@ dependencies = [
  "serde_json",
  "sunscreen_compiler_common",
  "syn",
+ "thiserror",
 ]
 
 [[package]]

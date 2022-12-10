@@ -87,6 +87,19 @@ where
 
         Self::new(&ids)
     }
+
+    /**
+     * Creates a constant program input of type T.
+     */
+    pub fn constant_input() -> Self {
+        let mut ids = Vec::with_capacity(T::NUM_NATIVE_FIELD_ELEMENTS);
+
+        for _ in 0..T::NUM_NATIVE_FIELD_ELEMENTS {
+            ids.push(with_zkp_ctx(|ctx| ctx.add_constant_input()));
+        }
+
+        Self::new(&ids)
+    }
 }
 
 impl<T> Add<ProgramNode<T>> for ProgramNode<T>

@@ -444,11 +444,12 @@ where
     pub fn prove(
         &self,
         program: &CompiledZkpProgram,
+        constant_inputs: &[BigInt],
         public_inputs: &[BigInt],
         private_inputs: &[BigInt],
     ) -> Result<Proof> {
         let backend = &self.runtime_data.unwrap_zkp().backend;
-        let prog = backend.jit_prover(program, public_inputs, private_inputs)?;
+        let prog = backend.jit_prover(program, constant_inputs, public_inputs, private_inputs)?;
 
         let inputs = [public_inputs, private_inputs].concat();
 
@@ -462,10 +463,11 @@ where
         &self,
         program: &CompiledZkpProgram,
         proof: &Proof,
+        constant_inputs: &[BigInt],
         public_inputs: &[BigInt],
     ) -> Result<()> {
         let backend = &self.runtime_data.unwrap_zkp().backend;
-        let prog = backend.jit_verifier(program, public_inputs)?;
+        let prog = backend.jit_verifier(program, constant_inputs, public_inputs)?;
 
         Ok(backend.verify(&prog, proof)?)
     }

@@ -1,8 +1,8 @@
 use proc_macro2::{Span, TokenStream as TokenStream2};
 use quote::{format_ident, quote, quote_spanned};
 use syn::{
-    parse_quote, parse_quote_spanned, punctuated::Punctuated, spanned::Spanned, FnArg, Ident,
-    Index, Pat, ReturnType, Token, Type,
+    parse_quote, parse_quote_spanned, punctuated::Punctuated, spanned::Spanned, Attribute, FnArg,
+    Ident, Index, Pat, ReturnType, Token, Type,
 };
 
 mod type_name;
@@ -100,12 +100,18 @@ pub enum ExtractFnArgumentsError {
 }
 
 /**
+ * The attribute, type, and identifier information for a function
+ * argument.
+ */
+pub type FnArgInfo<'a> = (Vec<Attribute>, &'a Type, &'a Ident);
+
+/**
  * Validate and parse the arguments of a function, returning a Vec of
  * the types and identifiers.
  */
 pub fn extract_fn_arguments(
     args: &Punctuated<FnArg, Token!(,)>,
-) -> Result<Vec<(&Type, &Ident)>, ExtractFnArgumentsError> {
+) -> Result<Vec<FnArgInfo<'_>>, ExtractFnArgumentsError> {
     let mut unwrapped_inputs = vec![];
 
     for i in args {
@@ -114,8 +120,8 @@ pub fn extract_fn_arguments(
                 return Err(ExtractFnArgumentsError::ContainsSelf(i.span()));
             }
             FnArg::Typed(t) => match (&*t.ty, &*t.pat) {
-                (Type::Path(_), Pat::Ident(i)) => (&*t.ty, &i.ident),
-                (Type::Array(_), Pat::Ident(i)) => (&*t.ty, &i.ident),
+                (Type::Path(_), Pat::Ident(i)) => (t.attrs.clone(), &*t.ty, &i.ident),
+                (Type::Array(_), Pat::Ident(i)) => (t.attrs.clone(), &*t.ty, &i.ident),
                 _ => {
                     match &*t.pat {
                         Pat::Ident(_) => {}
@@ -471,10 +477,36 @@ mod test {
         let expected_i1: Ident = parse_quote! { b };
 
         assert_eq!(extracted.len(), 2);
-        assert_syn_eq(extracted[0].0, &expected_t0);
-        assert_syn_eq(extracted[0].1, &expected_i0);
-        assert_syn_eq(extracted[1].0, &expected_t1);
-        assert_syn_eq(extracted[1].1, &expected_i1);
+        assert_syn_eq(extracted[0].1, &expected_t0);
+        assert_syn_eq(extracted[0].2, &expected_i0);
+        assert_syn_eq(extracted[1].1, &expected_t1);
+        assert_syn_eq(extracted[1].2, &expected_i1);
+    }
+
+    #[test]
+    fn can_extract_argument_attributes() {
+        let type_name = quote! {
+            #[public] a: [[Cipher<Rational>; 7]; 6], #[constant] b: Cipher<Rational>
+        };
+
+        let args: Punctuated<FnArg, Token!(,)> = parse_quote!(#type_name);
+
+        let extracted = extract_fn_arguments(&args).unwrap();
+
+        let expected_a0: Attribute = parse_quote! { #[public] };
+        let expected_a1: Attribute = parse_quote! { #[constant] };
+        let expected_t0: Type = parse_quote! { [[Cipher<Rational>; 7]; 6] };
+        let expected_t1: Type = parse_quote! { Cipher<Rational> };
+        let expected_i0: Ident = parse_quote! { a };
+        let expected_i1: Ident = parse_quote! { b };
+
+        assert_eq!(extracted.len(), 2);
+        assert_syn_eq(&extracted[0].0[0], &expected_a0);
+        assert_syn_eq(extracted[0].1, &expected_t0);
+        assert_syn_eq(extracted[0].2, &expected_i0);
+        assert_syn_eq(&extracted[1].0[0], &expected_a1);
+        assert_syn_eq(extracted[1].1, &expected_t1);
+        assert_syn_eq(extracted[1].2, &expected_i1);
     }
 
     #[test]

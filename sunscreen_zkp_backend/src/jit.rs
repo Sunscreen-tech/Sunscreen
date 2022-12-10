@@ -15,6 +15,7 @@ use sunscreen_compiler_common::{
 pub enum Operation {
     PrivateInput(usize),
     PublicInput(usize),
+    ConstantInput(usize),
     HiddenInput(usize),
 
     InvokeGadget(Arc<dyn Gadget>),
@@ -63,6 +64,10 @@ impl Hash for Operation {
             Self::Sub => state.write_u8(7),
             Self::Mul => state.write_u8(8),
             Self::Neg => state.write_u8(9),
+            Self::ConstantInput(x) => {
+                state.write_u8(10);
+                x.hash(state);
+            }
         }
     }
 }
@@ -92,6 +97,7 @@ impl Debug for Operation {
         match self {
             Self::PrivateInput(x) => write!(f, "PrivateInput({x})"),
             Self::PublicInput(x) => write!(f, "PublicInput({x})"),
+            Self::ConstantInput(x) => write!(f, "ConstantInput({x})"),
             Self::HiddenInput(x) => write!(f, "HiddenInput({x})"),
             Self::Constraint(x) => write!(f, "Constraint({x:#?})"),
             Self::Constant(x) => write!(f, "Constant({x:#?})"),
@@ -132,7 +138,53 @@ impl OperationTrait for Operation {
  */
 pub type CompiledZkpProgram = CompilationResult<Operation>;
 
-fn validate_zkp_program(_prog: &CompiledZkpProgram) -> Result<()> {
+fn validate_zkp_program(prog: &CompiledZkpProgram) -> Result<()> {
+    fn assert_range(inputs: &[usize], input_type: &str) -> Result<()> {
+        for (i, j) in inputs.iter().enumerate() {
+            if i != *j {
+                return Err(Error::malformed_zkp_program(&format!(
+                    "The {input_type}s do not form a range."
+                )));
+            }
+        }
+
+        Ok(())
+    }
+
+    // Check that the constant, public, and private inputs form a range.
+    let mut constant_inputs = prog
+        .node_weights()
+        .filter_map(|x| match x.operation {
+            Operation::ConstantInput(x) => Some(x),
+            _ => None,
+        })
+        .collect::<Vec<usize>>();
+
+    constant_inputs.sort();
+    assert_range(&constant_inputs, "constant input")?;
+
+    let mut private_inputs = prog
+        .node_weights()
+        .filter_map(|x| match x.operation {
+            Operation::PrivateInput(x) => Some(x),
+            _ => None,
+        })
+        .collect::<Vec<usize>>();
+
+    private_inputs.sort();
+    assert_range(&private_inputs, "private input")?;
+
+    let mut public_inputs = prog
+        .node_weights()
+        .filter_map(|x| match x.operation {
+            Operation::PublicInput(x) => Some(x),
+            _ => None,
+        })
+        .collect::<Vec<usize>>();
+
+    public_inputs.sort();
+    assert_range(&private_inputs, "private input")?;
+
     // TODO: check for cycles, assert each node has correct inputs.
 
     Ok(())
@@ -143,6 +195,7 @@ fn validate_zkp_program(_prog: &CompiledZkpProgram) -> Result<()> {
  */
 pub fn jit_prover<U>(
     prog: &CompiledZkpProgram,
+    constant_inputs: &[U],
     public_inputs: &[U],
     private_inputs: &[U],
 ) -> Result<ExecutableZkpProgram>
@@ -164,6 +217,7 @@ where
         )));
     }
 
+    verify_constant_inputs(&prog, constant_inputs)?;
     constrain_public_inputs(&mut prog, public_inputs)?;
 
     validate_zkp_program(&prog)?;
@@ -191,6 +245,9 @@ where
                 }
 
                 node_outputs.insert(id, private_inputs[x].clone());
+            }
+            Operation::ConstantInput(x) => {
+                node_outputs.insert(id, constant_inputs[x].clone());
             }
             Operation::HiddenInput(_) => {} // Gadgets populate these outputs.
             Operation::Add => {
@@ -311,11 +368,12 @@ where
         Ok::<_, Error>(())
     })?;
 
-    jit_common(prog, public_inputs, Some(node_outputs))
+    jit_common(prog, constant_inputs, public_inputs, Some(node_outputs))
 }
 
 pub fn jit_verifier<U>(
     prog: &CompiledZkpProgram,
+    constant_inputs: &[U],
     public_inputs: &[U],
 ) -> Result<ExecutableZkpProgram>
 where
@@ -323,13 +381,16 @@ where
 {
     let mut prog = prog.clone();
 
+    validate_zkp_program(&prog)?;
+    verify_constant_inputs(&prog, constant_inputs)?;
     constrain_public_inputs(&mut prog, public_inputs)?;
 
-    jit_common(prog, public_inputs, None)
+    jit_common(prog, constant_inputs, public_inputs, None)
 }
 
 fn jit_common<U>(
     mut prog: CompiledZkpProgram,
+    constant_inputs: &[U],
     public_inputs: &[U],
     node_outputs: Option<HashMap<NodeIndex, U>>,
 ) -> Result<ExecutableZkpProgram>
@@ -357,6 +418,11 @@ where
             Operation::PrivateInput(id) => {
                 NodeInfo::new(ExecOperation::Input(public_inputs.len() + id))
             }
+            Operation::ConstantInput(x) => {
+                let val = constant_inputs[x].clone();
+
+                NodeInfo::new(ExecOperation::Constant(val.into()))
+            }
             Operation::HiddenInput(_) => match node_outputs.as_ref() {
                 Some(node_outputs) => NodeInfo::new(ExecOperation::HiddenInput(Some(
                     node_outputs[&id].clone().into(),
@@ -372,6 +438,23 @@ where
     let executable_graph = Graph::from(executable_graph).into();
 
     Ok(CompilationResult(executable_graph))
+}
+
+fn verify_constant_inputs<U>(prog: &CompiledZkpProgram, constant_inputs: &[U]) -> Result<()> {
+    let expected_constant_inputs = prog
+        .node_weights()
+        .filter(|x| matches!(x.operation, Operation::ConstantInput(_)))
+        .count();
+
+    if constant_inputs.len() != expected_constant_inputs {
+        return Err(Error::inputs_mismatch(&format!(
+            "Expected {} constant inputs, received {}",
+            expected_constant_inputs,
+            constant_inputs.len()
+        )));
+    }
+
+    Ok(())
 }
 
 fn constrain_public_inputs<U>(prog: &mut CompiledZkpProgram, public_inputs: &[U]) -> Result<()>

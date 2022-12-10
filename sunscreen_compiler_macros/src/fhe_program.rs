@@ -4,6 +4,7 @@ use crate::{
 };
 use proc_macro2::{Span, TokenStream};
 use quote::{quote, quote_spanned};
+use sunscreen_compiler_common::macros::{extract_fn_arguments, ExtractFnArgumentsError};
 use syn::{parse_macro_input, spanned::Spanned, Ident, ItemFn, Type};
 
 pub fn fhe_program_impl(
@@ -31,7 +32,17 @@ pub fn fhe_program_impl(
     let chain_count = attr_params.chain_count;
 
     let unwrapped_inputs = match extract_fn_arguments(inputs) {
-        Ok(v) => v,
+        Ok(v) => {
+            for arg in &v {
+                if !arg.0.is_empty() {
+                    return proc_macro::TokenStream::from(
+                        quote_spanned! { arg.1.span() => compile_error!("FHE program arguments do not support attributes.")},
+                    );
+                }
+            }
+
+            v
+        }
         Err(e) => {
             return proc_macro::TokenStream::from(match e {
                 ExtractFnArgumentsError::ContainsSelf(s) => {
@@ -49,13 +60,13 @@ pub fn fhe_program_impl(
 
     let argument_types = unwrapped_inputs
         .iter()
-        .map(|(t, _)| (**t).clone())
+        .map(|(_, t, _)| (**t).clone())
         .collect::<Vec<Type>>();
 
     let fhe_program_args = unwrapped_inputs
         .iter()
         .map(|i| {
-            let (ty, name) = i;
+            let (_, ty, name) = i;
             let ty = map_fhe_type(ty).unwrap();
 
             quote! {
@@ -95,13 +106,13 @@ pub fn fhe_program_impl(
     let var_decl = unwrapped_inputs.iter().enumerate().map(|(i, t)| {
         let var_name = format!("c_{}", i);
 
-        create_fhe_program_node(&var_name, t.0)
+        create_fhe_program_node(&var_name, t.1)
     });
 
     let args = unwrapped_inputs.iter().enumerate().map(|(i, t)| {
         let id = Ident::new(&format!("c_{}", i), Span::call_site());
 
-        quote_spanned! {t.0.span() =>
+        quote_spanned! {t.1.span() =>
             #id
         }
     });

@@ -1,19 +1,37 @@
 use proc_macro2::{Ident, Span, TokenStream};
-use quote::{quote, quote_spanned};
+use quote::{quote, quote_spanned, ToTokens};
 use sunscreen_compiler_common::macros::{
     create_program_node, emit_signature, extract_fn_arguments, lift_type, ExtractFnArgumentsError,
 };
 use syn::{parse_macro_input, spanned::Spanned, ItemFn, ReturnType, Type};
 
-use crate::internals::attr::ZkpProgramAttrs;
+use crate::{
+    error::{Error, Result},
+    internals::attr::ZkpProgramAttrs,
+};
+
+enum ArgumentKind {
+    Public,
+    Private,
+    Constant,
+}
 
 pub fn zkp_program_impl(
     metadata: proc_macro::TokenStream,
     input: proc_macro::TokenStream,
 ) -> proc_macro::TokenStream {
-    let _attr_params = parse_macro_input!(metadata as ZkpProgramAttrs);
+    let attr_params = parse_macro_input!(metadata as ZkpProgramAttrs);
     let input_fn = parse_macro_input!(input as ItemFn);
 
+    match parse_inner(attr_params, input_fn) {
+        Ok(s) => s.into(),
+        Err(Error::CompileError(s, msg)) => proc_macro::TokenStream::from(quote_spanned! {
+            s => compile_error! { #msg }
+        }),
+    }
+}
+
+fn parse_inner(_attr_params: ZkpProgramAttrs, input_fn: ItemFn) -> Result<TokenStream> {
     let zkp_program_name = &input_fn.sig.ident;
     let vis = &input_fn.vis;
     let body = &input_fn.block;
@@ -23,38 +41,53 @@ pub fn zkp_program_impl(
     match ret {
         ReturnType::Default => {}
         _ => {
-            return proc_macro::TokenStream::from(quote_spanned! {
-                ret.span() => compile_error!("ZKP programs may not return values.")
-            });
+            return Err(Error::compile_error(
+                ret.span(),
+                "ZKP programs may not return values.",
+            ));
         }
     };
 
     let unwrapped_inputs = match extract_fn_arguments(inputs) {
-        Ok(v) => v,
-        Err(e) => {
-            return proc_macro::TokenStream::from(match e {
-                ExtractFnArgumentsError::ContainsSelf(s) => {
-                    quote_spanned! {s => compile_error!("FHE programs must not contain `self`") }
-                }
-                ExtractFnArgumentsError::IllegalPat(s) => quote_spanned! {
-                    s => compile_error! { "Expected Identifier" }
-                },
-                ExtractFnArgumentsError::IllegalType(s) => quote_spanned! {
-                    s => compile_error! { "FHE program arguments must be an array or named struct type" }
-                },
-            });
-        }
+        Ok(args) => {
+            args.iter().map(|a| {
+                let mut arg_kind = ArgumentKind::Private;
+
+                match a.0.len() {
+                    0 => {},
+                    1 => {
+                        let ident = a.0[0].path.get_ident();
+
+                        match ident.map(|x| x.to_string()).as_deref() {
+                            Some("public") => arg_kind = ArgumentKind::Public,
+                            Some("constant") => arg_kind = ArgumentKind::Constant,
+                            _ => {
+                                return Err(Error::compile_error(a.0[0].path.span(), &format!("Expected #[public] or #[constant], found {}", a.0[0].path.to_token_stream())));
+                            }
+                        }
+                    },
+                    _ => {
+                        return Err(Error::compile_error(a.1.span(), "ZKP program arguments may only have one attribute (#[public] or #[constant])."));
+                    }
+                };
+
+                Ok((arg_kind, a.1, a.2))
+            }).collect::<Result<Vec<(ArgumentKind, &Type, &Ident)>>>()?
+        },
+        Err(ExtractFnArgumentsError::ContainsSelf(s)) => Err(Error::compile_error(s, "ZKP programs must not contain self"))?,
+        Err(ExtractFnArgumentsError::IllegalPat(s)) => Err(Error::compile_error(s, "Expected Identifier"))?,
+        Err(ExtractFnArgumentsError::IllegalType(s)) => Err(Error::compile_error(s, "ZKP program arguments must be an array or named struct type"))?,
     };
 
     let argument_types = unwrapped_inputs
         .iter()
-        .map(|(t, _)| (**t).clone())
+        .map(|(_, t, _)| (**t).clone())
         .collect::<Vec<Type>>();
 
     let zkp_program_args = unwrapped_inputs
         .iter()
         .map(|i| {
-            let (ty, name) = i;
+            let (_, ty, name) = i;
             let ty = lift_type(ty).unwrap();
 
             quote! {
@@ -68,13 +101,19 @@ pub fn zkp_program_impl(
     let var_decl = unwrapped_inputs.iter().enumerate().map(|(i, t)| {
         let var_name = format!("c_{}", i);
 
-        create_program_node(&var_name, t.0, "private_input")
+        let input_type = match t.0 {
+            ArgumentKind::Private => "private_input",
+            ArgumentKind::Public => "public_input",
+            ArgumentKind::Constant => "constant_input",
+        };
+
+        create_program_node(&var_name, t.1, input_type)
     });
 
     let args = unwrapped_inputs.iter().enumerate().map(|(i, t)| {
         let id = Ident::new(&format!("c_{}", i), Span::call_site());
 
-        quote_spanned! {t.0.span() =>
+        quote_spanned! {t.1.span() =>
             #id
         }
     });
@@ -84,7 +123,7 @@ pub fn zkp_program_impl(
 
     let zkp_program_name_literal = format!("{}", zkp_program_name);
 
-    proc_macro::TokenStream::from(quote! {
+    Ok(quote! {
         #[allow(non_camel_case_types)]
         #[derive(Clone)]
         #vis struct #zkp_program_struct_name {

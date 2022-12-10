@@ -40,6 +40,7 @@ use sunscreen_compiler_common::{
 pub enum Operation {
     PrivateInput(usize),
     PublicInput(usize),
+    ConstantInput(usize),
     HiddenInput(usize),
     Constraint(BigInt),
     Constant(BigInt),
@@ -81,6 +82,10 @@ impl Hash for Operation {
             Self::Sub => state.write_u8(7),
             Self::Mul => state.write_u8(8),
             Self::Neg => state.write_u8(9),
+            Self::ConstantInput(x) => {
+                state.write_u8(10);
+                x.hash(state);
+            }
         }
     }
 }
@@ -110,6 +115,7 @@ impl Debug for Operation {
         match self {
             Self::PrivateInput(x) => write!(f, "PrivateInput({x})"),
             Self::PublicInput(x) => write!(f, "PublicInput({x})"),
+            Self::ConstantInput(x) => write!(f, "ConstantInput({x})"),
             Self::HiddenInput(x) => write!(f, "HiddenInput({x})"),
             Self::Constraint(x) => write!(f, "Constraint({x:#?})"),
             Self::Constant(x) => write!(f, "Constant({x:#?})"),
@@ -181,6 +187,7 @@ impl Operation {
 pub struct ZkpData {
     next_public_input: usize,
     next_private_input: usize,
+    next_constant_input: usize,
 }
 
 impl ZkpData {
@@ -191,6 +198,7 @@ impl ZkpData {
         Self {
             next_private_input: 0,
             next_public_input: 0,
+            next_constant_input: 0,
         }
     }
 }
@@ -223,6 +231,8 @@ pub trait ZkpContextOps {
 
     fn add_private_input(&mut self) -> NodeIndex;
 
+    fn add_constant_input(&mut self) -> NodeIndex;
+
     fn add_hidden_input(&mut self, gadget_arg_id: usize) -> NodeIndex;
 
     fn add_addition(&mut self, left: NodeIndex, right: NodeIndex) -> NodeIndex;
@@ -251,6 +261,13 @@ impl ZkpContextOps for ZkpContext {
     fn add_private_input(&mut self) -> NodeIndex {
         let node = self.add_node(Operation::PrivateInput(self.data.next_private_input));
         self.data.next_private_input += 1;
+
+        node
+    }
+
+    fn add_constant_input(&mut self) -> NodeIndex {
+        let node = self.add_node(Operation::ConstantInput(self.data.next_constant_input));
+        self.data.next_constant_input += 1;
 
         node
     }
@@ -334,6 +351,7 @@ pub(crate) fn compile(program: &ZkpFrontendCompilation) -> CompiledZkpProgram {
             let operation = match n.operation {
                 Operation::PrivateInput(x) => JitOperation::PrivateInput(x),
                 Operation::PublicInput(x) => JitOperation::PublicInput(x),
+                Operation::ConstantInput(x) => JitOperation::ConstantInput(x),
                 Operation::HiddenInput(x) => JitOperation::HiddenInput(x),
                 Operation::InvokeGadget(ref g) => JitOperation::InvokeGadget(g.clone()),
                 Operation::Add => JitOperation::Add,

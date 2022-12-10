@@ -51,3 +51,57 @@ fn get_input_mismatch_on_incorrect_args() {
         Err(Error::ZkpError(ZkpError::InputsMismatch(_)))
     ));
 }
+
+#[test]
+fn can_use_public_inputs() {
+    #[zkp_program(backend = "bulletproofs")]
+    fn add_mul(#[public] a: NativeField, b: NativeField, c: NativeField) {
+        let x = a * b + c;
+
+        x.constrain_eq(NativeField::from(42u32))
+    }
+
+    let app = Compiler::new().zkp_program(add_mul).compile().unwrap();
+
+    let runtime = Runtime::new_zkp(&BulletproofsBackend::new()).unwrap();
+
+    let program = app.get_zkp_program(add_mul).unwrap();
+
+    let proof = runtime
+        .prove(
+            program,
+            &[],
+            &[BigInt::from(10u8)],
+            &[BigInt::from(4u8), BigInt::from(2u8)],
+        )
+        .unwrap();
+
+    runtime.verify(program, &proof, &[], &[BigInt::from(10u8)]).unwrap();
+}
+
+#[test]
+fn can_use_constant_inputs() {
+    #[zkp_program(backend = "bulletproofs")]
+    fn add_mul(#[constant] a: NativeField, b: NativeField, c: NativeField) {
+        let x = a * b + c;
+
+        x.constrain_eq(NativeField::from(42u32))
+    }
+
+    let app = Compiler::new().zkp_program(add_mul).compile().unwrap();
+
+    let runtime = Runtime::new_zkp(&BulletproofsBackend::new()).unwrap();
+
+    let program = app.get_zkp_program(add_mul).unwrap();
+
+    let proof = runtime
+        .prove(
+            program,
+            &[BigInt::from(10u8)],
+            &[],
+            &[BigInt::from(4u8), BigInt::from(2u8)],
+        )
+        .unwrap();
+
+    runtime.verify(program, &proof, &[BigInt::from(10u8)], &[]).unwrap();
+}

@@ -76,7 +76,9 @@ fn can_use_public_inputs() {
         )
         .unwrap();
 
-    runtime.verify(program, &proof, &[], &[BigInt::from(10u8)]).unwrap();
+    runtime
+        .verify(program, &proof, &[], &[BigInt::from(10u8)])
+        .unwrap();
 }
 
 #[test]
@@ -103,5 +105,7 @@ fn can_use_constant_inputs() {
         )
         .unwrap();
 
-    runtime.verify(program, &proof, &[BigInt::from(10u8)], &[]).unwrap();
+    runtime
+        .verify(program, &proof, &[BigInt::from(10u8)], &[])
+        .unwrap();
 }

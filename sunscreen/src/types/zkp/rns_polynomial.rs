@@ -143,7 +143,14 @@ mod tests {
             .unwrap();
 
         runtime
-            .verify(program, &proof, vec![a.clone(), a], vec![])
+            .verify(program, &proof, vec![a.clone(), a.clone()], vec![])
             .unwrap();
+
+        let b =
+            RnsRingPolynomial::from([[0u8, 2, 3, 4, 5, 6, 7, 8], [9, 10, 11, 12, 13, 14, 15, 16]]);
+
+        let result = runtime.verify(program, &proof, vec![b, a], vec![]);
+
+        assert!(result.is_err());
     }
 }

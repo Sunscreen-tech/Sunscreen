@@ -1,5 +1,6 @@
 [workspace]
 members = [
+    "benchmarks/bfv_zkp",
     "benchmarks/cannonical_norm_noise_model",
     "emsdk",
     "examples/amm",

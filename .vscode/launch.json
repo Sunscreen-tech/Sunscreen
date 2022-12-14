@@ -4,6 +4,43 @@
         {
             "type": "lldb",
             "request": "launch",
+            "name": "Debug executable 'bfv_zkp'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=bfv_zkp",
+                    "--package=bfv_zkp"
+                ],
+                "filter": {
+                    "name": "bfv_zkp",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'bfv_zkp'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=bfv_zkp",
+                    "--package=bfv_zkp"
+                ],
+                "filter": {
+                    "name": "bfv_zkp",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
             "name": "Debug executable 'cannonical_norm_noise_model'",
             "cargo": {
                 "args": [
@@ -136,6 +173,25 @@
         {
             "type": "lldb",
             "request": "launch",
+            "name": "Debug unit tests in library 'sunscreen_compiler_common'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=sunscreen_compiler_common"
+                ],
+                "filter": {
+                    "name": "sunscreen_compiler_common",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
             "name": "Debug unit tests in library 'sunscreen_fhe_program'",
             "cargo": {
                 "args": [
@@ -193,16 +249,16 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug unit tests in library 'sunscreen_compiler_common'",
+            "name": "Debug unit tests in library 'sunscreen_zkp_backend'",
             "cargo": {
                 "args": [
                     "test",
                     "--no-run",
                     "--lib",
-                    "--package=sunscreen_compiler_common"
+                    "--package=sunscreen_zkp_backend"
                 ],
                 "filter": {
-                    "name": "sunscreen_compiler_common",
+                    "name": "sunscreen_zkp_backend",
                     "kind": "lib"
                 }
             },
@@ -747,25 +803,6 @@
                 "filter": {
                     "name": "pir",
                     "kind": "bin"
-                }
-            },
-            "args": [],
-            "cwd": "${workspaceFolder}"
-        },
-        {
-            "type": "lldb",
-            "request": "launch",
-            "name": "Debug unit tests in library 'sunscreen_zkp_backend'",
-            "cargo": {
-                "args": [
-                    "test",
-                    "--no-run",
-                    "--lib",
-                    "--package=sunscreen_zkp_backend"
-                ],
-                "filter": {
-                    "name": "sunscreen_zkp_backend",
-                    "kind": "lib"
                 }
             },
             "args": [],

@@ -1,4 +1,5 @@
-use ark_ff::{MontConfig, Fp, MontBackend, BigInt, BigInteger};
+use ark_ff::{MontConfig, Fp, MontBackend, BigInt, BigInteger, FpConfig};
+use ark_poly::univariate::DensePolynomial;
 
 use crate::poly_ring::PolyRing;
 
@@ -24,10 +25,13 @@ pub fn gen_keys() -> (PublicKey, PrivateKey) {
 
     let e = PolyRing::rand_gaussian(POLY_DEGREE);
     let a = PolyRing::rand_uniform(POLY_DEGREE);
-    let neg_a = -&a;
-    let neg_a_s = &neg_a * &s;
 
-    let pk = (&neg_a_s + &e, a);
+    let pk = (-(&a * &s + e), a);
+
+    let ring_quotient = Poly::ring_quotient(POLY_DEGREE);
+
+    let pk = (&pk.0 % &ring_quotient, &pk.1 % &ring_quotient);
+    let s = &s % &ring_quotient;
 
     (pk, s)
 }
@@ -35,27 +39,28 @@ pub fn gen_keys() -> (PublicKey, PrivateKey) {
 /**
  * Returns `((c_0, c_1), (e_1, e_2), u)`
  */
-pub fn encrypt(pk: &PublicKey, message: Poly, degree: usize) -> (Ciphertext, Noise, Poly) {
+pub fn encrypt(pk: &PublicKey, message: &Poly, degree: usize) -> (Ciphertext, Noise, Poly) {
 
-    let q = Fq::from(CIPHER_MODULUS);
-    let p = Fq::from(PLAIN_MODULUS);
-    let delta = q / p;
+    let q = BigInt::from(CIPHER_MODULUS);
+    let p = BigInt::from(PLAIN_MODULUS);
+    let (delta, _) = div_rem_bigint(q, p);
+
+    let delta = MontBackend::from_bigint(delta).unwrap();
 
     let (p_0, p_1) = pk.clone(); 
     let e_1 = Poly::rand_gaussian(degree);
     let e_2 = Poly::rand_gaussian(degree);
 
-
-    let del_m = &message * &delta;
+    let m = message.clone();
 
     let u = Poly::rand_binary(degree);
-    let p_0_u = &p_0 * &u;
+    let r = Poly::ring_quotient(POLY_DEGREE);
 
-    let c_0 = &(&del_m + &p_0_u) + &e_1;
+    let c_0 = &m * &delta + &p_0 * &u + &e_1;
 
     let c_1 = &(&p_1 * &u) + &e_2;
 
-    ((c_0, c_1), (e_1, e_2), u)
+    ((&c_0 % &r, &c_1 % &r), (&e_1 % &r, &e_2 % &r), &u % &r)
 }
 
 /**
@@ -64,35 +69,47 @@ pub fn encrypt(pk: &PublicKey, message: Poly, degree: usize) -> (Ciphertext, Noi
 pub fn decrypt(s: &PrivateKey, ct: &Ciphertext) -> Poly {
     let (c_0, c_1) = ct.clone();
 
-    let c_1_s = &c_1 * s;
-    let sum = &c_0 + &c_1;
+    let sum = &c_0 + &c_1 * s;
+    let sum = &sum % &PolyRing::ring_quotient(POLY_DEGREE);
 
-    let q: BigInt<1> = BigInt::from(CIPHER_MODULUS);
-    let p: BigInt<2> = BigInt::from(PLAIN_MODULUS);
+    let q: BigInt<2> = BigInt::from(CIPHER_MODULUS);
+    let p: BigInt<1> = BigInt::from(PLAIN_MODULUS);
+
+    let mut coeffs = Vec::with_capacity(s.poly.coeffs.len());
 
     for i in sum.poly.coeffs {
         let i_int = MontConfig::into_bigint(i);
-        let q_i = mul_bigint::<1, 2>(i_int, q);
+        let p_i = mul_bigint::<1, 2>(i_int, p);
 
-        let div_rem = div_rem_bigint(q_i, p);
+        let val = div_round_bigint(p_i, q);
 
+        // Make a BigInt<2>.
+        let p = BigInt::from(PLAIN_MODULUS);
+        let (_, val) = div_rem_bigint(val, p);
+
+        coeffs.push(Fq::from(convert_bigint(val)));
     }
 
-    todo!();
+    Poly {
+        poly: DensePolynomial { coeffs }
+    }
 }
 
 fn convert_bigint<const N1: usize, const N2: usize>(a: BigInt<N1>) -> BigInt<N2> {
-    assert!(N2 >= N1);
-
     let mut data = [0u64; N2];
 
     for (i, limb) in a.0.iter().enumerate() {
-        data[i] = *limb;
+        if i < N2 {
+            data[i] = *limb;
+        }
     }
 
     BigInt(data)
 }
 
+/**
+ * Multiplies 2 N-limb BigInt and produces a 2N-limb BigInt.
+ */
 fn mul_bigint<const N1: usize, const N2: usize>(a: BigInt<N1>, b: BigInt<N1>) -> BigInt<N2> {
     assert_eq!(N2, 2 * N1);
 
@@ -110,6 +127,9 @@ fn mul_bigint<const N1: usize, const N2: usize>(a: BigInt<N1>, b: BigInt<N1>) ->
     result
 }
 
+/**
+ * Computes the quotient and remainder of a / b.
+ */
 fn div_rem_bigint<const N: usize>(a: BigInt<N>, b: BigInt<N>) -> (BigInt<N>, BigInt<N>) {
     let mut rem = a;
     let mut div = BigInt::zero();
@@ -150,6 +170,9 @@ fn div_rem_bigint<const N: usize>(a: BigInt<N>, b: BigInt<N>) -> (BigInt<N>, Big
     (div, rem)
 }
 
+/**
+ * Computes round(a / b) on BigInt values.
+ */
 fn div_round_bigint<const N: usize>(a: BigInt<N>, b: BigInt<N>) -> BigInt<N> {
     let (mut b_2, r) = div_rem_bigint(b, BigInt::from(2u64));
     b_2.add_with_carry(&r);
@@ -226,4 +249,30 @@ fn can_div_round() {
             test_div(i, j);
         }
     }
+}
+
+#[test]
+fn can_encrypt_decrypt() {
+    let (public, private) = gen_keys();
+
+    let mut message = Poly::zero();
+
+    for i in 0..POLY_DEGREE {
+        message.poly.coeffs.push(Fp::from(i as u32));
+    }
+
+    let (ct, _, _) = encrypt(&public, &message, POLY_DEGREE);
+
+    let m = decrypt(&private, &ct);
+
+    assert_eq!(m.poly, message.poly);
+}
+
+#[test]
+fn can_roundtrip_ints() {
+    let x = Fq::from(1234u32);
+    let y = MontBackend::into_bigint(x);
+    let y = Fq::from(y);
+
+    assert_eq!(x, y);
 }

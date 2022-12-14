@@ -1,5 +1,6 @@
 use seal_fhe::Plaintext as SealPlaintext;
 
+use crate as sunscreen;
 use crate::{
     fhe::{with_fhe_ctx, FheContextOps},
     types::{

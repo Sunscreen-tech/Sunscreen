@@ -21,6 +21,7 @@ pub use serialization::WithContext;
 
 use seal_fhe::{Ciphertext as SealCiphertext, Plaintext as SealPlaintext};
 use serde::{Deserialize, Serialize};
+use sunscreen_zkp_backend::BigInt;
 
 #[derive(Debug, Clone, PartialEq, Hash, Serialize, Deserialize, Eq)]
 /**
@@ -196,6 +197,26 @@ pub enum FheProgramInput {
     Plaintext(Box<dyn FheProgramInputTrait>),
 }
 
+/**
+ * Denotes this type can be used as an input to a ZKP
+ * program.
+ */
+pub trait ZkpProgramInputTrait: ToNativeFields + TypeNameInstance {}
+
+/**
+ * An input argument to a ZKP program.
+ */
+pub struct ZkpProgramInput(pub Box<dyn ZkpProgramInputTrait>);
+
+impl<T> From<T> for ZkpProgramInput
+where
+    T: ZkpProgramInputTrait + 'static,
+{
+    fn from(val: T) -> Self {
+        Self(Box::new(val))
+    }
+}
+
 impl TypeNameInstance for FheProgramInput {
     fn type_name_instance(&self) -> Type {
         match self {
@@ -228,6 +249,19 @@ pub trait TryIntoPlaintext {
      * Attempts to turn this type into a [`Plaintext`].
      */
     fn try_into_plaintext(&self, params: &Params) -> Result<Plaintext>;
+}
+
+/**
+ * A trait for converting values into fields used by ZKPs.
+ */
+pub trait ToNativeFields {
+    /**
+     * Converts the given value into [`NativeField`]s.
+     *
+     * # Remarks
+     * The length of the returned vector must equal NUM_NATIVE_FIELD_ELEMENTS.
+     */
+    fn to_native_fields(&self) -> Vec<BigInt>;
 }
 
 /**

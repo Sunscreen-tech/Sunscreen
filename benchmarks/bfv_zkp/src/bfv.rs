@@ -1,4 +1,7 @@
-use ark_ff::{MontConfig, Fp, MontBackend, BigInt, BigInteger, FpConfig};
+// TODO: Remove
+#![allow(unused)]
+
+use ark_ff::{BigInt, BigInteger, Fp, FpConfig, MontBackend, MontConfig};
 use ark_poly::univariate::DensePolynomial;
 
 use crate::poly_ring::PolyRing;
@@ -40,14 +43,13 @@ pub fn gen_keys() -> (PublicKey, PrivateKey) {
  * Returns `((c_0, c_1), (e_1, e_2), u)`
  */
 pub fn encrypt(pk: &PublicKey, message: &Poly, degree: usize) -> (Ciphertext, Noise, Poly) {
-
     let q = BigInt::from(CIPHER_MODULUS);
     let p = BigInt::from(PLAIN_MODULUS);
     let (delta, _) = div_rem_bigint(q, p);
 
     let delta = MontBackend::from_bigint(delta).unwrap();
 
-    let (p_0, p_1) = pk.clone(); 
+    let (p_0, p_1) = pk.clone();
     let e_1 = Poly::rand_gaussian(degree);
     let e_2 = Poly::rand_gaussian(degree);
 
@@ -91,7 +93,7 @@ pub fn decrypt(s: &PrivateKey, ct: &Ciphertext) -> Poly {
     }
 
     Poly {
-        poly: DensePolynomial { coeffs }
+        poly: DensePolynomial { coeffs },
     }
 }
 
@@ -123,7 +125,7 @@ fn mul_bigint<const N1: usize, const N2: usize>(a: BigInt<N1>, b: BigInt<N1>) ->
 
         pow.mul2();
     }
-    
+
     result
 }
 
@@ -151,11 +153,11 @@ fn div_rem_bigint<const N: usize>(a: BigInt<N>, b: BigInt<N>) -> (BigInt<N>, Big
     }
 
     for i in leading_b..N * 64 {
-        let i = 64 * N as u32 - 1 - i as u32; 
+        let i = 64 * N as u32 - 1 - i as u32;
 
         let mut b_shift = b;
         b_shift.muln(i);
-    
+
         let mut pow = BigInt::<N>::one();
         pow.muln(i);
 
@@ -182,7 +184,7 @@ fn div_round_bigint<const N: usize>(a: BigInt<N>, b: BigInt<N>) -> BigInt<N> {
     if rem >= b_2 {
         div.add_with_carry(&BigInt::one());
     }
-    
+
     div
 }
 
@@ -199,7 +201,7 @@ fn can_bigint_mul() {
 
     test_mul(7, 3);
     test_mul(3, 7);
-    
+
     test_mul(u32::MAX, u32::MAX);
 }
 
@@ -222,7 +224,7 @@ fn can_bigint_div() {
     test_div(123456, 1234);
     test_div(6, 3);
     test_div(11, 7);
-    
+
     for i in 0..47 {
         for j in 1..47 {
             test_div(i, j);

@@ -1,5 +1,6 @@
 use sunscreen::{types::zkp::NativeField, zkp_program, Compiler, Runtime};
-use sunscreen_zkp_backend::{bulletproofs::BulletproofsBackend, BigInt};
+use sunscreen_runtime::ZkpProgramInput;
+use sunscreen_zkp_backend::bulletproofs::BulletproofsBackend;
 
 #[test]
 fn can_add_and_mul_native_fields() {
@@ -19,13 +20,19 @@ fn can_add_and_mul_native_fields() {
     let proof = runtime
         .prove(
             program,
-            &[],
-            &[],
-            &[BigInt::from(10u8), BigInt::from(4u8), BigInt::from(2u8)],
+            vec![],
+            vec![],
+            vec![
+                NativeField::from(10u8),
+                NativeField::from(4u8),
+                NativeField::from(2u8),
+            ],
         )
         .unwrap();
 
-    runtime.verify(program, &proof, &[], &[]).unwrap();
+    runtime
+        .verify(program, &proof, Vec::<ZkpProgramInput>::new(), vec![])
+        .unwrap();
 }
 
 #[test]
@@ -44,7 +51,7 @@ fn get_input_mismatch_on_incorrect_args() {
 
     let program = app.get_zkp_program(add_mul).unwrap();
 
-    let result = runtime.prove(program, &[], &[], &[]);
+    let result = runtime.prove(program, vec![], vec![], vec![NativeField::from(0u8)]);
 
     assert!(matches!(
         result,
@@ -70,14 +77,14 @@ fn can_use_public_inputs() {
     let proof = runtime
         .prove(
             program,
-            &[],
-            &[BigInt::from(10u8)],
-            &[BigInt::from(4u8), BigInt::from(2u8)],
+            vec![],
+            vec![NativeField::from(10u8)],
+            vec![NativeField::from(4u8), NativeField::from(2u8)],
         )
         .unwrap();
 
     runtime
-        .verify(program, &proof, &[], &[BigInt::from(10u8)])
+        .verify(program, &proof, vec![], vec![NativeField::from(10u8)])
         .unwrap();
 }
 
@@ -99,13 +106,13 @@ fn can_use_constant_inputs() {
     let proof = runtime
         .prove(
             program,
-            &[BigInt::from(10u8)],
-            &[],
-            &[BigInt::from(4u8), BigInt::from(2u8)],
+            vec![NativeField::from(10u8)],
+            vec![],
+            vec![NativeField::from(4u8), NativeField::from(2u8)],
         )
         .unwrap();
 
     runtime
-        .verify(program, &proof, &[BigInt::from(10u8)], &[])
+        .verify(program, &proof, vec![NativeField::from(10u8)], vec![])
         .unwrap();
 }

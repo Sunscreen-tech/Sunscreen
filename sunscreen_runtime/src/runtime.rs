@@ -2,6 +2,7 @@ use std::marker::PhantomData;
 
 use crate::error::*;
 use crate::metadata::*;
+use crate::ZkpProgramInput;
 use crate::{
     run_program_unchecked, serialization::WithContext, Ciphertext, FheProgramInput,
     InnerCiphertext, InnerPlaintext, Plaintext, PrivateKey, PublicKey, SealCiphertext, SealData,
@@ -441,15 +442,32 @@ where
     /**
      * Prove the given `inputs` satisfy `program`.
      */
-    pub fn prove(
+    pub fn prove<I>(
         &self,
         program: &CompiledZkpProgram,
-        constant_inputs: &[BigInt],
-        public_inputs: &[BigInt],
-        private_inputs: &[BigInt],
-    ) -> Result<Proof> {
+        constant_inputs: Vec<I>,
+        public_inputs: Vec<I>,
+        private_inputs: Vec<I>,
+    ) -> Result<Proof>
+    where
+        I: Into<ZkpProgramInput>,
+    {
+        let constant_inputs = constant_inputs
+            .into_iter()
+            .flat_map(|x| I::into(x).0.to_native_fields())
+            .collect::<Vec<BigInt>>();
+        let public_inputs = public_inputs
+            .into_iter()
+            .flat_map(|x| I::into(x).0.to_native_fields())
+            .collect::<Vec<BigInt>>();
+        let private_inputs = private_inputs
+            .into_iter()
+            .flat_map(|x| I::into(x).0.to_native_fields())
+            .collect::<Vec<BigInt>>();
+
         let backend = &self.runtime_data.unwrap_zkp().backend;
-        let prog = backend.jit_prover(program, constant_inputs, public_inputs, private_inputs)?;
+        let prog =
+            backend.jit_prover(program, &constant_inputs, &public_inputs, &private_inputs)?;
 
         let inputs = [public_inputs, private_inputs].concat();
 
@@ -459,15 +477,27 @@ where
     /**
      * Verify that the given `proof` satisfies the given `program`.
      */
-    pub fn verify(
+    pub fn verify<I>(
         &self,
         program: &CompiledZkpProgram,
         proof: &Proof,
-        constant_inputs: &[BigInt],
-        public_inputs: &[BigInt],
-    ) -> Result<()> {
+        constant_inputs: Vec<I>,
+        public_inputs: Vec<I>,
+    ) -> Result<()>
+    where
+        I: Into<ZkpProgramInput>,
+    {
+        let constant_inputs = constant_inputs
+            .into_iter()
+            .flat_map(|x| I::into(x).0.to_native_fields())
+            .collect::<Vec<BigInt>>();
+        let public_inputs = public_inputs
+            .into_iter()
+            .flat_map(|x| I::into(x).0.to_native_fields())
+            .collect::<Vec<BigInt>>();
+
         let backend = &self.runtime_data.unwrap_zkp().backend;
-        let prog = backend.jit_verifier(program, constant_inputs, public_inputs)?;
+        let prog = backend.jit_verifier(program, &constant_inputs, &public_inputs)?;
 
         Ok(backend.verify(&prog, proof)?)
     }

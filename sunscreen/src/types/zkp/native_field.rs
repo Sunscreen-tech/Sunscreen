@@ -1,4 +1,5 @@
 use sunscreen_compiler_macros::TypeName;
+use sunscreen_runtime::ZkpProgramInputTrait;
 use sunscreen_zkp_backend::BigInt;
 
 use crate::{
@@ -7,20 +8,26 @@ use crate::{
     zkp::{with_zkp_ctx, ZkpContextOps},
 };
 
-use super::{
-    gadgets::ToUInt, ConstrainEqVarVar, IntoProgramNode, MulVar, NegVar, NumFieldElements, ZkpType,
+use crate::types::zkp::{
+    gadgets::ToUInt, ConstrainEqVarVar, IntoProgramNode, MulVar, NegVar, NumFieldElements,
+    ToNativeFields, ZkpType,
 };
+
+use crate as sunscreen;
 
 // Shouldn't need Clone + Copy, but there appears to be a bug in the Rust
 // compiler that prevents ProgramNode from being Copy if we don't.
 // https://github.com/rust-lang/rust/issues/104264
-#[derive(Clone, Copy, TypeName)]
+#[derive(Debug, Clone, Copy, TypeName)]
 /**
  * The native field type in the underlying backend proof system. For
  * example, in Bulletproofs, this is [`Scalar`](https://docs.rs/curve25519-dalek-ng/4.1.1/curve25519_dalek_ng/scalar/struct.Scalar.html).
  */
 pub struct NativeField {
-    val: BigInt,
+    /**
+     * The native field's value.
+     */
+    pub val: BigInt,
 }
 
 impl NativeField {
@@ -47,7 +54,14 @@ impl NumFieldElements for NativeField {
     const NUM_NATIVE_FIELD_ELEMENTS: usize = 1;
 }
 
+impl ToNativeFields for NativeField {
+    fn to_native_fields(&self) -> Vec<BigInt> {
+        vec![self.val]
+    }
+}
+
 impl ZkpType for NativeField {}
+impl ZkpProgramInputTrait for NativeField {}
 
 impl AddVar for NativeField {
     fn add(lhs: ProgramNode<Self>, rhs: ProgramNode<Self>) -> ProgramNode<Self> {

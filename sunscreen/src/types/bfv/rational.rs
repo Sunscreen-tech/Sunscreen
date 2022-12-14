@@ -1,3 +1,4 @@
+use crate as sunscreen;
 use crate::fhe::{with_fhe_ctx, FheContextOps};
 use crate::types::{
     bfv::Signed, intern::FheProgramNode, ops::*, BfvType, Cipher, FheType, GraphCipherAdd,

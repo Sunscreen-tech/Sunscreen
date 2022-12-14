@@ -256,7 +256,7 @@ pub trait TryIntoPlaintext {
  */
 pub trait ToNativeFields {
     /**
-     * Converts the given value into [`NativeField`]s.
+     * Converts the given value into [`BigInt`]s.
      *
      * # Remarks
      * The length of the returned vector must equal NUM_NATIVE_FIELD_ELEMENTS.

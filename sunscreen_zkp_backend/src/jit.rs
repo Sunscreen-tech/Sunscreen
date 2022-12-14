@@ -12,24 +12,66 @@ use sunscreen_compiler_common::{
 };
 
 #[derive(Clone)]
+/**
+ * An operation in Sunscreen's intermediate representation programs before JIT compilation.
+ */
 pub enum Operation {
+    /**
+     * A private input known only to the prover.
+     */
     PrivateInput(usize),
+
+    /**
+     * An input known to the prover and verifier. Mechanically, the prover and verifier
+     * should add a constraint that fixes an input variable to the value passed at
+     * prove/verify JIT time.
+     */
     PublicInput(usize),
+
+    /**
+     * An input known to the prover and verifier. Mechanically, the prover and verifier
+     * should add a constant passed at prove/verify JIT time.
+     */
     ConstantInput(usize),
+
+    /**
+     * An input coming from a gadget known only to the prover.
+     */
     HiddenInput(usize),
 
+    /**
+     * Compute the given [`Gadget`]'s hidden inputs for the gadget input arguments.
+     */
     InvokeGadget(Arc<dyn Gadget>),
 
+    /**
+     * Add 2 values.
+     */
     Add,
 
+    /**
+     * Multiply 2 values.
+     */
     Mul,
 
+    /**
+     * Subtract 2 values.
+     */
     Sub,
 
+    /**
+     * Negate the given value.
+     */
     Neg,
 
+    /**
+     * Constraint the node's parent to equal the given field element.
+     */
     Constraint(BigInt),
 
+    /**
+     * A constant field element.
+     */
     Constant(BigInt),
 }
 
@@ -192,6 +234,10 @@ fn validate_zkp_program(prog: &CompiledZkpProgram) -> Result<()> {
 
 /**
  * Just in time compile a [`CompiledZkpProgram`] into an [`ExecutableZkpProgram`] for creating proofs.
+ *
+ * # Remarks
+ * This method computes [`Gadget`]'s hidden inputs from their gadget inputs. To do this,
+ * we first directly run the execution graph and store the outputs of each node.
  */
 pub fn jit_prover<U>(
     prog: &CompiledZkpProgram,
@@ -371,6 +417,13 @@ where
     jit_common(prog, constant_inputs, public_inputs, Some(node_outputs))
 }
 
+/**
+ * Just in time compile a [`CompiledZkpProgram`] into an [`ExecutableZkpProgram`] for
+ * verifying proofs.
+ *
+ * # Remarks
+ * This version doesn't compute hidden inputs, as the verifier doesn't know them.
+ */
 pub fn jit_verifier<U>(
     prog: &CompiledZkpProgram,
     constant_inputs: &[U],
@@ -388,6 +441,9 @@ where
     jit_common(prog, constant_inputs, public_inputs, None)
 }
 
+/**
+ * Performs JIT compilation common to the prover and verifier.
+ */
 fn jit_common<U>(
     mut prog: CompiledZkpProgram,
     constant_inputs: &[U],

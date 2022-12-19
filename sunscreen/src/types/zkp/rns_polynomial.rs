@@ -1,3 +1,4 @@
+use petgraph::stable_graph::NodeIndex;
 use sunscreen_compiler_macros::TypeName;
 use sunscreen_runtime::ZkpProgramInputTrait;
 use sunscreen_zkp_backend::{BackendField, BigInt};
@@ -8,7 +9,7 @@ use crate::{
     zkp::ZkpContextOps,
 };
 
-use super::{AddVar, NativeField, NumFieldElements, ToNativeFields, ZkpType};
+use super::{AddVar, NativeField, NumFieldElements, ToNativeFields, ZkpType, MulVar};
 
 use crate as sunscreen;
 
@@ -20,6 +21,8 @@ use crate as sunscreen;
  * # Remarks
  * Operations (e.g. add, mul, etc) don't automatically reduce modulo q. This enables
  * program authors to batch multiple operations before reduction.
+ * 
+ * Operations *do* reduce modulo X^N+1.
  */
 #[derive(Debug, Clone, TypeName)]
 pub struct RnsRingPolynomial<F: BackendField, const N: usize, const R: usize> {
@@ -94,6 +97,47 @@ impl<F: BackendField, const N: usize, const R: usize> ZkpProgramInputTrait
 {
 }
 
+impl<const N: usize, const R: usize> MulVar for RnsRingPolynomial<N, R> {
+    fn mul(lhs: ProgramNode<Self>, rhs: ProgramNode<Self>) -> ProgramNode<Self> {
+        let left = lhs.residues();
+        let right = rhs.residues();
+
+        let mut node_indices: Vec<NodeIndex> = vec![];
+
+        with_zkp_ctx(|ctx| {
+            for i in 0..R * N {
+                node_indices.push(ctx.add_constant(&BigInt::ZERO));
+            }
+
+            for residue in 0..R {
+                let left = left[residue];
+                let right = right[residue];
+
+                let node_indices = &mut node_indices[residue * N..(residue + 1) * N];
+
+                for i in 0..N {
+                    for j in 0..N {
+                        let out_coeff = (i + j) % N;
+
+                        let mul = ctx.add_multiplication(left[i].ids[0], right[j].ids[0]);
+
+                        let op = if i + j >= N {
+                            ctx.add_subtraction(node_indices[out_coeff], mul)
+                        } else {
+                            ctx.add_addition(node_indices[out_coeff], mul)
+                        };
+
+                        node_indices[out_coeff] = op;
+                    }
+                }
+            }
+        });
+
+        Self::coerce(&node_indices)
+
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use sunscreen_runtime::Runtime;
@@ -145,6 +189,54 @@ mod tests {
             [1u8, 2, 3, 4, 5, 6, 7, 8],
             [9, 10, 11, 12, 13, 14, 15, 16],
         ]);
+
+        let proof = runtime
+            .prove(program, vec![a.clone(), a.clone()], vec![], vec![])
+            .unwrap();
+
+        runtime
+            .verify(program, &proof, vec![a.clone(), a.clone()], vec![])
+            .unwrap();
+
+        let b =
+            RnsRingPolynomial::from([[0u8, 2, 3, 4, 5, 6, 7, 8], [9, 10, 11, 12, 13, 14, 15, 16]]);
+
+        let result = runtime.verify(program, &proof, vec![b, a], vec![]);
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn can_prove_multiply_polynomials() {
+        #[zkp_program(backend = "bulletproofs")]
+        fn add_poly(
+            #[constant] a: RnsRingPolynomial<8, 2>,
+            #[constant] b: RnsRingPolynomial<8, 2>,
+        ) {
+            let c = a + b;
+
+            let residues = c.residues();
+
+            let expected = [
+                [-146i8, -160, -160, -144, -110,  -56,   20,  120],
+                [18, 20, 22, 24, 26, 28, 30, 32],
+            ];
+
+            for i in 0..residues.len() {
+                for j in 0..residues[i].len() {
+                    residues[i][j].constrain_eq(NativeField::from(expected[i][j]));
+                }
+            }
+        }
+
+        let app = Compiler::new().zkp_program(add_poly).compile().unwrap();
+
+        let runtime = Runtime::new_zkp(&BulletproofsBackend::new()).unwrap();
+
+        let program = app.get_zkp_program(add_poly).unwrap();
+
+        let a =
+            RnsRingPolynomial::from([[1u8, 2, 3, 4, 5, 6, 7, 8], [9, 10, 11, 12, 13, 14, 15, 16]]);
 
         let proof = runtime
             .prove(program, vec![a.clone(), a.clone()], vec![], vec![])

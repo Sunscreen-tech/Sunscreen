@@ -32,19 +32,7 @@ where
 {
     fn from(x: [[T; N]; R]) -> Self {
         Self {
-            data: Box::new(
-                x.into_iter()
-                    .map(|x| {
-                        x.into_iter()
-                            .map(|x| x.into())
-                            .collect::<Vec<NativeField>>()
-                            .try_into()
-                            .unwrap()
-                    })
-                    .collect::<Vec<[NativeField; N]>>()
-                    .try_into()
-                    .unwrap(),
-            ),
+            data: Box::new(x.map(|x| x.map(|x| x.into()))),
         }
     }
 }

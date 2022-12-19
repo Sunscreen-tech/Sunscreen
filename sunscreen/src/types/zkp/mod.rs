@@ -1,10 +1,14 @@
 mod gadgets;
 mod native_field;
 mod program_node;
+mod rns_polynomial;
 
 pub use native_field::*;
 use petgraph::stable_graph::NodeIndex;
 pub use program_node::*;
+use sunscreen_compiler_common::TypeName;
+
+pub use sunscreen_runtime::{ToNativeFields, ZkpProgramInputTrait};
 
 /**
  * A trait for adding two ZKP values together
@@ -133,7 +137,7 @@ pub trait NumFieldElements {
  * Encapsulates all the traits required for a type to be used in ZKP
  * programs.
  */
-pub trait ZkpType: NumFieldElements + Sized {}
+pub trait ZkpType: NumFieldElements + Sized + TypeName + ToNativeFields {}
 
 /**
  * Methods for coercing ZKP data types.
@@ -143,8 +147,9 @@ where
     Self: ZkpType,
 {
     /**
-     * Coerces a value low-level ZKP program nodes. Useful for turning gadget
-     * outputs back into typed data.
+     * Coerces a value low-level ZKP program nodes.
+     * Useful for turning gadget outputs back into typed
+     *
      */
     fn coerce(nodes: &[NodeIndex]) -> ProgramNode<Self>;
 }

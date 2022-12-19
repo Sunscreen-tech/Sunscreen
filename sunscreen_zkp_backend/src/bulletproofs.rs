@@ -92,14 +92,23 @@ impl Neg for Node {
     }
 }
 
+/**
+ * A Bulletproofs R1CS circuit.
+ */
 pub struct BulletproofsCircuit {
     nodes: Vec<Option<Node>>,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
+/**
+ * A verifiable proof in the Bulletproofs R1CS system.
+ */
 pub struct BulletproofsR1CSProof(R1CSProof);
 
 impl BulletproofsCircuit {
+    /**
+     * Create a [`BulletproofsCircuit`].
+     */
     pub fn new(circuit_size: usize) -> Self {
         Self {
             nodes: vec![None; circuit_size],
@@ -268,9 +277,15 @@ impl BulletproofsCircuit {
 }
 
 #[derive(Debug, Clone)]
+/**
+ * A Bulletproofs backend.
+ */
 pub struct BulletproofsBackend;
 
 impl BulletproofsBackend {
+    /**
+     * Create a [`BulletproofsBackend`].
+     */
     pub fn new() -> Self {
         Self
     }

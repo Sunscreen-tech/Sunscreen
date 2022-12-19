@@ -1,4 +1,13 @@
+#![deny(missing_docs)]
+#![deny(rustdoc::broken_intra_doc_links)]
+
+//! This crate contains ZKP backends for use with the
+//! Sunscreen compiler and runtime.
+
 #[cfg(feature = "bulletproofs")]
+/**
+ * Types for working with Bulletproofs as the ZKP backend.
+ */
 pub mod bulletproofs;
 
 mod error;
@@ -14,7 +23,7 @@ pub use crypto_bigint::UInt;
 use crypto_bigint::U512;
 pub use error::*;
 pub use exec::ExecutableZkpProgram;
-pub use jit::{jit_prover, CompiledZkpProgram, Operation};
+pub use jit::{jit_prover, jit_verifier, CompiledZkpProgram, Operation};
 use petgraph::stable_graph::NodeIndex;
 use serde::{Deserialize, Serialize};
 
@@ -42,8 +51,7 @@ compile_error!("This crate currently requires a little endian target architectur
  * to ensure the trait is object-safe. Although legal, implementors generally
  * won't have data.
  *
- * The [`Gadget::get_gadget_input_count`] and
- * [`Gadget::get_hidden_input_count`] methods are not marked as `const` to
+ * The [`Gadget::gadget_input_count`] method is not marked as `const` to
  * maintain object-safety, but implementors should ensure the values these
  * functions return is always the same for a given gadget type.
  *
@@ -91,7 +99,7 @@ pub trait Gadget: Any {
      *
      * * # Remarks
      * The number of returned hidden input values must equal
-     * [`get_input_count()`](Gadget::get_input_count).
+     * [`hidden_input_count`](Gadget::hidden_input_count).
      */
     fn compute_inputs(&self, gadget_inputs: &[BigInt]) -> Vec<BigInt>;
 
@@ -127,12 +135,23 @@ pub enum Proof {
     /**
      * A custom proof type provided by an external crate.
      */
-    Custom { name: String, data: Vec<u8> },
+    Custom {
+        /**
+         * THe name of the proof system.
+         */
+        name: String,
+        /**
+         * The proof data.
+         */
+        data: Vec<u8>,
+    },
 }
 
-pub trait FieldValue {}
-
 #[derive(Debug, Clone, Copy, Hash, Eq, PartialEq)]
+/**
+ * A large integer representing a backend-agnostic
+ * field element.
+ */
 pub struct BigInt(U512);
 
 impl<T> std::convert::From<T> for BigInt
@@ -153,27 +172,65 @@ impl Deref for BigInt {
 }
 
 impl BigInt {
+    /**
+     * Create a [`BigInt`] from the given limbs.
+     */
     pub const fn from_words(val: [u64; 8]) -> Self {
         Self(U512::from_words(val))
     }
 
+    /**
+     * Create a [`BigInt`] from the given u32.
+     */
     pub const fn from_u32(val: u32) -> Self {
         Self(U512::from_u32(val))
     }
 
+    /**
+     * Create a [`BigInt`] from the given hex string.
+     */
     pub fn from_be_hex(hex_str: &str) -> Self {
         Self(U512::from_be_hex(hex_str))
     }
 
+    /**
+     * The value 0.
+     */
     pub const ZERO: Self = Self(U512::ZERO);
+
+    /**
+     * The value 1.
+     */
     pub const ONE: Self = Self(U512::ONE);
 }
 
+/**
+ * The methods needed for a type to serve as a proof
+ * system in the Sunscreen ecosystem.
+ */
 pub trait ZkpBackend {
+    /**
+     * Create a proof for the given executable Sunscreen
+     * program with the given inputs.
+     */
     fn prove(&self, graph: &ExecutableZkpProgram, inputs: &[BigInt]) -> Result<Proof>;
 
+    /**
+     * Verify the given proof for the given executable
+     * Sunscreen program.
+     */
     fn verify(&self, graph: &ExecutableZkpProgram, proof: &Proof) -> Result<()>;
 
+    /**
+     * JIT the given frontend-compiled ZKP program
+     * to an executable Sunscreen program for use by
+     * a prover.
+     *
+     * # Remarks
+     * Implementors should generally just call
+     * [`jit_prover<U>`](jit_prover), passing the
+     * appropriate backend field type for U.
+     */
     fn jit_prover(
         &self,
         prog: &CompiledZkpProgram,
@@ -182,6 +239,15 @@ pub trait ZkpBackend {
         private_inputs: &[BigInt],
     ) -> Result<ExecutableZkpProgram>;
 
+    /**
+     * JIT the given backend-compiled ZKP program to an
+     * executable Sunscreen program for use by a verifier.
+     *
+     * # Remarks
+     * Implementors should generally just call
+     * [`jit_verifier<U>`](jit_verifier), passing the
+     * appropriate backend field type for U.
+     */
     fn jit_verifier(
         &self,
         prog: &CompiledZkpProgram,
@@ -190,6 +256,11 @@ pub trait ZkpBackend {
     ) -> Result<ExecutableZkpProgram>;
 }
 
+/**
+ * Indicates the given type is a field used used in a
+ * ZKP backend. E.g. Bulletproofs uses Ristretto `Scalar`
+ * values.
+ */
 pub trait BackendField:
     Add<Self, Output = Self>
     + Sub<Self, Output = Self>

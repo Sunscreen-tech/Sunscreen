@@ -87,6 +87,7 @@ impl<const N: usize, const R: usize> ZkpProgramInputTrait for RnsRingPolynomial<
 #[cfg(test)]
 mod tests {
     use sunscreen_runtime::Runtime;
+    use sunscreen_zkp_backend::BackendField;
     use sunscreen_zkp_backend::bulletproofs::BulletproofsBackend;
 
     use crate as sunscreen;
@@ -97,7 +98,7 @@ mod tests {
     #[test]
     fn can_prove_added_polynomials() {
         #[zkp_program(backend = "bulletproofs")]
-        fn add_poly(
+        fn add_poly<F: BackendField>(
             #[constant] a: RnsRingPolynomial<8, 2>,
             #[constant] b: RnsRingPolynomial<8, 2>,
         ) {

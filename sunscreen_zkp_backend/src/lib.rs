@@ -210,6 +210,11 @@ impl BigInt {
  */
 pub trait ZkpBackend {
     /**
+     * The field this backend uses in computation.
+     */
+    type Field: BackendField;
+
+    /**
      * Create a proof for the given executable Sunscreen
      * program with the given inputs.
      */
@@ -266,10 +271,14 @@ pub trait BackendField:
     + Sub<Self, Output = Self>
     + Mul<Self, Output = Self>
     + Neg<Output = Self>
-    + Clone
+    + Clone // Breaks object safety due to +Sized.
     + TryFrom<BigInt, Error = Error>
     + ZkpInto<BigInt>
 {
+    /**
+     * The modulus of the proof system's `BackendField` type.
+     */
+    const FIELD_MODULUS: BigInt;
 }
 
 /**

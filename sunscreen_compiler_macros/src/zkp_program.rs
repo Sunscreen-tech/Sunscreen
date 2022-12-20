@@ -3,7 +3,7 @@ use quote::{quote, quote_spanned, ToTokens};
 use sunscreen_compiler_common::macros::{
     create_program_node, emit_signature, extract_fn_arguments, lift_type, ExtractFnArgumentsError,
 };
-use syn::{parse_macro_input, spanned::Spanned, ItemFn, ReturnType, Type};
+use syn::{parse_macro_input, spanned::Spanned, ItemFn, ReturnType, Type, Generics, TypeParamBound, Path};
 
 use crate::{
     error::{Error, Result},
@@ -31,12 +31,44 @@ pub fn zkp_program_impl(
     }
 }
 
+fn get_generic_arg(generics: &Generics) -> Result<(Ident, Path)> {
+    if generics.type_params().count() != 1 {
+        return Err(Error::compile_error(generics.span(), "ZKP programs must take 1 generic argument with bound sunscreen::BackendField.sunscreen::BackendField"));
+    }
+
+    if generics.lifetimes().count() > 0 {
+        return Err(Error::compile_error(generics.span(), "ZKP programs don't support lifetimes."));
+    }
+
+    if generics.const_params().count() > 0 {
+        return Err(Error::compile_error(generics.span(), "ZKP programs don't support const params."));
+    }
+
+    let generic = generics.type_params().next().unwrap();
+    if generic.bounds.len() != 1 {
+        return Err(Error::compile_error(generic.span(), "ZKP programs must take 1 generic argument with bound sunscreen::BackendField. This must be the only bound and cannot be specified in a `where` clause."));
+    }
+
+    let bound = generic.bounds[0].clone();
+
+    let bound = match bound {
+        TypeParamBound::Trait(x) => x,
+        TypeParamBound::Lifetime(x) => {
+            return Err(Error::compile_error(x.span(), "ZKP programs don't support lifetimes."))
+        }
+    };
+
+    Ok((generic.ident.clone(), bound.path))
+}
+
 fn parse_inner(_attr_params: ZkpProgramAttrs, input_fn: ItemFn) -> Result<TokenStream> {
     let zkp_program_name = &input_fn.sig.ident;
     let vis = &input_fn.vis;
     let body = &input_fn.block;
     let inputs = &input_fn.sig.inputs;
     let ret = &input_fn.sig.output;
+    
+    let (generic_ident, generic_bound) = get_generic_arg(&input_fn.sig.generics)?;
 
     match ret {
         ReturnType::Default => {}
@@ -126,10 +158,9 @@ fn parse_inner(_attr_params: ZkpProgramAttrs, input_fn: ItemFn) -> Result<TokenS
     Ok(quote! {
         #[allow(non_camel_case_types)]
         #[derive(Clone)]
-        #vis struct #zkp_program_struct_name {
-        }
+        #vis struct #zkp_program_struct_name;
 
-        impl sunscreen::ZkpProgramFn for #zkp_program_struct_name {
+        impl <#generic_ident: #generic_bound> sunscreen::ZkpProgramFn<#generic_ident> for #zkp_program_struct_name {
             fn build(&self) -> sunscreen::Result<sunscreen::ZkpFrontendCompilation> {
                 use std::cell::RefCell;
                 use std::mem::transmute;
@@ -186,7 +217,7 @@ fn parse_inner(_attr_params: ZkpProgramAttrs, input_fn: ItemFn) -> Result<TokenS
             }
         }
 
-        impl AsRef<str> for #zkp_program_struct_name {
+        impl <#generic_ident: #generic_bound> AsRef<str> for #zkp_program_struct_name {
             fn as_ref(&self) -> &str {
                 use sunscreen::ZkpProgramFn;
 
@@ -194,8 +225,6 @@ fn parse_inner(_attr_params: ZkpProgramAttrs, input_fn: ItemFn) -> Result<TokenS
             }
         }
 
-        #[allow(non_upper_case_globals)]
-        #vis const #zkp_program_name: #zkp_program_struct_name = #zkp_program_struct_name {
-        };
+        #vis const #zkp_program_name: #zkp_program_struct_name = #zkp_program_struct_name;
     })
 }

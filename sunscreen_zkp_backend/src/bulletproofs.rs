@@ -325,6 +325,8 @@ fn constraint_count(graph: &ExecutableZkpProgram) -> Result<usize> {
 }
 
 impl ZkpBackend for BulletproofsBackend {
+    type Field = Scalar;
+
     fn prove(&self, graph: &ExecutableZkpProgram, inputs: &[BigInt]) -> Result<Proof> {
         let expected_input_count = graph
             .node_weights()
@@ -457,7 +459,19 @@ fn try_uint_to_scalar<const N: usize>(x: &UInt<N>) -> Result<Scalar> {
     scalar.ok_or_else(|| Error::out_of_range(&x.to_string()))
 }
 
-impl BackendField for Scalar {}
+impl BackendField for Scalar {
+    // 2^252+27742317777372353535851937790883648493,
+    const FIELD_MODULUS: BigInt = BigInt::from_words([
+        6346243789798364141,
+        1503914060200516822,
+        0x0,
+        0x1000000000000000,
+        0x0,
+        0x0,
+        0x0,
+        0x0,
+    ]);
+}
 
 impl TryFrom<BigInt> for Scalar {
     type Error = Error;
@@ -550,19 +564,9 @@ mod tests {
 
     #[test]
     fn barely_too_bit_u512_to_scalar_fails() {
-        // 2^252+27742317777372353535851937790883648493,
-        let l = BigInt::from_words([
-            6346243789798364141,
-            1503914060200516822,
-            0x0,
-            0x1000000000000000,
-            0x0,
-            0x0,
-            0x0,
-            0x0,
-        ]);
+        let l = Scalar::FIELD_MODULUS;
 
-        assert!(Scalar::try_from(&l).is_err());
+        assert!(Scalar::try_from(l).is_err());
 
         let l_min_1 = l.0.wrapping_sub(&U512::ONE);
         let scalar = try_uint_to_scalar(&l_min_1).unwrap();

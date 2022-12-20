@@ -67,7 +67,7 @@ use fhe::{FheOperation, Literal};
 use petgraph::stable_graph::StableGraph;
 use serde::{Deserialize, Serialize};
 use sunscreen_runtime::{marker, Fhe, FheZkp, Zkp};
-use sunscreen_zkp_backend::CompiledZkpProgram;
+use sunscreen_zkp_backend::{BackendField, CompiledZkpProgram};
 
 use std::cell::RefCell;
 use std::collections::HashMap;

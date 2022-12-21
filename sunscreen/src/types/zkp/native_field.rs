@@ -1,6 +1,6 @@
 use sunscreen_compiler_macros::TypeName;
 use sunscreen_runtime::ZkpProgramInputTrait;
-use sunscreen_zkp_backend::BigInt;
+use sunscreen_zkp_backend::{BigInt, BackendField};
 
 use crate::{
     invoke_gadget,
@@ -23,14 +23,14 @@ use crate as sunscreen;
  * The native field type in the underlying backend proof system. For
  * example, in Bulletproofs, this is [`Scalar`](https://docs.rs/curve25519-dalek-ng/4.1.1/curve25519_dalek_ng/scalar/struct.Scalar.html).
  */
-pub struct NativeField {
+pub struct NativeField<F: BackendField> {
     /**
      * The native field's value.
      */
     pub val: BigInt,
 }
 
-impl NativeField {
+impl<F: BackendField> NativeField<F> {
     /**
      * Converts a big-endian hex string into a native field.
      */
@@ -41,7 +41,7 @@ impl NativeField {
     }
 }
 
-impl<T> From<T> for NativeField
+impl<F: BackendField, T> From<T> for NativeField<F>
 where
     T: Into<BigInt>,
 {
@@ -50,20 +50,20 @@ where
     }
 }
 
-impl NumFieldElements for NativeField {
+impl<F: BackendField> NumFieldElements for NativeField<F> {
     const NUM_NATIVE_FIELD_ELEMENTS: usize = 1;
 }
 
-impl ToNativeFields for NativeField {
+impl<F: BackendField> ToNativeFields for NativeField<F> {
     fn to_native_fields(&self) -> Vec<BigInt> {
         vec![self.val]
     }
 }
 
-impl ZkpType for NativeField {}
-impl ZkpProgramInputTrait for NativeField {}
+impl<F: BackendField> ZkpType for NativeField<F> {}
+impl<F: BackendField> ZkpProgramInputTrait for NativeField<F> {}
 
-impl AddVar for NativeField {
+impl<F: BackendField> AddVar for NativeField<F> {
     fn add(lhs: ProgramNode<Self>, rhs: ProgramNode<Self>) -> ProgramNode<Self> {
         with_zkp_ctx(|ctx| {
             let o = ctx.add_addition(lhs.ids[0], rhs.ids[0]);
@@ -73,7 +73,7 @@ impl AddVar for NativeField {
     }
 }
 
-impl MulVar for NativeField {
+impl<F: BackendField> MulVar for NativeField<F> {
     fn mul(lhs: ProgramNode<Self>, rhs: ProgramNode<Self>) -> ProgramNode<Self> {
         with_zkp_ctx(|ctx| {
             let o = ctx.add_multiplication(lhs.ids[0], rhs.ids[0]);
@@ -83,7 +83,7 @@ impl MulVar for NativeField {
     }
 }
 
-impl NegVar for NativeField {
+impl<F: BackendField> NegVar for NativeField<F> {
     fn neg(lhs: ProgramNode<Self>) -> ProgramNode<Self> {
         with_zkp_ctx(|ctx| {
             let o = ctx.add_negate(lhs.ids[0]);
@@ -93,7 +93,7 @@ impl NegVar for NativeField {
     }
 }
 
-impl ConstrainEqVarVar for NativeField {
+impl<F: BackendField> ConstrainEqVarVar for NativeField<F> {
     fn constraint_eq(lhs: ProgramNode<Self>, rhs: ProgramNode<Self>) -> ProgramNode<Self> {
         with_zkp_ctx(|ctx| {
             let sub = ctx.add_subtraction(lhs.ids[0], rhs.ids[0]);
@@ -105,8 +105,8 @@ impl ConstrainEqVarVar for NativeField {
     }
 }
 
-impl IntoProgramNode for NativeField {
-    type Output = NativeField;
+impl<F: BackendField> IntoProgramNode for NativeField<F> {
+    type Output = NativeField<F>;
 
     fn into_program_node(self) -> ProgramNode<Self> {
         with_zkp_ctx(|ctx| ProgramNode::new(&[ctx.add_constant(&self.val)]))
@@ -116,16 +116,16 @@ impl IntoProgramNode for NativeField {
 /**
  * Methods for decomposing values into binary.
  */
-pub trait ToBinary {
+pub trait ToBinary<F: BackendField> {
     /**
      * Decompose this value into unsigned N-bit binary. If the value
      * is too large, the proof will fail to validate.
      */
-    fn to_unsigned<const N: usize>(&self) -> [ProgramNode<NativeField>; N];
+    fn to_unsigned<const N: usize>(&self) -> [ProgramNode<NativeField<F>>; N];
 }
 
-impl ToBinary for ProgramNode<NativeField> {
-    fn to_unsigned<const N: usize>(&self) -> [ProgramNode<NativeField>; N] {
+impl<F: BackendField> ToBinary<F> for ProgramNode<NativeField<F>> {
+    fn to_unsigned<const N: usize>(&self) -> [ProgramNode<NativeField<F>>; N] {
         let bits = invoke_gadget(ToUInt::<N>, self.ids);
 
         let mut vals = [*self; N];

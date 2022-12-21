@@ -27,7 +27,7 @@ fn cant_chain_multiple_program() {
     #[fhe_program(scheme = "bfv")]
     fn program_2() {}
 
-    let result = Compiler::new()
+    let result = GenericCompiler::new()
         .fhe_program(program_1)
         .fhe_program(program_2)
         .compile();
@@ -45,7 +45,7 @@ fn chaining_increases_parameters() {
         a * b
     }
 
-    let app = Compiler::new()
+    let app = GenericCompiler::new()
         .fhe_program(mul_1)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(256))
         .compile()
@@ -58,7 +58,7 @@ fn chaining_increases_parameters() {
         a * b
     }
 
-    let app = Compiler::new()
+    let app = GenericCompiler::new()
         .fhe_program(mul_2)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(256))
         .compile()

@@ -3,7 +3,7 @@
 use sunscreen::{
     fhe_program,
     types::{bfv::Signed, Cipher},
-    Compiler, FheProgramInput, PlainModulusConstraint, Runtime,
+    GenericCompiler, FheProgramInput, PlainModulusConstraint, Runtime,
 };
 
 #[test]
@@ -21,7 +21,7 @@ fn can_add_array_elements() {
         add_impl(x)
     }
 
-    let app = Compiler::new()
+    let app = GenericCompiler::new()
         .fhe_program(add)
         .additional_noise_budget(5)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(500))
@@ -64,7 +64,7 @@ fn multidimensional_arrays() {
         determinant_impl(x)
     }
 
-    let app = Compiler::new()
+    let app = GenericCompiler::new()
         .fhe_program(determinant)
         .additional_noise_budget(5)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(500))
@@ -109,7 +109,7 @@ fn multidimensional_is_row_major() {
         x[1][2]
     }
 
-    let app = Compiler::new()
+    let app = GenericCompiler::new()
         .fhe_program(determinant)
         .additional_noise_budget(5)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(500))
@@ -160,7 +160,7 @@ fn cipher_plain_arrays() {
         sum
     }
 
-    let app = Compiler::new()
+    let app = GenericCompiler::new()
         .fhe_program(dot)
         .additional_noise_budget(5)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(500))
@@ -211,7 +211,7 @@ fn can_mutate_array() {
         sum
     }
 
-    let app = Compiler::new()
+    let app = GenericCompiler::new()
         .fhe_program(mult)
         .additional_noise_budget(5)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(500))
@@ -252,7 +252,7 @@ fn can_return_array() {
         a
     }
 
-    let app = Compiler::new()
+    let app = GenericCompiler::new()
         .fhe_program(mult)
         .additional_noise_budget(5)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(500))

@@ -1,4 +1,4 @@
-use sunscreen::{types::zkp::NativeField, zkp_program, Compiler, Runtime};
+use sunscreen::{types::zkp::NativeField, zkp_program, GenericCompiler, Runtime};
 use sunscreen_runtime::ZkpProgramInput;
 use sunscreen_zkp_backend::bulletproofs::BulletproofsBackend;
 
@@ -11,7 +11,7 @@ fn can_add_and_mul_native_fields() {
         x.constrain_eq(NativeField::from(42u32))
     }
 
-    let app = Compiler::new().zkp_program(add_mul).compile().unwrap();
+    let app = GenericCompiler::new().zkp_program(add_mul).compile().unwrap();
 
     let runtime = Runtime::new_zkp(&BulletproofsBackend::new()).unwrap();
 
@@ -45,7 +45,7 @@ fn get_input_mismatch_on_incorrect_args() {
         let _ = a + b * a;
     }
 
-    let app = Compiler::new().zkp_program(add_mul).compile().unwrap();
+    let app = GenericCompiler::new().zkp_program(add_mul).compile().unwrap();
 
     let runtime = Runtime::new_zkp(&BulletproofsBackend::new()).unwrap();
 
@@ -68,7 +68,7 @@ fn can_use_public_inputs() {
         x.constrain_eq(NativeField::from(42u32))
     }
 
-    let app = Compiler::new().zkp_program(add_mul).compile().unwrap();
+    let app = GenericCompiler::new().zkp_program(add_mul).compile().unwrap();
 
     let runtime = Runtime::new_zkp(&BulletproofsBackend::new()).unwrap();
 
@@ -97,7 +97,7 @@ fn can_use_constant_inputs() {
         x.constrain_eq(NativeField::from(42u32))
     }
 
-    let app = Compiler::new().zkp_program(add_mul).compile().unwrap();
+    let app = GenericCompiler::new().zkp_program(add_mul).compile().unwrap();
 
     let runtime = Runtime::new_zkp(&BulletproofsBackend::new()).unwrap();
 

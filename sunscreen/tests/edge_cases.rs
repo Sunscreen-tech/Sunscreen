@@ -10,7 +10,7 @@ fn unused_cipher_parameter_1() {
         b + c
     }
 
-    let app = Compiler::new()
+    let app = GenericCompiler::new()
         .fhe_program(add)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(64))
         .compile()
@@ -43,7 +43,7 @@ fn unused_cipher_parameter_2() {
         a + c
     }
 
-    let app = Compiler::new()
+    let app = GenericCompiler::new()
         .fhe_program(add)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(64))
         .compile()
@@ -76,7 +76,7 @@ fn unused_cipher_parameter_3() {
         a + b
     }
 
-    let app = Compiler::new()
+    let app = GenericCompiler::new()
         .fhe_program(add)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(64))
         .compile()
@@ -109,7 +109,7 @@ fn unused_plain_parameter_1() {
         b + c
     }
 
-    let app = Compiler::new()
+    let app = GenericCompiler::new()
         .fhe_program(add)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(64))
         .compile()
@@ -140,7 +140,7 @@ fn unused_plain_parameter_2() {
         a + c
     }
 
-    let app = Compiler::new()
+    let app = GenericCompiler::new()
         .fhe_program(add)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(64))
         .compile()
@@ -171,7 +171,7 @@ fn unused_plain_parameter_3() {
         a + b
     }
 
-    let app = Compiler::new()
+    let app = GenericCompiler::new()
         .fhe_program(add)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(64))
         .compile()

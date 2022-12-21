@@ -73,7 +73,7 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::marker::PhantomData;
 
-pub use compiler::{Compiler, FheProgramFn};
+pub use compiler::{GenericCompiler, FheProgramFn};
 pub use error::{Error, Result};
 pub use params::PlainModulusConstraint;
 pub use seal_fhe::Plaintext as SealPlaintext;

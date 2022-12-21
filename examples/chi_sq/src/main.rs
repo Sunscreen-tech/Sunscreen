@@ -17,7 +17,7 @@ use sunscreen::{
         bfv::{Batched, Signed},
         Cipher, FheType, TypeName,
     },
-    Compiler, Error, FheProgramFn, FheProgramInput, PlainModulusConstraint, Runtime,
+    GenericCompiler, Error, FheProgramFn, FheProgramInput, PlainModulusConstraint, Runtime,
 };
 
 use std::marker::PhantomData;
@@ -174,7 +174,7 @@ where
 {
     let start = Instant::now();
 
-    let app = Compiler::new()
+    let app = GenericCompiler::new()
         .fhe_program(c.clone())
         .plain_modulus_constraint(plain_modulus)
         .compile()?;

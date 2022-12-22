@@ -8,7 +8,7 @@ use std::collections::{HashMap, HashSet};
 use std::marker::PhantomData;
 use sunscreen_fhe_program::FheProgramTrait;
 use sunscreen_runtime::{marker, CompiledFheProgram, Fhe, FheZkp, Zkp};
-use sunscreen_zkp_backend::{CompiledZkpProgram, ZkpBackend, BackendField};
+use sunscreen_zkp_backend::{BackendField, CompiledZkpProgram, ZkpBackend};
 
 #[derive(Debug, Clone)]
 enum ParamsMode {
@@ -71,7 +71,7 @@ impl Default for FheCompilerData {
 impl<B> Default for ZkpCompilerData<B> {
     fn default() -> Self {
         Self {
-            zkp_program_fns: vec![]
+            zkp_program_fns: vec![],
         }
     }
 }
@@ -86,7 +86,7 @@ enum CompilerData<B> {
     None,
     Fhe(FheCompilerData),
     Zkp(ZkpCompilerData<B>),
-    FheZkp(FheCompilerData, ZkpCompilerData<B>)
+    FheZkp(FheCompilerData, ZkpCompilerData<B>),
 }
 
 impl<B> CompilerData<B> {
@@ -106,7 +106,7 @@ impl<B> CompilerData<B> {
         match self {
             Self::Zkp(d) => d,
             Self::FheZkp(_, d) => d,
-            _ => unreachable!()
+            _ => unreachable!(),
         }
     }
 
@@ -114,7 +114,7 @@ impl<B> CompilerData<B> {
         match self {
             Self::Zkp(d) => d,
             Self::FheZkp(_, d) => d,
-            _ => unreachable!()
+            _ => unreachable!(),
         }
     }
 
@@ -122,7 +122,7 @@ impl<B> CompilerData<B> {
         match self {
             Self::Fhe(d) => d,
             Self::FheZkp(d, _) => d,
-            _ => unreachable!()
+            _ => unreachable!(),
         }
     }
 
@@ -130,7 +130,7 @@ impl<B> CompilerData<B> {
         match self {
             Self::Fhe(d) => d,
             Self::FheZkp(d, _) => d,
-            _ => unreachable!()
+            _ => unreachable!(),
         }
     }
 
@@ -138,7 +138,7 @@ impl<B> CompilerData<B> {
         match self {
             Self::Zkp(d) => d,
             Self::FheZkp(_, d) => d,
-            _ => unreachable!()
+            _ => unreachable!(),
         }
     }
 
@@ -146,7 +146,7 @@ impl<B> CompilerData<B> {
         match self {
             Self::Fhe(d) => d,
             Self::FheZkp(d, _) => d,
-            _ => unreachable!()
+            _ => unreachable!(),
         }
     }
 }
@@ -173,7 +173,7 @@ impl Compiler {
      */
     pub fn new() -> Self {
         Self {
-            data: CompilerData::None,           
+            data: CompilerData::None,
             _phantom: PhantomData,
         }
     }
@@ -186,11 +186,13 @@ impl Compiler {
         F: FheProgramFn + 'static,
     {
         let mut data = CompilerData::new_fhe(FheCompilerData::default());
-        data.fhe_data_mut().fhe_program_fns.push(Box::new(fhe_program_fn));
+        data.fhe_data_mut()
+            .fhe_program_fns
+            .push(Box::new(fhe_program_fn));
 
         FheCompiler {
             data,
-            _phantom: PhantomData
+            _phantom: PhantomData,
         }
     }
 
@@ -202,17 +204,15 @@ impl Compiler {
 
         ZkpCompiler {
             data,
-            _phantom: PhantomData
+            _phantom: PhantomData,
         }
     }
 }
 
-impl<T, B> GenericCompiler<T, BoxZkpFn<B>>
-where B: BackendField
-{
+impl<T, B> GenericCompiler<T, B> {
     fn compile_fhe(&self) -> Result<HashMap<String, CompiledFheProgram>> {
         let fhe_data: &FheCompilerData = self.data.fhe_data();
-        
+
         if fhe_data.fhe_program_fns.is_empty() {
             return Ok(HashMap::new());
         }
@@ -241,7 +241,11 @@ where B: BackendField
         }
 
         // Check that every chain_count > 0.
-        if fhe_data.fhe_program_fns.iter().any(|p| p.chain_count() == 0) {
+        if fhe_data
+            .fhe_program_fns
+            .iter()
+            .any(|p| p.chain_count() == 0)
+        {
             return Err(Error::unsupported("Chain count must be greater than zero."));
         }
 
@@ -305,7 +309,12 @@ where B: BackendField
 
         Ok(fhe_programs)
     }
+}
 
+impl<T, B> GenericCompiler<T, BoxZkpFn<B>>
+where
+    B: BackendField,
+{
     fn compile_zkp(&self) -> Result<HashMap<String, CompiledZkpProgram>> {
         let zkp_data = self.data.zkp_data();
 
@@ -323,7 +332,7 @@ where B: BackendField
         Ok(zkp_programs)
     }
 
-    fn compile_internal(self) -> Result<Application<()>> {
+    fn compile_internal(self) -> Result<Application<T>> {
         Application::new(self.compile_fhe()?, self.compile_zkp()?)
     }
 }
@@ -336,7 +345,10 @@ impl FheCompiler {
     where
         F: FheProgramFn + 'static,
     {
-        self.data.fhe_data_mut().fhe_program_fns.push(Box::new(fhe_program_fn));
+        self.data
+            .fhe_data_mut()
+            .fhe_program_fns
+            .push(Box::new(fhe_program_fn));
         self
     }
 
@@ -348,18 +360,41 @@ impl FheCompiler {
 
         FheZkpCompiler {
             data,
-            _phantom: PhantomData
+            _phantom: PhantomData,
         }
+    }
+
+    /**
+     * Compile the FHE programs. If successful, returns an
+     * [`Application`] containing a compiled form of each
+     * `fhe_program` and argument.
+     *
+     * # Remarks
+     * Each compiled FHE program in the returned [`Application`]
+     * is compiled under the same [`Params`] so ciphertexts can be
+     * used interchangeably between programs.
+     *
+     * Each specified FHE program must have a unique name,
+     * regardless of its parent module or crate. `compile` returns
+     * a [`Error::NameCollision`] if two or more FHE programs
+     * have the same name.
+     *
+     * Each FHE program must use the same scheme or `compile`
+     * will return a [`Error::NameCollision`] error.
+     */
+    pub fn compile(self) -> Result<Application<()>> {
+        Ok(Application::new(self.compile_fhe()?, HashMap::new())?)
     }
 }
 
 impl<B> ZkpCompiler<BoxZkpFn<B>>
-where B: BackendField
+where
+    B: BackendField,
 {
     /**
      * Add the given FHE program for compilation.
      */
-    pub fn fhe_program<F>(mut self, fhe_program_fn: F) -> FheZkpCompiler<BoxZkpFn<B>>
+    pub fn fhe_program<F>(self, fhe_program_fn: F) -> FheZkpCompiler<BoxZkpFn<B>>
     where
         F: FheProgramFn + 'static,
     {
@@ -368,7 +403,7 @@ where B: BackendField
 
         FheZkpCompiler {
             data: CompilerData::new_fhe_zkp(fhe_data, self.data.unwrap_zkp()),
-            _phantom: PhantomData
+            _phantom: PhantomData,
         }
     }
 
@@ -379,13 +414,32 @@ where B: BackendField
     where
         F: ZkpProgramFn<B> + 'static,
     {
-        self.data.zkp_data_mut().zkp_program_fns.push(Box::new(zkp_program_fn));
+        self.data
+            .zkp_data_mut()
+            .zkp_program_fns
+            .push(Box::new(zkp_program_fn));
         self
+    }
+
+    /**
+     * Compile the ZKP programs. If successful, returns an
+     * [`Application`] containing a compiled form of each
+     * `zkp_program` argument.
+     *
+     * # Remarks
+     * Each specified ZKP program must have a unique name,
+     * regardless of its parent module or crate. `compile` returns
+     * a [`Error::NameCollision`] if two or more FHE programs
+     * have the same name.
+     */
+    pub fn compile(self) -> Result<Application<Zkp>> {
+        self.compile_internal()
     }
 }
 
 impl<B> FheZkpCompiler<BoxZkpFn<B>>
-where B: BackendField
+where
+    B: BackendField,
 {
     /**
      * Add the given FHE program for compilation.
@@ -394,7 +448,10 @@ where B: BackendField
     where
         F: FheProgramFn + 'static,
     {
-        self.data.fhe_data_mut().fhe_program_fns.push(Box::new(fhe_program_fn));
+        self.data
+            .fhe_data_mut()
+            .fhe_program_fns
+            .push(Box::new(fhe_program_fn));
         self
     }
 
@@ -405,8 +462,33 @@ where B: BackendField
     where
         F: ZkpProgramFn<B> + 'static,
     {
-        self.data.zkp_data_mut().zkp_program_fns.push(Box::new(zkp_program_fn));
+        self.data
+            .zkp_data_mut()
+            .zkp_program_fns
+            .push(Box::new(zkp_program_fn));
         self
+    }
+
+    /**
+     * Compile the FHE and ZKP programs. If successful, returns an
+     * [`Application`] containing a compiled form of each
+     * `fhe_program` and `zkp_program` argument.
+     *
+     * # Remarks
+     * Each compiled FHE program in the returned [`Application`]
+     * is compiled under the same [`Params`] so ciphertexts can be
+     * used interchangeably between programs.
+     *
+     * Each specified FHE and ZKP program must have a unique name,
+     * regardless of its parent module or crate. `compile` returns
+     * a [`Error::NameCollision`] if two or more FHE programs
+     * have the same name.
+     *
+     * Each FHE program must use the same scheme or `compile`
+     * will return a [`Error::NameCollision`] error.
+     */
+    pub fn compile(self) -> Result<Application<FheZkp>> {
+        self.compile_internal()
     }
 }
 
@@ -538,6 +620,7 @@ mod tests {
     use std::any::{Any, TypeId};
 
     use sunscreen_compiler_macros::{fhe_program, zkp_program};
+    use sunscreen_zkp_backend::bulletproofs::BulletproofsBackend;
 
     use super::*;
 
@@ -546,9 +629,9 @@ mod tests {
 
     #[test]
     fn raw_compiler_has_correct_type() {
-        let c = GenericCompiler::new();
+        let c = Compiler::new();
 
-        assert_eq!(c.type_id(), TypeId::of::<GenericCompiler<()>>());
+        assert_eq!(c.type_id(), TypeId::of::<Compiler>());
     }
 
     #[test]
@@ -556,19 +639,19 @@ mod tests {
         #[fhe_program(scheme = "bfv")]
         fn kitty() {}
 
-        let c = GenericCompiler::new().fhe_program(kitty);
+        let c = Compiler::new().fhe_program(kitty);
 
-        assert_eq!(c.type_id(), TypeId::of::<GenericCompiler<Fhe>>());
+        assert_eq!(c.type_id(), TypeId::of::<FheCompiler>());
     }
 
     #[test]
     fn zkp_program_yields_zkp_compiler() {
-        #[zkp_program(backend = "bulletproofs")]
-        fn kitty<F: BackendField>() {}
+        let c = Compiler::new().zkp_backend::<BulletproofsBackend>();
 
-        let c = GenericCompiler::new().zkp_program(kitty);
-
-        assert_eq!(c.type_id(), TypeId::of::<GenericCompiler<Zkp>>());
+        assert_eq!(
+            c.type_id(),
+            TypeId::of::<ZkpCompiler<<BulletproofsBackend as ZkpBackend>::Field>>()
+        );
     }
 
     #[test]
@@ -579,9 +662,14 @@ mod tests {
         #[fhe_program(scheme = "bfv")]
         fn doggie() {}
 
-        let c = GenericCompiler::new().zkp_program(kitty).fhe_program(doggie);
+        let c = GenericCompiler::new()
+            .zkp_backend::<BulletproofsBackend>()
+            .fhe_program(doggie);
 
-        assert_eq!(c.type_id(), TypeId::of::<GenericCompiler<FheZkp>>());
+        assert_eq!(
+            c.type_id(),
+            TypeId::of::<FheZkpCompiler<<BulletproofsBackend as ZkpBackend>::Field>>()
+        );
     }
 
     #[test]
@@ -589,7 +677,7 @@ mod tests {
         #[fhe_program(scheme = "bfv")]
         fn kitty() {}
 
-        let app = GenericCompiler::new().fhe_program(kitty).compile().unwrap();
+        let app = Compiler::new().fhe_program(kitty).compile().unwrap();
 
         assert_eq!(app.type_id(), TypeId::of::<Application<Fhe>>());
     }
@@ -599,7 +687,11 @@ mod tests {
         #[zkp_program(backend = "bulletproofs")]
         fn kitty<F: BackendField>() {}
 
-        let app = GenericCompiler::new().zkp_program(kitty).compile().unwrap();
+        let app = GenericCompiler::new()
+            .zkp_backend::<BulletproofsBackend>()
+            .zkp_program(kitty)
+            .compile()
+            .unwrap();
 
         assert_eq!(app.type_id(), TypeId::of::<Application<Zkp>>());
     }
@@ -607,12 +699,13 @@ mod tests {
     #[test]
     fn compiling_fhe_and_zkp_program_yields_fhezkp_application() {
         #[zkp_program(backend = "bulletproofs")]
-        fn kitty<F: BackendField>() {}
+        fn kitty<F: BackendField>(_a: NativeField<F>) {}
 
         #[fhe_program(scheme = "bfv")]
         fn doggie() {}
 
         let app = GenericCompiler::new()
+            .zkp_backend::<BulletproofsBackend>()
             .zkp_program(kitty)
             .fhe_program(doggie)
             .compile()

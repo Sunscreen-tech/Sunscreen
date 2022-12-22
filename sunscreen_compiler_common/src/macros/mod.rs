@@ -1,8 +1,9 @@
 use proc_macro2::{Span, TokenStream as TokenStream2};
-use quote::{format_ident, quote, quote_spanned};
+use quote::{format_ident, quote, quote_spanned, ToTokens};
 use syn::{
-    parse_quote, parse_quote_spanned, punctuated::Punctuated, spanned::Spanned, Attribute, FnArg,
-    Ident, Index, Pat, ReturnType, Token, Type, AngleBracketedGenericArguments, PathArguments, GenericArgument, TypePath, PathSegment, PatType, Path,
+    parse_quote, parse_quote_spanned, punctuated::Punctuated, spanned::Spanned, token::Colon2,
+    AngleBracketedGenericArguments, Attribute, FnArg, GenericArgument, Ident, Index, Pat, Path,
+    PathArguments, PathSegment, ReturnType, Token, Type, TypePath,
 };
 
 mod type_name;
@@ -146,23 +147,24 @@ pub fn extract_fn_arguments(
  * a new type with new generics.
  */
 pub fn map_type_generic_arg<F>(t: &Type, f: F) -> Type
-where F: Fn(&GenericArgument) -> GenericArgument
+where
+    F: Fn(&GenericArgument) -> GenericArgument,
 {
     match t {
         Type::Path(ref p) => {
             let seg = p.path.segments.last().unwrap();
             let generic_args = match &seg.arguments {
-                PathArguments::AngleBracketed(g) => {
-                    AngleBracketedGenericArguments {
-                        args: g.args.iter().map(f).collect(),
-                        colon2_token: g.colon2_token,
-                        lt_token: g.lt_token,
-                        gt_token: g.gt_token
-                    }
+                PathArguments::AngleBracketed(g) => AngleBracketedGenericArguments {
+                    args: g.args.iter().map(f).collect(),
+                    colon2_token: g.colon2_token,
+                    lt_token: g.lt_token,
+                    gt_token: g.gt_token,
                 },
-                _ => { return t.clone(); }
+                _ => {
+                    return t.clone();
+                }
             };
-            
+
             let mut segments = Punctuated::new();
 
             for (i, s) in p.path.segments.iter().enumerate() {
@@ -171,22 +173,20 @@ where F: Fn(&GenericArgument) -> GenericArgument
                 } else {
                     segments.push(PathSegment {
                         ident: s.ident.clone(),
-                        arguments: PathArguments::AngleBracketed(generic_args.clone())
+                        arguments: PathArguments::AngleBracketed(generic_args.clone()),
                     })
                 }
             }
 
-            return Type::Path(
-                TypePath {
-                    qself: None,
-                    path: Path {
-                        leading_colon: p.path.leading_colon,
-                        segments
-                    }
-                }
-            );
-        },
-        _ => unimplemented!()
+            return Type::Path(TypePath {
+                qself: None,
+                path: Path {
+                    leading_colon: p.path.leading_colon,
+                    segments,
+                },
+            });
+        }
+        _ => unimplemented!(),
     };
 }
 
@@ -285,26 +285,52 @@ pub fn emit_output_capture(return_types: &[Type]) -> TokenStream2 {
 }
 
 /**
+ * For a given type, inserts colons between each segment and generic
+ * argument. The returned token stream can be used for function
+ * invocations.
+ *
+ * # Example
+ * `foo::bar::<7>::Baz<Kitty>` becomes `foo::bar::<7>::Baz::<Kitty>`.
+ *
+ * With the former, you cannot do `foo::bar::<7>::Baz<Kitty>::my_func()`,
+ * the the latter you can do `foo::bar::<7>::Baz::<Kitty>::my_func()`.
+ */
+pub fn normalize_type_generic_args(t: &Type) -> Punctuated<TokenStream2, Colon2> {
+    let mut ret = Punctuated::new();
+
+    match t {
+        Type::Path(p) => {
+            for s in &p.path.segments {
+                ret.push(s.ident.clone().into_token_stream());
+
+                if let PathArguments::AngleBracketed(a) = &s.arguments {
+                    let args = AngleBracketedGenericArguments {
+                        colon2_token: None,
+                        ..a.clone()
+                    };
+
+                    ret.push(args.into_token_stream());
+                }
+            }
+        }
+        Type::Array(a) => {
+            ret.push(a.into_token_stream());
+        }
+        _ => unimplemented!(),
+    }
+
+    ret
+}
+
+/**
  * Emits the call signature of an FHE or ZKP program.
  */
 pub fn emit_signature(args: &[Type], return_types: &[Type]) -> TokenStream2 {
-    let arg_type_names = args
-        .iter()
-        .enumerate()
-        .map(|(i, t)| {
-            let alias = format_ident!("T{}", i);
-
-            quote! {
-                type #alias = #t;
-            }
-        })
-        .collect::<Vec<TokenStream2>>();
-
-    let arg_get_types = arg_type_names.iter().enumerate().map(|(i, _)| {
-        let alias = format_ident!("T{}", i);
+    let arg_get_types = args.iter().map(|x| {
+        let x = normalize_type_generic_args(x);
 
         quote! {
-            #alias::type_name(),
+            #x::type_name(),
         }
     });
 
@@ -334,8 +360,6 @@ pub fn emit_signature(args: &[Type], return_types: &[Type]) -> TokenStream2 {
 
     quote! {
         use sunscreen::types::TypeName;
-
-        #(#arg_type_names)*
         #(#return_type_aliases)*
 
         sunscreen::CallSignature {
@@ -692,21 +716,32 @@ mod test {
             kitty::cow::<7>::MyType<Foo>
         };
 
-        let actual = map_type_generic_arg(&in_type, |g| {
-            match g {
-                GenericArgument::Type(Type::Path(_)) => {
-                    let r: Type = parse_quote! {
-                        Bar
-                    };
+        let actual = map_type_generic_arg(&in_type, |g| match g {
+            GenericArgument::Type(Type::Path(_)) => {
+                let r: Type = parse_quote! {
+                    Bar
+                };
 
-                    GenericArgument::Type(r)
-                }
-                _ => unreachable!()
+                GenericArgument::Type(r)
             }
+            _ => unreachable!(),
         });
 
         let expected = quote! {
             kitty::cow::<7>::MyType<Bar>
+        };
+
+        assert_syn_eq(&actual, &expected);
+    }
+
+    #[test]
+    fn generic_invocation_works() {
+        let in_type: Type = parse_quote!(kitty::cow::<7>::MyType<Foo>);
+
+        let actual = normalize_type_generic_args(&in_type);
+
+        let expected = quote! {
+            kitty::cow::<7>::MyType::<Foo>
         };
 
         assert_syn_eq(&actual, &expected);

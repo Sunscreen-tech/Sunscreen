@@ -1,9 +1,11 @@
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::{quote, quote_spanned, ToTokens};
 use sunscreen_compiler_common::macros::{
-    create_program_node, emit_signature, extract_fn_arguments, lift_type, ExtractFnArgumentsError, map_type_generic_arg,
+    create_program_node, emit_signature, extract_fn_arguments, ExtractFnArgumentsError,
 };
-use syn::{parse_macro_input, spanned::Spanned, ItemFn, ReturnType, Type, Generics, TypeParamBound, Path, GenericArgument, TypePath, punctuated::Punctuated, PathArguments, PathSegment};
+use syn::{
+    parse_macro_input, spanned::Spanned, Generics, ItemFn, Path, ReturnType, Type, TypeParamBound,
+};
 
 use crate::{
     error::{Error, Result},
@@ -37,11 +39,17 @@ fn get_generic_arg(generics: &Generics) -> Result<(Ident, Path)> {
     }
 
     if generics.lifetimes().count() > 0 {
-        return Err(Error::compile_error(generics.span(), "ZKP programs don't support lifetimes."));
+        return Err(Error::compile_error(
+            generics.span(),
+            "ZKP programs don't support lifetimes.",
+        ));
     }
 
     if generics.const_params().count() > 0 {
-        return Err(Error::compile_error(generics.span(), "ZKP programs don't support const params."));
+        return Err(Error::compile_error(
+            generics.span(),
+            "ZKP programs don't support const params.",
+        ));
     }
 
     let generic = generics.type_params().next().unwrap();
@@ -54,7 +62,10 @@ fn get_generic_arg(generics: &Generics) -> Result<(Ident, Path)> {
     let bound = match bound {
         TypeParamBound::Trait(x) => x,
         TypeParamBound::Lifetime(x) => {
-            return Err(Error::compile_error(x.span(), "ZKP programs don't support lifetimes."))
+            return Err(Error::compile_error(
+                x.span(),
+                "ZKP programs don't support lifetimes.",
+            ))
         }
     };
 
@@ -67,9 +78,8 @@ fn parse_inner(_attr_params: ZkpProgramAttrs, input_fn: ItemFn) -> Result<TokenS
     let body = &input_fn.block;
     let inputs = &input_fn.sig.inputs;
     let ret = &input_fn.sig.output;
-    
+
     let (generic_ident, generic_bound) = get_generic_arg(&input_fn.sig.generics)?;
-    let generic_ident_internal = Ident::new(&format!("{generic_ident}_"), generic_ident.span());
 
     match ret {
         ReturnType::Default => {}
@@ -117,68 +127,16 @@ fn parse_inner(_attr_params: ZkpProgramAttrs, input_fn: ItemFn) -> Result<TokenS
         .map(|(_, t, _)| (**t).clone())
         .collect::<Vec<Type>>();
 
-    let generic_ident_internal_ref = &generic_ident_internal;
-
-    let zkp_program_args = unwrapped_inputs
-        .iter()
-        .map(|i| {
-            let (_, ty, name) = i;
-            
-            // Rename the generic argument matching generic_ident to
-            // generic_ident_internal
-            let ty = map_type_generic_arg(ty, |g| {
-                match g {
-                    GenericArgument::Type(Type::Path(t)) => {
-                        if t.path.is_ident(&generic_ident) {
-                            let mut path_segments = Punctuated::new();
-                            path_segments.push(PathSegment {
-                                ident: generic_ident_internal_ref.clone(),
-                                arguments: PathArguments::None
-                            });
-
-                            GenericArgument::Type(Type::Path(TypePath {
-                                qself: t.qself.clone(),
-                                path: Path {
-                                    leading_colon: None,
-                                    segments: path_segments
-                                }
-                            }))
-                        } else {
-                            g.clone()
-                        }
-                    },
-                    _ => g.clone()
-                }
-            });
-
-            let ty = lift_type(&ty).unwrap();
-
-            quote! {
-                #name: #ty,
-            }
-        })
-        .collect::<Vec<TokenStream>>();
-
     let signature = emit_signature(&argument_types, &[]);
 
-    let var_decl = unwrapped_inputs.iter().enumerate().map(|(i, t)| {
-        let var_name = format!("c_{}", i);
-
+    let var_decl = unwrapped_inputs.iter().map(|t| {
         let input_type = match t.0 {
             ArgumentKind::Private => "private_input",
             ArgumentKind::Public => "public_input",
             ArgumentKind::Constant => "constant_input",
         };
 
-        create_program_node(&var_name, t.1, input_type)
-    });
-
-    let args = unwrapped_inputs.iter().enumerate().map(|(i, t)| {
-        let id = Ident::new(&format!("c_{}", i), Span::call_site());
-
-        quote_spanned! {t.1.span() =>
-            #id
-        }
+        create_program_node(&t.2.to_string(), t.1, input_type)
     });
 
     let zkp_program_struct_name =
@@ -186,7 +144,7 @@ fn parse_inner(_attr_params: ZkpProgramAttrs, input_fn: ItemFn) -> Result<TokenS
 
     let zkp_program_name_literal = format!("{}", zkp_program_name);
 
-    Ok(quote! {
+    let foo = quote! {
         #[allow(non_camel_case_types)]
         #[derive(Clone)]
         #vis struct #zkp_program_struct_name;
@@ -200,21 +158,16 @@ fn parse_inner(_attr_params: ZkpProgramAttrs, input_fn: ItemFn) -> Result<TokenS
                 let mut context = ZkpContext::new(ZkpData::new());
 
                 CURRENT_ZKP_CTX.with(|ctx| {
-                    #[allow(clippy::type_complexity)]
-                    #[forbid(unused_variables)]
-                    fn internal<#generic_ident_internal: #generic_bound>(#(#zkp_program_args)*) {
-                        #body
-                    }
-
                     // Transmute away the lifetime to 'static. So long as we are careful with internal()
                     // panicing, this is safe because we set the context back to none before the function
                     // returns.
                     ctx.swap(&RefCell::new(Some(unsafe { transmute(&mut context) })));
 
-                    #(#var_decl)*
-
+                    #[allow(clippy::type_complexity)]
+                    #[forbid(unused_variables)]
                     let panic_res = std::panic::catch_unwind(|| {
-                        internal::<#generic_ident_internal>(#(#args),*)
+                        #(#var_decl)*
+                        #body
                     });
 
                     // when panicing or not, we need to clear our indicies arena and
@@ -248,14 +201,10 @@ fn parse_inner(_attr_params: ZkpProgramAttrs, input_fn: ItemFn) -> Result<TokenS
             }
         }
 
-        impl <#generic_ident: #generic_bound> AsRef<str> for #zkp_program_struct_name {
-            fn as_ref(&self) -> &str {
-                use sunscreen::ZkpProgramFn;
-
-                self.name()
-            }
-        }
-
         #vis const #zkp_program_name: #zkp_program_struct_name = #zkp_program_struct_name;
-    })
+    };
+
+    Ok(foo)
+
+    // panic!("{foo}");
 }

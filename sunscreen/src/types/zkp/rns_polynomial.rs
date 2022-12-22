@@ -1,6 +1,6 @@
 use sunscreen_compiler_macros::TypeName;
 use sunscreen_runtime::ZkpProgramInputTrait;
-use sunscreen_zkp_backend::{BigInt, BackendField};
+use sunscreen_zkp_backend::{BackendField, BigInt};
 
 use crate::{
     types::zkp::{Coerce, ProgramNode},
@@ -26,7 +26,8 @@ pub struct RnsRingPolynomial<F: BackendField, const N: usize, const R: usize> {
     data: Box<[[NativeField<F>; N]; R]>,
 }
 
-impl<F: BackendField, T, const N: usize, const R: usize> From<[[T; N]; R]> for RnsRingPolynomial<F, N, R>
+impl<F: BackendField, T, const N: usize, const R: usize> From<[[T; N]; R]>
+    for RnsRingPolynomial<F, N, R>
 where
     T: Into<NativeField<F>> + std::fmt::Debug,
 {
@@ -37,11 +38,15 @@ where
     }
 }
 
-impl<F: BackendField, const N: usize, const R: usize> NumFieldElements for RnsRingPolynomial<F, N, R> {
+impl<F: BackendField, const N: usize, const R: usize> NumFieldElements
+    for RnsRingPolynomial<F, N, R>
+{
     const NUM_NATIVE_FIELD_ELEMENTS: usize = N * R;
 }
 
-impl<F: BackendField, const N: usize, const R: usize> ToNativeFields for RnsRingPolynomial<F, N, R> {
+impl<F: BackendField, const N: usize, const R: usize> ToNativeFields
+    for RnsRingPolynomial<F, N, R>
+{
     fn to_native_fields(&self) -> Vec<BigInt> {
         self.data.into_iter().flatten().map(|x| x.val).collect()
     }
@@ -53,7 +58,9 @@ pub trait ToResidues<F: BackendField, const N: usize, const R: usize> {
     fn residues(&self) -> [[ProgramNode<NativeField<F>>; N]; R];
 }
 
-impl<F: BackendField, const N: usize, const R: usize> ToResidues<F, N, R> for ProgramNode<RnsRingPolynomial<F, N, R>> {
+impl<F: BackendField, const N: usize, const R: usize> ToResidues<F, N, R>
+    for ProgramNode<RnsRingPolynomial<F, N, R>>
+{
     fn residues(&self) -> [[ProgramNode<NativeField<F>>; N]; R] {
         let mut program_nodes = [[ProgramNode::new(&[]); N]; R];
 
@@ -82,13 +89,16 @@ impl<F: BackendField, const N: usize, const R: usize> AddVar for RnsRingPolynomi
     }
 }
 
-impl<F: BackendField, const N: usize, const R: usize> ZkpProgramInputTrait for RnsRingPolynomial<F, N, R> {}
+impl<F: BackendField, const N: usize, const R: usize> ZkpProgramInputTrait
+    for RnsRingPolynomial<F, N, R>
+{
+}
 
 #[cfg(test)]
 mod tests {
     use sunscreen_runtime::Runtime;
-    use sunscreen_zkp_backend::BackendField;
     use sunscreen_zkp_backend::bulletproofs::BulletproofsBackend;
+    use sunscreen_zkp_backend::BackendField;
 
     use crate as sunscreen;
     use crate::types::zkp::rns_polynomial::{RnsRingPolynomial, ToResidues};
@@ -118,7 +128,10 @@ mod tests {
             }
         }
 
-        let app = GenericCompiler::new().zkp_program(add_poly).compile().unwrap();
+        let app = GenericCompiler::new()
+            .zkp_program(add_poly)
+            .compile()
+            .unwrap();
 
         let runtime = Runtime::new_zkp(&BulletproofsBackend::new()).unwrap();
 

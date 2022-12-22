@@ -1,6 +1,8 @@
 use petgraph::Graph;
 use sunscreen_runtime::CallSignature;
-use sunscreen_zkp_backend::{BigInt, CompiledZkpProgram, Gadget, Operation as JitOperation, BackendField};
+use sunscreen_zkp_backend::{
+    BackendField, BigInt, CompiledZkpProgram, Gadget, Operation as JitOperation,
+};
 
 use crate::Result;
 
@@ -27,6 +29,26 @@ pub trait ZkpProgramFn<F: BackendField> {
      * Gets the name of this program.
      */
     fn name(&self) -> &str;
+}
+
+pub trait ZkpProgramFnName<F: BackendField> {
+    fn program_name(&self) -> &str;
+}
+
+impl<F, T> ZkpProgramFnName<F> for T
+where
+    T: ZkpProgramFn<F>,
+    F: BackendField,
+{
+    fn program_name(&self) -> &str {
+        self.name()
+    }
+}
+
+impl<F: BackendField> ZkpProgramFnName<F> for str {
+    fn program_name(&self) -> &str {
+        self
+    }
 }
 
 use std::fmt::Debug;

@@ -544,7 +544,7 @@ impl GenericRuntime<(), ()> {
         Ok(GenericRuntime {
             runtime_data: RuntimeData::Fhe(Self::make_fhe_runtime_data(params)?),
             _phantom_t: PhantomData,
-            zkp_backend: ()
+            zkp_backend: (),
         })
     }
 
@@ -558,7 +558,7 @@ impl GenericRuntime<(), ()> {
         Ok(GenericRuntime {
             runtime_data: RuntimeData::Zkp(Self::make_zkp_runtime_data()),
             _phantom_t: PhantomData,
-            zkp_backend: backend.clone()
+            zkp_backend: backend.clone(),
         })
     }
 
@@ -577,7 +577,7 @@ impl GenericRuntime<(), ()> {
         Ok(GenericRuntime {
             runtime_data,
             _phantom_t: PhantomData,
-            zkp_backend: zkp_backend.clone()
+            zkp_backend: zkp_backend.clone(),
         })
     }
 }

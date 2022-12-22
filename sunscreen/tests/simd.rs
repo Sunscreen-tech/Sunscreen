@@ -1,7 +1,7 @@
 use sunscreen::{
     fhe_program,
     types::{bfv::Batched, Cipher, SwapRows},
-    GenericCompiler, FheProgramInput, PlainModulusConstraint, Runtime,
+    FheProgramInput, GenericCompiler, PlainModulusConstraint, Runtime,
 };
 
 use std::ops::*;

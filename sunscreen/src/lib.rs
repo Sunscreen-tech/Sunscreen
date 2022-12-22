@@ -73,7 +73,7 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::marker::PhantomData;
 
-pub use compiler::{GenericCompiler, FheProgramFn};
+pub use compiler::{FheProgramFn, GenericCompiler};
 pub use error::{Error, Result};
 pub use params::PlainModulusConstraint;
 pub use seal_fhe::Plaintext as SealPlaintext;
@@ -100,7 +100,7 @@ pub struct Application<T> {
     _phantom: PhantomData<T>,
 }
 
-impl Application<()> {
+impl Application<T> {
     /**
      * Constructs a new Application from the given HashMap of programs. The
      * keys of this contain FHE program names and the values are the

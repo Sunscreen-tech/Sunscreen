@@ -2,7 +2,7 @@ use std::marker::PhantomData;
 
 use sunscreen_compiler_macros::TypeName;
 use sunscreen_runtime::ZkpProgramInputTrait;
-use sunscreen_zkp_backend::{BigInt, BackendField};
+use sunscreen_zkp_backend::{BackendField, BigInt};
 
 use crate::{
     invoke_gadget,
@@ -44,7 +44,7 @@ impl<F: BackendField> NativeField<F> {
     pub fn from_be_hex(hex_str: &str) -> Self {
         Self {
             val: BigInt::from_be_hex(hex_str),
-            _phantom: PhantomData
+            _phantom: PhantomData,
         }
     }
 }
@@ -54,7 +54,10 @@ where
     T: Into<BigInt>,
 {
     fn from(x: T) -> Self {
-        Self { val: x.into(), _phantom: PhantomData }
+        Self {
+            val: x.into(),
+            _phantom: PhantomData,
+        }
     }
 }
 

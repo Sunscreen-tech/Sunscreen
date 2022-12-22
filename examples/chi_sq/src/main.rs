@@ -17,7 +17,7 @@ use sunscreen::{
         bfv::{Batched, Signed},
         Cipher, FheType, TypeName,
     },
-    GenericCompiler, Error, FheProgramFn, FheProgramInput, PlainModulusConstraint, Runtime,
+    Error, FheProgramFn, FheProgramInput, GenericCompiler, PlainModulusConstraint, Runtime,
 };
 
 use std::marker::PhantomData;

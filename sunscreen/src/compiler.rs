@@ -199,7 +199,7 @@ impl Compiler {
     /**
      * Sets the ZKP backend target.
      */
-    pub fn zkp_backend<B: ZkpBackend>(self) -> ZkpCompiler<BoxZkpFn<B::Field>> {
+    pub fn zkp_backend<B: ZkpBackend>(self) -> ZkpCompiler<B::Field> {
         let data = CompilerData::new_zkp(ZkpCompilerData::default());
 
         ZkpCompiler {
@@ -333,7 +333,7 @@ where
     }
 
     fn compile_internal(self) -> Result<Application<T>> {
-        Application::new(self.compile_fhe()?, self.compile_zkp()?)
+        Application::new(HashMap::new(), self.compile_zkp()?)
     }
 }
 
@@ -382,19 +382,19 @@ impl FheCompiler {
      * Each FHE program must use the same scheme or `compile`
      * will return a [`Error::NameCollision`] error.
      */
-    pub fn compile(self) -> Result<Application<()>> {
+    pub fn compile(self) -> Result<Application<Fhe>> {
         Ok(Application::new(self.compile_fhe()?, HashMap::new())?)
     }
 }
 
-impl<B> ZkpCompiler<BoxZkpFn<B>>
+impl<B> ZkpCompiler<B>
 where
     B: BackendField,
 {
     /**
      * Add the given FHE program for compilation.
      */
-    pub fn fhe_program<F>(self, fhe_program_fn: F) -> FheZkpCompiler<BoxZkpFn<B>>
+    pub fn fhe_program<F>(self, fhe_program_fn: F) -> FheZkpCompiler<B>
     where
         F: FheProgramFn + 'static,
     {
@@ -437,7 +437,7 @@ where
     }
 }
 
-impl<B> FheZkpCompiler<BoxZkpFn<B>>
+impl<B> FheZkpCompiler<B>
 where
     B: BackendField,
 {
@@ -540,80 +540,15 @@ where
     }
 }
 
-/*
-impl GenericCompiler<Fhe> {
-    /**
-     * Compile the FHE programs. If successful, returns an
-     * [`Application`] containing a compiled form of each
-     * `fhe_program` argument.
-     *
-     * # Remarks
-     * Each compiled FHE program in the returned [`Application`]
-     * is compiled under the same [`Params`] so ciphertexts can be
-     * used interchangeably between programs.
-     *
-     * Each specified FHE program must have a unique name,
-     * regardless of its parent module or crate. `compile` returns
-     * a [`Error::NameCollision`] if two or more FHE programs
-     * have the same name.
-     *
-     * Each FHE program must use the same scheme or `compile`
-     * will return a [`Error::NameCollision`] error.
-     *
-     */
-    pub fn compile(self) -> Result<Application<Fhe>> {
-        let app = self.compile_internal()?;
-
-        Ok(app.convert())
-    }
-}
-
-impl GenericCompiler<Zkp> {
-    /**
-     * Compiles the ZKP programs. If successful, returns an
-     * [`Application`] containing a compiled form of each
-     * `zkp_program` argument.
-     */
-    pub fn compile(self) -> Result<Application<Zkp>> {
-        let app = self.compile_internal()?;
-
-        Ok(app.convert())
-    }
-}
-
-
-impl GenericCompiler<FheZkp> {
-    /**
-     * Compile the FHE and ZKP programs. If successful, returns an
-     * [`Application`] containing a compiled form of each
-     * `fhe_program` and `zkp_program` argument.
-     *
-     * # Remarks
-     * Each compiled FHE program in the returned [`Application`]
-     * is compiled under the same [`Params`] so ciphertexts can be
-     * used interchangeably between programs.
-     *
-     * Each specified FHE program must have a unique name,
-     * regardless of its parent module or crate. `compile` returns
-     * a [`Error::NameCollision`] if two or more FHE programs
-     * have the same name.
-     *
-     * Each FHE program must use the same scheme or `compile`
-     * will return a [`Error::NameCollision`] error.
-     *
-     */
-    pub fn compile(self) -> Result<Application<FheZkp>> {
-        let app = self.compile_internal()?;
-
-        Ok(app.convert())
-    }
-}
-*/
-
+/**
+ * A compiler that has not yet been types. After calling
+ * [`Compiler::new`], the builder type evolves as you specify parameters
+ * and new configurations become valid.
+ */
 pub type Compiler = GenericCompiler<(), ()>;
 pub type FheCompiler = GenericCompiler<Fhe, ()>;
-pub type ZkpCompiler<F> = GenericCompiler<Zkp, F>;
-pub type FheZkpCompiler<F> = GenericCompiler<FheZkp, F>;
+pub type ZkpCompiler<F> = GenericCompiler<Zkp, BoxZkpFn<F>>;
+pub type FheZkpCompiler<F> = GenericCompiler<FheZkp, BoxZkpFn<F>>;
 
 #[cfg(test)]
 mod tests {

@@ -31,26 +31,6 @@ pub trait ZkpProgramFn<F: BackendField> {
     fn name(&self) -> &str;
 }
 
-pub trait ZkpProgramFnName<F: BackendField> {
-    fn program_name(&self) -> &str;
-}
-
-impl<F, T> ZkpProgramFnName<F> for T
-where
-    T: ZkpProgramFn<F>,
-    F: BackendField,
-{
-    fn program_name(&self) -> &str {
-        self.name()
-    }
-}
-
-impl<F: BackendField> ZkpProgramFnName<F> for str {
-    fn program_name(&self) -> &str {
-        self
-    }
-}
-
 use std::fmt::Debug;
 
 use petgraph::stable_graph::NodeIndex;

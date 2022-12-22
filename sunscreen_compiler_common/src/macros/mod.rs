@@ -2,8 +2,8 @@ use proc_macro2::{Span, TokenStream as TokenStream2};
 use quote::{format_ident, quote, quote_spanned, ToTokens};
 use syn::{
     parse_quote, parse_quote_spanned, punctuated::Punctuated, spanned::Spanned, token::Colon2,
-    AngleBracketedGenericArguments, Attribute, FnArg, GenericArgument, Ident, Index, Pat, Path,
-    PathArguments, PathSegment, ReturnType, Token, Type, TypePath,
+    AngleBracketedGenericArguments, Attribute, FnArg, Ident, Index, Pat, PathArguments, ReturnType,
+    Token, Type,
 };
 
 mod type_name;
@@ -140,54 +140,6 @@ pub fn extract_fn_arguments(
     }
 
     Ok(unwrapped_inputs)
-}
-
-/**
- * Takes a type with generic arguments and a map function and creates
- * a new type with new generics.
- */
-pub fn map_type_generic_arg<F>(t: &Type, f: F) -> Type
-where
-    F: Fn(&GenericArgument) -> GenericArgument,
-{
-    match t {
-        Type::Path(ref p) => {
-            let seg = p.path.segments.last().unwrap();
-            let generic_args = match &seg.arguments {
-                PathArguments::AngleBracketed(g) => AngleBracketedGenericArguments {
-                    args: g.args.iter().map(f).collect(),
-                    colon2_token: g.colon2_token,
-                    lt_token: g.lt_token,
-                    gt_token: g.gt_token,
-                },
-                _ => {
-                    return t.clone();
-                }
-            };
-
-            let mut segments = Punctuated::new();
-
-            for (i, s) in p.path.segments.iter().enumerate() {
-                if i != p.path.segments.len() - 1 {
-                    segments.push(s.clone());
-                } else {
-                    segments.push(PathSegment {
-                        ident: s.ident.clone(),
-                        arguments: PathArguments::AngleBracketed(generic_args.clone()),
-                    })
-                }
-            }
-
-            return Type::Path(TypePath {
-                qself: None,
-                path: Path {
-                    leading_colon: p.path.leading_colon,
-                    segments,
-                },
-            });
-        }
-        _ => unimplemented!(),
-    };
 }
 
 #[derive(Debug)]
@@ -705,30 +657,6 @@ mod test {
         let expected = quote! {
             v.0.output();
             v.1.output();
-        };
-
-        assert_syn_eq(&actual, &expected);
-    }
-
-    #[test]
-    fn can_map_generic_args() {
-        let in_type: Type = parse_quote! {
-            kitty::cow::<7>::MyType<Foo>
-        };
-
-        let actual = map_type_generic_arg(&in_type, |g| match g {
-            GenericArgument::Type(Type::Path(_)) => {
-                let r: Type = parse_quote! {
-                    Bar
-                };
-
-                GenericArgument::Type(r)
-            }
-            _ => unreachable!(),
-        });
-
-        let expected = quote! {
-            kitty::cow::<7>::MyType<Bar>
         };
 
         assert_syn_eq(&actual, &expected);

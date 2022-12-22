@@ -142,7 +142,7 @@ impl Gadget for AssertBinary {
 mod tests {
     use sunscreen_runtime::{Runtime, ZkpProgramInput};
     use sunscreen_zkp_backend::bulletproofs::BulletproofsBackend;
-    use sunscreen_zkp_backend::BackendField;
+    use sunscreen_zkp_backend::{BackendField, ZkpBackend};
 
     use crate as sunscreen;
     use crate::types::zkp::{NativeField, ToBinary};
@@ -170,8 +170,10 @@ mod tests {
 
         let prog = app.get_zkp_program(test).unwrap();
 
+        type BPField = NativeField<<BulletproofsBackend as ZkpBackend>::Field>;
+
         let proof = runtime
-            .prove(prog, vec![], vec![], vec![NativeField::from(42u8)])
+            .prove(prog, vec![], vec![], vec![BPField::from(42u8)])
             .unwrap();
 
         runtime

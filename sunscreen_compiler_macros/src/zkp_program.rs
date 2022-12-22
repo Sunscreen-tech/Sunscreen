@@ -149,6 +149,12 @@ fn parse_inner(_attr_params: ZkpProgramAttrs, input_fn: ItemFn) -> Result<TokenS
         #[derive(Clone)]
         #vis struct #zkp_program_struct_name;
 
+        impl AsRef<str> for #zkp_program_struct_name {
+            fn as_ref(&self) -> &str {
+                #zkp_program_name_literal
+            }
+        }
+
         impl <#generic_ident: #generic_bound> sunscreen::ZkpProgramFn<#generic_ident> for #zkp_program_struct_name {
             fn build(&self) -> sunscreen::Result<sunscreen::ZkpFrontendCompilation> {
                 use std::cell::RefCell;
@@ -192,15 +198,16 @@ fn parse_inner(_attr_params: ZkpProgramAttrs, input_fn: ItemFn) -> Result<TokenS
                 Ok(context.graph)
             }
 
-            fn signature(&self) -> sunscreen::CallSignature {
-                #signature
-            }
-
             fn name(&self) -> &str {
                 #zkp_program_name_literal
             }
+
+            fn signature(&self) -> sunscreen::CallSignature {
+                #signature
+            }
         }
 
+        #[allow(non_upper_case_globals)]
         #vis const #zkp_program_name: #zkp_program_struct_name = #zkp_program_struct_name;
     };
 

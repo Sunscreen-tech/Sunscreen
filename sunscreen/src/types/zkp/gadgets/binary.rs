@@ -152,7 +152,7 @@ mod tests {
     fn can_convert_to_binary() {
         // Prove we know the value that decomposes into 0b101010
         #[zkp_program(backend = "bulletproofs")]
-        fn test<F: BackendField>(a: NativeField) {
+        fn test<F: BackendField>(a: NativeField<F>) {
             let bits = a.to_unsigned::<6>();
 
             for (bit, expected) in bits.iter().zip([0u8, 1u8, 0u8, 1u8, 0u8, 1u8]) {

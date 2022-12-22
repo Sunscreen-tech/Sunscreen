@@ -1,9 +1,9 @@
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::{quote, quote_spanned, ToTokens};
 use sunscreen_compiler_common::macros::{
-    create_program_node, emit_signature, extract_fn_arguments, lift_type, ExtractFnArgumentsError,
+    create_program_node, emit_signature, extract_fn_arguments, lift_type, ExtractFnArgumentsError, map_type_generic_arg,
 };
-use syn::{parse_macro_input, spanned::Spanned, ItemFn, ReturnType, Type, Generics, TypeParamBound, Path};
+use syn::{parse_macro_input, spanned::Spanned, ItemFn, ReturnType, Type, Generics, TypeParamBound, Path, GenericArgument, TypePath, punctuated::Punctuated, PathArguments, PathSegment};
 
 use crate::{
     error::{Error, Result},
@@ -69,6 +69,7 @@ fn parse_inner(_attr_params: ZkpProgramAttrs, input_fn: ItemFn) -> Result<TokenS
     let ret = &input_fn.sig.output;
     
     let (generic_ident, generic_bound) = get_generic_arg(&input_fn.sig.generics)?;
+    let generic_ident_internal = Ident::new(&format!("{generic_ident}_"), generic_ident.span());
 
     match ret {
         ReturnType::Default => {}
@@ -116,11 +117,41 @@ fn parse_inner(_attr_params: ZkpProgramAttrs, input_fn: ItemFn) -> Result<TokenS
         .map(|(_, t, _)| (**t).clone())
         .collect::<Vec<Type>>();
 
+    let generic_ident_internal_ref = &generic_ident_internal;
+
     let zkp_program_args = unwrapped_inputs
         .iter()
         .map(|i| {
             let (_, ty, name) = i;
-            let ty = lift_type(ty).unwrap();
+            
+            // Rename the generic argument matching generic_ident to
+            // generic_ident_internal
+            let ty = map_type_generic_arg(ty, |g| {
+                match g {
+                    GenericArgument::Type(Type::Path(t)) => {
+                        if t.path.is_ident(&generic_ident) {
+                            let mut path_segments = Punctuated::new();
+                            path_segments.push(PathSegment {
+                                ident: generic_ident_internal_ref.clone(),
+                                arguments: PathArguments::None
+                            });
+
+                            GenericArgument::Type(Type::Path(TypePath {
+                                qself: t.qself.clone(),
+                                path: Path {
+                                    leading_colon: None,
+                                    segments: path_segments
+                                }
+                            }))
+                        } else {
+                            g.clone()
+                        }
+                    },
+                    _ => g.clone()
+                }
+            });
+
+            let ty = lift_type(&ty).unwrap();
 
             quote! {
                 #name: #ty,
@@ -171,9 +202,9 @@ fn parse_inner(_attr_params: ZkpProgramAttrs, input_fn: ItemFn) -> Result<TokenS
                 CURRENT_ZKP_CTX.with(|ctx| {
                     #[allow(clippy::type_complexity)]
                     #[forbid(unused_variables)]
-                    let internal = | #(#zkp_program_args)* |
+                    fn internal<#generic_ident_internal: #generic_bound>(#(#zkp_program_args)*) {
                         #body
-                    ;
+                    }
 
                     // Transmute away the lifetime to 'static. So long as we are careful with internal()
                     // panicing, this is safe because we set the context back to none before the function
@@ -183,7 +214,7 @@ fn parse_inner(_attr_params: ZkpProgramAttrs, input_fn: ItemFn) -> Result<TokenS
                     #(#var_decl)*
 
                     let panic_res = std::panic::catch_unwind(|| {
-                        internal(#(#args),*)
+                        internal::<#generic_ident_internal>(#(#args),*)
                     });
 
                     // when panicing or not, we need to clear our indicies arena and

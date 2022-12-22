@@ -1,3 +1,5 @@
+use std::marker::PhantomData;
+
 use sunscreen_compiler_macros::TypeName;
 use sunscreen_runtime::ZkpProgramInputTrait;
 use sunscreen_zkp_backend::{BigInt, BackendField};
@@ -18,7 +20,7 @@ use crate as sunscreen;
 // Shouldn't need Clone + Copy, but there appears to be a bug in the Rust
 // compiler that prevents ProgramNode from being Copy if we don't.
 // https://github.com/rust-lang/rust/issues/104264
-#[derive(Debug, Clone, Copy, TypeName)]
+#[derive(Debug, Clone, TypeName)]
 /**
  * The native field type in the underlying backend proof system. For
  * example, in Bulletproofs, this is [`Scalar`](https://docs.rs/curve25519-dalek-ng/4.1.1/curve25519_dalek_ng/scalar/struct.Scalar.html).
@@ -28,7 +30,12 @@ pub struct NativeField<F: BackendField> {
      * The native field's value.
      */
     pub val: BigInt,
+
+    _phantom: PhantomData<F>,
 }
+
+// Can't #[derive()] due to PhantomData.
+impl<F: BackendField> Copy for NativeField<F> {}
 
 impl<F: BackendField> NativeField<F> {
     /**
@@ -37,6 +44,7 @@ impl<F: BackendField> NativeField<F> {
     pub fn from_be_hex(hex_str: &str) -> Self {
         Self {
             val: BigInt::from_be_hex(hex_str),
+            _phantom: PhantomData
         }
     }
 }
@@ -46,7 +54,7 @@ where
     T: Into<BigInt>,
 {
     fn from(x: T) -> Self {
-        Self { val: x.into() }
+        Self { val: x.into(), _phantom: PhantomData }
     }
 }
 

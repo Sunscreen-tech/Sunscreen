@@ -383,7 +383,7 @@ impl FheCompiler {
      * will return a [`Error::NameCollision`] error.
      */
     pub fn compile(self) -> Result<Application<Fhe>> {
-        Ok(Application::new(self.compile_fhe()?, HashMap::new())?)
+        Application::new(self.compile_fhe()?, HashMap::new())
     }
 }
 

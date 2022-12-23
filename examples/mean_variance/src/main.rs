@@ -3,7 +3,7 @@ use std::ops::{Add, Div, Mul, Sub};
 use sunscreen::{
     fhe_program,
     types::{bfv::Fractional, Cipher},
-    Ciphertext, CompiledFheProgram, Error as SunscreenError, FheRuntime, Compiler, Params,
+    Ciphertext, CompiledFheProgram, Compiler, Error as SunscreenError, FheRuntime, Params,
     PrivateKey, PublicKey, Runtime, RuntimeError,
 };
 

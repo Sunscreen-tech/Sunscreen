@@ -144,7 +144,7 @@ fn parse_inner(_attr_params: ZkpProgramAttrs, input_fn: ItemFn) -> Result<TokenS
 
     let zkp_program_name_literal = format!("{}", zkp_program_name);
 
-    let foo = quote! {
+    Ok(quote! {
         #[allow(non_camel_case_types)]
         #[derive(Clone)]
         #vis struct #zkp_program_struct_name;
@@ -209,9 +209,5 @@ fn parse_inner(_attr_params: ZkpProgramAttrs, input_fn: ItemFn) -> Result<TokenS
 
         #[allow(non_upper_case_globals)]
         #vis const #zkp_program_name: #zkp_program_struct_name = #zkp_program_struct_name;
-    };
-
-    Ok(foo)
-
-    // panic!("{foo}");
+    })
 }

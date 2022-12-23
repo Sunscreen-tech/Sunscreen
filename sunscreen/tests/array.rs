@@ -3,7 +3,7 @@
 use sunscreen::{
     fhe_program,
     types::{bfv::Signed, Cipher},
-    FheProgramInput, Compiler, PlainModulusConstraint, Runtime,
+    Compiler, FheProgramInput, PlainModulusConstraint, Runtime,
 };
 
 #[test]

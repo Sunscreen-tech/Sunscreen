@@ -1,7 +1,7 @@
 use sunscreen::{
     fhe_program,
     types::{bfv::Signed, Cipher},
-    Error, Compiler, Runtime,
+    Compiler, Error, Runtime,
 };
 
 /**
@@ -39,9 +39,7 @@ fn main() -> Result<(), Error> {
      * we're using the default behavior: automatically choose parameters
      * yielding good performance while maintaining correctness.
      */
-    let app = Compiler::new()
-        .fhe_program(simple_multiply)
-        .compile()?;
+    let app = Compiler::new().fhe_program(simple_multiply).compile()?;
 
     /*
      * Next, we construct a runtime, which provides the APIs for encryption,

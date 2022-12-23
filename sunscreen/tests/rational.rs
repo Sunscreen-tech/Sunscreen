@@ -3,7 +3,7 @@
 use sunscreen::{
     fhe_program,
     types::{bfv::Rational, Cipher},
-    FheProgramInput, Compiler, PlainModulusConstraint, Runtime,
+    Compiler, FheProgramInput, PlainModulusConstraint, Runtime,
 };
 
 use std::ops::*;

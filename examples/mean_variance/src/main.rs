@@ -3,7 +3,7 @@ use std::ops::{Add, Div, Mul, Sub};
 use sunscreen::{
     fhe_program,
     types::{bfv::Fractional, Cipher},
-    Ciphertext, CompiledFheProgram, Error as SunscreenError, FheRuntime, GenericCompiler, Params,
+    Ciphertext, CompiledFheProgram, Error as SunscreenError, FheRuntime, Compiler, Params,
     PrivateKey, PublicKey, Runtime, RuntimeError,
 };
 
@@ -81,7 +81,7 @@ impl Bob {
             variance(&data)
         }
 
-        let app = GenericCompiler::new()
+        let app = Compiler::new()
             .fhe_program(mean_fhe)
             .fhe_program(variance_fhe)
             .compile()?;

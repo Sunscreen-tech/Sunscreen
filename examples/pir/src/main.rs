@@ -3,7 +3,7 @@
 use sunscreen::{
     fhe_program,
     types::{bfv::Signed, Cipher},
-    Ciphertext, CompiledFheProgram, Error, FheProgramInput, FheRuntime, GenericCompiler, Params,
+    Ciphertext, CompiledFheProgram, Error, FheProgramInput, FheRuntime, Compiler, Params,
     PrivateKey, PublicKey, Runtime,
 };
 
@@ -55,7 +55,7 @@ struct Server {
 
 impl Server {
     pub fn setup() -> Result<Server, Error> {
-        let app = GenericCompiler::new().fhe_program(lookup).compile()?;
+        let app = Compiler::new().fhe_program(lookup).compile()?;
 
         let runtime = Runtime::new_fhe(app.params())?;
 

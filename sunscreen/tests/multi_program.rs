@@ -15,7 +15,7 @@ fn compiling_multiple_programs_yields_same_params() {
         a * b
     }
 
-    let app = GenericCompiler::new()
+    let app = Compiler::new()
         .fhe_program(add)
         .fhe_program(mul)
         .compile()
@@ -43,7 +43,7 @@ fn can_reference_program_strongly_or_stringly() {
         a * b
     }
 
-    let app = GenericCompiler::new()
+    let app = Compiler::new()
         .fhe_program(add)
         .fhe_program(mul)
         .compile()
@@ -70,7 +70,7 @@ fn get_programs_iterates_every_program() {
         a * b
     }
 
-    let app = GenericCompiler::new()
+    let app = Compiler::new()
         .fhe_program(add)
         .fhe_program(mul)
         .compile()
@@ -101,7 +101,7 @@ fn cant_compile_multiple_programs_with_same_name() {
         }
     }
 
-    let result = GenericCompiler::new()
+    let result = Compiler::new()
         .fhe_program(foo::add)
         .fhe_program(bar::add)
         .compile();

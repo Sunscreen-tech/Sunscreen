@@ -1,7 +1,7 @@
 use sunscreen::{
     fhe_program,
     types::{bfv::Batched, Cipher, SwapRows},
-    FheProgramInput, GenericCompiler, PlainModulusConstraint, Runtime,
+    FheProgramInput, Compiler, PlainModulusConstraint, Runtime,
 };
 
 use std::ops::*;
@@ -20,7 +20,7 @@ fn can_swap_rows_cipher() {
         swap_impl(a)
     }
 
-    let app = GenericCompiler::new()
+    let app = Compiler::new()
         .fhe_program(swap_rows)
         .additional_noise_budget(5)
         .plain_modulus_constraint(PlainModulusConstraint::BatchingMinimum(0))
@@ -64,7 +64,7 @@ fn can_rotate_left_cipher() {
         shl_impl(a, 1)
     }
 
-    let app = GenericCompiler::new()
+    let app = Compiler::new()
         .fhe_program(add)
         .additional_noise_budget(5)
         .plain_modulus_constraint(PlainModulusConstraint::BatchingMinimum(0))
@@ -105,7 +105,7 @@ fn can_rotate_right_cipher() {
         shr_impl(a, 1)
     }
 
-    let app = GenericCompiler::new()
+    let app = Compiler::new()
         .fhe_program(add)
         .additional_noise_budget(5)
         .plain_modulus_constraint(PlainModulusConstraint::BatchingMinimum(0))
@@ -146,7 +146,7 @@ fn can_add_cipher_cipher() {
         add_impl(a, b)
     }
 
-    let app = GenericCompiler::new()
+    let app = Compiler::new()
         .fhe_program(add)
         .additional_noise_budget(5)
         .plain_modulus_constraint(PlainModulusConstraint::BatchingMinimum(0))
@@ -189,7 +189,7 @@ fn can_sub_cipher_cipher() {
         sub_impl(a, b)
     }
 
-    let app = GenericCompiler::new()
+    let app = Compiler::new()
         .fhe_program(sub)
         .additional_noise_budget(5)
         .plain_modulus_constraint(PlainModulusConstraint::BatchingMinimum(0))
@@ -232,7 +232,7 @@ fn can_mul_cipher_cipher() {
         mul_impl(a, b)
     }
 
-    let app = GenericCompiler::new()
+    let app = Compiler::new()
         .fhe_program(mul)
         .additional_noise_budget(5)
         .plain_modulus_constraint(PlainModulusConstraint::BatchingMinimum(0))
@@ -275,7 +275,7 @@ fn can_neg_cipher_cipher() {
         neg_impl(a)
     }
 
-    let app = GenericCompiler::new()
+    let app = Compiler::new()
         .fhe_program(mul)
         .additional_noise_budget(5)
         .plain_modulus_constraint(PlainModulusConstraint::BatchingMinimum(0))

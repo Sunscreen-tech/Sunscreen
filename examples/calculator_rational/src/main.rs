@@ -7,7 +7,7 @@ use sunscreen::FheRuntime;
 use sunscreen::{
     fhe_program,
     types::{bfv::Rational, Cipher},
-    Ciphertext, FheApplication, GenericCompiler, Params, PlainModulusConstraint, PublicKey,
+    Ciphertext, FheApplication, Compiler, Params, PlainModulusConstraint, PublicKey,
     Runtime, RuntimeError,
 };
 
@@ -213,7 +213,7 @@ fn compile_fhe_programs() -> FheApplication {
 
     // We compile all the programs together so they have compatible
     // scheme parameters
-    GenericCompiler::new()
+    Compiler::new()
         .fhe_program(add)
         .fhe_program(mul)
         .fhe_program(div)

@@ -7,7 +7,7 @@ fn can_encrypt_decrypt() {
         a + b
     }
 
-    let app = GenericCompiler::new()
+    let app = Compiler::new()
         .fhe_program(foo)
         .additional_noise_budget(5)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(500))

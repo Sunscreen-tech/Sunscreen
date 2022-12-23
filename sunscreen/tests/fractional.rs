@@ -4,7 +4,7 @@ use float_cmp::ApproxEq;
 use sunscreen::{
     fhe_program,
     types::{bfv::Fractional, Cipher},
-    FheProgramInput, GenericCompiler, PlainModulusConstraint, Runtime,
+    FheProgramInput, Compiler, PlainModulusConstraint, Runtime,
 };
 
 use std::ops::*;
@@ -45,7 +45,7 @@ fn can_add() {
         add_fn(3.14, a)
     }
 
-    let app = GenericCompiler::new()
+    let app = Compiler::new()
         .fhe_program(add_c_c)
         .fhe_program(add_c_p)
         .fhe_program(add_p_c)
@@ -151,7 +151,7 @@ fn can_mul() {
         mul_fn(3.14, a)
     }
 
-    let app = GenericCompiler::new()
+    let app = Compiler::new()
         .fhe_program(mul_c_c)
         .fhe_program(mul_c_p)
         .fhe_program(mul_p_c)
@@ -277,7 +277,7 @@ fn can_sub() {
         sub_fn(3.14, a)
     }
 
-    let app = GenericCompiler::new()
+    let app = Compiler::new()
         .fhe_program(sub_c_c)
         .fhe_program(sub_c_p)
         .fhe_program(sub_p_c)
@@ -356,7 +356,7 @@ fn can_div_cipher_const() {
         a / 3.14
     }
 
-    let app = GenericCompiler::new()
+    let app = Compiler::new()
         .fhe_program(mul)
         .additional_noise_budget(5)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(100000))
@@ -400,7 +400,7 @@ fn can_negate() {
         -a
     }
 
-    let app = GenericCompiler::new()
+    let app = Compiler::new()
         .fhe_program(neg)
         .additional_noise_budget(5)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(100000))

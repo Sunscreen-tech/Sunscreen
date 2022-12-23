@@ -103,7 +103,7 @@ mod tests {
     use crate as sunscreen;
     use crate::types::zkp::rns_polynomial::{RnsRingPolynomial, ToResidues};
     use crate::types::zkp::NativeField;
-    use crate::{zkp_program, GenericCompiler};
+    use crate::{zkp_program, Compiler};
 
     #[test]
     fn can_prove_added_polynomials() {
@@ -128,7 +128,7 @@ mod tests {
             }
         }
 
-        let app = GenericCompiler::new()
+        let app = Compiler::new()
             .zkp_backend::<BulletproofsBackend>()
             .zkp_program(add_poly)
             .compile()

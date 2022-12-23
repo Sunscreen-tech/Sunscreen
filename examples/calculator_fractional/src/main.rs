@@ -6,7 +6,7 @@ use std::thread::{self, JoinHandle};
 use sunscreen::{
     fhe_program,
     types::{bfv::Fractional, Cipher},
-    Ciphertext, GenericCompiler, Params, PlainModulusConstraint, PublicKey, Runtime, RuntimeError,
+    Ciphertext, Compiler, Params, PlainModulusConstraint, PublicKey, Runtime, RuntimeError,
 };
 use sunscreen::{FheApplication, FheRuntime};
 
@@ -223,7 +223,7 @@ fn compile_fhe_programs() -> FheApplication {
         a * b
     }
 
-    GenericCompiler::new()
+    Compiler::new()
         .fhe_program(add)
         .fhe_program(sub)
         .fhe_program(mul)

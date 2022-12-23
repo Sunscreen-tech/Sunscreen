@@ -5,7 +5,7 @@
 use sunscreen::{
     fhe_program,
     types::{bfv::Batched, Cipher, LaneCount, SwapRows},
-    FheProgramInput, GenericCompiler, PlainModulusConstraint, Runtime,
+    FheProgramInput, Compiler, PlainModulusConstraint, Runtime,
 };
 
 use std::ops::*;
@@ -156,7 +156,7 @@ fn main() -> Result<(), sunscreen::Error> {
     // plaintext modulus constraint. This chooses a prime number for our plain modulus
     // suitable for use with Batched types. The 24 denotes the minimum precision of the plain
     // modulus.
-    let app = GenericCompiler::new()
+    let app = Compiler::new()
         .fhe_program(dot_product)
         .plain_modulus_constraint(PlainModulusConstraint::BatchingMinimum(24))
         .compile()?;

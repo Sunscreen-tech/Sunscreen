@@ -146,7 +146,7 @@ mod tests {
 
     use crate as sunscreen;
     use crate::types::zkp::{NativeField, ToBinary};
-    use crate::{zkp_program, GenericCompiler};
+    use crate::{zkp_program, Compiler};
 
     #[test]
     fn can_convert_to_binary() {
@@ -160,7 +160,7 @@ mod tests {
             }
         }
 
-        let app = GenericCompiler::new()
+        let app = Compiler::new()
             .zkp_backend::<BulletproofsBackend>()
             .zkp_program(test)
             .compile()

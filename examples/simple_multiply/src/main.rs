@@ -1,7 +1,7 @@
 use sunscreen::{
     fhe_program,
     types::{bfv::Signed, Cipher},
-    Error, GenericCompiler, Runtime,
+    Error, Compiler, Runtime,
 };
 
 /**
@@ -39,7 +39,7 @@ fn main() -> Result<(), Error> {
      * we're using the default behavior: automatically choose parameters
      * yielding good performance while maintaining correctness.
      */
-    let app = GenericCompiler::new()
+    let app = Compiler::new()
         .fhe_program(simple_multiply)
         .compile()?;
 

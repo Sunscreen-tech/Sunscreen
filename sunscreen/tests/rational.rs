@@ -3,7 +3,7 @@
 use sunscreen::{
     fhe_program,
     types::{bfv::Rational, Cipher},
-    FheProgramInput, GenericCompiler, PlainModulusConstraint, Runtime,
+    FheProgramInput, Compiler, PlainModulusConstraint, Runtime,
 };
 
 use std::ops::*;
@@ -15,7 +15,7 @@ fn can_encode_rational_numbers() {
         a
     }
 
-    let app = GenericCompiler::new()
+    let app = Compiler::new()
         .fhe_program(no_op)
         .additional_noise_budget(5)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(500))
@@ -55,7 +55,7 @@ fn can_add_cipher_cipher() {
         add_impl(a, b)
     }
 
-    let app = GenericCompiler::new()
+    let app = Compiler::new()
         .fhe_program(add)
         .additional_noise_budget(5)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(500))
@@ -91,7 +91,7 @@ fn can_add_cipher_plain() {
         add_impl(a, b)
     }
 
-    let app = GenericCompiler::new()
+    let app = Compiler::new()
         .fhe_program(add)
         .additional_noise_budget(5)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(500))
@@ -124,7 +124,7 @@ fn can_add_plain_cipher() {
         add_impl(b, a)
     }
 
-    let app = GenericCompiler::new()
+    let app = Compiler::new()
         .fhe_program(add)
         .additional_noise_budget(5)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(500))
@@ -157,7 +157,7 @@ fn can_add_cipher_literal() {
         add_impl(a, 3.14)
     }
 
-    let app = GenericCompiler::new()
+    let app = Compiler::new()
         .fhe_program(add)
         .additional_noise_budget(5)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(500))
@@ -189,7 +189,7 @@ fn can_add_literal_cipher() {
         add_impl(3.14, a)
     }
 
-    let app = GenericCompiler::new()
+    let app = Compiler::new()
         .fhe_program(add)
         .additional_noise_budget(5)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(500))
@@ -228,7 +228,7 @@ fn can_sub_cipher_cipher() {
         sub_impl(a, b)
     }
 
-    let app = GenericCompiler::new()
+    let app = Compiler::new()
         .fhe_program(sub)
         .additional_noise_budget(5)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(500))
@@ -264,7 +264,7 @@ fn can_sub_cipher_plain() {
         sub_impl(a, b)
     }
 
-    let app = GenericCompiler::new()
+    let app = Compiler::new()
         .fhe_program(sub)
         .additional_noise_budget(5)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(500))
@@ -297,7 +297,7 @@ fn can_sub_plain_cipher() {
         sub_impl(a, b)
     }
 
-    let app = GenericCompiler::new()
+    let app = Compiler::new()
         .fhe_program(sub)
         .additional_noise_budget(5)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(500))
@@ -331,7 +331,7 @@ fn can_sub_cipher_literal() {
         sub_impl(a, 3.14)
     }
 
-    let app = GenericCompiler::new()
+    let app = Compiler::new()
         .fhe_program(sub)
         .additional_noise_budget(5)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(500))
@@ -363,7 +363,7 @@ fn can_sub_literal_cipher() {
         sub_impl(3.14, a)
     }
 
-    let app = GenericCompiler::new()
+    let app = Compiler::new()
         .fhe_program(sub)
         .additional_noise_budget(5)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(500))
@@ -402,7 +402,7 @@ fn can_mul_cipher_cipher() {
         mul_impl(a, b)
     }
 
-    let app = GenericCompiler::new()
+    let app = Compiler::new()
         .fhe_program(mul)
         .additional_noise_budget(5)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(500))
@@ -438,7 +438,7 @@ fn can_mul_cipher_plain() {
         mul_impl(a, b)
     }
 
-    let app = GenericCompiler::new()
+    let app = Compiler::new()
         .fhe_program(mul)
         .additional_noise_budget(5)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(500))
@@ -471,7 +471,7 @@ fn can_mul_plain_cipher() {
         mul_impl(a, b)
     }
 
-    let app = GenericCompiler::new()
+    let app = Compiler::new()
         .fhe_program(mul)
         .additional_noise_budget(5)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(500))
@@ -505,7 +505,7 @@ fn can_mul_cipher_literal() {
         mul_impl(a, 3.14)
     }
 
-    let app = GenericCompiler::new()
+    let app = Compiler::new()
         .fhe_program(mul)
         .additional_noise_budget(5)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(500))
@@ -537,7 +537,7 @@ fn can_mul_literal_cipher() {
         mul_impl(3.14, a)
     }
 
-    let app = GenericCompiler::new()
+    let app = Compiler::new()
         .fhe_program(mul)
         .additional_noise_budget(5)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(500))
@@ -576,7 +576,7 @@ fn can_div_cipher_cipher() {
         div_impl(a, b)
     }
 
-    let app = GenericCompiler::new()
+    let app = Compiler::new()
         .fhe_program(div)
         .additional_noise_budget(5)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(500))
@@ -612,7 +612,7 @@ fn can_div_cipher_plain() {
         div_impl(a, b)
     }
 
-    let app = GenericCompiler::new()
+    let app = Compiler::new()
         .fhe_program(div)
         .additional_noise_budget(5)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(500))
@@ -645,7 +645,7 @@ fn can_div_plain_cipher() {
         div_impl(a, b)
     }
 
-    let app = GenericCompiler::new()
+    let app = Compiler::new()
         .fhe_program(div)
         .additional_noise_budget(5)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(500))
@@ -679,7 +679,7 @@ fn can_div_cipher_literal() {
         div_impl(a, 3.14)
     }
 
-    let app = GenericCompiler::new()
+    let app = Compiler::new()
         .fhe_program(div)
         .additional_noise_budget(5)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(500))
@@ -711,7 +711,7 @@ fn can_div_literal_cipher() {
         div_impl(3.14, a)
     }
 
-    let app = GenericCompiler::new()
+    let app = Compiler::new()
         .fhe_program(div)
         .additional_noise_budget(5)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(500))
@@ -750,7 +750,7 @@ fn can_neg_cipher() {
         neg_impl(x)
     }
 
-    let app = GenericCompiler::new()
+    let app = Compiler::new()
         .fhe_program(neg)
         .additional_noise_budget(5)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(500))

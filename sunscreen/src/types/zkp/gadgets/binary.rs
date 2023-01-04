@@ -142,6 +142,7 @@ impl Gadget for AssertBinary {
 mod tests {
     use sunscreen_runtime::{Runtime, ZkpProgramInput};
     use sunscreen_zkp_backend::bulletproofs::BulletproofsBackend;
+    use sunscreen_zkp_backend::{BackendField, ZkpBackend};
 
     use crate as sunscreen;
     use crate::types::zkp::{NativeField, ToBinary};
@@ -151,7 +152,7 @@ mod tests {
     fn can_convert_to_binary() {
         // Prove we know the value that decomposes into 0b101010
         #[zkp_program(backend = "bulletproofs")]
-        fn test(a: NativeField) {
+        fn test<F: BackendField>(a: NativeField<F>) {
             let bits = a.to_unsigned::<6>();
 
             for (bit, expected) in bits.iter().zip([0u8, 1u8, 0u8, 1u8, 0u8, 1u8]) {
@@ -159,14 +160,20 @@ mod tests {
             }
         }
 
-        let app = Compiler::new().zkp_program(test).compile().unwrap();
+        let app = Compiler::new()
+            .zkp_backend::<BulletproofsBackend>()
+            .zkp_program(test)
+            .compile()
+            .unwrap();
 
         let runtime = Runtime::new_zkp(&BulletproofsBackend::new()).unwrap();
 
         let prog = app.get_zkp_program(test).unwrap();
 
+        type BPField = NativeField<<BulletproofsBackend as ZkpBackend>::Field>;
+
         let proof = runtime
-            .prove(prog, vec![], vec![], vec![NativeField::from(42u8)])
+            .prove(prog, vec![], vec![], vec![BPField::from(42u8)])
             .unwrap();
 
         runtime

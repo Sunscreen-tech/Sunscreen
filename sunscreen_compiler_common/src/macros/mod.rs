@@ -1,8 +1,9 @@
 use proc_macro2::{Span, TokenStream as TokenStream2};
-use quote::{format_ident, quote, quote_spanned};
+use quote::{format_ident, quote, quote_spanned, ToTokens};
 use syn::{
-    parse_quote, parse_quote_spanned, punctuated::Punctuated, spanned::Spanned, Attribute, FnArg,
-    Ident, Index, Pat, ReturnType, Token, Type,
+    parse_quote, parse_quote_spanned, punctuated::Punctuated, spanned::Spanned, token::Colon2,
+    AngleBracketedGenericArguments, Attribute, FnArg, Ident, Index, Pat, PathArguments, ReturnType,
+    Token, Type,
 };
 
 mod type_name;
@@ -236,26 +237,52 @@ pub fn emit_output_capture(return_types: &[Type]) -> TokenStream2 {
 }
 
 /**
+ * For a given type, inserts colons between each segment and generic
+ * argument. The returned token stream can be used for function
+ * invocations.
+ *
+ * # Example
+ * `foo::bar::<7>::Baz<Kitty>` becomes `foo::bar::<7>::Baz::<Kitty>`.
+ *
+ * With the former, you cannot do `foo::bar::<7>::Baz<Kitty>::my_func()`,
+ * the the latter you can do `foo::bar::<7>::Baz::<Kitty>::my_func()`.
+ */
+pub fn normalize_type_generic_args(t: &Type) -> Punctuated<TokenStream2, Colon2> {
+    let mut ret = Punctuated::new();
+
+    match t {
+        Type::Path(p) => {
+            for s in &p.path.segments {
+                ret.push(s.ident.clone().into_token_stream());
+
+                if let PathArguments::AngleBracketed(a) = &s.arguments {
+                    let args = AngleBracketedGenericArguments {
+                        colon2_token: None,
+                        ..a.clone()
+                    };
+
+                    ret.push(args.into_token_stream());
+                }
+            }
+        }
+        Type::Array(a) => {
+            ret.push(a.into_token_stream());
+        }
+        _ => unimplemented!(),
+    }
+
+    ret
+}
+
+/**
  * Emits the call signature of an FHE or ZKP program.
  */
 pub fn emit_signature(args: &[Type], return_types: &[Type]) -> TokenStream2 {
-    let arg_type_names = args
-        .iter()
-        .enumerate()
-        .map(|(i, t)| {
-            let alias = format_ident!("T{}", i);
-
-            quote! {
-                type #alias = #t;
-            }
-        })
-        .collect::<Vec<TokenStream2>>();
-
-    let arg_get_types = arg_type_names.iter().enumerate().map(|(i, _)| {
-        let alias = format_ident!("T{}", i);
+    let arg_get_types = args.iter().map(|x| {
+        let x = normalize_type_generic_args(x);
 
         quote! {
-            #alias::type_name(),
+            #x::type_name(),
         }
     });
 
@@ -285,8 +312,6 @@ pub fn emit_signature(args: &[Type], return_types: &[Type]) -> TokenStream2 {
 
     quote! {
         use sunscreen::types::TypeName;
-
-        #(#arg_type_names)*
         #(#return_type_aliases)*
 
         sunscreen::CallSignature {
@@ -632,6 +657,19 @@ mod test {
         let expected = quote! {
             v.0.output();
             v.1.output();
+        };
+
+        assert_syn_eq(&actual, &expected);
+    }
+
+    #[test]
+    fn generic_invocation_works() {
+        let in_type: Type = parse_quote!(kitty::cow::<7>::MyType<Foo>);
+
+        let actual = normalize_type_generic_args(&in_type);
+
+        let expected = quote! {
+            kitty::cow::<7>::MyType::<Foo>
         };
 
         assert_syn_eq(&actual, &expected);

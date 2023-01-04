@@ -1,6 +1,6 @@
 use sunscreen_compiler_macros::TypeName;
 use sunscreen_runtime::ZkpProgramInputTrait;
-use sunscreen_zkp_backend::BigInt;
+use sunscreen_zkp_backend::{BackendField, BigInt};
 
 use crate::{
     types::zkp::{Coerce, ProgramNode},
@@ -22,13 +22,14 @@ use crate as sunscreen;
  * program authors to batch multiple operations before reduction.
  */
 #[derive(Debug, Clone, TypeName)]
-pub struct RnsRingPolynomial<const N: usize, const R: usize> {
-    data: Box<[[NativeField; N]; R]>,
+pub struct RnsRingPolynomial<F: BackendField, const N: usize, const R: usize> {
+    data: Box<[[NativeField<F>; N]; R]>,
 }
 
-impl<T, const N: usize, const R: usize> From<[[T; N]; R]> for RnsRingPolynomial<N, R>
+impl<F: BackendField, T, const N: usize, const R: usize> From<[[T; N]; R]>
+    for RnsRingPolynomial<F, N, R>
 where
-    T: Into<NativeField> + std::fmt::Debug,
+    T: Into<NativeField<F>> + std::fmt::Debug,
 {
     fn from(x: [[T; N]; R]) -> Self {
         Self {
@@ -37,24 +38,30 @@ where
     }
 }
 
-impl<const N: usize, const R: usize> NumFieldElements for RnsRingPolynomial<N, R> {
+impl<F: BackendField, const N: usize, const R: usize> NumFieldElements
+    for RnsRingPolynomial<F, N, R>
+{
     const NUM_NATIVE_FIELD_ELEMENTS: usize = N * R;
 }
 
-impl<const N: usize, const R: usize> ToNativeFields for RnsRingPolynomial<N, R> {
+impl<F: BackendField, const N: usize, const R: usize> ToNativeFields
+    for RnsRingPolynomial<F, N, R>
+{
     fn to_native_fields(&self) -> Vec<BigInt> {
         self.data.into_iter().flatten().map(|x| x.val).collect()
     }
 }
 
-impl<const N: usize, const R: usize> ZkpType for RnsRingPolynomial<N, R> {}
+impl<F: BackendField, const N: usize, const R: usize> ZkpType for RnsRingPolynomial<F, N, R> {}
 
-pub trait ToResidues<const N: usize, const R: usize> {
-    fn residues(&self) -> [[ProgramNode<NativeField>; N]; R];
+pub trait ToResidues<F: BackendField, const N: usize, const R: usize> {
+    fn residues(&self) -> [[ProgramNode<NativeField<F>>; N]; R];
 }
 
-impl<const N: usize, const R: usize> ToResidues<N, R> for ProgramNode<RnsRingPolynomial<N, R>> {
-    fn residues(&self) -> [[ProgramNode<NativeField>; N]; R] {
+impl<F: BackendField, const N: usize, const R: usize> ToResidues<F, N, R>
+    for ProgramNode<RnsRingPolynomial<F, N, R>>
+{
+    fn residues(&self) -> [[ProgramNode<NativeField<F>>; N]; R] {
         let mut program_nodes = [[ProgramNode::new(&[]); N]; R];
 
         for i in 0..N * R {
@@ -68,7 +75,7 @@ impl<const N: usize, const R: usize> ToResidues<N, R> for ProgramNode<RnsRingPol
     }
 }
 
-impl<const N: usize, const R: usize> AddVar for RnsRingPolynomial<N, R> {
+impl<F: BackendField, const N: usize, const R: usize> AddVar for RnsRingPolynomial<F, N, R> {
     fn add(lhs: ProgramNode<Self>, rhs: ProgramNode<Self>) -> ProgramNode<Self> {
         let mut node_indices = vec![];
 
@@ -82,12 +89,16 @@ impl<const N: usize, const R: usize> AddVar for RnsRingPolynomial<N, R> {
     }
 }
 
-impl<const N: usize, const R: usize> ZkpProgramInputTrait for RnsRingPolynomial<N, R> {}
+impl<F: BackendField, const N: usize, const R: usize> ZkpProgramInputTrait
+    for RnsRingPolynomial<F, N, R>
+{
+}
 
 #[cfg(test)]
 mod tests {
     use sunscreen_runtime::Runtime;
     use sunscreen_zkp_backend::bulletproofs::BulletproofsBackend;
+    use sunscreen_zkp_backend::{BackendField, ZkpBackend};
 
     use crate as sunscreen;
     use crate::types::zkp::rns_polynomial::{RnsRingPolynomial, ToResidues};
@@ -97,9 +108,9 @@ mod tests {
     #[test]
     fn can_prove_added_polynomials() {
         #[zkp_program(backend = "bulletproofs")]
-        fn add_poly(
-            #[constant] a: RnsRingPolynomial<8, 2>,
-            #[constant] b: RnsRingPolynomial<8, 2>,
+        fn add_poly<F: BackendField>(
+            #[constant] a: RnsRingPolynomial<F, 8, 2>,
+            #[constant] b: RnsRingPolynomial<F, 8, 2>,
         ) {
             let c = a + b;
 
@@ -117,14 +128,23 @@ mod tests {
             }
         }
 
-        let app = Compiler::new().zkp_program(add_poly).compile().unwrap();
+        let app = Compiler::new()
+            .zkp_backend::<BulletproofsBackend>()
+            .zkp_program(add_poly)
+            .compile()
+            .unwrap();
 
         let runtime = Runtime::new_zkp(&BulletproofsBackend::new()).unwrap();
 
         let program = app.get_zkp_program(add_poly).unwrap();
 
-        let a =
-            RnsRingPolynomial::from([[1u8, 2, 3, 4, 5, 6, 7, 8], [9, 10, 11, 12, 13, 14, 15, 16]]);
+        type BPRnsRingPolynomial<const N: usize, const R: usize> =
+            RnsRingPolynomial<<BulletproofsBackend as ZkpBackend>::Field, N, R>;
+
+        let a = BPRnsRingPolynomial::from([
+            [1u8, 2, 3, 4, 5, 6, 7, 8],
+            [9, 10, 11, 12, 13, 14, 15, 16],
+        ]);
 
         let proof = runtime
             .prove(program, vec![a.clone(), a.clone()], vec![], vec![])

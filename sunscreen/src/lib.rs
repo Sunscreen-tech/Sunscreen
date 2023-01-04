@@ -73,7 +73,7 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::marker::PhantomData;
 
-pub use compiler::{Compiler, FheProgramFn};
+pub use compiler::{Compiler, FheProgramFn, GenericCompiler};
 pub use error::{Error, Result};
 pub use params::PlainModulusConstraint;
 pub use seal_fhe::Plaintext as SealPlaintext;
@@ -85,6 +85,7 @@ pub use sunscreen_runtime::{
     InnerPlaintext, Params, Plaintext, PrivateKey, PublicKey, RequiredKeys, Runtime, WithContext,
     ZkpRuntime,
 };
+pub use sunscreen_zkp_backend::{BackendField, ZkpBackend};
 pub use zkp::ZkpProgramFn;
 pub use zkp::{
     invoke_gadget, with_zkp_ctx, ZkpContext, ZkpData, ZkpFrontendCompilation, CURRENT_ZKP_CTX,
@@ -100,7 +101,7 @@ pub struct Application<T> {
     _phantom: PhantomData<T>,
 }
 
-impl Application<()> {
+impl<T> Application<T> {
     /**
      * Constructs a new Application from the given HashMap of programs. The
      * keys of this contain FHE program names and the values are the
@@ -204,16 +205,6 @@ where
      */
     pub fn get_zkp_programs(&self) -> impl Iterator<Item = (&String, &CompiledZkpProgram)> {
         self.zkp_programs.iter()
-    }
-}
-
-impl<T> Application<T> {
-    pub(crate) fn convert<U>(self) -> Application<U> {
-        Application {
-            fhe_programs: self.fhe_programs,
-            zkp_programs: self.zkp_programs,
-            _phantom: PhantomData,
-        }
     }
 }
 

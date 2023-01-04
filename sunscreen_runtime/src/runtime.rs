@@ -68,9 +68,7 @@ struct FheRuntimeData {
     context: Context,
 }
 
-struct ZkpRuntimeData {
-    backend: Box<dyn ZkpBackend>,
-}
+struct ZkpRuntimeData;
 
 enum RuntimeData {
     Fhe(FheRuntimeData),
@@ -93,14 +91,6 @@ impl RuntimeData {
             _ => panic!("Expected RuntimeData::Fhe or RuntimeData::FheZkp."),
         }
     }
-
-    fn unwrap_zkp(&self) -> &ZkpRuntimeData {
-        match self {
-            Self::Zkp(x) => x,
-            Self::FheZkp(_, x) => x,
-            _ => panic!("Expected RuntimeData::Zkp or RuntimeData::FheZkp."),
-        }
-    }
 }
 
 /**
@@ -110,12 +100,13 @@ impl RuntimeData {
  * your needs. See [`Runtime`].
  *
  */
-pub struct GenericRuntime<T> {
+pub struct GenericRuntime<T, B> {
     runtime_data: RuntimeData,
-    _phantom: PhantomData<T>,
+    _phantom_t: PhantomData<T>,
+    zkp_backend: B,
 }
 
-impl<T> GenericRuntime<T>
+impl<T, B> GenericRuntime<T, B>
 where
     T: self::marker::Fhe,
 {
@@ -435,9 +426,10 @@ where
     }
 }
 
-impl<T> GenericRuntime<T>
+impl<T, B> GenericRuntime<T, B>
 where
     T: marker::Zkp,
+    B: ZkpBackend,
 {
     /**
      * Prove the given `inputs` satisfy `program`.
@@ -465,7 +457,8 @@ where
             .flat_map(|x| I::into(x).0.to_native_fields())
             .collect::<Vec<BigInt>>();
 
-        let backend = &self.runtime_data.unwrap_zkp().backend;
+        let backend = &self.zkp_backend;
+
         let prog =
             backend.jit_prover(program, &constant_inputs, &public_inputs, &private_inputs)?;
 
@@ -496,14 +489,14 @@ where
             .flat_map(|x| I::into(x).0.to_native_fields())
             .collect::<Vec<BigInt>>();
 
-        let backend = &self.runtime_data.unwrap_zkp().backend;
+        let backend = &self.zkp_backend;
         let prog = backend.jit_verifier(program, &constant_inputs, &public_inputs)?;
 
         Ok(backend.verify(&prog, proof)?)
     }
 }
 
-impl GenericRuntime<()> {
+impl GenericRuntime<(), ()> {
     #[deprecated]
     /**
      * Create a new Runtime supporting only FHE operations.
@@ -540,13 +533,8 @@ impl GenericRuntime<()> {
         }
     }
 
-    fn make_zkp_runtime_data<B>(backend: &B) -> ZkpRuntimeData
-    where
-        B: ZkpBackend + Clone + 'static,
-    {
-        ZkpRuntimeData {
-            backend: Box::new(backend.clone()),
-        }
+    fn make_zkp_runtime_data() -> ZkpRuntimeData {
+        ZkpRuntimeData
     }
 
     /**
@@ -555,38 +543,41 @@ impl GenericRuntime<()> {
     pub fn new_fhe(params: &Params) -> Result<FheRuntime> {
         Ok(GenericRuntime {
             runtime_data: RuntimeData::Fhe(Self::make_fhe_runtime_data(params)?),
-            _phantom: PhantomData,
+            _phantom_t: PhantomData,
+            zkp_backend: (),
         })
     }
 
     /**
      * Creates a new Runtime supporting only ZKP operations
      */
-    pub fn new_zkp<B>(backend: &B) -> Result<ZkpRuntime>
+    pub fn new_zkp<B>(backend: &B) -> Result<ZkpRuntime<B>>
     where
         B: ZkpBackend + Clone + 'static,
     {
         Ok(GenericRuntime {
-            runtime_data: RuntimeData::Zkp(Self::make_zkp_runtime_data(backend)),
-            _phantom: PhantomData,
+            runtime_data: RuntimeData::Zkp(Self::make_zkp_runtime_data()),
+            _phantom_t: PhantomData,
+            zkp_backend: backend.clone(),
         })
     }
 
     /**
      * Creates a new Runtime supporting both ZKP and FHE operations.
      */
-    pub fn new_fhe_zkp<B>(params: &Params, zkp_backend: &B) -> Result<FheZkpRuntime>
+    pub fn new_fhe_zkp<B>(params: &Params, zkp_backend: &B) -> Result<FheZkpRuntime<B>>
     where
         B: ZkpBackend + Clone + 'static,
     {
         let runtime_data = RuntimeData::FheZkp(
             Self::make_fhe_runtime_data(params)?,
-            Self::make_zkp_runtime_data(zkp_backend),
+            Self::make_zkp_runtime_data(),
         );
 
         Ok(GenericRuntime {
             runtime_data,
-            _phantom: PhantomData,
+            _phantom_t: PhantomData,
+            zkp_backend: zkp_backend.clone(),
         })
     }
 }
@@ -594,17 +585,17 @@ impl GenericRuntime<()> {
 /**
  * A runtime capable of both FHE and ZKP operations.
  */
-pub type FheZkpRuntime = GenericRuntime<FheZkp>;
+pub type FheZkpRuntime<B> = GenericRuntime<FheZkp, B>;
 
 /**
  * A runtime capable of only FHE operations.
  */
-pub type FheRuntime = GenericRuntime<Fhe>;
+pub type FheRuntime = GenericRuntime<Fhe, ()>;
 
 /**
  * A runtime capable of only ZKP operations.
  */
-pub type ZkpRuntime = GenericRuntime<Zkp>;
+pub type ZkpRuntime<B> = GenericRuntime<Zkp, B>;
 
 /**
  * An type containing the `Runtime::new_*` constructor methods to create
@@ -617,4 +608,4 @@ pub type ZkpRuntime = GenericRuntime<Zkp>;
  * * [`Runtime::new_fhe_zkp`] constructs a [`FheZkpRuntime`] that
  *   can do both.
  */
-pub type Runtime = GenericRuntime<()>;
+pub type Runtime = GenericRuntime<(), ()>;

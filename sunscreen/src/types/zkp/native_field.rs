@@ -105,12 +105,10 @@ impl<F: BackendField> From<i64> for NativeField<F> {
 
         // Shr on i64 is an arithmetic shift, so we need to mask
         // the LSB so we don't get 255 for negative values.
-        let is_negative = Choice::from(
-            ((x >> 63) & 0x1) as u8,
-        );
+        let is_negative = Choice::from(((x >> 63) & 0x1) as u8);
 
         let abs_val = BigInt::from(i64::conditional_select(&x, &-x, is_negative) as u64);
-        
+
         // unwrap is okay here as we've ensured FIELD_MODULUS is
         // non-zero.
         let abs_val = BigInt::from(abs_val.reduce(&F::FIELD_MODULUS).unwrap());

@@ -20,7 +20,7 @@ use std::{
 };
 
 pub use crypto_bigint::UInt;
-use crypto_bigint::U512;
+use crypto_bigint::{subtle::ConditionallySelectable, U512};
 pub use error::*;
 pub use exec::ExecutableZkpProgram;
 pub use jit::{jit_prover, jit_verifier, CompiledZkpProgram, Operation};
@@ -180,6 +180,12 @@ impl PartialOrd for BigInt {
 impl Ord for BigInt {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         self.0.cmp(&other.0)
+    }
+}
+
+impl ConditionallySelectable for BigInt {
+    fn conditional_select(a: &Self, b: &Self, choice: crypto_bigint::subtle::Choice) -> Self {
+        Self(U512::conditional_select(&a.0, &b.0, choice))
     }
 }
 

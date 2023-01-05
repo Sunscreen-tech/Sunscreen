@@ -1,5 +1,6 @@
 use std::marker::PhantomData;
 
+use subtle::{Choice, ConditionallySelectable};
 use sunscreen_compiler_macros::TypeName;
 use sunscreen_runtime::ZkpProgramInputTrait;
 use sunscreen_zkp_backend::{BackendField, BigInt};
@@ -49,35 +50,30 @@ impl<F: BackendField> NativeField<F> {
     }
 }
 
-impl<F: BackendField> From<u8> for NativeField<F>
-{
+impl<F: BackendField> From<u8> for NativeField<F> {
     fn from(x: u8) -> Self {
         (x as u64).into()
-        
     }
 }
 
-impl<F: BackendField> From<u16> for NativeField<F>
-{
+impl<F: BackendField> From<u16> for NativeField<F> {
     fn from(x: u16) -> Self {
         (x as u64).into()
-        
     }
 }
 
-impl<F: BackendField> From<u32> for NativeField<F>
-{
+impl<F: BackendField> From<u32> for NativeField<F> {
     fn from(x: u32) -> Self {
         (x as u64).into()
-        
     }
 }
 
-impl<F: BackendField> From<u64> for NativeField<F>
-{
+impl<F: BackendField> From<u64> for NativeField<F> {
     fn from(x: u64) -> Self {
+        assert!(F::FIELD_MODULUS != BigInt::ZERO);
+
         Self {
-            val: x.into(),
+            val: BigInt::from(BigInt::from(x).reduce(&F::FIELD_MODULUS).unwrap()),
             _phantom: PhantomData,
         }
     }
@@ -104,19 +100,20 @@ impl<F: BackendField> From<i32> for NativeField<F> {
 // TODO SECURITY: Make non-vartime
 impl<F: BackendField> From<i64> for NativeField<F> {
     fn from(x: i64) -> Self {
-        assert!(BigInt::from(i64::abs(x) as u64) < F::FIELD_MODULUS);
+        assert!(F::FIELD_MODULUS != BigInt::ZERO);
 
-        let val = if x < 0 {
-            // Wrapping is fine because we've already checked that
-            // x < FIELD_MODULUS.
-            BigInt::from(F::FIELD_MODULUS.wrapping_sub(&BigInt::from(i64::abs(x) as u64)))
-        } else {
-            BigInt::from(i64::abs(x) as u64)
-        };
+        let is_negative = Choice::from(
+            ((unsafe { std::mem::transmute::<i64, u64>(x) } & (0x1u64 << 63)) >> 63) as u8,
+        );
+
+        let abs_val = BigInt::from(i64::conditional_select(&x, &-x, is_negative) as u64);
+        let abs_val = BigInt::from(abs_val.reduce(&F::FIELD_MODULUS).unwrap());
+
+        let neg = BigInt::from(F::FIELD_MODULUS.wrapping_sub(&abs_val));
 
         Self {
-            val,
-            _phantom: PhantomData
+            val: BigInt::conditional_select(&abs_val, &neg, is_negative),
+            _phantom: PhantomData,
         }
     }
 }
@@ -211,7 +208,10 @@ impl<F: BackendField> ToBinary<F> for ProgramNode<NativeField<F>> {
 
 #[cfg(test)]
 mod tests {
+    use std::ops::{Add, Mul, Neg, Sub};
+
     use curve25519_dalek::scalar::Scalar;
+    use sunscreen_zkp_backend::ZkpInto;
 
     use super::*;
 
@@ -219,7 +219,95 @@ mod tests {
     fn can_encode_negative_number() {
         let x = NativeField::<Scalar>::from(-1);
 
-        assert_eq!(x.val, BigInt::from(Scalar::FIELD_MODULUS.wrapping_sub(&BigInt::ONE)));
+        assert_eq!(
+            x.val,
+            BigInt::from(Scalar::FIELD_MODULUS.wrapping_sub(&BigInt::ONE))
+        );
+
+        let x = NativeField::<Scalar>::from(1i64);
+
+        assert_eq!(x.val, BigInt::ONE);
+    }
+
+    #[derive(Copy, Clone, PartialEq, Eq)]
+    struct TestField;
+
+    impl Neg for TestField {
+        type Output = Self;
+
+        fn neg(self) -> Self::Output {
+            unreachable!()
+        }
+    }
+
+    impl TryFrom<BigInt> for TestField {
+        type Error = sunscreen_zkp_backend::Error;
+
+        fn try_from(_: BigInt) -> Result<Self, Self::Error> {
+            unreachable!()
+        }
+    }
+
+    impl Mul for TestField {
+        type Output = Self;
+
+        fn mul(self, _: Self) -> Self::Output {
+            unreachable!()
+        }
+    }
+
+    impl Sub for TestField {
+        type Output = Self;
+
+        fn sub(self, _: Self) -> Self::Output {
+            unreachable!()
+        }
+    }
+
+    impl Add for TestField {
+        type Output = Self;
+
+        fn add(self, _: Self) -> Self::Output {
+            unreachable!()
+        }
+    }
+
+    impl ZkpInto<BigInt> for TestField {
+        fn into(self) -> BigInt {
+            unreachable!()
+        }
+    }
+
+    impl BackendField for TestField {
+        const FIELD_MODULUS: BigInt = BigInt::from_u32(7);
+    }
+
+    #[test]
+    fn can_wrap_number() {
+        let x = NativeField::<TestField>::from(22i64);
+
+        assert_eq!(x.val, BigInt::ONE);
+
+        let x = NativeField::<TestField>::from(-22i64);
+
+        assert_eq!(
+            x.val,
+            BigInt::from(TestField::FIELD_MODULUS.wrapping_sub(&BigInt::ONE))
+        );
+    }
+
+    #[test]
+    fn can_encode_unsigned_value() {
+        let x = NativeField::<TestField>::from(6u64);
+
+        assert_eq!(x.val, BigInt::from(6u64));
+
+        let x = NativeField::<TestField>::from(7u64);
+
+        assert_eq!(x.val, BigInt::ZERO);
+
+        let x = NativeField::<TestField>::from(22u64);
+
+        assert_eq!(x.val, BigInt::ONE);
     }
 }
-

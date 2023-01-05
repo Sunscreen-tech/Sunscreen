@@ -33,6 +33,7 @@ sunscreen_runtime = { version = "0.7", path = "../sunscreen_runtime" }
 sunscreen_zkp_backend = { path = "../sunscreen_zkp_backend" }
 seal_fhe = { version = "0.7", path = "../seal_fhe" }
 serde = { version = "1.0.147", features = ["derive"] }
+subtle = "2.4.1"
 static_assertions = "1.1.0"
 thiserror = "1.0.37"
 

@@ -103,8 +103,10 @@ impl<F: BackendField> From<i64> for NativeField<F> {
     fn from(x: i64) -> Self {
         assert!(F::FIELD_MODULUS != BigInt::ZERO);
 
+        // Shr on i64 is an arithmetic shift, so we need to mask
+        // the LSB so we don't get 255 for negative values.
         let is_negative = Choice::from(
-            ((unsafe { std::mem::transmute::<i64, u64>(x) } & (0x1u64 << 63)) >> 63) as u8,
+            ((x >> 63) & 0x1) as u8,
         );
 
         let abs_val = BigInt::from(i64::conditional_select(&x, &-x, is_negative) as u64);

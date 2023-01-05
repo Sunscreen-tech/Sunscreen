@@ -49,14 +49,74 @@ impl<F: BackendField> NativeField<F> {
     }
 }
 
-impl<F: BackendField, T> From<T> for NativeField<F>
-where
-    T: Into<BigInt>,
+impl<F: BackendField> From<u8> for NativeField<F>
 {
-    fn from(x: T) -> Self {
+    fn from(x: u8) -> Self {
+        (x as u64).into()
+        
+    }
+}
+
+impl<F: BackendField> From<u16> for NativeField<F>
+{
+    fn from(x: u16) -> Self {
+        (x as u64).into()
+        
+    }
+}
+
+impl<F: BackendField> From<u32> for NativeField<F>
+{
+    fn from(x: u32) -> Self {
+        (x as u64).into()
+        
+    }
+}
+
+impl<F: BackendField> From<u64> for NativeField<F>
+{
+    fn from(x: u64) -> Self {
         Self {
             val: x.into(),
             _phantom: PhantomData,
+        }
+    }
+}
+
+impl<F: BackendField> From<i8> for NativeField<F> {
+    fn from(x: i8) -> Self {
+        (x as i64).into()
+    }
+}
+
+impl<F: BackendField> From<i16> for NativeField<F> {
+    fn from(x: i16) -> Self {
+        (x as i64).into()
+    }
+}
+
+impl<F: BackendField> From<i32> for NativeField<F> {
+    fn from(x: i32) -> Self {
+        (x as i64).into()
+    }
+}
+
+// TODO SECURITY: Make non-vartime
+impl<F: BackendField> From<i64> for NativeField<F> {
+    fn from(x: i64) -> Self {
+        assert!(BigInt::from(i64::abs(x) as u64) < F::FIELD_MODULUS);
+
+        let val = if x < 0 {
+            // Wrapping is fine because we've already checked that
+            // x < FIELD_MODULUS.
+            BigInt::from(F::FIELD_MODULUS.wrapping_sub(&BigInt::from(i64::abs(x) as u64)))
+        } else {
+            BigInt::from(i64::abs(x) as u64)
+        };
+
+        Self {
+            val,
+            _phantom: PhantomData
         }
     }
 }
@@ -148,3 +208,18 @@ impl<F: BackendField> ToBinary<F> for ProgramNode<NativeField<F>> {
         vals
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use curve25519_dalek::scalar::Scalar;
+
+    use super::*;
+
+    #[test]
+    fn can_encode_negative_number() {
+        let x = NativeField::<Scalar>::from(-1);
+
+        assert_eq!(x.val, BigInt::from(Scalar::FIELD_MODULUS.wrapping_sub(&BigInt::ONE)));
+    }
+}
+

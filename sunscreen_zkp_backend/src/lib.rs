@@ -171,6 +171,18 @@ impl Deref for BigInt {
     }
 }
 
+impl PartialOrd for BigInt {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        self.0.partial_cmp(&other.0)
+    }
+}
+
+impl Ord for BigInt {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.0.cmp(&other.0)
+    }
+}
+
 impl BigInt {
     /**
      * Create a [`BigInt`] from the given limbs.

@@ -52,19 +52,19 @@ impl<F: BackendField> NativeField<F> {
 
 impl<F: BackendField> From<u8> for NativeField<F> {
     fn from(x: u8) -> Self {
-        (x as u64).into()
+        (u64::from(x)).into()
     }
 }
 
 impl<F: BackendField> From<u16> for NativeField<F> {
     fn from(x: u16) -> Self {
-        (x as u64).into()
+        (u64::from(x)).into()
     }
 }
 
 impl<F: BackendField> From<u32> for NativeField<F> {
     fn from(x: u32) -> Self {
-        (x as u64).into()
+        (u64::from(x)).into()
     }
 }
 
@@ -72,6 +72,8 @@ impl<F: BackendField> From<u64> for NativeField<F> {
     fn from(x: u64) -> Self {
         assert!(F::FIELD_MODULUS != BigInt::ZERO);
 
+        // unwrap is okay here as we've ensured FIELD_MODULUS is
+        // non-zero.
         Self {
             val: BigInt::from(BigInt::from(x).reduce(&F::FIELD_MODULUS).unwrap()),
             _phantom: PhantomData,
@@ -81,23 +83,22 @@ impl<F: BackendField> From<u64> for NativeField<F> {
 
 impl<F: BackendField> From<i8> for NativeField<F> {
     fn from(x: i8) -> Self {
-        (x as i64).into()
+        (i64::from(x)).into()
     }
 }
 
 impl<F: BackendField> From<i16> for NativeField<F> {
     fn from(x: i16) -> Self {
-        (x as i64).into()
+        (i64::from(x)).into()
     }
 }
 
 impl<F: BackendField> From<i32> for NativeField<F> {
     fn from(x: i32) -> Self {
-        (x as i64).into()
+        (i64::from(x)).into()
     }
 }
 
-// TODO SECURITY: Make non-vartime
 impl<F: BackendField> From<i64> for NativeField<F> {
     fn from(x: i64) -> Self {
         assert!(F::FIELD_MODULUS != BigInt::ZERO);
@@ -107,6 +108,9 @@ impl<F: BackendField> From<i64> for NativeField<F> {
         );
 
         let abs_val = BigInt::from(i64::conditional_select(&x, &-x, is_negative) as u64);
+        
+        // unwrap is okay here as we've ensured FIELD_MODULUS is
+        // non-zero.
         let abs_val = BigInt::from(abs_val.reduce(&F::FIELD_MODULUS).unwrap());
 
         let neg = BigInt::from(F::FIELD_MODULUS.wrapping_sub(&abs_val));

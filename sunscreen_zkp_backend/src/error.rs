@@ -52,7 +52,7 @@ pub enum Error {
     MalformedZkpProgram(Box<String>),
 
     #[error("A constraint could not be satisfied.")]
-    /** 
+    /**
      * A constraint could not be satisfied.
      */
     UnsatifiableConstraint(NodeIndex),

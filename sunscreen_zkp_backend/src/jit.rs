@@ -330,10 +330,10 @@ where
 
                 for parent in parents {
                     if node_outputs[&parent].clone().into() != x {
-                        return Err(Error::UnsatifiableConstraint(id))
+                        return Err(Error::UnsatifiableConstraint(id));
                     }
                 }
-            } 
+            }
             Operation::Constant(x) => {
                 node_outputs.insert(id, U::try_from(x)?);
             }

@@ -105,7 +105,7 @@ impl<F: BackendField, const N: usize, const R: usize> MulVar for RnsRingPolynomi
 
         with_zkp_ctx(|ctx| {
             out_coeffs = vec![ctx.add_constant(&BigInt::ZERO); N * R];
-            
+
             for residue in 0..R {
                 let left = left[residue];
                 let right = right[residue];

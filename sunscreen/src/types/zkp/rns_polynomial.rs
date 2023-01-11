@@ -116,11 +116,11 @@ impl<F: BackendField, const N: usize, const R: usize> MulVar for RnsRingPolynomi
 
                 let out_coeffs = &mut out_coeffs[residue * N..(residue + 1) * N];
 
-                for i in 0..N {
-                    for j in 0..N {
+                for (i, left) in left.iter().enumerate().take(N) {
+                    for (j, right) in right.iter().enumerate().take(N) {
                         let out_coeff = (i + j) % N;
 
-                        let mul = ctx.add_multiplication(left[i].ids[0], right[j].ids[0]);
+                        let mul = ctx.add_multiplication(left.ids[0], right.ids[0]);
 
                         let op = if i + j >= N {
                             ctx.add_subtraction(out_coeffs[out_coeff], mul)

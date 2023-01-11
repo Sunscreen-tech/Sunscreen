@@ -8,7 +8,7 @@ use crate::{
     zkp::ZkpContextOps,
 };
 
-use super::{AddVar, NativeField, NumFieldElements, ToNativeFields, ZkpType};
+use super::{AddVar, MulVar, NativeField, NumFieldElements, ToNativeFields, ZkpType};
 
 use crate as sunscreen;
 
@@ -20,6 +20,8 @@ use crate as sunscreen;
  * # Remarks
  * Operations (e.g. add, mul, etc) don't automatically reduce modulo q. This enables
  * program authors to batch multiple operations before reduction.
+ *
+ * Operations *do* reduce modulo X^N+1.
  */
 #[derive(Debug, Clone, TypeName)]
 pub struct RnsRingPolynomial<F: BackendField, const N: usize, const R: usize> {
@@ -94,6 +96,44 @@ impl<F: BackendField, const N: usize, const R: usize> ZkpProgramInputTrait
 {
 }
 
+impl<F: BackendField, const N: usize, const R: usize> MulVar for RnsRingPolynomial<F, N, R> {
+    fn mul(lhs: ProgramNode<Self>, rhs: ProgramNode<Self>) -> ProgramNode<Self> {
+        let left = lhs.residues();
+        let right = rhs.residues();
+
+        let mut out_coeffs = vec![];
+
+        with_zkp_ctx(|ctx| {
+            out_coeffs = vec![ctx.add_constant(&BigInt::ZERO); N * R];
+
+            for residue in 0..R {
+                let left = left[residue];
+                let right = right[residue];
+
+                let out_coeffs = &mut out_coeffs[residue * N..(residue + 1) * N];
+
+                for (i, left) in left.iter().enumerate().take(N) {
+                    for (j, right) in right.iter().enumerate().take(N) {
+                        let out_coeff = (i + j) % N;
+
+                        let mul = ctx.add_multiplication(left.ids[0], right.ids[0]);
+
+                        let op = if i + j >= N {
+                            ctx.add_subtraction(out_coeffs[out_coeff], mul)
+                        } else {
+                            ctx.add_addition(out_coeffs[out_coeff], mul)
+                        };
+
+                        out_coeffs[out_coeff] = op;
+                    }
+                }
+            }
+        });
+
+        Self::coerce(&out_coeffs)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use sunscreen_runtime::Runtime;
@@ -156,6 +196,59 @@ mod tests {
 
         let b =
             RnsRingPolynomial::from([[0u8, 2, 3, 4, 5, 6, 7, 8], [9, 10, 11, 12, 13, 14, 15, 16]]);
+
+        let result = runtime.verify(program, &proof, vec![b, a], vec![]);
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn can_prove_multiply_polynomials() {
+        #[zkp_program(backend = "bulletproofs")]
+        fn add_poly<F: BackendField>(
+            #[constant] a: RnsRingPolynomial<F, 8, 2>,
+            #[constant] b: RnsRingPolynomial<F, 8, 2>,
+        ) {
+            let c = a * b;
+
+            let residues = c.residues();
+
+            let expected = [
+                [-146, -160, -160, -144, -110, -56, 20, 120],
+                [-1074, -896, -672, -400, -78, 296, 724, 1208],
+            ];
+
+            for i in 0..residues.len() {
+                for j in 0..residues[i].len() {
+                    residues[i][j].constrain_eq(NativeField::from(expected[i][j]));
+                }
+            }
+        }
+
+        let app = Compiler::new()
+            .zkp_backend::<BulletproofsBackend>()
+            .zkp_program(add_poly)
+            .compile()
+            .unwrap();
+
+        let runtime = Runtime::new_zkp(&BulletproofsBackend::new()).unwrap();
+
+        let program = app.get_zkp_program(add_poly).unwrap();
+
+        type BpPoly<const N: usize, const R: usize> =
+            RnsRingPolynomial<<BulletproofsBackend as ZkpBackend>::Field, N, R>;
+
+        let a = BpPoly::from([[1u8, 2, 3, 4, 5, 6, 7, 8], [9, 10, 11, 12, 13, 14, 15, 16]]);
+
+        let proof = runtime
+            .prove(program, vec![a.clone(), a.clone()], vec![], vec![])
+            .unwrap();
+
+        runtime
+            .verify(program, &proof, vec![a.clone(), a.clone()], vec![])
+            .unwrap();
+
+        let b = BpPoly::from([[0u8, 2, 3, 4, 5, 6, 7, 8], [9, 10, 11, 12, 13, 14, 15, 16]]);
 
         let result = runtime.verify(program, &proof, vec![b, a], vec![]);
 

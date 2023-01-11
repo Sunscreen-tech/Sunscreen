@@ -324,7 +324,16 @@ where
 
                 node_outputs.insert(id, output);
             }
-            Operation::Constraint(_) => {} // Constraints produce no outputs
+            Operation::Constraint(x) => {
+                // Constraints produce no outputs, but verify it's met.
+                let parents = query.get_unordered_operands(id)?;
+
+                for parent in parents {
+                    if node_outputs[&parent].clone().into() != x {
+                        return Err(Error::UnsatifiableConstraint(id));
+                    }
+                }
+            }
             Operation::Constant(x) => {
                 node_outputs.insert(id, U::try_from(x)?);
             }

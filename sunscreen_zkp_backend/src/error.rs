@@ -1,3 +1,4 @@
+use petgraph::stable_graph::NodeIndex;
 use static_assertions::const_assert;
 use sunscreen_compiler_common::GraphQueryError;
 use thiserror::Error;
@@ -49,6 +50,12 @@ pub enum Error {
      * The given program is malformed.
      */
     MalformedZkpProgram(Box<String>),
+
+    #[error("A constraint could not be satisfied.")]
+    /** 
+     * A constraint could not be satisfied.
+     */
+    UnsatifiableConstraint(NodeIndex),
 }
 
 impl Error {

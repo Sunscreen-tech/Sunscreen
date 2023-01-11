@@ -1,4 +1,3 @@
-use petgraph::stable_graph::NodeIndex;
 use sunscreen_compiler_macros::TypeName;
 use sunscreen_runtime::ZkpProgramInputTrait;
 use sunscreen_zkp_backend::{BackendField, BigInt};
@@ -102,14 +101,11 @@ impl<F: BackendField, const N: usize, const R: usize> MulVar for RnsRingPolynomi
         let left = lhs.residues();
         let right = rhs.residues();
 
-        let mut out_coeffs: Vec<NodeIndex> = vec![];
+        let mut out_coeffs = vec![];
 
         with_zkp_ctx(|ctx| {
-            let zero = ctx.add_constant(&BigInt::ZERO);
-            for _ in 0..R * N {
-                out_coeffs.push(zero);
-            }
-
+            out_coeffs = vec![ctx.add_constant(&BigInt::ZERO); N * R];
+            
             for residue in 0..R {
                 let left = left[residue];
                 let right = right[residue];

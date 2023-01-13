@@ -224,6 +224,40 @@ impl<F: BackendField> IntoProgramNode for NativeField<F> {
 }
 
 /**
+ * A trait for doing modular arithmetic.
+ */
+pub trait Mod<F: BackendField>
+where Self: ZkpType
+{
+    /**
+     * Compute self % m where self is interpreted as a signed value
+     * in F_m. This means e.g. -1 % m == m - 1 rather that whatever
+     * value in the native field mod m.
+     * 
+     * # Remarks
+     * m must be smaller than the native 
+     * field's modulus
+     * 
+     * # Example
+     * Suppose the native field is F_11 and the desired field is F_7 
+     * (i.e. m = 7).
+     * ```ignore
+     * // Not legal Rust code!
+     * let x = -2; // This is represented as 9 in F_11.
+     * x.signed_reduce(7) // returns -2 % 7 == 5, *not* 9 % 7 == 2.
+     * ```
+     */
+    fn signed_reduce(&self, m: ProgramNode<NativeField<F>>) -> ProgramNode<Self>;
+}
+
+impl<F: BackendField> Mod<F> for NativeField<F> {
+    fn signed_reduce(&self, m: ProgramNode<NativeField<F>>) -> ProgramNode<Self> {
+        
+        todo!();
+    }
+}
+
+/**
  * Methods for decomposing values into binary.
  */
 pub trait ToBinary<F: BackendField> {

@@ -200,7 +200,7 @@ impl Parse for FheProgramAttrs {
 
         for i in attrs.keys() {
             if !VALUE_KEYS.iter().any(|x| x == i) {
-                return Err(SynError::new(input.span(), &format!("Unknown key '{}'", i)));
+                return Err(SynError::new(input.span(), format!("Unknown key '{}'", i)));
             }
         }
 
@@ -254,7 +254,7 @@ impl Parse for ZkpProgramAttrs {
 
         for i in attrs.keys() {
             if !VALUE_KEYS.iter().any(|x| x == i) {
-                return Err(SynError::new(input.span(), &format!("Unknown key '{}'", i)));
+                return Err(SynError::new(input.span(), format!("Unknown key '{}'", i)));
             }
         }
 

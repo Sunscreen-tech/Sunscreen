@@ -347,7 +347,7 @@ where
                     .map(|x| node_outputs[x].clone().into())
                     .collect::<Vec<BigInt>>();
 
-                let hidden_inputs = g.compute_inputs(&args);
+                let hidden_inputs = g.compute_inputs(&args)?;
 
                 let mut next_nodes = query
                     .edges_directed(id, Direction::Outgoing)

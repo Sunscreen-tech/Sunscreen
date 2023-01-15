@@ -1,7 +1,6 @@
 use sunscreen_zkp_backend::{BigInt, Gadget};
 
-use crate::{invoke_gadget, with_zkp_ctx, zkp::ZkpContextOps};
-use crypto_bigint::CheckedSub;
+use crate::{invoke_gadget, with_zkp_ctx, zkp::ZkpContextOps, ZkpError, ZkpResult};
 
 /**
  * Expands a field element into N-bit unsigned binary.
@@ -24,15 +23,26 @@ impl GetBit for BigInt {
 }
 
 impl<const N: usize> Gadget for ToUInt<N> {
-    fn compute_inputs(&self, gadget_inputs: &[BigInt]) -> Vec<BigInt> {
+    fn compute_inputs(&self, gadget_inputs: &[BigInt]) -> ZkpResult<Vec<BigInt>> {
         let val = gadget_inputs[0];
+
+        if N == 0 {
+            return Err(ZkpError::gadget_error("Cannot create 0-bit uint."));
+        }
+
+        if *val > BigInt::ONE.shl_vartime(N) {
+            return Err(ZkpError::gadget_error(&format!(
+                "Value too large for {N} bit unsigned int."
+            )));
+        }
+
         let mut bits = vec![];
 
         for i in 0..N {
             bits.push(BigInt::from(val.get_bit(i)));
         }
 
-        bits
+        Ok(bits)
     }
 
     fn gen_circuit(
@@ -98,18 +108,18 @@ impl<const N: usize> Gadget for ToUInt<N> {
 pub struct AssertBinary;
 
 impl Gadget for AssertBinary {
-    fn compute_inputs(&self, gadget_inputs: &[BigInt]) -> Vec<BigInt> {
+    fn compute_inputs(&self, gadget_inputs: &[BigInt]) -> ZkpResult<Vec<BigInt>> {
         let val = gadget_inputs[0];
 
         if val != BigInt::ONE && val != BigInt::ZERO {
-            panic!("{:#?} is not binary", val);
+            return Err(ZkpError::gadget_error("Value is not binary."));
         }
 
-        vec![(*BigInt::ONE).checked_sub(&*val).unwrap().into()]
+        Ok(vec![])
     }
 
     fn hidden_input_count(&self) -> usize {
-        1
+        0
     }
 
     fn gadget_input_count(&self) -> usize {
@@ -119,19 +129,18 @@ impl Gadget for AssertBinary {
     fn gen_circuit(
         &self,
         gadget_inputs: &[petgraph::stable_graph::NodeIndex],
-        hidden_inputs: &[petgraph::stable_graph::NodeIndex],
+        _hidden_inputs: &[petgraph::stable_graph::NodeIndex],
     ) -> Vec<petgraph::stable_graph::NodeIndex> {
         let a = gadget_inputs[0];
-        let a_not = hidden_inputs[0];
 
         with_zkp_ctx(|ctx| {
-            let val = ctx.add_multiplication(a, a_not);
+            let one = ctx.add_constant(&BigInt::ONE);
 
-            ctx.add_constraint(val, &BigInt::ZERO);
+            let a_min_1 = ctx.add_subtraction(a, one);
 
-            let sum = ctx.add_addition(a, a_not);
+            let poly = ctx.add_multiplication(a, a_min_1);
 
-            ctx.add_constraint(sum, &BigInt::ONE);
+            ctx.add_constraint(poly, &BigInt::ZERO);
         });
 
         vec![]
@@ -144,9 +153,51 @@ mod tests {
     use sunscreen_zkp_backend::bulletproofs::BulletproofsBackend;
     use sunscreen_zkp_backend::{BackendField, ZkpBackend};
 
-    use crate as sunscreen;
     use crate::types::zkp::{NativeField, ToBinary};
+    use crate::{self as sunscreen, invoke_gadget};
     use crate::{zkp_program, Compiler};
+
+    use super::*;
+
+    #[test]
+    fn can_assert_binary() {
+        // Prove we know the value that decomposes into 0b101010
+        #[zkp_program(backend = "bulletproofs")]
+        fn test<F: BackendField>(a: NativeField<F>) {
+            invoke_gadget(AssertBinary, a.ids);
+        }
+
+        let app = Compiler::new()
+            .zkp_backend::<BulletproofsBackend>()
+            .zkp_program(test)
+            .compile()
+            .unwrap();
+
+        let runtime = Runtime::new_zkp(&BulletproofsBackend::new()).unwrap();
+
+        let prog = app.get_zkp_program(test).unwrap();
+
+        type BPField = NativeField<<BulletproofsBackend as ZkpBackend>::Field>;
+
+        let test_proof = |x: u8, expect_pass: bool| {
+            let result = runtime.prove(prog, vec![], vec![], vec![BPField::from(x)]);
+
+            let proof = if expect_pass {
+                result.unwrap()
+            } else {
+                assert!(result.is_err());
+                return;
+            };
+
+            runtime
+                .verify(prog, &proof, Vec::<ZkpProgramInput>::new(), vec![])
+                .unwrap();
+        };
+
+        test_proof(0u8, true);
+        test_proof(1u8, true);
+        test_proof(2u8, false);
+    }
 
     #[test]
     fn can_convert_to_binary() {

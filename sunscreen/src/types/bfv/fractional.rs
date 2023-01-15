@@ -503,7 +503,7 @@ impl<const INT_BITS: usize> TryIntoPlaintext for Fractional<INT_BITS> {
                 0
             };
 
-            seal_plaintext.set_coefficient(coeff_index as usize, coeff);
+            seal_plaintext.set_coefficient(coeff_index, coeff);
         }
 
         Ok(Plaintext {

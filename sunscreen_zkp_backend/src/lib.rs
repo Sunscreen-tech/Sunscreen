@@ -100,8 +100,10 @@ pub trait Gadget: Any {
      * * # Remarks
      * The number of returned hidden input values must equal
      * [`hidden_input_count`](Gadget::hidden_input_count).
+     *
+     * Implementors should ensure this function runs in constant time.
      */
-    fn compute_inputs(&self, gadget_inputs: &[BigInt]) -> Vec<BigInt>;
+    fn compute_inputs(&self, gadget_inputs: &[BigInt]) -> Result<Vec<BigInt>>;
 
     /**
      * Returns the expected number of gadget inputs.

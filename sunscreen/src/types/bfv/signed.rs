@@ -79,7 +79,7 @@ impl TryIntoPlaintext for Signed {
             let bit_value = (signed_val & 0x1 << i) >> i;
 
             let coeff_value = if self.val < 0 {
-                bit_value * (params.plain_modulus as u64 - bit_value)
+                bit_value * (params.plain_modulus - bit_value)
             } else {
                 bit_value
             };

@@ -132,7 +132,7 @@ pub fn encryption_noise(
     for _ in 0..SAMPLES {
         let plaintext = Plaintext::new().unwrap();
         let ciphertext = encryptor.encrypt(&plaintext).unwrap();
-        measured_noise.push(decryptor.invariant_noise(&ciphertext).unwrap() as f64);
+        measured_noise.push(decryptor.invariant_noise(&ciphertext).unwrap());
     }
 
     let measured = stats(&measured_noise);
@@ -236,7 +236,7 @@ pub fn add_noise(
 
         let c = evaluator.add(&a, &b).unwrap();
 
-        measured_noise.push(decryptor.invariant_noise(&c).unwrap() as f64);
+        measured_noise.push(decryptor.invariant_noise(&c).unwrap());
     }
 
     let measured = stats(&measured_noise);
@@ -297,7 +297,7 @@ pub fn add_pt_noise(
         let c = evaluator.add_plain(&a, &b).unwrap();
 
         predicted_noise.push(model.add_ct_pt(decryptor.invariant_noise(&a).unwrap()));
-        measured_noise.push(decryptor.invariant_noise(&c).unwrap() as f64);
+        measured_noise.push(decryptor.invariant_noise(&c).unwrap());
     }
 
     let measured = stats(&measured_noise);
@@ -364,7 +364,7 @@ pub fn mul_noise(
             decryptor.invariant_noise(&b).unwrap(),
         ));
 
-        measured_noise.push(decryptor.invariant_noise(&c).unwrap() as f64);
+        measured_noise.push(decryptor.invariant_noise(&c).unwrap());
     }
 
     let measured = stats(&measured_noise);
@@ -425,7 +425,7 @@ pub fn mul_pt_noise(
         let c = evaluator.multiply_plain(&a, &b).unwrap();
 
         predicted_noise.push(model.mul_ct_pt(decryptor.invariant_noise(&a).unwrap()));
-        measured_noise.push(decryptor.invariant_noise(&c).unwrap() as f64);
+        measured_noise.push(decryptor.invariant_noise(&c).unwrap());
     }
 
     let measured = stats(&measured_noise);

@@ -16,7 +16,7 @@ mod jit;
 
 use std::{
     any::Any,
-    ops::{Add, Deref, Mul, Neg, Sub}, panic::RefUnwindSafe,
+    ops::{Add, Deref, Mul, Neg, Sub},
 };
 
 pub use crypto_bigint::UInt;
@@ -72,7 +72,7 @@ compile_error!("This crate currently requires a little endian target architectur
  *
  * and outputs (b_0..b_7)
  */
-pub trait Gadget: Any + RefUnwindSafe {
+pub trait Gadget: Any {
     /**
      * Create the subcircuit for this gadget.
      * * `gadget_inputs` are the node indices of the gadget inputs.
@@ -100,7 +100,7 @@ pub trait Gadget: Any + RefUnwindSafe {
      * * # Remarks
      * The number of returned hidden input values must equal
      * [`hidden_input_count`](Gadget::hidden_input_count).
-     * 
+     *
      * Implementors should ensure this function runs in constant time.
      */
     fn compute_inputs(&self, gadget_inputs: &[BigInt]) -> Result<Vec<BigInt>>;

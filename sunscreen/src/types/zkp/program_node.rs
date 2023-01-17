@@ -216,6 +216,15 @@ where
 pub trait ConstrainCmp<Rhs> {
     /**
      * Constrain that this value is less than or equal than the RHS.
+     * 
+     * # Remarks
+     * The number of bits is the maximum number of bits required to
+     * represent `rhs - lhs` as an unsigned integer. This allows you
+     * to dramatically reduce the number of constrains to perform a
+     * comparison.
+     * 
+     * The maximum value for bits is f - 1 where f is the size of
+     * the backend field.
      */
     fn constrain_le_bounded(self, rhs: Rhs, bits: usize);
 }
@@ -226,9 +235,6 @@ where
     U: IntoProgramNode<Output = V> + Sized,
     V: ZkpType + Sized + ConstrainCmpVarVar,
 {
-    /**
-     * Constrains this native field to equal the right hand side
-     */
     fn constrain_le_bounded(self, rhs: T, bits: usize) {
         V::constrain_le_bounded(self.into_program_node(), rhs.into_program_node(), bits);
     }

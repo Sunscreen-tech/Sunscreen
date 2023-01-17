@@ -18,7 +18,7 @@ use crate::types::zkp::{
 
 use crate as sunscreen;
 
-use super::{gadgets::LessThanEqual, ConstrainCmpVarVar};
+use super::{ConstrainCmpVarVar, SubVar};
 
 // Shouldn't need Clone + Copy, but there appears to be a bug in the Rust
 // compiler that prevents ProgramNode from being Copy if we don't.
@@ -147,6 +147,16 @@ impl<F: BackendField> AddVar for NativeField<F> {
     }
 }
 
+impl<F: BackendField> SubVar for NativeField<F> {
+    fn sub(lhs: ProgramNode<Self>, rhs: ProgramNode<Self>) -> ProgramNode<Self> {
+        with_zkp_ctx(|ctx| {
+            let o = ctx.add_subtraction(lhs.ids[0], rhs.ids[0]);
+
+            ProgramNode::new(&[o])
+        })
+    }
+}
+
 impl<F: BackendField> MulVar for NativeField<F> {
     fn mul(lhs: ProgramNode<Self>, rhs: ProgramNode<Self>) -> ProgramNode<Self> {
         with_zkp_ctx(|ctx| {
@@ -181,7 +191,9 @@ impl<F: BackendField> ConstrainEqVarVar for NativeField<F> {
 
 impl<F: BackendField> ConstrainCmpVarVar for NativeField<F> {
     fn constrain_le_bounded(lhs: ProgramNode<Self>, rhs: ProgramNode<Self>, bits: usize) {
-        invoke_gadget(LessThanEqual::new(bits), &[lhs.ids[0], rhs.ids[0]]);
+        let diff = rhs - lhs;
+
+        invoke_gadget(ToUInt::new(bits), &[diff.ids[0]]);
     }
 }
 
@@ -371,6 +383,7 @@ mod tests {
         test_case(5, 1024, true);
         test_case(-3, -2, true);
         test_case(-2, -2, true);
+        test_case(-1, 3, true);
         test_case(-1, -2, false);
         test_case(6, 5, false);
     }

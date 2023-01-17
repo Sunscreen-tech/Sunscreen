@@ -198,7 +198,7 @@ pub trait ToBinary<F: BackendField> {
 
 impl<F: BackendField> ToBinary<F> for ProgramNode<NativeField<F>> {
     fn to_unsigned<const N: usize>(&self) -> [ProgramNode<NativeField<F>>; N] {
-        let bits = invoke_gadget(ToUInt::<N>, self.ids);
+        let bits = invoke_gadget(ToUInt::new(N), self.ids);
 
         let mut vals = [*self; N];
 

@@ -5,7 +5,17 @@ use crate::{invoke_gadget, with_zkp_ctx, zkp::ZkpContextOps, ZkpError, ZkpResult
 /**
  * Expands a field element into N-bit unsigned binary.
  */
-pub struct ToUInt<const N: usize>;
+pub struct ToUInt {
+    n: usize
+}
+
+impl ToUInt {
+    pub fn new(n: usize) -> Self {
+        Self {
+            n
+        }
+    }
+}
 
 trait GetBit {
     fn get_bit(&self, i: usize) -> u8;
@@ -22,23 +32,23 @@ impl GetBit for BigInt {
     }
 }
 
-impl<const N: usize> Gadget for ToUInt<N> {
+impl Gadget for ToUInt {
     fn compute_inputs(&self, gadget_inputs: &[BigInt]) -> ZkpResult<Vec<BigInt>> {
         let val = gadget_inputs[0];
 
-        if N == 0 {
+        if self.n == 0 {
             return Err(ZkpError::gadget_error("Cannot create 0-bit uint."));
         }
 
-        if *val > BigInt::ONE.shl_vartime(N) {
+        if *val > BigInt::ONE.shl_vartime(self.n) {
             return Err(ZkpError::gadget_error(&format!(
-                "Value too large for {N} bit unsigned int."
+                "Value too large for {} bit unsigned int.", self.n
             )));
         }
 
         let mut bits = vec![];
 
-        for i in 0..N {
+        for i in 0..self.n {
             bits.push(BigInt::from(val.get_bit(i)));
         }
 
@@ -55,7 +65,7 @@ impl<const N: usize> Gadget for ToUInt<N> {
         let mut muls = vec![];
 
         let hidden_inputs = with_zkp_ctx(|ctx| {
-            for i in 0..N {
+            for i in 0..self.n {
                 let constant = BigInt::from(*BigInt::ONE << i);
                 let constant = ctx.add_constant(&constant);
 
@@ -95,7 +105,7 @@ impl<const N: usize> Gadget for ToUInt<N> {
     }
 
     fn hidden_input_count(&self) -> usize {
-        N
+        self.n
     }
 }
 

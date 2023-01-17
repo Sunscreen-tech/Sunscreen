@@ -227,6 +227,48 @@ pub trait ConstrainCmp<Rhs> {
      * the backend field.
      */
     fn constrain_le_bounded(self, rhs: Rhs, bits: usize);
+
+        /**
+     * Constrain that this value is less than or equal than the RHS.
+     *
+     * # Remarks
+     * The number of bits is the maximum number of bits required to
+     * represent `rhs - lhs` as an unsigned integer. This allows you
+     * to dramatically reduce the number of constrains to perform a
+     * comparison.
+     *
+     * The maximum value for bits is f - 1 where f is the size of
+     * the backend field.
+     */
+    fn constrain_lt_bounded(self, rhs: Rhs, bits: usize);
+
+        /**
+     * Constrain that this value is less than or equal than the RHS.
+     *
+     * # Remarks
+     * The number of bits is the maximum number of bits required to
+     * represent `rhs - lhs` as an unsigned integer. This allows you
+     * to dramatically reduce the number of constrains to perform a
+     * comparison.
+     *
+     * The maximum value for bits is f - 1 where f is the size of
+     * the backend field.
+     */
+    fn constrain_ge_bounded(self, rhs: Rhs, bits: usize);
+
+        /**
+     * Constrain that this value is less than or equal than the RHS.
+     *
+     * # Remarks
+     * The number of bits is the maximum number of bits required to
+     * represent `rhs - lhs` as an unsigned integer. This allows you
+     * to dramatically reduce the number of constrains to perform a
+     * comparison.
+     *
+     * The maximum value for bits is f - 1 where f is the size of
+     * the backend field.
+     */
+    fn constrain_gt_bounded(self, rhs: Rhs, bits: usize);
 }
 
 impl<T, U, V> ConstrainCmp<T> for U
@@ -237,5 +279,17 @@ where
 {
     fn constrain_le_bounded(self, rhs: T, bits: usize) {
         V::constrain_le_bounded(self.into_program_node(), rhs.into_program_node(), bits);
+    }
+
+    fn constrain_lt_bounded(self, rhs: T, bits: usize) {
+        V::constrain_lt_bounded(self.into_program_node(), rhs.into_program_node(), bits);
+    }
+
+    fn constrain_ge_bounded(self, rhs: T, bits: usize) {
+        V::constrain_ge_bounded(self.into_program_node(), rhs.into_program_node(), bits);
+    }
+
+    fn constrain_gt_bounded(self, rhs: T, bits: usize) {
+        V::constrain_gt_bounded(self.into_program_node(), rhs.into_program_node(), bits);
     }
 }

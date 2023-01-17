@@ -118,6 +118,39 @@ where
      * represent the field modulus.
      */
     fn constrain_le_bounded(lhs: ProgramNode<Self>, rhs: ProgramNode<Self>, bits: usize);
+
+    /**
+     * Asserts that lhs is strictly less than rhs.
+     *
+     * # Remarks
+     * `bits` is the maximum number of bits required to represent
+     * `rhs - lhs` as an unsigned value.
+     * This value must be less than the number of bits needed to
+     * represent the field modulus.
+     */
+    fn constrain_lt_bounded(lhs: ProgramNode<Self>, rhs: ProgramNode<Self>, bits: usize);
+
+    /**
+     * Asserts that lhs is greater than or equal rhs.
+     *
+     * # Remarks
+     * `bits` is the maximum number of bits required to represent
+     * `rhs - lhs` as an unsigned value.
+     * This value must be less than the number of bits needed to
+     * represent the field modulus.
+     */
+    fn constrain_ge_bounded(lhs: ProgramNode<Self>, rhs: ProgramNode<Self>, bits: usize);
+
+    /**
+     * Asserts that lhs is strictly greater than rhs.
+     *
+     * # Remarks
+     * `bits` is the maximum number of bits required to represent
+     * `rhs - lhs` as an unsigned value.
+     * This value must be less than the number of bits needed to
+     * represent the field modulus.
+     */
+    fn constrain_gt_bounded(lhs: ProgramNode<Self>, rhs: ProgramNode<Self>, bits: usize);
 }
 
 /**

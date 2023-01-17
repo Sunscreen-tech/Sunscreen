@@ -502,13 +502,13 @@ fn scalar_to_uint<const N: usize>(x: &Scalar) -> UInt<N> {
 }
 
 impl crate::ZkpFrom<Scalar> for BigInt {
-    fn from(val: Scalar) -> BigInt {
+    fn zkp_from(val: Scalar) -> BigInt {
         BigInt(scalar_to_uint(&val))
     }
 }
 
 impl crate::ZkpFrom<&Scalar> for BigInt {
-    fn from(val: &Scalar) -> BigInt {
+    fn zkp_from(val: &Scalar) -> BigInt {
         BigInt(scalar_to_uint(val))
     }
 }
@@ -527,7 +527,7 @@ mod tests {
 
         let scalar = Scalar::try_from(a).unwrap();
 
-        assert_eq!(a, <BigInt as crate::ZkpFrom<Scalar>>::from(scalar));
+        assert_eq!(a, <BigInt as crate::ZkpFrom<Scalar>>::zkp_from(scalar));
     }
 
     #[test]
@@ -573,7 +573,7 @@ mod tests {
 
         assert_eq!(
             BigInt(l_min_1),
-            <BigInt as crate::ZkpFrom<Scalar>>::from(scalar)
+            <BigInt as crate::ZkpFrom<Scalar>>::zkp_from(scalar)
         );
     }
 

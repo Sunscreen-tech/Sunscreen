@@ -20,7 +20,7 @@ use std::{
 };
 
 pub use crypto_bigint::UInt;
-use crypto_bigint::{subtle::ConditionallySelectable, U512};
+use crypto_bigint::{subtle::ConditionallySelectable, U512, Limb};
 pub use error::*;
 pub use exec::ExecutableZkpProgram;
 pub use jit::{jit_prover, jit_verifier, CompiledZkpProgram, Operation};
@@ -214,6 +214,35 @@ impl BigInt {
     }
 
     /**
+     * Returns `ceil(log_2(&self))`.
+     * 
+     * # Remarks
+     * Runs in variable time with respect to `self`
+     */
+    pub fn vartime_log2(&self) -> u32 {
+        let mut log2 = 0;
+
+        if *self == BigInt::ZERO {
+            panic!("Cannot compute log2(0).");
+        }
+
+        let bitlen = self.limbs().len() * std::mem::size_of::<Limb>() * 8;
+
+        for i in 0..bitlen {
+            let i = bitlen - 1 - i;
+            let bit_val = self.bit_vartime(i);
+
+            if bit_val == 1 && log2 == 0 {
+                log2 = i as u32;
+            } else if bit_val == 1 {
+                log2 += 1;
+            }
+        }
+
+        log2
+    }
+
+    /**
      * The value 0.
      */
     pub const ZERO: Self = Self(U512::ZERO);
@@ -309,7 +338,7 @@ pub trait ZkpFrom<T> {
     /**
      * See [`std::convert::From::from`].
      */
-    fn from(val: T) -> Self;
+    fn zkp_from(val: T) -> Self;
 }
 
 /**
@@ -320,14 +349,27 @@ pub trait ZkpInto<T> {
     /**
      * See [`std::convert::Into::into`].
      */
-    fn into(self) -> T;
+    fn zkp_into(self) -> T;
 }
 
 impl<T, U> ZkpInto<T> for U
 where
     T: ZkpFrom<U>,
 {
-    fn into(self) -> T {
-        T::from(self)
+    fn zkp_into(self) -> T {
+        T::zkp_from(self)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn log2_works() {
+        assert_eq!(BigInt::from(4u16).vartime_log2(), 2);
+        assert_eq!(BigInt::from(5u16).vartime_log2(), 3);
+        assert_eq!(BigInt::from(6u16).vartime_log2(), 3);
+        assert_eq!(BigInt::from(8u16).vartime_log2(), 3);
     }
 }

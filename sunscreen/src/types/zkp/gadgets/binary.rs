@@ -6,29 +6,12 @@ use crate::{invoke_gadget, with_zkp_ctx, zkp::ZkpContextOps, ZkpError, ZkpResult
  * Expands a field element into N-bit unsigned binary.
  */
 pub struct ToUInt {
-    n: usize
+    n: usize,
 }
 
 impl ToUInt {
     pub fn new(n: usize) -> Self {
-        Self {
-            n
-        }
-    }
-}
-
-trait GetBit {
-    fn get_bit(&self, i: usize) -> u8;
-}
-
-impl GetBit for BigInt {
-    fn get_bit(&self, i: usize) -> u8 {
-        const LIMB_SIZE: usize = std::mem::size_of::<u64>();
-
-        let limb = i / LIMB_SIZE;
-        let bit = i % LIMB_SIZE;
-
-        ((self.limbs()[limb].0 & (0x1 << bit)) >> bit) as u8
+        Self { n }
     }
 }
 
@@ -42,14 +25,15 @@ impl Gadget for ToUInt {
 
         if *val > BigInt::ONE.shl_vartime(self.n) {
             return Err(ZkpError::gadget_error(&format!(
-                "Value too large for {} bit unsigned int.", self.n
+                "Value too large for {} bit unsigned int.",
+                self.n
             )));
         }
 
         let mut bits = vec![];
 
         for i in 0..self.n {
-            bits.push(BigInt::from(val.get_bit(i)));
+            bits.push(BigInt::from(val.bit_vartime(i)));
         }
 
         Ok(bits)

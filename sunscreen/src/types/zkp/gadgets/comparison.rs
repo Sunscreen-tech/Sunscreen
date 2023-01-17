@@ -1,28 +1,29 @@
 use sunscreen_zkp_backend::Gadget;
 
-use crate::{with_zkp_ctx, zkp::ZkpContextOps, invoke_gadget};
+use crate::{invoke_gadget, with_zkp_ctx, zkp::ZkpContextOps};
 
 use super::ToUInt;
 
 pub struct LessThanEqual {
-    diff_bits: usize
+    diff_bits: usize,
 }
 
 impl LessThanEqual {
     pub fn new(diff_bits: usize) -> Self {
-        Self {
-            diff_bits
-        }
+        Self { diff_bits }
     }
 }
 
 impl Gadget for LessThanEqual {
-    fn compute_inputs(&self, _gadget_inputs: &[sunscreen_zkp_backend::BigInt]) -> sunscreen_zkp_backend::Result<Vec<sunscreen_zkp_backend::BigInt>> {
+    fn compute_inputs(
+        &self,
+        _gadget_inputs: &[sunscreen_zkp_backend::BigInt],
+    ) -> sunscreen_zkp_backend::Result<Vec<sunscreen_zkp_backend::BigInt>> {
         Ok(vec![])
     }
 
     fn gadget_input_count(&self) -> usize {
-        2    
+        2
     }
 
     fn hidden_input_count(&self) -> usize {
@@ -30,16 +31,14 @@ impl Gadget for LessThanEqual {
     }
 
     fn gen_circuit(
-            &self,
-            gadget_inputs: &[petgraph::stable_graph::NodeIndex],
-            _hidden_inputs: &[petgraph::stable_graph::NodeIndex],
-        ) -> Vec<petgraph::stable_graph::NodeIndex> {
+        &self,
+        gadget_inputs: &[petgraph::stable_graph::NodeIndex],
+        _hidden_inputs: &[petgraph::stable_graph::NodeIndex],
+    ) -> Vec<petgraph::stable_graph::NodeIndex> {
         let lhs = gadget_inputs[0];
         let rhs = gadget_inputs[1];
-            
-        let diff = with_zkp_ctx(|ctx| {
-            ctx.add_subtraction(rhs, lhs)
-        });
+
+        let diff = with_zkp_ctx(|ctx| ctx.add_subtraction(rhs, lhs));
 
         invoke_gadget(ToUInt::new(self.diff_bits), &[diff]);
 
@@ -51,10 +50,10 @@ impl Gadget for LessThanEqual {
 mod tests {
     use sunscreen_compiler_macros::zkp_program;
     use sunscreen_runtime::{Runtime, ZkpProgramInput};
-    use sunscreen_zkp_backend::{BackendField, bulletproofs::BulletproofsBackend, ZkpBackend};
+    use sunscreen_zkp_backend::{bulletproofs::BulletproofsBackend, BackendField, ZkpBackend};
 
-    use crate::{types::zkp::NativeField, Compiler};
     use super::*;
+    use crate::{types::zkp::NativeField, Compiler};
 
     use crate as sunscreen;
 
@@ -78,7 +77,12 @@ mod tests {
         let test_case = |x: u64, y: u64, expect_pass: bool| {
             type BpField = NativeField<<BulletproofsBackend as ZkpBackend>::Field>;
 
-            let result= runtime.prove(program, vec![], vec![], vec![BpField::from(x), BpField::from(y)]);
+            let result = runtime.prove(
+                program,
+                vec![],
+                vec![],
+                vec![BpField::from(x), BpField::from(y)],
+            );
 
             let proof = if expect_pass {
                 result.unwrap()
@@ -87,7 +91,9 @@ mod tests {
                 return;
             };
 
-            runtime.verify(program, &proof, vec![], Vec::<ZkpProgramInput>::new()).unwrap();
+            runtime
+                .verify(program, &proof, vec![], Vec::<ZkpProgramInput>::new())
+                .unwrap();
         };
 
         test_case(5, 6, true);

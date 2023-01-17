@@ -98,7 +98,26 @@ where
     /**
      * Asserts that lhs equals rhs.
      */
-    fn constraint_eq(lhs: ProgramNode<Self>, rhs: ProgramNode<Self>) -> ProgramNode<Self>;
+    fn constrain_eq(lhs: ProgramNode<Self>, rhs: ProgramNode<Self>) -> ProgramNode<Self>;
+}
+
+/**
+ * A trait for comparing 2 values.
+ */
+pub trait ConstrainCmpVarVar
+where
+    Self: Sized + ZkpType,
+{
+    /**
+     * Asserts that lhs is less than or equal rhs.
+     *
+     * # Remarks
+     * `bits` is the maximum number of bits required to represent
+     * `rhs - lhs` as an unsigned value.
+     * This value must be less than the number of bits needed to
+     * represent the field modulus.
+     */
+    fn constrain_le_bounded(lhs: ProgramNode<Self>, rhs: ProgramNode<Self>, bits: usize);
 }
 
 /**

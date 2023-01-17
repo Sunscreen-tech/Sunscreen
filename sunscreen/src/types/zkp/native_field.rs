@@ -18,6 +18,8 @@ use crate::types::zkp::{
 
 use crate as sunscreen;
 
+use super::{ConstrainCmpVarVar, SubVar};
+
 // Shouldn't need Clone + Copy, but there appears to be a bug in the Rust
 // compiler that prevents ProgramNode from being Copy if we don't.
 // https://github.com/rust-lang/rust/issues/104264
@@ -145,6 +147,16 @@ impl<F: BackendField> AddVar for NativeField<F> {
     }
 }
 
+impl<F: BackendField> SubVar for NativeField<F> {
+    fn sub(lhs: ProgramNode<Self>, rhs: ProgramNode<Self>) -> ProgramNode<Self> {
+        with_zkp_ctx(|ctx| {
+            let o = ctx.add_subtraction(lhs.ids[0], rhs.ids[0]);
+
+            ProgramNode::new(&[o])
+        })
+    }
+}
+
 impl<F: BackendField> MulVar for NativeField<F> {
     fn mul(lhs: ProgramNode<Self>, rhs: ProgramNode<Self>) -> ProgramNode<Self> {
         with_zkp_ctx(|ctx| {
@@ -166,7 +178,7 @@ impl<F: BackendField> NegVar for NativeField<F> {
 }
 
 impl<F: BackendField> ConstrainEqVarVar for NativeField<F> {
-    fn constraint_eq(lhs: ProgramNode<Self>, rhs: ProgramNode<Self>) -> ProgramNode<Self> {
+    fn constrain_eq(lhs: ProgramNode<Self>, rhs: ProgramNode<Self>) -> ProgramNode<Self> {
         with_zkp_ctx(|ctx| {
             let sub = ctx.add_subtraction(lhs.ids[0], rhs.ids[0]);
 
@@ -174,6 +186,14 @@ impl<F: BackendField> ConstrainEqVarVar for NativeField<F> {
 
             ProgramNode::new(&[constraint])
         })
+    }
+}
+
+impl<F: BackendField> ConstrainCmpVarVar for NativeField<F> {
+    fn constrain_le_bounded(lhs: ProgramNode<Self>, rhs: ProgramNode<Self>, bits: usize) {
+        let diff = rhs - lhs;
+
+        invoke_gadget(ToUInt::new(bits), &[diff.ids[0]]);
     }
 }
 
@@ -198,7 +218,7 @@ pub trait ToBinary<F: BackendField> {
 
 impl<F: BackendField> ToBinary<F> for ProgramNode<NativeField<F>> {
     fn to_unsigned<const N: usize>(&self) -> [ProgramNode<NativeField<F>>; N] {
-        let bits = invoke_gadget(ToUInt::<N>, self.ids);
+        let bits = invoke_gadget(ToUInt::new(N), self.ids);
 
         let mut vals = [*self; N];
 
@@ -215,7 +235,11 @@ mod tests {
     use std::ops::{Add, Mul, Neg, Sub};
 
     use curve25519_dalek::scalar::Scalar;
-    use sunscreen_zkp_backend::ZkpInto;
+    use sunscreen_compiler_macros::zkp_program;
+    use sunscreen_runtime::{Runtime, ZkpProgramInput};
+    use sunscreen_zkp_backend::{bulletproofs::BulletproofsBackend, ZkpBackend, ZkpInto};
+
+    use crate::{types::zkp::ConstrainCmp, Compiler};
 
     use super::*;
 
@@ -277,7 +301,7 @@ mod tests {
     }
 
     impl ZkpInto<BigInt> for TestField {
-        fn into(self) -> BigInt {
+        fn zkp_into(self) -> BigInt {
             unreachable!()
         }
     }
@@ -313,5 +337,54 @@ mod tests {
         let x = NativeField::<TestField>::from(22u64);
 
         assert_eq!(x.val, BigInt::ONE);
+    }
+
+    #[test]
+    fn can_compare_le_bounded() {
+        #[zkp_program(backend = "bulletproofs")]
+        fn le<F: BackendField>(x: NativeField<F>, y: NativeField<F>) {
+            x.constrain_le_bounded(y, 16);
+        }
+
+        let app = Compiler::new()
+            .zkp_backend::<BulletproofsBackend>()
+            .zkp_program(le)
+            .compile()
+            .unwrap();
+
+        let runtime = Runtime::new_zkp(&BulletproofsBackend::new()).unwrap();
+
+        let program = app.get_zkp_program(le).unwrap();
+
+        let test_case = |x: i64, y: i64, expect_pass: bool| {
+            type BpField = NativeField<<BulletproofsBackend as ZkpBackend>::Field>;
+
+            let result = runtime.prove(
+                program,
+                vec![],
+                vec![],
+                vec![BpField::from(x), BpField::from(y)],
+            );
+
+            let proof = if expect_pass {
+                result.unwrap()
+            } else {
+                assert!(result.is_err());
+                return;
+            };
+
+            runtime
+                .verify(program, &proof, vec![], Vec::<ZkpProgramInput>::new())
+                .unwrap();
+        };
+
+        test_case(5, 6, true);
+        test_case(5, 5, true);
+        test_case(5, 1024, true);
+        test_case(-3, -2, true);
+        test_case(-2, -2, true);
+        test_case(-1, 3, true);
+        test_case(-1, -2, false);
+        test_case(6, 5, false);
     }
 }

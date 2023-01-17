@@ -5,41 +5,35 @@ use crate::{invoke_gadget, with_zkp_ctx, zkp::ZkpContextOps, ZkpError, ZkpResult
 /**
  * Expands a field element into N-bit unsigned binary.
  */
-pub struct ToUInt<const N: usize>;
-
-trait GetBit {
-    fn get_bit(&self, i: usize) -> u8;
+pub struct ToUInt {
+    n: usize,
 }
 
-impl GetBit for BigInt {
-    fn get_bit(&self, i: usize) -> u8 {
-        const LIMB_SIZE: usize = std::mem::size_of::<u64>();
-
-        let limb = i / LIMB_SIZE;
-        let bit = i % LIMB_SIZE;
-
-        ((self.limbs()[limb].0 & (0x1 << bit)) >> bit) as u8
+impl ToUInt {
+    pub fn new(n: usize) -> Self {
+        Self { n }
     }
 }
 
-impl<const N: usize> Gadget for ToUInt<N> {
+impl Gadget for ToUInt {
     fn compute_inputs(&self, gadget_inputs: &[BigInt]) -> ZkpResult<Vec<BigInt>> {
         let val = gadget_inputs[0];
 
-        if N == 0 {
+        if self.n == 0 {
             return Err(ZkpError::gadget_error("Cannot create 0-bit uint."));
         }
 
-        if *val > BigInt::ONE.shl_vartime(N) {
+        if *val > BigInt::ONE.shl_vartime(self.n) {
             return Err(ZkpError::gadget_error(&format!(
-                "Value too large for {N} bit unsigned int."
+                "Value too large for {} bit unsigned int.",
+                self.n
             )));
         }
 
         let mut bits = vec![];
 
-        for i in 0..N {
-            bits.push(BigInt::from(val.get_bit(i)));
+        for i in 0..self.n {
+            bits.push(BigInt::from(val.bit_vartime(i)));
         }
 
         Ok(bits)
@@ -55,7 +49,7 @@ impl<const N: usize> Gadget for ToUInt<N> {
         let mut muls = vec![];
 
         let hidden_inputs = with_zkp_ctx(|ctx| {
-            for i in 0..N {
+            for i in 0..self.n {
                 let constant = BigInt::from(*BigInt::ONE << i);
                 let constant = ctx.add_constant(&constant);
 
@@ -95,7 +89,7 @@ impl<const N: usize> Gadget for ToUInt<N> {
     }
 
     fn hidden_input_count(&self) -> usize {
-        N
+        self.n
     }
 }
 

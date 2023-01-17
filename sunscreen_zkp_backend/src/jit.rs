@@ -329,7 +329,7 @@ where
                 let parents = query.get_unordered_operands(id)?;
 
                 for parent in parents {
-                    if node_outputs[&parent].clone().into() != x {
+                    if node_outputs[&parent].clone().zkp_into() != x {
                         return Err(Error::UnsatifiableConstraint(id));
                     }
                 }
@@ -344,7 +344,7 @@ where
 
                 let args = arg_indices
                     .iter()
-                    .map(|x| node_outputs[x].clone().into())
+                    .map(|x| node_outputs[x].clone().zkp_into())
                     .collect::<Vec<BigInt>>();
 
                 let hidden_inputs = g.compute_inputs(&args)?;
@@ -486,11 +486,11 @@ where
             Operation::ConstantInput(x) => {
                 let val = constant_inputs[x].clone();
 
-                NodeInfo::new(ExecOperation::Constant(val.into()))
+                NodeInfo::new(ExecOperation::Constant(val.zkp_into()))
             }
             Operation::HiddenInput(_) => match node_outputs.as_ref() {
                 Some(node_outputs) => NodeInfo::new(ExecOperation::HiddenInput(Some(
-                    node_outputs[&id].clone().into(),
+                    node_outputs[&id].clone().zkp_into(),
                 ))),
                 None => NodeInfo::new(ExecOperation::HiddenInput(None)),
             },
@@ -558,7 +558,7 @@ where
         let mut transforms = GraphTransforms::new();
 
         if let Operation::PublicInput(x) = query.get_node(id).unwrap().operation {
-            let as_bigint: BigInt = public_inputs[x].clone().into();
+            let as_bigint: BigInt = public_inputs[x].clone().zkp_into();
 
             let constraint = transforms.push(Transform::AddNode(NodeInfo {
                 operation: Operation::Constraint(as_bigint),

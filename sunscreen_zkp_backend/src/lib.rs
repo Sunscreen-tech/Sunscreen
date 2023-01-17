@@ -20,7 +20,7 @@ use std::{
 };
 
 pub use crypto_bigint::UInt;
-use crypto_bigint::{subtle::ConditionallySelectable, U512, Limb};
+use crypto_bigint::{subtle::ConditionallySelectable, Limb, U512};
 pub use error::*;
 pub use exec::ExecutableZkpProgram;
 pub use jit::{jit_prover, jit_verifier, CompiledZkpProgram, Operation};
@@ -215,7 +215,7 @@ impl BigInt {
 
     /**
      * Returns `ceil(log_2(&self))`.
-     * 
+     *
      * # Remarks
      * Runs in variable time with respect to `self`
      */

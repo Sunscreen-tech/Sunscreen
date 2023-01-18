@@ -195,6 +195,24 @@ impl<F: BackendField> ConstrainCmpVarVar for NativeField<F> {
 
         invoke_gadget(ToUInt::new(bits), &[diff.ids[0]]);
     }
+
+    fn constrain_lt_bounded(lhs: ProgramNode<Self>, rhs: ProgramNode<Self>, bits: usize) {
+        let rhs_plus_1 = rhs - NativeField::from(1u8).into_program_node();
+
+        Self::constrain_le_bounded(lhs, rhs_plus_1, bits);
+    }
+
+    fn constrain_ge_bounded(lhs: ProgramNode<Self>, rhs: ProgramNode<Self>, bits: usize) {
+        let diff = lhs - rhs;
+
+        invoke_gadget(ToUInt::new(bits), &[diff.ids[0]]);
+    }
+
+    fn constrain_gt_bounded(lhs: ProgramNode<Self>, rhs: ProgramNode<Self>, bits: usize) {
+        let rhs_plus_1 = rhs + NativeField::from(1u8).into_program_node();
+
+        Self::constrain_ge_bounded(lhs, rhs_plus_1, bits);
+    }
 }
 
 impl<F: BackendField> IntoProgramNode for NativeField<F> {
@@ -386,5 +404,152 @@ mod tests {
         test_case(-1, 3, true);
         test_case(-1, -2, false);
         test_case(6, 5, false);
+    }
+
+    #[test]
+    fn can_compare_lt_bounded() {
+        #[zkp_program(backend = "bulletproofs")]
+        fn le<F: BackendField>(x: NativeField<F>, y: NativeField<F>) {
+            x.constrain_lt_bounded(y, 16);
+        }
+
+        let app = Compiler::new()
+            .zkp_backend::<BulletproofsBackend>()
+            .zkp_program(le)
+            .compile()
+            .unwrap();
+
+        let runtime = Runtime::new_zkp(&BulletproofsBackend::new()).unwrap();
+
+        let program = app.get_zkp_program(le).unwrap();
+
+        let test_case = |x: i64, y: i64, expect_pass: bool| {
+            type BpField = NativeField<<BulletproofsBackend as ZkpBackend>::Field>;
+
+            let result = runtime.prove(
+                program,
+                vec![],
+                vec![],
+                vec![BpField::from(x), BpField::from(y)],
+            );
+
+            let proof = if expect_pass {
+                result.unwrap()
+            } else {
+                assert!(result.is_err());
+                return;
+            };
+
+            runtime
+                .verify(program, &proof, vec![], Vec::<ZkpProgramInput>::new())
+                .unwrap();
+        };
+
+        test_case(5, 6, true);
+        test_case(5, 5, false);
+        test_case(5, 1024, true);
+        test_case(-3, -2, true);
+        test_case(-2, -2, false);
+        test_case(-1, 3, true);
+        test_case(-1, -2, false);
+        test_case(6, 5, false);
+    }
+
+    #[test]
+    fn can_compare_ge_bounded() {
+        #[zkp_program(backend = "bulletproofs")]
+        fn le<F: BackendField>(x: NativeField<F>, y: NativeField<F>) {
+            x.constrain_ge_bounded(y, 16);
+        }
+
+        let app = Compiler::new()
+            .zkp_backend::<BulletproofsBackend>()
+            .zkp_program(le)
+            .compile()
+            .unwrap();
+
+        let runtime = Runtime::new_zkp(&BulletproofsBackend::new()).unwrap();
+
+        let program = app.get_zkp_program(le).unwrap();
+
+        let test_case = |x: i64, y: i64, expect_pass: bool| {
+            type BpField = NativeField<<BulletproofsBackend as ZkpBackend>::Field>;
+
+            let result = runtime.prove(
+                program,
+                vec![],
+                vec![],
+                vec![BpField::from(x), BpField::from(y)],
+            );
+
+            let proof = if expect_pass {
+                result.unwrap()
+            } else {
+                assert!(result.is_err());
+                return;
+            };
+
+            runtime
+                .verify(program, &proof, vec![], Vec::<ZkpProgramInput>::new())
+                .unwrap();
+        };
+
+        test_case(6, 5, true);
+        test_case(5, 5, true);
+        test_case(1024, 5, true);
+        test_case(-2, -3, true);
+        test_case(-2, -2, true);
+        test_case(3, -1, true);
+        test_case(-2, -1, false);
+        test_case(5, 6, false);
+    }
+
+    #[test]
+    fn can_compare_gt_bounded() {
+        #[zkp_program(backend = "bulletproofs")]
+        fn le<F: BackendField>(x: NativeField<F>, y: NativeField<F>) {
+            x.constrain_gt_bounded(y, 16);
+        }
+
+        let app = Compiler::new()
+            .zkp_backend::<BulletproofsBackend>()
+            .zkp_program(le)
+            .compile()
+            .unwrap();
+
+        let runtime = Runtime::new_zkp(&BulletproofsBackend::new()).unwrap();
+
+        let program = app.get_zkp_program(le).unwrap();
+
+        let test_case = |x: i64, y: i64, expect_pass: bool| {
+            type BpField = NativeField<<BulletproofsBackend as ZkpBackend>::Field>;
+
+            let result = runtime.prove(
+                program,
+                vec![],
+                vec![],
+                vec![BpField::from(x), BpField::from(y)],
+            );
+
+            let proof = if expect_pass {
+                result.unwrap()
+            } else {
+                assert!(result.is_err());
+                return;
+            };
+
+            runtime
+                .verify(program, &proof, vec![], Vec::<ZkpProgramInput>::new())
+                .unwrap();
+        };
+
+        test_case(6, 5, true);
+        test_case(5, 5, false);
+        test_case(1024, 5, true);
+        test_case(-2, -3, true);
+        test_case(-2, -2, false);
+        test_case(3, -1, true);
+        test_case(-2, -1, false);
+        test_case(5, 6, false);
     }
 }

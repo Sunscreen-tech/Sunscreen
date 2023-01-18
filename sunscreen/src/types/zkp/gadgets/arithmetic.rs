@@ -1,6 +1,6 @@
 use crypto_bigint::UInt;
 use subtle::{ConditionallySelectable, ConstantTimeEq, ConstantTimeGreater};
-use sunscreen_zkp_backend::{BigInt, Gadget};
+use sunscreen_zkp_backend::{BigInt, Error as ZkpError, Gadget};
 
 use crate::{invoke_gadget, with_zkp_ctx, zkp::ZkpContextOps, ZkpResult};
 
@@ -84,6 +84,10 @@ impl Gadget for SignedModulus {
         let x = gadget_inputs[0];
         let m = gadget_inputs[1];
 
+        if m == BigInt::ZERO {
+            return Err(ZkpError::gadget_error("Divide by zero."));
+        }
+
         // As per docs, when shift amount is constant, time is constant.
         // See https://docs.rs/crypto-bigint/latest/crypto_bigint/struct.UInt.html#method.shr_vartime
         let fm_2 = self.field_modulus.shr_vartime(2);
@@ -95,6 +99,7 @@ impl Gadget for SignedModulus {
         let pos_x = self.field_modulus.wrapping_sub(&x);
 
         // Now we reduce mod m then subtract from m to get x mod m where x < 0.
+        // Unwrap is okay here because we've already checked for m == 0.
         let r_neg = m
             .wrapping_sub(&pos_x.reduce(&m).unwrap())
             .reduce(&m)
@@ -164,11 +169,10 @@ mod tests {
         #[zkp_program(backend = "bulletproofs")]
         fn div_rem<F: BackendField>(
             x: NativeField<F>,
+            m: NativeField<F>,
             expected_q: NativeField<F>,
             expected_r: NativeField<F>,
         ) {
-            let m = NativeField::<F>::from(22u32).into_program_node();
-
             let outs = invoke_gadget(
                 SignedModulus::new(F::FIELD_MODULUS, 16),
                 &[x.ids[0], m.ids[0]],
@@ -193,19 +197,25 @@ mod tests {
 
         type BpField = NativeField<<BulletproofsBackend as ZkpBackend>::Field>;
 
-        let test_case = |x: i64, expected_q: i64, expected_r: i64| {
-            let proof = runtime
-                .prove(
-                    prog,
-                    vec![],
-                    vec![],
-                    vec![
-                        BpField::from(x),
-                        BpField::from(expected_q),
-                        BpField::from(expected_r),
-                    ],
-                )
-                .unwrap();
+        let test_case = |x: i64, m: i64, expected_q: i64, expected_r: i64, expect_success: bool| {
+            let result = runtime.prove(
+                prog,
+                vec![],
+                vec![],
+                vec![
+                    BpField::from(x),
+                    BpField::from(m),
+                    BpField::from(expected_q),
+                    BpField::from(expected_r),
+                ],
+            );
+
+            let proof = if expect_success {
+                result.unwrap()
+            } else {
+                assert!(result.is_err());
+                return;
+            };
 
             runtime
                 .verify(prog, &proof, vec![], Vec::<ZkpProgramInput>::new())
@@ -213,9 +223,12 @@ mod tests {
         };
 
         // 2 * 22 + 3 == 47
-        test_case(47, 2, 3);
+        test_case(47, 22, 2, 3, true);
 
         // -3 * 22 + 19 == -47
-        test_case(-47, -3, 19);
+        test_case(-47, 22, -3, 19, true);
+
+        // Divide by zero error
+        test_case(4, 0, 0, 0, false);
     }
 }

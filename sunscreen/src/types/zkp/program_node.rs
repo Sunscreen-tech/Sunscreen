@@ -228,7 +228,7 @@ pub trait ConstrainCmp<Rhs> {
      */
     fn constrain_le_bounded(self, rhs: Rhs, bits: usize);
 
-        /**
+    /**
      * Constrain that this value is less than or equal than the RHS.
      *
      * # Remarks
@@ -242,7 +242,7 @@ pub trait ConstrainCmp<Rhs> {
      */
     fn constrain_lt_bounded(self, rhs: Rhs, bits: usize);
 
-        /**
+    /**
      * Constrain that this value is less than or equal than the RHS.
      *
      * # Remarks
@@ -256,7 +256,7 @@ pub trait ConstrainCmp<Rhs> {
      */
     fn constrain_ge_bounded(self, rhs: Rhs, bits: usize);
 
-        /**
+    /**
      * Constrain that this value is less than or equal than the RHS.
      *
      * # Remarks

@@ -193,19 +193,25 @@ mod tests {
 
         type BpField = NativeField<<BulletproofsBackend as ZkpBackend>::Field>;
 
-        let proof = runtime
+        let test_case = |x: i64, expected_q: i64, expected_r: i64| {
+            let proof = runtime
             .prove(
                 prog,
                 vec![],
                 vec![],
-                vec![BpField::from(47), BpField::from(2), BpField::from(3)],
+                vec![BpField::from(x), BpField::from(expected_q), BpField::from(expected_r)],
             )
             .unwrap();
 
-        runtime
-            .verify(prog, &proof, vec![], Vec::<ZkpProgramInput>::new())
-            .unwrap();
+            runtime
+                .verify(prog, &proof, vec![], Vec::<ZkpProgramInput>::new())
+                .unwrap();
+        };
 
-        // let proof = runtime.prove(prog, vec![], vec![], vec![BpField::from(-47), BpField::from(-30), BpField::from(-23)]).unwrap();
+        // 2 * 22 + 3 == 47
+        test_case(47, 2, 3);
+
+        // -3 * 22 + 19 == -47
+        test_case(-47, -3, 19);
     }
 }

@@ -195,13 +195,17 @@ mod tests {
 
         let test_case = |x: i64, expected_q: i64, expected_r: i64| {
             let proof = runtime
-            .prove(
-                prog,
-                vec![],
-                vec![],
-                vec![BpField::from(x), BpField::from(expected_q), BpField::from(expected_r)],
-            )
-            .unwrap();
+                .prove(
+                    prog,
+                    vec![],
+                    vec![],
+                    vec![
+                        BpField::from(x),
+                        BpField::from(expected_q),
+                        BpField::from(expected_r),
+                    ],
+                )
+                .unwrap();
 
             runtime
                 .verify(prog, &proof, vec![], Vec::<ZkpProgramInput>::new())

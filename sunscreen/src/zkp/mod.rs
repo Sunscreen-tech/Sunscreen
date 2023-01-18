@@ -6,6 +6,7 @@ use sunscreen_zkp_backend::{
 
 use crate::Result;
 
+use std::collections::HashMap;
 use std::hash::Hash;
 use std::sync::Arc;
 use std::vec;
@@ -190,6 +191,9 @@ pub struct ZkpData {
     next_public_input: usize,
     next_private_input: usize,
     next_constant_input: usize,
+    // A lookup table to reuse constant nodes. Reduces the size
+    // of the graph.
+    constant_map: HashMap<BigInt, NodeIndex>,
 }
 
 impl ZkpData {
@@ -201,6 +205,7 @@ impl ZkpData {
             next_private_input: 0,
             next_public_input: 0,
             next_constant_input: 0,
+            constant_map: HashMap::new(),
         }
     }
 }
@@ -303,7 +308,16 @@ impl ZkpContextOps for ZkpContext {
     }
 
     fn add_constant(&mut self, val: &BigInt) -> NodeIndex {
-        self.add_node(Operation::Constant(*val))
+        let existing_constant = self.data.constant_map.get(val);
+
+        match existing_constant {
+            Some(c) => *c,
+            None => {
+                let idx = self.add_node(Operation::Constant(*val));
+                self.data.constant_map.insert(*val, idx);
+                idx
+            }
+        }
     }
 
     fn add_invoke_gadget<G: Gadget>(&mut self, gadget: &Arc<G>) -> NodeIndex {

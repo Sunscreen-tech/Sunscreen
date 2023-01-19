@@ -66,6 +66,9 @@ impl Gadget for SignedModulus {
         // Show r < m
         invoke_gadget(ToUInt::new(self.max_remainder_bits), &[m_min_1_min_r]);
 
+        // Show that m is non-zero
+        invoke_gadget(Inverse::new(self.field_modulus), &[m]);
+
         vec![hidden_inputs[0], hidden_inputs[1]]
     }
 
@@ -124,7 +127,19 @@ impl Gadget for SignedModulus {
 /**
  * For value x, generate x^-1 and prove that x*x^-1 = 1.
  */
-pub struct Inverse;
+pub struct Inverse {
+    field_modulus: BigInt,
+}
+
+impl Inverse {
+    pub fn new(field_modulus: BigInt) -> Self {
+        if field_modulus == BigInt::ZERO {
+            panic!("Field modulus cannot be zero.");
+        }
+
+        Self { field_modulus }
+    }
+}
 
 impl Gadget for Inverse {
     fn compute_inputs(&self, gadget_inputs: &[BigInt]) -> ZkpResult<Vec<BigInt>> {
@@ -134,7 +149,7 @@ impl Gadget for Inverse {
             return Err(ZkpError::gadget_error("Cannot take inverse of zero."));
         }
 
-        todo!();
+        Ok(vec![x.inverse_fp(&self.field_modulus)])
     }
 
     fn gadget_input_count(&self) -> usize {
@@ -146,12 +161,20 @@ impl Gadget for Inverse {
     }
 
     fn gen_circuit(
-            &self,
-            gadget_inputs: &[petgraph::stable_graph::NodeIndex],
-            hidden_inputs: &[petgraph::stable_graph::NodeIndex],
-        ) -> Vec<petgraph::stable_graph::NodeIndex> {
-        todo!()
-        
+        &self,
+        gadget_inputs: &[petgraph::stable_graph::NodeIndex],
+        hidden_inputs: &[petgraph::stable_graph::NodeIndex],
+    ) -> Vec<petgraph::stable_graph::NodeIndex> {
+        let x = gadget_inputs[0];
+        let x_inv = hidden_inputs[0];
+
+        with_zkp_ctx(|ctx| {
+            // Assert x * x^-1 == 1
+            let prod = ctx.add_multiplication(x, x_inv);
+            ctx.add_constraint(prod, &BigInt::ONE);
+        });
+
+        vec![x_inv]
     }
 }
 
@@ -162,7 +185,7 @@ mod tests {
     use sunscreen_zkp_backend::BackendField;
     use sunscreen_zkp_backend::{bulletproofs::BulletproofsBackend, ZkpBackend};
 
-    use crate::types::zkp::{NativeField};
+    use crate::types::zkp::NativeField;
     use crate::{self as sunscreen, invoke_gadget, Compiler};
 
     use super::*;

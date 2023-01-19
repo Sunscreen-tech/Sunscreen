@@ -149,6 +149,7 @@ dependencies = [
  "ark-poly",
  "rand",
  "rand_distr",
+ "sunscreen",
 ]
 
 [[package]]

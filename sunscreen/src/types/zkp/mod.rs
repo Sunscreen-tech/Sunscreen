@@ -6,6 +6,7 @@ mod rns_polynomial;
 pub use native_field::*;
 use petgraph::stable_graph::NodeIndex;
 pub use program_node::*;
+pub use rns_polynomial::*;
 use sunscreen_compiler_common::TypeName;
 
 pub use sunscreen_runtime::{ToNativeFields, ZkpProgramInputTrait};

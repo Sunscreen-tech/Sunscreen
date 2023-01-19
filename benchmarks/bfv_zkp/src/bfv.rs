@@ -3,10 +3,11 @@
 
 use ark_ff::{BigInt, BigInteger, Fp, FpConfig, MontBackend, MontConfig};
 use ark_poly::univariate::DensePolynomial;
+use sunscreen::{zkp_program, types::zkp::{RnsRingPolynomial, NativeField, Scale, Mod, ToResidues}, BackendField};
 
 use crate::poly_ring::PolyRing;
 
-const POLY_DEGREE: usize = 1024;
+const POLY_DEGREE: usize = 16;
 
 #[derive(MontConfig)]
 #[modulus = "132120577"]
@@ -186,6 +187,53 @@ fn div_round_bigint<const N: usize>(a: BigInt<N>, b: BigInt<N>) -> BigInt<N> {
     }
 
     div
+}
+
+type BfvPoly<F> = RnsRingPolynomial<F, POLY_DEGREE, 1>;
+
+#[zkp_program(backend = "bulletproofs")]
+    fn prove_enc<F: BackendField>(
+        m: BfvPoly<F>,
+        e_1: BfvPoly<F>,
+        e_2: BfvPoly<F>,
+        u: BfvPoly<F>,
+        #[constant] expected_c_0: BfvPoly<F>,
+        #[constant] expected_c_1: BfvPoly<F>,
+        #[constant] p_0: BfvPoly<F>,
+        #[constant] p_1: BfvPoly<F>,
+        #[constant] delta: NativeField<F>
+    ) {
+        let q = NativeField::<F>::from(CIPHER_MODULUS).into_program_node();
+        let log_q = CIPHER_MODULUS.next_power_of_two() as usize;
+
+        let c_0 = m.scale(delta) + p_0 * u.clone() + e_1;
+        let c_0 = RnsRingPolynomial::signed_reduce(c_0, q, log_q);
+
+        let c_1 = p_1 * u + e_2;
+        let c_1 = RnsRingPolynomial::signed_reduce(c_1, q, log_q);
+
+        let c_0_residues = c_0.residues();
+        let c_1_residues = c_1.residues();
+
+        let expected_c_0_residues = expected_c_0.residues();
+        let expected_c_1_residues = expected_c_1.residues();
+
+        for i in 0..1 {
+            for j in 0..POLY_DEGREE {
+                c_0_residues[i][j].constrain_eq(expected_c_0_residues[i][j]);
+                c_1_residues[i][j].constrain_eq(expected_c_1_residues[i][j]);
+            }
+        }
+    }
+
+pub fn setup_runtime() {
+
+}
+
+pub fn prove_public_encryption() {
+    
+
+    
 }
 
 #[test]

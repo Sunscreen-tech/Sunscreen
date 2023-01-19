@@ -20,7 +20,10 @@ use std::{
 };
 
 pub use crypto_bigint::UInt;
-use crypto_bigint::{subtle::ConditionallySelectable, Limb, U512};
+use crypto_bigint::{
+    subtle::{Choice, ConditionallySelectable},
+    Limb, U512,
+};
 pub use error::*;
 pub use exec::ExecutableZkpProgram;
 pub use jit::{jit_prover, jit_verifier, CompiledZkpProgram, Operation};
@@ -243,6 +246,78 @@ impl BigInt {
     }
 
     /**
+     * Compute the multiplicative inverse of self with respect to F*_p, where
+     * `p` is prime.
+     *
+     * # Remarks
+     * This algorithm computes self^(p-2) in F*_p. This is the inverse as a
+     * consequence of Fermat's Little Theorem. Since x != 0 is a generator of
+     * F_p: `x^p-1 = x * x^p-2 = 1.` This means x^p-2 is x^-1.
+     *
+     * This algorithm runs in constant time.
+     *
+     * `p` should be prime, but this isn't enforced by the algorithm.
+     * Incorrect results may occur if `p` is not prime.
+     *
+     * `p` should be larger than 2, but what in tarnation would you need this
+     * algorithm for in a unary or binary field?
+     *
+     * TODO: Are there better algorithms?
+     *
+     * # Panics
+     * * If self == 0
+     * * If p == 0
+     */
+    pub fn inverse_fp(&self, p: &Self) -> Self {
+        if *self == BigInt::ZERO {
+            panic!("Cannot compute the inverse of zero.");
+        }
+
+        if *p == BigInt::ZERO {
+            panic!("Cannot have a finite field of zero size.");
+        }
+
+        let p_min_2 = BigInt::from(p.wrapping_sub(&BigInt::from(2u16)));
+
+        self.pow_fp(&p_min_2, p)
+    }
+
+    /**
+     * Compute self to the x power in F_p using the fast powers algorithm.
+     *
+     * # Remarks
+     * This algorithm runs in constant time.
+     *
+     * `x` should be less than `p`.
+     *
+     * # Panics
+     * * If p is zero.
+     */
+    pub fn pow_fp(&self, x: &Self, p: &Self) -> Self {
+        if *p == BigInt::ZERO {
+            panic!("Cannot have a finite field of zero size.");
+        }
+
+        let mut cur_power = self.0;
+        let mut result = UInt::ONE;
+
+        let power_count = 8 * 8 * std::mem::size_of::<Limb>();
+
+        for i in 0..power_count {
+            // Time is variable with respect to i, a public value.
+            let bit = x.bit_vartime(i) as u8;
+            let bit = Choice::from(bit);
+
+            let v = UInt::conditional_select(&UInt::ONE, &cur_power, bit);
+
+            result = result.wrapping_mul(&v).reduce(p).unwrap();
+            cur_power = cur_power.wrapping_mul(&cur_power).reduce(p).unwrap();
+        }
+
+        BigInt::from(result)
+    }
+
+    /**
      * The value 0.
      */
     pub const ZERO: Self = Self(U512::ZERO);
@@ -363,6 +438,8 @@ where
 
 #[cfg(test)]
 mod tests {
+    use crate::bulletproofs::BulletproofsBackend;
+
     use super::*;
 
     #[test]
@@ -371,5 +448,22 @@ mod tests {
         assert_eq!(BigInt::from(5u16).vartime_log2(), 3);
         assert_eq!(BigInt::from(6u16).vartime_log2(), 3);
         assert_eq!(BigInt::from(8u16).vartime_log2(), 3);
+    }
+
+    #[test]
+    fn inverse_works() {
+        let test_case = |x: BigInt, p: BigInt| {
+            let x_inv = x.inverse_fp(&p);
+
+            assert_eq!(x_inv.wrapping_mul(&x).reduce(&p).unwrap(), UInt::ONE);
+        };
+
+        test_case(BigInt::from(7u16), BigInt::from(11u16));
+        test_case(BigInt::from(8u16), BigInt::from(11u16));
+        test_case(BigInt::from(9u16), BigInt::from(11u16));
+        test_case(
+            BigInt::from(1234u32),
+            <BulletproofsBackend as ZkpBackend>::Field::FIELD_MODULUS,
+        );
     }
 }

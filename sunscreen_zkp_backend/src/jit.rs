@@ -330,7 +330,7 @@ where
 
                 for parent in parents {
                     if node_outputs[&parent].clone().zkp_into() != x {
-                        return Err(Error::UnsatifiableConstraint(id));
+                        return Err(Error::UnsatisfiableConstraint(id));
                     }
                 }
             }

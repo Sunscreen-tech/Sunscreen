@@ -55,7 +55,7 @@ pub enum Error {
     /**
      * A constraint could not be satisfied.
      */
-    UnsatifiableConstraint(NodeIndex),
+    UnsatisfiableConstraint(NodeIndex),
 }
 
 impl Error {

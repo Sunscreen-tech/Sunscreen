@@ -18,7 +18,7 @@ use crate::types::zkp::{
 
 use crate as sunscreen;
 
-use super::{ConstrainCmpVarVar, SubVar};
+use super::{gadgets::SignedModulus, ConstrainCmpVarVar, SubVar};
 
 // Shouldn't need Clone + Copy, but there appears to be a bug in the Rust
 // compiler that prevents ProgramNode from being Copy if we don't.
@@ -220,6 +220,58 @@ impl<F: BackendField> IntoProgramNode for NativeField<F> {
 
     fn into_program_node(self) -> ProgramNode<Self> {
         with_zkp_ctx(|ctx| ProgramNode::new(&[ctx.add_constant(&self.val)]))
+    }
+}
+
+/**
+ * A trait for doing modular arithmetic.
+ */
+pub trait Mod<F: BackendField>
+where
+    Self: ZkpType,
+{
+    /**
+     * Compute self % m where self is interpreted as a signed value
+     * in F_m. This means e.g. -1 % m == m - 1 rather that whatever
+     * value in the native field mod m.
+     *
+     * # Remarks
+     * m must be smaller than the native
+     * field's modulus
+     *
+     * `remainder_bits` is the number of bits required to store the
+     * remainder. This value should be `ceil(log2(abs(m)))`.
+     * Additionally, this value must be less than `log2(f)` where `f`
+     * is the size of the backend field.
+     *
+     * # Example
+     * Suppose the native field is F_11 and the desired field is F_7
+     * (i.e. m = 7).
+     * ```ignore
+     * // Not legal Rust code!
+     * let x = -2; // This is represented as 9 in F_11.
+     * x.signed_reduce(7) // returns -2 % 7 == 5, *not* 9 % 7 == 2.
+     * ```
+     */
+    fn signed_reduce(
+        lhs: ProgramNode<Self>,
+        m: ProgramNode<NativeField<F>>,
+        remainder_bits: usize,
+    ) -> ProgramNode<Self>;
+}
+
+impl<F: BackendField> Mod<F> for NativeField<F> {
+    fn signed_reduce(
+        lhs: ProgramNode<Self>,
+        m: ProgramNode<NativeField<F>>,
+        remainder_bits: usize,
+    ) -> ProgramNode<Self> {
+        let outputs = invoke_gadget(
+            SignedModulus::new(F::FIELD_MODULUS, remainder_bits),
+            &[lhs.ids[0], m.ids[0]],
+        );
+
+        ProgramNode::new(&[outputs[1]])
     }
 }
 

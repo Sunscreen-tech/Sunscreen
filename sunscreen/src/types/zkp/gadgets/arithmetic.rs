@@ -121,6 +121,40 @@ impl Gadget for SignedModulus {
     }
 }
 
+/**
+ * For value x, generate x^-1 and prove that x*x^-1 = 1.
+ */
+pub struct Inverse;
+
+impl Gadget for Inverse {
+    fn compute_inputs(&self, gadget_inputs: &[BigInt]) -> ZkpResult<Vec<BigInt>> {
+        let x = gadget_inputs[0];
+
+        if x == BigInt::ZERO {
+            return Err(ZkpError::gadget_error("Cannot take inverse of zero."));
+        }
+
+        todo!();
+    }
+
+    fn gadget_input_count(&self) -> usize {
+        1
+    }
+
+    fn hidden_input_count(&self) -> usize {
+        1
+    }
+
+    fn gen_circuit(
+            &self,
+            gadget_inputs: &[petgraph::stable_graph::NodeIndex],
+            hidden_inputs: &[petgraph::stable_graph::NodeIndex],
+        ) -> Vec<petgraph::stable_graph::NodeIndex> {
+        todo!()
+        
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use sunscreen_compiler_macros::zkp_program;
@@ -128,7 +162,7 @@ mod tests {
     use sunscreen_zkp_backend::BackendField;
     use sunscreen_zkp_backend::{bulletproofs::BulletproofsBackend, ZkpBackend};
 
-    use crate::types::zkp::{IntoProgramNode, NativeField};
+    use crate::types::zkp::{NativeField};
     use crate::{self as sunscreen, invoke_gadget, Compiler};
 
     use super::*;

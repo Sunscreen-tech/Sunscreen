@@ -20,7 +20,10 @@ use std::{
 };
 
 pub use crypto_bigint::UInt;
-use crypto_bigint::{subtle::{ConditionallySelectable, Choice}, Limb, U512};
+use crypto_bigint::{
+    subtle::{Choice, ConditionallySelectable},
+    Limb, U512,
+};
 pub use error::*;
 pub use exec::ExecutableZkpProgram;
 pub use jit::{jit_prover, jit_verifier, CompiledZkpProgram, Operation};
@@ -243,24 +246,24 @@ impl BigInt {
     }
 
     /**
-     * Compute the multiplicative inverse of self with respect to F*_p, where 
+     * Compute the multiplicative inverse of self with respect to F*_p, where
      * `p` is prime.
-     * 
+     *
      * # Remarks
      * This algorithm computes self^(p-2) in F*_p. This is the inverse as a
      * consequence of Fermat's Little Theorem. Since x != 0 is a generator of
      * F_p: `x^p-1 = x * x^p-2 = 1.` This means x^p-2 is x^-1.
-     * 
+     *
      * This algorithm runs in constant time.
-     * 
-     * `p` should be prime, but this isn't enforced by the algorithm. 
+     *
+     * `p` should be prime, but this isn't enforced by the algorithm.
      * Incorrect results may occur if `p` is not prime.
-     * 
+     *
      * `p` should be larger than 2, but what in tarnation would you need this
      * algorithm for in a unary or binary field?
-     * 
+     *
      * TODO: Are there better algorithms?
-     * 
+     *
      * # Panics
      * * If self == 0
      * * If p == 0
@@ -281,12 +284,12 @@ impl BigInt {
 
     /**
      * Compute self to the x power in F_p using the fast powers algorithm.
-     * 
+     *
      * # Remarks
      * This algorithm runs in constant time.
-     * 
+     *
      * `x` should be less than `p`.
-     * 
+     *
      * # Panics
      * * If p is zero.
      */
@@ -309,7 +312,7 @@ impl BigInt {
 
             result = result.wrapping_mul(&v).reduce(p).unwrap();
             cur_power = cur_power.wrapping_mul(&cur_power).reduce(p).unwrap();
-        };
+        }
 
         BigInt::from(result)
     }
@@ -458,7 +461,9 @@ mod tests {
         test_case(BigInt::from(7u16), BigInt::from(11u16));
         test_case(BigInt::from(8u16), BigInt::from(11u16));
         test_case(BigInt::from(9u16), BigInt::from(11u16));
-        test_case(BigInt::from(1234u32), <BulletproofsBackend as ZkpBackend>::Field::FIELD_MODULUS);
-
+        test_case(
+            BigInt::from(1234u32),
+            <BulletproofsBackend as ZkpBackend>::Field::FIELD_MODULUS,
+        );
     }
 }

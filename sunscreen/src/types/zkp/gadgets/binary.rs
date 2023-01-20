@@ -12,7 +12,7 @@ pub struct ToUInt {
 impl ToUInt {
     /**
      * Creates a new [`ToUInt`] gadget.
-     * 
+     *
      * # Panics
      * * If n > 512
      */
@@ -34,7 +34,9 @@ impl Gadget for ToUInt {
         }
 
         if self.n > 512 {
-            return Err(ZkpError::gadget_error("Cannot decompose into > 512-bit values."));
+            return Err(ZkpError::gadget_error(
+                "Cannot decompose into > 512-bit values.",
+            ));
         }
 
         if *val > BigInt::ONE.shl_vartime(self.n) {

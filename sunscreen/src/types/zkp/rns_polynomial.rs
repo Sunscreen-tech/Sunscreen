@@ -9,7 +9,7 @@ use crate::{
     zkp::ZkpContextOps,
 };
 
-use super::{AddVar, MulVar, NativeField, NumFieldElements, ToNativeFields, ZkpType, Mod};
+use super::{AddVar, Mod, MulVar, NativeField, NumFieldElements, ToNativeFields, ZkpType};
 
 use crate as sunscreen;
 
@@ -145,44 +145,44 @@ impl<F: BackendField, const N: usize, const R: usize> MulVar for RnsRingPolynomi
 /**
  * For scaling an algebraic structure (e.g. polynomial.)
  */
-pub trait Scale<F: BackendField>
-{
+pub trait Scale<F: BackendField> {
     /**
      * Return a structure scaled by `x`.
      */
     fn scale(self, x: ProgramNode<NativeField<F>>) -> Self;
 }
 
-impl<F: BackendField, const D: usize, const R: usize> Scale<F> for ProgramNode<RnsRingPolynomial<F, D, R>> {
+impl<F: BackendField, const D: usize, const R: usize> Scale<F>
+    for ProgramNode<RnsRingPolynomial<F, D, R>>
+{
     fn scale(self, x: ProgramNode<NativeField<F>>) -> Self {
         let mut output = vec![NodeIndex::from(0); D * R];
 
         with_zkp_ctx(|ctx| {
-            for i in 0..R * D {
-                output[i] = ctx.add_multiplication(self.ids[i], x.ids[0]);
+            for (i, o) in output.iter_mut().enumerate().take(R * D) {
+                *o = ctx.add_multiplication(self.ids[i], x.ids[0]);
             }
-
         });
-        
+
         Self::new(&output)
     }
 }
 
 impl<F: BackendField, const D: usize, const R: usize> Mod<F> for RnsRingPolynomial<F, D, R> {
     fn signed_reduce(
-            lhs: ProgramNode<Self>,
-            m: ProgramNode<NativeField<F>>,
-            remainder_bits: usize,
-        ) -> ProgramNode<Self> {
+        lhs: ProgramNode<Self>,
+        m: ProgramNode<NativeField<F>>,
+        remainder_bits: usize,
+    ) -> ProgramNode<Self> {
         let residues = lhs.residues();
 
         let mut outputs = vec![];
 
-        for i in 0..R {
-            for j in 0..D {
-                outputs.push(NativeField::signed_reduce(residues[i][j], m, remainder_bits).ids[0]);
+        for r in residues.iter().take(R) {
+            for j in r {
+                outputs.push(NativeField::signed_reduce(*j, m, remainder_bits).ids[0]);
             }
-        };
+        }
 
         ProgramNode::new(&outputs)
     }
@@ -317,7 +317,7 @@ mod tests {
             #[constant] b: NativeField<F>,
         ) {
             let c = a.scale(b);
-            
+
             let expected = [
                 [2u8, 4u8, 6u8, 8u8, 10u8, 12u8, 14u8, 16u8],
                 [18u8, 20u8, 22u8, 24u8, 26u8, 28u8, 30u8, 32],
@@ -354,10 +354,7 @@ mod tests {
 
         let b = BpField::from(2u8);
 
-        let const_args: Vec<ZkpProgramInput> = vec![
-            a.into(),
-            b.into()
-        ];
+        let const_args: Vec<ZkpProgramInput> = vec![a.into(), b.into()];
 
         let proof = runtime
             .prove(program, const_args.clone(), vec![], vec![])

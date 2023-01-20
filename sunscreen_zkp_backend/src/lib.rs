@@ -161,7 +161,7 @@ pub struct BigInt(
     /**
      * The wrapped value.
      */
-    pub U512
+    pub U512,
 );
 
 impl<T> std::convert::From<T> for BigInt

@@ -269,7 +269,7 @@ fn ark_bigint_to_native_field<B: ZkpBackend, F: MontConfig<N>, const N: usize>(
         out.0.limbs_mut()[i] = crypto_bigint::Limb(*l);
     }
 
-    NativeField::from(ZkpBigInt::from(out))
+    NativeField::from(out)
 }
 
 type BpBackendField = <BulletproofsBackend as ZkpBackend>::Field;
@@ -334,7 +334,7 @@ pub fn prove_public_encryption(
     let const_args = public_bfv_proof_params(&ciphertext, public_key);
 
     runtime
-        .prove(&prog, const_args, vec![], private_args)
+        .prove(prog, const_args, vec![], private_args)
         .unwrap()
 }
 
@@ -350,7 +350,7 @@ pub fn verify_public_encryption(
 
     let program = app.get_zkp_program(prove_enc).unwrap();
 
-    runtime.verify(&program, proof, const_args, vec![]).unwrap();
+    runtime.verify(program, proof, const_args, vec![]).unwrap();
 }
 
 #[test]

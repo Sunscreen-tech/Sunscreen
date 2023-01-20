@@ -23,7 +23,7 @@ pub enum ProgramTypeError {
 
 /**
  * Given an input type T, returns
- * * ProgramNode<T> when T is a Path
+ * * `ProgramNode<T>` when T is a Path
  * * [map_input_type(T); N] when T is Array
  */
 pub fn lift_type(arg_type: &Type) -> Result<Type, ProgramTypeError> {

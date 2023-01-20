@@ -147,8 +147,11 @@ version = "0.1.0"
 dependencies = [
  "ark-ff",
  "ark-poly",
+ "crypto-bigint",
  "rand",
  "rand_distr",
+ "sunscreen",
+ "sunscreen_zkp_backend",
 ]
 
 [[package]]

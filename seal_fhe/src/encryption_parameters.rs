@@ -56,7 +56,7 @@ impl SchemeType {
  * data lookup and input validity checks. In modulus switching the user can use
  * the ParmsId to keep track of the chain of encryption parameters. The ParmsId is
  * not exposed in the public API of EncryptionParameters, but can be accessed
- * through the <see cref="SEALContext.ContextData" /> class once the SEALContext
+ * through the SEALContext.ContextData" class once the SEALContext
  * has been created.
  *
  * Choosing inappropriate encryption parameters may lead to an encryption scheme

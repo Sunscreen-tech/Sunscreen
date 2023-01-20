@@ -83,7 +83,7 @@ pub use sunscreen_runtime::{
     CallSignature, Ciphertext, CompiledFheProgram, Error as RuntimeError, FheProgramInput,
     FheProgramInputTrait, FheProgramMetadata, FheRuntime, FheZkpRuntime, InnerCiphertext,
     InnerPlaintext, Params, Plaintext, PrivateKey, PublicKey, RequiredKeys, Runtime, WithContext,
-    ZkpRuntime,
+    ZkpProgramInput, ZkpRuntime,
 };
 pub use sunscreen_zkp_backend::{BackendField, Error as ZkpError, Result as ZkpResult, ZkpBackend};
 pub use zkp::ZkpProgramFn;

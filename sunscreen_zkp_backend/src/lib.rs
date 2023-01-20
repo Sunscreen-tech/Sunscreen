@@ -157,7 +157,12 @@ pub enum Proof {
  * A large integer representing a backend-agnostic
  * field element.
  */
-pub struct BigInt(U512);
+pub struct BigInt(
+    /**
+     * The wrapped value.
+     */
+    pub U512,
+);
 
 impl<T> std::convert::From<T> for BigInt
 where

@@ -196,7 +196,7 @@ pub trait ConstrainEq<Rhs> {
 
 impl<T, U, V> ConstrainEq<T> for U
 where
-    T: ZkpType + Sized + IntoProgramNode<Output = V>,
+    T: Sized + IntoProgramNode<Output = V>,
     U: IntoProgramNode<Output = V> + Sized,
     V: ZkpType + Sized + ConstrainEqVarVar,
 {

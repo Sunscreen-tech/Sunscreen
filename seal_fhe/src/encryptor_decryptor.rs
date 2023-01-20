@@ -148,9 +148,9 @@ impl Decryptor {
     /**
      * Creates a Decryptor instance initialized with the specified SEALContext
      * and secret key.
-     * </summary>
-     * <param name="context">The SEALContext</param>
-     * <param name="secretKey">The secret key</param>
+     *
+     * The SEALContext
+     * The secret key
      */
     pub fn new(ctx: &Context, secret_key: &SecretKey) -> Result<Self> {
         let mut handle = null_mut();

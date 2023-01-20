@@ -12,6 +12,8 @@ mod run;
 mod runtime;
 mod serialization;
 
+use std::sync::Arc;
+
 pub use crate::error::*;
 pub use crate::keys::*;
 pub use crate::metadata::*;
@@ -203,17 +205,18 @@ pub enum FheProgramInput {
  */
 pub trait ZkpProgramInputTrait: ToNativeFields + TypeNameInstance {}
 
+#[derive(Clone)]
 /**
  * An input argument to a ZKP program.
  */
-pub struct ZkpProgramInput(pub Box<dyn ZkpProgramInputTrait>);
+pub struct ZkpProgramInput(pub Arc<dyn ZkpProgramInputTrait>);
 
 impl<T> From<T> for ZkpProgramInput
 where
     T: ZkpProgramInputTrait + 'static,
 {
     fn from(val: T) -> Self {
-        Self(Box::new(val))
+        Self(Arc::new(val))
     }
 }
 

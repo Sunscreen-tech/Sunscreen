@@ -232,7 +232,7 @@ fn prove_enc<F: BackendField>(
     // e_* coefficients are gaussian distributed from -19 to 19.
     // If we add 18 to these values, we get a distribution from
     // [0, 36], which we can range check.
-    //let chi_offset = NativeField::from(19).into_program_node();
+    let chi_offset = NativeField::from(19).into_program_node();
 
     for i in 0..1 {
         for j in 0..POLY_DEGREE {
@@ -240,8 +240,8 @@ fn prove_enc<F: BackendField>(
             // e_1_* and e_2_* in [0, 32)
             u.residues()[i][j].to_unsigned::<1>();
             m.residues()[i][j].to_unsigned::<LOG_PLAIN_MODULUS>();
-            //(e_1.residues()[i][j] + chi_offset).to_unsigned::<6>();
-            //(e_2.residues()[i][j] + chi_offset).to_unsigned::<6>();
+            (e_1.residues()[i][j] + chi_offset).to_unsigned::<27>();
+            (e_2.residues()[i][j] + chi_offset).to_unsigned::<27>();
 
             c_0.residues()[i][j].constrain_eq(expected_c_0.residues()[i][j]);
             c_1.residues()[i][j].constrain_eq(expected_c_1.residues()[i][j]);

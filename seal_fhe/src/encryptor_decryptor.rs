@@ -148,7 +148,7 @@ impl Decryptor {
     /**
      * Creates a Decryptor instance initialized with the specified SEALContext
      * and secret key.
-     * 
+     *
      * The SEALContext
      * The secret key
      */

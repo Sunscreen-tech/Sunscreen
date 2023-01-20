@@ -360,8 +360,6 @@ mod tests {
             .prove(program, const_args.clone(), vec![], vec![])
             .unwrap();
 
-        runtime
-            .verify(program, &proof, const_args, vec![])
-            .unwrap();
+        runtime.verify(program, &proof, const_args, vec![]).unwrap();
     }
 }

@@ -157,11 +157,11 @@ impl KeyGenerator {
 
     /**
      * Generates Galois keys and stores the result in destination.
-     * 
+     *
      * # Remarks
      * Generates Galois keys and stores the result in destination. Every time
      * this function is called, new Galois keys will be generated.
-     * 
+     *
      * This function creates logarithmically many (in degree of the polynomial
      * modulus) Galois keys that is sufficient to apply any Galois automorphism
      * (e.g. rotations) on encrypted data. Most users will want to use this

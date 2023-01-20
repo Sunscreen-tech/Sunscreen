@@ -24,9 +24,11 @@ impl SignedModulus {
      *
      * # Panics
      * * When `field_modulus == 0`
+     * * When max_remainder_bits > 512
      */
     pub fn new(field_modulus: BigInt, max_remainder_bits: usize) -> Self {
         assert_ne!(field_modulus, BigInt::ZERO);
+        assert!(max_remainder_bits <= 512);
 
         Self {
             field_modulus,

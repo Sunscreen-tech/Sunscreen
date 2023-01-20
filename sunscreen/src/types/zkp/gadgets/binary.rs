@@ -10,7 +10,17 @@ pub struct ToUInt {
 }
 
 impl ToUInt {
+    /**
+     * Creates a new [`ToUInt`] gadget.
+     * 
+     * # Panics
+     * * If n > 512
+     */
     pub fn new(n: usize) -> Self {
+        if n > 512 {
+            panic!("Cannot decompose into > 512 bit values.");
+        }
+
         Self { n }
     }
 }
@@ -21,6 +31,10 @@ impl Gadget for ToUInt {
 
         if self.n == 0 {
             return Err(ZkpError::gadget_error("Cannot create 0-bit uint."));
+        }
+
+        if self.n > 512 {
+            return Err(ZkpError::gadget_error("Cannot decompose into > 512-bit values."));
         }
 
         if *val > BigInt::ONE.shl_vartime(self.n) {

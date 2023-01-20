@@ -1,13 +1,14 @@
 // TODO: Remove
 #![allow(unused)]
 
-use ark_ff::{BigInt, BigInteger, Fp, FpConfig, MontBackend, MontConfig};
+use ark_ff::{BigInt, BigInteger, Fp, FpConfig, MontBackend, MontConfig, Field, PrimeField};
 use ark_poly::univariate::DensePolynomial;
-use sunscreen::{zkp_program, types::zkp::{RnsRingPolynomial, NativeField, Scale, Mod, ToResidues}, BackendField};
+use sunscreen::{zkp_program, types::zkp::{RnsRingPolynomial, NativeField, Scale, Mod, ToResidues, ToBinary}, BackendField, Runtime, ZkpRuntime, Application, ZkpApplication, Compiler, ZkpBackend, ZkpProgramInput};
+use sunscreen_zkp_backend::{bulletproofs::BulletproofsBackend, Proof, BigInt as ZkpBigInt};
 
 use crate::poly_ring::PolyRing;
 
-const POLY_DEGREE: usize = 16;
+const POLY_DEGREE: usize = 2;
 
 #[derive(MontConfig)]
 #[modulus = "132120577"]
@@ -23,6 +24,7 @@ pub type Noise = (Poly, Poly);
 
 const CIPHER_MODULUS: u64 = 132120577;
 const PLAIN_MODULUS: u64 = 1024;
+const LOG_PLAIN_MODULUS: usize = 10;
 
 pub fn gen_keys() -> (PublicKey, PrivateKey) {
     let s = PolyRing::rand_binary(POLY_DEGREE);
@@ -204,36 +206,131 @@ type BfvPoly<F> = RnsRingPolynomial<F, POLY_DEGREE, 1>;
         #[constant] delta: NativeField<F>
     ) {
         let q = NativeField::<F>::from(CIPHER_MODULUS).into_program_node();
-        let log_q = CIPHER_MODULUS.next_power_of_two() as usize;
 
-        let c_0 = m.scale(delta) + p_0 * u.clone() + e_1;
+        fn log2(x: usize) -> usize {
+            let log2 = 8 * std::mem::size_of::<usize>() - x.leading_zeros() as usize;
+
+            if x.is_power_of_two() {
+                log2
+            } else {
+                log2 + 1
+            }
+        }
+
+        let log_q = log2(CIPHER_MODULUS as usize);
+
+        let c_0 = m.clone().scale(delta) + p_0 * u.clone() + e_1.clone();
         let c_0 = RnsRingPolynomial::signed_reduce(c_0, q, log_q);
 
-        let c_1 = p_1 * u + e_2;
+        let c_1 = p_1 * u.clone() + e_2.clone();
         let c_1 = RnsRingPolynomial::signed_reduce(c_1, q, log_q);
 
-        let c_0_residues = c_0.residues();
-        let c_1_residues = c_1.residues();
-
-        let expected_c_0_residues = expected_c_0.residues();
-        let expected_c_1_residues = expected_c_1.residues();
+        // e_* coefficients are gaussian distributed from -19 to 19. 
+        // If we add 18 to these values, we get a distribution from
+        // [0, 36], which we can range check.
+        let chi_offset = NativeField::from(19).into_program_node();
 
         for i in 0..1 {
             for j in 0..POLY_DEGREE {
-                c_0_residues[i][j].constrain_eq(expected_c_0_residues[i][j]);
-                c_1_residues[i][j].constrain_eq(expected_c_1_residues[i][j]);
+
+                // Check that u_* in [0, 2), m_* in [0, P),
+                // e_1_* and e_2_* in [0, 32)
+                u.residues()[i][j].to_unsigned::<1>();
+                m.residues()[i][j].to_unsigned::<LOG_PLAIN_MODULUS>();
+                (e_1.residues()[i][j] + chi_offset).to_unsigned::<6>();
+                (e_2.residues()[i][j] + chi_offset).to_unsigned::<6>();
+                
+
+                c_0.residues()[i][j].constrain_eq(expected_c_0.residues()[i][j]);
+                c_1.residues()[i][j].constrain_eq(expected_c_1.residues()[i][j]);
             }
         }
     }
 
-pub fn setup_runtime() {
-
+pub fn compile_proof() -> ZkpApplication {
+    Compiler::new()
+        .zkp_backend::<BulletproofsBackend>()
+        .zkp_program(prove_enc)
+        .compile()
+        .unwrap()
 }
 
-pub fn prove_public_encryption() {
-    
+fn ark_bigint_to_native_field<B: ZkpBackend, F: MontConfig<N>, const N: usize>(x: Fp<MontBackend<F, N>, N>) -> NativeField<B::Field> {
+    assert!(N <= 8);
 
-    
+    let x = x.into_bigint();
+    let mut out = ZkpBigInt::ZERO;
+
+    for (i, l) in x.0.iter().enumerate() {
+        out.0.limbs_mut()[i] = crypto_bigint::Limb(*l);
+    };
+
+    NativeField::from(ZkpBigInt::from(out))
+}
+
+pub fn prove_public_encryption(
+    app: &ZkpApplication,
+    message: &Poly,
+    encryption_data: &(Ciphertext, Noise, Poly),
+    public_key: &PublicKey,
+) -> Proof {
+    let runtime = Runtime::new_zkp(&BulletproofsBackend::new()).unwrap();
+
+    type BackendField = <BulletproofsBackend as ZkpBackend>::Field;
+    type BpField = NativeField<BackendField>;
+
+    let prog = app.get_zkp_program(prove_enc).unwrap();
+
+    let ((c_0, c_1), (e_1, e_2), u) = encryption_data.clone();
+
+    let (p_0, p_1) = public_key.clone();
+
+    fn into_rns_poly<F: MontConfig<N>, const N: usize>(x: PolyRing<F, N>) -> RnsRingPolynomial<BackendField, POLY_DEGREE, 1> {
+        let mut coeffs = x.poly.iter().map(|x| {
+            ark_bigint_to_native_field::<BulletproofsBackend, _, N>(*x)
+        }).collect::<Vec<BpField>>();
+        
+        coeffs.resize(POLY_DEGREE, BpField::from(0u8));
+
+        let coeffs: [BpField; POLY_DEGREE] = coeffs.try_into().unwrap();
+
+        RnsRingPolynomial::from([coeffs])
+    }
+
+    let m = into_rns_poly(message.clone());
+
+    let c_0 = into_rns_poly(c_0);
+    let c_1 = into_rns_poly(c_1);
+    let e_1 = into_rns_poly(e_1);
+    let e_2 = into_rns_poly(e_2);
+    let u = into_rns_poly(u);
+
+    dbg!(&e_1);
+    dbg!(&e_2);
+
+    let p_0 = into_rns_poly(p_0);
+    let p_1 = into_rns_poly(p_1);
+
+    let delta = BpField::from(CIPHER_MODULUS / PLAIN_MODULUS);
+
+    let const_args: Vec<ZkpProgramInput> = vec![
+        c_0.into(),
+        c_1.into(),
+        p_0.into(),
+        p_1.into(),
+        delta.into()
+    ];
+
+    let private_args: Vec<ZkpProgramInput> = vec![
+        m.into(),
+        e_1.into(),
+        e_2.into(),
+        u.into()
+    ];
+
+    runtime
+        .prove(&prog, const_args, vec![], private_args)
+        .unwrap()
 }
 
 #[test]
@@ -316,6 +413,25 @@ fn can_encrypt_decrypt() {
     let m = decrypt(&private, &ct);
 
     assert_eq!(m.poly, message.poly);
+}
+
+#[test]
+fn can_prove_encryption() {
+    let (public, private) = gen_keys();
+
+    let mut message = Poly::zero();
+
+    for i in 0..POLY_DEGREE {
+        message.poly.coeffs.push(Fp::from(i as u32));
+    }
+
+    let res = encrypt(&public, &message, POLY_DEGREE);
+
+    let app = compile_proof();
+
+    let proof = prove_public_encryption(&app, &message, &res, &public);
+
+    panic!();
 }
 
 #[test]

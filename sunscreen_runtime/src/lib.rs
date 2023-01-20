@@ -220,6 +220,8 @@ where
     }
 }
 
+impl<T: ZkpProgramInputTrait + TypeName, const N: usize> ZkpProgramInputTrait for [T; N] {}
+
 impl TypeNameInstance for FheProgramInput {
     fn type_name_instance(&self) -> Type {
         match self {
@@ -265,6 +267,12 @@ pub trait ToNativeFields {
      * The length of the returned vector must equal NUM_NATIVE_FIELD_ELEMENTS.
      */
     fn to_native_fields(&self) -> Vec<BigInt>;
+}
+
+impl<T: ToNativeFields, const N: usize> ToNativeFields for [T; N] {
+    fn to_native_fields(&self) -> Vec<BigInt> {
+        self.iter().map(|x| x.to_native_fields()).flatten().collect()
+    }
 }
 
 /**

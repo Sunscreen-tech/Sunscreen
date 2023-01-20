@@ -52,6 +52,15 @@ impl<F: BackendField> NativeField<F> {
     }
 }
 
+impl<F: BackendField> From<BigInt> for NativeField<F> {
+    fn from(val: BigInt) -> Self {
+        Self {
+            val,
+            _phantom: PhantomData
+        }
+    }
+}
+
 impl<F: BackendField> From<u8> for NativeField<F> {
     fn from(x: u8) -> Self {
         (u64::from(x)).into()
@@ -244,6 +253,9 @@ where
      * Additionally, this value must be less than `log2(f)` where `f`
      * is the size of the backend field.
      *
+     * # Panics
+     * Implementors should panic if remainder_bits > 512.
+     * 
      * # Example
      * Suppose the native field is F_11 and the desired field is F_7
      * (i.e. m = 7).

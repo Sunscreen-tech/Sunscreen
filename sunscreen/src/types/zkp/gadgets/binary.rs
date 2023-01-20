@@ -33,12 +33,6 @@ impl Gadget for ToUInt {
             return Err(ZkpError::gadget_error("Cannot create 0-bit uint."));
         }
 
-        if self.n > 512 {
-            return Err(ZkpError::gadget_error(
-                "Cannot decompose into > 512-bit values.",
-            ));
-        }
-
         if *val > BigInt::ONE.shl_vartime(self.n) {
             return Err(ZkpError::gadget_error(&format!(
                 "Value too large for {} bit unsigned int.",

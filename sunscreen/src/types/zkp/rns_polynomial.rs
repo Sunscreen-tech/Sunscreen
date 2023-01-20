@@ -176,7 +176,7 @@ impl<F: BackendField, const D: usize, const R: usize> Mod<F> for RnsRingPolynomi
     ) -> ProgramNode<Self> {
         let residues = lhs.residues();
 
-        let mut outputs = vec![];
+        let mut outputs = Vec::with_capacity(D);
 
         for r in residues.iter().take(R) {
             for j in r {
@@ -312,7 +312,7 @@ mod tests {
     #[test]
     fn can_scale_polynomial() {
         #[zkp_program(backend = "bulletproofs")]
-        fn add_poly<F: BackendField>(
+        fn scale_poly<F: BackendField>(
             #[constant] a: RnsRingPolynomial<F, 8, 2>,
             #[constant] b: NativeField<F>,
         ) {
@@ -334,13 +334,13 @@ mod tests {
 
         let app = Compiler::new()
             .zkp_backend::<BulletproofsBackend>()
-            .zkp_program(add_poly)
+            .zkp_program(scale_poly)
             .compile()
             .unwrap();
 
         let runtime = Runtime::new_zkp(&BulletproofsBackend::new()).unwrap();
 
-        let program = app.get_zkp_program(add_poly).unwrap();
+        let program = app.get_zkp_program(scale_poly).unwrap();
 
         type BPRnsRingPolynomial<const N: usize, const R: usize> =
             RnsRingPolynomial<<BulletproofsBackend as ZkpBackend>::Field, N, R>;

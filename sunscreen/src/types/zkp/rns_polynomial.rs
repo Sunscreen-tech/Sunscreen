@@ -14,7 +14,7 @@ use super::{AddVar, Mod, MulVar, NativeField, NumFieldElements, ToNativeFields, 
 use crate as sunscreen;
 
 /**
- * A polynomial in Z_q[X]/(X^N+1), up to degree N-1. `q` is the
+ * A polynomial in `Z_q[X]/(X^N+1)`, up to degree N-1. `q` is the
  * coefficient modulus and is the product of R factors. Each coefficient is decomposed
  * into R residues (i.e. RNS form).
  *

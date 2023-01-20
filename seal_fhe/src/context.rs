@@ -54,7 +54,7 @@ impl Context {
      * Creates an instance of SEALContext and performs several pre-computations
      * on the given EncryptionParameters.
      *
-     * * `params` - The encryption parameters.</param>
+     * * `params` - The encryption parameters.
      * * `expand_mod_chain` - Determines whether the modulus switching chain
      * should be created.
      * * `security_level` - Determines whether a specific security level should be

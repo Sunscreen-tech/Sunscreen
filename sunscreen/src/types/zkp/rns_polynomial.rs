@@ -361,7 +361,7 @@ mod tests {
             .unwrap();
 
         runtime
-            .verify(program, &proof, const_args.clone(), vec![])
+            .verify(program, &proof, const_args, vec![])
             .unwrap();
     }
 }

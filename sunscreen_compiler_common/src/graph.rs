@@ -74,9 +74,9 @@ where
     E: Clone,
 {
     /**
-     * Apply the transformations.
+     * Apply the transformations and return any added nodes.
      */
-    fn apply(&mut self, graph: &mut StableGraph<N, E>);
+    fn apply(&mut self, graph: &mut StableGraph<N, E>) -> Vec<NodeIndex>;
 }
 
 // Make a surrogate implementation of the trait for traversal functions
@@ -86,7 +86,9 @@ where
     N: Clone,
     E: Clone,
 {
-    fn apply(&mut self, _graph: &mut StableGraph<N, E>) {}
+    fn apply(&mut self, _graph: &mut StableGraph<N, E>) -> Vec<NodeIndex> {
+        vec![]
+    }
 }
 
 /**
@@ -226,7 +228,7 @@ where
         let mut transforms = callback(GraphQuery(graph), n)?;
 
         // Apply the transforms the callback produced
-        transforms.apply(graph);
+        let added_nodes = transforms.apply(graph);
 
         let node_ready = |n: NodeIndex| {
             graph
@@ -252,13 +254,9 @@ where
             }
         }
 
-        // Iterate through any sources/sinks the callback may have added.
-        let sources = graph
-            .node_identifiers()
-            .filter(|&x| graph.neighbors_directed(x, prev_direction).next().is_none());
-
-        for i in sources {
-            if !ready.contains(&i) {
+        // Check for and sources/sinks the callback may have added.
+        for i in added_nodes {
+            if graph.neighbors_directed(i, prev_direction).next().is_none() {
                 ready.insert(i);
                 ready_nodes.push(i);
             }

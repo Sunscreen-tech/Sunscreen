@@ -145,9 +145,28 @@ impl BulletproofsCircuit {
         CS: ConstraintSystem,
         I: Fn(usize) -> Option<Scalar>,
     {
+        let mut unprocessed_child_count = graph
+            .node_indices()
+            .map(|n| graph.neighbors(n).count())
+            .collect::<Vec<usize>>();
+
         // The graph won't actually be mutated.
         forward_traverse(&graph.0, |query, idx| {
             let node = query.get_node(idx).unwrap();
+
+            // Each linear combination object in Bulletproofs has a Vec
+            // in it and thus ain't cheap to store. As such, we reference
+            // count the output of a given node when all its children have
+            // been processed.
+            let ref_count = |nodes: &mut Vec<Option<Node>>,
+                             idx: NodeIndex,
+                             unprocessed_child_count: &mut Vec<usize>| {
+                unprocessed_child_count[idx.index()] -= 1;
+
+                if unprocessed_child_count[idx.index()] == 0 {
+                    nodes[idx.index()] = None;
+                }
+            };
 
             let dependency_not_found_msg =
                 |x: NodeIndex| format!("traversal error: dependency {} not found", x.index());
@@ -170,56 +189,64 @@ impl BulletproofsCircuit {
                     self.nodes[idx.index()] = Some(input.into());
                 }
                 Operation::Add => {
-                    let (left, right) = query.get_binary_operands(idx)?;
+                    let (left_idx, right_idx) = query.get_binary_operands(idx)?;
 
-                    let left = self.nodes[left.index()]
+                    let left = self.nodes[left_idx.index()]
                         .as_ref()
-                        .unwrap_or_else(|| panic!("{}", dependency_not_found_msg(left)))
+                        .unwrap_or_else(|| panic!("{}", dependency_not_found_msg(left_idx)))
                         .clone();
 
-                    let right = self.nodes[right.index()]
+                    let right = self.nodes[right_idx.index()]
                         .as_ref()
-                        .unwrap_or_else(|| panic!("{}", dependency_not_found_msg(right)))
+                        .unwrap_or_else(|| panic!("{}", dependency_not_found_msg(right_idx)))
                         .clone();
 
                     self.nodes[idx.index()] = Some(left + right);
+
+                    ref_count(&mut self.nodes, left_idx, &mut unprocessed_child_count);
+                    ref_count(&mut self.nodes, right_idx, &mut unprocessed_child_count);
                 }
                 Operation::Sub => {
-                    let (left, right) = query.get_binary_operands(idx)?;
+                    let (left_idx, right_idx) = query.get_binary_operands(idx)?;
 
-                    let left = self.nodes[left.index()]
+                    let left = self.nodes[left_idx.index()]
                         .as_ref()
-                        .unwrap_or_else(|| panic!("{}", dependency_not_found_msg(left)))
+                        .unwrap_or_else(|| panic!("{}", dependency_not_found_msg(left_idx)))
                         .clone();
 
-                    let right = self.nodes[right.index()]
+                    let right = self.nodes[right_idx.index()]
                         .as_ref()
-                        .unwrap_or_else(|| panic!("{}", dependency_not_found_msg(right)))
+                        .unwrap_or_else(|| panic!("{}", dependency_not_found_msg(right_idx)))
                         .clone();
 
                     self.nodes[idx.index()] = Some(left - right);
+
+                    ref_count(&mut self.nodes, left_idx, &mut unprocessed_child_count);
+                    ref_count(&mut self.nodes, right_idx, &mut unprocessed_child_count);
                 }
                 Operation::Neg => {
-                    let left = query.get_unary_operand(idx)?;
+                    let left_idx = query.get_unary_operand(idx)?;
 
-                    let left = self.nodes[left.index()]
+                    let left = self.nodes[left_idx.index()]
                         .as_ref()
-                        .unwrap_or_else(|| panic!("{}", dependency_not_found_msg(left)))
+                        .unwrap_or_else(|| panic!("{}", dependency_not_found_msg(left_idx)))
                         .clone();
 
                     self.nodes[idx.index()] = Some(-left);
+
+                    ref_count(&mut self.nodes, left_idx, &mut unprocessed_child_count);
                 }
                 Operation::Mul => {
-                    let (left, right) = query.get_binary_operands(idx)?;
+                    let (left_idx, right_idx) = query.get_binary_operands(idx)?;
 
-                    let left = self.nodes[left.index()]
+                    let left = self.nodes[left_idx.index()]
                         .as_ref()
-                        .unwrap_or_else(|| panic!("{}", dependency_not_found_msg(left)))
+                        .unwrap_or_else(|| panic!("{}", dependency_not_found_msg(left_idx)))
                         .clone();
 
-                    let right = self.nodes[right.index()]
+                    let right = self.nodes[right_idx.index()]
                         .as_ref()
-                        .unwrap_or_else(|| panic!("{}", dependency_not_found_msg(right)))
+                        .unwrap_or_else(|| panic!("{}", dependency_not_found_msg(right_idx)))
                         .clone();
 
                     if let (Node::LinearCombination(x), Node::LinearCombination(y)) =
@@ -232,16 +259,19 @@ impl BulletproofsCircuit {
                     } else {
                         self.nodes[idx.index()] = Some(left * right);
                     }
+
+                    ref_count(&mut self.nodes, left_idx, &mut unprocessed_child_count);
+                    ref_count(&mut self.nodes, right_idx, &mut unprocessed_child_count);
                 }
                 Operation::Constraint(x) => {
                     let operands = query.get_unordered_operands(idx)?;
 
                     let x: Scalar = x.try_into()?;
 
-                    for o in operands {
-                        let o = self.nodes[o.index()]
+                    for o_idx in operands {
+                        let o = self.nodes[o_idx.index()]
                             .as_ref()
-                            .unwrap_or_else(|| panic!("{}", dependency_not_found_msg(o)))
+                            .unwrap_or_else(|| panic!("{}", dependency_not_found_msg(o_idx)))
                             .clone();
 
                         match o {
@@ -260,6 +290,8 @@ impl BulletproofsCircuit {
                                 }
                             }
                         }
+
+                        ref_count(&mut self.nodes, o_idx, &mut unprocessed_child_count);
                     }
                 }
                 Operation::Constant(x) => {

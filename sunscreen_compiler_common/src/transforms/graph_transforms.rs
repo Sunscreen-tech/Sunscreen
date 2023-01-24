@@ -39,6 +39,7 @@ impl From<DeferredIndex> for TransformNodeIndex {
     }
 }
 
+#[derive(Clone)]
 /**
  * A request to transform the graph as appropriate.
  */
@@ -71,6 +72,7 @@ pub enum Transform<N, E> {
     RemoveEdge(TransformNodeIndex, TransformNodeIndex),
 }
 
+#[derive(Clone)]
 /**
  * A datastructure for holding a sequence of graph transformations.
  */
@@ -132,7 +134,7 @@ where
     N: Clone,
     E: Clone,
 {
-    fn apply(&mut self, graph: &mut petgraph::stable_graph::StableGraph<N, E>) -> Vec<NodeIndex> {
+    fn apply(mut self, graph: &mut petgraph::stable_graph::StableGraph<N, E>) -> Vec<NodeIndex> {
         // Despite appearances, this is not redundant with
         // `self.inserted_node_ids`. `added_nodes` is a list
         // of added nodes, while latter is indexable by the

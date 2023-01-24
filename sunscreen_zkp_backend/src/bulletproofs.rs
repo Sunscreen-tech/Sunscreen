@@ -145,10 +145,11 @@ impl BulletproofsCircuit {
         CS: ConstraintSystem,
         I: Fn(usize) -> Option<Scalar>,
     {
-        let mut unprocessed_child_count = graph.node_indices().map(|n| {
-            graph.neighbors(n).count()
-        }).collect::<Vec<usize>>();
-        
+        let mut unprocessed_child_count = graph
+            .node_indices()
+            .map(|n| graph.neighbors(n).count())
+            .collect::<Vec<usize>>();
+
         // The graph won't actually be mutated.
         forward_traverse(&graph.0, |query, idx| {
             let node = query.get_node(idx).unwrap();
@@ -157,7 +158,9 @@ impl BulletproofsCircuit {
             // in it and thus ain't cheap to store. As such, we reference
             // count the output of a given node when all its children have
             // been processed.
-            let ref_count = |nodes: &mut Vec<Option<Node>>, idx: NodeIndex, unprocessed_child_count: &mut Vec<usize>| {
+            let ref_count = |nodes: &mut Vec<Option<Node>>,
+                             idx: NodeIndex,
+                             unprocessed_child_count: &mut Vec<usize>| {
                 unprocessed_child_count[idx.index()] -= 1;
 
                 if unprocessed_child_count[idx.index()] == 0 {
@@ -202,7 +205,6 @@ impl BulletproofsCircuit {
 
                     ref_count(&mut self.nodes, left_idx, &mut unprocessed_child_count);
                     ref_count(&mut self.nodes, right_idx, &mut unprocessed_child_count);
-
                 }
                 Operation::Sub => {
                     let (left_idx, right_idx) = query.get_binary_operands(idx)?;
@@ -233,7 +235,6 @@ impl BulletproofsCircuit {
                     self.nodes[idx.index()] = Some(-left);
 
                     ref_count(&mut self.nodes, left_idx, &mut unprocessed_child_count);
-
                 }
                 Operation::Mul => {
                     let (left_idx, right_idx) = query.get_binary_operands(idx)?;

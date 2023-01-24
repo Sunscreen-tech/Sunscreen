@@ -75,8 +75,11 @@ where
 {
     /**
      * Apply the transformations and return any added nodes.
+     *
+     * # Remarks
+     * This consumes the transform list.
      */
-    fn apply(&mut self, graph: &mut StableGraph<N, E>) -> Vec<NodeIndex>;
+    fn apply(self, graph: &mut StableGraph<N, E>) -> Vec<NodeIndex>;
 }
 
 // Make a surrogate implementation of the trait for traversal functions
@@ -86,7 +89,7 @@ where
     N: Clone,
     E: Clone,
 {
-    fn apply(&mut self, _graph: &mut StableGraph<N, E>) -> Vec<NodeIndex> {
+    fn apply(self, _graph: &mut StableGraph<N, E>) -> Vec<NodeIndex> {
         vec![]
     }
 }
@@ -225,7 +228,7 @@ where
         // Remember the next nodes from the current node in case it gets deleted.
         let next_nodes: Vec<NodeIndex> = graph.neighbors_directed(n, next_direction).collect();
 
-        let mut transforms = callback(GraphQuery(graph), n)?;
+        let transforms = callback(GraphQuery(graph), n)?;
 
         // Apply the transforms the callback produced
         let added_nodes = transforms.apply(graph);
@@ -757,9 +760,11 @@ mod tests {
                     EdgeInfo::Right,
                 ));
 
+                let ret = transforms.clone();
+
                 transforms.apply(&mut create_simple_dag().graph.0);
 
-                Ok::<_, Infallible>(transforms)
+                Ok::<_, Infallible>(ret)
             } else {
                 Ok::<_, Infallible>(GraphTransforms::default())
             }

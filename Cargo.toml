@@ -25,3 +25,7 @@ exclude = [
     "mdBook",
     "rust-playground"
 ]
+
+[profile.release]
+split-debuginfo="packed"
+debug=true

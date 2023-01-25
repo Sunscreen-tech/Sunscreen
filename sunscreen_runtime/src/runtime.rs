@@ -1,4 +1,5 @@
 use std::marker::PhantomData;
+use std::time::Instant;
 
 use crate::error::*;
 use crate::metadata::*;
@@ -9,6 +10,7 @@ use crate::{
     SealPlaintext, TryFromPlaintext, TryIntoPlaintext, TypeNameInstance,
 };
 
+use log::trace;
 use sunscreen_fhe_program::FheProgramTrait;
 use sunscreen_fhe_program::SchemeType;
 
@@ -459,10 +461,18 @@ where
 
         let backend = &self.zkp_backend;
 
+        trace!("Starting JIT (prover)...");
+
+        let now = Instant::now();
+
         let prog =
             backend.jit_prover(program, &constant_inputs, &public_inputs, &private_inputs)?;
 
+        trace!("Prover JIT time {}s", now.elapsed().as_secs_f64());
+
         let inputs = [public_inputs, private_inputs].concat();
+
+        trace!("Starting backend prove...");
 
         Ok(backend.prove(&prog, &inputs)?)
     }
@@ -490,7 +500,15 @@ where
             .collect::<Vec<BigInt>>();
 
         let backend = &self.zkp_backend;
+
+        trace!("Starting JIT (verifier)");
+
+        let now = Instant::now();
+
         let prog = backend.jit_verifier(program, &constant_inputs, &public_inputs)?;
+
+        trace!("Verifier JIT time {}s", now.elapsed().as_secs_f64());
+        trace!("Starting backend verify...");
 
         Ok(backend.verify(&prog, proof)?)
     }

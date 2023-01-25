@@ -12,7 +12,7 @@ use sunscreen_zkp_backend::{bulletproofs::BulletproofsBackend, BigInt as ZkpBigI
 
 use crate::poly_ring::PolyRing;
 
-const POLY_DEGREE: usize = 2;
+const POLY_DEGREE: usize = 4;
 
 #[derive(MontConfig)]
 #[modulus = "132120577"]
@@ -240,8 +240,8 @@ fn prove_enc<F: BackendField>(
             // e_1_* and e_2_* in [0, 32)
             u.residues()[i][j].to_unsigned::<1>();
             m.residues()[i][j].to_unsigned::<LOG_PLAIN_MODULUS>();
-            (e_1.residues()[i][j] + chi_offset).to_unsigned::<27>();
-            (e_2.residues()[i][j] + chi_offset).to_unsigned::<27>();
+            (e_1.residues()[i][j] + chi_offset).to_unsigned::<6>();
+            (e_2.residues()[i][j] + chi_offset).to_unsigned::<6>();
 
             c_0.residues()[i][j].constrain_eq(expected_c_0.residues()[i][j]);
             c_1.residues()[i][j].constrain_eq(expected_c_1.residues()[i][j]);
@@ -309,6 +309,60 @@ fn into_rns_poly<F: MontConfig<N>, const N: usize>(
     RnsRingPolynomial::from([coeffs])
 }
 
+fn ark_bigint_to_zkp_bigint<const N: usize>(x: BigInt<N>) -> ZkpBigInt {
+    let mut r = ZkpBigInt::ZERO;
+
+    for i in 0..N {
+        r.0.as_words_mut()[i] = x.0[i];
+    }
+
+    r
+}
+
+/**
+ * First lifts a signed value in F_q into F_s before creating
+ * a native field.
+ */
+fn signed_into_rns_poly<F: MontConfig<N>, const N: usize>(
+    x: PolyRing<F, N>,
+) -> RnsRingPolynomial<BpBackendField, POLY_DEGREE, 1> {
+    let mut q_div_2 = F::MODULUS;
+    q_div_2.div2();
+    let q_div_2 = ark_bigint_to_zkp_bigint(q_div_2);
+    let q = ark_bigint_to_zkp_bigint(F::MODULUS);
+
+    assert!(N <= 8);
+    let mut q = ZkpBigInt::ZERO;
+
+    for i in 0..N {
+        q.0.as_words_mut()[i] = F::MODULUS.0[i];
+    }
+
+    let offset = BpBackendField::FIELD_MODULUS.wrapping_sub(&q);
+
+    let mut coeffs = x
+        .poly
+        .iter()
+        .map(|x| {
+            let x = ark_bigint_to_zkp_bigint(x.into_bigint());
+
+            let x = if x > q_div_2 {
+                ZkpBigInt::from(x.wrapping_add(&offset))
+            } else {
+                x
+            };
+
+            x.into()
+        })
+        .collect::<Vec<BpField>>();
+
+    coeffs.resize(POLY_DEGREE, BpField::from(0u8));
+
+    let coeffs: [BpField; POLY_DEGREE] = coeffs.try_into().unwrap();
+
+    RnsRingPolynomial::from([coeffs])
+}
+
 pub fn prove_public_encryption(
     app: &ZkpApplication,
     message: &Poly,
@@ -325,8 +379,8 @@ pub fn prove_public_encryption(
 
     let m = into_rns_poly(message.clone());
 
-    let e_1 = into_rns_poly(e_1);
-    let e_2 = into_rns_poly(e_2);
+    let e_1 = signed_into_rns_poly(e_1);
+    let e_2 = signed_into_rns_poly(e_2);
     let u = into_rns_poly(u);
 
     let private_args: Vec<ZkpProgramInput> = vec![m.into(), e_1.into(), e_2.into(), u.into()];
@@ -437,6 +491,8 @@ fn can_encrypt_decrypt() {
 
 #[test]
 fn can_prove_encryption() {
+    env_logger::init();
+
     let (public, private) = gen_keys();
 
     let mut message = Poly::zero();

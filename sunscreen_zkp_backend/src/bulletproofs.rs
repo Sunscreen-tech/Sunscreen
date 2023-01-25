@@ -1,4 +1,7 @@
-use std::ops::{Add, Deref, Mul, Neg, Sub};
+use std::{
+    ops::{Add, Deref, Mul, Neg, Sub},
+    time::Instant,
+};
 
 use bulletproofs::{
     r1cs::{ConstraintSystem, LinearCombination, Prover, R1CSError, R1CSProof, Verifier},
@@ -6,6 +9,7 @@ use bulletproofs::{
 };
 use crypto_bigint::{Limb, UInt};
 use curve25519_dalek::scalar::Scalar;
+use log::trace;
 use merlin::Transcript;
 use petgraph::stable_graph::NodeIndex;
 use serde::{Deserialize, Serialize};
@@ -390,11 +394,20 @@ impl ZkpBackend for BulletproofsBackend {
 
         let mut prover = Prover::new(&pedersen_gens, transcript);
 
+        let now = Instant::now();
+
         circuit.gen_circuit(graph, &mut prover, |x| Some(inputs[x]))?;
 
-        Ok(Proof::Bulletproofs(Box::new(BulletproofsR1CSProof(
-            prover.prove(&bulletproof_gens)?,
-        ))))
+        trace!("Bulletproofs encode time {}s", now.elapsed().as_secs_f64());
+        trace!("{:#?}", prover.metrics());
+
+        let now = Instant::now();
+
+        let proof = prover.prove(&bulletproof_gens)?;
+
+        trace!("Bulletproofs prover time {}s", now.elapsed().as_secs_f64());
+
+        Ok(Proof::Bulletproofs(Box::new(BulletproofsR1CSProof(proof))))
     }
 
     fn verify(&self, graph: &ExecutableZkpProgram, proof: &Proof) -> Result<()> {
@@ -404,6 +417,8 @@ impl ZkpBackend for BulletproofsBackend {
                 return Err(Error::IncorrectProofType);
             }
         };
+
+        trace!("Starting backend verify...");
 
         let constraint_count = constraint_count(graph)?;
 
@@ -415,9 +430,19 @@ impl ZkpBackend for BulletproofsBackend {
 
         let mut verifier = Verifier::new(transcript);
 
+        let now = Instant::now();
+
         circuit.gen_circuit(graph, &mut verifier, |_| None)?;
 
-        Ok(verifier.verify(&proof.0, &pedersen_gens, &bulletproof_gens)?)
+        trace!("Bulletproofs encode time {}s", now.elapsed().as_secs_f64());
+
+        let now = Instant::now();
+
+        verifier.verify(&proof.0, &pedersen_gens, &bulletproof_gens)?;
+
+        trace!("Bulletproofs verify time {}s", now.elapsed().as_secs_f64());
+
+        Ok(())
     }
 
     fn jit_prover(

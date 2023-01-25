@@ -13,3 +13,6 @@ rand = "0.8.5"
 rand_distr = "0.4.3"
 sunscreen = { path = "../../sunscreen" }
 sunscreen_zkp_backend = { path = "../../sunscreen_zkp_backend" }
+
+[dev-dependencies]
+env_logger = "0.10.0"

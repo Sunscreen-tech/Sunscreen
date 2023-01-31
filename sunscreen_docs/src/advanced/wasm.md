@@ -11,7 +11,7 @@ Rust features multiple targets for building WASM binaries, but Sunscreen current
 ```sh
 git clone https://github.com/emscripten-core/emsdk.git
 emsdk/emsdk install 3.1.3
-emsdk/emsdk activate
+emsdk/emsdk activate 3.1.3
 ```
 
 You can try installing other toolchain versions if you wish, but we've seen the compiler seg fault and other strange errors when building our examples 🙃.

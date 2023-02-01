@@ -333,6 +333,12 @@ fn signed_into_rns_poly<F: MontConfig<N>, const N: usize>(
 
     assert!(N <= 8);
 
+    let mut q = ZkpBigInt::ZERO;
+
+    for i in 0..N {
+        q.0.as_words_mut()[i] = F::MODULUS.0[i];
+    }
+
     let offset = BpBackendField::FIELD_MODULUS.wrapping_sub(&q);
 
     let mut coeffs = x

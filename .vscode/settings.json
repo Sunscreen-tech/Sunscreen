@@ -90,7 +90,8 @@
         "functional": "cpp",
         "pointers": "cpp",
         "future": "cpp",
-        "multi_span": "cpp"
+        "multi_span": "cpp",
+        "constants": "cpp"
     },
     "debug.allowBreakpointsEverywhere": true,
     "cSpell.words": [

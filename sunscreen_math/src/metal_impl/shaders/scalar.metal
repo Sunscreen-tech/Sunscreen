@@ -70,6 +70,7 @@ Scalar29 Scalar29::sub(const Scalar29 a, const Scalar29 b) {
 
     // conditionally add l if the difference is negative
     const u32 underflow_mask = ((borrow >> 31) ^ 1) - 1;
+
     u32 carry = 0;
     for (size_t i = 0; i < 9; i++) {
         carry = (carry >> 29) + difference[i] + (constants::L[i] & underflow_mask);
@@ -83,16 +84,6 @@ constant u32 data[] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
 
 constant Scalar29 Scalar29::Zero(data);
 
-kernel void test_can_pack_unpack(
-    u32 tid [[thread_position_in_grid]],
-    device const u32* a [[buffer(0)]],
-    device u32* b [[buffer(1)]],
-    constant u32& len [[buffer(2)]]
-) {
-    auto x = Scalar29::unpack(a, tid, len);
-    x.pack(b, tid, len);
-}
-
 kernel void scalar_add(
     u32 tid [[thread_position_in_grid]],
     device const u32* a [[buffer(0)]],
@@ -104,4 +95,35 @@ kernel void scalar_add(
     Scalar29 t_b = Scalar29::unpack(b, tid, len);
 
     (t_a + t_b).pack(c, tid, len);
+}
+
+kernel void scalar_sub(
+    u32 tid [[thread_position_in_grid]],
+    device const u32* a [[buffer(0)]],
+    device const u32* b [[buffer(1)]],
+    device u32* c [[buffer(2)]],
+    constant u32& len [[buffer(3)]]
+) {
+    Scalar29 t_a = Scalar29::unpack(a, tid, len);
+    Scalar29 t_b = Scalar29::unpack(b, tid, len);
+
+    (t_a - t_b).pack(c, tid, len);
+}
+
+kernel void test_get_l(
+    device u32* a [[buffer(0)]]
+ ) {
+    Scalar29 l = constants::L;
+
+    l.pack(a, 0, 1);
+}
+
+kernel void test_can_pack_unpack(
+    u32 tid [[thread_position_in_grid]],
+    device const u32* a [[buffer(0)]],
+    device u32* b [[buffer(1)]],
+    constant u32& len [[buffer(2)]]
+) {
+    auto x = Scalar29::unpack(a, tid, len);
+    x.pack(b, tid, len);
 }

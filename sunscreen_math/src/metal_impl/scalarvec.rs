@@ -1,5 +1,5 @@
 use core::{mem::{size_of}, slice};
-use std::ops::Add;
+use std::ops::{Add, Sub};
 
 use metal::Buffer;
 
@@ -74,7 +74,7 @@ impl ScalarVec {
 
     /// Get the [`Scalar`] at index i.
     pub fn get(&self, i: usize) -> Scalar {
-        if i > self.len {
+        if i >= self.len {
             panic!("Index out of {i} range {}.", self.len);
         }
 
@@ -162,6 +162,50 @@ impl Add<&ScalarVec> for &ScalarVec {
     }
 }
 
+impl Sub<ScalarVec> for ScalarVec {
+    type Output = Self;
+
+    fn sub(self, rhs: ScalarVec) -> Self::Output {
+        &self + &rhs
+    }
+}
+
+impl Sub<&ScalarVec> for ScalarVec {
+    type Output = Self;
+
+    fn sub(self, rhs: &ScalarVec) -> Self::Output {
+        &self + rhs
+    }
+}
+
+
+impl Sub<ScalarVec> for &ScalarVec {
+    type Output = ScalarVec;
+
+    fn sub(self, rhs: ScalarVec) -> Self::Output {
+        self + &rhs
+    }
+}
+
+impl Sub<&ScalarVec> for &ScalarVec {
+    type Output = ScalarVec;
+
+    fn sub(self, rhs: &ScalarVec) -> Self::Output {
+        assert_eq!(self.len(), rhs.len());
+
+        let runtime = Runtime::get();
+        let out_buf = runtime.alloc(self.byte_len());
+        let len = U32Arg::new(self.len as u32);
+
+        runtime.run("scalar_sub", &[&self.data, &rhs.data, &out_buf, &len.data], [(self.len() as u64, 64), (1, 1), (1, 1)]);
+
+        ScalarVec {
+            data: out_buf,
+            len: self.len
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use rand::thread_rng;
@@ -216,6 +260,16 @@ mod tests {
     }
 
     #[test]
+    fn const_l_is_correct() {
+        let l = ScalarVec::new(&[Scalar::zero()]);
+
+        let runtime = Runtime::get();
+        runtime.run("test_get_l", &[&l.data], [(1, 1), (1, 1), (1, 1)]);
+
+        assert_eq!(l.get(0) - Scalar::one(), -Scalar::one());
+    }
+
+    #[test]
     fn can_add_scalars() {
         let a = ScalarVec::new(&[
             Scalar::random(&mut thread_rng()),
@@ -237,6 +291,33 @@ mod tests {
             dbg!(i);
             assert_eq!(c.get(i), a.get(i) + b.get(i));
         }
+    }
 
+    #[test]
+    fn can_sub_scalars() {
+        let a = ScalarVec::new(&[
+            Scalar::random(&mut thread_rng()),
+            Scalar::random(&mut thread_rng()),
+            Scalar::random(&mut thread_rng()),
+            Scalar::random(&mut thread_rng()),
+        ]);
+
+        let b = ScalarVec::new(&[
+            Scalar::random(&mut thread_rng()),
+            Scalar::random(&mut thread_rng()),
+            Scalar::random(&mut thread_rng()),
+            Scalar::random(&mut thread_rng()),
+        ]);
+
+        let c = &a - &b;
+
+        for i in 0..a.len() {
+            let a_i = a.get(i);
+            let b_i = b.get(i);
+
+            dbg!(a_i);
+            dbg!(b_i);
+            assert_eq!(c.get(i), a.get(i) - b.get(i));
+        }
     }
 }

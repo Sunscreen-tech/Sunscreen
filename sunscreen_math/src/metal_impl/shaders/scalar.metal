@@ -110,6 +110,18 @@ kernel void scalar_sub(
     (t_a - t_b).pack(c, tid, len);
 }
 
+kernel void scalar_neg(
+    u32 tid [[thread_position_in_grid]],
+    device const u32* a [[buffer(0)]],
+    device u32* b [[buffer(1)]],
+    constant u32& len [[buffer(3)]]
+) {
+    Scalar29 t_a = Scalar29::unpack(a, tid, len);
+    Scalar29 zero = Scalar29::Zero;
+
+    (zero - t_a).pack(b, tid, len);
+}
+
 kernel void test_get_l(
     device u32* a [[buffer(0)]]
  ) {

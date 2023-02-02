@@ -1,5 +1,5 @@
 use core::{mem::{size_of}, slice};
-use std::ops::{Add, Sub};
+use std::ops::{Add, Sub, Neg};
 
 use metal::Buffer;
 
@@ -206,6 +206,31 @@ impl Sub<&ScalarVec> for &ScalarVec {
     }
 }
 
+impl Neg for ScalarVec {
+    type Output = Self;
+
+    fn neg(self) -> Self::Output {
+        -&self
+    }
+}
+
+impl Neg for &ScalarVec {
+    type Output = ScalarVec;
+
+    fn neg(self) -> Self::Output {
+        let runtime = Runtime::get();
+        let out_buf = runtime.alloc(self.byte_len());
+        let len = U32Arg::new(self.len as u32);
+
+        runtime.run("scalar_neg", &[&self.data, &out_buf, &len.data], [(self.len() as u64, 64), (1, 1), (1, 1)]);
+
+        ScalarVec {
+            data: out_buf,
+            len: self.len
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use rand::thread_rng;
@@ -295,6 +320,34 @@ mod tests {
 
     #[test]
     fn can_sub_scalars() {
+        let a = ScalarVec::new(&[
+            Scalar::random(&mut thread_rng()),
+            Scalar::random(&mut thread_rng()),
+            Scalar::random(&mut thread_rng()),
+            Scalar::random(&mut thread_rng()),
+        ]);
+
+        let b = ScalarVec::new(&[
+            Scalar::random(&mut thread_rng()),
+            Scalar::random(&mut thread_rng()),
+            Scalar::random(&mut thread_rng()),
+            Scalar::random(&mut thread_rng()),
+        ]);
+
+        let c = &a - &b;
+
+        for i in 0..a.len() {
+            let a_i = a.get(i);
+            let b_i = b.get(i);
+
+            dbg!(a_i);
+            dbg!(b_i);
+            assert_eq!(c.get(i), a.get(i) - b.get(i));
+        }
+    }
+
+    #[test]
+    fn can_neg_scalars() {
         let a = ScalarVec::new(&[
             Scalar::random(&mut thread_rng()),
             Scalar::random(&mut thread_rng()),

@@ -112,6 +112,23 @@ impl ScalarVec {
 
         Scalar::from_bits(bytes)
     }
+
+    pub fn square(&self) -> Self {
+        let runtime = Runtime::get();
+        let out_buf = runtime.alloc(self.byte_len());
+        let len = U32Arg::new(self.len as u32);
+
+        runtime.run(
+            "scalar_square",
+            &[&self.data, &out_buf, &len.data],
+            [(self.len() as u64, 64), (1, 1), (1, 1)],
+        );
+
+        ScalarVec {
+            data: out_buf,
+            len: self.len,
+        }
+    }
 }
 
 impl Add<ScalarVec> for ScalarVec {
@@ -452,6 +469,24 @@ mod tests {
             let b_i = b.get(i);
 
             assert_eq!(c.get(i), a.get(i) * b.get(i));
+        }
+    }
+
+    #[test]
+    fn can_square_scalars() {
+        let a = ScalarVec::new(&[
+            Scalar::random(&mut thread_rng()),
+            Scalar::random(&mut thread_rng()),
+            Scalar::random(&mut thread_rng()),
+            Scalar::random(&mut thread_rng()),
+        ]);
+
+        let c = a.square();
+
+        for i in 0..a.len() {
+            let a_i = a.get(i);
+
+            assert_eq!(c.get(i), a.get(i) * a.get(i));
         }
     }
 }

@@ -93,6 +93,7 @@ struct MulResult {
     }
 };
 
+MulResult square_internal(Scalar29 a);
 MulResult mul_internal(Scalar29 a, Scalar29 b);
 Scalar29 montgomery_reduce(MulResult limbs);
 
@@ -100,8 +101,14 @@ Scalar29 Scalar29::mul(Scalar29 a, Scalar29 b) {
     Scalar29 ab = montgomery_reduce(mul_internal(a, b));
 
     Scalar29 rr = constants::RR;
-
     return montgomery_reduce(mul_internal(ab, rr));
+}
+
+Scalar29 Scalar29::square(Scalar29 a) {
+    Scalar29 aa = montgomery_reduce(square_internal(a));
+
+    Scalar29 rr = constants::RR;
+    return montgomery_reduce(mul_internal(aa, rr));
 }
 
 u64 m(u32 a, u32 b) {
@@ -166,6 +173,41 @@ MulResult mul_internal(Scalar29 a, Scalar29 b) {
 
     return z;
 }
+
+MulResult square_internal(Scalar29 a) {
+        u32 aa[8] = {
+            a[0] * 2,
+            a[1] * 2,
+            a[2] * 2,
+            a[3] * 2,
+            a[4] * 2,
+            a[5] * 2,
+            a[6] * 2,
+            a[7] * 2
+        };
+
+        MulResult r = {
+            m( a[0], a[0]),
+            m(aa[0], a[1]),
+            m(aa[0], a[2]) + m( a[1], a[1]),
+            m(aa[0], a[3]) + m(aa[1], a[2]),
+            m(aa[0], a[4]) + m(aa[1], a[3]) + m( a[2], a[2]),
+            m(aa[0], a[5]) + m(aa[1], a[4]) + m(aa[2], a[3]),
+            m(aa[0], a[6]) + m(aa[1], a[5]) + m(aa[2], a[4]) + m( a[3], a[3]),
+            m(aa[0], a[7]) + m(aa[1], a[6]) + m(aa[2], a[5]) + m(aa[3], a[4]),
+            m(aa[0], a[8]) + m(aa[1], a[7]) + m(aa[2], a[6]) + m(aa[3], a[5]) + m( a[4], a[4]),
+                             m(aa[1], a[8]) + m(aa[2], a[7]) + m(aa[3], a[6]) + m(aa[4], a[5]),
+                                              m(aa[2], a[8]) + m(aa[3], a[7]) + m(aa[4], a[6]) + m( a[5], a[5]),
+                                                               m(aa[3], a[8]) + m(aa[4], a[7]) + m(aa[5], a[6]),
+                                                                                m(aa[4], a[8]) + m(aa[5], a[7]) + m( a[6], a[6]),
+                                                                                                 m(aa[5], a[8]) + m(aa[6], a[7]),
+                                                                                                                  m(aa[6], a[8]) + m( a[7], a[7]),
+                                                                                                                                   m(aa[7], a[8]),
+                                                                                                                                                    m( a[8], a[8]),
+        };
+
+        return r;
+    }
 
 struct MontMulLRes {
         u64 carry;
@@ -250,7 +292,7 @@ kernel void scalar_neg(
     u32 tid [[thread_position_in_grid]],
     device const u32* a [[buffer(0)]],
     device u32* b [[buffer(1)]],
-    constant u32& len [[buffer(3)]]
+    constant u32& len [[buffer(2)]]
 ) {
     Scalar29 t_a = Scalar29::unpack(a, tid, len);
     Scalar29 zero = Scalar29::Zero;
@@ -271,6 +313,21 @@ kernel void scalar_mul(
     (t_a * t_b).pack(c, tid, len);
 }
 
+kernel void scalar_square(
+    u32 tid [[thread_position_in_grid]],
+    device const u32* a [[buffer(0)]],
+    device u32* b [[buffer(1)]],
+    constant u32& len [[buffer(2)]]
+) {
+    Scalar29 t_a = Scalar29::unpack(a, tid, len);
+
+    t_a.square().pack(b, tid, len);
+}
+
+//
+// Test kernels
+// TODO: #ifdef these away for production
+//
 kernel void test_get_l(
     device u32* a [[buffer(0)]]
  ) {

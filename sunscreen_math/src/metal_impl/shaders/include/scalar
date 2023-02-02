@@ -37,20 +37,29 @@ public:
     /// unpacking is fully coalesced.
     void pack(device u32* ptr, size_t grid_tid, size_t n);
     
-    Scalar29 add(const Scalar29 a, const Scalar29 b);
-    Scalar29 sub(const Scalar29 a, const Scalar29 b);
-    Scalar29 mul(const Scalar29 a, const Scalar29 b);
+    static Scalar29 add(const Scalar29 a, const Scalar29 b);
+    static Scalar29 sub(const Scalar29 a, const Scalar29 b);
+    static Scalar29 mul(const Scalar29 a, const Scalar29 b);
+    static Scalar29 square(const Scalar29 a);
 
     Scalar29 operator+(thread const Scalar29& other) thread {
-        return add(*this, other);
+        return Scalar29::add(*this, other);
     }
 
     Scalar29 operator-(thread const Scalar29& other) thread {
-        return sub(*this, other);
+        return Scalar29::sub(*this, other);
     }
 
     Scalar29 operator*(thread const Scalar29& other) thread {
-        return mul(*this, other);
+        return Scalar29::mul(*this, other);
+    }
+
+    Scalar29 operator-() {
+        return Scalar29::sub(Zero, *this);
+    }
+
+    Scalar29 square() thread {
+        return square(*this);
     }
 
     const thread u32& operator[](const size_t index) const {

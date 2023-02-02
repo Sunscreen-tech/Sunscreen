@@ -13,3 +13,6 @@
 	path = rust-playground
 	url = git@github.com:Sunscreen-tech/rust-playground.git
   branch = sunscreen
+[submodule "sunscreen_curve25519_dalek"]
+	path = sunscreen_curve25519_dalek
+	url = git@github.com:dalek-cryptography/curve25519-dalek.git

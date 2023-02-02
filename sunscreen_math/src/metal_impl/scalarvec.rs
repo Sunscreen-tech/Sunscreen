@@ -3,7 +3,7 @@ use std::ops::{Add, Mul, Neg, Sub};
 
 use metal::Buffer;
 
-use curve25519_dalek::scalar::Scalar;
+use sunscreen_curve25519_dalek::scalar::Scalar;
 
 use crate::metal_impl::U32Arg;
 
@@ -113,6 +113,12 @@ impl ScalarVec {
         Scalar::from_bits(bytes)
     }
 
+    /**
+     * Computes self * self.
+     * 
+     * #Remarks
+     * This is more performant than using `mul`.
+     */
     pub fn square(&self) -> Self {
         let runtime = Runtime::get();
         let out_buf = runtime.alloc(self.byte_len());
@@ -363,12 +369,12 @@ mod tests {
 
     #[test]
     fn const_l_is_correct() {
-        let l = ScalarVec::new(&[Scalar::zero()]);
+        let l = ScalarVec::new(&[Scalar::ZERO]);
 
         let runtime = Runtime::get();
         runtime.run("test_get_l", &[&l.data], [(1, 1), (1, 1), (1, 1)]);
 
-        assert_eq!(l.get(0) - Scalar::one(), -Scalar::one());
+        assert_eq!(l.get(0) - Scalar::ONE, -Scalar::ONE);
     }
 
     #[test]

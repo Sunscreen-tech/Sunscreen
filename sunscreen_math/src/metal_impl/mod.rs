@@ -7,6 +7,8 @@ use metal::{
     MTLResourceOptions, MTLSize,
 };
 
+mod ristrettovec;
+pub use ristrettovec::*;
 mod scalarvec;
 pub use scalarvec::*;
 

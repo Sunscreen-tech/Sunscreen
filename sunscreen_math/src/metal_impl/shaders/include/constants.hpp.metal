@@ -1,7 +1,7 @@
 #pragma once
 
-#include <inttypes>
-#include <scalar>
+#include <inttypes.hpp.metal>
+#include <scalar.hpp.metal>
 
 namespace constants {
     constant const u32 _L[9] = {

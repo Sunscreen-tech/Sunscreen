@@ -16,6 +16,7 @@ members = [
     "sunscreen_backend",
     "sunscreen_compiler_common",
     "sunscreen_compiler_macros",
+    "sunscreen_curve25519_dalek",
     "sunscreen_fhe_program",
     "sunscreen_math",
     "sunscreen_runtime",

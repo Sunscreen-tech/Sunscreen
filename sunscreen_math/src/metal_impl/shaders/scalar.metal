@@ -1,7 +1,8 @@
 #include <metal_integer>
-#include <inttypes>
-#include <constants>
-#include <scalar>
+
+#include <inttypes.hpp.metal>
+#include <constants.hpp.metal>
+#include <scalar.hpp.metal>
 
 Scalar29 Scalar29::unpack(device const u32* words, size_t grid_tid, size_t stride) {
     words = &words[grid_tid];

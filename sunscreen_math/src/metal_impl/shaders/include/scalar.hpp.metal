@@ -1,6 +1,6 @@
 #pragma once
 
-#include<inttypes>
+#include <inttypes.hpp.metal>
 
 class Scalar29 {
 private:
@@ -15,7 +15,7 @@ public:
 
     Scalar29(constant u32 limbs[9]): _limbs{limbs[0], limbs[1], limbs[2], limbs[3], limbs[4], limbs[5], limbs[6], limbs[7], limbs[8]} {}
 
-    /// Loads the value at grid_tid from an `8 x n` row-major Scalar word matrix. `n` is the length
+    /// Loads the value at grid_tid from an `8 x n` row-major u32 matrix. `n` is the length
     /// of the Scalar array.
     ///
     /// # Remarks
@@ -27,7 +27,7 @@ public:
     static Scalar29 unpack(device const u32* ptr, size_t grid_tid, size_t n);
     
     /// Packs this value into an `8 x n` row-major 
-    /// Scalar word matrix.
+    /// u32 matrix.
     ///
     /// # Remarks
     /// Each thread should pass the same base address.

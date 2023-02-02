@@ -3,6 +3,8 @@
 #include <inttypes.hpp.metal>
 #include <field.hpp.metal>
 
+class ProjectiveNielsPoint;
+
 class RistrettoPoint {
 private:
     FieldElement2625 x;
@@ -35,4 +37,20 @@ public:
     /// function with a consecutive grid_tid,
     /// unpacking is fully coalesced.
     void pack(device u32* ptr, size_t grid_tid, size_t n);
+
+    /// Convert to a ProjectiveNielsPoint
+    ProjectiveNielsPoint as_projective_niels();
+
 };
+
+class ProjectiveNielsPoint {
+private:
+    FieldElement2625 x;
+    FieldElement2625 y;
+    FieldElement2625 z;
+    FieldElement2625 t;
+
+public:
+    ProjectiveNielsPoint(FieldElement2625 x, FieldElement2625 y, FieldElement2625 z, FieldElement2625 t)
+        : x(x), y(y), z(z), t(t) {}
+}

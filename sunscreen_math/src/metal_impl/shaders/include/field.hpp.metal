@@ -6,10 +6,12 @@ class FieldElement2625 {
 private:
     u32 _limbs[10];
 
-    FieldElement2625() {
-        
-    }
+    FieldElement2625() { }
 public:
+    FieldElement2625(constant const u32 limbs[10]): _limbs{limbs[0], limbs[1], limbs[2], limbs[3], limbs[4], limbs[5], limbs[6], limbs[7], limbs[8], limbs[9]} { }
+
+    FieldElement2625(thread const u32 limbs[10]): _limbs{limbs[0], limbs[1], limbs[2], limbs[3], limbs[4], limbs[5], limbs[6], limbs[7], limbs[8], limbs[9]} { }
+
     /// Loads the value at grid_tid from an `10 x n` row-major u32 matrix. `n` is the length
     /// of the Scalar array.
     ///

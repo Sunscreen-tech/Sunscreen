@@ -16,6 +16,16 @@ void RistrettoPoint::pack(device u32* ptr, size_t grid_tid, size_t n) {
     this->t.pack(&ptr[30 * n], grid_tid, n);
 }
 
+/// Convert to a ProjectiveNielsPoint
+ProjectiveNielsPoint RistrettoPoint::as_projective_niels() {
+    FieldElement2625 y_plus_x = this->y + this->x;
+    FieldElement2625 y_minus_x = this->y - this->x;
+    FieldElement2625 t2d = this->t * constants::EDWARDS_D2;
+
+    return ProjectiveNielsPoint(y_plus_x, y_minus_x, this->z, t2d);
+}
+
+
 kernel void test_can_pack_unpack_ristretto(
     u32 tid [[thread_position_in_grid]],
     device const u32* a [[buffer(0)]],

@@ -1,0 +1,57 @@
+#pragma once
+
+#include<inttypes>
+
+class Scalar29 {
+private:
+    u32 _limbs[9];
+
+public:
+    constant static Scalar29 Zero;
+
+    template <typename T> Scalar29(T limbs[9]): _limbs{limbs[0], _limbs[1], limbs[2], _limbs[3], limbs[4], _limbs[5], limbs[6], _limbs[7], limbs[8]}  {}
+
+    /// Loads the value at grid_tid from an `8 x n` row-major Scalar word matrix. `n` is the length
+    /// of the Scalar array.
+    ///
+    /// # Remarks
+    /// Each thread should pass the same base address.
+    ///
+    /// When reach thread in a group executes this
+    /// function with a consecutive grid_tid,
+    /// unpacking is fully coalesced.
+    static Scalar29 unpack(device const u32* ptr, size_t grid_tid, size_t n);
+    
+    /// Packs this value into an `8 x n` row-major 
+    /// Scalar word matrix.
+    ///
+    /// # Remarks
+    /// Each thread should pass the same base address.
+    ///
+    /// When reach thread in a group executes this
+    /// function with a consecutive grid_tid,
+    /// unpacking is fully coalesced.
+    void pack(device u32* ptr, size_t grid_tid, size_t n);
+    Scalar29 add(const Scalar29 a, const Scalar29 b);
+    Scalar29 sub(const Scalar29 a, const Scalar29 b);
+
+    Scalar29 operator+(thread const Scalar29& other) thread {
+        return add(*this, other);
+    }
+
+    Scalar29 operator-(thread const Scalar29& other) thread {
+        return sub(*this, other);
+    }
+
+    const thread u32& operator[](const size_t index) const {
+        return _limbs[index];
+    }
+
+    thread u32& operator[](const size_t index) {
+        return _limbs[index];
+    }
+
+    const constant thread u32& operator[](const size_t index) constant const {
+        return _limbs[index];
+    }
+};

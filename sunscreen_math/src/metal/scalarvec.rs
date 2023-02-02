@@ -1,0 +1,159 @@
+use core::{mem::{size_of}, slice};
+
+use metal::Buffer;
+
+use curve25519_dalek::scalar::Scalar;
+
+use super::Runtime;
+
+/// A vector of scalars laid out in a way that enables coalescing on
+/// the GPU.
+/// 
+/// # Remarks
+/// Conceptually, data is laid out as a row-major `m x n` matrix stored in
+/// a 1 dimensional buffer. The leading dimension iterates over the scalars
+/// while the trailing dimension iterates over limbs in the scalar.
+pub struct ScalarVec {
+    data: Buffer,
+    len: usize,
+}
+
+impl ScalarVec {
+    pub fn new(x: &[Scalar]) -> Self {
+        let len = x.len();
+        let byte_len = x.len() * size_of::<Scalar>();
+
+        let data = Runtime::get().alloc(byte_len);
+        let mut res = Self {
+            data,
+            len: x.len()
+        };
+
+        
+        let data_map = res.buffer_slice_mut();
+
+        for (i, s) in x.iter().enumerate() {
+            let bytes = s.as_bytes();
+
+            for j in 0..8 {
+                data_map[len * j + i] = (bytes[4 * j + 0] as u32) << 0;
+                data_map[len * j + i] |= (bytes[4 * j + 1] as u32) << 8;
+                data_map[len * j + i] |= (bytes[4 * j + 2] as u32) << 16;
+                data_map[len * j + i] |= (bytes[4 * j + 3] as u32) << 24;
+            }
+        }
+
+        res
+    }
+
+    fn buffer_slice_mut(&mut self) -> &mut [u32] {
+        let byte_len = self.len * size_of::<Scalar>();
+
+        unsafe { slice::from_raw_parts_mut(self.data.contents() as *mut u32, byte_len) }
+    }
+
+    fn buffer_slice(&self) -> &[u32] {
+        let byte_len = self.len * size_of::<Scalar>();
+
+        unsafe { slice::from_raw_parts(self.data.contents() as *const u32, byte_len) }
+    }
+
+    /**
+     * Returns the number of scalars in this vector.
+     */
+    pub fn len(&self) -> usize {
+        self.len
+    }
+
+    /// Get the [`Scalar`] at index i.
+    pub fn get(&self, i: usize) -> Scalar {
+        if i > self.len {
+            panic!("Index out of {i} range {}.", self.len);
+        }
+
+        let data = self.buffer_slice();
+        let mut bytes = [0u8; 32];
+
+        bytes[0] = ((data[0 * self.len + i] & 0xFF << 0) >> 0) as u8;
+        bytes[1] = ((data[0 * self.len + i] & 0xFF << 8) >> 8) as u8;
+        bytes[2] = ((data[0 * self.len + i] & 0xFF << 16) >> 16) as u8;
+        bytes[3] = ((data[0 * self.len + i] & 0xFF << 24) >> 24) as u8;
+        bytes[4] = ((data[1 * self.len + i] & 0xFF << 0) >> 0) as u8;
+        bytes[5] = ((data[1 * self.len + i] & 0xFF << 8) >> 8) as u8;
+        bytes[6] = ((data[1 * self.len + i] & 0xFF << 16) >> 16) as u8;
+        bytes[7] = ((data[1 * self.len + i] & 0xFF << 24) >> 24) as u8;
+        bytes[8] = ((data[2 * self.len + i] & 0xFF << 0) >> 0) as u8;
+        bytes[9] = ((data[2 * self.len + i] & 0xFF << 8) >> 8) as u8;
+        bytes[10] = ((data[2 * self.len + i] & 0xFF << 16) >> 16) as u8;
+        bytes[11] = ((data[2 * self.len + i] & 0xFF << 24) >> 24) as u8;
+        bytes[12] = ((data[3 * self.len + i] & 0xFF << 0) >> 0) as u8;
+        bytes[13] = ((data[3 * self.len + i] & 0xFF << 8) >> 8) as u8;
+        bytes[14] = ((data[3 * self.len + i] & 0xFF << 16) >> 16) as u8;
+        bytes[15] = ((data[3 * self.len + i] & 0xFF << 24) >> 24) as u8;
+        bytes[16] = ((data[4 * self.len + i] & 0xFF << 0) >> 0) as u8;
+        bytes[17] = ((data[4 * self.len + i] & 0xFF << 8) >> 8) as u8;
+        bytes[18] = ((data[4 * self.len + i] & 0xFF << 16) >> 16) as u8;
+        bytes[19] = ((data[4 * self.len + i] & 0xFF << 24) >> 24) as u8;
+        bytes[20] = ((data[5 * self.len + i] & 0xFF << 0) >> 0) as u8;
+        bytes[21] = ((data[5 * self.len + i] & 0xFF << 8) >> 8) as u8;
+        bytes[22] = ((data[5 * self.len + i] & 0xFF << 16) >> 16) as u8;
+        bytes[23] = ((data[5 * self.len + i] & 0xFF << 24) >> 24) as u8;
+        bytes[24] = ((data[6 * self.len + i] & 0xFF << 0) >> 0) as u8;
+        bytes[25] = ((data[6 * self.len + i] & 0xFF << 8) >> 8) as u8;
+        bytes[26] = ((data[6 * self.len + i] & 0xFF << 16) >> 16) as u8;
+        bytes[27] = ((data[6 * self.len + i] & 0xFF << 24) >> 24) as u8;
+        bytes[28] = ((data[7 * self.len + i] & 0xFF << 0) >> 0) as u8;
+        bytes[29] = ((data[7 * self.len + i] & 0xFF << 8) >> 8) as u8;
+        bytes[30] = ((data[7 * self.len + i] & 0xFF << 16) >> 16) as u8;
+        bytes[31] = ((data[7 * self.len + i] & 0xFF << 24) >> 24) as u8;
+
+        Scalar::from_bits(bytes)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use rand::thread_rng;
+
+    use super::*;
+
+    #[test]
+    fn can_roundtrip_scalarvec_elements() {
+        let v = ScalarVec::new(&[Scalar::from(1u8), Scalar::from(2u8), Scalar::from(3u8), Scalar::from(4u8)]);
+
+        assert_eq!(v.get(0), Scalar::from(1u8));
+        assert_eq!(v.get(1), Scalar::from(2u8));
+        assert_eq!(v.get(2), Scalar::from(3u8));
+        assert_eq!(v.get(3), Scalar::from(4u8));
+    }
+
+    #[test]
+    fn can_unpack_and_pack_elements() {
+        let runtime = Runtime::get();
+
+        let scalars = [
+            Scalar::random(&mut thread_rng()),
+            Scalar::random(&mut thread_rng()),
+            Scalar::random(&mut thread_rng()),
+            Scalar::random(&mut thread_rng()),
+        ];
+
+        let v = ScalarVec::new(&scalars);
+        let mut out = ScalarVec::new(&[Scalar::from(0u8), Scalar::from(0u8), Scalar::from(0u8), Scalar::from(0u8)]);
+
+        for i in 0..out.len() {
+            dbg!(i);
+            assert_eq!(out.get(i), Scalar::from(0u8));
+        }
+
+        let len = runtime.alloc(size_of::<u32>());
+        unsafe { *(len.contents() as *mut u32) = v.len() as u32 };
+
+        runtime.run("test_can_pack_unpack", &[&v.data, &out.data, &len], [(4, 64), (1, 1), (1, 1)]);
+
+        for i in 0..out.len() {
+            dbg!(i);
+            assert_eq!(v.get(i), out.get(i));
+        }
+    }
+}

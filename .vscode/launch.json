@@ -41,233 +41,6 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug executable 'cannonical_norm_noise_model'",
-            "cargo": {
-                "args": [
-                    "build",
-                    "--bin=cannonical_norm_noise_model",
-                    "--package=cannonical_norm_noise_model"
-                ],
-                "filter": {
-                    "name": "cannonical_norm_noise_model",
-                    "kind": "bin"
-                }
-            },
-            "args": [],
-            "cwd": "${workspaceFolder}"
-        },
-        {
-            "type": "lldb",
-            "request": "launch",
-            "name": "Debug unit tests in executable 'cannonical_norm_noise_model'",
-            "cargo": {
-                "args": [
-                    "test",
-                    "--no-run",
-                    "--bin=cannonical_norm_noise_model",
-                    "--package=cannonical_norm_noise_model"
-                ],
-                "filter": {
-                    "name": "cannonical_norm_noise_model",
-                    "kind": "bin"
-                }
-            },
-            "args": [],
-            "cwd": "${workspaceFolder}"
-        },
-        {
-            "type": "lldb",
-            "request": "launch",
-            "name": "Debug unit tests in library 'seal_fhe'",
-            "cargo": {
-                "args": [
-                    "test",
-                    "--no-run",
-                    "--lib",
-                    "--package=seal_fhe"
-                ],
-                "filter": {
-                    "name": "seal_fhe",
-                    "kind": "lib"
-                }
-            },
-            "args": [],
-            "cwd": "${workspaceFolder}"
-        },
-        {
-            "type": "lldb",
-            "request": "launch",
-            "name": "Debug integration test 'test_common'",
-            "cargo": {
-                "args": [
-                    "test",
-                    "--no-run",
-                    "--test=test_common",
-                    "--package=seal_fhe"
-                ],
-                "filter": {
-                    "name": "test_common",
-                    "kind": "test"
-                }
-            },
-            "args": [],
-            "cwd": "${workspaceFolder}"
-        },
-        {
-            "type": "lldb",
-            "request": "launch",
-            "name": "Debug integration test 'assumptions'",
-            "cargo": {
-                "args": [
-                    "test",
-                    "--no-run",
-                    "--test=assumptions",
-                    "--package=seal_fhe"
-                ],
-                "filter": {
-                    "name": "assumptions",
-                    "kind": "test"
-                }
-            },
-            "args": [],
-            "cwd": "${workspaceFolder}"
-        },
-        {
-            "type": "lldb",
-            "request": "launch",
-            "name": "Debug unit tests in library 'emsdk'",
-            "cargo": {
-                "args": [
-                    "test",
-                    "--no-run",
-                    "--lib",
-                    "--package=emsdk"
-                ],
-                "filter": {
-                    "name": "emsdk",
-                    "kind": "lib"
-                }
-            },
-            "args": [],
-            "cwd": "${workspaceFolder}"
-        },
-        {
-            "type": "lldb",
-            "request": "launch",
-            "name": "Debug unit tests in library 'sunscreen_backend'",
-            "cargo": {
-                "args": [
-                    "test",
-                    "--no-run",
-                    "--lib",
-                    "--package=sunscreen_backend"
-                ],
-                "filter": {
-                    "name": "sunscreen_backend",
-                    "kind": "lib"
-                }
-            },
-            "args": [],
-            "cwd": "${workspaceFolder}"
-        },
-        {
-            "type": "lldb",
-            "request": "launch",
-            "name": "Debug unit tests in library 'sunscreen_compiler_common'",
-            "cargo": {
-                "args": [
-                    "test",
-                    "--no-run",
-                    "--lib",
-                    "--package=sunscreen_compiler_common"
-                ],
-                "filter": {
-                    "name": "sunscreen_compiler_common",
-                    "kind": "lib"
-                }
-            },
-            "args": [],
-            "cwd": "${workspaceFolder}"
-        },
-        {
-            "type": "lldb",
-            "request": "launch",
-            "name": "Debug unit tests in library 'sunscreen_fhe_program'",
-            "cargo": {
-                "args": [
-                    "test",
-                    "--no-run",
-                    "--lib",
-                    "--package=sunscreen_fhe_program"
-                ],
-                "filter": {
-                    "name": "sunscreen_fhe_program",
-                    "kind": "lib"
-                }
-            },
-            "args": [],
-            "cwd": "${workspaceFolder}"
-        },
-        {
-            "type": "lldb",
-            "request": "launch",
-            "name": "Debug unit tests in library 'sunscreen_runtime'",
-            "cargo": {
-                "args": [
-                    "test",
-                    "--no-run",
-                    "--lib",
-                    "--package=sunscreen_runtime"
-                ],
-                "filter": {
-                    "name": "sunscreen_runtime",
-                    "kind": "lib"
-                }
-            },
-            "args": [],
-            "cwd": "${workspaceFolder}"
-        },
-        {
-            "type": "lldb",
-            "request": "launch",
-            "name": "Debug integration test 'serialization'",
-            "cargo": {
-                "args": [
-                    "test",
-                    "--no-run",
-                    "--test=serialization",
-                    "--package=sunscreen_runtime"
-                ],
-                "filter": {
-                    "name": "serialization",
-                    "kind": "test"
-                }
-            },
-            "args": [],
-            "cwd": "${workspaceFolder}"
-        },
-        {
-            "type": "lldb",
-            "request": "launch",
-            "name": "Debug unit tests in library 'sunscreen_zkp_backend'",
-            "cargo": {
-                "args": [
-                    "test",
-                    "--no-run",
-                    "--lib",
-                    "--package=sunscreen_zkp_backend"
-                ],
-                "filter": {
-                    "name": "sunscreen_zkp_backend",
-                    "kind": "lib"
-                }
-            },
-            "args": [],
-            "cwd": "${workspaceFolder}"
-        },
-        {
-            "type": "lldb",
-            "request": "launch",
             "name": "Debug unit tests in library 'sunscreen'",
             "cargo": {
                 "args": [
@@ -507,6 +280,233 @@
                 "filter": {
                     "name": "signed",
                     "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'seal_fhe'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=seal_fhe"
+                ],
+                "filter": {
+                    "name": "seal_fhe",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'test_common'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=test_common",
+                    "--package=seal_fhe"
+                ],
+                "filter": {
+                    "name": "test_common",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'assumptions'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=assumptions",
+                    "--package=seal_fhe"
+                ],
+                "filter": {
+                    "name": "assumptions",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'emsdk'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=emsdk"
+                ],
+                "filter": {
+                    "name": "emsdk",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'sunscreen_backend'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=sunscreen_backend"
+                ],
+                "filter": {
+                    "name": "sunscreen_backend",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'sunscreen_compiler_common'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=sunscreen_compiler_common"
+                ],
+                "filter": {
+                    "name": "sunscreen_compiler_common",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'sunscreen_fhe_program'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=sunscreen_fhe_program"
+                ],
+                "filter": {
+                    "name": "sunscreen_fhe_program",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'sunscreen_runtime'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=sunscreen_runtime"
+                ],
+                "filter": {
+                    "name": "sunscreen_runtime",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'serialization'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=serialization",
+                    "--package=sunscreen_runtime"
+                ],
+                "filter": {
+                    "name": "serialization",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'sunscreen_zkp_backend'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=sunscreen_zkp_backend"
+                ],
+                "filter": {
+                    "name": "sunscreen_zkp_backend",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'cannonical_norm_noise_model'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=cannonical_norm_noise_model",
+                    "--package=cannonical_norm_noise_model"
+                ],
+                "filter": {
+                    "name": "cannonical_norm_noise_model",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'cannonical_norm_noise_model'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=cannonical_norm_noise_model",
+                    "--package=cannonical_norm_noise_model"
+                ],
+                "filter": {
+                    "name": "cannonical_norm_noise_model",
+                    "kind": "bin"
                 }
             },
             "args": [],
@@ -803,6 +803,25 @@
                 "filter": {
                     "name": "pir",
                     "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'sunscreen_math'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=sunscreen_math"
+                ],
+                "filter": {
+                    "name": "sunscreen_math",
+                    "kind": "lib"
                 }
             },
             "args": [],

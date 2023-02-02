@@ -1,0 +1,15 @@
+#pragma once
+
+#include <inttypes>
+#include <scalar>
+
+namespace constants {
+    constant const u32 _L[] = {
+        0x1cf5d3ed, 0x009318d2, 0x1de73596, 0x1df3bd45, 0x0000014d, 0x00000000, 0x00000000, 0x00000000,
+        0x00100000,
+    };
+
+    /// `L` is the order of base point, i.e. 2^252 +
+    /// 27742317777372353535851937790883648493
+    constant const Scalar29 L(_L);
+}

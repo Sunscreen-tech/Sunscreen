@@ -1,0 +1,104 @@
+use std::collections::HashMap;
+
+use lazy_static::lazy_static;
+use metal::{Device, ComputePipelineState, CommandQueue, Buffer, MTLResourceOptions, MTLSize, MTLCommandBufferStatus, Library};
+
+mod scalarvec;
+pub use scalarvec::*;
+
+const SHADERLIB: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/curve25519-dalek.metallib"));
+
+pub struct Runtime {
+    device: Device,
+    lib: Library,
+    command_queue: CommandQueue,
+}
+
+/// TODO Remove
+unsafe impl Sync for Runtime {}
+
+lazy_static! {
+    static ref RUNTIME: Runtime = {
+        let device = Device::system_default().unwrap();
+        let lib = device.new_library_with_data(SHADERLIB).unwrap();
+        let command_queue = device.new_command_queue();
+
+        Runtime {
+            device: Device::system_default().unwrap(),
+            lib,
+            command_queue
+        }
+    };
+}
+
+impl Runtime {
+    pub fn get() -> &'static Runtime {
+        &*RUNTIME
+    }
+
+    pub fn alloc(&self, len: usize) -> Buffer {
+        self.device.new_buffer(len as u64, MTLResourceOptions::StorageModeShared)
+    }
+
+    pub fn run(&self, kernel_name: &'static str, data: &[&Buffer], grid: [(u64, u64); 3]) {
+        let command_buffer = self.command_queue.new_command_buffer();
+        let encoder = command_buffer.new_compute_command_encoder();
+
+        let gpu_fn = self.lib.get_function(kernel_name, None).unwrap();
+        let gpu_fn = self.device.new_compute_pipeline_state_with_function(&gpu_fn).unwrap();
+
+        encoder.set_compute_pipeline_state(&gpu_fn);
+        
+        for (i, buf) in data.iter().enumerate() {
+            encoder.set_buffer(i as u64, Some(buf), 0);
+        }
+
+        let global = MTLSize::new(grid[0].0, grid[1].0, grid[2].0);
+        let local = MTLSize::new(grid[0].1, grid[1].1, grid[2].1);
+
+        encoder.dispatch_threads(global, local);
+        encoder.end_encoding();
+        command_buffer.commit();
+        command_buffer.wait_until_completed();
+        assert_eq!(command_buffer.status(), MTLCommandBufferStatus::Completed);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use core::slice;
+
+    use super::*;
+
+    #[test]
+    fn can_init() {
+        Runtime::get();
+    }
+
+    #[test]
+    fn can_add() {
+        let runtime = Runtime::get();
+
+        const LEN: usize = 42 * core::mem::size_of::<f32>();
+
+        let a_buf = runtime.alloc(LEN);
+        let b_buf = runtime.alloc(LEN);
+        let c_buf = runtime.alloc(LEN);
+
+        let a = unsafe { slice::from_raw_parts_mut(a_buf.contents() as *mut f32, 42) };
+        let b = unsafe { slice::from_raw_parts_mut(b_buf.contents() as *mut f32, 42) };
+
+        for (i, val) in a.iter_mut().zip(b.iter_mut()).enumerate() {
+            *val.0 = i as f32;
+            *val.1 = i as f32;
+        }
+
+        runtime.run("add_arrays", &[&a_buf, &b_buf, &c_buf], [(42, 64), (1, 1), (1, 1)]);
+
+        let c = unsafe { slice::from_raw_parts(c_buf.contents() as *const f32, 42) };
+
+        for i in 0..42usize {
+            assert_eq!(c[i], 2.0 * i as f32);
+        }
+    }
+}

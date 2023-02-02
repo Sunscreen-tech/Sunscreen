@@ -337,7 +337,7 @@ kernel void test_get_l(
     l.pack(a, 0, 1);
 }
 
-kernel void test_can_pack_unpack(
+kernel void test_can_pack_unpack_scalar(
     u32 tid [[thread_position_in_grid]],
     device const u32* a [[buffer(0)]],
     device u32* b [[buffer(1)]],

@@ -34,6 +34,8 @@ fn compile_metal_shaders() {
             .arg("-sdk")
             .arg("macosx")
             .arg("metal")
+            .arg("-Wall")
+            .arg("-Werror")
             .arg("-c")
             .arg(file.path())
             .arg("-I")

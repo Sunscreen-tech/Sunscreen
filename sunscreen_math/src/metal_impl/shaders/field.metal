@@ -1,5 +1,3 @@
-#pragma once
-
 #include <field.hpp.metal>
 
 FieldElement2625 FieldElement2625::unpack(device const u32* ptr, const size_t grid_tid, const size_t n) {

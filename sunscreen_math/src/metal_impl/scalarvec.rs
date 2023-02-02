@@ -357,7 +357,7 @@ mod tests {
         let len = U32Arg::new(v.len() as u32);
 
         runtime.run(
-            "test_can_pack_unpack",
+            "test_can_pack_unpack_scalar",
             &[&v.data, &out.data, &len],
             [(4, 64), (1, 1), (1, 1)],
         );

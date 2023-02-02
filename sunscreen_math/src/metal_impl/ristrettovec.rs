@@ -6,12 +6,30 @@ use std::mem::size_of;
 
 use super::Runtime;
 
-pub struct RistrettoVec {
+pub struct RistrettoPointVec {
     data: Buffer,
     len: usize,
 }
 
-impl RistrettoVec {
+impl RistrettoPointVec {
+    /// Creates a new [RistrettoVec].
+    /// 
+    /// # Remarks
+    /// This code assumes the following layout of curve25519-dalek datastructures:
+    /// ```rust
+    /// struct RistrettoPoint(EdwardsPoint);
+    /// 
+    /// struct EdwardsPoint {
+    ///     X: FieldElement2625,
+    ///     Y: FieldElement2625,
+    ///     Z: FieldElement2625,
+    ///     T: FieldElement2625,
+    /// }
+    /// 
+    /// struct FieldElement2625([u32; 10]);
+    /// ```
+    /// To achieve this layout, you must use the u32 backend.
+    /// 
     pub fn new(x: &[RistrettoPoint]) -> Self {
         let runtime = Runtime::get();
 
@@ -52,6 +70,14 @@ impl RistrettoVec {
         }
 
         field_vec
+    }
+
+    pub fn len(&self) -> usize {
+        self.len
+    }
+
+    pub fn len_bytes(&self) -> usize {
+        self.len * size_of::<RistrettoPoint>()
     }
 
     pub fn get(&self, index: usize) -> RistrettoPoint {
@@ -118,10 +144,34 @@ mod tests {
             RistrettoPoint::random(&mut thread_rng()),
         ];
 
-        let v = RistrettoVec::new(&points);
+        let v = RistrettoPointVec::new(&points);
 
         for (i, p) in points.into_iter().enumerate() {
             assert_eq!(v.get(i), p);
+        }
+    }
+
+    fn can_pack_and_unpack_gpu() {
+        let points = [
+            RistrettoPoint::random(&mut thread_rng()),
+            RistrettoPoint::random(&mut thread_rng()),
+            RistrettoPoint::random(&mut thread_rng()),
+            RistrettoPoint::random(&mut thread_rng()),
+        ];
+
+        let v = RistrettoPointVec::new(&points);
+
+        let runtime = Runtime::get();
+
+        let o = RistrettoPointVec {
+            data: runtime.alloc(v.len_bytes()),
+            len: v.len()
+        };
+
+        runtime.run("test_can_pack_unpack_ristretto", &[&v.data, &o.data], [(v.len() as u64, 1), (1, 1), (1, 1)]);
+
+        for i in 0..v.len() {
+            assert_eq!(v.get(i), o.get(i));
         }
     }
 }

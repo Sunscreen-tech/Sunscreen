@@ -84,11 +84,24 @@ constant u32 data[] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
 constant Scalar29 Scalar29::Zero(data);
 
 kernel void test_can_pack_unpack(
+    u32 tid [[thread_position_in_grid]],
     device const u32* a [[buffer(0)]],
     device u32* b [[buffer(1)]],
-    u32 tid [[thread_position_in_grid]],
     constant u32& len [[buffer(2)]]
 ) {
     auto x = Scalar29::unpack(a, tid, len);
     x.pack(b, tid, len);
+}
+
+kernel void scalar_add(
+    u32 tid [[thread_position_in_grid]],
+    device const u32* a [[buffer(0)]],
+    device const u32* b [[buffer(1)]],
+    device u32* c [[buffer(2)]],
+    constant u32& len [[buffer(3)]]
+) {
+    Scalar29 t_a = Scalar29::unpack(a, tid, len);
+    Scalar29 t_b = Scalar29::unpack(b, tid, len);
+
+    (t_a + t_b).pack(c, tid, len);
 }

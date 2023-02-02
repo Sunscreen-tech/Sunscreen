@@ -4,13 +4,13 @@ fn compile_metal_shaders() {
     let outdir = std::env::var("OUT_DIR").unwrap();
     let shader_dir = PathBuf::from(".")
         .join("src")
-        .join("metal")
+        .join("metal_impl")
         .join("shaders");
 
     let shaders = std::fs::read_dir(&shader_dir).unwrap();
     let mut air_files = vec![];
 
-    println!("cargo:rerun-if-changed=src/metal/shaders");
+    println!("cargo:rerun-if-changed=src/metal_impl/shaders");
 
     let include_dir = shader_dir.join("include");
 

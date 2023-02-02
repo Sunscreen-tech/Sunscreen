@@ -1,8 +1,11 @@
 use core::{mem::{size_of}, slice};
+use std::ops::Add;
 
 use metal::Buffer;
 
 use curve25519_dalek::scalar::Scalar;
+
+use crate::metal_impl::U32Arg;
 
 use super::Runtime;
 
@@ -65,6 +68,10 @@ impl ScalarVec {
         self.len
     }
 
+    pub fn byte_len(&self) -> usize {
+        self.len() * size_of::<Scalar>()
+    }
+
     /// Get the [`Scalar`] at index i.
     pub fn get(&self, i: usize) -> Scalar {
         if i > self.len {
@@ -111,20 +118,72 @@ impl ScalarVec {
     }
 }
 
+impl Add<ScalarVec> for ScalarVec {
+    type Output = Self;
+
+    fn add(self, rhs: ScalarVec) -> Self::Output {
+        &self + &rhs
+    }
+}
+
+impl Add<&ScalarVec> for ScalarVec {
+    type Output = Self;
+
+    fn add(self, rhs: &ScalarVec) -> Self::Output {
+        &self + rhs
+    }
+}
+
+
+impl Add<ScalarVec> for &ScalarVec {
+    type Output = ScalarVec;
+
+    fn add(self, rhs: ScalarVec) -> Self::Output {
+        self + &rhs
+    }
+}
+
+impl Add<&ScalarVec> for &ScalarVec {
+    type Output = ScalarVec;
+
+    fn add(self, rhs: &ScalarVec) -> Self::Output {
+        assert_eq!(self.len(), rhs.len());
+
+        let runtime = Runtime::get();
+        let out_buf = runtime.alloc(self.byte_len());
+        let len = U32Arg::new(self.len as u32);
+
+        runtime.run("scalar_add", &[&self.data, &rhs.data, &out_buf, &len.data], [(self.len() as u64, 64), (1, 1), (1, 1)]);
+
+        ScalarVec {
+            data: out_buf,
+            len: self.len
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use rand::thread_rng;
+
+    use crate::metal_impl::U32Arg;
 
     use super::*;
 
     #[test]
     fn can_roundtrip_scalarvec_elements() {
-        let v = ScalarVec::new(&[Scalar::from(1u8), Scalar::from(2u8), Scalar::from(3u8), Scalar::from(4u8)]);
+        let s = &[
+            Scalar::random(&mut thread_rng()),
+            Scalar::random(&mut thread_rng()),
+            Scalar::random(&mut thread_rng()),
+            Scalar::random(&mut thread_rng()),
+        ];
 
-        assert_eq!(v.get(0), Scalar::from(1u8));
-        assert_eq!(v.get(1), Scalar::from(2u8));
-        assert_eq!(v.get(2), Scalar::from(3u8));
-        assert_eq!(v.get(3), Scalar::from(4u8));
+        let v = ScalarVec::new(s);
+
+        for i in 0..v.len() {
+            assert_eq!(v.get(i), s[i]);
+        }
     }
 
     #[test]
@@ -146,8 +205,7 @@ mod tests {
             assert_eq!(out.get(i), Scalar::from(0u8));
         }
 
-        let len = runtime.alloc(size_of::<u32>());
-        unsafe { *(len.contents() as *mut u32) = v.len() as u32 };
+        let len = U32Arg::new(v.len() as u32);
 
         runtime.run("test_can_pack_unpack", &[&v.data, &out.data, &len], [(4, 64), (1, 1), (1, 1)]);
 
@@ -155,5 +213,30 @@ mod tests {
             dbg!(i);
             assert_eq!(v.get(i), out.get(i));
         }
+    }
+
+    #[test]
+    fn can_add_scalars() {
+        let a = ScalarVec::new(&[
+            Scalar::random(&mut thread_rng()),
+            Scalar::random(&mut thread_rng()),
+            Scalar::random(&mut thread_rng()),
+            Scalar::random(&mut thread_rng()),
+        ]);
+
+        let b = ScalarVec::new(&[
+            Scalar::random(&mut thread_rng()),
+            Scalar::random(&mut thread_rng()),
+            Scalar::random(&mut thread_rng()),
+            Scalar::random(&mut thread_rng()),
+        ]);
+
+        let c = &a + &b;
+
+        for i in 0..a.len() {
+            dbg!(i);
+            assert_eq!(c.get(i), a.get(i) + b.get(i));
+        }
+
     }
 }

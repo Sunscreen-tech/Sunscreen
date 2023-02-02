@@ -1,6 +1,7 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, mem::size_of};
+use std::ops::Deref;
 
-use lazy_static::lazy_static;
+use lazy_static::{lazy_static, __Deref};
 use metal::{Device, ComputePipelineState, CommandQueue, Buffer, MTLResourceOptions, MTLSize, MTLCommandBufferStatus, Library};
 
 mod scalarvec;
@@ -61,6 +62,32 @@ impl Runtime {
         command_buffer.commit();
         command_buffer.wait_until_completed();
         assert_eq!(command_buffer.status(), MTLCommandBufferStatus::Completed);
+    }
+}
+
+pub(crate) struct U32Arg {
+    pub(crate) data: Buffer,
+}
+
+impl U32Arg {
+    pub fn new(val: u32) -> Self {
+        let runtime = Runtime::get();
+
+        let data = runtime.alloc(size_of::<u32>());
+
+        unsafe { *(data.contents() as *mut u32) = val };
+
+        Self {
+            data
+        }
+    }
+}
+
+impl Deref for U32Arg {
+    type Target = Buffer;
+
+    fn deref(&self) -> &Self::Target {
+        &self.data
     }
 }
 

@@ -4,7 +4,7 @@
 #include <scalar>
 
 namespace constants {
-    constant const u32 _L[] = {
+    constant const u32 _L[9] = {
         0x1cf5d3ed, 0x009318d2, 0x1de73596, 0x1df3bd45, 0x0000014d, 0x00000000, 0x00000000, 0x00000000,
         0x00100000,
     };

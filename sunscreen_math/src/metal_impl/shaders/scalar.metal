@@ -93,6 +93,17 @@ struct MulResult {
     }
 };
 
+MulResult mul_internal(Scalar29 a, Scalar29 b);
+Scalar29 montgomery_reduce(MulResult limbs);
+
+Scalar29 Scalar29::mul(Scalar29 a, Scalar29 b) {
+    Scalar29 ab = montgomery_reduce(mul_internal(a, b));
+
+    Scalar29 rr = constants::RR;
+
+    return montgomery_reduce(mul_internal(ab, rr));
+}
+
 u64 m(u32 a, u32 b) {
     u64 c;
 
@@ -126,9 +137,9 @@ MulResult mul_internal(Scalar29 a, Scalar29 b) {
     z[ 6] = z[11] - (z[ 1]); // c06mc11 - c01
     z[ 7] = z[12] - (z[ 2]); // c07mc12 - c02
     z[ 8] = z[ 8] - (z[13]); // c08mc13 - c03
-    z[ 9] = z[14] - (z[ 4]); // c14 + c04
-    z[10] = z[15] - (z[10]); // c15 + c05mc10
-    z[11] = z[16] - (z[11]); // c16 + c06mc11
+    z[ 9] = z[14] + (z[ 4]); // c14 + c04
+    z[10] = z[15] + (z[10]); // c15 + c05mc10
+    z[11] = z[16] + (z[11]); // c16 + c06mc11
 
     u64 aa[] = {
         a[0] + a[5],
@@ -245,6 +256,19 @@ kernel void scalar_neg(
     Scalar29 zero = Scalar29::Zero;
 
     (zero - t_a).pack(b, tid, len);
+}
+
+kernel void scalar_mul(
+    u32 tid [[thread_position_in_grid]],
+    device const u32* a [[buffer(0)]],
+    device const u32* b [[buffer(1)]],
+    device u32* c [[buffer(2)]],
+    constant u32& len [[buffer(3)]]
+) {
+    Scalar29 t_a = Scalar29::unpack(a, tid, len);
+    Scalar29 t_b = Scalar29::unpack(b, tid, len);
+
+    (t_a * t_b).pack(c, tid, len);
 }
 
 kernel void test_get_l(

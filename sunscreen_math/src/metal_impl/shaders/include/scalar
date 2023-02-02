@@ -9,6 +9,8 @@ private:
 public:
     constant static Scalar29 Zero;
 
+    Scalar29() = delete;
+
     Scalar29(thread u32 limbs[9]): _limbs{limbs[0], limbs[1], limbs[2], limbs[3], limbs[4], limbs[5], limbs[6], limbs[7], limbs[8]} {}
 
     Scalar29(constant u32 limbs[9]): _limbs{limbs[0], limbs[1], limbs[2], limbs[3], limbs[4], limbs[5], limbs[6], limbs[7], limbs[8]} {}
@@ -34,8 +36,10 @@ public:
     /// function with a consecutive grid_tid,
     /// unpacking is fully coalesced.
     void pack(device u32* ptr, size_t grid_tid, size_t n);
+    
     Scalar29 add(const Scalar29 a, const Scalar29 b);
     Scalar29 sub(const Scalar29 a, const Scalar29 b);
+    Scalar29 mul(const Scalar29 a, const Scalar29 b);
 
     Scalar29 operator+(thread const Scalar29& other) thread {
         return add(*this, other);
@@ -43,6 +47,10 @@ public:
 
     Scalar29 operator-(thread const Scalar29& other) thread {
         return sub(*this, other);
+    }
+
+    Scalar29 operator*(thread const Scalar29& other) thread {
+        return mul(*this, other);
     }
 
     const thread u32& operator[](const size_t index) const {

@@ -15,4 +15,11 @@ namespace constants {
     
     /// `L` * `LFACTOR` = -1 (mod 2^29)
     constant const u32 LFACTOR = 0x12547e1b;
+
+    constant const u32 _RR[9] = {
+        0x0b5f9d12, 0x1e141b17, 0x158d7f3d, 0x143f3757, 0x1972d781, 0x042feb7c, 0x1ceec73d, 0x1e184d1e,
+        0x0005046d
+    };
+    
+    constant const Scalar29 RR = Scalar29(_RR);
 }

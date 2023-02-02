@@ -48,6 +48,8 @@ impl Runtime {
         let gpu_fn = self.lib.get_function(kernel_name, None).unwrap();
         let gpu_fn = self.device.new_compute_pipeline_state_with_function(&gpu_fn).unwrap();
 
+        dbg!(gpu_fn.max_total_threads_per_threadgroup());
+
         encoder.set_compute_pipeline_state(&gpu_fn);
         
         for (i, buf) in data.iter().enumerate() {

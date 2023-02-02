@@ -1,4 +1,4 @@
-use std::{process::Command, path::PathBuf};
+use std::{path::PathBuf, process::Command};
 
 fn compile_metal_shaders() {
     let outdir = std::env::var("OUT_DIR").unwrap();
@@ -18,14 +18,15 @@ fn compile_metal_shaders() {
         let file = s.unwrap();
         let filename = file.file_name().to_string_lossy().into_owned();
 
-        let out_name = if !file.file_name().to_string_lossy().ends_with(".metal") || !file.file_type().unwrap().is_file() {
+        let out_name = if !file.file_name().to_string_lossy().ends_with(".metal")
+            || !file.file_type().unwrap().is_file()
+        {
             continue;
         } else {
             format!("{}.air", filename.strip_suffix(".metal").unwrap())
         };
 
-        let outfile = PathBuf::from(&outdir)
-            .join(&out_name);
+        let outfile = PathBuf::from(&outdir).join(&out_name);
 
         air_files.push(outfile.clone());
 
@@ -53,8 +54,7 @@ fn compile_metal_shaders() {
         }
     }
 
-    let libout = PathBuf::from(outdir)
-        .join("curve25519-dalek.metallib");
+    let libout = PathBuf::from(outdir).join("curve25519-dalek.metallib");
 
     let output = Command::new("xcrun")
         .arg("-sdk")

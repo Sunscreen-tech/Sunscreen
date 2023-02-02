@@ -1,8 +1,11 @@
-use std::{collections::HashMap, mem::size_of};
 use std::ops::Deref;
+use std::{collections::HashMap, mem::size_of};
 
-use lazy_static::{lazy_static, __Deref};
-use metal::{Device, ComputePipelineState, CommandQueue, Buffer, MTLResourceOptions, MTLSize, MTLCommandBufferStatus, Library};
+use lazy_static::{__Deref, lazy_static};
+use metal::{
+    Buffer, CommandQueue, ComputePipelineState, Device, Library, MTLCommandBufferStatus,
+    MTLResourceOptions, MTLSize,
+};
 
 mod scalarvec;
 pub use scalarvec::*;
@@ -27,7 +30,7 @@ lazy_static! {
         Runtime {
             device: Device::system_default().unwrap(),
             lib,
-            command_queue
+            command_queue,
         }
     };
 }
@@ -38,7 +41,8 @@ impl Runtime {
     }
 
     pub fn alloc(&self, len: usize) -> Buffer {
-        self.device.new_buffer(len as u64, MTLResourceOptions::StorageModeShared)
+        self.device
+            .new_buffer(len as u64, MTLResourceOptions::StorageModeShared)
     }
 
     pub fn run(&self, kernel_name: &'static str, data: &[&Buffer], grid: [(u64, u64); 3]) {
@@ -46,12 +50,15 @@ impl Runtime {
         let encoder = command_buffer.new_compute_command_encoder();
 
         let gpu_fn = self.lib.get_function(kernel_name, None).unwrap();
-        let gpu_fn = self.device.new_compute_pipeline_state_with_function(&gpu_fn).unwrap();
+        let gpu_fn = self
+            .device
+            .new_compute_pipeline_state_with_function(&gpu_fn)
+            .unwrap();
 
         dbg!(gpu_fn.max_total_threads_per_threadgroup());
 
         encoder.set_compute_pipeline_state(&gpu_fn);
-        
+
         for (i, buf) in data.iter().enumerate() {
             encoder.set_buffer(i as u64, Some(buf), 0);
         }
@@ -59,9 +66,9 @@ impl Runtime {
         let global = MTLSize::new(grid[0].0, grid[1].0, grid[2].0);
         let local = MTLSize::new(grid[0].1, grid[1].1, grid[2].1);
 
-        // TODO: We're relying on non-uniform thread groups. We 
+        // TODO: We're relying on non-uniform thread groups. We
         // should either document this as a requirement or
-        // do feature detection and modify our kernels to mask 
+        // do feature detection and modify our kernels to mask
         // off excess threads.
         // See https://developer.apple.com/metal/Metal-Feature-Set-Tables.pdf
         encoder.dispatch_threads(global, local);
@@ -84,9 +91,7 @@ impl U32Arg {
 
         unsafe { *(data.contents() as *mut u32) = val };
 
-        Self {
-            data
-        }
+        Self { data }
     }
 }
 

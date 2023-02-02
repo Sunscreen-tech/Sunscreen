@@ -1,5 +1,5 @@
-use core::{mem::{size_of}, slice};
-use std::ops::{Add, Sub, Neg, Mul};
+use core::{mem::size_of, slice};
+use std::ops::{Add, Mul, Neg, Sub};
 
 use metal::Buffer;
 
@@ -11,7 +11,7 @@ use super::Runtime;
 
 /// A vector of scalars laid out in a way that enables coalescing on
 /// the GPU.
-/// 
+///
 /// # Remarks
 /// Conceptually, data is laid out as a row-major `m x n` matrix stored in
 /// a 1 dimensional buffer. The leading dimension iterates over the scalars
@@ -27,12 +27,8 @@ impl ScalarVec {
         let byte_len = x.len() * size_of::<Scalar>();
 
         let data = Runtime::get().alloc(byte_len);
-        let mut res = Self {
-            data,
-            len: x.len()
-        };
+        let mut res = Self { data, len: x.len() };
 
-        
         let data_map = res.buffer_slice_mut();
 
         for (i, s) in x.iter().enumerate() {
@@ -134,7 +130,6 @@ impl Add<&ScalarVec> for ScalarVec {
     }
 }
 
-
 impl Add<ScalarVec> for &ScalarVec {
     type Output = ScalarVec;
 
@@ -153,11 +148,15 @@ impl Add<&ScalarVec> for &ScalarVec {
         let out_buf = runtime.alloc(self.byte_len());
         let len = U32Arg::new(self.len as u32);
 
-        runtime.run("scalar_add", &[&self.data, &rhs.data, &out_buf, &len.data], [(self.len() as u64, 64), (1, 1), (1, 1)]);
+        runtime.run(
+            "scalar_add",
+            &[&self.data, &rhs.data, &out_buf, &len.data],
+            [(self.len() as u64, 64), (1, 1), (1, 1)],
+        );
 
         ScalarVec {
             data: out_buf,
-            len: self.len
+            len: self.len,
         }
     }
 }
@@ -178,7 +177,6 @@ impl Sub<&ScalarVec> for ScalarVec {
     }
 }
 
-
 impl Sub<ScalarVec> for &ScalarVec {
     type Output = ScalarVec;
 
@@ -197,11 +195,15 @@ impl Sub<&ScalarVec> for &ScalarVec {
         let out_buf = runtime.alloc(self.byte_len());
         let len = U32Arg::new(self.len as u32);
 
-        runtime.run("scalar_sub", &[&self.data, &rhs.data, &out_buf, &len.data], [(self.len() as u64, 64), (1, 1), (1, 1)]);
+        runtime.run(
+            "scalar_sub",
+            &[&self.data, &rhs.data, &out_buf, &len.data],
+            [(self.len() as u64, 64), (1, 1), (1, 1)],
+        );
 
         ScalarVec {
             data: out_buf,
-            len: self.len
+            len: self.len,
         }
     }
 }
@@ -222,7 +224,6 @@ impl Mul<&ScalarVec> for ScalarVec {
     }
 }
 
-
 impl Mul<ScalarVec> for &ScalarVec {
     type Output = ScalarVec;
 
@@ -241,11 +242,15 @@ impl Mul<&ScalarVec> for &ScalarVec {
         let out_buf = runtime.alloc(self.byte_len());
         let len = U32Arg::new(self.len as u32);
 
-        runtime.run("scalar_mul", &[&self.data, &rhs.data, &out_buf, &len.data], [(self.len() as u64, 64), (1, 1), (1, 1)]);
+        runtime.run(
+            "scalar_mul",
+            &[&self.data, &rhs.data, &out_buf, &len.data],
+            [(self.len() as u64, 64), (1, 1), (1, 1)],
+        );
 
         ScalarVec {
             data: out_buf,
-            len: self.len
+            len: self.len,
         }
     }
 }
@@ -266,11 +271,15 @@ impl Neg for &ScalarVec {
         let out_buf = runtime.alloc(self.byte_len());
         let len = U32Arg::new(self.len as u32);
 
-        runtime.run("scalar_neg", &[&self.data, &out_buf, &len.data], [(self.len() as u64, 64), (1, 1), (1, 1)]);
+        runtime.run(
+            "scalar_neg",
+            &[&self.data, &out_buf, &len.data],
+            [(self.len() as u64, 64), (1, 1), (1, 1)],
+        );
 
         ScalarVec {
             data: out_buf,
-            len: self.len
+            len: self.len,
         }
     }
 }
@@ -311,7 +320,12 @@ mod tests {
         ];
 
         let v = ScalarVec::new(&scalars);
-        let mut out = ScalarVec::new(&[Scalar::from(0u8), Scalar::from(0u8), Scalar::from(0u8), Scalar::from(0u8)]);
+        let mut out = ScalarVec::new(&[
+            Scalar::from(0u8),
+            Scalar::from(0u8),
+            Scalar::from(0u8),
+            Scalar::from(0u8),
+        ]);
 
         for i in 0..out.len() {
             assert_eq!(out.get(i), Scalar::from(0u8));
@@ -319,7 +333,11 @@ mod tests {
 
         let len = U32Arg::new(v.len() as u32);
 
-        runtime.run("test_can_pack_unpack", &[&v.data, &out.data, &len], [(4, 64), (1, 1), (1, 1)]);
+        runtime.run(
+            "test_can_pack_unpack",
+            &[&v.data, &out.data, &len],
+            [(4, 64), (1, 1), (1, 1)],
+        );
 
         for i in 0..out.len() {
             assert_eq!(v.get(i), out.get(i));

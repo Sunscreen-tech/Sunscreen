@@ -12,4 +12,7 @@ namespace constants {
     /// `L` is the order of base point, i.e. 2^252 +
     /// 27742317777372353535851937790883648493
     constant const Scalar29 L(_L);
+    
+    /// `L` * `LFACTOR` = -1 (mod 2^29)
+    constant const u32 LFACTOR = 0x12547e1b;
 }

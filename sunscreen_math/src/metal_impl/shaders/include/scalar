@@ -9,6 +9,8 @@ private:
 public:
     constant static Scalar29 Zero;
 
+    Scalar29(thread u32 limbs[9]): _limbs{limbs[0], limbs[1], limbs[2], limbs[3], limbs[4], limbs[5], limbs[6], limbs[7], limbs[8]} {}
+
     Scalar29(constant u32 limbs[9]): _limbs{limbs[0], limbs[1], limbs[2], limbs[3], limbs[4], limbs[5], limbs[6], limbs[7], limbs[8]} {}
 
     /// Loads the value at grid_tid from an `8 x n` row-major Scalar word matrix. `n` is the length

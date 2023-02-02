@@ -57,6 +57,11 @@ impl Runtime {
         let global = MTLSize::new(grid[0].0, grid[1].0, grid[2].0);
         let local = MTLSize::new(grid[0].1, grid[1].1, grid[2].1);
 
+        // TODO: We're relying on non-uniform thread groups. We 
+        // should either document this as a requirement or
+        // do feature detection and modify our kernels to mask 
+        // off excess threads.
+        // See https://developer.apple.com/metal/Metal-Feature-Set-Tables.pdf
         encoder.dispatch_threads(global, local);
         encoder.end_encoding();
         command_buffer.commit();
@@ -100,32 +105,5 @@ mod tests {
     #[test]
     fn can_init() {
         Runtime::get();
-    }
-
-    #[test]
-    fn can_add() {
-        let runtime = Runtime::get();
-
-        const LEN: usize = 42 * core::mem::size_of::<f32>();
-
-        let a_buf = runtime.alloc(LEN);
-        let b_buf = runtime.alloc(LEN);
-        let c_buf = runtime.alloc(LEN);
-
-        let a = unsafe { slice::from_raw_parts_mut(a_buf.contents() as *mut f32, 42) };
-        let b = unsafe { slice::from_raw_parts_mut(b_buf.contents() as *mut f32, 42) };
-
-        for (i, val) in a.iter_mut().zip(b.iter_mut()).enumerate() {
-            *val.0 = i as f32;
-            *val.1 = i as f32;
-        }
-
-        runtime.run("add_arrays", &[&a_buf, &b_buf, &c_buf], [(42, 64), (1, 1), (1, 1)]);
-
-        let c = unsafe { slice::from_raw_parts(c_buf.contents() as *const f32, 42) };
-
-        for i in 0..42usize {
-            assert_eq!(c[i], 2.0 * i as f32);
-        }
     }
 }

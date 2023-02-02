@@ -270,7 +270,6 @@ mod tests {
         let mut out = ScalarVec::new(&[Scalar::from(0u8), Scalar::from(0u8), Scalar::from(0u8), Scalar::from(0u8)]);
 
         for i in 0..out.len() {
-            dbg!(i);
             assert_eq!(out.get(i), Scalar::from(0u8));
         }
 
@@ -279,7 +278,6 @@ mod tests {
         runtime.run("test_can_pack_unpack", &[&v.data, &out.data, &len], [(4, 64), (1, 1), (1, 1)]);
 
         for i in 0..out.len() {
-            dbg!(i);
             assert_eq!(v.get(i), out.get(i));
         }
     }
@@ -313,7 +311,6 @@ mod tests {
         let c = &a + &b;
 
         for i in 0..a.len() {
-            dbg!(i);
             assert_eq!(c.get(i), a.get(i) + b.get(i));
         }
     }
@@ -340,8 +337,6 @@ mod tests {
             let a_i = a.get(i);
             let b_i = b.get(i);
 
-            dbg!(a_i);
-            dbg!(b_i);
             assert_eq!(c.get(i), a.get(i) - b.get(i));
         }
     }
@@ -368,8 +363,6 @@ mod tests {
             let a_i = a.get(i);
             let b_i = b.get(i);
 
-            dbg!(a_i);
-            dbg!(b_i);
             assert_eq!(c.get(i), a.get(i) - b.get(i));
         }
     }

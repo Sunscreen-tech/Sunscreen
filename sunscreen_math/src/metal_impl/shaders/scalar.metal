@@ -1,3 +1,4 @@
+#include <metal_integer>
 #include <inttypes>
 #include <constants>
 #include <scalar>
@@ -78,6 +79,130 @@ Scalar29 Scalar29::sub(const Scalar29 a, const Scalar29 b) {
     }
 
     return difference;
+}
+
+struct MulResult {
+    ulong limbs[17];
+
+    thread const u64& operator[](const size_t i) const {
+        return limbs[i];
+    }
+
+    thread u64& operator[](const size_t i) {
+        return limbs[i];
+    }
+};
+
+u64 m(u32 a, u32 b) {
+    u64 c;
+
+    c = ((u64)(a * b)) | ((u64)metal::mulhi(a, b)) << 32;
+
+    return c;
+}
+
+MulResult mul_internal(Scalar29 a, Scalar29 b) {
+    MulResult z;
+
+    z[0] = m(a[0], b[0]);                                                                 // c00
+    z[1] = m(a[0], b[1]) + m(a[1], b[0]);                                                 // c01
+    z[2] = m(a[0], b[2]) + m(a[1], b[1]) + m(a[2], b[0]);                                 // c02
+    z[3] = m(a[0], b[3]) + m(a[1], b[2]) + m(a[2], b[1]) + m(a[3], b[0]);                 // c03
+    z[4] = m(a[0], b[4]) + m(a[1], b[3]) + m(a[2], b[2]) + m(a[3], b[1]) + m(a[4], b[0]); // c04
+    z[5] =                 m(a[1], b[4]) + m(a[2], b[3]) + m(a[3], b[2]) + m(a[4], b[1]); // c05
+    z[6] =                                 m(a[2], b[4]) + m(a[3], b[3]) + m(a[4], b[2]); // c06
+    z[7] =                                                 m(a[3], b[4]) + m(a[4], b[3]); // c07
+    z[8] =                                                                (m(a[4], b[4])) - z[3]; // c08 - c03
+
+    z[10] = z[5] - m(a[5], b[5]);                                                        // c05mc10
+    z[11] = z[6] - (m(a[5], b[6]) + m(a[6], b[5]));                                      // c06mc11
+    z[12] = z[7] - (m(a[5], b[7]) + m(a[6], b[6]) + m(a[7], b[5]));                      // c07mc12
+    z[13] =                   m(a[5], b[8]) + m(a[6], b[7]) + m(a[7], b[6]) + m(a[8], b[5]); // c13
+    z[14] =                                   m(a[6], b[8]) + m(a[7], b[7]) + m(a[8], b[6]); // c14
+    z[15] =                                                   m(a[7], b[8]) + m(a[8], b[7]); // c15
+    z[16] =                                                                   m(a[8], b[8]); // c16
+
+    z[ 5] = z[10] - (z[ 0]); // c05mc10 - c00
+    z[ 6] = z[11] - (z[ 1]); // c06mc11 - c01
+    z[ 7] = z[12] - (z[ 2]); // c07mc12 - c02
+    z[ 8] = z[ 8] - (z[13]); // c08mc13 - c03
+    z[ 9] = z[14] - (z[ 4]); // c14 + c04
+    z[10] = z[15] - (z[10]); // c15 + c05mc10
+    z[11] = z[16] - (z[11]); // c16 + c06mc11
+
+    u64 aa[] = {
+        a[0] + a[5],
+        a[1] + a[6],
+        a[2] + a[7],
+        a[3] + a[8]
+    };
+
+    u64 bb[] = {
+        b[0] + b[5],
+        b[1] + b[6],
+        b[2] + b[7],
+        b[3] + b[8]
+    };
+
+    z[ 5] = (m(aa[0], bb[0]))                                                                        + (z[ 5]); // c20 + c05mc10 - c00
+    z[ 6] = (m(aa[0], bb[1]) + m(aa[1], bb[0]))                                                      + (z[ 6]); // c21 + c06mc11 - c01
+    z[ 7] = (m(aa[0], bb[2]) + m(aa[1], bb[1]) + m(aa[2], bb[0]))                                    + (z[ 7]); // c22 + c07mc12 - c02
+    z[ 8] = (m(aa[0], bb[3]) + m(aa[1], bb[2]) + m(aa[2], bb[1]) + m(aa[3], bb[0]))                  + (z[ 8]); // c23 + c08mc13 - c03
+    z[ 9] = (m(aa[0],  b[4]) + m(aa[1], bb[3]) + m(aa[2], bb[2]) + m(aa[3], bb[1]) + m(a[4], bb[0])) - (z[ 9]); // c24 - c14 - c04
+    z[10] = (                  m(aa[1],  b[4]) + m(aa[2], bb[3]) + m(aa[3], bb[2]) + m(a[4], bb[1])) - (z[10]); // c25 - c15 - c05mc10
+    z[11] = (                                    m(aa[2],  b[4]) + m(aa[3], bb[3]) + m(a[4], bb[2])) - (z[11]); // c26 - c16 - c06mc11
+    z[12] = (                                                      m(aa[3],  b[4]) + m(a[4], bb[3])) - (z[12]); // c27 - c07mc12
+
+    return z;
+}
+
+struct MontMulLRes {
+        u64 carry;
+        u32 n;
+
+        MontMulLRes(u64 carry, u32 n): carry(carry), n(n) {}
+};
+
+inline MontMulLRes part1(u64 sum) {
+    u32 p = ((u32)sum) * (constants::LFACTOR) & ((1u << 29) - 1);
+    return MontMulLRes((sum + m(p,constants::L[0])) >> 29, p);
+}
+
+inline MontMulLRes part2(u64 sum) {
+    u32 w = ((u32)sum) & ((1u << 29) - 1);
+    return MontMulLRes(sum >> 29, w);
+}
+
+Scalar29 montgomery_reduce(MulResult limbs) {
+    // note: l5,l6,l7 are zero, so their multiplies can be skipped
+    Scalar29 l = constants::L;
+
+    // the first half computes the Montgomery adjustment factor n, and begins adding n*l to make limbs divisible by R
+    MontMulLRes x0 = part1(        limbs[ 0]);
+    MontMulLRes x1 = part1(x0.carry + limbs[ 1] + m(x0.n,l[1]));
+    MontMulLRes x2 = part1(x1.carry + limbs[ 2] + m(x0.n,l[2]) + m(x1.n,l[1]));
+    MontMulLRes x3 = part1(x2.carry + limbs[ 3] + m(x0.n,l[3]) + m(x1.n,l[2]) + m(x2.n,l[1]));
+    MontMulLRes x4 = part1(x3.carry + limbs[ 4] + m(x0.n,l[4]) + m(x1.n,l[3]) + m(x2.n,l[2]) + m(x3.n,l[1]));
+    MontMulLRes x5 = part1(x4.carry + limbs[ 5]                + m(x1.n,l[4]) + m(x2.n,l[3]) + m(x3.n,l[2]) + m(x4.n,l[1]));
+    MontMulLRes x6 = part1(x5.carry + limbs[ 6]                               + m(x2.n,l[4]) + m(x3.n,l[3]) + m(x4.n,l[2]) + m(x5.n,l[1]));
+    MontMulLRes x7 = part1(x6.carry + limbs[ 7]                                              + m(x3.n,l[4]) + m(x4.n,l[3]) + m(x5.n,l[2]) + m(x6.n,l[1]));
+    MontMulLRes x8 = part1(x7.carry + limbs[ 8] + m(x0.n,l[8])                                              + m(x4.n,l[4]) + m(x5.n,l[3]) + m(x6.n,l[2]) + m(x7.n,l[1]));
+
+    // limbs is divisible by R now, so we can divide by R by simply storing the upper half as the result
+    MontMulLRes r0 = part2(x8.carry + limbs[ 9]                + m(x1.n,l[8])                                              + m(x5.n,l[4]) + m(x6.n,l[3]) + m(x7.n,l[2]) + m(x8.n,l[1]));
+    MontMulLRes r1 = part2(r0.carry + limbs[10]                               + m(x2.n,l[8])                                              + m(x6.n,l[4]) + m(x7.n,l[3]) + m(x8.n,l[2]));
+    MontMulLRes r2 = part2(r1.carry + limbs[11]                                              + m(x3.n,l[8])                                              + m(x7.n,l[4]) + m(x8.n,l[3]));
+    MontMulLRes r3 = part2(r2.carry + limbs[12]                                                             + m(x4.n,l[8])                                              + m(x8.n,l[4]));
+    MontMulLRes r4 = part2(r3.carry + limbs[13]                                                                            + m(x5.n,l[8]));
+    MontMulLRes r5 = part2(r4.carry + limbs[14]                                                                                           + m(x6.n,l[8]));
+    MontMulLRes r6 = part2(r5.carry + limbs[15]                                                                                                          + m(x7.n,l[8]));
+    MontMulLRes r7 = part2(r6.carry + limbs[16]                                                                                                                         + m(x8.n,l[8]));
+    u32 r8 = (u32)r7.carry;
+
+    u32 vals[9] = {r0.n,r1.n,r2.n,r3.n,r4.n,r5.n,r6.n,r7.n,r8};
+
+    // result may be >= l, so attempt to subtract l
+    return Scalar29(vals) - l;
 }
 
 constant u32 data[] = {0, 0, 0, 0, 0, 0, 0, 0, 0};

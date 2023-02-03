@@ -8,6 +8,9 @@ private:
 
     FieldElement2625() { }
 public:
+    static const constant FieldElement2625 ONE;
+    static const constant FieldElement2625 ZERO;
+
     FieldElement2625(constant const u32 limbs[10]): _limbs{limbs[0], limbs[1], limbs[2], limbs[3], limbs[4], limbs[5], limbs[6], limbs[7], limbs[8], limbs[9]} { }
 
     FieldElement2625(thread const u32 limbs[10]): _limbs{limbs[0], limbs[1], limbs[2], limbs[3], limbs[4], limbs[5], limbs[6], limbs[7], limbs[8], limbs[9]} { }

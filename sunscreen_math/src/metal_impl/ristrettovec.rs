@@ -6,10 +6,10 @@ use sunscreen_curve25519_dalek::{
 use core::slice;
 use std::{
     mem::size_of,
-    ops::{Add, Sub},
+    ops::{Add, Sub, Mul},
 };
 
-use crate::metal_impl::U32Arg;
+use crate::{metal_impl::U32Arg, ScalarVec};
 
 use super::Runtime;
 
@@ -238,9 +238,57 @@ impl Sub<&RistrettoPointVec> for &RistrettoPointVec {
     }
 }
 
+impl Mul<ScalarVec> for RistrettoPointVec {
+    type Output = Self;
+
+    fn mul(self, rhs: ScalarVec) -> Self::Output {
+        &self * &rhs
+    }
+}
+
+impl Mul<&ScalarVec> for RistrettoPointVec {
+    type Output = Self;
+
+    fn mul(self, rhs: &ScalarVec) -> Self::Output {
+        &self * rhs
+    }
+}
+
+impl Mul<ScalarVec> for &RistrettoPointVec {
+    type Output = RistrettoPointVec;
+
+    fn mul(self, rhs: ScalarVec) -> Self::Output {
+        self * &rhs
+    }
+}
+
+impl Mul<&ScalarVec> for &RistrettoPointVec {
+    type Output = RistrettoPointVec;
+
+    fn mul(self, rhs: &ScalarVec) -> Self::Output {
+        assert_eq!(self.len(), rhs.len());
+
+        let runtime = Runtime::get();
+
+        let out = RistrettoPointVec {
+            data: runtime.alloc(self.len_bytes()),
+            len: self.len(),
+        };
+
+        let len_gpu = U32Arg::new(self.len() as u32);
+
+        runtime.run("ristretto_scalar_mul", &[&self.data, &rhs.data, &out.data, &len_gpu.data], [(self.len() as u64, 64), (1, 1), (1, 1)]);
+
+        out
+    }
+}
+
 #[cfg(test)]
 mod tests {
+    use std::time::Instant;
+
     use rand::thread_rng;
+    use sunscreen_curve25519_dalek::Scalar;
 
     use crate::metal_impl::U32Arg;
 
@@ -293,6 +341,41 @@ mod tests {
         }
     }
 
+
+    #[test]
+    fn can_add_identity() {
+        let points = [
+            RistrettoPoint::random(&mut thread_rng()),
+            RistrettoPoint::random(&mut thread_rng()),
+            RistrettoPoint::random(&mut thread_rng()),
+            RistrettoPoint::random(&mut thread_rng()),
+        ];
+
+        let v = RistrettoPointVec::new(&points);
+
+        let runtime = Runtime::get();
+
+        let o = RistrettoPointVec {
+            data: runtime.alloc(v.len_bytes()),
+            len: v.len(),
+        };
+
+        let len_gpu = U32Arg::new(v.len() as u32);
+
+        runtime.run(
+            "test_add_identity_ristretto",
+            &[&v.data, &o.data, &len_gpu.data],
+            [(v.len() as u64, 64), (1, 1), (1, 1)],
+        );
+
+        for i in 0..v.len() {
+            dbg!(v.get(i).compress());
+            dbg!(o.get(i).compress());
+
+            assert_eq!(v.get(i).compress(), o.get(i).compress());
+        }
+    }
+
     #[test]
     fn can_add_ristretto_points() {
         let a = RistrettoPointVec::new(&[
@@ -312,7 +395,7 @@ mod tests {
         let c = &a + &b;
 
         for i in 0..c.len() {
-            assert_eq!(c.get(i), a.get(i) + b.get(i));
+            assert_eq!(c.get(i).compress(), (a.get(i) + b.get(i)).compress());
         }
     }
 
@@ -336,6 +419,58 @@ mod tests {
 
         for i in 0..c.len() {
             assert_eq!(c.get(i), a.get(i) - b.get(i));
+        }
+    }
+
+    #[test]
+    fn can_scalar_mul_ristretto_points() {
+        let a = RistrettoPointVec::new(&[
+            RistrettoPoint::random(&mut thread_rng()),
+            RistrettoPoint::random(&mut thread_rng()),
+            RistrettoPoint::random(&mut thread_rng()),
+            RistrettoPoint::random(&mut thread_rng()),
+        ]);
+
+        let b = ScalarVec::new(&[
+            Scalar::random(&mut thread_rng()),
+            Scalar::random(&mut thread_rng()),
+            Scalar::random(&mut thread_rng()),
+            Scalar::random(&mut thread_rng()),
+        ]);
+
+        let c = &a * &b;
+
+        for i in 0..c.len() {
+            assert_eq!(c.get(i).compress(), (a.get(i) * b.get(i)).compress());
+        }
+    }
+
+    #[test]
+    fn bench_scalar_mul_ristretto_points() {
+        const LEN: usize = 1024 * 1024;
+
+        let mut a = Vec::with_capacity(LEN);
+        let mut b = Vec::with_capacity(LEN);
+        
+        for _ in 0..LEN {
+            a.push(RistrettoPoint::random(&mut thread_rng()));
+            b.push(Scalar::random(&mut thread_rng()))
+        }
+
+        let a = RistrettoPointVec::new(&a);
+        let b = ScalarVec::new(&b);
+
+        
+        let _ = &a * &b;
+
+        let now = Instant::now();
+
+        let c = &a * &b;
+
+        println!("{} sm/s", a.len() as f64 / now.elapsed().as_secs_f64());
+
+        for i in 0..c.len() {
+            assert_eq!(c.get(i).compress(), (a.get(i) * b.get(i)).compress());
         }
     }
 }

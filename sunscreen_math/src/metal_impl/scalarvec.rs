@@ -17,7 +17,7 @@ use super::Runtime;
 /// a 1 dimensional buffer. The leading dimension iterates over the scalars
 /// while the trailing dimension iterates over limbs in the scalar.
 pub struct ScalarVec {
-    data: Buffer,
+    pub(crate) data: Buffer,
     len: usize,
 }
 

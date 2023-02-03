@@ -1,6 +1,13 @@
 #include <ristretto.hpp.metal>
 #include <constants.hpp.metal>
 
+const constant RistrettoPoint RistrettoPoint::IDENTITY = RistrettoPoint(
+    FieldElement2625::ZERO,
+    FieldElement2625::ONE,
+    FieldElement2625::ONE,
+    FieldElement2625::ZERO
+);
+
 RistrettoPoint RistrettoPoint::unpack(device const u32* ptr, const size_t grid_tid, const size_t n) {
     auto x = FieldElement2625::unpack(&ptr[00 * n], grid_tid, n);
     auto y = FieldElement2625::unpack(&ptr[10 * n], grid_tid, n);
@@ -78,6 +85,49 @@ RistrettoPoint CompletedPoint::as_extended() const {
     return RistrettoPoint(X, Y, Z, T);
 }
 
+RistrettoPoint RistrettoPoint::scalar_mul(const RistrettoPoint lhs, const Scalar29 rhs) {
+    // Rematerialize the limbs of the scalar from S29 to S32
+    u32 words[8];
+    
+    u32 word = rhs[0] | rhs[1] << 29;
+    words[0] = word;
+    word = rhs[1] >> 3 | rhs[2] << 26;
+    words[1] = word;
+    word = rhs[2] >> 6 | rhs[3] << 23;
+    words[2] = word;
+    word = rhs[3] >> 9 | rhs[4] << 20;
+    words[3] = word;
+    word = rhs[4] >> 12 | rhs[5] << 17;
+    words[4] = word;
+    word = rhs[5] >> 15 | rhs[6] << 14;
+    words[5] = word;
+    word = rhs[6] >> 18 | rhs[7] << 11;
+    words[6] = word;
+    word = rhs[7] >> 21 | rhs[8] << 8;
+    words[7] = word;
+
+    auto sum = RistrettoPoint::IDENTITY;
+    auto pow = lhs;
+
+    for (size_t i = 0; i < 8; i++) {
+        auto word = words[i];
+
+        for (size_t j = 0; j < 32; j++) {
+            if (word & (0x1 << j)) {
+                sum = sum + pow;
+            }
+
+            pow = pow + pow;
+        }
+    }
+
+    return sum;
+}
+
+RistrettoPoint RistrettoPoint::operator*(const thread Scalar29& rhs) const thread {
+    return RistrettoPoint::scalar_mul(*this, rhs);
+}
+
 kernel void ristretto_add(
     u32 tid [[thread_position_in_grid]],
     device const u32* a [[buffer(0)]],
@@ -104,6 +154,19 @@ kernel void ristretto_sub(
     (x - y).pack(c, tid, len);
 }
 
+kernel void ristretto_scalar_mul(
+    u32 tid [[thread_position_in_grid]],
+    device const u32* a [[buffer(0)]], // Packed Ristretto points
+    device const u32* b [[buffer(1)]], // Packed Scalars
+    device u32* c [[buffer(2)]],
+    constant u32& len [[buffer(3)]]
+) {
+    auto x = RistrettoPoint::unpack(a, tid, len);
+    auto y = Scalar29::unpack(b, tid, len);
+
+    (x * y).pack(c, tid, len);
+}
+
 ///
 /// TESTS. TODO: don't include in release builds.
 ///
@@ -115,4 +178,16 @@ kernel void test_can_pack_unpack_ristretto(
 ) {
     auto x = RistrettoPoint::unpack(a, tid, len);
     x.pack(b, tid, len);
+}
+
+kernel void test_add_identity_ristretto(
+    u32 tid [[thread_position_in_grid]],
+    device const u32* a [[buffer(0)]],
+    device u32* b [[buffer(1)]],
+    constant u32& len [[buffer(2)]]
+) {
+    auto x = RistrettoPoint::unpack(a, tid, len);
+    auto y = RistrettoPoint::IDENTITY;
+
+    (x + y).pack(b, tid, len);
 }

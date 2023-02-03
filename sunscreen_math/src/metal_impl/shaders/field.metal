@@ -1,5 +1,11 @@
 #include <field.hpp.metal>
 
+const constant u32 _ZERO[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+const constant u32 _ONE[10] = {1, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+
+const constant FieldElement2625 FieldElement2625::ZERO = FieldElement2625(_ZERO);
+const constant FieldElement2625 FieldElement2625::ONE = FieldElement2625(_ONE);
+
 FieldElement2625 FieldElement2625::unpack(device const u32* ptr, const size_t grid_tid, const size_t n) {
     FieldElement2625 a;
 

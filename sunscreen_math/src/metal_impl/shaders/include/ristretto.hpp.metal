@@ -2,6 +2,7 @@
 
 #include <inttypes.hpp.metal>
 #include <field.hpp.metal>
+#include <scalar.hpp.metal>
 
 class ProjectiveNielsPoint;
 class CompletedPoint;
@@ -19,6 +20,8 @@ private:
 public:
     RistrettoPoint(FieldElement2625 x, FieldElement2625 y, FieldElement2625 z, FieldElement2625 t)
         : X(x), Y(y), Z(z), T(t) {}
+
+    static const constant RistrettoPoint IDENTITY;
 
     /// Loads the value at grid_tid from an `40 x n` row-major u32 matrix. `n` is the length
     /// of the Scalar array.
@@ -49,6 +52,9 @@ public:
     CompletedPoint operator+(const thread ProjectiveNielsPoint& rhs) const thread;
     RistrettoPoint operator-(const thread RistrettoPoint& rhs) const thread;
     CompletedPoint operator-(const thread ProjectiveNielsPoint& rhs) const thread;
+    RistrettoPoint operator*(const thread Scalar29& rhs) const thread;
+
+    static RistrettoPoint scalar_mul(const RistrettoPoint lhs, const Scalar29 rhs);
 };
 
 class ProjectiveNielsPoint {

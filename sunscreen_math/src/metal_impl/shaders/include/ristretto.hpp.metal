@@ -53,4 +53,4 @@ private:
 public:
     ProjectiveNielsPoint(FieldElement2625 x, FieldElement2625 y, FieldElement2625 z, FieldElement2625 t)
         : x(x), y(y), z(z), t(t) {}
-}
+};

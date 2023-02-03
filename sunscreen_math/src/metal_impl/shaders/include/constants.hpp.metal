@@ -2,6 +2,7 @@
 
 #include <inttypes.hpp.metal>
 #include <scalar.hpp.metal>
+#include <field.hpp.metal>
 
 namespace constants {
     constant const u32 _L[9] = {
@@ -23,8 +24,10 @@ namespace constants {
     
     constant const Scalar29 RR = Scalar29(_RR);
 
-    /// Edwards `2*d` value, equal to `2*(-121665/121666) mod p`.
-    constant const FieldElement2625 EDWARDS_D2 = {
-    45281625, 27714825, 36363642, 13898781, 229458, 15978800, 54557047, 27058993, 29715967, 9444199,
+    constant const u32 _EDWARDS_D2[10] = {
+        45281625, 27714825, 36363642, 13898781, 229458, 15978800, 54557047, 27058993, 29715967, 9444199,
     };
+
+    /// Edwards `2*d` value, equal to `2*(-121665/121666) mod p`.
+    constant const FieldElement2625 EDWARDS_D2(_EDWARDS_D2);
 }

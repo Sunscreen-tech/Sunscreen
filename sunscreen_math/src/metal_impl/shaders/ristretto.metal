@@ -1,4 +1,5 @@
 #include <ristretto.hpp.metal>
+#include <constants.hpp.metal>
 
 RistrettoPoint RistrettoPoint::unpack(device const u32* ptr, const size_t grid_tid, const size_t n) {
     auto x = FieldElement2625::unpack(&ptr[00 * n], grid_tid, n);

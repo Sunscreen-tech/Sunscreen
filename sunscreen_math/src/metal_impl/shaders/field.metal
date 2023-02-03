@@ -16,7 +16,7 @@ void FieldElement2625::pack(device u32* ptr, const size_t grid_tid, const size_t
     }
 }
 
-FieldElement2625 add(const FieldElement2625 a, const FieldElement2625 b) {
+FieldElement2625 FieldElement2625::add(const FieldElement2625 a, const FieldElement2625 b) {
     u32 limbs[10] = {
         a[0] + b[0],
         a[1] + b[1],
@@ -36,7 +36,7 @@ FieldElement2625 add(const FieldElement2625 a, const FieldElement2625 b) {
 
 FieldElement2625 reduce(thread u64 z[10]);
 
-FieldElement2625 sub(const FieldElement2625 a, const FieldElement2625 b) {
+FieldElement2625 FieldElement2625::sub(const FieldElement2625 a, const FieldElement2625 b) {
     u64 z[10] = {
         (u64)((a[0] + (0x3ffffed << 4)) - b[0]),
         (u64)((a[1] + (0x1ffffff << 4)) - b[1]),

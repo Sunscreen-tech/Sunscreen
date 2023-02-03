@@ -133,6 +133,8 @@ impl RistrettoPointVec {
 mod tests {
     use rand::thread_rng;
 
+    use crate::metal_impl::U32Arg;
+
     use super::*;
 
     #[test]
@@ -151,6 +153,7 @@ mod tests {
         }
     }
 
+    #[test]
     fn can_pack_and_unpack_gpu() {
         let points = [
             RistrettoPoint::random(&mut thread_rng()),
@@ -168,7 +171,9 @@ mod tests {
             len: v.len()
         };
 
-        runtime.run("test_can_pack_unpack_ristretto", &[&v.data, &o.data], [(v.len() as u64, 1), (1, 1), (1, 1)]);
+        let len_gpu = U32Arg::new(v.len() as u32);
+
+        runtime.run("test_can_pack_unpack_ristretto", &[&v.data, &o.data, &len_gpu.data], [(v.len() as u64, 1), (1, 1), (1, 1)]);
 
         for i in 0..v.len() {
             assert_eq!(v.get(i), o.get(i));

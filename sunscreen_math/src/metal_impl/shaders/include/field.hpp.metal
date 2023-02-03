@@ -38,23 +38,23 @@ public:
     static FieldElement2625 sub(const FieldElement2625 a, const FieldElement2625 b);
     static FieldElement2625 mul(const FieldElement2625 a, const FieldElement2625 b);
 
-    FieldElement2625 operator+(const thread FieldElement2625& rhs) {
+    FieldElement2625 operator+(const thread FieldElement2625& rhs) const {
         return FieldElement2625::add(*this, rhs);
     }
 
-    FieldElement2625 operator+(const constant FieldElement2625& rhs) {
+    FieldElement2625 operator+(const constant FieldElement2625& rhs) const {
         return FieldElement2625::add(*this, rhs);
     }
 
-    FieldElement2625 operator-(const thread FieldElement2625& rhs) {
+    FieldElement2625 operator-(const thread FieldElement2625& rhs) const {
         return FieldElement2625::sub(*this, rhs);
     }
 
-    FieldElement2625 operator*(const thread FieldElement2625& rhs) {
+    FieldElement2625 operator*(const thread FieldElement2625& rhs) const {
         return FieldElement2625::mul(*this, rhs);
     }
 
-    FieldElement2625 operator*(const constant FieldElement2625& rhs) {
+    FieldElement2625 operator*(const constant FieldElement2625& rhs) const {
         return FieldElement2625::mul(*this, rhs);
     }
 

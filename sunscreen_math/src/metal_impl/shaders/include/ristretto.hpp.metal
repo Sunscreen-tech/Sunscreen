@@ -4,16 +4,20 @@
 #include <field.hpp.metal>
 
 class ProjectiveNielsPoint;
+class CompletedPoint;
 
 class RistrettoPoint {
+    friend ProjectiveNielsPoint;
+    friend CompletedPoint;
+
 private:
-    FieldElement2625 x;
-    FieldElement2625 y;
-    FieldElement2625 z;
-    FieldElement2625 t;
+    FieldElement2625 X;
+    FieldElement2625 Y;
+    FieldElement2625 Z;
+    FieldElement2625 T;
 
     RistrettoPoint(FieldElement2625 x, FieldElement2625 y, FieldElement2625 z, FieldElement2625 t)
-        : x(x), y(y), z(z), t(t) {}
+        : X(x), Y(y), Z(z), T(t) {}
 
 public:
     /// Loads the value at grid_tid from an `40 x n` row-major u32 matrix. `n` is the length
@@ -39,18 +43,38 @@ public:
     void pack(device u32* ptr, size_t grid_tid, size_t n);
 
     /// Convert to a ProjectiveNielsPoint
-    ProjectiveNielsPoint as_projective_niels();
+    ProjectiveNielsPoint as_projective_niels() const;
+
+    RistrettoPoint operator+(const thread RistrettoPoint& rhs) const thread;
+    CompletedPoint operator+(const thread ProjectiveNielsPoint& rhs) const thread;
+    CompletedPoint operator-(const ProjectiveNielsPoint rhs) const;
 
 };
 
 class ProjectiveNielsPoint {
+    friend RistrettoPoint;
 private:
-    FieldElement2625 x;
-    FieldElement2625 y;
-    FieldElement2625 z;
-    FieldElement2625 t;
+    FieldElement2625 Y_plus_X;
+    FieldElement2625 Y_minus_X;
+    FieldElement2625 Z;
+    FieldElement2625 T2d;
 
 public:
     ProjectiveNielsPoint(FieldElement2625 x, FieldElement2625 y, FieldElement2625 z, FieldElement2625 t)
-        : x(x), y(y), z(z), t(t) {}
+        : Y_plus_X(x), Y_minus_X(y), Z(z), T2d(t) {}
+};
+
+class CompletedPoint {
+    friend RistrettoPoint;
+private:
+    FieldElement2625 X;
+    FieldElement2625 Y;
+    FieldElement2625 Z;
+    FieldElement2625 T;
+
+public:
+    CompletedPoint(FieldElement2625 x, FieldElement2625 y, FieldElement2625 z, FieldElement2625 t)
+        : X(x), Y(y), Z(z), T(t) {}
+
+    RistrettoPoint as_extended() const;
 };

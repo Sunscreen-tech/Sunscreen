@@ -1,8 +1,13 @@
-use sunscreen_curve25519_dalek::{ristretto::RistrettoPoint, EdwardsPoint, field::FieldElement2625};
 use metal::Buffer;
+use sunscreen_curve25519_dalek::{
+    field::FieldElement2625, ristretto::RistrettoPoint, EdwardsPoint,
+};
 
 use core::slice;
-use std::{mem::size_of, ops::{Add, Sub}};
+use std::{
+    mem::size_of,
+    ops::{Add, Sub},
+};
 
 use crate::metal_impl::U32Arg;
 
@@ -15,23 +20,23 @@ pub struct RistrettoPointVec {
 
 impl RistrettoPointVec {
     /// Creates a new [RistrettoVec].
-    /// 
+    ///
     /// # Remarks
     /// This code assumes the following layout of curve25519-dalek datastructures:
     /// ```rust
     /// struct RistrettoPoint(EdwardsPoint);
-    /// 
+    ///
     /// struct EdwardsPoint {
     ///     X: FieldElement2625,
     ///     Y: FieldElement2625,
     ///     Z: FieldElement2625,
     ///     T: FieldElement2625,
     /// }
-    /// 
+    ///
     /// struct FieldElement2625([u32; 10]);
     /// ```
     /// To achieve this layout, you must use the u32 backend.
-    /// 
+    ///
     pub fn new(x: &[RistrettoPoint]) -> Self {
         let runtime = Runtime::get();
 
@@ -41,10 +46,7 @@ impl RistrettoPointVec {
         let byte_len = x.len() * size_of::<RistrettoPoint>();
         let data = runtime.alloc(byte_len);
 
-        let mut field_vec = Self {
-            data,
-            len
-        };
+        let mut field_vec = Self { data, len };
 
         let data_slice = field_vec.buffer_slice_mut();
 
@@ -114,7 +116,7 @@ impl RistrettoPointVec {
             X: FieldElement2625(x),
             Y: FieldElement2625(y),
             Z: FieldElement2625(z),
-            T: FieldElement2625(t)
+            T: FieldElement2625(t),
         })
     }
 
@@ -136,7 +138,7 @@ impl Add<RistrettoPointVec> for RistrettoPointVec {
     type Output = Self;
 
     fn add(self, rhs: RistrettoPointVec) -> Self::Output {
-        &self + &rhs   
+        &self + &rhs
     }
 }
 
@@ -144,7 +146,7 @@ impl Add<&RistrettoPointVec> for RistrettoPointVec {
     type Output = Self;
 
     fn add(self, rhs: &RistrettoPointVec) -> Self::Output {
-        &self + rhs   
+        &self + rhs
     }
 }
 
@@ -152,7 +154,7 @@ impl Add<RistrettoPointVec> for &RistrettoPointVec {
     type Output = RistrettoPointVec;
 
     fn add(self, rhs: RistrettoPointVec) -> Self::Output {
-        self + &rhs   
+        self + &rhs
     }
 }
 
@@ -168,13 +170,17 @@ impl Add<&RistrettoPointVec> for &RistrettoPointVec {
 
         let o = Self::Output {
             data: runtime.alloc(len),
-            len: rhs.len()
+            len: rhs.len(),
         };
 
         let len_gpu = U32Arg::new(rhs.len() as u32);
 
         // TODO: o gets mutated here. Need to figure out what that means in terms of UB.
-        runtime.run("ristretto_add", &[&self.data, &rhs.data, &o.data, &len_gpu.data], [(rhs.len() as u64, 64), (1, 1), (1, 1)]);
+        runtime.run(
+            "ristretto_add",
+            &[&self.data, &rhs.data, &o.data, &len_gpu.data],
+            [(rhs.len() as u64, 64), (1, 1), (1, 1)],
+        );
 
         o
     }
@@ -184,7 +190,7 @@ impl Sub<RistrettoPointVec> for RistrettoPointVec {
     type Output = Self;
 
     fn sub(self, rhs: RistrettoPointVec) -> Self::Output {
-        &self + &rhs   
+        &self + &rhs
     }
 }
 
@@ -192,7 +198,7 @@ impl Sub<&RistrettoPointVec> for RistrettoPointVec {
     type Output = Self;
 
     fn sub(self, rhs: &RistrettoPointVec) -> Self::Output {
-        &self + rhs   
+        &self + rhs
     }
 }
 
@@ -200,7 +206,7 @@ impl Sub<RistrettoPointVec> for &RistrettoPointVec {
     type Output = RistrettoPointVec;
 
     fn sub(self, rhs: RistrettoPointVec) -> Self::Output {
-        self + &rhs   
+        self + &rhs
     }
 }
 
@@ -216,13 +222,17 @@ impl Sub<&RistrettoPointVec> for &RistrettoPointVec {
 
         let o = Self::Output {
             data: runtime.alloc(len),
-            len: rhs.len()
+            len: rhs.len(),
         };
 
         let len_gpu = U32Arg::new(rhs.len() as u32);
 
         // TODO: o gets mutated here. Need to figure out what that means in terms of UB.
-        runtime.run("ristretto_sub", &[&self.data, &rhs.data, &o.data, &len_gpu.data], [(rhs.len() as u64, 64), (1, 1), (1, 1)]);
+        runtime.run(
+            "ristretto_sub",
+            &[&self.data, &rhs.data, &o.data, &len_gpu.data],
+            [(rhs.len() as u64, 64), (1, 1), (1, 1)],
+        );
 
         o
     }
@@ -267,18 +277,22 @@ mod tests {
 
         let o = RistrettoPointVec {
             data: runtime.alloc(v.len_bytes()),
-            len: v.len()
+            len: v.len(),
         };
 
         let len_gpu = U32Arg::new(v.len() as u32);
 
-        runtime.run("test_can_pack_unpack_ristretto", &[&v.data, &o.data, &len_gpu.data], [(v.len() as u64, 64), (1, 1), (1, 1)]);
+        runtime.run(
+            "test_can_pack_unpack_ristretto",
+            &[&v.data, &o.data, &len_gpu.data],
+            [(v.len() as u64, 64), (1, 1), (1, 1)],
+        );
 
         for i in 0..v.len() {
             assert_eq!(v.get(i), o.get(i));
         }
     }
-    
+
     #[test]
     fn can_add_ristretto_points() {
         let a = RistrettoPointVec::new(&[

@@ -115,7 +115,7 @@ impl ScalarVec {
 
     /**
      * Computes self * self.
-     * 
+     *
      * #Remarks
      * This is more performant than using `mul`.
      */

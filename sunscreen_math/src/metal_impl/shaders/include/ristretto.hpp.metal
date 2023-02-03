@@ -16,10 +16,10 @@ private:
     FieldElement2625 Z;
     FieldElement2625 T;
 
+public:
     RistrettoPoint(FieldElement2625 x, FieldElement2625 y, FieldElement2625 z, FieldElement2625 t)
         : X(x), Y(y), Z(z), T(t) {}
 
-public:
     /// Loads the value at grid_tid from an `40 x n` row-major u32 matrix. `n` is the length
     /// of the Scalar array.
     ///
@@ -47,8 +47,8 @@ public:
 
     RistrettoPoint operator+(const thread RistrettoPoint& rhs) const thread;
     CompletedPoint operator+(const thread ProjectiveNielsPoint& rhs) const thread;
-    CompletedPoint operator-(const ProjectiveNielsPoint rhs) const;
-
+    RistrettoPoint operator-(const thread RistrettoPoint& rhs) const thread;
+    CompletedPoint operator-(const thread ProjectiveNielsPoint& rhs) const thread;
 };
 
 class ProjectiveNielsPoint {
@@ -62,6 +62,11 @@ private:
 public:
     ProjectiveNielsPoint(FieldElement2625 x, FieldElement2625 y, FieldElement2625 z, FieldElement2625 t)
         : Y_plus_X(x), Y_minus_X(y), Z(z), T2d(t) {}
+
+    FieldElement2625 get_y_plus_x() { return Y_plus_X; }
+    FieldElement2625 get_y_minus_x() { return Y_minus_X; }
+    FieldElement2625 get_z() { return Z; }
+    FieldElement2625 get_t2d() { return T2d; }
 };
 
 class CompletedPoint {
@@ -77,4 +82,9 @@ public:
         : X(x), Y(y), Z(z), T(t) {}
 
     RistrettoPoint as_extended() const;
+
+    FieldElement2625 get_x() { return X; }
+    FieldElement2625 get_y() { return Y; }
+    FieldElement2625 get_z() { return Z; }
+    FieldElement2625 get_t() { return T; }
 };

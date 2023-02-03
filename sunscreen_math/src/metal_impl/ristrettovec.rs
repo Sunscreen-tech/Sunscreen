@@ -2,7 +2,9 @@ use sunscreen_curve25519_dalek::{ristretto::RistrettoPoint, EdwardsPoint, field:
 use metal::Buffer;
 
 use core::slice;
-use std::mem::size_of;
+use std::{mem::size_of, ops::Add};
+
+use crate::metal_impl::U32Arg;
 
 use super::Runtime;
 
@@ -116,6 +118,7 @@ impl RistrettoPointVec {
         })
     }
 
+    // TODO: This probably needs to return a slice of MaybeUninit<u32>.
     fn buffer_slice_mut(&mut self) -> &mut [u32] {
         let byte_len = self.len * size_of::<RistrettoPoint>();
 
@@ -126,6 +129,54 @@ impl RistrettoPointVec {
         let byte_len = self.len * size_of::<RistrettoPoint>();
 
         unsafe { slice::from_raw_parts(self.data.contents() as *const u32, byte_len) }
+    }
+}
+
+impl Add<RistrettoPointVec> for RistrettoPointVec {
+    type Output = Self;
+
+    fn add(self, rhs: RistrettoPointVec) -> Self::Output {
+        &self + &rhs   
+    }
+}
+
+impl Add<&RistrettoPointVec> for RistrettoPointVec {
+    type Output = Self;
+
+    fn add(self, rhs: &RistrettoPointVec) -> Self::Output {
+        &self + rhs   
+    }
+}
+
+impl Add<RistrettoPointVec> for &RistrettoPointVec {
+    type Output = RistrettoPointVec;
+
+    fn add(self, rhs: RistrettoPointVec) -> Self::Output {
+        self + &rhs   
+    }
+}
+
+impl Add<&RistrettoPointVec> for &RistrettoPointVec {
+    type Output = RistrettoPointVec;
+
+    fn add(self, rhs: &RistrettoPointVec) -> Self::Output {
+        assert_eq!(self.len(), rhs.len());
+
+        let runtime = Runtime::get();
+
+        let len = self.len_bytes();
+
+        let o = Self::Output {
+            data: runtime.alloc(len),
+            len: rhs.len()
+        };
+
+        let len_gpu = U32Arg::new(rhs.len() as u32);
+
+        // TODO: o gets mutated here. Need to figure out what that means in terms of UB.
+        runtime.run("ristretto_add", &[&self.data, &rhs.data, &o.data, &len_gpu.data], [(rhs.len() as u64, 64), (1, 1), (1, 1)]);
+
+        o
     }
 }
 
@@ -173,10 +224,33 @@ mod tests {
 
         let len_gpu = U32Arg::new(v.len() as u32);
 
-        runtime.run("test_can_pack_unpack_ristretto", &[&v.data, &o.data, &len_gpu.data], [(v.len() as u64, 1), (1, 1), (1, 1)]);
+        runtime.run("test_can_pack_unpack_ristretto", &[&v.data, &o.data, &len_gpu.data], [(v.len() as u64, 64), (1, 1), (1, 1)]);
 
         for i in 0..v.len() {
             assert_eq!(v.get(i), o.get(i));
+        }
+    }
+    
+    #[test]
+    fn can_add_ristretto_points() {
+        let a = RistrettoPointVec::new(&[
+            RistrettoPoint::random(&mut thread_rng()),
+            RistrettoPoint::random(&mut thread_rng()),
+            RistrettoPoint::random(&mut thread_rng()),
+            RistrettoPoint::random(&mut thread_rng()),
+        ]);
+
+        let b = RistrettoPointVec::new(&[
+            RistrettoPoint::random(&mut thread_rng()),
+            RistrettoPoint::random(&mut thread_rng()),
+            RistrettoPoint::random(&mut thread_rng()),
+            RistrettoPoint::random(&mut thread_rng()),
+        ]);
+
+        let c = &a + &b;
+
+        for i in 0..c.len() {
+            assert_eq!(c.get(i), a.get(i) + b.get(i));
         }
     }
 }

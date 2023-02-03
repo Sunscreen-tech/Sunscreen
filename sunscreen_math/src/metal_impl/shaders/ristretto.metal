@@ -47,6 +47,28 @@ CompletedPoint RistrettoPoint::operator+(const thread ProjectiveNielsPoint& rhs)
     );
 }
 
+
+RistrettoPoint RistrettoPoint::operator-(const thread RistrettoPoint& rhs) const {
+    return (*this - rhs.as_projective_niels()).as_extended();
+}
+
+CompletedPoint RistrettoPoint::operator-(const thread ProjectiveNielsPoint& rhs) const {
+    FieldElement2625 Y_plus_X = this->Y + this->X;
+    FieldElement2625 Y_minus_X = this->Y - this->X;
+    FieldElement2625 PM = Y_plus_X * rhs.Y_minus_X;
+    FieldElement2625 MP = Y_minus_X * rhs.Y_plus_X;
+    FieldElement2625 TT2d = this->T * rhs.T2d;
+    FieldElement2625 ZZ = this->Z * this->Z;
+    FieldElement2625 ZZ2 = ZZ + ZZ;
+
+    return CompletedPoint(
+        PM - MP,
+        PM + MP,
+        ZZ2 - TT2d,
+        ZZ2 + TT2d
+    );
+}
+
 RistrettoPoint CompletedPoint::as_extended() const {
     FieldElement2625 X = this->X * this->T;
     FieldElement2625 Y = this->Y * this->Z;
@@ -69,6 +91,22 @@ kernel void ristretto_add(
     (x + y).pack(c, tid, len);
 }
 
+kernel void ristretto_sub(
+    u32 tid [[thread_position_in_grid]],
+    device const u32* a [[buffer(0)]],
+    device const u32* b [[buffer(1)]],
+    device u32* c [[buffer(2)]],
+    constant u32& len [[buffer(3)]]
+) {
+    auto x = RistrettoPoint::unpack(a, tid, len);
+    auto y = RistrettoPoint::unpack(b, tid, len);
+
+    (x - y).pack(c, tid, len);
+}
+
+///
+/// TESTS. TODO: don't include in release builds.
+///
 kernel void test_can_pack_unpack_ristretto(
     u32 tid [[thread_position_in_grid]],
     device const u32* a [[buffer(0)]],

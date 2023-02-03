@@ -2,7 +2,7 @@ use sunscreen_curve25519_dalek::{ristretto::RistrettoPoint, EdwardsPoint, field:
 use metal::Buffer;
 
 use core::slice;
-use std::{mem::size_of, ops::Add};
+use std::{mem::size_of, ops::{Add, Sub}};
 
 use crate::metal_impl::U32Arg;
 
@@ -180,6 +180,54 @@ impl Add<&RistrettoPointVec> for &RistrettoPointVec {
     }
 }
 
+impl Sub<RistrettoPointVec> for RistrettoPointVec {
+    type Output = Self;
+
+    fn sub(self, rhs: RistrettoPointVec) -> Self::Output {
+        &self + &rhs   
+    }
+}
+
+impl Sub<&RistrettoPointVec> for RistrettoPointVec {
+    type Output = Self;
+
+    fn sub(self, rhs: &RistrettoPointVec) -> Self::Output {
+        &self + rhs   
+    }
+}
+
+impl Sub<RistrettoPointVec> for &RistrettoPointVec {
+    type Output = RistrettoPointVec;
+
+    fn sub(self, rhs: RistrettoPointVec) -> Self::Output {
+        self + &rhs   
+    }
+}
+
+impl Sub<&RistrettoPointVec> for &RistrettoPointVec {
+    type Output = RistrettoPointVec;
+
+    fn sub(self, rhs: &RistrettoPointVec) -> Self::Output {
+        assert_eq!(self.len(), rhs.len());
+
+        let runtime = Runtime::get();
+
+        let len = self.len_bytes();
+
+        let o = Self::Output {
+            data: runtime.alloc(len),
+            len: rhs.len()
+        };
+
+        let len_gpu = U32Arg::new(rhs.len() as u32);
+
+        // TODO: o gets mutated here. Need to figure out what that means in terms of UB.
+        runtime.run("ristretto_sub", &[&self.data, &rhs.data, &o.data, &len_gpu.data], [(rhs.len() as u64, 64), (1, 1), (1, 1)]);
+
+        o
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use rand::thread_rng;
@@ -251,6 +299,29 @@ mod tests {
 
         for i in 0..c.len() {
             assert_eq!(c.get(i), a.get(i) + b.get(i));
+        }
+    }
+
+    #[test]
+    fn can_sub_ristretto_points() {
+        let a = RistrettoPointVec::new(&[
+            RistrettoPoint::random(&mut thread_rng()),
+            RistrettoPoint::random(&mut thread_rng()),
+            RistrettoPoint::random(&mut thread_rng()),
+            RistrettoPoint::random(&mut thread_rng()),
+        ]);
+
+        let b = RistrettoPointVec::new(&[
+            RistrettoPoint::random(&mut thread_rng()),
+            RistrettoPoint::random(&mut thread_rng()),
+            RistrettoPoint::random(&mut thread_rng()),
+            RistrettoPoint::random(&mut thread_rng()),
+        ]);
+
+        let c = &a - &b;
+
+        for i in 0..c.len() {
+            assert_eq!(c.get(i), a.get(i) - b.get(i));
         }
     }
 }

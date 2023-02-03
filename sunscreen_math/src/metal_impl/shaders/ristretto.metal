@@ -58,7 +58,7 @@ CompletedPoint RistrettoPoint::operator-(const thread ProjectiveNielsPoint& rhs)
     FieldElement2625 PM = Y_plus_X * rhs.Y_minus_X;
     FieldElement2625 MP = Y_minus_X * rhs.Y_plus_X;
     FieldElement2625 TT2d = this->T * rhs.T2d;
-    FieldElement2625 ZZ = this->Z * this->Z;
+    FieldElement2625 ZZ = this->Z * rhs.Z;
     FieldElement2625 ZZ2 = ZZ + ZZ;
 
     return CompletedPoint(

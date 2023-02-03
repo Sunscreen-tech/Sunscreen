@@ -6,7 +6,7 @@ use sunscreen_curve25519_dalek::{
 use core::slice;
 use std::{
     mem::size_of,
-    ops::{Add, Sub, Mul},
+    ops::{Add, Mul, Sub},
 };
 
 use crate::{metal_impl::U32Arg, ScalarVec};
@@ -277,7 +277,11 @@ impl Mul<&ScalarVec> for &RistrettoPointVec {
 
         let len_gpu = U32Arg::new(self.len() as u32);
 
-        runtime.run("ristretto_scalar_mul", &[&self.data, &rhs.data, &out.data, &len_gpu.data], [(self.len() as u64, 64), (1, 1), (1, 1)]);
+        runtime.run(
+            "ristretto_scalar_mul",
+            &[&self.data, &rhs.data, &out.data, &len_gpu.data],
+            [(self.len() as u64, 64), (1, 1), (1, 1)],
+        );
 
         out
     }
@@ -340,7 +344,6 @@ mod tests {
             assert_eq!(v.get(i), o.get(i));
         }
     }
-
 
     #[test]
     fn can_add_identity() {
@@ -451,7 +454,7 @@ mod tests {
 
         let mut a = Vec::with_capacity(LEN);
         let mut b = Vec::with_capacity(LEN);
-        
+
         for _ in 0..LEN {
             a.push(RistrettoPoint::random(&mut thread_rng()));
             b.push(Scalar::random(&mut thread_rng()))
@@ -460,7 +463,6 @@ mod tests {
         let a = RistrettoPointVec::new(&a);
         let b = ScalarVec::new(&b);
 
-        
         let _ = &a * &b;
 
         let now = Instant::now();

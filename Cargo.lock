@@ -2006,6 +2006,7 @@ dependencies = [
  "lazy_static",
  "metal",
  "rand",
+ "rayon",
  "sunscreen_curve25519_dalek",
 ]
 

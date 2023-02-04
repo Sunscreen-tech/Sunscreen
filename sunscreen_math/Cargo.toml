@@ -10,3 +10,4 @@ lazy_static = "1.4.0"
 metal = "0.24.0"
 rand = "0.8.5"
 sunscreen_curve25519_dalek = { path = "../sunscreen_curve25519_dalek", features = ["serde", "rand_core"], default-features = false }
+rayon = "1.6.1"

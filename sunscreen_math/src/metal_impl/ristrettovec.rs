@@ -292,6 +292,7 @@ mod tests {
     use std::time::Instant;
 
     use rand::thread_rng;
+    use rayon::prelude::*;
     use sunscreen_curve25519_dalek::Scalar;
 
     use crate::metal_impl::U32Arg;
@@ -450,7 +451,7 @@ mod tests {
 
     #[test]
     fn bench_scalar_mul_ristretto_points() {
-        const LEN: usize = 1024 * 1024;
+        const LEN: usize = 256 * 1024;
 
         let mut a = Vec::with_capacity(LEN);
         let mut b = Vec::with_capacity(LEN);
@@ -460,19 +461,27 @@ mod tests {
             b.push(Scalar::random(&mut thread_rng()))
         }
 
-        let a = RistrettoPointVec::new(&a);
-        let b = ScalarVec::new(&b);
+        let a_gpu = RistrettoPointVec::new(&a);
+        let b_gpu = ScalarVec::new(&b);
 
-        let _ = &a * &b;
+        println!("Benchmarking...");
 
         let now = Instant::now();
 
-        let c = &a * &b;
+        let c = &a_gpu * &b_gpu;
 
-        println!("{} sm/s", a.len() as f64 / now.elapsed().as_secs_f64());
+        println!("GPU: {} sm/s", a_gpu.len() as f64 / now.elapsed().as_secs_f64());
 
         for i in 0..c.len() {
-            assert_eq!(c.get(i).compress(), (a.get(i) * b.get(i)).compress());
+            assert_eq!(c.get(i).compress(), (a_gpu.get(i) * b_gpu.get(i)).compress());
         }
+
+        println!("Benchmarking...");
+
+        let now = Instant::now();
+
+        a.into_par_iter().zip(b.into_par_iter()).map(|(p, s)| p * s).collect::<Vec<RistrettoPoint>>();
+            
+        println!("CPU (1 thread): {} sm/s", LEN as f64 / now.elapsed().as_secs_f64());
     }
 }

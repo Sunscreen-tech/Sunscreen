@@ -5,6 +5,10 @@ edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[features]
+default = []
+nightly-features = []
+
 [dependencies]
 lazy_static = "1.4.0"
 metal = "0.24.0"

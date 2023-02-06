@@ -327,8 +327,8 @@ kernel void scalar_square(
 
 //
 // Test kernels
-// TODO: #ifdef these away for production
 //
+#if defined(TEST)
 kernel void test_get_l(
     device u32* a [[buffer(0)]]
  ) {
@@ -346,3 +346,4 @@ kernel void test_can_pack_unpack_scalar(
     auto x = Scalar29::unpack(a, tid, len);
     x.pack(b, tid, len);
 }
+#endif

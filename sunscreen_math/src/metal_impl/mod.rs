@@ -12,7 +12,14 @@ pub use ristrettovec::*;
 mod scalarvec;
 pub use scalarvec::*;
 
-const SHADERLIB: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/curve25519-dalek.metallib"));
+// In build.rs, we compile 2 variants of the curve25519-dalek.metallib library:
+// test and release. In test, we #define the TEST macro, which exposes test kernels.
+// The release library does not feature these kernels.
+#[cfg(not(test))]
+const SHADERLIB: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/curve25519-dalek.release.metallib"));
+
+#[cfg(test)]
+const SHADERLIB: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/curve25519-dalek.test.metallib"));
 
 pub struct Runtime {
     device: Device,
@@ -48,6 +55,8 @@ impl Runtime {
     }
 
     pub fn run(&self, kernel_name: &'static str, data: &[&Buffer], grid: [(u64, u64); 3]) {
+        println!("{}", self.device.recommended_max_working_set_size());
+
         let command_buffer = self.command_queue.new_command_buffer();
         let encoder = command_buffer.new_compute_command_encoder();
 
@@ -114,5 +123,17 @@ mod tests {
     #[test]
     fn can_init() {
         Runtime::get();
+    }
+}
+
+#[cfg(all(test, feature = "nightly-features"))]
+mod benches {
+    extern crate test;
+
+    use test::Bencher;
+
+    #[bench]
+    fn peak_float(b: &mut Bencher) {
+        panic!();
     }
 }

@@ -476,11 +476,13 @@ mod tests {
             assert_eq!(c.get(i).compress(), (a_gpu.get(i) * b_gpu.get(i)).compress());
         }
 
+        let s = Scalar::random(&mut thread_rng());
+
         println!("Benchmarking...");
 
         let now = Instant::now();
 
-        a.into_par_iter().zip(b.into_par_iter()).map(|(p, s)| p * s).collect::<Vec<RistrettoPoint>>();
+        a.into_par_iter().map(|p| p * s).collect::<Vec<RistrettoPoint>>();
             
         println!("CPU (1 thread): {} sm/s", LEN as f64 / now.elapsed().as_secs_f64());
     }

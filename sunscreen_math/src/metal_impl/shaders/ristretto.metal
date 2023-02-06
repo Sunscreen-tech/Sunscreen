@@ -168,8 +168,9 @@ kernel void ristretto_scalar_mul(
 }
 
 ///
-/// TESTS. TODO: don't include in release builds.
+/// TESTS.
 ///
+#if defined(TEST)
 kernel void test_can_pack_unpack_ristretto(
     u32 tid [[thread_position_in_grid]],
     device const u32* a [[buffer(0)]],
@@ -191,3 +192,4 @@ kernel void test_add_identity_ristretto(
 
     (x + y).pack(b, tid, len);
 }
+#endif

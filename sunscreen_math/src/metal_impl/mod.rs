@@ -125,15 +125,3 @@ mod tests {
         Runtime::get();
     }
 }
-
-#[cfg(all(test, feature = "nightly-features"))]
-mod benches {
-    extern crate test;
-
-    use test::Bencher;
-
-    #[bench]
-    fn peak_float(b: &mut Bencher) {
-        panic!();
-    }
-}

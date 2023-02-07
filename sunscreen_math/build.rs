@@ -11,7 +11,7 @@ fn compile_metal_shaders() {
 
     let include_dir = shader_dir.join("include");
 
-    for config in ["release", "test"] {
+    for config in ["test", "release"] {
         let mut air_files = vec![];
         let shaders = std::fs::read_dir(&shader_dir).unwrap();
 
@@ -38,6 +38,7 @@ fn compile_metal_shaders() {
                 .arg("-Wall")
                 .arg("-Werror")
                 .arg(format!("-D{}", config.to_uppercase()))
+                //.arg("-S")
                 .arg("-c")
                 .arg(file.path())
                 .arg("-I")

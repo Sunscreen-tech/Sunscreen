@@ -2,9 +2,22 @@
 
 #include <inttypes.hpp.metal>
 
+struct u64_10 {
+    u64 data[10];
+
+    inline thread u64& operator[](const size_t i) thread {
+        return data[i];
+    }
+    inline const thread u64& operator[](const size_t i) const thread {
+        return data[i];
+    }
+};
+
 class FieldElement2625 {
 private:
     u32 _limbs[10];
+
+    u64_10 square_inner() const;
 
 public:
     FieldElement2625() { }
@@ -68,11 +81,11 @@ public:
     /// Compute `2*this^2`.
     FieldElement2625 square2() const;
 
-    thread const u32& operator[](const size_t i) const thread {
+    inline thread const u32& operator[](const size_t i) const thread {
         return _limbs[i];
     }
 
-    thread u32& operator[](const size_t i) thread {
+    inline thread u32& operator[](const size_t i) thread {
         return _limbs[i];
     }
 };

@@ -213,3 +213,54 @@ FieldElement2625 reduce(thread u64 z[10]) {
 
     return FieldElement2625(limbs);
 }
+
+u64_10 FieldElement2625::square_inner() const {
+    // Optimized version of multiplication for the case of squaring.
+    // Pre- and post- conditions identical to multiplication function.
+    FieldElement2625 x = *this;
+    u32 x0_2  =  2 * x[0];
+    u32 x1_2  =  2 * x[1];
+    u32 x2_2  =  2 * x[2];
+    u32 x3_2  =  2 * x[3];
+    u32 x4_2  =  2 * x[4];
+    u32 x5_2  =  2 * x[5];
+    u32 x6_2  =  2 * x[6];
+    u32 x7_2  =  2 * x[7];
+    u32 x5_19 = 19 * x[5];
+    u32 x6_19 = 19 * x[6];
+    u32 x7_19 = 19 * x[7];
+    u32 x8_19 = 19 * x[8];
+    u32 x9_19 = 19 * x[9];
+
+    // This block is rearranged so that instead of doing a 32-bit multiplication by 38, we do a
+    // 64-bit multiplication by 2 on the results.  This is because lg(38) is too big: we would
+    // have less than 1 bit of headroom left, which is too little.
+    u64_10 z;
+    
+    z[0] = m(x[0], x[0]) + m(x2_2, x8_19) + m(x4_2, x6_19) + (m(x1_2, x9_19) +  m(x3_2, x7_19) + m(x[5], x5_19)) * 2;
+    z[1] = m(x0_2, x[1]) + m(x3_2, x8_19) + m(x5_2, x6_19) + (m(x[2], x9_19) +  m(x[4], x7_19)                 ) * 2;
+    z[2] = m(x0_2, x[2]) + m(x1_2,  x[1]) + m(x4_2, x8_19) +  m(x[6], x6_19) + (m(x3_2, x9_19) + m(x5_2, x7_19)) * 2;
+    z[3] = m(x0_2, x[3]) + m(x1_2,  x[2]) + m(x5_2, x8_19) + (m(x[4], x9_19) +  m(x[6], x7_19)                 ) * 2;
+    z[4] = m(x0_2, x[4]) + m(x1_2,  x3_2) + m(x[2],  x[2]) +  m(x6_2, x8_19) + (m(x5_2, x9_19) + m(x[7], x7_19)) * 2;
+    z[5] = m(x0_2, x[5]) + m(x1_2,  x[4]) + m(x2_2,  x[3]) +  m(x7_2, x8_19) +  m(x[6], x9_19)                   * 2;
+    z[6] = m(x0_2, x[6]) + m(x1_2,  x5_2) + m(x2_2,  x[4]) +  m(x3_2,  x[3]) +  m(x[8], x8_19) + m(x7_2, x9_19)  * 2;
+    z[7] = m(x0_2, x[7]) + m(x1_2,  x[6]) + m(x2_2,  x[5]) +  m(x3_2,  x[4]) +  m(x[8], x9_19)                   * 2;
+    z[8] = m(x0_2, x[8]) + m(x1_2,  x7_2) + m(x2_2,  x[6]) +  m(x3_2,  x5_2) +  m(x[4],  x[4]) + m(x[9], x9_19)  * 2;
+    z[9] = m(x0_2, x[9]) + m(x1_2,  x[8]) + m(x2_2,  x[7]) +  m(x3_2,  x[6]) +  m(x4_2,  x[5])                      ;
+
+    return z;
+}
+
+FieldElement2625 FieldElement2625::square() const {
+    return reduce(this->square_inner().data);
+}
+
+FieldElement2625 FieldElement2625::square2() const {
+    auto coeffs = this->square_inner();
+
+    for (size_t i = 0; i < 10; i++) {
+        coeffs[i] += coeffs[i];
+    }
+
+    return reduce(coeffs.data);
+}

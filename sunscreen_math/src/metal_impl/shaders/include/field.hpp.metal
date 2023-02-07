@@ -62,6 +62,12 @@ public:
         return FieldElement2625::mul(*this, rhs);
     }
 
+    /// Compute `this^2`.
+    FieldElement2625 square() const;
+
+    /// Compute `2*this^2`.
+    FieldElement2625 square2() const;
+
     thread const u32& operator[](const size_t i) const thread {
         return _limbs[i];
     }

@@ -6,6 +6,7 @@
 
 class ProjectiveNielsPoint;
 class CompletedPoint;
+class ProjectivePoint;
 
 class RistrettoPoint {
     friend ProjectiveNielsPoint;
@@ -48,13 +49,8 @@ public:
     /// Convert to a ProjectiveNielsPoint
     ProjectiveNielsPoint as_projective_niels() const;
 
-    template <typename T> operator+(const T& rhs) const;
-
     RistrettoPoint operator+(const thread RistrettoPoint& rhs) const thread;
     CompletedPoint operator+(const thread ProjectiveNielsPoint& rhs) const thread;
-    CompletedPoint operator+(const constant ProjectiveNielsPoint& rhs) const thread;
-    CompletedPoint operator+(const thread ProjectiveNielsPoint& rhs) const constant;
-    CompletedPoint operator+(const constant ProjectiveNielsPoint& rhs) const constant;
     RistrettoPoint operator-(const thread RistrettoPoint& rhs) const thread;
     CompletedPoint operator-(const thread ProjectiveNielsPoint& rhs) const thread;
     RistrettoPoint operator*(const thread Scalar29& rhs) const thread;
@@ -97,9 +93,25 @@ public:
         : X(x), Y(y), Z(z), T(t) {}
 
     RistrettoPoint as_extended() const;
+    ProjectivePoint as_projective() const;
 
     FieldElement2625 get_x() { return X; }
     FieldElement2625 get_y() { return Y; }
     FieldElement2625 get_z() { return Z; }
     FieldElement2625 get_t() { return T; }
+};
+
+class ProjectivePoint {
+private:
+    FieldElement2625 X;
+    FieldElement2625 Y;
+    FieldElement2625 Z;
+
+public:
+    static const constant ProjectivePoint IDENTITY;
+
+    ProjectivePoint(FieldElement2625 x, FieldElement2625 y, FieldElement2625 z): X(x), Y(y), Z(z) {}
+
+    // double is a keyword, so we name our function double_point.
+    CompletedPoint double_point() const thread;
 };

@@ -16,6 +16,12 @@ const constant ProjectiveNielsPoint ProjectiveNielsPoint::IDENTITY = ProjectiveN
     FieldElement2625::ZERO
 );
 
+const constant ProjectivePoint ProjectivePoint::IDENTITY = ProjectivePoint(
+    FieldElement2625::ZERO,
+    FieldElement2625::ONE,
+    FieldElement2625::ONE
+);
+
 RistrettoPoint RistrettoPoint::unpack(device const u32* ptr, const size_t grid_tid, const size_t n) {
     auto x = FieldElement2625::unpack(&ptr[00 * n], grid_tid, n);
     auto y = FieldElement2625::unpack(&ptr[10 * n], grid_tid, n);
@@ -62,57 +68,6 @@ CompletedPoint RistrettoPoint::operator+(const thread ProjectiveNielsPoint& rhs)
     );
 }
 
-CompletedPoint RistrettoPoint::operator+(const constant ProjectiveNielsPoint& rhs) const thread {
-    FieldElement2625 Y_plus_X = this->Y + this->X;
-    FieldElement2625 Y_minus_X = this->Y - this->X;
-    FieldElement2625 PP = Y_plus_X * rhs.Y_plus_X;
-    FieldElement2625 MM = Y_minus_X * rhs.Y_minus_X;
-    FieldElement2625 TT2d = this->T * rhs.T2d;
-    FieldElement2625 ZZ = this->Z * rhs.Z;
-    FieldElement2625 ZZ2 = ZZ + ZZ;
-
-    return CompletedPoint(
-        PP - MM,
-        PP + MM,
-        ZZ2 + TT2d,
-        ZZ2 - TT2d
-    );
-}
-
-CompletedPoint RistrettoPoint::operator+(const constant ProjectiveNielsPoint& rhs) const constant {
-    FieldElement2625 Y_plus_X = this->Y + this->X;
-    FieldElement2625 Y_minus_X = this->Y - this->X;
-    FieldElement2625 PP = Y_plus_X * rhs.Y_plus_X;
-    FieldElement2625 MM = Y_minus_X * rhs.Y_minus_X;
-    FieldElement2625 TT2d = this->T * rhs.T2d;
-    FieldElement2625 ZZ = this->Z * rhs.Z;
-    FieldElement2625 ZZ2 = ZZ + ZZ;
-
-    return CompletedPoint(
-        PP - MM,
-        PP + MM,
-        ZZ2 + TT2d,
-        ZZ2 - TT2d
-    );
-}
-
-CompletedPoint RistrettoPoint::operator+(const constant ProjectiveNielsPoint& rhs) const constant {
-    FieldElement2625 Y_plus_X = this->Y + this->X;
-    FieldElement2625 Y_minus_X = this->Y - this->X;
-    FieldElement2625 PP = Y_plus_X * rhs.Y_plus_X;
-    FieldElement2625 MM = Y_minus_X * rhs.Y_minus_X;
-    FieldElement2625 TT2d = this->T * rhs.T2d;
-    FieldElement2625 ZZ = this->Z * rhs.Z;
-    FieldElement2625 ZZ2 = ZZ + ZZ;
-
-    return CompletedPoint(
-        PP - MM,
-        PP + MM,
-        ZZ2 + TT2d,
-        ZZ2 - TT2d
-    );
-}
-
 RistrettoPoint RistrettoPoint::operator-(const thread RistrettoPoint& rhs) const {
     return (*this - rhs.as_projective_niels()).as_extended();
 }
@@ -141,6 +96,14 @@ RistrettoPoint CompletedPoint::as_extended() const {
     FieldElement2625 T = this->X * this->Y;
 
     return RistrettoPoint(X, Y, Z, T);
+}
+
+ProjectivePoint CompletedPoint::as_projective() const {
+    FieldElement2625 X = this->X * this->T;
+    FieldElement2625 Y = this->Y * this->Z;
+    FieldElement2625 Z = this->Z * this->T;
+
+    return ProjectivePoint(X, Y, Z);
 }
 
 /*
@@ -214,52 +177,73 @@ RistrettoPoint RistrettoPoint::scalar_mul(const RistrettoPoint lhs, const Scalar
     word = rhs[7] >> 21 | rhs[8] << 8;
     words[7] = word;
 
+    // Copy from contant to thread storage. We'll also use this to store the 16P value in standard
+    // projection.
+    RistrettoPoint tmp2 = RistrettoPoint::IDENTITY;
+
     // Compute the highest nibble scalar's contribution
-    auto sum = RistrettoPoint::IDENTITY + lut.select(get_nibble(words[7], 7));
-    ProjectiveNielsPoint tmp;
+    CompletedPoint sum = (tmp2 + lut.select(get_nibble(words[7], 7)));
+    ProjectivePoint tmp = ProjectivePoint::IDENTITY;
 
     // Compute the rest of the highest word's contribution
     for (size_t j = 1; j < 8; j++) {
         auto word = words[7];
 
         // Multiply sum by 16 and then add the next nibble's contribution.
-        tmp = sum + sum;
-        sum = tmp.as_completed().as_extended();
-        tmp = sum + sum;
-        sum = tmp.as_extended();
-        tmp = sum + sum;
-        sum = tmp.as_extended();
-        tmp = sum + sum;
-        sum = tmp.as_extended();
+        tmp = sum.as_projective();
+        sum = tmp.double_point();
+        tmp = sum.as_projective();
+        sum = tmp.double_point();
+        tmp = sum.as_projective();
+        sum = tmp.double_point();
+        tmp = sum.as_projective();
+        sum = tmp.double_point();
+        tmp2 = sum.as_extended();
 
-        sum = (sum + lut.select(get_nibble(words[7], 7 - j))).as_extended();
+        sum = tmp2 + lut.select(get_nibble(word, 7 - j));
     }
 
     for (size_t i = 1; i < 8; i++) {
         auto word = words[7 - i];
 
         for (size_t j = 0; j < 4; j++) {
-            size_t mask_id = 256 * (3 - j);
+            tmp = sum.as_projective();
+            sum = tmp.double_point();
+            tmp = sum.as_projective();
+            sum = tmp.double_point();
+            tmp = sum.as_projective();
+            sum = tmp.double_point();
+            tmp = sum.as_projective();
+            sum = tmp.double_point();
+            tmp2 = sum.as_extended();
 
-            tmp = sum + sum;
-            sum = tmp.as_projective_niels();
-            tmp = sum + sum;
-            sum = tmp.as_projective_niels();
-            tmp = sum + sum;
-            sum = tmp.as_projective_niels();
-            tmp = sum + sum;
-            sum = tmp.as_projective_niels();
-
-            auto mul = (work & (0xFF << mask_id)) >> mask_id;
+            sum = tmp2 + lut.select(get_nibble(word, 7 - j));
 
         }
     }
 
-    return sum;
+    return sum.as_extended();
 }
 
 RistrettoPoint RistrettoPoint::operator*(const thread Scalar29& rhs) const thread {
     return RistrettoPoint::scalar_mul(*this, rhs);
+}
+
+CompletedPoint ProjectivePoint::double_point() const thread {
+    auto XX = this->X.square();
+    auto YY = this->Y.square();
+    auto ZZ2 = this->Z.square2();
+    auto X_plus_Y = this->X + this->Y;
+    auto X_plus_Y_sq = X_plus_Y.square();
+    auto YY_plus_XX = YY + XX;
+    auto YY_minus_XX = YY - XX;
+
+    return CompletedPoint (
+        X_plus_Y_sq - YY_plus_XX,
+        YY_plus_XX,
+        YY_minus_XX,
+        ZZ2 - YY_minus_XX
+    );
 }
 
 kernel void ristretto_add(

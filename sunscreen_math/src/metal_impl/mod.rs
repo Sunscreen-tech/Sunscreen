@@ -16,10 +16,14 @@ pub use scalarvec::*;
 // test and release. In test, we #define the TEST macro, which exposes test kernels.
 // The release library does not feature these kernels.
 #[cfg(not(test))]
-const SHADERLIB: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/curve25519-dalek.release.metallib"));
+const SHADERLIB: &[u8] = include_bytes!(concat!(
+    env!("OUT_DIR"),
+    "/curve25519-dalek.release.metallib"
+));
 
 #[cfg(test)]
-const SHADERLIB: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/curve25519-dalek.test.metallib"));
+const SHADERLIB: &[u8] =
+    include_bytes!(concat!(env!("OUT_DIR"), "/curve25519-dalek.test.metallib"));
 
 pub struct Runtime {
     device: Device,

@@ -1,8 +1,16 @@
 #include <ristretto.hpp.metal>
 #include <constants.hpp.metal>
+#include <lookuptable.hpp.metal>
 
 const constant RistrettoPoint RistrettoPoint::IDENTITY = RistrettoPoint(
     FieldElement2625::ZERO,
+    FieldElement2625::ONE,
+    FieldElement2625::ONE,
+    FieldElement2625::ZERO
+);
+
+const constant ProjectiveNielsPoint ProjectiveNielsPoint::IDENTITY = ProjectiveNielsPoint(
+    FieldElement2625::ONE,
     FieldElement2625::ONE,
     FieldElement2625::ONE,
     FieldElement2625::ZERO
@@ -54,6 +62,56 @@ CompletedPoint RistrettoPoint::operator+(const thread ProjectiveNielsPoint& rhs)
     );
 }
 
+CompletedPoint RistrettoPoint::operator+(const constant ProjectiveNielsPoint& rhs) const thread {
+    FieldElement2625 Y_plus_X = this->Y + this->X;
+    FieldElement2625 Y_minus_X = this->Y - this->X;
+    FieldElement2625 PP = Y_plus_X * rhs.Y_plus_X;
+    FieldElement2625 MM = Y_minus_X * rhs.Y_minus_X;
+    FieldElement2625 TT2d = this->T * rhs.T2d;
+    FieldElement2625 ZZ = this->Z * rhs.Z;
+    FieldElement2625 ZZ2 = ZZ + ZZ;
+
+    return CompletedPoint(
+        PP - MM,
+        PP + MM,
+        ZZ2 + TT2d,
+        ZZ2 - TT2d
+    );
+}
+
+CompletedPoint RistrettoPoint::operator+(const constant ProjectiveNielsPoint& rhs) const constant {
+    FieldElement2625 Y_plus_X = this->Y + this->X;
+    FieldElement2625 Y_minus_X = this->Y - this->X;
+    FieldElement2625 PP = Y_plus_X * rhs.Y_plus_X;
+    FieldElement2625 MM = Y_minus_X * rhs.Y_minus_X;
+    FieldElement2625 TT2d = this->T * rhs.T2d;
+    FieldElement2625 ZZ = this->Z * rhs.Z;
+    FieldElement2625 ZZ2 = ZZ + ZZ;
+
+    return CompletedPoint(
+        PP - MM,
+        PP + MM,
+        ZZ2 + TT2d,
+        ZZ2 - TT2d
+    );
+}
+
+CompletedPoint RistrettoPoint::operator+(const constant ProjectiveNielsPoint& rhs) const constant {
+    FieldElement2625 Y_plus_X = this->Y + this->X;
+    FieldElement2625 Y_minus_X = this->Y - this->X;
+    FieldElement2625 PP = Y_plus_X * rhs.Y_plus_X;
+    FieldElement2625 MM = Y_minus_X * rhs.Y_minus_X;
+    FieldElement2625 TT2d = this->T * rhs.T2d;
+    FieldElement2625 ZZ = this->Z * rhs.Z;
+    FieldElement2625 ZZ2 = ZZ + ZZ;
+
+    return CompletedPoint(
+        PP - MM,
+        PP + MM,
+        ZZ2 + TT2d,
+        ZZ2 - TT2d
+    );
+}
 
 RistrettoPoint RistrettoPoint::operator-(const thread RistrettoPoint& rhs) const {
     return (*this - rhs.as_projective_niels()).as_extended();
@@ -85,6 +143,7 @@ RistrettoPoint CompletedPoint::as_extended() const {
     return RistrettoPoint(X, Y, Z, T);
 }
 
+/*
 RistrettoPoint RistrettoPoint::scalar_mul(const RistrettoPoint lhs, const Scalar29 rhs) {
     // Rematerialize the limbs of the scalar from S29 to S32
     u32 words[8];
@@ -118,6 +177,81 @@ RistrettoPoint RistrettoPoint::scalar_mul(const RistrettoPoint lhs, const Scalar
             }
 
             pow = pow + pow;
+        }
+    }
+
+    return sum;
+}*/
+
+inline u8 get_nibble(u32 word, u8 nibble) {
+    auto shift_amount = nibble * 4;
+
+    return (word & (0xF << shift_amount)) >> shift_amount;
+}
+
+RistrettoPoint RistrettoPoint::scalar_mul(const RistrettoPoint lhs, const Scalar29 rhs) {
+    // A lookup table for Radix-8 multiplication. Contains [0P, 1P, 2P, ...]
+    LookupTable<8> lut(lhs);
+
+    // Rematerialize the limbs of the scalar from S29 to S32
+    // TODO: use the 
+    u32 words[8];
+    
+    u32 word = rhs[0] | rhs[1] << 29;
+    words[0] = word;
+    word = rhs[1] >> 3 | rhs[2] << 26;
+    words[1] = word;
+    word = rhs[2] >> 6 | rhs[3] << 23;
+    words[2] = word;
+    word = rhs[3] >> 9 | rhs[4] << 20;
+    words[3] = word;
+    word = rhs[4] >> 12 | rhs[5] << 17;
+    words[4] = word;
+    word = rhs[5] >> 15 | rhs[6] << 14;
+    words[5] = word;
+    word = rhs[6] >> 18 | rhs[7] << 11;
+    words[6] = word;
+    word = rhs[7] >> 21 | rhs[8] << 8;
+    words[7] = word;
+
+    // Compute the highest nibble scalar's contribution
+    auto sum = RistrettoPoint::IDENTITY + lut.select(get_nibble(words[7], 7));
+    ProjectiveNielsPoint tmp;
+
+    // Compute the rest of the highest word's contribution
+    for (size_t j = 1; j < 8; j++) {
+        auto word = words[7];
+
+        // Multiply sum by 16 and then add the next nibble's contribution.
+        tmp = sum + sum;
+        sum = tmp.as_completed().as_extended();
+        tmp = sum + sum;
+        sum = tmp.as_extended();
+        tmp = sum + sum;
+        sum = tmp.as_extended();
+        tmp = sum + sum;
+        sum = tmp.as_extended();
+
+        sum = (sum + lut.select(get_nibble(words[7], 7 - j))).as_extended();
+    }
+
+    for (size_t i = 1; i < 8; i++) {
+        auto word = words[7 - i];
+
+        for (size_t j = 0; j < 4; j++) {
+            size_t mask_id = 256 * (3 - j);
+
+            tmp = sum + sum;
+            sum = tmp.as_projective_niels();
+            tmp = sum + sum;
+            sum = tmp.as_projective_niels();
+            tmp = sum + sum;
+            sum = tmp.as_projective_niels();
+            tmp = sum + sum;
+            sum = tmp.as_projective_niels();
+
+            auto mul = (work & (0xFF << mask_id)) >> mask_id;
+
         }
     }
 

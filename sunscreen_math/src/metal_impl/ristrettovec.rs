@@ -447,7 +447,6 @@ mod tests {
     }
 }
 
-
 #[cfg(all(test, feature = "nightly-features"))]
 mod benches {
     use std::time::Instant;
@@ -456,10 +455,10 @@ mod benches {
     use rand::thread_rng;
     use sunscreen_curve25519_dalek::Scalar;
 
-    use crate::metal_impl::U32Arg;
-    use test::Bencher;
     use super::*;
+    use crate::metal_impl::U32Arg;
     use rayon::prelude::*;
+    use test::Bencher;
 
     use core::mem::size_of;
 
@@ -484,7 +483,9 @@ mod benches {
 
         let c = &a_gpu * &b_gpu;
 
-        println!("GPU: {} sm/s", a_gpu.len() as f64 / now.elapsed().as_secs_f64());
+        println!(
+            "GPU: {} sm/s",
+            a_gpu.len() as f64 / now.elapsed().as_secs_f64()
+        );
     }
-    
 }

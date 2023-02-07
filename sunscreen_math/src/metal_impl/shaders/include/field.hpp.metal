@@ -6,8 +6,9 @@ class FieldElement2625 {
 private:
     u32 _limbs[10];
 
-    FieldElement2625() { }
 public:
+    FieldElement2625() { }
+
     static const constant FieldElement2625 ONE;
     static const constant FieldElement2625 ZERO;
 

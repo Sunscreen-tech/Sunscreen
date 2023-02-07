@@ -48,8 +48,13 @@ public:
     /// Convert to a ProjectiveNielsPoint
     ProjectiveNielsPoint as_projective_niels() const;
 
+    template <typename T> operator+(const T& rhs) const;
+
     RistrettoPoint operator+(const thread RistrettoPoint& rhs) const thread;
     CompletedPoint operator+(const thread ProjectiveNielsPoint& rhs) const thread;
+    CompletedPoint operator+(const constant ProjectiveNielsPoint& rhs) const thread;
+    CompletedPoint operator+(const thread ProjectiveNielsPoint& rhs) const constant;
+    CompletedPoint operator+(const constant ProjectiveNielsPoint& rhs) const constant;
     RistrettoPoint operator-(const thread RistrettoPoint& rhs) const thread;
     CompletedPoint operator-(const thread ProjectiveNielsPoint& rhs) const thread;
     RistrettoPoint operator*(const thread Scalar29& rhs) const thread;
@@ -66,6 +71,10 @@ private:
     FieldElement2625 T2d;
 
 public:
+    static const constant ProjectiveNielsPoint IDENTITY;
+
+    ProjectiveNielsPoint() { };
+
     ProjectiveNielsPoint(FieldElement2625 x, FieldElement2625 y, FieldElement2625 z, FieldElement2625 t)
         : Y_plus_X(x), Y_minus_X(y), Z(z), T2d(t) {}
 

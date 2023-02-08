@@ -353,4 +353,16 @@ kernel void test_can_add_ristretto_projective_niels_point(
     (x + y).as_extended().pack(b, tid, len);
 }
 
+kernel void test_can_double_projective_point(
+    u32 tid [[thread_position_in_grid]],
+    device const u32* a [[buffer(0)]],
+    device u32* b [[buffer(1)]],
+    constant u32& len [[buffer(2)]]
+) {
+    auto x = RistrettoPoint::unpack(a, tid, len);
+    auto y = x.as_projective().double_point().as_extended();
+
+    y.pack(b, tid, len);
+}
+
 #endif

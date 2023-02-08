@@ -158,7 +158,7 @@ inline u8 get_nibble(u32 word, u8 nibble) {
 
 RistrettoPoint RistrettoPoint::scalar_mul(const RistrettoPoint lhs, const Scalar29 rhs) {
     // A lookup table for Radix-8 multiplication. Contains [0P, 1P, 2P, ...]
-    LookupTable<8> lut(lhs);
+    LookupTable<16> lut(lhs);
 
     // Rematerialize the limbs of the scalar from S29 to S32
     // TODO: use the 
@@ -210,7 +210,7 @@ RistrettoPoint RistrettoPoint::scalar_mul(const RistrettoPoint lhs, const Scalar
     for (size_t i = 1; i < 8; i++) {
         auto word = words[7 - i];
 
-        for (size_t j = 0; j < 4; j++) {
+        for (size_t j = 0; j < 8; j++) {
             tmp = sum.as_projective();
             sum = tmp.double_point();
             tmp = sum.as_projective();

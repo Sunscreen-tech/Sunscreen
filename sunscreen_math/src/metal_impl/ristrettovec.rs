@@ -484,7 +484,6 @@ mod tests {
             RistrettoPoint::random(&mut thread_rng()),
         ]);
 
-        
         let b = ScalarVec::new(&[
             Scalar::random(&mut thread_rng()),
             Scalar::random(&mut thread_rng()),

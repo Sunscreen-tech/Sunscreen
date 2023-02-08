@@ -7,7 +7,7 @@ private:
     ProjectiveNielsPoint _entries[N];
 
 public:
-    LookupTable(const RistrettoPoint p) {
+    LookupTable(const thread RistrettoPoint& p) {
         _entries[0] = p.as_projective_niels();
 
         for (size_t i = 1; i < N; i++) {

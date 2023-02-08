@@ -42,7 +42,9 @@ void RistrettoPoint::pack(device u32* ptr, size_t grid_tid, size_t n) {
 ProjectiveNielsPoint RistrettoPoint::as_projective_niels() const {
     FieldElement2625 y_plus_x = this->Y + this->X;
     FieldElement2625 y_minus_x = this->Y - this->X;
-    FieldElement2625 t2d = this->T * constants::EDWARDS_D2;
+    auto edwards_d2 = constants::EDWARDS_D2;
+
+    FieldElement2625 t2d = this->T * edwards_d2;
 
     return ProjectiveNielsPoint(y_plus_x, y_minus_x, this->Z, t2d);
 }

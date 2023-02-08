@@ -120,6 +120,10 @@ impl RistrettoPointVec {
         })
     }
 
+    pub fn iter(&self) -> RistrettoPoints {
+        RistrettoPoints { vec: self, i: 0usize }
+    }
+    
     // TODO: This probably needs to return a slice of MaybeUninit<u32>.
     fn buffer_slice_mut(&mut self) -> &mut [u32] {
         let byte_len = self.len * size_of::<RistrettoPoint>();
@@ -287,10 +291,51 @@ impl Mul<&ScalarVec> for &RistrettoPointVec {
     }
 }
 
+impl Clone for RistrettoPointVec {
+    fn clone(&self) -> Self {
+        let runtime = Runtime::get();
+        
+        let buffer = runtime.alloc(self.len_bytes());
+
+        unsafe {
+            std::ptr::copy_nonoverlapping(self.data.contents() as *const u8, buffer.contents() as *mut u8, self.len_bytes())
+        };
+
+        Self {
+            data: buffer,
+            len: self.len()
+        }
+    }
+}
+
+/**
+ * An iterator over the [RistrettoPoint]s in a [RistrettoPointVec].
+ */
+pub struct RistrettoPoints<'a> {
+    vec: &'a RistrettoPointVec,
+    i: usize,
+}
+
+impl<'a> Iterator for RistrettoPoints<'a> {
+    type Item = RistrettoPoint;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let ret = if self.i < self.vec.len() {
+            Some(self.vec.get(self.i))
+        } else {
+            None
+        };
+
+        self.i += 1;
+
+        ret
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use rand::thread_rng;
-    use sunscreen_curve25519_dalek::Scalar;
+    use sunscreen_curve25519_dalek::{Scalar, traits::Identity};
 
     use crate::metal_impl::U32Arg;
 
@@ -444,6 +489,108 @@ mod tests {
         for i in 0..c.len() {
             assert_eq!(c.get(i).compress(), (a.get(i) * b.get(i)).compress());
         }
+    }
+
+    #[test]
+    fn can_iter() {
+        let a = RistrettoPointVec::new(&[
+            RistrettoPoint::random(&mut thread_rng()),
+            RistrettoPoint::random(&mut thread_rng()),
+            RistrettoPoint::random(&mut thread_rng()),
+            RistrettoPoint::random(&mut thread_rng()),
+        ]);
+
+        for (i, e) in a.iter().enumerate() {
+            assert_eq!(e, a.get(i));
+        }
+    }
+
+    #[test]
+    fn can_roundtrip_projective_point() {
+        let runtime = Runtime::get();
+
+        let a = [
+            RistrettoPoint::random(&mut thread_rng()),
+            RistrettoPoint::random(&mut thread_rng()),
+            RistrettoPoint::random(&mut thread_rng()),
+            RistrettoPoint::random(&mut thread_rng()),
+        ];
+
+        let a_gpu = RistrettoPointVec::new(&a);
+        
+        // Allocate space for the output coordinates
+        let b_gpu = RistrettoPointVec::new(&a);
+
+        let n = U32Arg::new(a.len() as u32);
+
+        runtime.run("test_can_roundtrip_projective_point", &[&a_gpu.data, &b_gpu.data, &n.data], [(4, 64), (1, 1), (1, 1)]);
+
+        for (i, j) in a_gpu.iter().zip(b_gpu.iter()) {
+            assert_eq!(i, j);
+        }
+    }
+
+    #[test]
+    fn clone_yields_new_buffer() {
+        let a = RistrettoPointVec::new(&[
+            RistrettoPoint::random(&mut thread_rng()),
+            RistrettoPoint::random(&mut thread_rng()),
+            RistrettoPoint::random(&mut thread_rng()),
+            RistrettoPoint::random(&mut thread_rng()),
+        ]);
+
+        let b = a.clone();
+
+        assert_ne!(a.data.contents(), b.data.contents());
+
+        for (i, j) in a.iter().zip(b.iter()) {
+            assert_eq!(i, j);
+        }
+    }
+
+    #[test]
+    fn can_add_projective() {
+        let runtime = Runtime::get();
+
+        let a = RistrettoPointVec::new(&[
+            RistrettoPoint::random(&mut thread_rng()),
+            RistrettoPoint::random(&mut thread_rng()),
+            RistrettoPoint::random(&mut thread_rng()),
+            RistrettoPoint::random(&mut thread_rng()),
+        ]);
+
+        let b = a.clone();
+
+        //runtime.run()
+    }
+
+    #[test]
+    fn lookup_tables_are_correct() {
+        let runtime = Runtime::get();
+
+        let a = RistrettoPointVec::new(&[
+            RistrettoPoint::random(&mut thread_rng()),
+            RistrettoPoint::random(&mut thread_rng()),
+            RistrettoPoint::random(&mut thread_rng()),
+            RistrettoPoint::random(&mut thread_rng()),
+        ]);
+
+        let b0 = a.clone();
+        let b1 = a.clone();
+        let b2 = a.clone();
+        let b3 = a.clone();
+
+        let n = U32Arg::new(a.len() as u32);
+
+        runtime.run("test_lut", &[&a.data, &b0.data, &b1.data, &b2.data, &b3.data, &n.data], [(a.len() as u64, 64), (1, 1), (1, 1)]);
+
+        for (i, p) in a.iter().enumerate() {
+            assert_eq!(b0.get(i), RistrettoPoint::identity());
+            assert_eq!(b1.get(i), p);
+            assert_eq!(b2.get(i), Scalar::from(2u8) * p);
+            assert_eq!(b3.get(i), Scalar::from(3u8) * p);
+        }
+
     }
 }
 

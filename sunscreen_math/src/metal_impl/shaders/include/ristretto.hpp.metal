@@ -48,6 +48,7 @@ public:
 
     /// Convert to a ProjectiveNielsPoint
     ProjectiveNielsPoint as_projective_niels() const;
+    ProjectivePoint as_projective() const;
 
     RistrettoPoint operator+(const thread RistrettoPoint& rhs) const thread;
     CompletedPoint operator+(const thread ProjectiveNielsPoint& rhs) const thread;
@@ -114,4 +115,6 @@ public:
 
     // double is a keyword, so we name our function double_point.
     CompletedPoint double_point() const thread;
+
+    RistrettoPoint as_extended() const thread;
 };

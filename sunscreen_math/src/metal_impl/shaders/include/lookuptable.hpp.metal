@@ -1,3 +1,4 @@
+#pragma once
 #include <ristretto.hpp.metal>
 
 // Note: N must be >= 1.

@@ -47,6 +47,10 @@ ProjectiveNielsPoint RistrettoPoint::as_projective_niels() const {
     return ProjectiveNielsPoint(y_plus_x, y_minus_x, this->Z, t2d);
 }
 
+ProjectivePoint RistrettoPoint::as_projective() const {
+    return ProjectivePoint(this->X, this->Y, this->Z);
+}
+
 RistrettoPoint RistrettoPoint::operator+(const thread RistrettoPoint& rhs) const {
     return (*this + rhs.as_projective_niels()).as_extended();
 }
@@ -246,6 +250,20 @@ CompletedPoint ProjectivePoint::double_point() const thread {
     );
 }
 
+RistrettoPoint ProjectivePoint::as_extended() const thread {
+    auto X = this->X * this->Z;
+    auto Y = this->Y * this->Z;
+    auto Z = this->Z.square();
+    auto T = this->X * this->Y;
+
+    return RistrettoPoint(
+        X,
+        Y,
+        Z,
+        T
+    );
+}
+
 kernel void ristretto_add(
     u32 tid [[thread_position_in_grid]],
     device const u32* a [[buffer(0)]],
@@ -310,4 +328,29 @@ kernel void test_add_identity_ristretto(
 
     (x + y).pack(b, tid, len);
 }
+
+kernel void test_can_roundtrip_projective_point(
+    u32 tid [[thread_position_in_grid]],
+    device const u32* a [[buffer(0)]],
+    device u32* b [[buffer(1)]],
+    constant u32& len [[buffer(2)]]
+) {
+    auto x = RistrettoPoint::unpack(a, tid, len);
+    auto y = x.as_projective().as_extended();
+
+    y.pack(b, tid, len);
+}
+
+kernel void test_can_add_ristretto_projective_niels_point(
+    u32 tid [[thread_position_in_grid]],
+    device const u32* a [[buffer(0)]],
+    device u32* b [[buffer(1)]],
+    constant u32& len [[buffer(2)]]
+) {
+    auto x = RistrettoPoint::unpack(a, tid, len);
+    auto y = x.as_projective_niels();
+
+    (x + y).as_extended().pack(b, tid, len);
+}
+
 #endif

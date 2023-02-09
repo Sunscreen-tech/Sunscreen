@@ -158,44 +158,32 @@ inline u8 get_nibble(u32 word, u8 nibble) {
     return (word & (0xF << shift_amount)) >> shift_amount;
 }
 
+ProjectiveNielsPoint ProjectiveNielsPoint::operator-() const {
+    return ProjectiveNielsPoint(
+        this->Y_minus_X,
+        this->Y_plus_X,
+        this->Z,
+        -this->T2d
+    );
+}
+
 RistrettoPoint RistrettoPoint::scalar_mul(const RistrettoPoint lhs, const Scalar29 rhs) {
     // A lookup table for Radix-8 multiplication. Contains [0P, 1P, 2P, ...]
-    LookupTable<15> lut(lhs);
+    LookupTable<8> lut(lhs);
 
-    // Rematerialize the limbs of the scalar from S29 to S32
-    // TODO: use the 
-    u32 words[8];
-    
-    u32 word = rhs[0] | rhs[1] << 29;
-    words[0] = word;
-    word = rhs[1] >> 3 | rhs[2] << 26;
-    words[1] = word;
-    word = rhs[2] >> 6 | rhs[3] << 23;
-    words[2] = word;
-    word = rhs[3] >> 9 | rhs[4] << 20;
-    words[3] = word;
-    word = rhs[4] >> 12 | rhs[5] << 17;
-    words[4] = word;
-    word = rhs[5] >> 15 | rhs[6] << 14;
-    words[5] = word;
-    word = rhs[6] >> 18 | rhs[7] << 11;
-    words[6] = word;
-    word = rhs[7] >> 21 | rhs[8] << 8;
-    words[7] = word;
+    Radix16 scalar_digits = rhs.as_radix_16();
 
     // Copy from contant to thread storage. We'll also use this to store the 16P value in standard
     // projection.
     RistrettoPoint tmp2 = RistrettoPoint::IDENTITY;
 
     // Compute the highest nibble scalar's contribution
-    CompletedPoint sum = (tmp2 + lut.select(get_nibble(words[7], 7)));
+    CompletedPoint sum = tmp2 + lut.select(scalar_digits[63]);
     ProjectivePoint tmp = ProjectivePoint::IDENTITY;
 
-    // Compute the rest of the highest word's contribution
-    for (size_t j = 1; j < 8; j++) {
-        auto word = words[7];
+    for (size_t i = 0; i < 63; i++) {
+        size_t j = 62 - i;
 
-        // Multiply sum by 16 and then add the next nibble's contribution.
         tmp = sum.as_projective();
         sum = tmp.double_point();
         tmp = sum.as_projective();
@@ -206,26 +194,7 @@ RistrettoPoint RistrettoPoint::scalar_mul(const RistrettoPoint lhs, const Scalar
         sum = tmp.double_point();
         tmp2 = sum.as_extended();
 
-        sum = tmp2 + lut.select(get_nibble(word, 7 - j));
-    }
-
-    for (size_t i = 1; i < 8; i++) {
-        auto word = words[7 - i];
-
-        for (size_t j = 0; j < 8; j++) {
-            tmp = sum.as_projective();
-            sum = tmp.double_point();
-            tmp = sum.as_projective();
-            sum = tmp.double_point();
-            tmp = sum.as_projective();
-            sum = tmp.double_point();
-            tmp = sum.as_projective();
-            sum = tmp.double_point();
-            tmp2 = sum.as_extended();
-
-            sum = tmp2 + lut.select(get_nibble(word, 7 - j));
-
-        }
+        sum = tmp2 + lut.select(scalar_digits[j]);
     }
 
     return sum.as_extended();

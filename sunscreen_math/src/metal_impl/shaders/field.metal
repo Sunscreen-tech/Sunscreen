@@ -270,3 +270,23 @@ FieldElement2625 FieldElement2625::square2() const {
 
     return reduce(coeffs.data);
 }
+
+FieldElement2625 FieldElement2625::operator-() const {
+    auto self = *this;
+
+    // Compute -b as ((2^4 * p) - b) to avoid underflow.
+    u64 limbs[10] = {
+        (u64)((0x3ffffed << 4) - self[0]),
+        (u64)((0x1ffffff << 4) - self[1]),
+        (u64)((0x3ffffff << 4) - self[2]),
+        (u64)((0x1ffffff << 4) - self[3]),
+        (u64)((0x3ffffff << 4) - self[4]),
+        (u64)((0x1ffffff << 4) - self[5]),
+        (u64)((0x3ffffff << 4) - self[6]),
+        (u64)((0x1ffffff << 4) - self[7]),
+        (u64)((0x3ffffff << 4) - self[8]),
+        (u64)((0x1ffffff << 4) - self[9]),
+    };
+
+    return reduce(limbs);
+}

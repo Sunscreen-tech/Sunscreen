@@ -495,4 +495,30 @@ mod tests {
             assert_eq!(c.get(i), a.get(i) * a.get(i));
         }
     }
+
+    #[test]
+    fn can_radix_16() {
+        let runtime = Runtime::get();
+
+        let a = ScalarVec::new(&[
+            Scalar::random(&mut thread_rng()),
+            Scalar::random(&mut thread_rng()),
+            Scalar::random(&mut thread_rng()),
+            Scalar::random(&mut thread_rng()),
+        ]);
+
+        let b = runtime.alloc(a.len() * 64);
+        let len = U32Arg::new(a.len() as u32);
+
+        runtime.run("test_can_radix_16", &[&a.data, &b, &len.data], [(a.len() as u64, 1), (1, 1), (1, 1)]);
+
+        for i in 0..a.len() {
+            let expected = a.get(i).as_radix_16();
+            let b_slice = unsafe { slice::from_raw_parts(b.contents() as *const i8, a.len() * 64) };
+
+            for (j, v) in expected.iter().enumerate() {
+                assert_eq!(*v, b_slice[j * a.len() + i]);
+            }
+        }
+    }
 }

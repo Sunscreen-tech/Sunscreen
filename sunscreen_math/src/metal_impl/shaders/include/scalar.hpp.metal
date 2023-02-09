@@ -2,6 +2,20 @@
 
 #include <inttypes.hpp.metal>
 
+class Radix16 {
+private:
+    i8 data[64];
+
+public:
+    thread i8& operator[](size_t i) {
+        return data[i];
+    }
+
+    const thread i8& operator[](size_t i) const {
+        return data[i];
+    }
+};
+
 class Scalar29 {
 private:
     u32 _limbs[9];
@@ -73,4 +87,6 @@ public:
     const constant thread u32& operator[](const size_t index) constant const {
         return _limbs[index];
     }
+
+    Radix16 as_radix_16() const;
 };

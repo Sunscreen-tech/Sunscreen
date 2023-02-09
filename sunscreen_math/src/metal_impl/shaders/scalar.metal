@@ -259,6 +259,53 @@ Scalar29 montgomery_reduce(MulResult limbs) {
     return Scalar29(vals) - l;
 }
 
+Radix16 Scalar29::as_radix_16() const {
+    Radix16 output;
+    
+    auto self = *this;
+
+    u32 words[8] = { 0, 0, 0, 0, 0, 0, 0, 0 };
+    // Convert Scalar29 to Scalar
+    u32 word = self[0] | self[1] << 29;
+    words[0] = word;
+    word = self[1] >> 3 | self[2] << 26;
+    words[1] = word;
+    word = self[2] >> 6 | self[3] << 23;
+    words[2] = word;
+    word = self[3] >> 9 | self[4] << 20;
+    words[3] = word;
+    word = self[4] >> 12 | self[5] << 17;
+    words[4] = word;
+    word = self[5] >> 15 | self[6] << 14;
+    words[5] = word;
+    word = self[6] >> 18 | self[7] << 11;
+    words[6] = word;
+    word = self[7] >> 21 | self[8] << 8;
+    words[7] = word;
+
+    for (size_t i = 0; i < 8; i++) {
+        u32 word = words[i];
+
+        output[8 * i + 0] = (word >> 0) & 0xF;
+        output[8 * i + 1] = (word >> 4) & 0xF;
+        output[8 * i + 2] = (word >> 8) & 0xF;
+        output[8 * i + 3] = (word >> 12) & 0xF;
+        output[8 * i + 4] = (word >> 16) & 0xF;
+        output[8 * i + 5] = (word >> 20) & 0xF;
+        output[8 * i + 6] = (word >> 24) & 0xF;
+        output[8 * i + 7] = (word >> 28) & 0xF;
+    }
+
+    // Step 2: recenter coefficients from [0,16) to [-8,8)
+    for (size_t i = 0; i < 63; i++) {
+        i8 carry = (output[i] + 8) >> 4;
+        output[i] -= (carry << 4);
+        output[i + 1] += carry;
+    }
+
+    return output;
+}
+
 constant u32 data[] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
 
 constant Scalar29 Scalar29::Zero(data);
@@ -346,4 +393,19 @@ kernel void test_can_pack_unpack_scalar(
     auto x = Scalar29::unpack(a, tid, len);
     x.pack(b, tid, len);
 }
+
+kernel void test_can_radix_16(
+    u32 tid [[thread_position_in_grid]],
+    device const u32* a [[buffer(0)]],
+    device i8* b [[buffer(1)]],
+    constant u32& len [[buffer(2)]]
+) {
+    auto x = Scalar29::unpack(a, tid, len);
+    auto res = x.as_radix_16();
+
+    for (size_t i = 0; i < 64; i++) {
+        b[i * len + tid] = res[i];
+    }
+}
+
 #endif

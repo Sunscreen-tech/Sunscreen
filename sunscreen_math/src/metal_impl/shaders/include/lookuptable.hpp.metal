@@ -1,5 +1,8 @@
 #pragma once
 #include <ristretto.hpp.metal>
+#include <metal_integer>
+
+using namespace metal;
 
 // Note: N must be >= 1.
 template <size_t N> class LookupTable {
@@ -15,12 +18,15 @@ public:
         }
     }
 
-    // TODO: Eventually make this non vartime.
-    thread ProjectiveNielsPoint select(size_t x) {
-        if (x == 0) {
-            return ProjectiveNielsPoint::IDENTITY;
-        } else {
-            return _entries[x - 1];
-        }
+    // TODO: Eventually make this non vartime. Or not, as Sunscreen doesn't require it.
+    thread ProjectiveNielsPoint select(i8 x) {
+        ProjectiveNielsPoint ret = ProjectiveNielsPoint::IDENTITY;
+
+        size_t idx = abs(x);
+
+        ret = x > 0 ? _entries[idx - 1] : ret;
+        ret = x < 0 ? -_entries[idx - 1] : ret;
+
+        return ret;
     }
 };

@@ -55,6 +55,8 @@ public:
     FieldElement2625 operator-(const thread FieldElement2625& rhs) const thread;
     FieldElement2625 operator*(const thread FieldElement2625& rhs) const thread;
 
+    FieldElement2625 operator-() const thread;
+
     /// Compute `this^2`.
     FieldElement2625 square() const;
 

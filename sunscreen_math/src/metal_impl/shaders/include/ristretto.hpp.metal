@@ -79,6 +79,8 @@ public:
     FieldElement2625 get_y_minus_x() { return Y_minus_X; }
     FieldElement2625 get_z() { return Z; }
     FieldElement2625 get_t2d() { return T2d; }
+
+    ProjectiveNielsPoint operator-() const thread;
 };
 
 class CompletedPoint {

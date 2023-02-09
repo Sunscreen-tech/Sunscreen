@@ -35,6 +35,7 @@ fn compile_metal_shaders() {
                 .arg("-sdk")
                 .arg("macosx")
                 .arg("metal")
+                .arg("-g")
                 .arg("-Wall")
                 .arg("-Werror")
                 .arg(format!("-D{}", config.to_uppercase()))

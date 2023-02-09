@@ -629,12 +629,16 @@ mod tests {
         let b1 = a.clone();
         let b2 = a.clone();
         let b3 = a.clone();
+        let b4 = a.clone();
+        let b5 = a.clone();
+        let b6 = a.clone();
+        let b7 = a.clone();
 
         let n = U32Arg::new(a.len() as u32);
 
         runtime.run(
             "test_lut",
-            &[&a.data, &b0.data, &b1.data, &b2.data, &b3.data, &n.data],
+            &[&a.data, &b0.data, &b1.data, &b2.data, &b3.data, &b4.data, &b5.data, &b6.data, &b7.data, &n.data],
             [(a.len() as u64, 64), (1, 1), (1, 1)],
         );
 
@@ -643,6 +647,10 @@ mod tests {
             assert_eq!(b1.get(i), p);
             assert_eq!(b2.get(i), Scalar::from(2u8) * p);
             assert_eq!(b3.get(i), Scalar::from(3u8) * p);
+            assert_eq!(b4.get(i), -p);
+            assert_eq!(b5.get(i), Scalar::from(2u8) * -p);
+            assert_eq!(b6.get(i), Scalar::from(3u8) * -p);
+            assert_eq!(b7.get(i), Scalar::from(4u8) * -p);
         }
     }
 }

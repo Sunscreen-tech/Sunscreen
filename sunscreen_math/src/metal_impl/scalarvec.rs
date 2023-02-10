@@ -510,7 +510,11 @@ mod tests {
         let b = runtime.alloc(a.len() * 64);
         let len = U32Arg::new(a.len() as u32);
 
-        runtime.run("test_can_radix_16", &[&a.data, &b, &len.data], [(a.len() as u64, 1), (1, 1), (1, 1)]);
+        runtime.run(
+            "test_can_radix_16",
+            &[&a.data, &b, &len.data],
+            [(a.len() as u64, 1), (1, 1), (1, 1)],
+        );
 
         for i in 0..a.len() {
             let expected = a.get(i).as_radix_16();

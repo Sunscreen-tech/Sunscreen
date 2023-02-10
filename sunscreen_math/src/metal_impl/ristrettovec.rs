@@ -638,7 +638,10 @@ mod tests {
 
         runtime.run(
             "test_lut",
-            &[&a.data, &b0.data, &b1.data, &b2.data, &b3.data, &b4.data, &b5.data, &b6.data, &b7.data, &n.data],
+            &[
+                &a.data, &b0.data, &b1.data, &b2.data, &b3.data, &b4.data, &b5.data, &b6.data,
+                &b7.data, &n.data,
+            ],
             [(a.len() as u64, 64), (1, 1), (1, 1)],
         );
 

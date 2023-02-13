@@ -9,7 +9,7 @@ use std::{
     ops::{Add, Mul, Sub},
 };
 
-use crate::{metal_impl::U32Arg, ScalarVec};
+use crate::{metal_impl::{U32Arg, ScalarVec}};
 
 use super::Runtime;
 
@@ -697,6 +697,28 @@ mod benches {
         println!(
             "GPU: {} sm/s",
             a_gpu.len() as f64 / now.elapsed().as_secs_f64()
+        );
+    }
+
+    #[bench]
+    fn bench_scalar_mul_ristretto_points_cpu(_: &mut Bencher) {
+        const LEN: usize = 256 * 1024;
+
+        let mut a = Vec::with_capacity(LEN);
+        let mut b = Vec::with_capacity(LEN);
+
+        for _ in 0..LEN {
+            a.push(RistrettoPoint::random(&mut thread_rng()));
+            b.push(Scalar::random(&mut thread_rng()))
+        }
+
+        let now = Instant::now();
+
+        let results: Vec<RistrettoPoint> = a.par_iter().zip(b.par_iter()).map(|(x, y)| x * y).collect();
+
+        println!(
+            "CPU: {} sm/s",
+            a.len() as f64 / now.elapsed().as_secs_f64()
         );
     }
 }

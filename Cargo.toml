@@ -14,6 +14,7 @@ members = [
     "seal_fhe",
     "sunscreen",
     "sunscreen_backend",
+    "sunscreen_bulletproofs",
     "sunscreen_compiler_common",
     "sunscreen_compiler_macros",
     "sunscreen_curve25519_dalek",

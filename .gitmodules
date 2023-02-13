@@ -16,3 +16,6 @@
 [submodule "sunscreen_curve25519_dalek"]
 	path = sunscreen_curve25519_dalek
 	url = git@github.com:Sunscreen-tech/curve25519-dalek.git
+[submodule "sunscreen_bulletproofs"]
+	path = sunscreen_bulletproofs
+	url = git@github.com:Sunscreen-tech/bulletproofs.git

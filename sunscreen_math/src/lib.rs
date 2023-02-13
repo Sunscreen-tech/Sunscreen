@@ -1,4 +1,5 @@
 #![cfg_attr(feature = "nightly-features", feature(test))]
 
+#[cfg(feature = "metal")]
 mod metal_impl;
-pub use metal_impl::ScalarVec;
+

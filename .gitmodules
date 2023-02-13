@@ -13,3 +13,6 @@
 	path = rust-playground
 	url = git@github.com:Sunscreen-tech/rust-playground.git
   branch = sunscreen
+[submodule "sunscreen_bulletproofs"]
+	path = sunscreen_bulletproofs
+	url = git@github.com:Sunscreen-tech/bulletproofs_zkcrypto.git

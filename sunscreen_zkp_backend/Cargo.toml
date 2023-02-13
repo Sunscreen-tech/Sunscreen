@@ -6,7 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-curve25519_dalek = { package="sunscreen_curve25519_dalek", path = "../sunscreen_curve25519_dalek", default-features = false, features = ["serde"] }
+curve25519_dalek = { package="sunscreen_curve25519", path = "../sunscreen_curve25519", default-features = false, features = ["serde"] }
 sunscreen_bulletproofs = { path = "../sunscreen_bulletproofs", features = ["yoloproofs"], optional = true }
 crypto-bigint = "0.4.9"
 merlin = { version = "3.0.0", optional = true}

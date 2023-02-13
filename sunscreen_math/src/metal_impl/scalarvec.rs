@@ -3,7 +3,7 @@ use std::ops::{Add, Mul, Neg, Sub};
 
 use metal::Buffer;
 
-use sunscreen_curve25519_dalek::scalar::Scalar;
+use curve25519_dalek::scalar::Scalar;
 
 use crate::metal_impl::U32Arg;
 

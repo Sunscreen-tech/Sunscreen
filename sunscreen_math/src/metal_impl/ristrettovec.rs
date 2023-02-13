@@ -1,5 +1,5 @@
 use metal::Buffer;
-use sunscreen_curve25519_dalek::{
+use curve25519_dalek::{
     field::FieldElement2625, ristretto::RistrettoPoint, EdwardsPoint,
 };
 
@@ -664,7 +664,7 @@ mod benches {
     extern crate test;
 
     use rand::thread_rng;
-    use sunscreen_curve25519_dalek::Scalar;
+    use curve25519_dalek::Scalar;
 
     use super::*;
     use crate::metal_impl::U32Arg;

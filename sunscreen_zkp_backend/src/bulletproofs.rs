@@ -8,7 +8,7 @@ use bulletproofs::{
     BulletproofGens, PedersenGens,
 };
 use crypto_bigint::{Limb, UInt};
-use sunscreen_curve25519_dalek::scalar::Scalar;
+use curve25519_dalek::scalar::Scalar;
 use log::trace;
 use merlin::Transcript;
 use petgraph::stable_graph::NodeIndex;

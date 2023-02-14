@@ -1,6 +1,6 @@
 use metal::Buffer;
 use curve25519_dalek::{
-    field::FieldElement2625, ristretto::RistrettoPoint, EdwardsPoint,
+    field::FieldElement2625, ristretto::RistrettoPoint, edwards::EdwardsPoint,
 };
 
 use core::slice;
@@ -342,7 +342,7 @@ impl<'a> Iterator for RistrettoPoints<'a> {
 #[cfg(test)]
 mod tests {
     use rand::thread_rng;
-    use sunscreen_curve25519_dalek::{traits::Identity, Scalar};
+    use curve25519_dalek::{traits::Identity, Scalar};
 
     use crate::metal_impl::U32Arg;
 

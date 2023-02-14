@@ -227,26 +227,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "bulletproofs"
-version = "4.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "40e698f1df446cc6246afd823afbe2d121134d089c9102c1dd26d1264991ba32"
-dependencies = [
- "byteorder",
- "clear_on_drop",
- "curve25519-dalek-ng",
- "digest 0.9.0",
- "merlin",
- "rand",
- "rand_core",
- "serde",
- "serde_derive",
- "sha3",
- "subtle-ng",
- "thiserror",
-]
-
-[[package]]
 name = "bumpalo"
 version = "3.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -546,20 +526,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2b2466559f260f48ad25fe6317b3c8dac77b5bdb5763ac7d9d6103530663bc90"
 dependencies = [
  "memchr",
-]
-
-[[package]]
-name = "curve25519-dalek-ng"
-version = "4.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1c359b7249347e46fb28804470d071c921156ad62b3eef5d34e2ba867533dec8"
-dependencies = [
- "byteorder",
- "digest 0.9.0",
- "rand_core",
- "serde",
- "subtle-ng",
- "zeroize",
 ]
 
 [[package]]
@@ -1890,7 +1856,6 @@ checksum = "734676eb262c623cec13c3155096e08d1f8f29adce39ba17948b18dad1e54142"
 name = "sunscreen"
 version = "0.7.0"
 dependencies = [
- "bulletproofs",
  "bumpalo",
  "crypto-bigint",
  "float-cmp",
@@ -1903,8 +1868,10 @@ dependencies = [
  "static_assertions",
  "subtle",
  "sunscreen_backend",
+ "sunscreen_bulletproofs",
  "sunscreen_compiler_common",
  "sunscreen_compiler_macros",
+ "sunscreen_curve25519",
  "sunscreen_fhe_program",
  "sunscreen_runtime",
  "sunscreen_zkp_backend",

@@ -1,6 +1,6 @@
 use metal::Buffer;
 use curve25519_dalek::{
-    Field26, ristretto::RistrettoPoint, edwards::EdwardsPoint,
+    CannonicalFieldElement, ristretto::RistrettoPoint, edwards::EdwardsPoint,
 };
 
 use core::slice;
@@ -113,10 +113,10 @@ impl RistrettoPointVec {
         }
 
         RistrettoPoint(EdwardsPoint {
-            X: Field26(x).to_field(),
-            Y: Field26(y).to_field(),
-            Z: Field26(z).to_field(),
-            T: Field26(t).to_field(),
+            X: CannonicalFieldElement(x).to_field(),
+            Y: CannonicalFieldElement(y).to_field(),
+            Z: CannonicalFieldElement(z).to_field(),
+            T: CannonicalFieldElement(t).to_field(),
         })
     }
 

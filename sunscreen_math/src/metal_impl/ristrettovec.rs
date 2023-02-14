@@ -1,7 +1,5 @@
+use curve25519_dalek::{edwards::EdwardsPoint, ristretto::RistrettoPoint, CannonicalFieldElement};
 use metal::Buffer;
-use curve25519_dalek::{
-    CannonicalFieldElement, ristretto::RistrettoPoint, edwards::EdwardsPoint,
-};
 
 use core::slice;
 use std::{
@@ -9,7 +7,7 @@ use std::{
     ops::{Add, Mul, Sub},
 };
 
-use crate::{metal_impl::{U32Arg, ScalarVec}};
+use crate::metal_impl::{ScalarVec, U32Arg};
 
 use super::Runtime;
 
@@ -341,8 +339,8 @@ impl<'a> Iterator for RistrettoPoints<'a> {
 
 #[cfg(test)]
 mod tests {
+    use curve25519_dalek::{scalar::Scalar, traits::Identity};
     use rand::thread_rng;
-    use curve25519_dalek::{traits::Identity, scalar::Scalar};
 
     use crate::metal_impl::U32Arg;
 
@@ -663,8 +661,8 @@ mod benches {
     use std::time::Instant;
     extern crate test;
 
-    use rand::thread_rng;
     use curve25519_dalek::scalar::Scalar;
+    use rand::thread_rng;
 
     use super::*;
     use rayon::prelude::*;
@@ -713,9 +711,6 @@ mod benches {
 
         let _: Vec<RistrettoPoint> = a.par_iter().zip(b.par_iter()).map(|(x, y)| x * y).collect();
 
-        println!(
-            "CPU: {} sm/s",
-            a.len() as f64 / now.elapsed().as_secs_f64()
-        );
+        println!("CPU: {} sm/s", a.len() as f64 / now.elapsed().as_secs_f64());
     }
 }

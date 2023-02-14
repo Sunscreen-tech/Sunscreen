@@ -2,4 +2,3 @@
 
 #[cfg(feature = "metal")]
 mod metal_impl;
-

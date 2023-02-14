@@ -1,6 +1,6 @@
 use metal::Buffer;
 use curve25519_dalek::{
-    field::FieldElement2625, ristretto::RistrettoPoint, edwards::EdwardsPoint,
+    Field26, ristretto::RistrettoPoint, edwards::EdwardsPoint,
 };
 
 use core::slice;
@@ -51,10 +51,10 @@ impl RistrettoPointVec {
         let data_slice = field_vec.buffer_slice_mut();
 
         for (i, p) in x.iter().enumerate() {
-            let x = p.0.X.0;
-            let y = p.0.Y.0;
-            let z = p.0.Z.0;
-            let t = p.0.T.0;
+            let x = p.0.X.to_u29();
+            let y = p.0.Y.to_u29();
+            let z = p.0.Z.to_u29();
+            let t = p.0.T.to_u29();
 
             for (j, w) in x.iter().enumerate() {
                 data_slice[(j + 0) * len + i] = *w;
@@ -113,10 +113,10 @@ impl RistrettoPointVec {
         }
 
         RistrettoPoint(EdwardsPoint {
-            X: FieldElement2625(x),
-            Y: FieldElement2625(y),
-            Z: FieldElement2625(z),
-            T: FieldElement2625(t),
+            X: Field26(x).to_field(),
+            Y: Field26(y).to_field(),
+            Z: Field26(z).to_field(),
+            T: Field26(t).to_field(),
         })
     }
 
@@ -342,7 +342,7 @@ impl<'a> Iterator for RistrettoPoints<'a> {
 #[cfg(test)]
 mod tests {
     use rand::thread_rng;
-    use curve25519_dalek::{traits::Identity, Scalar};
+    use curve25519_dalek::{traits::Identity, scalar::Scalar};
 
     use crate::metal_impl::U32Arg;
 
@@ -664,14 +664,11 @@ mod benches {
     extern crate test;
 
     use rand::thread_rng;
-    use curve25519_dalek::Scalar;
+    use curve25519_dalek::scalar::Scalar;
 
     use super::*;
-    use crate::metal_impl::U32Arg;
     use rayon::prelude::*;
     use test::Bencher;
-
-    use core::mem::size_of;
 
     #[bench]
     fn bench_scalar_mul_ristretto_points(_: &mut Bencher) {
@@ -714,7 +711,7 @@ mod benches {
 
         let now = Instant::now();
 
-        let results: Vec<RistrettoPoint> = a.par_iter().zip(b.par_iter()).map(|(x, y)| x * y).collect();
+        let _: Vec<RistrettoPoint> = a.par_iter().zip(b.par_iter()).map(|(x, y)| x * y).collect();
 
         println!(
             "CPU: {} sm/s",

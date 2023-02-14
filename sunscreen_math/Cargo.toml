@@ -9,10 +9,10 @@ edition = "2021"
 lazy_static = "1.4.0"
 metal = { version = "0.24.0", optional = true }
 rand = "0.8.5"
-curve25519_dalek = { package = "sunscreen_curve25519", path = "../sunscreen_curve25519", features = ["serde"], default-features = false }
+curve25519_dalek = { package = "sunscreen_curve25519", path = "../sunscreen_curve25519", features = ["serde", "u64_backend"], default-features = false }
 rayon = "1.6.1"
 
 [features]
-default = ["metal", "nightly-features"]
+default = ["metal"]
 nightly-features = []
 metal = ["dep:metal"]

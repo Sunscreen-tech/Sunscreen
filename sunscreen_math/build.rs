@@ -1,6 +1,7 @@
-use std::{path::PathBuf, process::Command};
-
+#[cfg(feature = "metal")]
 fn compile_metal_shaders() {
+    use std::{path::PathBuf, process::Command};
+
     let outdir = std::env::var("OUT_DIR").unwrap();
     let shader_dir = PathBuf::from(".")
         .join("src")
@@ -85,5 +86,6 @@ fn compile_metal_shaders() {
 }
 
 fn main() {
+    #[cfg(feature = "metal")]
     compile_metal_shaders();
 }

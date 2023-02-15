@@ -181,11 +181,11 @@ fn alice(
                     println!("Decryption failed: too much noise");
                     continue;
                 }
-                Err(e) => panic!("{:#?}", e),
+                Err(e) => panic!("{e:#?}"),
             };
             let result: f64 = result.into();
 
-            println!("{}", result);
+            println!("{result}");
         }
     })
 }

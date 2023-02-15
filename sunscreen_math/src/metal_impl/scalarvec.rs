@@ -35,7 +35,7 @@ impl ScalarVec {
             let bytes = s.as_bytes();
 
             for j in 0..8 {
-                data_map[len * j + i] = (bytes[4 * j + 0] as u32) << 0;
+                data_map[len * j + i] = bytes[4 * j] as u32;
                 data_map[len * j + i] |= (bytes[4 * j + 1] as u32) << 8;
                 data_map[len * j + i] |= (bytes[4 * j + 2] as u32) << 16;
                 data_map[len * j + i] |= (bytes[4 * j + 3] as u32) << 24;
@@ -68,6 +68,17 @@ impl ScalarVec {
         self.len() * size_of::<Scalar>()
     }
 
+    /**
+     * Create an iterator over the scalars in this [`ScalarVec`].
+     */
+    pub fn iter(&self) -> Scalars {
+        Scalars { scalar_vec: self, i: 0 }
+    }
+
+    // Multiplying by zero and shifting zero actually makes the code
+    // clearer.
+    #[allow(clippy::identity_op)]
+    #[allow(clippy::erasing_op)]
     /// Get the [`Scalar`] at index i.
     pub fn get(&self, i: usize) -> Scalar {
         if i >= self.len {
@@ -137,6 +148,30 @@ impl ScalarVec {
     }
 }
 
+/**
+ * An iterator over the [`Scalar`]s in [`ScalarVec`].
+ */
+pub struct Scalars<'a> {
+    scalar_vec: &'a ScalarVec,
+    i: usize
+}
+
+impl<'a> Iterator for Scalars<'a> {
+    type Item = Scalar;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.i >= self.scalar_vec.len() {
+            return None;
+        }
+
+        let val = self.scalar_vec.get(self.i);
+
+        self.i += 1;
+
+        Some(val)
+    }
+}
+
 impl Add<ScalarVec> for ScalarVec {
     type Output = Self;
 
@@ -188,7 +223,7 @@ impl Sub<ScalarVec> for ScalarVec {
     type Output = Self;
 
     fn sub(self, rhs: ScalarVec) -> Self::Output {
-        &self + &rhs
+        &self - &rhs
     }
 }
 
@@ -196,7 +231,7 @@ impl Sub<&ScalarVec> for ScalarVec {
     type Output = Self;
 
     fn sub(self, rhs: &ScalarVec) -> Self::Output {
-        &self + rhs
+        &self - rhs
     }
 }
 
@@ -204,7 +239,7 @@ impl Sub<ScalarVec> for &ScalarVec {
     type Output = ScalarVec;
 
     fn sub(self, rhs: ScalarVec) -> Self::Output {
-        self + &rhs
+        self - &rhs
     }
 }
 
@@ -235,7 +270,7 @@ impl Mul<ScalarVec> for ScalarVec {
     type Output = Self;
 
     fn mul(self, rhs: ScalarVec) -> Self::Output {
-        &self + &rhs
+        &self * &rhs
     }
 }
 
@@ -243,7 +278,7 @@ impl Mul<&ScalarVec> for ScalarVec {
     type Output = Self;
 
     fn mul(self, rhs: &ScalarVec) -> Self::Output {
-        &self + rhs
+        &self * rhs
     }
 }
 
@@ -251,7 +286,7 @@ impl Mul<ScalarVec> for &ScalarVec {
     type Output = ScalarVec;
 
     fn mul(self, rhs: ScalarVec) -> Self::Output {
-        self + &rhs
+        self * &rhs
     }
 }
 
@@ -326,8 +361,8 @@ mod tests {
 
         let v = ScalarVec::new(s);
 
-        for i in 0..v.len() {
-            assert_eq!(v.get(i), s[i]);
+        for (i, v) in v.iter().enumerate() {
+            assert_eq!(v, s[i]);
         }
     }
 
@@ -343,7 +378,7 @@ mod tests {
         ];
 
         let v = ScalarVec::new(&scalars);
-        let mut out = ScalarVec::new(&[
+        let out = ScalarVec::new(&[
             Scalar::from(0u8),
             Scalar::from(0u8),
             Scalar::from(0u8),
@@ -419,9 +454,6 @@ mod tests {
         let c = &a - &b;
 
         for i in 0..a.len() {
-            let a_i = a.get(i);
-            let b_i = b.get(i);
-
             assert_eq!(c.get(i), a.get(i) - b.get(i));
         }
     }
@@ -445,9 +477,6 @@ mod tests {
         let c = &a - &b;
 
         for i in 0..a.len() {
-            let a_i = a.get(i);
-            let b_i = b.get(i);
-
             assert_eq!(c.get(i), a.get(i) - b.get(i));
         }
     }
@@ -471,9 +500,6 @@ mod tests {
         let c = &a * &b;
 
         for i in 0..a.len() {
-            let a_i = a.get(i);
-            let b_i = b.get(i);
-
             assert_eq!(c.get(i), a.get(i) * b.get(i));
         }
     }
@@ -490,8 +516,6 @@ mod tests {
         let c = a.square();
 
         for i in 0..a.len() {
-            let a_i = a.get(i);
-
             assert_eq!(c.get(i), a.get(i) * a.get(i));
         }
     }

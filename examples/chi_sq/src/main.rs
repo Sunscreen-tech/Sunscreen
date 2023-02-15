@@ -144,8 +144,7 @@ where
     let elapsed = start.elapsed().as_secs_f64();
 
     println!(
-        "\t\tchi_sq (non-fhe) alpha {}, beta_1 {}, beta_2 {}, beta_3 {}, ({}s)",
-        a, b_1, b_2, b_3, elapsed
+        "\t\tchi_sq (non-fhe) alpha {a}, beta_1 {b_1}, beta_2 {b_2}, beta_3 {b_3}, ({elapsed}s)"
     );
 }
 
@@ -180,7 +179,7 @@ where
         .compile()?;
     let elapsed = start.elapsed().as_secs_f64();
 
-    println!("\t\tCompile time {}s", elapsed);
+    println!("\t\tCompile time {elapsed}s");
 
     let runtime = Runtime::new_fhe(app.params())?;
 
@@ -192,7 +191,7 @@ where
     let (public_key, private_key) = runtime.generate_keys()?;
     let elapsed = start.elapsed().as_secs_f64();
 
-    println!("\t\tKeygen time {}s", elapsed);
+    println!("\t\tKeygen time {elapsed}s");
 
     let start = Instant::now();
     let n_0_enc = runtime.encrypt(n_0, &public_key)?;
@@ -200,7 +199,7 @@ where
     let n_2_enc = runtime.encrypt(n_2, &public_key)?;
     let elapsed = start.elapsed().as_secs_f64();
 
-    println!("\t\tEncryption time {}s", elapsed);
+    println!("\t\tEncryption time {elapsed}s");
 
     let start = Instant::now();
     let args: Vec<FheProgramInput> = vec![n_0_enc.into(), n_1_enc.into(), n_2_enc.into()];
@@ -208,7 +207,7 @@ where
     let result = runtime.run(app.get_fhe_program(c).unwrap(), args, &public_key)?;
     let elapsed = start.elapsed().as_secs_f64();
 
-    println!("\t\tRun time {}s", elapsed);
+    println!("\t\tRun time {elapsed}s");
 
     let start = Instant::now();
     let a: U = runtime.decrypt(&result[0], &private_key)?;
@@ -217,11 +216,10 @@ where
     let b_3: U = runtime.decrypt(&result[3], &private_key)?;
     let elapsed = start.elapsed().as_secs_f64();
 
-    println!("\t\tDecryption time {}s", elapsed);
+    println!("\t\tDecryption time {elapsed}s");
 
     println!(
-        "\t\tchi_sq (fhe) alpha {:40}, beta_1 {:40}, beta_2 {:40}, beta_3 {:40}",
-        a, b_1, b_2, b_3
+        "\t\tchi_sq (fhe) alpha {a:40}, beta_1 {b_1:40}, beta_2 {b_2:40}, beta_3 {b_3:40}"
     );
 
     Ok(())

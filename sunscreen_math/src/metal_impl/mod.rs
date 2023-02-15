@@ -1,9 +1,9 @@
 use std::ops::Deref;
-use std::{collections::HashMap, mem::size_of};
+use std::{mem::size_of};
 
-use lazy_static::{__Deref, lazy_static};
+use lazy_static::{lazy_static};
 use metal::{
-    Buffer, CommandQueue, ComputePipelineState, Device, Library, MTLCommandBufferStatus,
+    Buffer, CommandQueue, Device, Library, MTLCommandBufferStatus,
     MTLResourceOptions, MTLSize,
 };
 
@@ -50,7 +50,7 @@ lazy_static! {
 
 impl Runtime {
     pub fn get() -> &'static Runtime {
-        &*RUNTIME
+        &RUNTIME
     }
 
     pub fn alloc(&self, len: usize) -> Buffer {
@@ -120,8 +120,6 @@ impl Deref for U32Arg {
 
 #[cfg(test)]
 mod tests {
-    use core::slice;
-
     use super::*;
 
     #[test]

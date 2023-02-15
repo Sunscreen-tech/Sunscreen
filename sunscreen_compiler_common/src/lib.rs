@@ -156,14 +156,14 @@ impl<'de> Deserialize<'de> for Type {
                 .next()
                 .ok_or_else(|| D::Error::custom("Malformed `Type`: missing version."))?,
         )
-        .map_err(|e| de::Error::custom(format!("Failed to parse version: {}", e)))?;
+        .map_err(|e| de::Error::custom(format!("Failed to parse version: {e}")))?;
 
         let is_encrypted = bool::from_str(
             splits
                 .next()
                 .ok_or_else(|| D::Error::custom("Malformed `Type`: missing is_encrypted."))?,
         )
-        .map_err(|e| de::Error::custom(format!("Failed to parse boolean: {}", e)))?;
+        .map_err(|e| de::Error::custom(format!("Failed to parse boolean: {e}")))?;
 
         Ok(Self {
             name: typename.to_owned(),

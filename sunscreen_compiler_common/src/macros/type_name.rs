@@ -7,7 +7,7 @@ use syn::{DeriveInput, Ident, LitStr};
  */
 pub fn derive_typename_impl(parse_stream: DeriveInput) -> TokenStream {
     let name = &parse_stream.ident;
-    let name_contents = LitStr::new(&format!("{{}}::{}", name), name.span());
+    let name_contents = LitStr::new(&format!("{{}}::{name}"), name.span());
     let crate_name = std::env::var("CARGO_CRATE_NAME").unwrap();
 
     // If the sunscreen crate itself tries to derive types, then it needs to refer

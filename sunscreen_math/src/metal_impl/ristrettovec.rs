@@ -55,7 +55,7 @@ impl RistrettoPointVec {
             let t = p.0.T.to_u29();
 
             for (j, w) in x.iter().enumerate() {
-                data_slice[(j + 0) * len + i] = *w;
+                data_slice[(j) * len + i] = *w;
             }
 
             for (j, w) in y.iter().enumerate() {
@@ -195,7 +195,7 @@ impl Sub<RistrettoPointVec> for RistrettoPointVec {
     type Output = Self;
 
     fn sub(self, rhs: RistrettoPointVec) -> Self::Output {
-        &self + &rhs
+        &self - &rhs
     }
 }
 
@@ -203,7 +203,7 @@ impl Sub<&RistrettoPointVec> for RistrettoPointVec {
     type Output = Self;
 
     fn sub(self, rhs: &RistrettoPointVec) -> Self::Output {
-        &self + rhs
+        &self - rhs
     }
 }
 
@@ -211,7 +211,7 @@ impl Sub<RistrettoPointVec> for &RistrettoPointVec {
     type Output = RistrettoPointVec;
 
     fn sub(self, rhs: RistrettoPointVec) -> Self::Output {
-        self + &rhs
+        self - &rhs
     }
 }
 

@@ -289,7 +289,7 @@ where
             },
         );
 
-        format!("{:?}", data)
+        format!("{data:?}")
     }
 }
 

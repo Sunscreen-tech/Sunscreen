@@ -72,7 +72,10 @@ impl ScalarVec {
      * Create an iterator over the scalars in this [`ScalarVec`].
      */
     pub fn iter(&self) -> Scalars {
-        Scalars { scalar_vec: self, i: 0 }
+        Scalars {
+            scalar_vec: self,
+            i: 0,
+        }
     }
 
     // Multiplying by zero and shifting zero actually makes the code
@@ -153,7 +156,7 @@ impl ScalarVec {
  */
 pub struct Scalars<'a> {
     scalar_vec: &'a ScalarVec,
-    i: usize
+    i: usize,
 }
 
 impl<'a> Iterator for Scalars<'a> {

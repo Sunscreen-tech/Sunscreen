@@ -1,10 +1,9 @@
+use std::mem::size_of;
 use std::ops::Deref;
-use std::{mem::size_of};
 
-use lazy_static::{lazy_static};
+use lazy_static::lazy_static;
 use metal::{
-    Buffer, CommandQueue, Device, Library, MTLCommandBufferStatus,
-    MTLResourceOptions, MTLSize,
+    Buffer, CommandQueue, Device, Library, MTLCommandBufferStatus, MTLResourceOptions, MTLSize,
 };
 
 mod ristrettovec;

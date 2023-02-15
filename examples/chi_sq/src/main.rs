@@ -218,9 +218,7 @@ where
 
     println!("\t\tDecryption time {elapsed}s");
 
-    println!(
-        "\t\tchi_sq (fhe) alpha {a:40}, beta_1 {b_1:40}, beta_2 {b_2:40}, beta_3 {b_3:40}"
-    );
+    println!("\t\tchi_sq (fhe) alpha {a:40}, beta_1 {b_1:40}, beta_2 {b_2:40}, beta_3 {b_3:40}");
 
     Ok(())
 }

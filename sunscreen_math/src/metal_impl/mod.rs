@@ -70,14 +70,6 @@ impl Runtime {
     }
 
     pub fn run(&self, kernel_name: &'static str, data: &[&Buffer], grid: Grid) {
-        println!(
-            "{}",
-            self.device
-                .lock()
-                .unwrap()
-                .recommended_max_working_set_size()
-        );
-
         let command_buffer = self.command_queue.new_command_buffer();
         let encoder = command_buffer.new_compute_command_encoder();
 

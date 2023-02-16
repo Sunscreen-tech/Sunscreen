@@ -21,6 +21,15 @@ pub struct ScalarVec {
     len: usize,
 }
 
+impl Clone for ScalarVec {
+    fn clone(&self) -> Self {
+        Self {
+            data: self.clone_buffer(),
+            len: self.len
+        }
+    }
+}
+
 impl ScalarVec {
     pub fn new(x: &[Scalar]) -> Self {
         let len = x.len();

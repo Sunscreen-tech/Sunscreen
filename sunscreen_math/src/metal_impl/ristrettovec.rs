@@ -25,24 +25,9 @@ impl Clone for RistrettoPointVec {
 }
 
 impl RistrettoPointVec {
-    /// Creates a new [RistrettoVec].
-    ///
-    /// # Remarks
-    /// This code assumes the following layout of curve25519-dalek datastructures:
-    /// ```rust
-    /// struct RistrettoPoint(EdwardsPoint);
-    ///
-    /// struct EdwardsPoint {
-    ///     X: FieldElement2625,
-    ///     Y: FieldElement2625,
-    ///     Z: FieldElement2625,
-    ///     T: FieldElement2625,
-    /// }
-    ///
-    /// struct FieldElement2625([u32; 10]);
-    /// ```
-    /// To achieve this layout, you must use the u32 backend.
-    ///
+    /**
+     * Creates a new [`RistrettoPointVec`].
+     */
     pub fn new(x: &[RistrettoPoint]) -> Self {
         let runtime = Runtime::get();
 
@@ -65,19 +50,19 @@ impl RistrettoPointVec {
             let u29_len = x.len();
 
             for (j, w) in x.iter().enumerate() {
-                data_slice[(j) * len + i].write(*w);
+                data_slice[(j + 0 * u29_len) * len + i].write(*w);
             }
 
             for (j, w) in y.iter().enumerate() {
-                data_slice[(j + 10) * len + i].write(*w);
+                data_slice[(j + 1 * u29_len) * len + i].write(*w);
             }
 
             for (j, w) in z.iter().enumerate() {
-                data_slice[(j + 20) * len + i].write(*w);
+                data_slice[(j + 2 * u29_len) * len + i].write(*w);
             }
 
             for (j, w) in t.iter().enumerate() {
-                data_slice[(j + 30) * len + i].write(*w);
+                data_slice[(j + 3 * u29_len) * len + i].write(*w);
             }
         }
 

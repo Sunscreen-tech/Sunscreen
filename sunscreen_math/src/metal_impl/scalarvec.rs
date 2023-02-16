@@ -65,18 +65,8 @@ impl ScalarVec {
      * This is more performant than using `mul`.
      */
     pub fn square(&self) -> Self {
-        let runtime = Runtime::get();
-        let out_buf = runtime.alloc(self.len_bytes());
-        let len = U32Arg::new(self.len as u32);
-
-        runtime.run(
-            "scalar_square",
-            &[&self.data, &out_buf, &len.data],
-            [(self.len() as u64, 64), (1, 1), (1, 1)],
-        );
-
         ScalarVec {
-            data: out_buf,
+            data: self.unary_gpu_kernel("scalar_square"),
             len: self.len,
         }
     }
@@ -196,20 +186,8 @@ impl Add<&ScalarVec> for &ScalarVec {
     type Output = ScalarVec;
 
     fn add(self, rhs: &ScalarVec) -> Self::Output {
-        assert_eq!(self.len(), rhs.len());
-
-        let runtime = Runtime::get();
-        let out_buf = runtime.alloc(self.len_bytes());
-        let len = U32Arg::new(self.len as u32);
-
-        runtime.run(
-            "scalar_add",
-            &[&self.data, &rhs.data, &out_buf, &len.data],
-            [(self.len() as u64, 64), (1, 1), (1, 1)],
-        );
-
         ScalarVec {
-            data: out_buf,
+            data: self.binary_gpu_kernel("scalar_add", rhs),
             len: self.len,
         }
     }
@@ -243,20 +221,8 @@ impl Sub<&ScalarVec> for &ScalarVec {
     type Output = ScalarVec;
 
     fn sub(self, rhs: &ScalarVec) -> Self::Output {
-        assert_eq!(self.len(), rhs.len());
-
-        let runtime = Runtime::get();
-        let out_buf = runtime.alloc(self.len_bytes());
-        let len = U32Arg::new(self.len as u32);
-
-        runtime.run(
-            "scalar_sub",
-            &[&self.data, &rhs.data, &out_buf, &len.data],
-            [(self.len() as u64, 64), (1, 1), (1, 1)],
-        );
-
         ScalarVec {
-            data: out_buf,
+            data: self.binary_gpu_kernel("scalar_sub", rhs),
             len: self.len,
         }
     }
@@ -290,20 +256,8 @@ impl Mul<&ScalarVec> for &ScalarVec {
     type Output = ScalarVec;
 
     fn mul(self, rhs: &ScalarVec) -> Self::Output {
-        assert_eq!(self.len(), rhs.len());
-
-        let runtime = Runtime::get();
-        let out_buf = runtime.alloc(self.len_bytes());
-        let len = U32Arg::new(self.len as u32);
-
-        runtime.run(
-            "scalar_mul",
-            &[&self.data, &rhs.data, &out_buf, &len.data],
-            [(self.len() as u64, 64), (1, 1), (1, 1)],
-        );
-
         ScalarVec {
-            data: out_buf,
+            data: self.binary_gpu_kernel("scalar_mul", rhs),
             len: self.len,
         }
     }
@@ -321,18 +275,8 @@ impl Neg for &ScalarVec {
     type Output = ScalarVec;
 
     fn neg(self) -> Self::Output {
-        let runtime = Runtime::get();
-        let out_buf = runtime.alloc(self.len_bytes());
-        let len = U32Arg::new(self.len as u32);
-
-        runtime.run(
-            "scalar_neg",
-            &[&self.data, &out_buf, &len.data],
-            [(self.len() as u64, 64), (1, 1), (1, 1)],
-        );
-
         ScalarVec {
-            data: out_buf,
+            data: self.unary_gpu_kernel("scalar_neg"),
             len: self.len,
         }
     }

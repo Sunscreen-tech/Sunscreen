@@ -197,6 +197,40 @@ where Self: Sized
         // Unfortunate we can't construct Self in a trait method.
         buffer
     }
+
+    fn unary_gpu_kernel(&self, kernel_name: &'static str) -> Buffer {
+        let runtime = Runtime::get();
+        let out_buf = runtime.alloc(self.len_bytes());
+        let len = U32Arg::new(self.len() as u32);
+
+        runtime.run(
+            kernel_name,
+            &[self.get_buffer(), &out_buf, &len.data],
+            [(self.len() as u64, 64), (1, 1), (1, 1)],
+        );
+
+        out_buf
+    }
+
+    /**
+     * Run a 2 operand GPU kernel that produces 1 output.
+     */
+    fn binary_gpu_kernel<Rhs: GpuVec>(&self, kernel_name: &'static str, rhs: &Rhs) -> Buffer {
+        assert_eq!(self.len(), rhs.len());
+
+        let runtime = Runtime::get();
+        let out_buf = runtime.alloc(self.len_bytes());
+        let len = U32Arg::new(self.len() as u32);
+
+        runtime.run(
+            kernel_name,
+            &[self.get_buffer(), rhs.get_buffer(), &out_buf, &len.data],
+            [(self.len() as u64, 64), (1, 1), (1, 1)],
+        );
+
+        // Unfortunate we can't construct Self in a trait method.
+        out_buf
+    }
 }
 
 pub(crate) struct U32Arg {

@@ -236,7 +236,7 @@ mod tests {
     use curve25519_dalek::{scalar::Scalar, traits::Identity};
     use rand::thread_rng;
 
-    use crate::metal_impl::{U32Arg, Grid};
+    use crate::metal_impl::{Grid, U32Arg};
 
     use super::*;
 

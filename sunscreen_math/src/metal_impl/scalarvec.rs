@@ -1,13 +1,11 @@
-use core::{mem::size_of, slice};
+use core::mem::size_of;
 use std::ops::{Add, Mul, Neg, Sub};
 
 use metal::Buffer;
 
 use curve25519_dalek::scalar::Scalar;
 
-use crate::metal_impl::U32Arg;
-
-use super::{Runtime, GpuVec};
+use super::{GpuVec, Runtime};
 
 /// A vector of scalars laid out in a way that enables coalescing on
 /// the GPU.
@@ -25,7 +23,7 @@ impl Clone for ScalarVec {
     fn clone(&self) -> Self {
         Self {
             data: self.clone_buffer(),
-            len: self.len
+            len: self.len,
         }
     }
 }
@@ -131,7 +129,6 @@ impl GpuVec for ScalarVec {
 
         Scalar::from_bits(bytes)
     }
-
 }
 
 /**

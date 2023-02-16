@@ -1,5 +1,4 @@
 use core::slice;
-use std::marker::PhantomData;
 use std::mem::{size_of, MaybeUninit};
 use std::ops::Deref;
 
@@ -121,7 +120,8 @@ impl<'a, P: GpuVec> Iterator for GpuVecIter<'a, P> {
  * data layout.
  */
 pub trait GpuVec
-where Self: Sized
+where
+    Self: Sized,
 {
     /**
      * The type of item iterated over.
@@ -149,12 +149,15 @@ where Self: Sized
     unsafe fn buffer_slice_mut(&mut self) -> &mut [MaybeUninit<u32>] {
         let byte_len = self.len_bytes();
 
-        slice::from_raw_parts_mut(self.get_buffer().contents() as *mut MaybeUninit<u32>, byte_len)
+        slice::from_raw_parts_mut(
+            self.get_buffer().contents() as *mut MaybeUninit<u32>,
+            byte_len,
+        )
     }
 
     /**
      * Return an immutable slice of the GPU buffer as u32 values.
-     * 
+     *
      * # Undefined behavior
      * Before using this method, you must first call `buffer_slice_mut`,
      * and initialize all the elements. Calling this method before doing
@@ -169,12 +172,15 @@ where Self: Sized
     fn get(&self, index: usize) -> Self::Item;
 
     fn iter(&self) -> GpuVecIter<Self> {
-        GpuVecIter { index: 0, gpu_vec: &self }
+        GpuVecIter {
+            index: 0,
+            gpu_vec: &self,
+        }
     }
 
-    /** 
+    /**
      * Clones the buffer in this vector and copies the contained data.
-     * 
+     *
      * # Remarks
      * Unfortunately, Clone is a foreign trait so we can't make a blanket
      * implementation for impl GpuVec. Furthermore, we can't return Self
@@ -198,6 +204,13 @@ where Self: Sized
         buffer
     }
 
+    /**
+     * Runs a 1 operand GPU kernel that produces 1 output.
+     *
+     * # TODO
+     * Currently requires the Metal non-uniform threadgroups feature,
+     * which may not be present on older GPUs.
+     */
     fn unary_gpu_kernel(&self, kernel_name: &'static str) -> Buffer {
         let runtime = Runtime::get();
         let out_buf = runtime.alloc(self.len_bytes());
@@ -214,6 +227,10 @@ where Self: Sized
 
     /**
      * Run a 2 operand GPU kernel that produces 1 output.
+     *
+     * # TODO
+     * Currently requires the Metal non-uniform threadgroups feature,
+     * which may not be present on older GPUs.
      */
     fn binary_gpu_kernel<Rhs: GpuVec>(&self, kernel_name: &'static str, rhs: &Rhs) -> Buffer {
         assert_eq!(self.len(), rhs.len());

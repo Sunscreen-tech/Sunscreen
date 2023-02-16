@@ -2,13 +2,13 @@ use curve25519_dalek::{edwards::EdwardsPoint, ristretto::RistrettoPoint, Cannoni
 use metal::Buffer;
 
 use std::{
-    mem::{size_of},
+    mem::size_of,
     ops::{Add, Mul, Sub},
 };
 
-use crate::metal_impl::{ScalarVec, U32Arg};
+use crate::metal_impl::ScalarVec;
 
-use super::{Runtime, GpuVec};
+use super::{GpuVec, Runtime};
 
 pub struct RistrettoPointVec {
     data: Buffer,
@@ -19,7 +19,7 @@ impl Clone for RistrettoPointVec {
     fn clone(&self) -> Self {
         Self {
             data: self.clone_buffer(),
-            len: self.len
+            len: self.len,
         }
     }
 }
@@ -150,7 +150,7 @@ impl Add<&RistrettoPointVec> for &RistrettoPointVec {
     fn add(self, rhs: &RistrettoPointVec) -> Self::Output {
         Self::Output {
             data: self.binary_gpu_kernel("ristretto_add", rhs),
-            len: self.len
+            len: self.len,
         }
     }
 }
@@ -185,7 +185,7 @@ impl Sub<&RistrettoPointVec> for &RistrettoPointVec {
     fn sub(self, rhs: &RistrettoPointVec) -> Self::Output {
         Self::Output {
             data: self.binary_gpu_kernel("ristretto_sub", rhs),
-            len: self.len
+            len: self.len,
         }
     }
 }
@@ -220,7 +220,7 @@ impl Mul<&ScalarVec> for &RistrettoPointVec {
     fn mul(self, rhs: &ScalarVec) -> Self::Output {
         Self::Output {
             data: self.binary_gpu_kernel("ristretto_scalar_mul", rhs),
-            len: self.len
+            len: self.len,
         }
     }
 }

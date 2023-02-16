@@ -148,27 +148,10 @@ impl Add<&RistrettoPointVec> for &RistrettoPointVec {
     type Output = RistrettoPointVec;
 
     fn add(self, rhs: &RistrettoPointVec) -> Self::Output {
-        assert_eq!(self.len(), rhs.len());
-
-        let runtime = Runtime::get();
-
-        let len = self.len_bytes();
-
-        let o = Self::Output {
-            data: runtime.alloc(len),
-            len: rhs.len(),
-        };
-
-        let len_gpu = U32Arg::new(rhs.len() as u32);
-
-        // TODO: o gets mutated here. Need to figure out what that means in terms of UB.
-        runtime.run(
-            "ristretto_add",
-            &[&self.data, &rhs.data, &o.data, &len_gpu.data],
-            [(rhs.len() as u64, 64), (1, 1), (1, 1)],
-        );
-
-        o
+        Self::Output {
+            data: self.binary_gpu_kernel("ristretto_add", rhs),
+            len: self.len
+        }
     }
 }
 
@@ -200,27 +183,10 @@ impl Sub<&RistrettoPointVec> for &RistrettoPointVec {
     type Output = RistrettoPointVec;
 
     fn sub(self, rhs: &RistrettoPointVec) -> Self::Output {
-        assert_eq!(self.len(), rhs.len());
-
-        let runtime = Runtime::get();
-
-        let len = self.len_bytes();
-
-        let o = Self::Output {
-            data: runtime.alloc(len),
-            len: rhs.len(),
-        };
-
-        let len_gpu = U32Arg::new(rhs.len() as u32);
-
-        // TODO: o gets mutated here. Need to figure out what that means in terms of UB.
-        runtime.run(
-            "ristretto_sub",
-            &[&self.data, &rhs.data, &o.data, &len_gpu.data],
-            [(rhs.len() as u64, 64), (1, 1), (1, 1)],
-        );
-
-        o
+        Self::Output {
+            data: self.binary_gpu_kernel("ristretto_sub", rhs),
+            len: self.len
+        }
     }
 }
 
@@ -252,24 +218,10 @@ impl Mul<&ScalarVec> for &RistrettoPointVec {
     type Output = RistrettoPointVec;
 
     fn mul(self, rhs: &ScalarVec) -> Self::Output {
-        assert_eq!(self.len(), rhs.len());
-
-        let runtime = Runtime::get();
-
-        let out = RistrettoPointVec {
-            data: runtime.alloc(self.len_bytes()),
-            len: self.len(),
-        };
-
-        let len_gpu = U32Arg::new(self.len() as u32);
-
-        runtime.run(
-            "ristretto_scalar_mul",
-            &[&self.data, &rhs.data, &out.data, &len_gpu.data],
-            [(self.len() as u64, 64), (1, 1), (1, 1)],
-        );
-
-        out
+        Self::Output {
+            data: self.binary_gpu_kernel("ristretto_scalar_mul", rhs),
+            len: self.len
+        }
     }
 }
 

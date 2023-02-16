@@ -240,6 +240,8 @@ where
         let out_buf = runtime.alloc(self.len_bytes());
         let len = U32Arg::new(self.len() as u32);
 
+        // out_buf gets mutated here, but the data is behind a pointer not a 
+        // reference so we don't break any aliasing rules
         runtime.run(
             kernel_name,
             &[self.get_buffer(), &out_buf, &len.data],
@@ -263,6 +265,8 @@ where
         let out_buf = runtime.alloc(self.len_bytes());
         let len = U32Arg::new(self.len() as u32);
 
+        // out_buf gets mutated here, but the data is behind a pointer not a 
+        // reference so we don't break any aliasing rules
         runtime.run(
             kernel_name,
             &[self.get_buffer(), rhs.get_buffer(), &out_buf, &len.data],

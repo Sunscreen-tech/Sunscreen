@@ -180,7 +180,7 @@ impl Alice {
         let variance: Fractional<64> = self.runtime.decrypt(&variance, &self.private_key)?;
         let variance: f64 = variance.into();
 
-        println!("Mean={}, Variance={}", mean, variance);
+        println!("Mean={mean}, Variance={variance}");
 
         Ok(())
     }

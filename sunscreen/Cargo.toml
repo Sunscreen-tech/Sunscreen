@@ -38,18 +38,12 @@ static_assertions = "1.1.0"
 thiserror = "1.0.37"
 
 [dev-dependencies]
-bulletproofs = { version = "4.0.0" }
+curve25519-dalek = { path = "../sunscreen_curve25519", package = "sunscreen_curve25519" }
+bulletproofs = { path = "../sunscreen_bulletproofs", package = "sunscreen_bulletproofs" }
 sunscreen_zkp_backend = { path = "../sunscreen_zkp_backend", features = ["bulletproofs"] }
 sunscreen_compiler_common = { path = "../sunscreen_compiler_common" }
 serde_json = "1.0.74"
 float-cmp = "0.9.0"
-
-[dev-dependencies.curve25519-dalek]
-version = "4"
-features = ["u64_backend", "serde"]
-default-features = false
-package = "curve25519-dalek-ng"
-
 
 [features]
 bulletproofs = ["sunscreen_zkp_backend/bulletproofs"]

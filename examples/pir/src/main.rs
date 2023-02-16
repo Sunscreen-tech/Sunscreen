@@ -136,7 +136,7 @@ impl Alice {
 
         let value: i64 = value.into();
 
-        println!("Alice received {}", value);
+        println!("Alice received {value}");
         assert_eq!(value, 494);
 
         Ok(())

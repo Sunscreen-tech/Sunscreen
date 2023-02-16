@@ -3,3 +3,6 @@ sunscreen = { index = "https://crates.sunscreen.tech/git/index" }
 
 [env]
 EMCC_CFLAGS = "-sERROR_ON_UNDEFINED_SYMBOLS=0 -sDISABLE_EXCEPTION_CATCHING=0 -sALLOW_MEMORY_GROWTH"
+
+[build]
+#rustflags = ['--cfg=curve25519_dalek_bits="32"']

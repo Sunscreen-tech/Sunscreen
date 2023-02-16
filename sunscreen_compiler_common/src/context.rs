@@ -40,7 +40,7 @@ where
     O: Operation,
 {
     fn render(&self) -> String {
-        format!("{:?}", self)
+        format!("{self:?}")
     }
 }
 
@@ -109,7 +109,7 @@ impl EdgeInfo {
 
 impl Render for EdgeInfo {
     fn render(&self) -> String {
-        format!("{:?}", self)
+        format!("{self:?}")
     }
 }
 
@@ -156,7 +156,7 @@ where
         writeln!(f, "Nodes = [")?;
 
         for (i, n) in self.node_references() {
-            writeln!(f, "  {:?}: {:?}", i, n)?;
+            writeln!(f, "  {i:?}: {n:?}")?;
         }
 
         writeln!(f, "]")?;

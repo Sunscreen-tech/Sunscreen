@@ -40,7 +40,7 @@ fn derive_typename_inner(parse_stream: DeriveInput) -> TokenStream {
         })
         .collect::<Punctuated<TokenStream, Comma>>();
 
-    let name_contents = LitStr::new(&format!("{{}}::{}", name), name.span());
+    let name_contents = LitStr::new(&format!("{{}}::{name}"), name.span());
 
     // If the sunscreen crate itself tries to derive types, then it needs to refer
     // to itself in the first-person as "crate", not in the third-person as "sunscreen"

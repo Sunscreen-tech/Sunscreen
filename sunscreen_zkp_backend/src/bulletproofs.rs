@@ -286,7 +286,7 @@ impl BulletproofsCircuit {
                                 // Don't know why you would do this, but whatever.
                                 if x != o {
                                     let err_string =
-                                        format!("Constant {:#?} does not equal {:#?}", x, o);
+                                        format!("Constant {x:?} does not equal {o:#?}");
 
                                     return Err(R1CSError::GadgetError {
                                         description: err_string,

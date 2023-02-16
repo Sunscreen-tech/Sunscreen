@@ -85,7 +85,7 @@ impl Alice {
 
         let received_eth: f64 = received_eth.into();
 
-        println!("Alice received {}ETH", received_eth);
+        println!("Alice received {received_eth}ETH");
 
         Ok(())
     }

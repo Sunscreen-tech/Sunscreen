@@ -86,8 +86,7 @@ impl RistrettoPointVec {
 }
 
 impl GpuVec for RistrettoPointVec {
-    type SizeItem = RistrettoPoint;
-    type IterItem = RistrettoPoint;
+    type Item = RistrettoPoint;
 
     fn get_buffer(&self) -> &Buffer {
         &self.data

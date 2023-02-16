@@ -32,6 +32,8 @@ impl Clone for ScalarVec {
 
 impl ScalarVec {
     pub fn new(x: &[Scalar]) -> Self {
+        assert_eq!(size_of::<Scalar>(), size_of::<u32>() * 8);
+
         let len = x.len();
         let byte_len = x.len() * size_of::<Scalar>();
 
@@ -81,8 +83,7 @@ impl ScalarVec {
 }
 
 impl GpuVec for ScalarVec {
-    type SizeItem = Scalar;
-    type IterItem = Scalar;
+    type Item = Scalar;
 
     fn get_buffer(&self) -> &Buffer {
         &self.data

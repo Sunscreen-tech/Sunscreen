@@ -101,7 +101,7 @@ pub struct GpuVecIter<'a, P: GpuVec> {
 }
 
 impl<'a, P: GpuVec> Iterator for GpuVecIter<'a, P> {
-    type Item = P::IterItem;
+    type Item = P::Item;
 
     fn next(&mut self) -> Option<Self::Item> {
         let item = if self.index >= self.gpu_vec.len() {
@@ -124,21 +124,22 @@ pub trait GpuVec
 where Self: Sized
 {
     /**
-     * The type of the item for determining the amount of allocated memory.
-     */
-    type SizeItem: Sized;
-
-    /**
      * The type of item iterated over.
      */
-    type IterItem: Sized;
+    type Item: Sized;
 
+    /**
+     * Gets the underlying [`Buffer`] object.
+     */
     fn get_buffer(&self) -> &Buffer;
 
+    /**
+     * Returns the length in [`Self::Item`].
+     */
     fn len(&self) -> usize;
 
     fn len_bytes(&self) -> usize {
-        self.len() * size_of::<Self::SizeItem>()
+        self.len() * size_of::<Self::Item>()
     }
 
     /**
@@ -165,12 +166,21 @@ where Self: Sized
         slice::from_raw_parts(self.get_buffer().contents() as *const u32, byte_len)
     }
 
-    fn get(&self, index: usize) -> Self::IterItem;
+    fn get(&self, index: usize) -> Self::Item;
 
     fn iter(&self) -> GpuVecIter<Self> {
         GpuVecIter { index: 0, gpu_vec: &self }
     }
 
+    /** 
+     * Clones the buffer in this vector and copies the contained data.
+     * 
+     * # Remarks
+     * Unfortunately, Clone is a foreign trait so we can't make a blanket
+     * implementation for impl GpuVec. Furthermore, we can't return Self
+     * in a trait method. So, we simply clone the buffer and let the
+     * concrete type implement call this.
+     */
     fn clone_buffer(&self) -> Buffer {
         let runtime = Runtime::get();
 

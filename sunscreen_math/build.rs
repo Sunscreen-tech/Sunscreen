@@ -14,10 +14,18 @@ fn compile_metal_shaders() {
 
     for config in ["test", "release"] {
         let mut air_files = vec![];
-        let shaders = std::fs::read_dir(&shader_dir).unwrap();
 
-        for s in shaders {
-            let file = s.unwrap();
+        let is_metal_file = |file: &std::fs::DirEntry| {
+            file.file_name().to_string_lossy().ends_with(".metal")
+                && file.file_type().unwrap().is_file()
+        };
+
+        let shaders = std::fs::read_dir(&shader_dir)
+            .unwrap()
+            .filter_map(Result::ok)
+            .filter(is_metal_file);
+
+        for file in shaders {
             let filename = file.file_name().to_string_lossy().into_owned();
 
             let out_name = if !file.file_name().to_string_lossy().ends_with(".metal")
@@ -40,7 +48,6 @@ fn compile_metal_shaders() {
                 .arg("-Wall")
                 .arg("-Werror")
                 .arg(format!("-D{}", config.to_uppercase()))
-                //.arg("-S")
                 .arg("-c")
                 .arg(file.path())
                 .arg("-I")

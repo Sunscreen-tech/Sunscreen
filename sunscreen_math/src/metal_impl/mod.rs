@@ -1,6 +1,7 @@
 use core::slice;
 use std::mem::{size_of, MaybeUninit};
 use std::ops::Deref;
+use std::sync::Mutex;
 
 use lazy_static::lazy_static;
 use metal::{
@@ -25,13 +26,21 @@ const SHADERLIB: &[u8] = include_bytes!(concat!(
 const SHADERLIB: &[u8] =
     include_bytes!(concat!(env!("OUT_DIR"), "/curve25519-dalek.test.metallib"));
 
+pub struct Grid([(u64, u64); 3]);
+
 pub struct Runtime {
-    device: Device,
-    lib: Library,
+    // Device is not known to be thread safe
+    device: Mutex<Device>,
+
+    // Library is not known to be thread safe
+    lib: Mutex<Library>,
+
+    // Command queues are documented to be thread safe.
     command_queue: CommandQueue,
 }
 
-/// TODO Remove
+// device and lib are guarded with Mutexes and CommandQueue is thread safe,
+// so we are now okay to share Runtimes between threads.
 unsafe impl Sync for Runtime {}
 
 lazy_static! {
@@ -41,8 +50,8 @@ lazy_static! {
         let command_queue = device.new_command_queue();
 
         Runtime {
-            device: Device::system_default().unwrap(),
-            lib,
+            device: Mutex::new(Device::system_default().unwrap()),
+            lib: Mutex::new(lib),
             command_queue,
         }
     };
@@ -55,18 +64,33 @@ impl Runtime {
 
     pub fn alloc(&self, len: usize) -> Buffer {
         self.device
+            .lock()
+            .unwrap()
             .new_buffer(len as u64, MTLResourceOptions::StorageModeShared)
     }
 
-    pub fn run(&self, kernel_name: &'static str, data: &[&Buffer], grid: [(u64, u64); 3]) {
-        println!("{}", self.device.recommended_max_working_set_size());
+    pub fn run(&self, kernel_name: &'static str, data: &[&Buffer], grid: Grid) {
+        println!(
+            "{}",
+            self.device
+                .lock()
+                .unwrap()
+                .recommended_max_working_set_size()
+        );
 
         let command_buffer = self.command_queue.new_command_buffer();
         let encoder = command_buffer.new_compute_command_encoder();
 
-        let gpu_fn = self.lib.get_function(kernel_name, None).unwrap();
+        let gpu_fn = self
+            .lib
+            .lock()
+            .unwrap()
+            .get_function(kernel_name, None)
+            .unwrap();
         let gpu_fn = self
             .device
+            .lock()
+            .unwrap()
             .new_compute_pipeline_state_with_function(&gpu_fn)
             .unwrap();
 
@@ -78,8 +102,8 @@ impl Runtime {
             encoder.set_buffer(i as u64, Some(buf), 0);
         }
 
-        let global = MTLSize::new(grid[0].0, grid[1].0, grid[2].0);
-        let local = MTLSize::new(grid[0].1, grid[1].1, grid[2].1);
+        let global = MTLSize::new(grid.0[0].0, grid.0[1].0, grid.0[2].0);
+        let local = MTLSize::new(grid.0[0].1, grid.0[1].1, grid.0[2].1);
 
         // TODO: We're relying on non-uniform thread groups. We
         // should either document this as a requirement or
@@ -219,7 +243,7 @@ where
         runtime.run(
             kernel_name,
             &[self.get_buffer(), &out_buf, &len.data],
-            [(self.len() as u64, 64), (1, 1), (1, 1)],
+            Grid([(self.len() as u64, 64), (1, 1), (1, 1)]),
         );
 
         out_buf
@@ -242,7 +266,7 @@ where
         runtime.run(
             kernel_name,
             &[self.get_buffer(), rhs.get_buffer(), &out_buf, &len.data],
-            [(self.len() as u64, 64), (1, 1), (1, 1)],
+            Grid([(self.len() as u64, 64), (1, 1), (1, 1)]),
         );
 
         // Unfortunate we can't construct Self in a trait method.

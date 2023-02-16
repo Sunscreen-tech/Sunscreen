@@ -30,7 +30,7 @@ impl Clone for ScalarVec {
 
 impl ScalarVec {
     pub fn new(x: &[Scalar]) -> Self {
-        assert_eq!(size_of::<Scalar>(), u32::BITS as usize * 8);
+        assert_eq!(size_of::<Scalar>(), u32::BITS as usize);
 
         let len = x.len();
         let byte_len = x.len() * size_of::<Scalar>();
@@ -283,7 +283,7 @@ impl Neg for &ScalarVec {
 mod tests {
     use rand::thread_rng;
 
-    use crate::metal_impl::U32Arg;
+    use crate::metal_impl::{U32Arg, Grid};
 
     use super::*;
 
@@ -331,7 +331,7 @@ mod tests {
         runtime.run(
             "test_can_pack_unpack_scalar",
             &[&v.data, &out.data, &len],
-            [(4, 64), (1, 1), (1, 1)],
+            Grid([(4, 64), (1, 1), (1, 1)]),
         );
 
         for i in 0..out.len() {
@@ -344,7 +344,7 @@ mod tests {
         let l = ScalarVec::new(&[Scalar::zero()]);
 
         let runtime = Runtime::get();
-        runtime.run("test_get_l", &[&l.data], [(1, 1), (1, 1), (1, 1)]);
+        runtime.run("test_get_l", &[&l.data], Grid([(1, 1), (1, 1), (1, 1)]));
 
         assert_eq!(l.get(0) - Scalar::one(), -Scalar::one());
     }

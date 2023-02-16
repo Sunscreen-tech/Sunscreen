@@ -236,7 +236,7 @@ mod tests {
     use curve25519_dalek::{scalar::Scalar, traits::Identity};
     use rand::thread_rng;
 
-    use crate::metal_impl::U32Arg;
+    use crate::metal_impl::{U32Arg, Grid};
 
     use super::*;
 
@@ -279,7 +279,7 @@ mod tests {
         runtime.run(
             "test_can_pack_unpack_ristretto",
             &[&v.data, &o.data, &len_gpu.data],
-            [(v.len() as u64, 64), (1, 1), (1, 1)],
+            Grid([(v.len() as u64, 64), (1, 1), (1, 1)]),
         );
 
         for i in 0..v.len() {
@@ -310,7 +310,7 @@ mod tests {
         runtime.run(
             "test_add_identity_ristretto",
             &[&v.data, &o.data, &len_gpu.data],
-            [(v.len() as u64, 64), (1, 1), (1, 1)],
+            Grid([(v.len() as u64, 64), (1, 1), (1, 1)]),
         );
 
         for i in 0..v.len() {
@@ -425,7 +425,7 @@ mod tests {
         runtime.run(
             "test_can_roundtrip_projective_point",
             &[&a_gpu.data, &b_gpu.data, &n.data],
-            [(4, 64), (1, 1), (1, 1)],
+            Grid([(4, 64), (1, 1), (1, 1)]),
         );
 
         for (i, j) in a_gpu.iter().zip(b_gpu.iter()) {
@@ -468,7 +468,7 @@ mod tests {
         runtime.run(
             "test_can_double_projective_point",
             &[&a.data, &b.data, &n.data],
-            [(a.len() as u64, 64), (1, 1), (1, 1)],
+            Grid([(a.len() as u64, 64), (1, 1), (1, 1)]),
         );
 
         for (p_a, p_b) in a.iter().zip(b.iter()) {
@@ -493,7 +493,7 @@ mod tests {
         runtime.run(
             "test_can_add_ristretto_projective_niels_point",
             &[&a.data, &b.data, &n.data],
-            [(a.len() as u64, 64), (1, 1), (1, 1)],
+            Grid([(a.len() as u64, 64), (1, 1), (1, 1)]),
         );
     }
 
@@ -525,7 +525,7 @@ mod tests {
                 &a.data, &b0.data, &b1.data, &b2.data, &b3.data, &b4.data, &b5.data, &b6.data,
                 &b7.data, &n.data,
             ],
-            [(a.len() as u64, 64), (1, 1), (1, 1)],
+            Grid([(a.len() as u64, 64), (1, 1), (1, 1)]),
         );
 
         for (i, p) in a.iter().enumerate() {
@@ -572,7 +572,7 @@ mod benches {
 
         let now = Instant::now();
 
-        let c = &a_gpu * &b_gpu;
+        let _ = &a_gpu * &b_gpu;
 
         println!(
             "GPU: {} sm/s",

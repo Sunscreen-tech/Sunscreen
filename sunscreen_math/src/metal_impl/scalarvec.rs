@@ -7,7 +7,7 @@ use curve25519_dalek::scalar::Scalar;
 
 use crate::metal_impl::U32Arg;
 
-use super::Runtime;
+use super::{Runtime, GpuVec};
 
 /// A vector of scalars laid out in a way that enables coalescing on
 /// the GPU.
@@ -29,53 +29,58 @@ impl ScalarVec {
         let data = Runtime::get().alloc(byte_len);
         let mut res = Self { data, len: x.len() };
 
-        let data_map = res.buffer_slice_mut();
+        let data_map = unsafe { res.buffer_slice_mut() };
 
         for (i, s) in x.iter().enumerate() {
             let bytes = s.as_bytes();
 
             for j in 0..8 {
-                data_map[len * j + i] = bytes[4 * j] as u32;
-                data_map[len * j + i] |= (bytes[4 * j + 1] as u32) << 8;
-                data_map[len * j + i] |= (bytes[4 * j + 2] as u32) << 16;
-                data_map[len * j + i] |= (bytes[4 * j + 3] as u32) << 24;
+                let mut val = bytes[4 * j] as u32;
+                val |= (bytes[4 * j + 1] as u32) << 8;
+                val |= (bytes[4 * j + 2] as u32) << 16;
+                val |= (bytes[4 * j + 3] as u32) << 24;
+
+                data_map[len * j + i].write(val);
             }
         }
 
         res
     }
 
-    fn buffer_slice_mut(&mut self) -> &mut [u32] {
-        let byte_len = self.len * size_of::<Scalar>();
-
-        unsafe { slice::from_raw_parts_mut(self.data.contents() as *mut u32, byte_len) }
-    }
-
-    fn buffer_slice(&self) -> &[u32] {
-        let byte_len = self.len * size_of::<Scalar>();
-
-        unsafe { slice::from_raw_parts(self.data.contents() as *const u32, byte_len) }
-    }
-
     /**
-     * Returns the number of scalars in this vector.
+     * Computes self * self.
+     *
+     * #Remarks
+     * This is more performant than using `mul`.
      */
-    pub fn len(&self) -> usize {
-        self.len
-    }
+    pub fn square(&self) -> Self {
+        let runtime = Runtime::get();
+        let out_buf = runtime.alloc(self.len_bytes());
+        let len = U32Arg::new(self.len as u32);
 
-    pub fn byte_len(&self) -> usize {
-        self.len() * size_of::<Scalar>()
-    }
+        runtime.run(
+            "scalar_square",
+            &[&self.data, &out_buf, &len.data],
+            [(self.len() as u64, 64), (1, 1), (1, 1)],
+        );
 
-    /**
-     * Create an iterator over the scalars in this [`ScalarVec`].
-     */
-    pub fn iter(&self) -> Scalars {
-        Scalars {
-            scalar_vec: self,
-            i: 0,
+        ScalarVec {
+            data: out_buf,
+            len: self.len,
         }
+    }
+}
+
+impl GpuVec for ScalarVec {
+    type SizeItem = Scalar;
+    type IterItem = Scalar;
+
+    fn get_buffer(&self) -> &Buffer {
+        &self.data
+    }
+
+    fn len(&self) -> usize {
+        self.len
     }
 
     // Multiplying by zero and shifting zero actually makes the code
@@ -83,12 +88,12 @@ impl ScalarVec {
     #[allow(clippy::identity_op)]
     #[allow(clippy::erasing_op)]
     /// Get the [`Scalar`] at index i.
-    pub fn get(&self, i: usize) -> Scalar {
+    fn get(&self, i: usize) -> Scalar {
         if i >= self.len {
             panic!("Index out of {i} range {}.", self.len);
         }
 
-        let data = self.buffer_slice();
+        let data = unsafe { self.buffer_slice() };
         let mut bytes = [0u8; 32];
 
         bytes[0] = ((data[0 * self.len + i] & 0xFF << 0) >> 0) as u8;
@@ -127,28 +132,6 @@ impl ScalarVec {
         Scalar::from_bits(bytes)
     }
 
-    /**
-     * Computes self * self.
-     *
-     * #Remarks
-     * This is more performant than using `mul`.
-     */
-    pub fn square(&self) -> Self {
-        let runtime = Runtime::get();
-        let out_buf = runtime.alloc(self.byte_len());
-        let len = U32Arg::new(self.len as u32);
-
-        runtime.run(
-            "scalar_square",
-            &[&self.data, &out_buf, &len.data],
-            [(self.len() as u64, 64), (1, 1), (1, 1)],
-        );
-
-        ScalarVec {
-            data: out_buf,
-            len: self.len,
-        }
-    }
 }
 
 /**
@@ -206,7 +189,7 @@ impl Add<&ScalarVec> for &ScalarVec {
         assert_eq!(self.len(), rhs.len());
 
         let runtime = Runtime::get();
-        let out_buf = runtime.alloc(self.byte_len());
+        let out_buf = runtime.alloc(self.len_bytes());
         let len = U32Arg::new(self.len as u32);
 
         runtime.run(
@@ -253,7 +236,7 @@ impl Sub<&ScalarVec> for &ScalarVec {
         assert_eq!(self.len(), rhs.len());
 
         let runtime = Runtime::get();
-        let out_buf = runtime.alloc(self.byte_len());
+        let out_buf = runtime.alloc(self.len_bytes());
         let len = U32Arg::new(self.len as u32);
 
         runtime.run(
@@ -300,7 +283,7 @@ impl Mul<&ScalarVec> for &ScalarVec {
         assert_eq!(self.len(), rhs.len());
 
         let runtime = Runtime::get();
-        let out_buf = runtime.alloc(self.byte_len());
+        let out_buf = runtime.alloc(self.len_bytes());
         let len = U32Arg::new(self.len as u32);
 
         runtime.run(
@@ -329,7 +312,7 @@ impl Neg for &ScalarVec {
 
     fn neg(self) -> Self::Output {
         let runtime = Runtime::get();
-        let out_buf = runtime.alloc(self.byte_len());
+        let out_buf = runtime.alloc(self.len_bytes());
         let len = U32Arg::new(self.len as u32);
 
         runtime.run(

@@ -1,4 +1,6 @@
-use std::mem::size_of;
+use core::slice;
+use std::marker::PhantomData;
+use std::mem::{size_of, MaybeUninit};
 use std::ops::Deref;
 
 use lazy_static::lazy_static;
@@ -90,6 +92,100 @@ impl Runtime {
         command_buffer.commit();
         command_buffer.wait_until_completed();
         assert_eq!(command_buffer.status(), MTLCommandBufferStatus::Completed);
+    }
+}
+
+pub struct GpuVecIter<'a, P: GpuVec> {
+    index: usize,
+    gpu_vec: &'a P,
+}
+
+impl<'a, P: GpuVec> Iterator for GpuVecIter<'a, P> {
+    type Item = P::IterItem;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let item = if self.index >= self.gpu_vec.len() {
+            None
+        } else {
+            Some(self.gpu_vec.get(self.index))
+        };
+
+        self.index += 1;
+
+        return item;
+    }
+}
+
+/**
+ * A vector of items stored on the GPU. This trait is agnostic as to the
+ * data layout.
+ */
+pub trait GpuVec
+where Self: Sized
+{
+    /**
+     * The type of the item for determining the amount of allocated memory.
+     */
+    type SizeItem: Sized;
+
+    /**
+     * The type of item iterated over.
+     */
+    type IterItem: Sized;
+
+    fn get_buffer(&self) -> &Buffer;
+
+    fn len(&self) -> usize;
+
+    fn len_bytes(&self) -> usize {
+        self.len() * size_of::<Self::SizeItem>()
+    }
+
+    /**
+     * Returns a mutable slice of the GPU buffer. Since the data may not have
+     * been initialized, we return `MaybeUninit<u32>` to ensure soundness.
+     */
+    unsafe fn buffer_slice_mut(&mut self) -> &mut [MaybeUninit<u32>] {
+        let byte_len = self.len_bytes();
+
+        slice::from_raw_parts_mut(self.get_buffer().contents() as *mut MaybeUninit<u32>, byte_len)
+    }
+
+    /**
+     * Return an immutable slice of the GPU buffer as u32 values.
+     * 
+     * # Undefined behavior
+     * Before using this method, you must first call `buffer_slice_mut`,
+     * and initialize all the elements. Calling this method before doing
+     * this is unsound.
+     */
+    unsafe fn buffer_slice(&self) -> &[u32] {
+        let byte_len = self.len_bytes();
+
+        slice::from_raw_parts(self.get_buffer().contents() as *const u32, byte_len)
+    }
+
+    fn get(&self, index: usize) -> Self::IterItem;
+
+    fn iter(&self) -> GpuVecIter<Self> {
+        GpuVecIter { index: 0, gpu_vec: &self }
+    }
+
+    fn clone_buffer(&self) -> Buffer {
+        let runtime = Runtime::get();
+
+        let buffer = runtime.alloc(self.len_bytes());
+
+        unsafe {
+            std::ptr::copy_nonoverlapping(
+                self.get_buffer().contents() as *const u8,
+                buffer.contents() as *mut u8,
+                self.len_bytes(),
+            )
+        };
+
+        // Unfortunate we can't construct Self in a trait method.
+        buffer
     }
 }
 

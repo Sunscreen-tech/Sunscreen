@@ -1,19 +1,27 @@
 use curve25519_dalek::{edwards::EdwardsPoint, ristretto::RistrettoPoint, CannonicalFieldElement};
 use metal::Buffer;
 
-use core::slice;
 use std::{
-    mem::size_of,
+    mem::{size_of},
     ops::{Add, Mul, Sub},
 };
 
 use crate::metal_impl::{ScalarVec, U32Arg};
 
-use super::Runtime;
+use super::{Runtime, GpuVec};
 
 pub struct RistrettoPointVec {
     data: Buffer,
     len: usize,
+}
+
+impl Clone for RistrettoPointVec {
+    fn clone(&self) -> Self {
+        Self {
+            data: self.clone_buffer(),
+            len: self.len
+        }
+    }
 }
 
 impl RistrettoPointVec {
@@ -46,7 +54,7 @@ impl RistrettoPointVec {
 
         let mut field_vec = Self { data, len };
 
-        let data_slice = field_vec.buffer_slice_mut();
+        let data_slice = unsafe { field_vec.buffer_slice_mut() };
 
         for (i, p) in x.iter().enumerate() {
             let x = p.0.X.to_u29();
@@ -54,35 +62,42 @@ impl RistrettoPointVec {
             let z = p.0.Z.to_u29();
             let t = p.0.T.to_u29();
 
+            let u29_len = x.len();
+
             for (j, w) in x.iter().enumerate() {
-                data_slice[(j) * len + i] = *w;
+                data_slice[(j) * len + i].write(*w);
             }
 
             for (j, w) in y.iter().enumerate() {
-                data_slice[(j + 10) * len + i] = *w;
+                data_slice[(j + 10) * len + i].write(*w);
             }
 
             for (j, w) in z.iter().enumerate() {
-                data_slice[(j + 20) * len + i] = *w;
+                data_slice[(j + 20) * len + i].write(*w);
             }
 
             for (j, w) in t.iter().enumerate() {
-                data_slice[(j + 30) * len + i] = *w;
+                data_slice[(j + 30) * len + i].write(*w);
             }
         }
 
         field_vec
     }
+}
 
-    pub fn len(&self) -> usize {
+impl GpuVec for RistrettoPointVec {
+    type SizeItem = RistrettoPoint;
+    type IterItem = RistrettoPoint;
+
+    fn get_buffer(&self) -> &Buffer {
+        &self.data
+    }
+
+    fn len(&self) -> usize {
         self.len
     }
 
-    pub fn len_bytes(&self) -> usize {
-        self.len * size_of::<RistrettoPoint>()
-    }
-
-    pub fn get(&self, index: usize) -> RistrettoPoint {
+    fn get(&self, index: usize) -> RistrettoPoint {
         if index > self.len {
             panic!("Index {index} exceeds bounds of {}", self.len);
         }
@@ -92,7 +107,9 @@ impl RistrettoPointVec {
         let mut z = [0u32; 10];
         let mut t = [0u32; 10];
 
-        let buffer_slice = self.buffer_slice();
+        // This should be sound because this instance has been initialized by
+        // the time you can call get.
+        let buffer_slice = unsafe { self.buffer_slice() };
 
         for i in 0..10 {
             x[i] = buffer_slice[i * self.len + index];
@@ -116,26 +133,6 @@ impl RistrettoPointVec {
             Z: CannonicalFieldElement(z).to_field(),
             T: CannonicalFieldElement(t).to_field(),
         })
-    }
-
-    pub fn iter(&self) -> RistrettoPoints {
-        RistrettoPoints {
-            vec: self,
-            i: 0usize,
-        }
-    }
-
-    // TODO: This probably needs to return a slice of MaybeUninit<u32>.
-    fn buffer_slice_mut(&mut self) -> &mut [u32] {
-        let byte_len = self.len * size_of::<RistrettoPoint>();
-
-        unsafe { slice::from_raw_parts_mut(self.data.contents() as *mut u32, byte_len) }
-    }
-
-    fn buffer_slice(&self) -> &[u32] {
-        let byte_len = self.len * size_of::<RistrettoPoint>();
-
-        unsafe { slice::from_raw_parts(self.data.contents() as *const u32, byte_len) }
     }
 }
 
@@ -292,51 +289,6 @@ impl Mul<&ScalarVec> for &RistrettoPointVec {
     }
 }
 
-impl Clone for RistrettoPointVec {
-    fn clone(&self) -> Self {
-        let runtime = Runtime::get();
-
-        let buffer = runtime.alloc(self.len_bytes());
-
-        unsafe {
-            std::ptr::copy_nonoverlapping(
-                self.data.contents() as *const u8,
-                buffer.contents() as *mut u8,
-                self.len_bytes(),
-            )
-        };
-
-        Self {
-            data: buffer,
-            len: self.len(),
-        }
-    }
-}
-
-/**
- * An iterator over the [RistrettoPoint]s in a [RistrettoPointVec].
- */
-pub struct RistrettoPoints<'a> {
-    vec: &'a RistrettoPointVec,
-    i: usize,
-}
-
-impl<'a> Iterator for RistrettoPoints<'a> {
-    type Item = RistrettoPoint;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        let ret = if self.i < self.vec.len() {
-            Some(self.vec.get(self.i))
-        } else {
-            None
-        };
-
-        self.i += 1;
-
-        ret
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use curve25519_dalek::{scalar::Scalar, traits::Identity};
@@ -488,15 +440,6 @@ mod tests {
             Scalar::random(&mut thread_rng()),
             Scalar::random(&mut thread_rng()),
         ]);
-
-        /*
-        let b_s = Scalar::from(9u8);
-        let b = ScalarVec::new(&[
-            b_s,
-            b_s,
-            b_s,
-            b_s
-        ]);*/
 
         let c = &a * &b;
 

@@ -111,7 +111,7 @@ impl<'a, P: GpuVec> Iterator for GpuVecIter<'a, P> {
 
         self.index += 1;
 
-        return item;
+        item
     }
 }
 
@@ -174,7 +174,7 @@ where
     fn iter(&self) -> GpuVecIter<Self> {
         GpuVecIter {
             index: 0,
-            gpu_vec: &self,
+            gpu_vec: self,
         }
     }
 

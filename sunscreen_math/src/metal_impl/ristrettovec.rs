@@ -25,6 +25,8 @@ impl Clone for RistrettoPointVec {
 }
 
 impl RistrettoPointVec {
+    #[allow(clippy::erasing_op)]
+    #[allow(clippy::identity_op)]
     /**
      * Creates a new [`RistrettoPointVec`].
      */
@@ -81,6 +83,8 @@ impl GpuVec for RistrettoPointVec {
         self.len
     }
 
+    #[allow(clippy::erasing_op)]
+    #[allow(clippy::identity_op)]
     fn get(&self, index: usize) -> RistrettoPoint {
         if index > self.len {
             panic!("Index {index} exceeds bounds of {}", self.len);
@@ -91,24 +95,26 @@ impl GpuVec for RistrettoPointVec {
         let mut z = [0u32; 10];
         let mut t = [0u32; 10];
 
+        let u29_len = x.len();
+
         // This should be sound because this instance has been initialized by
         // the time you can call get.
         let buffer_slice = unsafe { self.buffer_slice() };
 
         for i in 0..10 {
-            x[i] = buffer_slice[i * self.len + index];
+            x[i] = buffer_slice[(i + 0 * u29_len) * self.len + index];
         }
 
         for i in 0..10 {
-            y[i] = buffer_slice[(i + 10) * self.len + index];
+            y[i] = buffer_slice[(i + 1 * u29_len) * self.len + index];
         }
 
         for i in 0..10 {
-            z[i] = buffer_slice[(i + 20) * self.len + index];
+            z[i] = buffer_slice[(i + 2 * u29_len) * self.len + index];
         }
 
         for i in 0..10 {
-            t[i] = buffer_slice[(i + 30) * self.len + index];
+            t[i] = buffer_slice[(i + 3 * u29_len) * self.len + index];
         }
 
         RistrettoPoint(EdwardsPoint {

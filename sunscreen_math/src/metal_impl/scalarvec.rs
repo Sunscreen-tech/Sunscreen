@@ -30,7 +30,7 @@ impl Clone for ScalarVec {
 
 impl ScalarVec {
     pub fn new(x: &[Scalar]) -> Self {
-        assert_eq!(size_of::<Scalar>(), size_of::<u32>() * 8);
+        assert_eq!(size_of::<Scalar>(), u32::BITS as usize * 8);
 
         let len = x.len();
         let byte_len = x.len() * size_of::<Scalar>();

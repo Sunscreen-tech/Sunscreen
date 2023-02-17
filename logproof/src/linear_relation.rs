@@ -212,12 +212,12 @@ where
     Q: Field + ModSwitch<FpRistretto> + FieldModulus<4> + CryptoHash,
 {
     /**
-     * Creates [`ProverKnowlege`]. Where `as=t` and `bound` is a bound on
+     * Creates [`ProverKnowledge`]. Where `as=t` and `bound` is a bound on
      * every coefficient in `s`. `f` is the divisor in the quotient ring
-     * Z_q[X]/f.
+     * Z_q\[X\]/f.
      *
      * # Panics
-     * * If `as != t` (or the dimensions mismatch) in Z_q[X]/(X^deg-1)
+     * * If `as != t` (or the dimensions mismatch) in Z_q\[X\]/(X^deg-1)
      * *
      */
     pub fn new(

@@ -1014,18 +1014,9 @@ mod test {
         for (i, p) in s.chunks(4).enumerate() {
             let i = i + 1;
             assert_eq!(p.len(), 4);
-            assert_eq!(
-                p[0],
-                (FpRistretto::from(i as u64) * base_poly_ristretto[0])
-            );
-            assert_eq!(
-                p[1],
-                (FpRistretto::from(i as u64) * base_poly_ristretto[1])
-            );
-            assert_eq!(
-                p[2],
-                (FpRistretto::from(i as u64) * base_poly_ristretto[2])
-            );
+            assert_eq!(p[0], (FpRistretto::from(i as u64) * base_poly_ristretto[0]));
+            assert_eq!(p[1], (FpRistretto::from(i as u64) * base_poly_ristretto[1]));
+            assert_eq!(p[2], (FpRistretto::from(i as u64) * base_poly_ristretto[2]));
             // Should have a zero padding due to the d=4 passed to
             // serialize.
             assert_eq!(p[3], FpRistretto::zero());

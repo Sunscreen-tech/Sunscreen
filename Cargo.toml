@@ -11,6 +11,7 @@ members = [
     "examples/dot_prod",
     "examples/mean_variance",
     "examples/pir",
+    "logproof",
     "seal_fhe",
     "sunscreen",
     "sunscreen_backend",

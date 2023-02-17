@@ -799,7 +799,7 @@ mod tests {
         let encoder = BFVEncoder::new(&context).unwrap();
         let galois_keys = keygen.create_galois_keys().unwrap();
 
-        let a: Vec<u64> = (0..degree).into_iter().collect();
+        let a: Vec<u64> = (0..degree).collect();
 
         let pt_0 = encoder.encode_unsigned(&a).unwrap();
 
@@ -814,11 +814,11 @@ mod tests {
 
         let o_p = decryptor.decrypt(&output[0]).unwrap();
 
-        let mut expected = (3..degree / 2).into_iter().collect::<Vec<u64>>();
+        let mut expected = (3..degree / 2).collect::<Vec<u64>>();
 
         expected.append(&mut vec![0, 1, 2]);
 
-        expected.append(&mut (degree / 2 + 3..degree).into_iter().collect::<Vec<u64>>());
+        expected.append(&mut (degree / 2 + 3..degree).collect::<Vec<u64>>());
 
         expected.append(&mut vec![degree / 2, degree / 2 + 1, degree / 2 + 2]);
 
@@ -844,7 +844,7 @@ mod tests {
         let encoder = BFVEncoder::new(&context).unwrap();
         let galois_keys = keygen.create_galois_keys().unwrap();
 
-        let a: Vec<u64> = (0..degree).into_iter().collect();
+        let a: Vec<u64> = (0..degree).collect();
 
         let pt_0 = encoder.encode_unsigned(&a).unwrap();
 
@@ -861,11 +861,11 @@ mod tests {
 
         let mut expected = vec![degree / 2 - 3, degree / 2 - 2, degree / 2 - 1];
 
-        expected.append(&mut (0..degree / 2 - 3).into_iter().collect::<Vec<u64>>());
+        expected.append(&mut (0..degree / 2 - 3).collect::<Vec<u64>>());
 
         expected.append(&mut vec![degree - 3, degree - 2, degree - 1]);
 
-        expected.append(&mut (degree / 2..degree - 3).into_iter().collect::<Vec<u64>>());
+        expected.append(&mut (degree / 2..degree - 3).collect::<Vec<u64>>());
 
         assert_eq!(encoder.decode_unsigned(&o_p).unwrap(), expected);
     }

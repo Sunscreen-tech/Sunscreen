@@ -1,3 +1,4 @@
+#![cfg_attr(feature = "nightly-features", feature(test))]
 #![deny(missing_docs)]
 
 //! This crate contains proofs for demonstrating facts about lattice

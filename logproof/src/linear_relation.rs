@@ -920,12 +920,8 @@ impl LogProof {
 
 #[cfg(test)]
 mod test {
-    use std::time::Instant;
-
-    use rayon::current_num_threads;
-
     use crate::{
-        fields::{FqSeal128_4096, FqSeal128_8192},
+        fields::{FqSeal128_8192},
         linear_algebra::ScalarRem,
         math::{make_poly, Zero},
         LogProofGenerators,
@@ -971,92 +967,7 @@ mod test {
         (a, s, t_mod_f, f)
     }
 
-    #[test]
-    fn bfv_benchmark() {
-        type Q = FqSeal128_4096;
-
-        const POLY_DEGREE: u64 = 4096u64;
-        const BIT_SIZE: u64 = 2 << 8;
-
-        println!("{} threads", current_num_threads());
-
-        println!("Generating data...");
-
-        let coeffs = (0..POLY_DEGREE)
-            .map(|x| x % 2)
-            .into_iter()
-            .collect::<Vec<u64>>();
-
-        let delta = make_poly::<Q>(&[1234]);
-        let p_0 = make_poly::<Q>(&coeffs);
-        let p_1 = p_0.clone();
-
-        let one = make_poly(&[1]);
-        let zero = make_poly(&[0]);
-
-        let a = MatrixPoly::from([
-            [delta.clone(), p_0.clone(), one.clone(), zero.clone()],
-            [zero.clone(), p_1.clone(), zero.clone(), one.clone()],
-            [delta.clone(), p_0.clone(), one.clone(), zero.clone()],
-            [zero.clone(), p_1.clone(), zero.clone(), one.clone()],
-            [delta.clone(), p_0.clone(), one.clone(), zero.clone()],
-            [zero.clone(), p_1.clone(), zero.clone(), one.clone()],
-        ]);
-
-        let m = p_0.clone();
-        let u = p_0.clone();
-        let e_1 = p_0.clone();
-        let e_2 = p_0.clone();
-
-        let s = MatrixPoly::from([[m], [u], [e_1], [e_2]]);
-
-        let f = f::<FqSeal128_4096>(POLY_DEGREE as usize);
-
-        let t = &a * &s;
-        let t = t.scalar_rem(&f);
-
-        let mut transcript = Transcript::new(b"test");
-
-        println!("Generating prover knowlege");
-
-        let now = Instant::now();
-
-        let pk = ProverKnowledge::new(&a, &s, &t, BIT_SIZE, &f);
-
-        println!("Generate PK {}s", now.elapsed().as_secs_f64());
-
-        println!("b={}", pk.vk.b());
-        println!("b_1={}", pk.vk.b_1());
-        println!("b_2={}", pk.vk.b_2());
-        println!("mkdb={}", pk.vk.mkdb());
-        println!("nk(2d-1)b_1={}", pk.vk.nk_2d_min_1_b_1());
-        println!("nk(d-1)b_2={}", pk.vk.nk_d_min_1_b_2());
-        println!("l={}", pk.vk.l());
-
-        println!("Starting proof...");
-
-        let gens = LogProofGenerators::new(pk.vk.l() as usize);
-        let u = inner_product::VerifierKnowledge::get_u();
-
-        let now = Instant::now();
-
-        let proof = LogProof::create(&mut transcript, &pk, &gens.g, &gens.h, &u);
-
-        println!("Prover time {}s", now.elapsed().as_secs_f64());
-        println!("Proof size {}B", bincode::serialize(&proof).unwrap().len());
-
-        let mut transcript = Transcript::new(b"test");
-
-        let now = Instant::now();
-        
-        proof
-            .verify(&mut transcript, &pk.vk, &gens.g, &gens.h, &u)
-            .unwrap();
-        
-        println!("Verifier time {}s", now.elapsed().as_secs_f64());
-    }
-
-    fn f<F: Field>(degree: usize) -> DensePolynomial<F> {
+    pub fn f<F: Field>(degree: usize) -> DensePolynomial<F> {
         let mut coeffs = Vec::with_capacity(degree + 1);
         coeffs.push(F::ONE);
 
@@ -1236,5 +1147,100 @@ mod test {
         let r = verify_transcript.challenge_scalar(b"verify");
 
         assert_eq!(l, r);
+    }
+}
+
+#[cfg(all(test, feature = "nightly-features"))]
+mod benches {
+    use crate::{fields::FqSeal128_4096, math::make_poly, LogProofGenerators};
+
+    use super::*;
+    use super::test::f;
+    use std::time::Instant;
+
+    extern crate test;
+    use test::Bencher;
+
+    #[bench]
+    fn bfv_benchmark(_: &mut Bencher) {
+        type Q = FqSeal128_4096;
+
+        const POLY_DEGREE: u64 = 4096u64;
+        const BIT_SIZE: u64 = 2 << 8;
+
+        println!("Generating data...");
+
+        let coeffs = (0..POLY_DEGREE)
+            .map(|x| x % 2)
+            .into_iter()
+            .collect::<Vec<u64>>();
+
+        let delta = make_poly::<Q>(&[1234]);
+        let p_0 = make_poly::<Q>(&coeffs);
+        let p_1 = p_0.clone();
+
+        let one = make_poly(&[1]);
+        let zero = make_poly(&[0]);
+
+        let a = MatrixPoly::from([
+            [delta.clone(), p_0.clone(), one.clone(), zero.clone()],
+            [zero.clone(), p_1.clone(), zero.clone(), one.clone()],
+            [delta.clone(), p_0.clone(), one.clone(), zero.clone()],
+            [zero.clone(), p_1.clone(), zero.clone(), one.clone()],
+            [delta.clone(), p_0.clone(), one.clone(), zero.clone()],
+            [zero.clone(), p_1.clone(), zero.clone(), one.clone()],
+        ]);
+
+        let m = p_0.clone();
+        let u = p_0.clone();
+        let e_1 = p_0.clone();
+        let e_2 = p_0.clone();
+
+        let s = MatrixPoly::from([[m], [u], [e_1], [e_2]]);
+
+        let f = f::<FqSeal128_4096>(POLY_DEGREE as usize);
+
+        let t = &a * &s;
+        let t = t.scalar_rem(&f);
+
+        let mut transcript = Transcript::new(b"test");
+
+        println!("Generating prover knowlege");
+
+        let now = Instant::now();
+
+        let pk = ProverKnowledge::new(&a, &s, &t, BIT_SIZE, &f);
+
+        println!("Generate PK {}s", now.elapsed().as_secs_f64());
+
+        println!("b={}", pk.vk.b());
+        println!("b_1={}", pk.vk.b_1());
+        println!("b_2={}", pk.vk.b_2());
+        println!("mkdb={}", pk.vk.mkdb());
+        println!("nk(2d-1)b_1={}", pk.vk.nk_2d_min_1_b_1());
+        println!("nk(d-1)b_2={}", pk.vk.nk_d_min_1_b_2());
+        println!("l={}", pk.vk.l());
+
+        println!("Starting proof...");
+
+        let gens = LogProofGenerators::new(pk.vk.l() as usize);
+        let u = inner_product::VerifierKnowledge::get_u();
+
+        let now = Instant::now();
+
+        let proof = LogProof::create(&mut transcript, &pk, &gens.g, &gens.h, &u);
+
+        println!("Prover time {}s", now.elapsed().as_secs_f64());
+        println!("Proof size {}B", bincode::serialize(&proof).unwrap().len());
+
+        let mut transcript = Transcript::new(b"test");
+
+        let now = Instant::now();
+        
+        proof
+            .verify(&mut transcript, &pk.vk, &gens.g, &gens.h, &u)
+            .unwrap();
+        
+        println!("Verifier time {}s", now.elapsed().as_secs_f64());
     }
 }

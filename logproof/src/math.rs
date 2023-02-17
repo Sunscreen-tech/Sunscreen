@@ -694,8 +694,8 @@ mod test {
         let d = 16;
         let powers = Scalar::from(2u32).powers(d);
 
-        for i in 0..d {
-            assert_eq!(powers[i], Scalar::from(0x1u32 << i));
+        for (i, p) in powers.iter().enumerate() {
+            assert_eq!(*p, Scalar::from(0x1u32 << i));
         }
     }
 
@@ -725,9 +725,9 @@ mod test {
             let bits: u8 = unsafe { std::mem::transmute(val) };
             let mut actual = <Fp as Zero>::zero();
 
-            for i in 0..8 {
+            for (i, c) in coeffs.iter().enumerate() {
                 let bit = ((0x1 << i) & bits) >> i;
-                actual += Fp::from(bit) * coeffs[i];
+                actual += Fp::from(bit) * c;
             }
 
             assert_eq!(actual, expected);

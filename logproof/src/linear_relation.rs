@@ -1097,7 +1097,7 @@ mod test {
     #[test]
     fn ristretto_identity_is_point_at_infinity() {
         let i = RistrettoPoint::identity();
-        assert_eq!(i + &i, i);
+        assert_eq!(i + i, i);
     }
 
     #[test]

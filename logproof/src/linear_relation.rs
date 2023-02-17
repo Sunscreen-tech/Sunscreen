@@ -976,7 +976,7 @@ mod test {
 
         let as_p: MatrixPoly<FpRistretto> = a.mod_switch_signed() * s.mod_switch_signed();
 
-        let r_1_q = (&r_1).scalar_mul_q(&FpRistretto::from(Q::field_modulus()));
+        let r_1_q = r_1.scalar_mul_q(&FpRistretto::from(Q::field_modulus()));
 
         let r_2_f = (&r_2).scalar_mul(&f);
 
@@ -1016,15 +1016,15 @@ mod test {
             assert_eq!(p.len(), 4);
             assert_eq!(
                 p[0],
-                FpRistretto::from(FpRistretto::from(i as u64) * base_poly_ristretto[0])
+                (FpRistretto::from(i as u64) * base_poly_ristretto[0])
             );
             assert_eq!(
                 p[1],
-                FpRistretto::from(FpRistretto::from(i as u64) * base_poly_ristretto[1])
+                (FpRistretto::from(i as u64) * base_poly_ristretto[1])
             );
             assert_eq!(
                 p[2],
-                FpRistretto::from(FpRistretto::from(i as u64) * base_poly_ristretto[2])
+                (FpRistretto::from(i as u64) * base_poly_ristretto[2])
             );
             // Should have a zero padding due to the d=4 passed to
             // serialize.
@@ -1125,7 +1125,7 @@ mod test {
 
         let proof = LogProof::create(&mut transcript, &pk, &gens.g, &gens.h, &u);
 
-        let _ = proof
+        proof
             .verify(&mut verify_transcript, &pk.vk, &gens.g, &gens.h, &u)
             .unwrap();
 

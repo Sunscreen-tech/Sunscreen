@@ -553,7 +553,7 @@ fn scalar_to_uint<const N: usize>(x: &Scalar) -> UInt<N> {
 
     let remainder = std::mem::size_of::<UInt<N>>() - std::mem::size_of::<Scalar>();
 
-    uint_data.extend((0..remainder).into_iter().map(|_| 0u8));
+    uint_data.extend((0..remainder).map(|_| 0u8));
 
     UInt::from_le_slice(&uint_data)
 }

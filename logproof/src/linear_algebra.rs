@@ -878,8 +878,8 @@ mod tests {
         for i in 0..a.rows {
             for j in 0..a.cols {
                 assert_eq!(
-                    MontBackend::into_bigint(a[(i, j)].clone()),
-                    MontBackend::into_bigint(b[(i, j)].clone())
+                    MontBackend::into_bigint(a[(i, j)]),
+                    MontBackend::into_bigint(b[(i, j)])
                 );
             }
         }
@@ -1017,7 +1017,7 @@ mod tests {
         let c = a.evaluate(&Fp::from(7));
 
         let expected = Matrix::from([
-            [Fp::from(1 * 162), Fp::from(2 * 162)],
+            [Fp::from(162), Fp::from(2 * 162)],
             [Fp::from(3 * 162), Fp::from(4 * 162)],
         ]);
 

@@ -121,7 +121,7 @@ fn make_vector<const LENDIV2: usize>() -> Result<(Vec<i64>, Batched<LENDIV2>), s
 
     // Create a vector of numbers from 0 to LENDIV2 * 2 and split it into 2
     // parts each with 4096 elements.
-    let a = (0..end).map(|x| x % 32).into_iter().collect::<Vec<i64>>();
+    let a = (0..end).map(|x| x % 32).collect::<Vec<i64>>();
     let (a_top, a_bottom) = a.split_at(LENDIV2);
 
     let batched = Batched::<LENDIV2>::try_from([a_top.to_owned(), a_bottom.to_owned()])?;

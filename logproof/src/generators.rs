@@ -93,7 +93,6 @@ impl LogProofGenerators {
                 .collect_into_vec(&mut g);
 
             g.into_iter()
-                .map(|x| x)
                 .take(n)
                 .collect::<Vec<Vec<RistrettoPoint>>>()
                 .concat()

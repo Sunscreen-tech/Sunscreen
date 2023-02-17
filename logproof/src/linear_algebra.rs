@@ -257,7 +257,7 @@ where
     fn div(self, rhs: Rhs) -> Self::Output {
         let rhs = rhs.borrow();
 
-        let data = self.data.par_iter().map(|x| x / &rhs).collect();
+        let data = self.data.par_iter().map(|x| x / rhs).collect();
 
         Self::Output {
             rows: self.rows,
@@ -373,7 +373,7 @@ where
     F: Zero + Clone,
 {
     fn from(x: [[F; N]; M]) -> Self {
-        let x = x.iter().flatten().map(|x| x.clone()).collect();
+        let x = x.iter().flatten().cloned().collect();
 
         Self {
             data: x,
@@ -567,8 +567,8 @@ where
 
                 let mut partial = Vec::with_capacity(rhs.len());
 
-                for k in 0..rhs.len() {
-                    partial.push(self[(row, col)].clone() * rhs[k].clone())
+                for k in rhs {
+                    partial.push(self[(row, col)].clone() * k.clone())
                 }
 
                 partial
@@ -624,8 +624,8 @@ where
         self.par_iter()
             .zip(rhs.par_iter())
             .map(|(a, b)| a * b)
-            .fold(|| Scalar::zero(), |s, p| s + &p)
-            .reduce(|| Scalar::zero(), |a, b| a + b)
+            .fold(Scalar::zero, |s, p| s + p)
+            .reduce(Scalar::zero, |a, b| a + b)
     }
 }
 
@@ -653,8 +653,8 @@ where
         self.par_iter()
             .zip(rhs.par_iter())
             .map(|(a, b)| a * b)
-            .fold(|| FpRistretto::zero(), |s, p| s + &p)
-            .reduce(|| FpRistretto::zero(), |a, b| a + b)
+            .fold(FpRistretto::zero, |s, p| s + p)
+            .reduce(FpRistretto::zero, |a, b| a + b)
     }
 }
 

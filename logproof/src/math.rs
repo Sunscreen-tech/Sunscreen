@@ -221,7 +221,7 @@ pub fn print_polynomial<F: Field>(p: &DensePolynomial<F>) {
             .unwrap()
             .trim_start_matches('0');
 
-        let val = if val.len() == 0 { "0" } else { val };
+        let val = if val.is_empty() { "0" } else { val };
 
         if i == 0 {
             print!("{}", val);
@@ -394,7 +394,7 @@ where
     type Output = Vec<T>;
 
     fn pad_to_power_of_2(&self) -> Self::Output {
-        if self.len() == 0 || self.len().is_power_of_two() {
+        if self.is_empty() || self.len().is_power_of_two() {
             return self.to_owned();
         }
 
@@ -435,7 +435,7 @@ impl Powers for Scalar {
         for _ in 0..d {
             result.push(x);
 
-            x = x * self;
+            x *= self;
         }
 
         result
@@ -453,7 +453,7 @@ where
         for _ in 0..d {
             result.push(x);
 
-            x = x * self;
+            x *= *self;
         }
 
         result
@@ -515,7 +515,7 @@ pub fn parallel_multiscalar_multiplication(s: &[Scalar], p: &[RistrettoPoint]) -
         .chunks(16384)
         .zip(p.par_iter().chunks(16384))
         .map(|(s, p)| RistrettoPoint::vartime_multiscalar_mul(s.into_iter(), p.into_iter()))
-        .reduce(|| RistrettoPoint::default(), |x, p| x + p);
+        .reduce(RistrettoPoint::default, |x, p| x + p);
 
     println!(
         "MSM {} muls/s (naive)",

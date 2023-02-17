@@ -100,7 +100,7 @@ where
      * coefficients in the polynomials in `S`.
      */
     pub fn b(&self) -> u64 {
-        Log2::log2(&self.bound) + 1 as u64
+        Log2::log2(&self.bound) + 1
     }
 
     /**
@@ -144,9 +144,7 @@ where
         let b1 = m_big * d_big * bound_big + d_big * inf_norm_f;
         let b1 = MontBackend::into_bigint(b1);
 
-        let log_b1 = Log2::log2(&b1);
-
-        log_b1
+        Log2::log2(&b1)
     }
 
     /**
@@ -406,7 +404,7 @@ impl LogProof {
         let g_prime = Self::compute_g_prime(g, &phi);
 
         println!("Computing v");
-        let v = Self::compute_v(&vk, alpha, &beta, &gamma);
+        let v = Self::compute_v(vk, alpha, &beta, &gamma);
 
         println!("Generating commitment...");
 
@@ -455,7 +453,7 @@ impl LogProof {
         assert_eq!(v_1.len(), v_2.len());
         debug_assert_eq!(
             v_1.inner_product(v_2.as_slice()),
-            Self::compute_x(&vk, &gamma, &alpha, &beta, &phi, &psi, &v)
+            Self::compute_x(vk, &gamma, &alpha, &beta, &phi, &psi, &v)
         );
 
         println!("Generating inner product proof...");
@@ -494,11 +492,11 @@ impl LogProof {
 
         let g_prime = Self::compute_g_prime(g, &phi);
 
-        let v = Self::compute_v(&vk, alpha, &beta, &gamma);
+        let v = Self::compute_v(vk, alpha, &beta, &gamma);
 
-        let t = Self::compute_t(&self.w, &g_prime, &h, &phi, &psi, &v);
+        let t = Self::compute_t(&self.w, &g_prime, h, &phi, &psi, &v);
 
-        let x = Self::compute_x(&vk, &gamma, &alpha, &beta, &phi, &psi, &v);
+        let x = Self::compute_x(vk, &gamma, &alpha, &beta, &phi, &psi, &v);
 
         let ip_vk = inner_product::VerifierKnowledge { t, x };
 
@@ -543,6 +541,7 @@ impl LogProof {
         term_1 + term_2 + term_3
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn create_inner_product_proof(
         transcript: &mut Transcript,
         v_1: &[Scalar],
@@ -621,8 +620,8 @@ impl LogProof {
 
         let h = h
             .par_iter()
-            .fold(|| RistrettoPoint::identity(), |x, y| x + y)
-            .reduce(|| RistrettoPoint::identity(), |a, b| a + b);
+            .fold(RistrettoPoint::identity, |x, y| x + y)
+            .reduce(RistrettoPoint::identity, |a, b| a + b);
 
         let t_2 = h * psi;
 
@@ -646,7 +645,7 @@ impl LogProof {
         Q: Field + CryptoHash + Zero + ModSwitch<FpRistretto> + FieldModulus<4>,
     {
         assert_eq!(beta.len(), vk.t.cols);
-        assert_eq!(gamma.len(), vk.a.rows as usize);
+        assert_eq!(gamma.len(), vk.a.rows);
 
         let n = vk.n();
         let m = vk.m();
@@ -758,31 +757,31 @@ impl LogProof {
             .par_iter()
             .enumerate()
             .fold(
-                || RistrettoPoint::identity(),
+                RistrettoPoint::identity,
                 |c, (i, bit)| {
-                    if *bit == true {
+                    if *bit {
                         c + h[i]
                     } else {
                         c
                     }
                 },
             )
-            .reduce(|| RistrettoPoint::identity(), |x, y| x + y);
+            .reduce(RistrettoPoint::identity, |x, y| x + y);
 
         commitment += s_2
             .par_iter()
             .enumerate()
             .fold(
-                || RistrettoPoint::identity(),
+                RistrettoPoint::identity,
                 |c, (i, bit)| {
-                    if *bit == true {
+                    if *bit {
                         c + g[i]
                     } else {
                         c
                     }
                 },
             )
-            .reduce(|| RistrettoPoint::identity(), |x, y| x + y);
+            .reduce(RistrettoPoint::identity, |x, y| x + y);
 
         commitment += u * rho;
 
@@ -858,7 +857,7 @@ impl LogProof {
             let is_negative = value > mod_div_2;
 
             // Compute the q's complement of value
-            let mut as_neg: BigInt<N> = modulus.clone();
+            let mut as_neg: BigInt<N> = modulus;
             as_neg.sub_with_borrow(&value);
 
             // The smaller of value and it's q's complement is the absolute

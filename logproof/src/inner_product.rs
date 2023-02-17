@@ -81,7 +81,7 @@ impl ProverKnowledge {
      */
     pub fn new(v_1: &[Scalar], v_2: &[Scalar], rho: &Scalar, t: &RistrettoPoint) -> Self {
         assert_eq!(v_1.len(), v_2.len());
-        assert!(v_1.len() > 0);
+        assert!(!v_1.is_empty());
 
         let x = v_1.inner_product(v_2);
 
@@ -192,7 +192,7 @@ impl InnerProductProof {
         let mut t_minus1 = vec![];
 
         transcript.inner_product_domain_separator();
-        transcript.append_inner_product_knowledge(&vk);
+        transcript.append_inner_product_knowledge(vk);
 
         let a = transcript.challenge_point(b"a");
         let t_prime = vk.t + a * vk.x;
@@ -318,6 +318,7 @@ impl InnerProductProof {
         x
     }
 
+    #[allow(clippy::too_many_arguments)]
     /**
      * This a single iteration of the folding algorithm run by both
      * the prover and verifier.
@@ -411,6 +412,7 @@ impl InnerProductProof {
         Ok((g[0], h[0], t))
     }
 
+    #[allow(clippy::too_many_arguments)]
     /**
      * The full folding algorithm for the prover.
      */

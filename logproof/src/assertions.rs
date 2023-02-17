@@ -427,6 +427,7 @@ pub mod linear_relation {
         assert_eq!(lhs, rhs);
     }
 
+    #[allow(clippy::too_many_arguments)]
     /**
      * Asserts the equation 2 after equation 19 holds.
      *
@@ -484,9 +485,8 @@ pub mod linear_relation {
         assert_eq!(rhs_1.cols, 1);
         let rhs_1 = rhs_1[(0, 0)];
 
-        let rhs_2 = Matrix::from(v.as_slice())
-            .inner_product(&Matrix::from(vec![Fp::one(); v.len()]))
-            * &psi;
+        let rhs_2 =
+            Matrix::from(v.as_slice()).inner_product(&Matrix::from(vec![Fp::one(); v.len()])) * psi;
 
         let rhs_3 = (psi + psi * psi)
             * Matrix::from(phi).inner_product(&Matrix::from(vec![Fp::one(); phi.len()]));

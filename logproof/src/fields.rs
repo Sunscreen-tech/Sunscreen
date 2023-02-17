@@ -115,13 +115,13 @@ where
     F2: MontConfig<N>,
 {
     fn mod_switch_unsigned(&self) -> Fp<MontBackend<F2, N>, N> {
-        let a = MontBackend::into_bigint(self.clone());
+        let a = MontBackend::into_bigint(*self);
 
         Fp::from(extend_bigint(&a))
     }
 
     fn mod_switch_signed(&self) -> Fp<MontBackend<F2, N>, N> {
-        let val = MontBackend::into_bigint(self.clone());
+        let val = MontBackend::into_bigint(*self);
         let mut mod_div_2 = F1::MODULUS;
         mod_div_2.div2();
 

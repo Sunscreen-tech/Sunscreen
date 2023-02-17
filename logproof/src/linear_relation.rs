@@ -921,7 +921,7 @@ impl LogProof {
 #[cfg(test)]
 mod test {
     use crate::{
-        fields::{FqSeal128_8192},
+        fields::FqSeal128_8192,
         linear_algebra::ScalarRem,
         math::{make_poly, Zero},
         LogProofGenerators,
@@ -1235,11 +1235,11 @@ mod benches {
         let mut transcript = Transcript::new(b"test");
 
         let now = Instant::now();
-        
+
         proof
             .verify(&mut transcript, &pk.vk, &gens.g, &gens.h, &u)
             .unwrap();
-        
+
         println!("Verifier time {}s", now.elapsed().as_secs_f64());
     }
 }

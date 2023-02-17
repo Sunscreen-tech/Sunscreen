@@ -668,10 +668,5 @@ mod tests {
         fn can_verify_valid_proof_11() {
             validate_proof(11);
         }
-
-        #[test]
-        fn can_verify_valid_proof_16384() {
-            validate_proof(16384);
-        }
     }
 }

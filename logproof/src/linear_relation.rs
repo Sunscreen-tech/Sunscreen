@@ -967,19 +967,6 @@ mod test {
         (a, s, t_mod_f, f)
     }
 
-    pub fn f<F: Field>(degree: usize) -> DensePolynomial<F> {
-        let mut coeffs = Vec::with_capacity(degree + 1);
-        coeffs.push(F::ONE);
-
-        for _ in 0..degree - 1 {
-            coeffs.push(F::ZERO);
-        }
-
-        coeffs.push(F::ONE);
-
-        DensePolynomial { coeffs }
-    }
-
     #[test]
     fn can_compute_residues() {
         type Q = FqSeal128_8192;
@@ -1155,11 +1142,23 @@ mod benches {
     use crate::{fields::FqSeal128_4096, math::make_poly, LogProofGenerators};
 
     use super::*;
-    use super::test::f;
     use std::time::Instant;
 
     extern crate test;
     use test::Bencher;
+
+    fn f<F: Field>(degree: usize) -> DensePolynomial<F> {
+        let mut coeffs = Vec::with_capacity(degree + 1);
+        coeffs.push(F::ONE);
+
+        for _ in 0..degree - 1 {
+            coeffs.push(F::ZERO);
+        }
+
+        coeffs.push(F::ONE);
+
+        DensePolynomial { coeffs }
+    }
 
     #[bench]
     fn bfv_benchmark(_: &mut Bencher) {

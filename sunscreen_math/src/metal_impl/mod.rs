@@ -86,8 +86,6 @@ impl Runtime {
             .new_compute_pipeline_state_with_function(&gpu_fn)
             .unwrap();
 
-        dbg!(gpu_fn.max_total_threads_per_threadgroup());
-
         encoder.set_compute_pipeline_state(&gpu_fn);
 
         for (i, buf) in data.iter().enumerate() {
@@ -128,6 +126,27 @@ impl<'a, P: GpuVec> Iterator for GpuVecIter<'a, P> {
         self.index += 1;
 
         item
+    }
+}
+
+pub struct IntoGpuVecIter<P: GpuVec> {
+    index: usize,
+    gpu_vec: P,
+}
+
+impl<P: GpuVec> Iterator for IntoGpuVecIter<P> {
+    type Item = P::Item;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let item = if self.index >= self.gpu_vec.len() {
+            None
+        } else {
+            Some(self.gpu_vec.get(self.index))
+        };
+
+        self.index += 1;
+
+        item 
     }
 }
 
@@ -192,6 +211,10 @@ where
             index: 0,
             gpu_vec: self,
         }
+    }
+
+    fn into_iter(self) -> IntoGpuVecIter<Self> {
+        IntoGpuVecIter { index: 0, gpu_vec: self }
     }
 
     /**

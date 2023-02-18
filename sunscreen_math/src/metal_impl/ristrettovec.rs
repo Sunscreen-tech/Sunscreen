@@ -1,4 +1,4 @@
-use curve25519_dalek::{edwards::EdwardsPoint, ristretto::RistrettoPoint, CannonicalFieldElement};
+use curve25519_dalek::{edwards::EdwardsPoint, ristretto::RistrettoPoint, CannonicalFieldElement, scalar::Scalar};
 use metal::Buffer;
 
 use std::{
@@ -6,16 +6,18 @@ use std::{
     ops::{Add, Mul, Sub},
 };
 
-use crate::metal_impl::ScalarVec;
+use crate::{metal_impl::GpuScalarVec, RistrettoPointVec};
 
-use super::{GpuVec, Runtime};
+use super::{GpuVec, Runtime, GpuVecIter, IntoGpuVecIter};
 
-pub struct RistrettoPointVec {
+pub struct GpuRistrettoPointVec {
     data: Buffer,
     len: usize,
 }
 
-impl Clone for RistrettoPointVec {
+unsafe impl Send for GpuRistrettoPointVec {}
+
+impl Clone for GpuRistrettoPointVec {
     fn clone(&self) -> Self {
         Self {
             data: self.clone_buffer(),
@@ -24,7 +26,7 @@ impl Clone for RistrettoPointVec {
     }
 }
 
-impl RistrettoPointVec {
+impl GpuRistrettoPointVec {
     #[allow(clippy::erasing_op)]
     #[allow(clippy::identity_op)]
     /**
@@ -70,9 +72,22 @@ impl RistrettoPointVec {
 
         field_vec
     }
+
+    pub fn iter(&self) -> GpuVecIter<Self> {
+        <Self as GpuVec>::iter(self)
+    }
 }
 
-impl GpuVec for RistrettoPointVec {
+impl IntoIterator for GpuRistrettoPointVec {
+    type Item = RistrettoPoint;
+    type IntoIter = IntoGpuVecIter<Self>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        <Self as GpuVec>::into_iter(self)
+    }
+}
+
+impl GpuVec for GpuRistrettoPointVec {
     type Item = RistrettoPoint;
 
     fn get_buffer(&self) -> &Buffer {
@@ -126,34 +141,34 @@ impl GpuVec for RistrettoPointVec {
     }
 }
 
-impl Add<RistrettoPointVec> for RistrettoPointVec {
+impl Add<GpuRistrettoPointVec> for GpuRistrettoPointVec {
     type Output = Self;
 
-    fn add(self, rhs: RistrettoPointVec) -> Self::Output {
+    fn add(self, rhs: GpuRistrettoPointVec) -> Self::Output {
         &self + &rhs
     }
 }
 
-impl Add<&RistrettoPointVec> for RistrettoPointVec {
+impl Add<&GpuRistrettoPointVec> for GpuRistrettoPointVec {
     type Output = Self;
 
-    fn add(self, rhs: &RistrettoPointVec) -> Self::Output {
+    fn add(self, rhs: &GpuRistrettoPointVec) -> Self::Output {
         &self + rhs
     }
 }
 
-impl Add<RistrettoPointVec> for &RistrettoPointVec {
-    type Output = RistrettoPointVec;
+impl Add<GpuRistrettoPointVec> for &GpuRistrettoPointVec {
+    type Output = GpuRistrettoPointVec;
 
-    fn add(self, rhs: RistrettoPointVec) -> Self::Output {
+    fn add(self, rhs: GpuRistrettoPointVec) -> Self::Output {
         self + &rhs
     }
 }
 
-impl Add<&RistrettoPointVec> for &RistrettoPointVec {
-    type Output = RistrettoPointVec;
+impl Add<&GpuRistrettoPointVec> for &GpuRistrettoPointVec {
+    type Output = GpuRistrettoPointVec;
 
-    fn add(self, rhs: &RistrettoPointVec) -> Self::Output {
+    fn add(self, rhs: &GpuRistrettoPointVec) -> Self::Output {
         Self::Output {
             data: self.binary_gpu_kernel("ristretto_add", rhs),
             len: self.len,
@@ -161,34 +176,34 @@ impl Add<&RistrettoPointVec> for &RistrettoPointVec {
     }
 }
 
-impl Sub<RistrettoPointVec> for RistrettoPointVec {
+impl Sub<GpuRistrettoPointVec> for GpuRistrettoPointVec {
     type Output = Self;
 
-    fn sub(self, rhs: RistrettoPointVec) -> Self::Output {
+    fn sub(self, rhs: GpuRistrettoPointVec) -> Self::Output {
         &self - &rhs
     }
 }
 
-impl Sub<&RistrettoPointVec> for RistrettoPointVec {
+impl Sub<&GpuRistrettoPointVec> for GpuRistrettoPointVec {
     type Output = Self;
 
-    fn sub(self, rhs: &RistrettoPointVec) -> Self::Output {
+    fn sub(self, rhs: &GpuRistrettoPointVec) -> Self::Output {
         &self - rhs
     }
 }
 
-impl Sub<RistrettoPointVec> for &RistrettoPointVec {
-    type Output = RistrettoPointVec;
+impl Sub<GpuRistrettoPointVec> for &GpuRistrettoPointVec {
+    type Output = GpuRistrettoPointVec;
 
-    fn sub(self, rhs: RistrettoPointVec) -> Self::Output {
+    fn sub(self, rhs: GpuRistrettoPointVec) -> Self::Output {
         self - &rhs
     }
 }
 
-impl Sub<&RistrettoPointVec> for &RistrettoPointVec {
-    type Output = RistrettoPointVec;
+impl Sub<&GpuRistrettoPointVec> for &GpuRistrettoPointVec {
+    type Output = GpuRistrettoPointVec;
 
-    fn sub(self, rhs: &RistrettoPointVec) -> Self::Output {
+    fn sub(self, rhs: &GpuRistrettoPointVec) -> Self::Output {
         Self::Output {
             data: self.binary_gpu_kernel("ristretto_sub", rhs),
             len: self.len,
@@ -196,38 +211,75 @@ impl Sub<&RistrettoPointVec> for &RistrettoPointVec {
     }
 }
 
-impl Mul<ScalarVec> for RistrettoPointVec {
+impl Mul<GpuScalarVec> for GpuRistrettoPointVec {
     type Output = Self;
 
-    fn mul(self, rhs: ScalarVec) -> Self::Output {
+    fn mul(self, rhs: GpuScalarVec) -> Self::Output {
         &self * &rhs
     }
 }
 
-impl Mul<&ScalarVec> for RistrettoPointVec {
+impl Mul<&GpuScalarVec> for GpuRistrettoPointVec {
     type Output = Self;
 
-    fn mul(self, rhs: &ScalarVec) -> Self::Output {
+    fn mul(self, rhs: &GpuScalarVec) -> Self::Output {
         &self * rhs
     }
 }
 
-impl Mul<ScalarVec> for &RistrettoPointVec {
-    type Output = RistrettoPointVec;
+impl Mul<GpuScalarVec> for &GpuRistrettoPointVec {
+    type Output = GpuRistrettoPointVec;
 
-    fn mul(self, rhs: ScalarVec) -> Self::Output {
+    fn mul(self, rhs: GpuScalarVec) -> Self::Output {
         self * &rhs
     }
 }
 
-impl Mul<&ScalarVec> for &RistrettoPointVec {
-    type Output = RistrettoPointVec;
+impl Mul<&GpuScalarVec> for &GpuRistrettoPointVec {
+    type Output = GpuRistrettoPointVec;
 
-    fn mul(self, rhs: &ScalarVec) -> Self::Output {
+    fn mul(self, rhs: &GpuScalarVec) -> Self::Output {
         Self::Output {
             data: self.binary_gpu_kernel("ristretto_scalar_mul", rhs),
             len: self.len,
         }
+    }
+}
+
+impl Mul<Scalar> for GpuRistrettoPointVec {
+    type Output = Self;
+
+    fn mul(self, rhs: Scalar) -> Self::Output {
+        &self * &rhs
+    }
+}
+
+impl Mul<&Scalar> for GpuRistrettoPointVec {
+    type Output = Self;
+
+    fn mul(self, rhs: &Scalar) -> Self::Output {
+        &self * rhs
+    }
+}
+
+impl Mul<Scalar> for &GpuRistrettoPointVec {
+    type Output = GpuRistrettoPointVec;
+
+    fn mul(self, rhs: Scalar) -> Self::Output {
+        self * &rhs
+    }
+}
+
+impl Mul<&Scalar> for &GpuRistrettoPointVec {
+    type Output = GpuRistrettoPointVec;
+
+    /**
+     * This variant multiplies each point by the single scalar.
+     */
+    fn mul(self, rhs: &Scalar) -> Self::Output {
+        let scalar_vec = GpuScalarVec::new(&vec![*rhs; self.len()]);
+
+        self * scalar_vec
     }
 }
 
@@ -249,7 +301,7 @@ mod tests {
             RistrettoPoint::random(&mut thread_rng()),
         ];
 
-        let v = RistrettoPointVec::new(&points);
+        let v = GpuRistrettoPointVec::new(&points);
 
         for (i, p) in points.into_iter().enumerate() {
             assert_eq!(v.get(i), p);
@@ -265,11 +317,11 @@ mod tests {
             RistrettoPoint::random(&mut thread_rng()),
         ];
 
-        let v = RistrettoPointVec::new(&points);
+        let v = GpuRistrettoPointVec::new(&points);
 
         let runtime = Runtime::get();
 
-        let o = RistrettoPointVec {
+        let o = GpuRistrettoPointVec {
             data: runtime.alloc(v.len_bytes()),
             len: v.len(),
         };
@@ -296,11 +348,11 @@ mod tests {
             RistrettoPoint::random(&mut thread_rng()),
         ];
 
-        let v = RistrettoPointVec::new(&points);
+        let v = GpuRistrettoPointVec::new(&points);
 
         let runtime = Runtime::get();
 
-        let o = RistrettoPointVec {
+        let o = GpuRistrettoPointVec {
             data: runtime.alloc(v.len_bytes()),
             len: v.len(),
         };
@@ -323,14 +375,14 @@ mod tests {
 
     #[test]
     fn can_add_ristretto_points() {
-        let a = RistrettoPointVec::new(&[
+        let a = GpuRistrettoPointVec::new(&[
             RistrettoPoint::random(&mut thread_rng()),
             RistrettoPoint::random(&mut thread_rng()),
             RistrettoPoint::random(&mut thread_rng()),
             RistrettoPoint::random(&mut thread_rng()),
         ]);
 
-        let b = RistrettoPointVec::new(&[
+        let b = GpuRistrettoPointVec::new(&[
             RistrettoPoint::random(&mut thread_rng()),
             RistrettoPoint::random(&mut thread_rng()),
             RistrettoPoint::random(&mut thread_rng()),
@@ -346,14 +398,14 @@ mod tests {
 
     #[test]
     fn can_sub_ristretto_points() {
-        let a = RistrettoPointVec::new(&[
+        let a = GpuRistrettoPointVec::new(&[
             RistrettoPoint::random(&mut thread_rng()),
             RistrettoPoint::random(&mut thread_rng()),
             RistrettoPoint::random(&mut thread_rng()),
             RistrettoPoint::random(&mut thread_rng()),
         ]);
 
-        let b = RistrettoPointVec::new(&[
+        let b = GpuRistrettoPointVec::new(&[
             RistrettoPoint::random(&mut thread_rng()),
             RistrettoPoint::random(&mut thread_rng()),
             RistrettoPoint::random(&mut thread_rng()),
@@ -369,14 +421,14 @@ mod tests {
 
     #[test]
     fn can_scalar_mul_ristretto_points() {
-        let a = RistrettoPointVec::new(&[
+        let a = GpuRistrettoPointVec::new(&[
             RistrettoPoint::random(&mut thread_rng()),
             RistrettoPoint::random(&mut thread_rng()),
             RistrettoPoint::random(&mut thread_rng()),
             RistrettoPoint::random(&mut thread_rng()),
         ]);
 
-        let b = ScalarVec::new(&[
+        let b = GpuScalarVec::new(&[
             Scalar::random(&mut thread_rng()),
             Scalar::random(&mut thread_rng()),
             Scalar::random(&mut thread_rng()),
@@ -390,9 +442,28 @@ mod tests {
         }
     }
 
+
+    #[test]
+    fn can_single_scalar_mul_ristretto_points() {
+        let a = GpuRistrettoPointVec::new(&[
+            RistrettoPoint::random(&mut thread_rng()),
+            RistrettoPoint::random(&mut thread_rng()),
+            RistrettoPoint::random(&mut thread_rng()),
+            RistrettoPoint::random(&mut thread_rng()),
+        ]);
+
+        let b = Scalar::random(&mut thread_rng());
+
+        let c = &a * &b;
+
+        for i in 0..c.len() {
+            assert_eq!(c.get(i).compress(), (a.get(i) * b).compress());
+        }
+    }
+
     #[test]
     fn can_iter() {
-        let a = RistrettoPointVec::new(&[
+        let a = GpuRistrettoPointVec::new(&[
             RistrettoPoint::random(&mut thread_rng()),
             RistrettoPoint::random(&mut thread_rng()),
             RistrettoPoint::random(&mut thread_rng()),
@@ -415,10 +486,10 @@ mod tests {
             RistrettoPoint::random(&mut thread_rng()),
         ];
 
-        let a_gpu = RistrettoPointVec::new(&a);
+        let a_gpu = GpuRistrettoPointVec::new(&a);
 
         // Allocate space for the output coordinates
-        let b_gpu = RistrettoPointVec::new(&a);
+        let b_gpu = GpuRistrettoPointVec::new(&a);
 
         let n = U32Arg::new(a.len() as u32);
 
@@ -435,7 +506,7 @@ mod tests {
 
     #[test]
     fn clone_yields_new_buffer() {
-        let a = RistrettoPointVec::new(&[
+        let a = GpuRistrettoPointVec::new(&[
             RistrettoPoint::random(&mut thread_rng()),
             RistrettoPoint::random(&mut thread_rng()),
             RistrettoPoint::random(&mut thread_rng()),
@@ -455,7 +526,7 @@ mod tests {
     fn can_double_projective_point() {
         let runtime = Runtime::get();
 
-        let a = RistrettoPointVec::new(&[
+        let a = GpuRistrettoPointVec::new(&[
             RistrettoPoint::random(&mut thread_rng()),
             RistrettoPoint::random(&mut thread_rng()),
             RistrettoPoint::random(&mut thread_rng()),
@@ -480,7 +551,7 @@ mod tests {
     fn can_add_projective() {
         let runtime = Runtime::get();
 
-        let a = RistrettoPointVec::new(&[
+        let a = GpuRistrettoPointVec::new(&[
             RistrettoPoint::random(&mut thread_rng()),
             RistrettoPoint::random(&mut thread_rng()),
             RistrettoPoint::random(&mut thread_rng()),
@@ -501,7 +572,7 @@ mod tests {
     fn lookup_tables_are_correct() {
         let runtime = Runtime::get();
 
-        let a = RistrettoPointVec::new(&[
+        let a = GpuRistrettoPointVec::new(&[
             RistrettoPoint::random(&mut thread_rng()),
             RistrettoPoint::random(&mut thread_rng()),
             RistrettoPoint::random(&mut thread_rng()),
@@ -565,8 +636,8 @@ mod benches {
             b.push(Scalar::random(&mut thread_rng()))
         }
 
-        let a_gpu = RistrettoPointVec::new(&a);
-        let b_gpu = ScalarVec::new(&b);
+        let a_gpu = GpuRistrettoPointVec::new(&a);
+        let b_gpu = GpuScalarVec::new(&b);
 
         println!("Benchmarking...");
 

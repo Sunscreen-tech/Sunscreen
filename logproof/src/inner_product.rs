@@ -1,5 +1,3 @@
-use std::time::Instant;
-
 use curve25519_dalek::{
     ristretto::{CompressedRistretto, RistrettoPoint},
     scalar::Scalar,
@@ -10,7 +8,7 @@ use merlin::Transcript;
 use serde::{Deserialize, Serialize};
 use sha3::{self, digest::Update, Shake256};
 
-use rayon::prelude::*;
+use sunscreen_math::{RistrettoPointVec};
 
 use crate::error::ProofError;
 use crate::{linear_algebra::InnerProduct, math::rand256};
@@ -305,17 +303,10 @@ impl InnerProductProof {
         v_2: &[RistrettoPoint],
         c: Scalar,
     ) -> Vec<RistrettoPoint> {
-        let t = Instant::now();
+        let v_1 = RistrettoPointVec::new(v_1);
+        let v_2 = RistrettoPointVec::new(v_2);
 
-        let x = v_1
-            .par_iter()
-            .zip(v_2.par_iter())
-            .map(|(a, b)| a + b * c)
-            .collect();
-
-        println!("{} mad/s", v_1.len() as f64 / t.elapsed().as_secs_f64());
-
-        x
+        (v_1 + v_2 * c).into_iter().collect()
     }
 
     #[allow(clippy::too_many_arguments)]

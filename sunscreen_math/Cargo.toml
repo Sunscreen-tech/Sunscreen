@@ -15,4 +15,6 @@ rayon = "1.6.1"
 [features]
 default = []
 nightly-features = []
-metal = ["dep:metal"]
+metal = ["dep:metal", "gpu"]
+gpu = []
+pina = []

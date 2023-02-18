@@ -249,6 +249,7 @@ impl Mul<&GpuScalarVec> for &GpuRistrettoPointVec {
 impl Mul<Scalar> for GpuRistrettoPointVec {
     type Output = Self;
 
+    #[allow(clippy::op_ref)]
     fn mul(self, rhs: Scalar) -> Self::Output {
         &self * &rhs
     }
@@ -265,6 +266,7 @@ impl Mul<&Scalar> for GpuRistrettoPointVec {
 impl Mul<Scalar> for &GpuRistrettoPointVec {
     type Output = GpuRistrettoPointVec;
 
+    #[allow(clippy::op_ref)]
     fn mul(self, rhs: Scalar) -> Self::Output {
         self * &rhs
     }
@@ -454,7 +456,7 @@ mod tests {
 
         let b = Scalar::random(&mut thread_rng());
 
-        let c = &a * &b;
+        let c = &a * b;
 
         for i in 0..c.len() {
             assert_eq!(c.get(i).compress(), (a.get(i) * b).compress());

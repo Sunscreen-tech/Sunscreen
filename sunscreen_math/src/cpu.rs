@@ -100,6 +100,7 @@ impl Mul<&CpuScalarVec> for &CpuRistrettoPointVec{
 impl Mul<Scalar> for CpuRistrettoPointVec {
     type Output = CpuRistrettoPointVec;
 
+    #[allow(clippy::op_ref)]
     fn mul(self, rhs: Scalar) -> Self::Output {
         &self * &rhs
     }
@@ -116,6 +117,7 @@ impl Mul<&Scalar> for CpuRistrettoPointVec {
 impl Mul<Scalar> for &CpuRistrettoPointVec {
     type Output = CpuRistrettoPointVec;
 
+    #[allow(clippy::op_ref)]
     fn mul(self, rhs: Scalar) -> Self::Output {
         self * &rhs
     }

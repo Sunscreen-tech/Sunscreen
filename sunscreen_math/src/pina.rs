@@ -117,6 +117,7 @@ impl Mul<&PinaScalarVec> for &PinaRistrettoPointVec {
 impl Mul<Scalar> for PinaRistrettoPointVec {
     type Output = PinaRistrettoPointVec;
 
+    #[allow(clippy::op_ref)]
     fn mul(self, rhs: Scalar) -> Self::Output {
         &self * &rhs
     }
@@ -125,6 +126,7 @@ impl Mul<Scalar> for PinaRistrettoPointVec {
 impl Mul<&Scalar> for PinaRistrettoPointVec {
     type Output = PinaRistrettoPointVec;
 
+    #[allow(clippy::op_ref)]
     fn mul(self, rhs: &Scalar) -> Self::Output {
         &self * rhs
     }
@@ -133,6 +135,7 @@ impl Mul<&Scalar> for PinaRistrettoPointVec {
 impl Mul<Scalar> for &PinaRistrettoPointVec {
     type Output = PinaRistrettoPointVec;
 
+    #[allow(clippy::op_ref)]
     fn mul(self, rhs: Scalar) -> Self::Output {
         self * &rhs
     }

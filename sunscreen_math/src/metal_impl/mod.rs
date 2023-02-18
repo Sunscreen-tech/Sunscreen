@@ -173,14 +173,21 @@ where
      */
     fn len(&self) -> usize;
 
+    fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
     fn len_bytes(&self) -> usize {
         self.len() * size_of::<Self::Item>()
     }
 
-    /**
-     * Returns a mutable slice of the GPU buffer. Since the data may not have
-     * been initialized, we return `MaybeUninit<u32>` to ensure soundness.
-     */
+    ///
+    /// Returns a mutable slice of the GPU buffer. Since the data may not have
+    /// been initialized, we return `MaybeUninit<u32>` to ensure soundness.
+    /// 
+    /// # Safety
+    /// This method returns potentially uninitialized memory.
+    ///
     unsafe fn buffer_slice_mut(&mut self) -> &mut [MaybeUninit<u32>] {
         let byte_len = self.len_bytes();
 
@@ -190,14 +197,14 @@ where
         )
     }
 
-    /**
-     * Return an immutable slice of the GPU buffer as u32 values.
-     *
-     * # Undefined behavior
-     * Before using this method, you must first call `buffer_slice_mut`,
-     * and initialize all the elements. Calling this method before doing
-     * this is unsound.
-     */
+    ///
+    /// Return an immutable slice of the GPU buffer as u32 values.
+    ///
+    /// # Safety
+    /// Before using this method, you must first call `buffer_slice_mut`,
+    /// and initialize all the elements. Calling this method before doing
+    /// this is unsound.
+    ///
     unsafe fn buffer_slice(&self) -> &[u32] {
         let byte_len = self.len_bytes();
 

@@ -8,7 +8,7 @@ use merlin::Transcript;
 use serde::{Deserialize, Serialize};
 use sha3::{self, digest::Update, Shake256};
 
-use sunscreen_math::{RistrettoPointVec};
+use sunscreen_math::RistrettoPointVec;
 
 use crate::error::ProofError;
 use crate::{linear_algebra::InnerProduct, math::rand256};

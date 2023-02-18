@@ -5,7 +5,7 @@ use curve25519_dalek::{ristretto::RistrettoPoint, scalar::Scalar, traits::Identi
 use merlin::Transcript;
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
-use sunscreen_math::{ScalarVec, RistrettoPointVec};
+use sunscreen_math::{RistrettoPointVec, ScalarVec};
 
 use crate::{
     assertions::linear_relation,

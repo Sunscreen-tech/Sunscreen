@@ -6,7 +6,7 @@ use std::{
     ops::{Add, Mul, Sub},
 };
 
-use crate::{metal_impl::GpuScalarVec, RistrettoPointVec};
+use crate::{metal_impl::GpuScalarVec};
 
 use super::{GpuVec, Runtime, GpuVecIter, IntoGpuVecIter};
 

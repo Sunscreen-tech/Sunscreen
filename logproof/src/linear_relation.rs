@@ -630,8 +630,7 @@ impl LogProof {
     }
 
     fn compute_g_prime(g: &[RistrettoPoint], phi: &[Scalar]) -> Vec<RistrettoPoint> {
-        let phi_inv = phi.par_iter().map(|x| x.invert()).collect::<Vec<_>>();
-        let phi_inv = ScalarVec::new(&phi_inv);
+        let phi_inv = ScalarVec::new(phi).invert();
         let g = RistrettoPointVec::new(g);
 
         (g * phi_inv).into_iter().collect()

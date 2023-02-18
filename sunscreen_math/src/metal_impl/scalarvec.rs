@@ -62,6 +62,13 @@ impl GpuScalarVec {
         <Self as GpuVec>::iter(&self)
     }
 
+    pub fn invert(&self) -> Self {
+        GpuScalarVec {
+            data: self.unary_gpu_kernel("scalar_invert"),
+            len: self.len
+        }
+    }
+
     /**
      * Computes self * self.
      *
@@ -499,6 +506,58 @@ mod tests {
 
         for i in 0..a.len() {
             assert_eq!(c.get(i), a.get(i) * a.get(i));
+        }
+    }
+
+    #[test]
+    fn can_roundtrip_montgomery() {
+        let a = GpuScalarVec::new(&[
+            Scalar::random(&mut thread_rng()),
+            Scalar::random(&mut thread_rng()),
+            Scalar::random(&mut thread_rng()),
+            Scalar::random(&mut thread_rng()),
+        ]);
+
+        let out = GpuScalarVec::new(&[
+            Scalar::from(0u8),
+            Scalar::from(0u8),
+            Scalar::from(0u8),
+            Scalar::from(0u8),
+        ]);
+
+        for i in 0..out.len() {
+            assert_eq!(out.get(i), Scalar::from(0u8));
+        }
+
+        let len = U32Arg::new(a.len() as u32);
+
+        let runtime = Runtime::get();
+
+
+        runtime.run(
+            "test_can_roundtrip_montgomery",
+            &[&a.data, &out.data, &len.data],
+            Grid([(4, 64), (1, 1), (1, 1)]),
+        );
+
+        for (a, b) in a.iter().zip(out.iter()) {
+            assert_eq!(a, b);
+        }
+    }
+
+    #[test]
+    fn can_invert_scalars() {
+        let a = GpuScalarVec::new(&[
+            Scalar::random(&mut thread_rng()),
+            Scalar::random(&mut thread_rng()),
+            Scalar::random(&mut thread_rng()),
+            Scalar::random(&mut thread_rng()),
+        ]);
+
+        let b = a.invert();
+
+        for (a, b) in a.iter().zip(b.iter()) {
+            assert_eq!(a, b.invert());
         }
     }
 }

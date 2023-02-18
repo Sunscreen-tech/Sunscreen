@@ -306,6 +306,88 @@ Radix16 Scalar29::as_radix_16() const {
     return output;
 }
 
+Scalar29 montgomery_square(const thread Scalar29& x) {
+    return montgomery_reduce(square_internal(x));
+}
+
+Scalar29 montgomery_mul(const thread Scalar29& a, const thread Scalar29& b) {
+    return montgomery_reduce(mul_internal(a, b));
+}
+
+void square_multiply(thread Scalar29& y, size_t squarings, const thread Scalar29& x) {
+    for (size_t i = 0; i < squarings; i++) {
+        y = montgomery_square(y);
+    }
+    y = montgomery_mul(y, x);
+}
+
+Scalar29 Scalar29::montgomery_invert() const {
+        // Uses the addition chain from
+        // https://briansmith.org/ecc-inversion-addition-chains-01#curve25519_scalar_inversion
+        auto    _1 = *this;
+        auto   _10 = montgomery_square(_1);
+        auto  _100 = montgomery_square(_10);
+        auto   _11 = montgomery_mul(_10,     _1);
+        auto  _101 = montgomery_mul(_10,    _11);
+        auto  _111 = montgomery_mul(_10,   _101);
+        auto _1001 = montgomery_mul(_10,   _111);
+        auto _1011 = montgomery_mul(_10,  _1001);
+        auto _1111 = montgomery_mul(_100, _1011);
+
+        // _10000
+        auto y = montgomery_mul(_1111, _1);
+
+        square_multiply(y, 123 + 3, _101);
+        square_multiply(y,   2 + 2, _11);
+        square_multiply(y,   1 + 4, _1111);
+        square_multiply(y,   1 + 4, _1111);
+        square_multiply(y,       4, _1001);
+        square_multiply(y,       2, _11);
+        square_multiply(y,   1 + 4, _1111);
+        square_multiply(y,   1 + 3, _101);
+        square_multiply(y,   3 + 3, _101);
+        square_multiply(y,       3, _111);
+        square_multiply(y,   1 + 4, _1111);
+        square_multiply(y,   2 + 3, _111);
+        square_multiply(y,   2 + 2, _11);
+        square_multiply(y,   1 + 4, _1011);
+        square_multiply(y,   2 + 4, _1011);
+        square_multiply(y,   6 + 4, _1001);
+        square_multiply(y,   2 + 2, _11);
+        square_multiply(y,   3 + 2, _11);
+        square_multiply(y,   3 + 2, _11);
+        square_multiply(y,   1 + 4, _1001);
+        square_multiply(y,   1 + 3, _111);
+        square_multiply(y,   2 + 4, _1111);
+        square_multiply(y,   1 + 4, _1011);
+        square_multiply(y,       3, _101);
+        square_multiply(y,   2 + 4, _1111);
+        square_multiply(y,       3, _101);
+        square_multiply(y,   1 + 2, _11);
+
+        return y;
+    }
+
+Scalar29 to_montgomery(const thread Scalar29& val) {
+    auto rr = constants::RR;
+    return montgomery_mul(val, rr);
+}
+
+Scalar29 from_montgomery(const thread Scalar29& val) {
+    MulResult limbs = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    for (size_t i = 0; i < 9; i++) {
+        limbs[i] = (u64)val[i];
+    }
+            
+    return montgomery_reduce(limbs);
+}
+
+Scalar29 Scalar29::invert() const {
+    auto mont = to_montgomery(*this);
+    auto mont_inv = mont.montgomery_invert();
+    return from_montgomery(mont_inv);
+}
+
 constant u32 data[] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
 
 constant Scalar29 Scalar29::Zero(data);
@@ -372,6 +454,17 @@ kernel void scalar_square(
     t_a.square().pack(b, tid, len);
 }
 
+kernel void scalar_invert(
+    u32 tid [[thread_position_in_grid]],
+    device const u32* a [[buffer(0)]],
+    device u32* b [[buffer(1)]],
+    constant u32& len [[buffer(2)]]
+) {
+    Scalar29 t_a = Scalar29::unpack(a, tid, len);
+
+    t_a.invert().pack(b, tid, len);
+}
+
 //
 // Test kernels
 //
@@ -406,6 +499,18 @@ kernel void test_can_radix_16(
     for (size_t i = 0; i < 64; i++) {
         b[i * len + tid] = res[i];
     }
+}
+
+kernel void test_can_roundtrip_montgomery(
+    u32 tid [[thread_position_in_grid]],
+    device const u32* a [[buffer(0)]],
+    device u32* b [[buffer(1)]],
+    constant u32& len [[buffer(2)]]
+) {
+    auto x = Scalar29::unpack(a, tid, len);
+    auto y = from_montgomery(to_montgomery(x));
+
+    y.pack(b, tid, len);
 }
 
 #endif

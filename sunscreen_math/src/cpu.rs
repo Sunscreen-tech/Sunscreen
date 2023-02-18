@@ -139,6 +139,10 @@ impl CpuScalarVec {
     pub fn iter<'a>(&'a self) -> Iter<'a, Scalar> {
         self.0.iter()
     }
+
+    pub fn invert(&self) -> Self {
+        Self(self.par_iter().map(|x| x.invert()).collect())
+    }
 }
 
 impl Deref for CpuScalarVec {

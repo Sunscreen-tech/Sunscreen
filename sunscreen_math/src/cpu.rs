@@ -11,7 +11,7 @@ impl CpuRistrettoPointVec {
         Self(data.to_owned())
     }
 
-    pub fn iter<'a>(&'a self) -> Iter<'a, RistrettoPoint> {
+    pub fn iter(&self) -> Iter<'_, RistrettoPoint> {
         self.0.iter()
     }
 }
@@ -136,7 +136,7 @@ impl CpuScalarVec {
         Self(data.to_owned())
     }
 
-    pub fn iter<'a>(&'a self) -> Iter<'a, Scalar> {
+    pub fn iter(&self) -> Iter<'_, Scalar> {
         self.0.iter()
     }
 

@@ -59,7 +59,7 @@ impl GpuScalarVec {
     }
 
     pub fn iter(&self) -> GpuVecIter<Self> {
-        <Self as GpuVec>::iter(&self)
+        <Self as GpuVec>::iter(self)
     }
 
     pub fn invert(&self) -> Self {

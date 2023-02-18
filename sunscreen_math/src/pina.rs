@@ -4,7 +4,7 @@ use core::ops::Deref;
 use core::slice::Iter;
 
 use curve25519_dalek::{ristretto::RistrettoPoint, scalar::Scalar};
-use rayon::{prelude::*, scope, spawn};
+use rayon::{prelude::*, scope};
 
 use crate::{GpuRistrettoPointVec, GpuScalarVec};
 
@@ -153,7 +153,7 @@ impl PinaScalarVec {
         Self(data.to_owned())
     }
 
-    pub fn iter<'a>(&'a self) -> Iter<'a, Scalar> {
+    pub fn iter(&self) -> Iter<'_, Scalar> {
         self.0.iter()
     }
 

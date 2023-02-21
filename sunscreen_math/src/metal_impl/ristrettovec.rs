@@ -1,4 +1,6 @@
-use curve25519_dalek::{edwards::EdwardsPoint, ristretto::RistrettoPoint, CannonicalFieldElement, scalar::Scalar};
+use curve25519_dalek::{
+    edwards::EdwardsPoint, ristretto::RistrettoPoint, scalar::Scalar, CannonicalFieldElement,
+};
 use metal::Buffer;
 
 use std::{
@@ -6,9 +8,9 @@ use std::{
     ops::{Add, Mul, Sub},
 };
 
-use crate::{metal_impl::GpuScalarVec};
+use crate::metal_impl::GpuScalarVec;
 
-use super::{GpuVec, Runtime, GpuVecIter, IntoGpuVecIter};
+use super::{GpuVec, GpuVecIter, IntoGpuVecIter, Runtime};
 
 pub struct GpuRistrettoPointVec {
     data: Buffer,
@@ -443,7 +445,6 @@ mod tests {
             assert_eq!(c.get(i).compress(), (a.get(i) * b.get(i)).compress());
         }
     }
-
 
     #[test]
     fn can_single_scalar_mul_ristretto_points() {

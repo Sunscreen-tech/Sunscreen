@@ -4,12 +4,12 @@
 mod metal_impl;
 
 mod cpu;
-pub use cpu::{CpuScalarVec, CpuRistrettoPointVec};
+pub use cpu::{CpuRistrettoPointVec, CpuScalarVec};
 
 #[cfg(feature = "pina")]
 mod pina;
 #[cfg(feature = "pina")]
-pub use pina::{PinaScalarVec, PinaRistrettoPointVec};
+pub use pina::{PinaRistrettoPointVec, PinaScalarVec};
 
 #[cfg(all(feature = "pina", not(feature = "gpu")))]
 compile_error!("feature pina requires a GPU backend feature.");

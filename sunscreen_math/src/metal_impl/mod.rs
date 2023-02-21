@@ -146,7 +146,7 @@ impl<P: GpuVec> Iterator for IntoGpuVecIter<P> {
 
         self.index += 1;
 
-        item 
+        item
     }
 }
 
@@ -184,7 +184,7 @@ where
     ///
     /// Returns a mutable slice of the GPU buffer. Since the data may not have
     /// been initialized, we return `MaybeUninit<u32>` to ensure soundness.
-    /// 
+    ///
     /// # Safety
     /// This method returns potentially uninitialized memory.
     ///
@@ -221,7 +221,10 @@ where
     }
 
     fn into_iter(self) -> IntoGpuVecIter<Self> {
-        IntoGpuVecIter { index: 0, gpu_vec: self }
+        IntoGpuVecIter {
+            index: 0,
+            gpu_vec: self,
+        }
     }
 
     /**

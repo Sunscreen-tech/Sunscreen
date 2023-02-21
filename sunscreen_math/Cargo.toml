@@ -13,7 +13,7 @@ curve25519_dalek = { package = "sunscreen_curve25519", path = "../sunscreen_curv
 rayon = "1.6.1"
 
 [features]
-default = ["metal", "pina"]
+default = []
 nightly-features = []
 metal = ["dep:metal", "gpu"]
 gpu = []

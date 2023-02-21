@@ -1,7 +1,7 @@
-use std::ops::{Add, Mul};
-use std::vec::IntoIter;
 use core::ops::Deref;
 use core::slice::Iter;
+use std::ops::{Add, Mul};
+use std::vec::IntoIter;
 
 use curve25519_dalek::{ristretto::RistrettoPoint, scalar::Scalar};
 use rayon::{prelude::*, scope};
@@ -27,7 +27,7 @@ impl Deref for PinaRistrettoPointVec {
 impl IntoIterator for PinaRistrettoPointVec {
     type Item = RistrettoPoint;
     type IntoIter = IntoIter<RistrettoPoint>;
-    
+
     fn into_iter(self) -> Self::IntoIter {
         self.0.into_iter()
     }
@@ -60,7 +60,12 @@ impl Add<&PinaRistrettoPointVec> for &PinaRistrettoPointVec {
     type Output = PinaRistrettoPointVec;
 
     fn add(self, rhs: &PinaRistrettoPointVec) -> Self::Output {
-        PinaRistrettoPointVec(self.par_iter().zip(rhs.par_iter()).map(|(a, b)| a + b).collect())
+        PinaRistrettoPointVec(
+            self.par_iter()
+                .zip(rhs.par_iter())
+                .map(|(a, b)| a + b)
+                .collect(),
+        )
     }
 }
 
@@ -103,11 +108,13 @@ impl Mul<&PinaScalarVec> for &PinaRistrettoPointVec {
         let mut cpu_out = vec![];
 
         scope(|s| {
-            s.spawn(|_| {
-                gpu_out = gpu_a * gpu_b
-            });
+            s.spawn(|_| gpu_out = gpu_a * gpu_b);
 
-            cpu_out = cpu_a.par_iter().zip(cpu_b.par_iter()).map(|(a, b)| a * b).collect();
+            cpu_out = cpu_a
+                .par_iter()
+                .zip(cpu_b.par_iter())
+                .map(|(a, b)| a * b)
+                .collect();
         });
 
         PinaRistrettoPointVec(gpu_out.iter().chain(cpu_out.drain(..)).collect())

@@ -1,8 +1,11 @@
-use curve25519_dalek::{scalar::Scalar, ristretto::RistrettoPoint};
-use rayon::{prelude::*};
 use core::ops::Deref;
 use core::slice::Iter;
-use std::{ops::{Add, Mul}, vec::IntoIter};
+use curve25519_dalek::{ristretto::RistrettoPoint, scalar::Scalar};
+use rayon::prelude::*;
+use std::{
+    ops::{Add, Mul},
+    vec::IntoIter,
+};
 
 pub struct CpuRistrettoPointVec(Vec<RistrettoPoint>);
 
@@ -19,7 +22,7 @@ impl CpuRistrettoPointVec {
 impl IntoIterator for CpuRistrettoPointVec {
     type Item = RistrettoPoint;
     type IntoIter = IntoIter<RistrettoPoint>;
-    
+
     fn into_iter(self) -> Self::IntoIter {
         self.0.into_iter()
     }
@@ -57,15 +60,20 @@ impl Add<CpuRistrettoPointVec> for &CpuRistrettoPointVec {
     }
 }
 
-impl Add<&CpuRistrettoPointVec> for &CpuRistrettoPointVec{
+impl Add<&CpuRistrettoPointVec> for &CpuRistrettoPointVec {
     type Output = CpuRistrettoPointVec;
 
     fn add(self, rhs: &CpuRistrettoPointVec) -> Self::Output {
-        CpuRistrettoPointVec(self.par_iter().zip(rhs.par_iter()).map(|(a, b)| a + b).collect())
+        CpuRistrettoPointVec(
+            self.par_iter()
+                .zip(rhs.par_iter())
+                .map(|(a, b)| a + b)
+                .collect(),
+        )
     }
 }
 
-impl Mul<CpuScalarVec> for CpuRistrettoPointVec{
+impl Mul<CpuScalarVec> for CpuRistrettoPointVec {
     type Output = CpuRistrettoPointVec;
 
     fn mul(self, rhs: CpuScalarVec) -> Self::Output {
@@ -73,7 +81,7 @@ impl Mul<CpuScalarVec> for CpuRistrettoPointVec{
     }
 }
 
-impl Mul<&CpuScalarVec> for CpuRistrettoPointVec{
+impl Mul<&CpuScalarVec> for CpuRistrettoPointVec {
     type Output = CpuRistrettoPointVec;
 
     fn mul(self, rhs: &CpuScalarVec) -> Self::Output {
@@ -81,7 +89,7 @@ impl Mul<&CpuScalarVec> for CpuRistrettoPointVec{
     }
 }
 
-impl Mul<CpuScalarVec> for &CpuRistrettoPointVec{
+impl Mul<CpuScalarVec> for &CpuRistrettoPointVec {
     type Output = CpuRistrettoPointVec;
 
     fn mul(self, rhs: CpuScalarVec) -> Self::Output {
@@ -89,11 +97,16 @@ impl Mul<CpuScalarVec> for &CpuRistrettoPointVec{
     }
 }
 
-impl Mul<&CpuScalarVec> for &CpuRistrettoPointVec{
+impl Mul<&CpuScalarVec> for &CpuRistrettoPointVec {
     type Output = CpuRistrettoPointVec;
 
     fn mul(self, rhs: &CpuScalarVec) -> Self::Output {
-        CpuRistrettoPointVec(self.par_iter().zip(rhs.par_iter()).map(|(a, b)| a * b).collect())
+        CpuRistrettoPointVec(
+            self.par_iter()
+                .zip(rhs.par_iter())
+                .map(|(a, b)| a * b)
+                .collect(),
+        )
     }
 }
 

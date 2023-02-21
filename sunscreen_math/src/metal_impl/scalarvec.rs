@@ -5,7 +5,7 @@ use metal::Buffer;
 
 use curve25519_dalek::scalar::Scalar;
 
-use super::{GpuVec, Runtime, IntoGpuVecIter, GpuVecIter};
+use super::{GpuVec, GpuVecIter, IntoGpuVecIter, Runtime};
 
 /// A vector of scalars laid out in a way that enables coalescing on
 /// the GPU.
@@ -65,7 +65,7 @@ impl GpuScalarVec {
     pub fn invert(&self) -> Self {
         GpuScalarVec {
             data: self.unary_gpu_kernel("scalar_invert"),
-            len: self.len
+            len: self.len,
         }
     }
 
@@ -329,14 +329,10 @@ mod tests {
     fn can_unpack_and_pack_1_element() {
         let runtime = Runtime::get();
 
-        let scalars = [
-            Scalar::random(&mut thread_rng())
-        ];
-            
+        let scalars = [Scalar::random(&mut thread_rng())];
+
         let v = GpuScalarVec::new(&scalars);
-        let out = GpuScalarVec::new(&[
-            Scalar::from(0u8)
-        ]);
+        let out = GpuScalarVec::new(&[Scalar::from(0u8)]);
 
         for i in 0..out.len() {
             assert_eq!(out.get(i), Scalar::from(0u8));
@@ -532,7 +528,6 @@ mod tests {
         let len = U32Arg::new(a.len() as u32);
 
         let runtime = Runtime::get();
-
 
         runtime.run(
             "test_can_roundtrip_montgomery",

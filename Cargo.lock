@@ -2444,6 +2444,7 @@ dependencies = [
  "futures",
  "lazy_static",
  "metal",
+ "naga",
  "rand",
  "rayon",
  "sunscreen_curve25519",

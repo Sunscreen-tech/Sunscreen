@@ -19,6 +19,19 @@ pub struct Runtime {
     shaders: ShaderModule,
 }
 
+// In build.rs, we compile 2 variants of the curve25519-dalek.metallib library:
+// test and release. In test, we #define the TEST macro, which exposes test kernels.
+// The release library does not feature these kernels.
+#[cfg(not(test))]
+const SHADERS: &str = include_str!(concat!(
+    env!("OUT_DIR"),
+    "/shaders-release.wgsl"
+));
+
+#[cfg(test)]
+const SHADERS: &str =
+    include_str!(concat!(env!("OUT_DIR"), "/shaders-test.wgsl"));
+
 fn assert_aligned<T>(ptr: *const T) {
     assert!(ptr.cast::<()>().align_offset(align_of::<T>()) == 0);
 }
@@ -184,7 +197,7 @@ lazy_static! {
 
         let shaders = device.create_shader_module(ShaderModuleDescriptor {
             label: None,
-            source: wgpu::ShaderSource::Wgsl(Cow::Borrowed(include_str!("./shaders/hello.wgsl"))), // Moo
+            source: wgpu::ShaderSource::Wgsl(Cow::Borrowed(SHADERS)), // Moo
         });
 
         println!("{:#?}", device.features());

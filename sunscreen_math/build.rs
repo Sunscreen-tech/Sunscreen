@@ -1,3 +1,61 @@
+#[cfg(feature = "webgpu")]
+// This simply concatenates all the wgsl shaders, which get compiled at runtime.
+fn compile_wgsl_shaders() {
+    use std::{path::PathBuf, process::Command};
+    use std::fs::{DirEntry, File, read_to_string};
+    use std::io::Write;
+
+    let outdir = PathBuf::from(std::env::var("OUT_DIR").unwrap());
+    let shader_dir = PathBuf::from(".")
+        .join("src")
+        .join("webgpu_impl")
+        .join("shaders");
+
+    for config in ["test", "release"] {
+        let is_wgsl_file = |file: &DirEntry| {
+            file.file_name().to_string_lossy().ends_with(".wgsl")
+                && file.file_type().unwrap().is_file()
+        };
+
+        let is_test_wgsl_file = |file: &DirEntry| {
+            file.file_name().to_string_lossy().ends_with(".test.wgsl")
+                && file.file_type().unwrap().is_file()
+        };
+
+        let include_file: Box<dyn Fn(&DirEntry) -> bool> = if config == "test" {
+            Box::new(is_wgsl_file)
+        } else {
+            Box::new(|file: &DirEntry| {
+                is_wgsl_file(file) && !is_test_wgsl_file(file)
+            })
+        };
+
+        let shaders = std::fs::read_dir(&shader_dir)
+            .unwrap()
+            .filter_map(Result::ok)
+            .filter(include_file);
+
+        let out_file_path = outdir.join(format!("shaders-{config}.wgsl"));
+        
+        {
+            let mut out_file = File::create(&out_file_path).unwrap();
+
+            for s in shaders {
+                let data = read_to_string(s.path()).unwrap();
+
+                writeln!(out_file, "{}", data).unwrap();
+            }
+        };
+
+        // Validate the shader
+        let shader_contents = read_to_string(out_file_path).unwrap();
+
+        if let Err(e) = naga::front::wgsl::parse_str(&shader_contents) {
+            panic!("{}", e.message());
+        };
+    }
+}
+
 #[cfg(feature = "metal")]
 fn compile_metal_shaders() {
     use std::{path::PathBuf, process::Command};
@@ -95,4 +153,7 @@ fn compile_metal_shaders() {
 fn main() {
     #[cfg(feature = "metal")]
     compile_metal_shaders();
+
+    #[cfg(feature = "webgpu")]
+    compile_wgsl_shaders();
 }

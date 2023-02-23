@@ -6,7 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-bytemuck = "1.13.0"
+bytemuck = { version = "1.13.0", optional = true }
 lazy_static = "1.4.0"
 metal = { version = "0.24.0", optional = true }
 rand = "0.8.5"
@@ -16,10 +16,13 @@ futures = { version = "0.3.26", optional = true }
 tokio = { version = "1.25.0", features = ["rt"], optional = true }
 wgpu = { version = "0.15.1", optional = true }
 
+[build-dependencies]
+naga = { version = "0.11.0", optional = true, features = ["wgsl-in"]}
+
 [features]
 default = ["webgpu"]
 nightly-features = []
 metal = ["dep:metal", "gpu"]
-webgpu = ["dep:wgpu", "dep:tokio", "dep:futures", "gpu"]
+webgpu = ["dep:wgpu", "dep:tokio", "dep:futures", "dep:naga", "dep:bytemuck", "gpu"]
 gpu = []
 pina = []

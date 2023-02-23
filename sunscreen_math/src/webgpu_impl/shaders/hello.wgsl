@@ -12,3 +12,7 @@ fn add(
         c[gid.x] = a[gid.x] + b[gid.x];
     }
 }
+
+struct Horse {
+    x: u32,
+}

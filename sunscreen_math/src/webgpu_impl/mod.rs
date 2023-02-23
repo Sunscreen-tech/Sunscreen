@@ -234,7 +234,9 @@ mod tests {
         let b_gpu = runtime.alloc_from_slice(&b);
         let c_gpu = runtime.alloc::<u32>(a.len());
 
-        runtime.run("add", &[&a_gpu, &b_gpu, &c_gpu], &Grid::new(1, 1, 1));
+        let n = GpuU32::new(a.len() as u32);
+
+        runtime.run("add", &[&a_gpu, &b_gpu, &c_gpu, &n.data], &Grid::new(1, 1, 1));
 
         for (c, (a, b)) in c_gpu.get_data::<u32>().iter().zip(a.iter().zip(b.iter())) {
             assert_eq!(*c, a + b);

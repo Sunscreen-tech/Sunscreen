@@ -68,6 +68,7 @@ fn scalar29_pack_c(val: Scalar29, grid_tid: u32, stride: u32) {
     g_c[7u * stride + grid_tid] = word;
 }
 
+/*
 fn scalar29_add(a: ptr<function, Scalar29>, b: ptr<function, Scalar29>) -> Scalar29 {
     var sum = Scalar29_Zero;
     let mask = (0x1u << 29u) - 1u;
@@ -75,13 +76,13 @@ fn scalar29_add(a: ptr<function, Scalar29>, b: ptr<function, Scalar29>) -> Scala
     // a + b
     var carry = 0u;
     for (var i = 0u; i < 9u; i++) {
-        carry = a.v[i] + b.v[i] + (carry >> 29u);
+        carry = (*a).v[i] + (*b).v[i] + (carry >> 29u);
         sum.v[i] = carry & mask;
     }
 
     // subtract l if the sum is >= l
-    return scalar29_sub(&sum, &Scalar29_L);
-}
+    return scalar29_sub(&sum, Scalar29_L);
+}*/
 
 fn scalar29_sub(a: ptr<function, Scalar29>, b: ptr<function, Scalar29>) -> Scalar29 {
     var difference = Scalar29_Zero;
@@ -90,7 +91,7 @@ fn scalar29_sub(a: ptr<function, Scalar29>, b: ptr<function, Scalar29>) -> Scala
     // a - b
     var borrow = 0u;
     for (var i = 0u; i < 9u; i++) {
-        borrow = a.v[i] - (b.v[i] + (borrow >> 31u));
+        borrow = (*a).v[i] - ((*b).v[i] + (borrow >> 31u));
         difference.v[i] = borrow & mask;
     }
 
@@ -99,8 +100,8 @@ fn scalar29_sub(a: ptr<function, Scalar29>, b: ptr<function, Scalar29>) -> Scala
 
     var carry = 0u;
     for (var i = 0u; i < 9u; i++) {
-        carry = (carry >> 29) + difference[i] + (Scalar29_L.v[i] & underflow_mask);
-        difference[i] = carry & mask;
+        carry = (carry >> 29u) + difference.v[i] + (Scalar29_L.v[i] & underflow_mask);
+        difference.v[i] = carry & mask;
     }
 
     return difference;

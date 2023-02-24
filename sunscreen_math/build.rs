@@ -70,6 +70,14 @@ fn compile_wgsl_shaders() {
         let validation_results = validator.validate(&parse_result.unwrap());
 
         if let Err(e) = validation_results {
+            let e = ShaderError {
+                source: shader_contents,
+                label: None,
+                inner: Box::new(e)
+            };
+
+            let e = CreateShaderModuleError::Validation(e);
+
             panic!("{}", e.to_string());
         }
     }

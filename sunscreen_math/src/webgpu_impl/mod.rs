@@ -45,10 +45,33 @@ impl Grid {
 }
 
 trait BufferExt {
+    fn clone(&self) -> Buffer;
+
+    fn copy_into(&self, dst: &Buffer);
+
     fn get_data<T: Pod + Copy>(&self) -> Vec<T>;
 }
 
 impl BufferExt for Buffer {
+    fn clone(&self) -> Buffer {
+        let runtime = Runtime::get();
+
+        let cloned = runtime.alloc::<u8>(self.size() as usize);
+        self.copy_into(&cloned);
+
+        cloned
+    }
+
+    fn copy_into(&self, dst: &Buffer) {
+        let runtime = Runtime::get();
+
+        let mut encoder = runtime.device.create_command_encoder(&CommandEncoderDescriptor { label: None });
+        encoder.copy_buffer_to_buffer(self, 0, &dst, 0, self.size());
+
+        runtime.queue.submit(Some(encoder.finish()));
+        runtime.device.poll(wgpu::MaintainBase::Wait);
+    }
+
     fn get_data<T: Pod + Copy>(&self) -> Vec<T> {
         let (s, r) = oneshot::channel();
 
@@ -65,10 +88,7 @@ impl BufferExt for Buffer {
             mapped_at_creation: false
         });
 
-        let mut encoder = runtime.device.create_command_encoder(&CommandEncoderDescriptor { label: None });
-        encoder.copy_buffer_to_buffer(self, 0, &copy_buf, 0, self.size());
-
-        runtime.queue.submit(Some(encoder.finish()));
+        self.copy_into(&copy_buf);
 
         let buffer_slice = copy_buf.slice(..);
         buffer_slice.map_async(wgpu::MapMode::Read, move |v| { s.send(v).unwrap(); });
@@ -100,7 +120,7 @@ impl Runtime {
         let buffer = self.device.create_buffer(&BufferDescriptor {
             label: None,
             size: len as u64,
-            usage: BufferUsages::STORAGE | BufferUsages::COPY_SRC,
+            usage: BufferUsages::STORAGE | BufferUsages::COPY_SRC | BufferUsages::COPY_DST,
             mapped_at_creation: false
         });
 
@@ -117,7 +137,7 @@ impl Runtime {
         let buffer = self.device.create_buffer_init(&BufferInitDescriptor {
             label: None,
             contents: cast_slice(data),
-            usage: BufferUsages::STORAGE | BufferUsages::COPY_SRC,
+            usage: BufferUsages::STORAGE | BufferUsages::COPY_SRC | BufferUsages::COPY_DST,
         });
 
         buffer

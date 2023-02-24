@@ -4,6 +4,7 @@ fn test_scalar_can_pack_unpack_a(
     @builtin(global_invocation_id) gid: vec3<u32>,
 ) {
     if gid.x >= g_len {
+        unused_b();
         return;
     }
 

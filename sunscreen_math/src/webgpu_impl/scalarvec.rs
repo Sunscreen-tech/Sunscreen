@@ -1,4 +1,4 @@
-use std::{mem::size_of, ops::{Sub, Add}};
+use std::{mem::size_of, ops::{Sub, Add, Neg}};
 
 use curve25519_dalek::scalar::Scalar;
 use wgpu::Buffer;
@@ -213,6 +213,29 @@ impl Add<&GpuScalarVec> for &GpuScalarVec {
     }
 }
 
+impl Neg for GpuScalarVec {
+    type Output = GpuScalarVec;
+
+    fn neg(self) -> Self::Output {
+        -&self
+    }
+}
+
+impl Neg for &GpuScalarVec {
+    type Output = GpuScalarVec;
+
+    fn neg(self) -> Self::Output {
+        let output = Runtime::get().alloc::<u32>(self.u32_len());
+
+        GpuScalarVec::run_unary_kernel(self, &output, "kernel_scalar29_neg");
+
+        GpuScalarVec {
+            data: output,
+            len: self.len()
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use rand::thread_rng;
@@ -328,5 +351,22 @@ mod tests {
         for (i, c) in c_v.iter().enumerate() {
             assert_eq!(c, a[i] + b[i]);
         }
+    }
+
+    #[test]
+    fn can_neg() {
+        let a = (0..238)
+            .into_iter()
+            .map(|_| Scalar::random(&mut thread_rng()))
+            .collect::<Vec<_>>();
+
+        let a_v = GpuScalarVec::new(&a);
+
+        let c_v = -a_v;
+
+        for (i, c) in c_v.iter().enumerate() {
+            assert_eq!(c, -a[i]);
+        }
+
     }
 }

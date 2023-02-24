@@ -22,6 +22,7 @@ wgpu-core = { version = "0.15.1", optional = true, features = ["metal", "wgsl"] 
 
 [features]
 default = ["webgpu"]
+#default = []
 nightly-features = []
 metal = ["dep:metal", "gpu"]
 webgpu = ["dep:wgpu", "dep:tokio", "dep:futures", "dep:naga", "dep:wgpu-core", "dep:bytemuck", "gpu"]

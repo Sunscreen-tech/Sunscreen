@@ -77,10 +77,16 @@ pub trait GpuVec {
         let runtime = Runtime::get();
         let len = GpuU32::new(lhs.len() as u32);
 
+        let threadgroups = if lhs.len() % 128 == 0 {
+            lhs.len() / 128
+        } else {
+            lhs.len() / 128 + 1
+        } as u32;
+
         runtime.run(
             kernel_name,
             &[lhs.get_buffer(), &DUMMY_BUFFER, output, &len.data],
-            &Grid::new(lhs.len() as u32 / 128, 1, 1),
+            &Grid::new(threadgroups, 1, 1),
         );
     }
 

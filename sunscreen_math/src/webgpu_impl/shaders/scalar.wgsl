@@ -144,3 +144,21 @@ fn kernel_scalar29_add(
 
     scalar29_pack_c(&c, gid.x, g_len);
 }
+
+@compute
+@workgroup_size(128, 1, 1)
+fn kernel_scalar29_neg(
+    @builtin(global_invocation_id) gid: vec3<u32>,
+) {
+    if gid.x >= g_len {
+        unused_b();
+        return;
+    }
+
+    var a = scalar29_unpack_a(gid.x, g_len);
+    var zero = Scalar29_Zero;
+
+    var c = scalar29_sub(&zero, &a);
+
+    scalar29_pack_c(&c, gid.x, g_len);
+}

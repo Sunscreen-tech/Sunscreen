@@ -459,10 +459,10 @@ mod tests {
             Scalar::random(&mut thread_rng()),
         ]);
 
-        let c = &a - &b;
+        let c = -&a;
 
         for i in 0..a.len() {
-            assert_eq!(c.get(i), a.get(i) - b.get(i));
+            assert_eq!(c.get(i), -a.get(i));
         }
     }
 

@@ -5,6 +5,8 @@ fn compile_wgsl_shaders() {
     use std::fs::{DirEntry, File, read_to_string};
     use std::io::Write;
 
+    use naga::valid::{ValidationFlags, Capabilities};
+
     let outdir = PathBuf::from(std::env::var("OUT_DIR").unwrap());
     let shader_dir = PathBuf::from(".")
         .join("src")
@@ -50,9 +52,19 @@ fn compile_wgsl_shaders() {
         // Validate the shader
         let shader_contents = read_to_string(out_file_path).unwrap();
 
-        if let Err(e) = naga::front::wgsl::parse_str(&shader_contents) {
+        let parse_result = naga::front::wgsl::parse_str(&shader_contents);
+
+        if let Err(e) = parse_result {
             panic!("{}", e.message());
-        };
+        }
+
+        let mut validator = naga::valid::Validator::new(ValidationFlags::all(), Capabilities::empty());
+
+        let validation_results = validator.validate(&parse_result.unwrap());
+
+        if let Err(e) = validation_results {
+            panic!("{}", e.to_string());
+        }
     }
 }
 

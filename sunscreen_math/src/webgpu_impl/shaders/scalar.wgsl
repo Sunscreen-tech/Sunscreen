@@ -48,7 +48,9 @@ fn scalar29_unpack_b(grid_tid: u32, stride: u32) -> Scalar29 {
     return s;
 }
 
-fn scalar29_pack_c(val: Scalar29, grid_tid: u32, stride: u32) {
+fn scalar29_pack_c(val: ptr<function, Scalar29>, grid_tid: u32, stride: u32) {
+    let val = *val;
+    
     var word: u32 = val.v[0u] | val.v[1u] << 29u;
 
     g_c[0u * stride + grid_tid] = word;
@@ -102,8 +104,43 @@ fn scalar29_sub(a: ptr<function, Scalar29>, b: ptr<function, Scalar29>) -> Scala
     var carry = 0u;
     for (var i = 0u; i < 9u; i++) {
         carry = (carry >> 29u) + difference.v[i] + (l.v[i] & underflow_mask);
+
         difference.v[i] = carry & mask;
     }
 
     return difference;
+}
+
+@compute
+@workgroup_size(128, 1, 1)
+fn kernel_scalar29_sub(
+    @builtin(global_invocation_id) gid: vec3<u32>,
+) {
+    if gid.x >= g_len {
+        return;
+    }
+
+    var a = scalar29_unpack_a(gid.x, g_len);
+    var b = scalar29_unpack_b(gid.x, g_len);
+
+    var c = scalar29_sub(&a, &b);
+
+    scalar29_pack_c(&c, gid.x, g_len);
+}
+
+@compute
+@workgroup_size(128, 1, 1)
+fn kernel_scalar29_add(
+    @builtin(global_invocation_id) gid: vec3<u32>,
+) {
+    if gid.x >= g_len {
+        return;
+    }
+
+    var a = scalar29_unpack_a(gid.x, g_len);
+    var b = scalar29_unpack_b(gid.x, g_len);
+
+    var c = scalar29_add(&a, &b);
+
+    scalar29_pack_c(&c, gid.x, g_len);
 }

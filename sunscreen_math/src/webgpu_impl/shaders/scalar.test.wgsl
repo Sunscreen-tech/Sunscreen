@@ -8,8 +8,8 @@ fn test_scalar_can_pack_unpack_a(
         return;
     }
 
-    let a = scalar29_unpack_a(gid.x, g_len);
-    scalar29_pack_c(a, gid.x, g_len);
+    var a = scalar29_unpack_a(gid.x, g_len);
+    scalar29_pack_c(&a, gid.x, g_len);
 }
 
 @compute
@@ -22,6 +22,6 @@ fn test_scalar_can_pack_unpack_b(
         return;
     }
 
-    let b = scalar29_unpack_b(gid.x, g_len);
-    scalar29_pack_c(b, gid.x, g_len);
+    var b = scalar29_unpack_b(gid.x, g_len);
+    scalar29_pack_c(&b, gid.x, g_len);
 }

@@ -1,4 +1,4 @@
-use std::mem::size_of;
+use std::{mem::size_of, ops::{Sub, Add}};
 
 use curve25519_dalek::scalar::Scalar;
 use wgpu::Buffer;
@@ -135,6 +135,84 @@ impl GpuScalarVec {
     }
 }
 
+impl Sub<GpuScalarVec> for GpuScalarVec {
+    type Output = Self;
+
+    fn sub(self, rhs: GpuScalarVec) -> Self::Output {
+        &self - &rhs
+    }
+}
+
+impl Sub<&GpuScalarVec> for GpuScalarVec {
+    type Output = Self;
+
+    fn sub(self, rhs: &GpuScalarVec) -> Self::Output {
+        &self - rhs
+    }
+}
+
+impl Sub<GpuScalarVec> for &GpuScalarVec {
+    type Output = GpuScalarVec;
+
+    fn sub(self, rhs: GpuScalarVec) -> Self::Output {
+        self - &rhs
+    }
+}
+
+impl Sub<&GpuScalarVec> for &GpuScalarVec {
+    type Output = GpuScalarVec;
+
+    fn sub(self, rhs: &GpuScalarVec) -> Self::Output {
+        let c = Runtime::get().alloc::<u32>(self.u32_len());
+
+        GpuScalarVec::run_binary_kernel(self, rhs, &c, "kernel_scalar29_sub");
+
+        GpuScalarVec {
+            data: c,
+            len: self.len()
+        }
+    }
+}
+
+impl Add<GpuScalarVec> for GpuScalarVec {
+    type Output = Self;
+
+    fn add(self, rhs: GpuScalarVec) -> Self::Output {
+        &self + &rhs
+    }
+}
+
+impl Add<&GpuScalarVec> for GpuScalarVec {
+    type Output = Self;
+
+    fn add(self, rhs: &GpuScalarVec) -> Self::Output {
+        &self + rhs
+    }
+}
+
+impl Add<GpuScalarVec> for &GpuScalarVec {
+    type Output = GpuScalarVec;
+
+    fn add(self, rhs: GpuScalarVec) -> Self::Output {
+        self + &rhs
+    }
+}
+
+impl Add<&GpuScalarVec> for &GpuScalarVec {
+    type Output = GpuScalarVec;
+
+    fn add(self, rhs: &GpuScalarVec) -> Self::Output {
+        let c = Runtime::get().alloc::<u32>(self.u32_len());
+
+        GpuScalarVec::run_binary_kernel(self, rhs, &c, "kernel_scalar29_add");
+
+        GpuScalarVec {
+            data: c,
+            len: self.len()
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use rand::thread_rng;
@@ -193,7 +271,7 @@ mod tests {
         let a_v = GpuScalarVec::new(&a);
         let c_v = a_v.clone();
 
-        GpuScalarVec::run_unary(&a_v, &c_v.data, "test_scalar_can_pack_unpack_a");
+        GpuScalarVec::run_unary_kernel(&a_v, &c_v.data, "test_scalar_can_pack_unpack_a");
     }
 
     #[test]
@@ -207,6 +285,48 @@ mod tests {
         let a_v = GpuScalarVec::new(&a);
         let c_v = a_v.clone();
 
-        GpuScalarVec::run_unary(&a_v, &c_v.data, "test_scalar_can_pack_unpack_a");
+        GpuScalarVec::run_unary_kernel(&a_v, &c_v.data, "test_scalar_can_pack_unpack_a");
+    }
+
+    #[test]
+    fn can_sub() {
+        let a = (0..238)
+            .into_iter()
+            .map(|_| Scalar::random(&mut thread_rng()))
+            .collect::<Vec<_>>();
+        let b = (0..238)
+            .into_iter()
+            .map(|_| Scalar::random(&mut thread_rng()))
+            .collect::<Vec<_>>();
+
+        let a_v = GpuScalarVec::new(&a);
+        let b_v = GpuScalarVec::new(&b);
+
+        let c_v = a_v - b_v;
+
+        for (i, c) in c_v.iter().enumerate() {
+            assert_eq!(c, a[i] - b[i]);
+        }
+    }
+
+    #[test]
+    fn can_add() {
+        let a = (0..238)
+            .into_iter()
+            .map(|_| Scalar::random(&mut thread_rng()))
+            .collect::<Vec<_>>();
+        let b = (0..238)
+            .into_iter()
+            .map(|_| Scalar::random(&mut thread_rng()))
+            .collect::<Vec<_>>();
+
+        let a_v = GpuScalarVec::new(&a);
+        let b_v = GpuScalarVec::new(&b);
+
+        let c_v = a_v + b_v;
+
+        for (i, c) in c_v.iter().enumerate() {
+            assert_eq!(c, a[i] + b[i]);
+        }
     }
 }

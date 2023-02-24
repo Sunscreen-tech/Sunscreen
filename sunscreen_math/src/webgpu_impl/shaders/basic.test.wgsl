@@ -7,7 +7,3 @@ fn add(
         g_c[gid.x] = g_a[gid.x] + g_b[gid.x];
     }
 }
-
-struct Horse {
-    x: u32,
-}

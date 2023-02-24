@@ -2450,6 +2450,7 @@ dependencies = [
  "sunscreen_curve25519",
  "tokio",
  "wgpu",
+ "wgpu-core",
 ]
 
 [[package]]

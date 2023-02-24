@@ -1,11 +1,12 @@
 #[cfg(feature = "webgpu")]
 // This simply concatenates all the wgsl shaders, which get compiled at runtime.
 fn compile_wgsl_shaders() {
-    use std::{path::PathBuf, process::Command};
-    use std::fs::{DirEntry, File, read_to_string};
+    use std::fs::{read_to_string, DirEntry, File};
     use std::io::Write;
+    use std::{path::PathBuf};
 
-    use naga::valid::{ValidationFlags, Capabilities};
+    use naga::valid::{Capabilities, ValidationFlags};
+    use wgpu_core::pipeline::{CreateShaderModuleError, ShaderError};
 
     let outdir = PathBuf::from(std::env::var("OUT_DIR").unwrap());
     let shader_dir = PathBuf::from(".")
@@ -27,9 +28,7 @@ fn compile_wgsl_shaders() {
         let include_file: Box<dyn Fn(&DirEntry) -> bool> = if config == "test" {
             Box::new(is_wgsl_file)
         } else {
-            Box::new(|file: &DirEntry| {
-                is_wgsl_file(file) && !is_test_wgsl_file(file)
-            })
+            Box::new(|file: &DirEntry| is_wgsl_file(file) && !is_test_wgsl_file(file))
         };
 
         let shaders = std::fs::read_dir(&shader_dir)
@@ -38,7 +37,7 @@ fn compile_wgsl_shaders() {
             .filter(include_file);
 
         let out_file_path = outdir.join(format!("shaders-{config}.wgsl"));
-        
+
         {
             let mut out_file = File::create(&out_file_path).unwrap();
 
@@ -50,15 +49,23 @@ fn compile_wgsl_shaders() {
         };
 
         // Validate the shader
-        let shader_contents = read_to_string(out_file_path).unwrap();
+        let shader_contents = read_to_string(&out_file_path).unwrap();
 
         let parse_result = naga::front::wgsl::parse_str(&shader_contents);
 
         if let Err(e) = parse_result {
-            panic!("{}", e.message());
+            let e = ShaderError {
+                source: shader_contents,
+                label: None,
+                inner: Box::new(e)
+            };
+
+            let e = CreateShaderModuleError::Parsing(e);
+            panic!("{}", e);
         }
 
-        let mut validator = naga::valid::Validator::new(ValidationFlags::all(), Capabilities::empty());
+        let mut validator =
+            naga::valid::Validator::new(ValidationFlags::all(), Capabilities::empty());
 
         let validation_results = validator.validate(&parse_result.unwrap());
 

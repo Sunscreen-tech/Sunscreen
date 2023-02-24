@@ -10,8 +10,6 @@ struct Foo {
     v: array<u32>
 }
 
-const Scalar29_Zero: Scalar29 = Scalar29(array<u32, 9>(0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u));
-
 // WGSL is terrible in that you can't pass arrays of unknown length to functions. So, we create
 // functions for unpacking bindings a, b respectively.
 fn scalar29_unpack_a(grid_tid: u32, stride: u32) -> Scalar29 {
@@ -68,4 +66,42 @@ fn scalar29_pack_c(val: Scalar29, grid_tid: u32, stride: u32) {
     g_c[6u * stride + grid_tid] = word;
     word = val.v[7] >> 21u | val.v[8u] << 8u;
     g_c[7u * stride + grid_tid] = word;
+}
+
+fn scalar29_add(a: ptr<function, Scalar29>, b: ptr<function, Scalar29>) -> Scalar29 {
+    var sum = Scalar29_Zero;
+    let mask = (0x1u << 29u) - 1u;
+
+    // a + b
+    var carry = 0u;
+    for (var i = 0u; i < 9u; i++) {
+        carry = a.v[i] + b.v[i] + (carry >> 29u);
+        sum.v[i] = carry & mask;
+    }
+
+    // subtract l if the sum is >= l
+    return scalar29_sub(&sum, &Scalar29_L);
+}
+
+fn scalar29_sub(a: ptr<function, Scalar29>, b: ptr<function, Scalar29>) -> Scalar29 {
+    var difference = Scalar29_Zero;
+    let mask = (1u << 29u) - 1u;
+
+    // a - b
+    var borrow = 0u;
+    for (var i = 0u; i < 9u; i++) {
+        borrow = a.v[i] - (b.v[i] + (borrow >> 31u));
+        difference.v[i] = borrow & mask;
+    }
+
+    // conditionally add l if the difference is negative
+    let underflow_mask = ((borrow >> 31u) ^ 1u) - 1u;
+
+    var carry = 0u;
+    for (var i = 0u; i < 9u; i++) {
+        carry = (carry >> 29) + difference[i] + (Scalar29_L.v[i] & underflow_mask);
+        difference[i] = carry & mask;
+    }
+
+    return difference;
 }

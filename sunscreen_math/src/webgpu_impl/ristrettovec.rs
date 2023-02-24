@@ -1,3 +1,1 @@
-pub struct GpuRistrettoPointVec {
-    
-}
+pub struct GpuRistrettoPointVec {}

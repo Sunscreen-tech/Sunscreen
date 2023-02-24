@@ -3,7 +3,7 @@ use std::mem::size_of;
 use curve25519_dalek::scalar::Scalar;
 use wgpu::Buffer;
 
-use super::{Runtime, BufferExt};
+use super::{BufferExt, Runtime};
 
 pub struct GpuScalarVec {
     data: Buffer,
@@ -12,14 +12,14 @@ pub struct GpuScalarVec {
 impl Clone for GpuScalarVec {
     fn clone(&self) -> Self {
         Self {
-            data: self.data.clone()
+            data: self.data.clone(),
         }
     }
 }
 
 pub struct Scalars {
     data: Vec<u32>,
-    i: usize
+    i: usize,
 }
 
 impl Scalars {
@@ -109,7 +109,7 @@ impl GpuScalarVec {
         }
 
         Self {
-            data: runtime.alloc_from_slice(&packed_data)
+            data: runtime.alloc_from_slice(&packed_data),
         }
     }
 
@@ -124,13 +124,16 @@ impl GpuScalarVec {
 mod tests {
     use rand::thread_rng;
 
-    use crate::webgpu_impl::{Grid, GpuU32};
+    use crate::webgpu_impl::{GpuU32, Grid};
 
     use super::*;
-    
+
     #[test]
     fn can_unpack_scalarvec() {
-        let a = (0..238).into_iter().map(|_| Scalar::random(&mut thread_rng())).collect::<Vec<_>>();
+        let a = (0..238)
+            .into_iter()
+            .map(|_| Scalar::random(&mut thread_rng()))
+            .collect::<Vec<_>>();
 
         let a_v = GpuScalarVec::new(&a);
 
@@ -146,7 +149,10 @@ mod tests {
 
     #[test]
     fn can_clone_scalarvec() {
-        let a = (0..238).into_iter().map(|_| Scalar::random(&mut thread_rng())).collect::<Vec<_>>();
+        let a = (0..238)
+            .into_iter()
+            .map(|_| Scalar::random(&mut thread_rng()))
+            .collect::<Vec<_>>();
 
         let a_v = GpuScalarVec::new(&a);
         let a_v_clone = a_v.clone();
@@ -161,11 +167,13 @@ mod tests {
         assert_eq!(count, a.len());
     }
 
-
     #[test]
     fn can_pack_unpack_shader_operand_a() {
         // Use 238 because it's a weird number not a multiple of the threadgroup size.
-        let a = (0..238).into_iter().map(|_| Scalar::random(&mut thread_rng())).collect::<Vec<_>>();
+        let a = (0..238)
+            .into_iter()
+            .map(|_| Scalar::random(&mut thread_rng()))
+            .collect::<Vec<_>>();
 
         let a_v = GpuScalarVec::new(&a);
         let c_v = a_v.clone();
@@ -174,6 +182,32 @@ mod tests {
 
         let len = GpuU32::new(a.len() as u32);
 
-        runtime.run("test_scalar_can_pack_unpack_a", &[&a_v.data, &a_v.data, &c_v.data, &len.data], &Grid::new(2, 1, 1));
+        runtime.run(
+            "test_scalar_can_pack_unpack_a",
+            &[&a_v.data, &a_v.data, &c_v.data, &len.data],
+            &Grid::new(2, 1, 1),
+        );
+    }
+
+    #[test]
+    fn can_pack_unpack_shader_operand_b() {
+        // Use 238 because it's a weird number not a multiple of the threadgroup size.
+        let a = (0..238)
+            .into_iter()
+            .map(|_| Scalar::random(&mut thread_rng()))
+            .collect::<Vec<_>>();
+
+        let a_v = GpuScalarVec::new(&a);
+        let c_v = a_v.clone();
+
+        let runtime = Runtime::get();
+
+        let len = GpuU32::new(a.len() as u32);
+
+        runtime.run(
+            "test_scalar_can_pack_unpack_b",
+            &[&a_v.data, &a_v.data, &c_v.data, &len.data],
+            &Grid::new(2, 1, 1),
+        );
     }
 }

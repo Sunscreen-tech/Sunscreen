@@ -1,11 +1,21 @@
 use core::slice;
-use std::{borrow::Cow, ops::Deref, mem::{align_of, MaybeUninit, size_of}};
+use std::{
+    borrow::Cow,
+    mem::{align_of, size_of, MaybeUninit},
+    ops::Deref,
+};
 
 use bytemuck::{cast, cast_slice, Pod};
 use futures::channel::oneshot;
 use lazy_static::lazy_static;
 use tokio::runtime::{Builder as TokioRuntimeBuilder, Runtime as TokioRuntime};
-use wgpu::{Instance, RequestAdapterOptions, Device, Queue, ShaderModuleDescriptor, ShaderModule, BufferDescriptor, COPY_BUFFER_ALIGNMENT, BufferUsages, Buffer, ComputePipelineDescriptor, BindGroupDescriptor, BindGroupEntry, CommandEncoderDescriptor, ComputePassDescriptor, util::{BufferInitDescriptor, DeviceExt}, Maintain};
+use wgpu::{
+    util::{BufferInitDescriptor, DeviceExt},
+    BindGroupDescriptor, BindGroupEntry, Buffer, BufferDescriptor, BufferUsages,
+    CommandEncoderDescriptor, ComputePassDescriptor, ComputePipelineDescriptor, Device, Instance,
+    Maintain, Queue, RequestAdapterOptions, ShaderModule, ShaderModuleDescriptor,
+    COPY_BUFFER_ALIGNMENT,
+};
 
 mod ristrettovec;
 mod scalarvec;
@@ -23,14 +33,10 @@ pub struct Runtime {
 // test and release. In test, we #define the TEST macro, which exposes test kernels.
 // The release library does not feature these kernels.
 #[cfg(not(test))]
-const SHADERS: &str = include_str!(concat!(
-    env!("OUT_DIR"),
-    "/shaders-release.wgsl"
-));
+const SHADERS: &str = include_str!(concat!(env!("OUT_DIR"), "/shaders-release.wgsl"));
 
 #[cfg(test)]
-const SHADERS: &str =
-    include_str!(concat!(env!("OUT_DIR"), "/shaders-test.wgsl"));
+const SHADERS: &str = include_str!(concat!(env!("OUT_DIR"), "/shaders-test.wgsl"));
 
 fn assert_aligned<T>(ptr: *const T) {
     assert!(ptr.cast::<()>().align_offset(align_of::<T>()) == 0);
@@ -52,6 +58,33 @@ trait BufferExt {
     fn get_data<T: Pod + Copy>(&self) -> Vec<T>;
 }
 
+pub trait GpuVec {
+    type IterType: Sized;
+
+    fn get_buffer(&self) -> &Buffer;
+
+    fn len(&self) -> usize;
+
+    fn byte_len(&self) -> usize {
+        self.len() * size_of::<Self::IterType>()
+    }
+
+    fn u32_len(&self) -> usize {
+        self.byte_len() / size_of::<u32>()
+    }
+
+    fn run_unary<Rhs: GpuVec>(&self, output: &Buffer, kernel_name: &'static str) {
+        let runtime = Runtime::get();
+        let len = GpuU32::new(self.len() as u32);
+
+        runtime.run(
+            kernel_name,
+            &[self.get_buffer(), &DUMMY_BUFFER, output, &len.data],
+            &Grid::new(self.len() as u32 / 128, 1, 1),
+        );
+    }
+}
+
 impl BufferExt for Buffer {
     fn clone(&self) -> Buffer {
         let runtime = Runtime::get();
@@ -65,7 +98,9 @@ impl BufferExt for Buffer {
     fn copy_into(&self, dst: &Buffer) {
         let runtime = Runtime::get();
 
-        let mut encoder = runtime.device.create_command_encoder(&CommandEncoderDescriptor { label: None });
+        let mut encoder = runtime
+            .device
+            .create_command_encoder(&CommandEncoderDescriptor { label: None });
         encoder.copy_buffer_to_buffer(self, 0, &dst, 0, self.size());
 
         runtime.queue.submit(Some(encoder.finish()));
@@ -76,7 +111,7 @@ impl BufferExt for Buffer {
         let (s, r) = oneshot::channel();
 
         // In vanilla WebGPU, if you use the MAP_READ flag, you must also set COPY_DST
-        // and *only* COPY_DST. This means you can't use such buffers in compute 
+        // and *only* COPY_DST. This means you can't use such buffers in compute
         // shaders. As such, we create a temporary buffer with these properties so we
         // can copy data out of the shader-capable buffer and return the results.
         let runtime = Runtime::get();
@@ -85,13 +120,15 @@ impl BufferExt for Buffer {
             label: None,
             size: self.size(),
             usage: BufferUsages::MAP_READ | BufferUsages::COPY_DST,
-            mapped_at_creation: false
+            mapped_at_creation: false,
         });
 
         self.copy_into(&copy_buf);
 
         let buffer_slice = copy_buf.slice(..);
-        buffer_slice.map_async(wgpu::MapMode::Read, move |v| { s.send(v).unwrap(); });
+        buffer_slice.map_async(wgpu::MapMode::Read, move |v| {
+            s.send(v).unwrap();
+        });
 
         runtime.device.poll(Maintain::Wait);
 
@@ -113,15 +150,19 @@ impl Runtime {
     pub fn alloc<T>(&self, len: usize) -> Buffer {
         let len = size_of::<T>() * len;
 
-        // Round up len to a multiple of COPY_BUFFER_ALIGNMENT, as required to use 
+        // Round up len to a multiple of COPY_BUFFER_ALIGNMENT, as required to use
         // mapped_at_creation=true
-        let len = if len % COPY_BUFFER_ALIGNMENT as usize == 0 { len } else { (len / COPY_BUFFER_ALIGNMENT as usize + 1) * COPY_BUFFER_ALIGNMENT as usize};
+        let len = if len % COPY_BUFFER_ALIGNMENT as usize == 0 {
+            len
+        } else {
+            (len / COPY_BUFFER_ALIGNMENT as usize + 1) * COPY_BUFFER_ALIGNMENT as usize
+        };
 
         let buffer = self.device.create_buffer(&BufferDescriptor {
             label: None,
             size: len as u64,
             usage: BufferUsages::STORAGE | BufferUsages::COPY_SRC | BufferUsages::COPY_DST,
-            mapped_at_creation: false
+            mapped_at_creation: false,
         });
 
         buffer
@@ -130,9 +171,13 @@ impl Runtime {
     pub fn alloc_from_slice<T: Pod>(&self, data: &[T]) -> Buffer {
         let len = size_of::<T>() * data.len();
 
-        // Round up len to a multiple of COPY_BUFFER_ALIGNMENT, as required to use 
+        // Round up len to a multiple of COPY_BUFFER_ALIGNMENT, as required to use
         // mapped_at_creation=true
-        let len = if len % COPY_BUFFER_ALIGNMENT as usize == 0 { len } else { (len / COPY_BUFFER_ALIGNMENT as usize + 1) * COPY_BUFFER_ALIGNMENT as usize};
+        let len = if len % COPY_BUFFER_ALIGNMENT as usize == 0 {
+            len
+        } else {
+            (len / COPY_BUFFER_ALIGNMENT as usize + 1) * COPY_BUFFER_ALIGNMENT as usize
+        };
 
         let buffer = self.device.create_buffer_init(&BufferInitDescriptor {
             label: None,
@@ -144,19 +189,23 @@ impl Runtime {
     }
 
     pub fn run(&self, kernel_name: &'static str, args: &[&Buffer], threadgroups: &Grid) {
-        let pipeline = self.device.create_compute_pipeline(&ComputePipelineDescriptor {
-            label: None,
-            layout: None,
-            module: &self.shaders,
-            entry_point: kernel_name
-        });
+        let pipeline = self
+            .device
+            .create_compute_pipeline(&ComputePipelineDescriptor {
+                label: None,
+                layout: None,
+                module: &self.shaders,
+                entry_point: kernel_name,
+            });
 
-        let bindings = args.iter().enumerate().map(|(i, b)| {
-            BindGroupEntry {
+        let bindings = args
+            .iter()
+            .enumerate()
+            .map(|(i, b)| BindGroupEntry {
                 binding: i as u32,
-                resource: b.as_entire_binding()
-            }
-        }).collect::<Vec<_>>();
+                resource: b.as_entire_binding(),
+            })
+            .collect::<Vec<_>>();
 
         let layout = pipeline.get_bind_group_layout(0);
 
@@ -166,7 +215,9 @@ impl Runtime {
             entries: &bindings,
         });
 
-        let mut encoder = self.device.create_command_encoder(&CommandEncoderDescriptor { label: None });
+        let mut encoder = self
+            .device
+            .create_command_encoder(&CommandEncoderDescriptor { label: None });
 
         {
             let (x, y, z) = threadgroups.0;
@@ -182,7 +233,6 @@ impl Runtime {
         assert!(self.device.poll(wgpu::MaintainBase::Wait));
     }
 }
-
 
 lazy_static! {
     static ref TOKIO_RUNTIME: TokioRuntime = {
@@ -228,10 +278,16 @@ lazy_static! {
             shaders
         }
     };
+
+    /// A 4-byte buffer that exists so you can bind a buffer to `g_b`
+    /// in unary shaders.
+    static ref DUMMY_BUFFER: Buffer = {
+        Runtime::get().alloc::<u32>(1)
+    };
 }
 
 pub struct GpuU32 {
-    data: Buffer
+    data: Buffer,
 }
 
 impl GpuU32 {
@@ -239,9 +295,7 @@ impl GpuU32 {
         let runtime = Runtime::get();
         let data = runtime.alloc_from_slice(&[val]);
 
-        Self {
-            data
-        }
+        Self { data }
     }
 }
 
@@ -269,7 +323,11 @@ mod tests {
 
         let n = GpuU32::new(a.len() as u32);
 
-        runtime.run("add", &[&a_gpu, &b_gpu, &c_gpu, &n.data], &Grid::new(1, 1, 1));
+        runtime.run(
+            "add",
+            &[&a_gpu, &b_gpu, &c_gpu, &n.data],
+            &Grid::new(1, 1, 1),
+        );
 
         for (c, (a, b)) in c_gpu.get_data::<u32>().iter().zip(a.iter().zip(b.iter())) {
             assert_eq!(*c, a + b);

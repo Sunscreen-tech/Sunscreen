@@ -18,12 +18,11 @@ wgpu = { version = "0.15.1", optional = true }
 
 [build-dependencies]
 naga = { version = "0.11.0", optional = true, features = ["wgsl-in"]}
-clang = { version = "2.0.0", optional = true }
 
 [features]
 default = ["webgpu"]
 nightly-features = []
 metal = ["dep:metal", "gpu"]
-webgpu = ["dep:wgpu", "dep:tokio", "dep:futures", "dep:naga", "dep:bytemuck", "dep:clang", "gpu"]
+webgpu = ["dep:wgpu", "dep:tokio", "dep:futures", "dep:naga", "dep:bytemuck", "gpu"]
 gpu = []
 pina = []

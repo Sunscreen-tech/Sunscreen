@@ -50,7 +50,6 @@ fn scalar29_unpack_b(grid_tid: u32, stride: u32) -> Scalar29 {
     return s;
 }
 
-
 fn scalar29_pack_c(val: Scalar29, grid_tid: u32, stride: u32) {
     var word: u32 = val.v[0u] | val.v[1u] << 29u;
 

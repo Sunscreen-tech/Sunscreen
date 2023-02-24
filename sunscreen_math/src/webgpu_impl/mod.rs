@@ -73,14 +73,14 @@ pub trait GpuVec {
         self.byte_len() / size_of::<u32>()
     }
 
-    fn run_unary<Rhs: GpuVec>(&self, output: &Buffer, kernel_name: &'static str) {
+    fn run_unary(lhs: &Self, output: &Buffer, kernel_name: &'static str) {
         let runtime = Runtime::get();
-        let len = GpuU32::new(self.len() as u32);
+        let len = GpuU32::new(lhs.len() as u32);
 
         runtime.run(
             kernel_name,
-            &[self.get_buffer(), &DUMMY_BUFFER, output, &len.data],
-            &Grid::new(self.len() as u32 / 128, 1, 1),
+            &[lhs.get_buffer(), &DUMMY_BUFFER, output, &len.data],
+            &Grid::new(lhs.len() as u32 / 128, 1, 1),
         );
     }
 }

@@ -3,17 +3,31 @@ use std::mem::size_of;
 use curve25519_dalek::scalar::Scalar;
 use wgpu::Buffer;
 
-use super::{BufferExt, Runtime};
+use super::{BufferExt, Runtime, GpuVec};
 
 pub struct GpuScalarVec {
     data: Buffer,
+    len: usize,
 }
 
 impl Clone for GpuScalarVec {
     fn clone(&self) -> Self {
         Self {
             data: self.data.clone(),
+            len: self.len
         }
+    }
+}
+
+impl GpuVec for GpuScalarVec {
+    type IterType = Scalar;
+
+    fn len(&self) -> usize {
+        self.len
+    }
+
+    fn get_buffer(&self) -> &Buffer {
+        &self.data    
     }
 }
 
@@ -110,6 +124,7 @@ impl GpuScalarVec {
 
         Self {
             data: runtime.alloc_from_slice(&packed_data),
+            len: x.len()
         }
     }
 
@@ -178,15 +193,7 @@ mod tests {
         let a_v = GpuScalarVec::new(&a);
         let c_v = a_v.clone();
 
-        let runtime = Runtime::get();
-
-        let len = GpuU32::new(a.len() as u32);
-
-        runtime.run(
-            "test_scalar_can_pack_unpack_a",
-            &[&a_v.data, &a_v.data, &c_v.data, &len.data],
-            &Grid::new(2, 1, 1),
-        );
+        GpuScalarVec::run_unary(&a_v, &c_v.data, "test_scalar_can_pack_unpack_a");
     }
 
     #[test]
@@ -200,14 +207,6 @@ mod tests {
         let a_v = GpuScalarVec::new(&a);
         let c_v = a_v.clone();
 
-        let runtime = Runtime::get();
-
-        let len = GpuU32::new(a.len() as u32);
-
-        runtime.run(
-            "test_scalar_can_pack_unpack_b",
-            &[&a_v.data, &a_v.data, &c_v.data, &len.data],
-            &Grid::new(2, 1, 1),
-        );
+        GpuScalarVec::run_unary(&a_v, &c_v.data, "test_scalar_can_pack_unpack_a");
     }
 }

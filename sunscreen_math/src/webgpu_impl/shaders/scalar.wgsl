@@ -111,6 +111,70 @@ fn scalar29_sub(a: ptr<function, Scalar29>, b: ptr<function, Scalar29>) -> Scala
     return difference;
 }
 
+/*
+fn scalar29_mul(a: ptr<function, Scalar29>, b: ptr<function, Scalar29>) -> Scalar29 {
+    var ab = montgomery_reduce(mul_internal(&a, &b));
+
+    var rr = Scalar29_RR;
+    return montgomery_reduce(mul_internal(&ab, &rr));
+}
+
+
+fn mul_internal(a: ptr<function, Scalar29>, b: ptr<function, Scalar29>) -> u64 {
+    u64 z;
+
+    z[0] = m(a[0], b[0]);                                                                 // c00
+    z[1] = m(a[0], b[1]) + m(a[1], b[0]);                                                 // c01
+    z[2] = m(a[0], b[2]) + m(a[1], b[1]) + m(a[2], b[0]);                                 // c02
+    z[3] = m(a[0], b[3]) + m(a[1], b[2]) + m(a[2], b[1]) + m(a[3], b[0]);                 // c03
+    z[4] = m(a[0], b[4]) + m(a[1], b[3]) + m(a[2], b[2]) + m(a[3], b[1]) + m(a[4], b[0]); // c04
+    z[5] =                 m(a[1], b[4]) + m(a[2], b[3]) + m(a[3], b[2]) + m(a[4], b[1]); // c05
+    z[6] =                                 m(a[2], b[4]) + m(a[3], b[3]) + m(a[4], b[2]); // c06
+    z[7] =                                                 m(a[3], b[4]) + m(a[4], b[3]); // c07
+    z[8] =                                                                (m(a[4], b[4])) - z[3]; // c08 - c03
+
+    z[10] = z[5] - m(a[5], b[5]);                                                        // c05mc10
+    z[11] = z[6] - (m(a[5], b[6]) + m(a[6], b[5]));                                      // c06mc11
+    z[12] = z[7] - (m(a[5], b[7]) + m(a[6], b[6]) + m(a[7], b[5]));                      // c07mc12
+    z[13] =                   m(a[5], b[8]) + m(a[6], b[7]) + m(a[7], b[6]) + m(a[8], b[5]); // c13
+    z[14] =                                   m(a[6], b[8]) + m(a[7], b[7]) + m(a[8], b[6]); // c14
+    z[15] =                                                   m(a[7], b[8]) + m(a[8], b[7]); // c15
+    z[16] =                                                                   m(a[8], b[8]); // c16
+
+    z[ 5] = z[10] - (z[ 0]); // c05mc10 - c00
+    z[ 6] = z[11] - (z[ 1]); // c06mc11 - c01
+    z[ 7] = z[12] - (z[ 2]); // c07mc12 - c02
+    z[ 8] = z[ 8] - (z[13]); // c08mc13 - c03
+    z[ 9] = z[14] + (z[ 4]); // c14 + c04
+    z[10] = z[15] + (z[10]); // c15 + c05mc10
+    z[11] = z[16] + (z[11]); // c16 + c06mc11
+
+    u64 aa[] = {
+        a[0] + a[5],
+        a[1] + a[6],
+        a[2] + a[7],
+        a[3] + a[8]
+    };
+
+    u64 bb[] = {
+        b[0] + b[5],
+        b[1] + b[6],
+        b[2] + b[7],
+        b[3] + b[8]
+    };
+
+    z[ 5] = (m(aa[0], bb[0]))                                                                        + (z[ 5]); // c20 + c05mc10 - c00
+    z[ 6] = (m(aa[0], bb[1]) + m(aa[1], bb[0]))                                                      + (z[ 6]); // c21 + c06mc11 - c01
+    z[ 7] = (m(aa[0], bb[2]) + m(aa[1], bb[1]) + m(aa[2], bb[0]))                                    + (z[ 7]); // c22 + c07mc12 - c02
+    z[ 8] = (m(aa[0], bb[3]) + m(aa[1], bb[2]) + m(aa[2], bb[1]) + m(aa[3], bb[0]))                  + (z[ 8]); // c23 + c08mc13 - c03
+    z[ 9] = (m(aa[0],  b[4]) + m(aa[1], bb[3]) + m(aa[2], bb[2]) + m(aa[3], bb[1]) + m(a[4], bb[0])) - (z[ 9]); // c24 - c14 - c04
+    z[10] = (                  m(aa[1],  b[4]) + m(aa[2], bb[3]) + m(aa[3], bb[2]) + m(a[4], bb[1])) - (z[10]); // c25 - c15 - c05mc10
+    z[11] = (                                    m(aa[2],  b[4]) + m(aa[3], bb[3]) + m(a[4], bb[2])) - (z[11]); // c26 - c16 - c06mc11
+    z[12] = (                                                      m(aa[3],  b[4]) + m(a[4], bb[3])) - (z[12]); // c27 - c07mc12
+
+    return z;
+}*/
+
 @compute
 @workgroup_size(128, 1, 1)
 fn kernel_scalar29_sub(

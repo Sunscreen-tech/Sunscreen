@@ -328,6 +328,8 @@ impl GpuU32 {
 mod tests {
     use std::mem::size_of;
 
+    use rand::{thread_rng, RngCore};
+
     use super::*;
 
     #[test]
@@ -356,6 +358,48 @@ mod tests {
 
         for (c, (a, b)) in c_gpu.get_data::<u32>().iter().zip(a.iter().zip(b.iter())) {
             assert_eq!(*c, a + b);
+        }
+    }
+
+    #[test]
+    fn can_wide_mul() {
+        let a = (0..253).into_iter().map(|_| thread_rng().next_u32()).collect::<Vec<_>>();
+        let b = (0..253).into_iter().map(|_| thread_rng().next_u32()).collect::<Vec<_>>();
+        //let a = vec![0xFFFFFFFFu32; 253];
+        //let b = vec![0xFFFFFFFFu32; 253];
+        
+        let a_len = a.len();
+
+        let runtime = Runtime::get();
+
+        let a_vec = runtime.alloc_from_slice(&a);
+        let b_vec = runtime.alloc_from_slice(&b);
+        let c_vec = runtime.alloc::<u32>(a.len() * 2); // * 2 for lo and hi words
+
+        let len = GpuU32::new(a.len() as u32);
+
+        let threadgroups = if a.len() % 128 == 0 { a.len() / 128 } else { a.len() / 128 + 1 };
+        
+        runtime.run("test_wide_mul", &[&a_vec, &b_vec, &c_vec, &len.data], &Grid::new(threadgroups as u32, 1, 1));
+
+        let c = c_vec.get_data::<u32>();
+
+        for (i, (a, b)) in a.iter().zip(b.iter()).enumerate() {
+            dbg!(a);
+            dbg!(b);
+            dbg!(i);
+            let expected = *a as u64 * *b as u64;
+
+            let actual = c[i] as u64 | (c[i] as u64) << 32;
+
+            assert_eq!(expected & 0xFFFFFFFF, c[i] as u64);
+
+            let actual_hi = c[a_len + i];
+            let expected_hi = (expected >> 32) as u32;
+
+            assert_eq!(expected_hi, actual_hi);
+
+            //assert_eq!(expected, actual);
         }
     }
 }

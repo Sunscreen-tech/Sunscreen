@@ -1181,6 +1181,12 @@ mod benches {
             [zero.clone(), p_1.clone(), zero.clone(), one.clone()],
         ]);
 
+        // Secret key
+        // a = random in q
+        // e_1 = q / 2p
+        // c_1 = s * a + e_1 + del * m
+        // c_2 = a
+
         let m = p_0.clone();
         let u = p_0.clone();
         let e_1 = p_0.clone();

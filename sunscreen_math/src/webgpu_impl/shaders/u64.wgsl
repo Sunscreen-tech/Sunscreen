@@ -3,7 +3,7 @@ struct u64 {
     hi: u32
 }
 
-fn wide_mul(a: u32, b: u32) -> u64 {
+fn mul_wide(a: u32, b: u32) -> u64 {
     // Break a and b into 16-bit words.
     // Compute product as
     //     a b
@@ -42,4 +42,11 @@ fn wide_mul(a: u32, b: u32) -> u64 {
 
     // For the high word, we add the carries.
     return u64(lo, ac + (ad >> 16u) + (cb >> 16u) + carry1 + carry2);
+}
+
+fn u64_add(a: u64, b: u64) -> u64 {
+    let lo = a.lo + b.lo;
+    let carry = u32(lo < a.lo);
+
+    return u64(lo, a.hi + b.hi);
 }

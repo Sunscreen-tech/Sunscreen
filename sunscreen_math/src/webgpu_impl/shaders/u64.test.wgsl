@@ -10,7 +10,7 @@ fn test_wide_mul(
     let a = g_a[gid.x];
     let b = g_b[gid.x];
 
-    let c = wide_mul(a, b);
+    let c = mul_wide(a, b);
 
     g_c[gid.x] = c.lo;
     g_c[g_len + gid.x] = c.hi;

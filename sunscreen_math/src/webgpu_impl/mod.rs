@@ -365,8 +365,6 @@ mod tests {
     fn can_wide_mul() {
         let a = (0..253).into_iter().map(|_| thread_rng().next_u32()).collect::<Vec<_>>();
         let b = (0..253).into_iter().map(|_| thread_rng().next_u32()).collect::<Vec<_>>();
-        //let a = vec![0xFFFFFFFFu32; 253];
-        //let b = vec![0xFFFFFFFFu32; 253];
         
         let a_len = a.len();
 
@@ -390,7 +388,7 @@ mod tests {
             dbg!(i);
             let expected = *a as u64 * *b as u64;
 
-            let actual = c[i] as u64 | (c[i] as u64) << 32;
+            let actual = c[i] as u64 | (c[a_len + i] as u64) << 32;
 
             assert_eq!(expected & 0xFFFFFFFF, c[i] as u64);
 
@@ -398,8 +396,7 @@ mod tests {
             let expected_hi = (expected >> 32) as u32;
 
             assert_eq!(expected_hi, actual_hi);
-
-            //assert_eq!(expected, actual);
+            assert_eq!(expected, actual);
         }
     }
 }

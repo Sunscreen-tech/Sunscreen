@@ -48,5 +48,12 @@ fn u64_add(a: u64, b: u64) -> u64 {
     let lo = a.lo + b.lo;
     let carry = u32(lo < a.lo);
 
-    return u64(lo, a.hi + b.hi);
+    return u64(lo, a.hi + b.hi + carry);
+}
+
+fn u64_sub(a: u64, b: u64) -> u64 {
+    let lo = a.lo - b.lo;
+    let borrow = u32(b.lo > a.lo);
+
+    return u64(lo, a.hi - b.hi - borrow);
 }

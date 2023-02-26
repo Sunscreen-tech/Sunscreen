@@ -111,7 +111,7 @@ fn scalar29_sub(a: ptr<function, Scalar29>, b: ptr<function, Scalar29>) -> Scala
     return difference;
 }
 
-/*
+
 fn scalar29_mul(a: ptr<function, Scalar29>, b: ptr<function, Scalar29>) -> Scalar29 {
     var ab = montgomery_reduce(mul_internal(a, b));
 
@@ -178,21 +178,49 @@ fn mul_internal(a: ptr<function, Scalar29>, b: ptr<function, Scalar29>) -> array
     let z_81 = mul_wide((*a).v[4], (*b).v[4]);
     z[8] = u64_sub(z_81, z[3]);
 
-    z[10] = z[5] - mul_wide((*a).v[5], (*b).v[5]);                                                        // c05mc10
-    z[11] = z[6] - (mul_wide((*a).v[5], (*b).v[6]) + mul_wide((*a).v[6], (*b).v[5]));                                      // c06mc11
-    z[12] = z[7] - (mul_wide((*a).v[5], (*b).v[7]) + mul_wide((*a).v[6], (*b).v[6]) + mul_wide((*a).v[7], (*b).v[5]));                      // c07mc12
-    z[13] =                   mul_wide((*a).v[5], (*b).v[8]) + mul_wide((*a).v[6], (*b).v[7]) + mul_wide((*a).v[7], (*b).v[6]) + mul_wide((*a).v[8], (*b).v[5]); // c13
-    z[14] =                                   mul_wide((*a).v[6], (*b).v[8]) + mul_wide((*a).v[7], (*b).v[7]) + mul_wide((*a).v[8], (*b).v[6]); // c14
-    z[15] =                                                   mul_wide((*a).v[7], (*b).v[8]) + mul_wide((*a).v[8], (*b).v[7]); // c15
-    z[16] =                                                                   mul_wide((*a).v[8], (*b).v[8]); // c16
+    // c05mc10
+    let z_10_1 = mul_wide((*a).v[5], (*b).v[5]);
+    z[10] = u64_sub(z[5], z_10_1);
 
-    z[ 5] = z[10] - (z[ 0]); // c05mc10 - c00
-    z[ 6] = z[11] - (z[ 1]); // c06mc11 - c01
-    z[ 7] = z[12] - (z[ 2]); // c07mc12 - c02
-    z[ 8] = z[ 8] - (z[13]); // c08mc13 - c03
-    z[ 9] = z[14] + (z[ 4]); // c14 + c04
-    z[10] = z[15] + (z[10]); // c15 + c05mc10
-    z[11] = z[16] + (z[11]); // c16 + c06mc11
+    // c06mc11
+    let z_11_1 = mul_wide((*a).v[5], (*b).v[6]);
+    let z_11_2 = mul_wide((*a).v[6], (*b).v[5]);
+    z[11] = u64_add(u64_sub(z[6], z_11_1), z_11_2);
+
+    // c07mc12
+    let z_12_1 = mul_wide((*a).v[5], (*b).v[7]); 
+    let z_12_2 = mul_wide((*a).v[6], (*b).v[6]);
+    let z_12_3 = mul_wide((*a).v[7], (*b).v[5]);
+    z[12] = u64_add(u64_add(u64_sub(z[7], z_12_1), z_12_2), z_12_3);
+
+    // c13
+    let z_13_1 = mul_wide((*a).v[5], (*b).v[8]);
+    let z_13_2 = mul_wide((*a).v[6], (*b).v[7]);
+    let z_13_3 = mul_wide((*a).v[7], (*b).v[6]);
+    let z_13_4 = mul_wide((*a).v[8], (*b).v[5]);
+    z[13] = u64_add(u64_add(u64_add(z_13_1, z_13_2), z_13_3), z_13_4);
+
+    // c14
+    let z_14_1 = mul_wide((*a).v[6], (*b).v[8]);
+    let z_14_2 = mul_wide((*a).v[7], (*b).v[7]);
+    let z_14_3 = mul_wide((*a).v[8], (*b).v[6]);
+    z[14] = u64_add(u64_add(z_14_1, z_14_2), z_14_3);
+
+    // c15
+    let z_15_1 = mul_wide((*a).v[7], (*b).v[8]);
+    let z_15_2 = mul_wide((*a).v[8], (*b).v[7]);
+    z[15] = u64_add(z_15_1, z_15_2);
+
+    // c16
+    z[16] = mul_wide((*a).v[8], (*b).v[8]); 
+
+    z[ 5] = u64_sub(z[10], (z[ 0])); // c05mc10 - c00
+    z[ 6] = u64_sub(z[11], (z[ 1])); // c06mc11 - c01
+    z[ 7] = u64_sub(z[12], (z[ 2])); // c07mc12 - c02
+    z[ 8] = u64_sub(z[ 8], (z[13])); // c08mc13 - c03
+    z[ 9] = u64_add(z[14], (z[ 4])); // c14 + c04
+    z[10] = u64_add(z[15], (z[10])); // c15 + c05mc10
+    z[11] = u64_add(z[16], (z[11])); // c16 + c06mc11
 
     let aa = array<u32, 4>(
         (*a).v[0] + (*a).v[5],
@@ -209,17 +237,56 @@ fn mul_internal(a: ptr<function, Scalar29>, b: ptr<function, Scalar29>) -> array
     );
 
 
-    z[ 5] = (mul_wide(aa[0], bb[0]))                                                                        + (z[ 5]); // c20 + c05mc10 - c00
-    z[ 6] = (mul_wide(aa[0], bb[1]) + mul_wide(aa[1], bb[0]))                                                      + (z[ 6]); // c21 + c06mc11 - c01
-    z[ 7] = (mul_wide(aa[0], bb[2]) + mul_wide(aa[1], bb[1]) + mul_wide(aa[2], bb[0]))                                    + (z[ 7]); // c22 + c07mc12 - c02
-    z[ 8] = (mul_wide(aa[0], bb[3]) + mul_wide(aa[1], bb[2]) + mul_wide(aa[2], bb[1]) + mul_wide(aa[3], bb[0]))                  + (z[ 8]); // c23 + c08mc13 - c03
-    z[ 9] = (mul_wide(aa[0],  (*b).v[4]) + mul_wide(aa[1], bb[3]) + mul_wide(aa[2], bb[2]) + mul_wide(aa[3], bb[1]) + mul_wide((*a).v[4], bb[0])) - (z[ 9]); // c24 - c14 - c04
-    z[10] = (                  mul_wide(aa[1],  (*b).v[4]) + mul_wide(aa[2], bb[3]) + mul_wide(aa[3], bb[2]) + mul_wide((*a).v[4], bb[1])) - (z[10]); // c25 - c15 - c05mc10
-    z[11] = (                                    mul_wide(aa[2],  (*b).v[4]) + mul_wide(aa[3], bb[3]) + mul_wide((*a).v[4], bb[2])) - (z[11]); // c26 - c16 - c06mc11
-    z[12] = (                                                      mul_wide(aa[3],  (*b).v[4]) + mul_wide((*a).v[4], bb[3])) - (z[12]); // c27 - c07mc12
+    // c20 + c05mc10 - c00
+    let z5_1 = mul_wide(aa[0], bb[0]);
+    z[ 5] = u64_add(z5_1, z[ 5]);
+
+    // c21 + c06mc11 - c01
+    let z6_1 = mul_wide(aa[0], bb[1]);
+    let z6_2 = mul_wide(aa[1], bb[0]);
+    z[ 6] = u64_add(u64_add(z6_1, z6_2), z[ 6]);
+
+    // c22 + c07mc12 - c02
+    let z7_1 = mul_wide(aa[0], bb[2]);
+    let z7_2 = mul_wide(aa[1], bb[1]);
+    let z7_3 = mul_wide(aa[2], bb[0]);
+    z[ 7] = u64_add(u64_add(u64_add(z7_1, z7_2), z7_3), z[ 7]);
+
+    // c23 + c08mc13 - c03
+    let z8_1 = mul_wide(aa[0], bb[3]);
+    let z8_2 = mul_wide(aa[1], bb[2]);
+    let z8_3 = mul_wide(aa[2], bb[1]);
+    let z8_4 = mul_wide(aa[3], bb[0]);
+    z[ 8] = u64_add(u64_add(u64_add(u64_add(z8_1, z8_2), z8_3), z8_4), z[ 8]);
+
+    // c24 - c14 - c04
+    let z9_1 = mul_wide(aa[0], (*b).v[4]);
+    let z9_2 = mul_wide(aa[1], bb[3]);
+    let z9_3 = mul_wide(aa[2], bb[2]);
+    let z9_4 = mul_wide(aa[3], bb[1]);
+    let z9_5 = mul_wide((*a).v[4], bb[0]);
+    z[ 9] = u64_sub(u64_add(u64_add(u64_add(u64_add(z9_1, z9_2), z9_3), z9_4), z9_5), z[ 9]);
+
+    // c25 - c15 - c05mc10
+    let z10_1 = mul_wide(aa[1], (*b).v[4]);
+    let z10_2 = mul_wide(aa[2], bb[3]);
+    let z10_3 = mul_wide(aa[3], bb[2]);
+    let z10_4 = mul_wide((*a).v[4], bb[1]);
+    z[10] = u64_sub(u64_add(u64_add(u64_add(z10_1, z10_2), z10_3), z10_4), z[10]);
+
+    // c26 - c16 - c06mc11
+    let z11_1 = mul_wide(aa[2], (*b).v[4]);
+    let z11_2 = mul_wide(aa[3], bb[3]);
+    let z11_3 = mul_wide((*a).v[4], bb[2]);
+    z[11] = u64_sub(u64_add(u64_add(z11_1, z11_2), z11_3), z[11]);
+
+    // c27 - c07mc12
+    let z12_1 = mul_wide(aa[3],  (*b).v[4]);
+    let z12_2 = mul_wide((*a).v[4], bb[3]);
+    z[12] = u64_sub(u64_add(z12_1, z12_2), z[12]); 
 
     return z;
-}*/
+}
 
 @compute
 @workgroup_size(128, 1, 1)

@@ -44,3 +44,22 @@ fn test_scalar_montgomery_reduce_part1(
     g_c[gid.x + g_len] = b.carry.hi;
     g_c[gid.x + 2u * g_len] = b.n;
 }
+
+@compute
+@workgroup_size(128, 1, 1)
+fn test_scalar_montgomery_reduce_part2(
+    @builtin(global_invocation_id) gid: vec3<u32>,
+) {
+    if gid.x >= g_len {
+        unused_b();
+        return;
+    }
+
+    let a = u64(g_a[gid.x], g_a[gid.x + g_len]);
+ 
+    let b = part2(a);
+
+    g_c[gid.x] = b.carry.lo;
+    g_c[gid.x + g_len] = b.carry.hi;
+    g_c[gid.x + 2u * g_len] = b.n;
+}

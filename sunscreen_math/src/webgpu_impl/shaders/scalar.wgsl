@@ -133,7 +133,7 @@ fn part1(sum: u64) -> MontMulLRes {
 
 fn part2(sum: u64) -> MontMulLRes {
     let w = (sum.lo) & ((1u << 29u) - 1u);
-    return MontMulLRes(u64_shr(sum, 2u), w);
+    return MontMulLRes(u64_shr(sum, 29u), w);
 }
 
 fn montgomery_reduce(limbs: array<u64, 17>) -> Scalar29 {

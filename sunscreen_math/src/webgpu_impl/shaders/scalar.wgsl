@@ -128,7 +128,7 @@ fn part1(sum: u64) -> MontMulLRes {
     let p = sum.lo * Scalar29_LFACTOR & ((1u << 29u) - 1u);
     let carry = u64_shr(u64_add(sum, mul_wide(p, Scalar29_L.v[0])), 29u);
 
-    return MontMulLRes(u64_shr(u64_add(sum, carry), 29u), p);
+    return MontMulLRes(carry, p);
 }
 
 fn part2(sum: u64) -> MontMulLRes {

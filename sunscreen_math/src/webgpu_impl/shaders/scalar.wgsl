@@ -113,10 +113,10 @@ fn scalar29_sub(a: ptr<function, Scalar29>, b: ptr<function, Scalar29>) -> Scala
 
 
 fn scalar29_mul(a: ptr<function, Scalar29>, b: ptr<function, Scalar29>) -> Scalar29 {
-    var ab = montgomery_reduce(mul_internal(a, b));
+    var ab = montgomery_reduce(scalar29_mul_internal(a, b));
 
     var rr = Scalar29_RR;
-    return montgomery_reduce(mul_internal(&ab, &rr));
+    return montgomery_reduce(scalar29_mul_internal(&ab, &rr));
 }
 
 struct MontMulLRes {
@@ -136,7 +136,6 @@ fn part2(sum: u64) -> MontMulLRes {
     return MontMulLRes(u64_shr(sum, 2u), w);
 }
 
-// TODO
 fn montgomery_reduce(limbs: array<u64, 17>) -> Scalar29 {
     // note: l5,l6,l7 are zero, so their multiplies can be skipped
     var l = Scalar29_L;
@@ -244,7 +243,7 @@ fn montgomery_reduce(limbs: array<u64, 17>) -> Scalar29 {
     return scalar29_sub(&val, &l);
 }
 
-fn mul_internal(a: ptr<function, Scalar29>, b: ptr<function, Scalar29>) -> array<u64, 17> {
+fn scalar29_mul_internal(a: ptr<function, Scalar29>, b: ptr<function, Scalar29>) -> array<u64, 17> {
     var z: array<u64, 17>;
 
     // c00
@@ -305,13 +304,13 @@ fn mul_internal(a: ptr<function, Scalar29>, b: ptr<function, Scalar29>) -> array
     // c06mc11
     let z_11_1 = mul_wide((*a).v[5], (*b).v[6]);
     let z_11_2 = mul_wide((*a).v[6], (*b).v[5]);
-    z[11] = u64_add(u64_sub(z[6], z_11_1), z_11_2);
+    z[11] = u64_sub(z[6], u64_add(z_11_1, z_11_2));
 
     // c07mc12
     let z_12_1 = mul_wide((*a).v[5], (*b).v[7]); 
     let z_12_2 = mul_wide((*a).v[6], (*b).v[6]);
     let z_12_3 = mul_wide((*a).v[7], (*b).v[5]);
-    z[12] = u64_add(u64_add(u64_sub(z[7], z_12_1), z_12_2), z_12_3);
+    z[12] = u64_sub(z[7], u64_add(u64_add(z_12_1, z_12_2), z_12_3));
 
     // c13
     let z_13_1 = mul_wide((*a).v[5], (*b).v[8]);
@@ -334,13 +333,13 @@ fn mul_internal(a: ptr<function, Scalar29>, b: ptr<function, Scalar29>) -> array
     // c16
     z[16] = mul_wide((*a).v[8], (*b).v[8]); 
 
-    z[ 5] = u64_sub(z[10], (z[ 0])); // c05mc10 - c00
-    z[ 6] = u64_sub(z[11], (z[ 1])); // c06mc11 - c01
-    z[ 7] = u64_sub(z[12], (z[ 2])); // c07mc12 - c02
-    z[ 8] = u64_sub(z[ 8], (z[13])); // c08mc13 - c03
-    z[ 9] = u64_add(z[14], (z[ 4])); // c14 + c04
-    z[10] = u64_add(z[15], (z[10])); // c15 + c05mc10
-    z[11] = u64_add(z[16], (z[11])); // c16 + c06mc11
+    z[ 5] = u64_sub(z[10], z[ 0]); // c05mc10 - c00
+    z[ 6] = u64_sub(z[11], z[ 1]); // c06mc11 - c01
+    z[ 7] = u64_sub(z[12], z[ 2]); // c07mc12 - c02
+    z[ 8] = u64_sub(z[ 8], z[13]); // c08mc13 - c03
+    z[ 9] = u64_add(z[14], z[ 4]); // c14 + c04
+    z[10] = u64_add(z[15], z[10]); // c15 + c05mc10
+    z[11] = u64_add(z[16], z[11]); // c16 + c06mc11
 
     let aa = array<u32, 4>(
         (*a).v[0] + (*a).v[5],
@@ -408,6 +407,15 @@ fn mul_internal(a: ptr<function, Scalar29>, b: ptr<function, Scalar29>) -> array
     return z;
 }
 
+fn scalar29_montgomery_mul(a: ptr<function, Scalar29>, b: ptr<function, Scalar29>) -> Scalar29 {
+    return montgomery_reduce(scalar29_mul_internal(a, b));
+}
+
+fn scalar29_to_montgomery(val: ptr<function, Scalar29>) -> Scalar29 {
+    var rr = Scalar29_RR;
+    return scalar29_montgomery_mul(val, &rr);
+}
+
 @compute
 @workgroup_size(128, 1, 1)
 fn kernel_scalar29_sub(
@@ -456,6 +464,23 @@ fn kernel_scalar29_neg(
     var zero = Scalar29_Zero;
 
     var c = scalar29_sub(&zero, &a);
+
+    scalar29_pack_c(&c, gid.x, g_len);
+}
+
+@compute
+@workgroup_size(128, 1, 1)
+fn kernel_scalar29_mul(
+    @builtin(global_invocation_id) gid: vec3<u32>,
+) {
+    if gid.x >= g_len {
+        return;
+    }
+
+    var a = scalar29_unpack_a(gid.x, g_len);
+    var b = scalar29_unpack_b(gid.x, g_len);
+
+    var c = scalar29_mul(&a, &b);
 
     scalar29_pack_c(&c, gid.x, g_len);
 }

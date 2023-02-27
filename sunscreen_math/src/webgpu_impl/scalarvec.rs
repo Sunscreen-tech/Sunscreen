@@ -1,4 +1,4 @@
-use std::{mem::size_of, ops::{Sub, Add, Neg}};
+use std::{mem::size_of, ops::{Sub, Add, Neg, Mul}};
 
 use curve25519_dalek::scalar::Scalar;
 use wgpu::Buffer;
@@ -236,6 +236,45 @@ impl Neg for &GpuScalarVec {
     }
 }
 
+impl Mul<GpuScalarVec> for GpuScalarVec {
+    type Output = Self;
+
+    fn mul(self, rhs: GpuScalarVec) -> Self::Output {
+        &self * &rhs
+    }
+}
+
+impl Mul<&GpuScalarVec> for GpuScalarVec {
+    type Output = Self;
+
+    fn mul(self, rhs: &GpuScalarVec) -> Self::Output {
+        &self * rhs
+    }
+}
+
+impl Mul<GpuScalarVec> for &GpuScalarVec {
+    type Output = GpuScalarVec;
+
+    fn mul(self, rhs: GpuScalarVec) -> Self::Output {
+        self * &rhs
+    }
+}
+
+impl Mul<&GpuScalarVec> for &GpuScalarVec {
+    type Output = GpuScalarVec;
+
+    fn mul(self, rhs: &GpuScalarVec) -> Self::Output {
+        let c = Runtime::get().alloc::<u32>(self.len());
+
+        GpuScalarVec::run_binary_kernel(self, rhs, &c, "kernel_scalar29_mul");
+
+        GpuScalarVec {
+            data: c,
+            len: self.len()
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use rand::thread_rng;
@@ -367,6 +406,26 @@ mod tests {
         for (i, c) in c_v.iter().enumerate() {
             assert_eq!(c, -a[i]);
         }
+    }
 
+    #[test]
+    fn can_multiply() {
+        let a = (0..238)
+        .into_iter()
+        .map(|_| Scalar::random(&mut thread_rng()))
+        .collect::<Vec<_>>();
+    let b = (0..238)
+        .into_iter()
+        .map(|_| Scalar::random(&mut thread_rng()))
+        .collect::<Vec<_>>();
+
+    let a_v = GpuScalarVec::new(&a);
+    let b_v = GpuScalarVec::new(&b);
+
+    let c_v = a_v * b_v;
+
+    for (i, c) in c_v.iter().enumerate() {
+        assert_eq!(c, a[i] * b[i]);
+    }
     }
 }

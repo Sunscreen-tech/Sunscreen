@@ -232,7 +232,7 @@ Scalar29 montgomery_reduce(MulResult limbs) {
     Scalar29 l = constants::L;
 
     // the first half computes the Montgomery adjustment factor n, and begins adding n*l to make limbs divisible by R
-    MontMulLRes x0 = part1(        limbs[ 0]);
+    MontMulLRes x0 = part1(           limbs[ 0]);
     MontMulLRes x1 = part1(x0.carry + limbs[ 1] + m(x0.n,l[1]));
     MontMulLRes x2 = part1(x1.carry + limbs[ 2] + m(x0.n,l[2]) + m(x1.n,l[1]));
     MontMulLRes x3 = part1(x2.carry + limbs[ 3] + m(x0.n,l[3]) + m(x1.n,l[2]) + m(x2.n,l[1]));

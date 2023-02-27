@@ -58,10 +58,14 @@ fn u64_sub(a: u64, b: u64) -> u64 {
     return u64(lo, a.hi - b.hi - borrow);
 }
 
+/// Shift right by sh amount.
+///
+/// # Remarks
+/// This implementation is correct up to sh == 31.
 fn u64_shr(a: u64, sh: u32) -> u64 {
     let mask = (0x1u << sh) - 1u;
 
     let in = (a.hi & mask) << (32u - sh);
 
-    return u64((a.lo >> 29u) | in, a.hi >> 29u);
+    return u64((a.lo >> sh) | in, a.hi >> sh);
 }

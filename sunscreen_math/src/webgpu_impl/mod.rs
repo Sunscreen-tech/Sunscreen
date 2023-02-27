@@ -494,4 +494,48 @@ mod tests {
             assert_eq!(expected, actual);
         }
     }
+
+    #[test]
+    fn can_u64_shr() {
+        let a = (0..253).into_iter().map(|_| thread_rng().next_u64()).collect::<Vec<_>>();
+        let b = (0..253).into_iter().map(|_| thread_rng().next_u32() % 32).collect::<Vec<_>>();
+        let (lo, hi): (Vec<_>, Vec<_>) = a.iter().map(|x| ((x & 0xFFFFFFFF) as u32, (x >> 32) as u32)).unzip();
+        let a_packed = [lo, hi].concat();
+
+        let a_len = a.len();
+
+        let runtime = Runtime::get();
+
+        let a_vec = runtime.alloc_from_slice(&a_packed);
+        let b_vec = runtime.alloc_from_slice(&b);
+        let c_vec = runtime.alloc::<u32>(a.len() * 2); // * 2 for lo and hi words
+
+        let len = GpuU32::new(a.len() as u32);
+
+        let threadgroups = if a.len() % 128 == 0 { a.len() / 128 } else { a.len() / 128 + 1 };
+        
+        runtime.run("test_u64_shr", &[&a_vec, &b_vec, &c_vec, &len.data], &Grid::new(threadgroups as u32, 1, 1));
+
+        let c = c_vec.get_data::<u32>();
+
+        for (i, (a, b)) in a.iter().zip(b.iter()).enumerate() {
+            let expected = a >> *b;
+            dbg!(a);
+            dbg!(b);
+
+            assert_eq!(a & 0xFFFFFFFF, a_packed[i] as u64);
+            assert_eq!(a >> 32, a_packed[i + a_len] as u64);
+
+            let actual = c[i] as u64 | (c[a_len + i] as u64) << 32;
+
+            assert_eq!(expected & 0xFFFFFFFF, c[i] as u64);
+
+            let actual_hi = c[a_len + i];
+            let expected_hi = (expected >> 32) as u32;
+
+            assert_eq!(expected_hi, actual_hi);
+            assert_eq!(expected, actual);
+        }
+    }
+
 }

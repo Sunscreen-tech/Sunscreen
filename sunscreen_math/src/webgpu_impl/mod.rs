@@ -20,6 +20,9 @@ use wgpu::{
 mod ristrettovec;
 mod scalarvec;
 
+#[cfg(test)]
+mod scalarvectest;
+
 pub use ristrettovec::GpuRistrettoPointVec;
 pub use scalarvec::GpuScalarVec;
 

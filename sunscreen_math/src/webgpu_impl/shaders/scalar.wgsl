@@ -113,10 +113,10 @@ fn scalar29_sub(a: ptr<function, Scalar29>, b: ptr<function, Scalar29>) -> Scala
 
 
 fn scalar29_mul(a: ptr<function, Scalar29>, b: ptr<function, Scalar29>) -> Scalar29 {
-    var ab = montgomery_reduce(scalar29_mul_internal(a, b));
+    var ab = scalar29_montgomery_reduce(scalar29_mul_internal(a, b));
 
     var rr = Scalar29_RR;
-    return montgomery_reduce(scalar29_mul_internal(&ab, &rr));
+    return scalar29_montgomery_reduce(scalar29_mul_internal(&ab, &rr));
 }
 
 struct MontMulLRes {
@@ -136,7 +136,7 @@ fn part2(sum: u64) -> MontMulLRes {
     return MontMulLRes(u64_shr(sum, 29u), w);
 }
 
-fn montgomery_reduce(limbs: array<u64, 17>) -> Scalar29 {
+fn scalar29_montgomery_reduce(limbs: array<u64, 17>) -> Scalar29 {
     // note: l5,l6,l7 are zero, so their multiplies can be skipped
     var l = Scalar29_L;
 
@@ -355,7 +355,6 @@ fn scalar29_mul_internal(a: ptr<function, Scalar29>, b: ptr<function, Scalar29>)
         (*b).v[3] + (*b).v[8]
     );
 
-
     // c20 + c05mc10 - c00
     let z5_1 = mul_wide(aa[0], bb[0]);
     z[ 5] = u64_add(z5_1, z[ 5]);
@@ -408,7 +407,7 @@ fn scalar29_mul_internal(a: ptr<function, Scalar29>, b: ptr<function, Scalar29>)
 }
 
 fn scalar29_montgomery_mul(a: ptr<function, Scalar29>, b: ptr<function, Scalar29>) -> Scalar29 {
-    return montgomery_reduce(scalar29_mul_internal(a, b));
+    return scalar29_montgomery_reduce(scalar29_mul_internal(a, b));
 }
 
 fn scalar29_to_montgomery(val: ptr<function, Scalar29>) -> Scalar29 {

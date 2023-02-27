@@ -279,7 +279,7 @@ impl Mul<&GpuScalarVec> for &GpuScalarVec {
 mod tests {
     use rand::{thread_rng, RngCore};
 
-    use crate::webgpu_impl::{GpuU32, Grid};
+    use crate::webgpu_impl::{GpuU32, Grid, scalarvectest::{Scalar29, mul_internal}};
 
     use super::*;
 
@@ -529,6 +529,44 @@ mod tests {
             assert_eq!(expected_hi, actual_hi);
             assert_eq!(expected.0, actual);
             assert_eq!(expected.1, c[2 * a_len + i]);
+        }
+    }
+    
+    #[test]
+    fn can_mul_internal() {
+        let a = (0..253).into_iter().map(|_| Scalar::random(&mut thread_rng())).collect::<Vec<_>>();
+        let b = (0..253).into_iter().map(|_| Scalar::random(&mut thread_rng())).collect::<Vec<_>>();
+
+        let runtime = Runtime::get();
+
+        let a_len = a.len();
+
+        let a_vec = GpuScalarVec::new(&a);
+        let b_vec = GpuScalarVec::new(&b);
+        let c_vec = runtime.alloc_from_slice(&vec![0u32; 34 * a.len()]);
+
+        let gpu_len = GpuU32::new(a.len() as u32);
+
+        let threadgroups = if a.len() % 128 == 0 { a.len() / 128 }  else { a.len() / 128 + 1 };
+
+        Runtime::get().run("test_scalar_mul_internal", &[&a_vec.data, &b_vec.data, &c_vec, &gpu_len.data], &Grid::new(threadgroups as u32, 1, 1));
+
+        let c = c_vec.get_data::<u32>();
+
+        for (i, (a, b)) in a.iter().zip(b.iter()).enumerate() {
+            let a = Scalar29::from_bytes(&a.to_bytes());
+            let b = Scalar29::from_bytes(&b.to_bytes());
+
+            let expected = mul_internal(&a, &b);
+
+            for (j, e) in expected.iter().enumerate() {
+                let lo = c[i + 2 * j * a_len + 0];
+                let hi = c[i + 2 * j * a_len + a_len];
+
+                let actual = lo as u64 | (hi as u64) << 32;
+
+                assert_eq!(actual, *e);
+            }
         }
     }
 }

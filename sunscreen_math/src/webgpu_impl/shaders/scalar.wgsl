@@ -119,9 +119,129 @@ fn scalar29_mul(a: ptr<function, Scalar29>, b: ptr<function, Scalar29>) -> Scala
     return montgomery_reduce(mul_internal(&ab, &rr));
 }
 
+struct MontMulLRes {
+    carry: u64 ,
+    n: u32 ,
+}
+
+fn part1(sum: u64) -> MontMulLRes {
+    let p = sum.lo * Scalar29_LFACTOR & ((1u << 29u) - 1u);
+    let carry = u64_shr(u64_add(sum, mul_wide(p, Scalar29_L.v[0])), 29u);
+
+    return MontMulLRes(u64_shr(u64_add(sum, carry), 29u), p);
+}
+
+fn part2(sum: u64) -> MontMulLRes {
+    let w = (sum.lo) & ((1u << 29u) - 1u);
+    return MontMulLRes(u64_shr(sum, 2u), w);
+}
+
 // TODO
-fn montgomery_reduce(a: array<u64, 17>, b: array<u64, 17>) -> Scalar29 {
-    return Scalar29_Zero;
+fn montgomery_reduce(limbs: array<u64, 17>) -> Scalar29 {
+    // note: l5,l6,l7 are zero, so their multiplies can be skipped
+    var l = Scalar29_L;
+
+    // the first half computes the Montgomery adjustment factor n, and begins adding n*l to make limbs divisible by R
+    let x0 = part1(limbs[ 0]);
+    
+    let x_1_1 = mul_wide(x0.n, l.v[1]);
+    let x_1_in = u64_add(u64_add(x0.carry, limbs[1]), x_1_1);
+    let x1 = part1(x_1_in);
+
+    let x_2_1 = mul_wide(x0.n, l.v[2]);
+    let x_2_2 = mul_wide(x1.n, l.v[1]);
+    let x_2_in = u64_add(u64_add(u64_add(x1.carry, limbs[2]), x_2_1), x_2_1);
+    let x2 = part1(x_2_in);
+
+    let x_3_1 = mul_wide(x0.n, l.v[3]);
+    let x_3_2 = mul_wide(x1.n, l.v[2]);
+    let x_3_3 = mul_wide(x2.n, l.v[1]);
+    let x_3_in = u64_add(u64_add(u64_add(u64_add(x2.carry, limbs[3]), x_3_1), x_3_2), x_3_3);
+    let x3 = part1(x_3_in);
+
+    let x_4_1 = mul_wide(x0.n, l.v[4]);
+    let x_4_2 = mul_wide(x1.n, l.v[3]);
+    let x_4_3 = mul_wide(x2.n, l.v[2]);
+    let x_4_4 = mul_wide(x3.n, l.v[1]);
+    let x_4_in = u64_add(u64_add(u64_add(u64_add(u64_add(x3.carry, limbs[4]), x_4_1), x_4_2), x_4_3), x_4_4);
+    let x4 = part1(x_4_in);
+
+    let x_5_1 = mul_wide(x1.n, l.v[4]);
+    let x_5_2 = mul_wide(x2.n, l.v[3]);
+    let x_5_3 = mul_wide(x3.n, l.v[2]);
+    let x_5_4 = mul_wide(x4.n, l.v[1]);
+    let x_5_in = u64_add(u64_add(u64_add(u64_add(u64_add(x4.carry, limbs[5]), x_4_1), x_4_2), x_4_3), x_4_4);
+    let x5 = part1(x_5_in);
+
+    let x_6_1 = mul_wide(x2.n, l.v[4]);
+    let x_6_2 = mul_wide(x3.n, l.v[3]);
+    let x_6_3 = mul_wide(x4.n, l.v[2]);
+    let x_6_4 = mul_wide(x5.n, l.v[1]);
+    let x_6_in = u64_add(u64_add(u64_add(u64_add(u64_add(x5.carry, limbs[6]), x_6_1), x_6_2), x_6_3), x_6_4);
+    let x6 = part1(x_6_in);
+
+    let x_7_1 = mul_wide(x3.n, l.v[4]);
+    let x_7_2 = mul_wide(x4.n, l.v[3]);
+    let x_7_3 = mul_wide(x5.n, l.v[2]);
+    let x_7_4 = mul_wide(x6.n, l.v[1]);
+    let x_7_in = u64_add(u64_add(u64_add(u64_add(u64_add(x6.carry, limbs[7]), x_7_1), x_7_2), x_7_3), x_7_4);
+    let x7 = part1(x_7_in);
+    
+    let x_8_1 = mul_wide(x4.n, l.v[4]);
+    let x_8_2 = mul_wide(x5.n, l.v[3]);
+    let x_8_3 = mul_wide(x6.n, l.v[2]);
+    let x_8_4 = mul_wide(x7.n, l.v[1]);
+    let x_8_in = u64_add(u64_add(u64_add(u64_add(u64_add(x7.carry, limbs[8]), x_8_1), x_8_2), x_8_3), x_8_4);
+    let x8 = part1(x_8_in);
+
+    // limbs is divisible by R now, so we can divide by R by simply storing the upper half as the result
+    let r_0_1 = mul_wide(x1.n, l.v[8]);
+    let r_0_2 = mul_wide(x5.n, l.v[4]);
+    let r_0_3 = mul_wide(x6.n, l.v[3]);
+    let r_0_4 = mul_wide(x7.n, l.v[2]);
+    let r_0_5 = mul_wide(x8.n, l.v[1]);
+    let r_0_in = u64_add(u64_add(u64_add(u64_add(u64_add(u64_add(x8.carry, limbs[9]), r_0_1), r_0_2), r_0_3), r_0_4), r_0_5);
+    let r0 = part2(r_0_in);
+    
+    let r_1_1 = mul_wide(x2.n, l.v[8]);
+    let r_1_2 = mul_wide(x6.n, l.v[4]);
+    let r_1_3 = mul_wide(x7.n, l.v[3]);
+    let r_1_4 = mul_wide(x8.n, l.v[2]);
+    let r_1_in = u64_add(u64_add(u64_add(u64_add(u64_add(r0.carry, limbs[10]), r_1_1), r_1_2), r_1_3), r_1_4);
+    let r1 = part2(r_1_in);
+
+    let r_2_1 = mul_wide(x3.n, l.v[8]);
+    let r_2_2 = mul_wide(x7.n, l.v[4]);
+    let r_2_3 = mul_wide(x8.n, l.v[3]);
+    let r_2_in = u64_add(u64_add(u64_add(u64_add(r1.carry, limbs[11]), r_2_1), r_2_2), r_2_3);
+    let r2 = part2(r_2_in);
+
+    let r_3_1 = mul_wide(x4.n, l.v[8]);
+    let r_3_2 = mul_wide(x8.n, l.v[4]);
+    let r_3_in = u64_add(u64_add(u64_add(r2.carry, limbs[12]), r_3_1), r_3_2);
+    let r3 = part2(r_3_in);
+
+    let r_4_1 = mul_wide(x5.n, l.v[8]);
+    let r_4_in = u64_add(u64_add(r3.carry, limbs[13]), r_4_1);
+    let r4 = part2(r_4_in);
+    
+    let r_5_1 = mul_wide(x6.n, l.v[8]);
+    let r_5_in = u64_add(u64_add(r4.carry, limbs[14]), r_5_1);
+    let r5 = part2(r_5_in);
+    
+    let r_6_1 = mul_wide(x7.n, l.v[8]);
+    let r_6_in = u64_add(u64_add(r5.carry, limbs[15]), r_6_1);
+    let r6 = part2(r_6_in);
+
+    let r_7_1 = mul_wide(x8.n, l.v[8]);
+    let r_7_in = u64_add(u64_add(r6.carry, limbs[16]), r_7_1);
+    let r7 = part2(r_7_in);
+    
+    let r8 = r7.carry.lo;
+
+    var val = Scalar29(array<u32, 9>(r0.n,r1.n,r2.n,r3.n,r4.n,r5.n,r6.n,r7.n,r8));
+
+    return scalar29_sub(&val, &l);
 }
 
 fn mul_internal(a: ptr<function, Scalar29>, b: ptr<function, Scalar29>) -> array<u64, 17> {

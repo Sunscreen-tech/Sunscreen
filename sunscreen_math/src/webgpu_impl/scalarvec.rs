@@ -282,9 +282,12 @@ impl Mul<&GpuScalarVec> for &GpuScalarVec {
 mod tests {
     use rand::{thread_rng, RngCore};
 
-    use crate::webgpu_impl::{
-        scalarvectest::{mul_internal, Scalar29},
-        GpuU32, Grid,
+    use crate::{
+        webgpu_impl::{
+            scalarvectest::{mul_internal, Scalar29},
+            GpuU32, Grid,
+        },
+        ScalarVec,
     };
 
     use super::*;
@@ -615,6 +618,54 @@ mod tests {
 
                 assert_eq!(actual, *e);
             }
+        }
+    }
+
+    #[test]
+    fn can_montgomery_reduce() {
+        let a = (0..253)
+            .into_iter()
+            .map(|_| {
+                let vals = (0..17)
+                    .into_iter()
+                    .map(|_| thread_rng().next_u64())
+                    .collect::<Vec<_>>();
+
+                let vals: [u64; 17] = vals.try_into().unwrap();
+                vals
+            })
+            .collect::<Vec<_>>();
+        let a_packed = a.iter().cloned().flatten().collect::<Vec<_>>();
+
+        let runtime = Runtime::get();
+
+        let a_vec = runtime.alloc_from_slice(&a_packed);
+        let dummy = GpuU32::new(0);
+        let len = GpuU32::new(a.len() as u32);
+
+        let c = (0..253)
+            .into_iter()
+            .map(|_| Scalar::random(&mut thread_rng()))
+            .collect::<Vec<_>>();
+        let c_gpu = ScalarVec::new(&c);
+
+        let threadgroups = if a.len() % 128 == 0 {
+            a.len() / 128
+        } else {
+            a.len() / 128 + 1
+        };
+
+        runtime.run(
+            "test_montgomery_reduce",
+            &[&a_vec, &dummy.data, &c_gpu.data, &len.data],
+            &Grid::new(threadgroups as u32, 1, 1),
+        );
+
+        for (a, actual) in a.iter().zip(c_gpu.iter()) {
+            let expected = Scalar29::montgomery_reduce(&a).to_bytes();
+            let expected = Scalar::from_bits(expected);
+
+            assert_eq!(expected, actual);
         }
     }
 }

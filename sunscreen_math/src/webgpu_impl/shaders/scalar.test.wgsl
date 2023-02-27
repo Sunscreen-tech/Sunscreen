@@ -66,6 +66,41 @@ fn test_scalar_montgomery_reduce_part2(
 
 @compute
 @workgroup_size(128, 1, 1)
+fn test_montgomery_reduce(
+    @builtin(global_invocation_id) gid: vec3<u32>,
+) {
+    if gid.x >= g_len {
+        unused_b();
+        return;
+    }
+
+    let limbs = array<u64, 17>(
+        u64(g_a[34u * gid.x + 0u], g_a[34u * gid.x + 1u]),
+        u64(g_a[34u * gid.x + 2u], g_a[34u * gid.x + 3u]),
+        u64(g_a[34u * gid.x + 4u], g_a[34u * gid.x + 5u]),
+        u64(g_a[34u * gid.x + 6u], g_a[34u * gid.x + 7u]),
+        u64(g_a[34u * gid.x + 8u], g_a[34u * gid.x + 9u]),
+        u64(g_a[34u * gid.x + 10u], g_a[34u * gid.x + 11u]),
+        u64(g_a[34u * gid.x + 12u], g_a[34u * gid.x + 13u]),
+        u64(g_a[34u * gid.x + 14u], g_a[34u * gid.x + 15u]),
+        u64(g_a[34u * gid.x + 16u], g_a[34u * gid.x + 17u]),
+        u64(g_a[34u * gid.x + 18u], g_a[34u * gid.x + 19u]),
+        u64(g_a[34u * gid.x + 20u], g_a[34u * gid.x + 21u]),
+        u64(g_a[34u * gid.x + 22u], g_a[34u * gid.x + 23u]),
+        u64(g_a[34u * gid.x + 24u], g_a[34u * gid.x + 25u]),
+        u64(g_a[34u * gid.x + 26u], g_a[34u * gid.x + 27u]),
+        u64(g_a[34u * gid.x + 28u], g_a[34u * gid.x + 29u]),
+        u64(g_a[34u * gid.x + 30u], g_a[34u * gid.x + 31u]),
+        u64(g_a[34u * gid.x + 32u], g_a[34u * gid.x + 33u]),
+    );
+ 
+    var c = scalar29_montgomery_reduce(limbs);
+
+    scalar29_pack_c(&c, gid.x, g_len);
+}
+
+@compute
+@workgroup_size(128, 1, 1)
 fn test_scalar_mul_internal(
     @builtin(global_invocation_id) gid: vec3<u32>,
 ) {

@@ -15,10 +15,62 @@ impl IndexMut<usize> for Scalar29 {
     }
 }
 
+const L: Scalar29 = Scalar29([
+    0x1cf5d3edu32,
+    0x009318d2,
+    0x1de73596,
+    0x1df3bd45,
+    0x0000014d,
+    0x00000000,
+    0x00000000,
+    0x00000000,
+    0x00100000,
+]);
+
 impl Scalar29 {
     /// Return the zero scalar.
     pub fn zero() -> Scalar29 {
         Scalar29([0, 0, 0, 0, 0, 0, 0, 0, 0])
+    }
+
+    /// Pack the limbs of this `Scalar29` into 32 bytes.
+    pub fn to_bytes(&self) -> [u8; 32] {
+        let mut s = [0u8; 32];
+
+        s[0] = (self.0[0] >> 0) as u8;
+        s[1] = (self.0[0] >> 8) as u8;
+        s[2] = (self.0[0] >> 16) as u8;
+        s[3] = ((self.0[0] >> 24) | (self.0[1] << 5)) as u8;
+        s[4] = (self.0[1] >> 3) as u8;
+        s[5] = (self.0[1] >> 11) as u8;
+        s[6] = (self.0[1] >> 19) as u8;
+        s[7] = ((self.0[1] >> 27) | (self.0[2] << 2)) as u8;
+        s[8] = (self.0[2] >> 6) as u8;
+        s[9] = (self.0[2] >> 14) as u8;
+        s[10] = ((self.0[2] >> 22) | (self.0[3] << 7)) as u8;
+        s[11] = (self.0[3] >> 1) as u8;
+        s[12] = (self.0[3] >> 9) as u8;
+        s[13] = (self.0[3] >> 17) as u8;
+        s[14] = ((self.0[3] >> 25) | (self.0[4] << 4)) as u8;
+        s[15] = (self.0[4] >> 4) as u8;
+        s[16] = (self.0[4] >> 12) as u8;
+        s[17] = (self.0[4] >> 20) as u8;
+        s[18] = ((self.0[4] >> 28) | (self.0[5] << 1)) as u8;
+        s[19] = (self.0[5] >> 7) as u8;
+        s[20] = (self.0[5] >> 15) as u8;
+        s[21] = ((self.0[5] >> 23) | (self.0[6] << 6)) as u8;
+        s[22] = (self.0[6] >> 2) as u8;
+        s[23] = (self.0[6] >> 10) as u8;
+        s[24] = (self.0[6] >> 18) as u8;
+        s[25] = ((self.0[6] >> 26) | (self.0[7] << 3)) as u8;
+        s[26] = (self.0[7] >> 5) as u8;
+        s[27] = (self.0[7] >> 13) as u8;
+        s[28] = (self.0[7] >> 21) as u8;
+        s[29] = (self.0[8] >> 0) as u8;
+        s[30] = (self.0[8] >> 8) as u8;
+        s[31] = (self.0[8] >> 16) as u8;
+
+        s
     }
 
     /// Unpack a 32 byte / 256 bit scalar into 9 29-bit limbs.
@@ -45,6 +97,81 @@ impl Scalar29 {
         s[8] = (words[7] >> 8) & top_mask;
 
         s
+    }
+
+    pub(crate) fn montgomery_reduce(limbs: &[u64; 17]) -> Scalar29 {
+        const LFACTOR: u32 = 0x12547e1b;
+
+        #[inline(always)]
+        fn part1(sum: u64) -> (u64, u32) {
+            let p = (sum as u32).wrapping_mul(LFACTOR) & ((1u32 << 29) - 1);
+            ((sum + m(p, L[0])) >> 29, p)
+        }
+
+        #[inline(always)]
+        fn part2(sum: u64) -> (u64, u32) {
+            let w = (sum as u32) & ((1u32 << 29) - 1);
+            (sum >> 29, w)
+        }
+
+        // note: l5,l6,l7 are zero, so their multiplies can be skipped
+        let l = &L;
+
+        // the first half computes the Montgomery adjustment factor n, and begins adding n*l to make limbs divisible by R
+        let (carry, n0) = part1(limbs[0]);
+        let (carry, n1) = part1(carry + limbs[1] + m(n0, l[1]));
+        let (carry, n2) = part1(carry + limbs[2] + m(n0, l[2]) + m(n1, l[1]));
+        let (carry, n3) = part1(carry + limbs[3] + m(n0, l[3]) + m(n1, l[2]) + m(n2, l[1]));
+        let (carry, n4) =
+            part1(carry + limbs[4] + m(n0, l[4]) + m(n1, l[3]) + m(n2, l[2]) + m(n3, l[1]));
+        let (carry, n5) =
+            part1(carry + limbs[5] + m(n1, l[4]) + m(n2, l[3]) + m(n3, l[2]) + m(n4, l[1]));
+        let (carry, n6) =
+            part1(carry + limbs[6] + m(n2, l[4]) + m(n3, l[3]) + m(n4, l[2]) + m(n5, l[1]));
+        let (carry, n7) =
+            part1(carry + limbs[7] + m(n3, l[4]) + m(n4, l[3]) + m(n5, l[2]) + m(n6, l[1]));
+        let (carry, n8) = part1(
+            carry + limbs[8] + m(n0, l[8]) + m(n4, l[4]) + m(n5, l[3]) + m(n6, l[2]) + m(n7, l[1]),
+        );
+
+        // limbs is divisible by R now, so we can divide by R by simply storing the upper half as the result
+        let (carry, r0) = part2(
+            carry + limbs[9] + m(n1, l[8]) + m(n5, l[4]) + m(n6, l[3]) + m(n7, l[2]) + m(n8, l[1]),
+        );
+        let (carry, r1) =
+            part2(carry + limbs[10] + m(n2, l[8]) + m(n6, l[4]) + m(n7, l[3]) + m(n8, l[2]));
+        let (carry, r2) = part2(carry + limbs[11] + m(n3, l[8]) + m(n7, l[4]) + m(n8, l[3]));
+        let (carry, r3) = part2(carry + limbs[12] + m(n4, l[8]) + m(n8, l[4]));
+        let (carry, r4) = part2(carry + limbs[13] + m(n5, l[8]));
+        let (carry, r5) = part2(carry + limbs[14] + m(n6, l[8]));
+        let (carry, r6) = part2(carry + limbs[15] + m(n7, l[8]));
+        let (carry, r7) = part2(carry + limbs[16] + m(n8, l[8]));
+        let r8 = carry as u32;
+
+        // result may be >= l, so attempt to subtract l
+        Scalar29::sub(&Scalar29([r0, r1, r2, r3, r4, r5, r6, r7, r8]), l)
+    }
+
+    pub fn sub(a: &Scalar29, b: &Scalar29) -> Scalar29 {
+        let mut difference = Scalar29::zero();
+        let mask = (1u32 << 29) - 1;
+
+        // a - b
+        let mut borrow: u32 = 0;
+        for i in 0..9 {
+            borrow = a[i].wrapping_sub(b[i] + (borrow >> 31));
+            difference[i] = borrow & mask;
+        }
+
+        // conditionally add l if the difference is negative
+        let underflow_mask = ((borrow >> 31) ^ 1).wrapping_sub(1);
+        let mut carry: u32 = 0;
+        for i in 0..9 {
+            carry = (carry >> 29) + difference[i] + (L[i] & underflow_mask);
+            difference[i] = carry & mask;
+        }
+
+        difference
     }
 }
 

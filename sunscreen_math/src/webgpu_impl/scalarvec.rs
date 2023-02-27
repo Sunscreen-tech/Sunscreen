@@ -1,9 +1,12 @@
-use std::{mem::size_of, ops::{Sub, Add, Neg, Mul}};
+use std::{
+    mem::size_of,
+    ops::{Add, Mul, Neg, Sub},
+};
 
 use curve25519_dalek::scalar::Scalar;
 use wgpu::Buffer;
 
-use super::{BufferExt, Runtime, GpuVec};
+use super::{BufferExt, GpuVec, Runtime};
 
 pub struct GpuScalarVec {
     data: Buffer,
@@ -14,7 +17,7 @@ impl Clone for GpuScalarVec {
     fn clone(&self) -> Self {
         Self {
             data: self.data.clone(),
-            len: self.len
+            len: self.len,
         }
     }
 }
@@ -27,7 +30,7 @@ impl GpuVec for GpuScalarVec {
     }
 
     fn get_buffer(&self) -> &Buffer {
-        &self.data    
+        &self.data
     }
 }
 
@@ -124,7 +127,7 @@ impl GpuScalarVec {
 
         Self {
             data: runtime.alloc_from_slice(&packed_data),
-            len: x.len()
+            len: x.len(),
         }
     }
 
@@ -169,7 +172,7 @@ impl Sub<&GpuScalarVec> for &GpuScalarVec {
 
         GpuScalarVec {
             data: c,
-            len: self.len()
+            len: self.len(),
         }
     }
 }
@@ -208,7 +211,7 @@ impl Add<&GpuScalarVec> for &GpuScalarVec {
 
         GpuScalarVec {
             data: c,
-            len: self.len()
+            len: self.len(),
         }
     }
 }
@@ -231,7 +234,7 @@ impl Neg for &GpuScalarVec {
 
         GpuScalarVec {
             data: output,
-            len: self.len()
+            len: self.len(),
         }
     }
 }
@@ -270,7 +273,7 @@ impl Mul<&GpuScalarVec> for &GpuScalarVec {
 
         GpuScalarVec {
             data: c,
-            len: self.len()
+            len: self.len(),
         }
     }
 }
@@ -279,7 +282,10 @@ impl Mul<&GpuScalarVec> for &GpuScalarVec {
 mod tests {
     use rand::{thread_rng, RngCore};
 
-    use crate::webgpu_impl::{GpuU32, Grid, scalarvectest::{Scalar29, mul_internal}};
+    use crate::webgpu_impl::{
+        scalarvectest::{mul_internal, Scalar29},
+        GpuU32, Grid,
+    };
 
     use super::*;
 
@@ -441,11 +447,17 @@ mod tests {
         // Copied from curve25519-dalek
         fn part1(sum: u64) -> (u64, u32) {
             let p = (sum as u32).wrapping_mul(LFACTOR) & ((1u32 << 29) - 1);
-            ((sum + m(p,L0)) >> 29, p)
+            ((sum + m(p, L0)) >> 29, p)
         }
 
-        let a = (0..253).into_iter().map(|_| thread_rng().next_u64()).collect::<Vec<_>>();
-        let (lo, hi): (Vec<_>, Vec<_>) = a.iter().map(|x| ((x & 0xFFFFFFFF) as u32, (x >> 32) as u32)).unzip();
+        let a = (0..253)
+            .into_iter()
+            .map(|_| thread_rng().next_u64())
+            .collect::<Vec<_>>();
+        let (lo, hi): (Vec<_>, Vec<_>) = a
+            .iter()
+            .map(|x| ((x & 0xFFFFFFFF) as u32, (x >> 32) as u32))
+            .unzip();
         let a_packed = [lo, hi].concat();
 
         let a_len = a.len();
@@ -454,14 +466,22 @@ mod tests {
 
         let a_vec = runtime.alloc_from_slice(&a_packed);
         // * 3: 2 for lo and hi words of carry and 1 for n
-        let c_vec = runtime.alloc::<u32>(a.len() * 3); 
+        let c_vec = runtime.alloc::<u32>(a.len() * 3);
 
         let len = GpuU32::new(a.len() as u32);
         let dummy = GpuU32::new(0);
 
-        let threadgroups = if a.len() % 128 == 0 { a.len() / 128 } else { a.len() / 128 + 1 };
-        
-        runtime.run("test_scalar_montgomery_reduce_part1", &[&a_vec, &dummy.data, &c_vec, &len.data], &Grid::new(threadgroups as u32, 1, 1));
+        let threadgroups = if a.len() % 128 == 0 {
+            a.len() / 128
+        } else {
+            a.len() / 128 + 1
+        };
+
+        runtime.run(
+            "test_scalar_montgomery_reduce_part1",
+            &[&a_vec, &dummy.data, &c_vec, &len.data],
+            &Grid::new(threadgroups as u32, 1, 1),
+        );
 
         let c = c_vec.get_data::<u32>();
 
@@ -492,8 +512,14 @@ mod tests {
             (sum >> 29, w)
         }
 
-        let a = (0..253).into_iter().map(|_| thread_rng().next_u64()).collect::<Vec<_>>();
-        let (lo, hi): (Vec<_>, Vec<_>) = a.iter().map(|x| ((x & 0xFFFFFFFF) as u32, (x >> 32) as u32)).unzip();
+        let a = (0..253)
+            .into_iter()
+            .map(|_| thread_rng().next_u64())
+            .collect::<Vec<_>>();
+        let (lo, hi): (Vec<_>, Vec<_>) = a
+            .iter()
+            .map(|x| ((x & 0xFFFFFFFF) as u32, (x >> 32) as u32))
+            .unzip();
         let a_packed = [lo, hi].concat();
 
         let a_len = a.len();
@@ -502,14 +528,22 @@ mod tests {
 
         let a_vec = runtime.alloc_from_slice(&a_packed);
         // * 3: 2 for lo and hi words of carry and 1 for n
-        let c_vec = runtime.alloc::<u32>(a.len() * 3); 
+        let c_vec = runtime.alloc::<u32>(a.len() * 3);
 
         let len = GpuU32::new(a.len() as u32);
         let dummy = GpuU32::new(0);
 
-        let threadgroups = if a.len() % 128 == 0 { a.len() / 128 } else { a.len() / 128 + 1 };
-        
-        runtime.run("test_scalar_montgomery_reduce_part2", &[&a_vec, &dummy.data, &c_vec, &len.data], &Grid::new(threadgroups as u32, 1, 1));
+        let threadgroups = if a.len() % 128 == 0 {
+            a.len() / 128
+        } else {
+            a.len() / 128 + 1
+        };
+
+        runtime.run(
+            "test_scalar_montgomery_reduce_part2",
+            &[&a_vec, &dummy.data, &c_vec, &len.data],
+            &Grid::new(threadgroups as u32, 1, 1),
+        );
 
         let c = c_vec.get_data::<u32>();
 
@@ -531,11 +565,17 @@ mod tests {
             assert_eq!(expected.1, c[2 * a_len + i]);
         }
     }
-    
+
     #[test]
     fn can_mul_internal() {
-        let a = (0..253).into_iter().map(|_| Scalar::random(&mut thread_rng())).collect::<Vec<_>>();
-        let b = (0..253).into_iter().map(|_| Scalar::random(&mut thread_rng())).collect::<Vec<_>>();
+        let a = (0..253)
+            .into_iter()
+            .map(|_| Scalar::random(&mut thread_rng()))
+            .collect::<Vec<_>>();
+        let b = (0..253)
+            .into_iter()
+            .map(|_| Scalar::random(&mut thread_rng()))
+            .collect::<Vec<_>>();
 
         let runtime = Runtime::get();
 
@@ -547,9 +587,17 @@ mod tests {
 
         let gpu_len = GpuU32::new(a.len() as u32);
 
-        let threadgroups = if a.len() % 128 == 0 { a.len() / 128 }  else { a.len() / 128 + 1 };
+        let threadgroups = if a.len() % 128 == 0 {
+            a.len() / 128
+        } else {
+            a.len() / 128 + 1
+        };
 
-        Runtime::get().run("test_scalar_mul_internal", &[&a_vec.data, &b_vec.data, &c_vec, &gpu_len.data], &Grid::new(threadgroups as u32, 1, 1));
+        Runtime::get().run(
+            "test_scalar_mul_internal",
+            &[&a_vec.data, &b_vec.data, &c_vec, &gpu_len.data],
+            &Grid::new(threadgroups as u32, 1, 1),
+        );
 
         let c = c_vec.get_data::<u32>();
 

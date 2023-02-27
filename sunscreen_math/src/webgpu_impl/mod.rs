@@ -95,7 +95,12 @@ pub trait GpuVec {
         );
     }
 
-    fn run_binary_kernel<Rhs: GpuVec>(lhs: &Self, rhs: &Rhs, output: &Buffer, kernel_name: &'static str) {
+    fn run_binary_kernel<Rhs: GpuVec>(
+        lhs: &Self,
+        rhs: &Rhs,
+        output: &Buffer,
+        kernel_name: &'static str,
+    ) {
         assert_eq!(lhs.len(), rhs.len());
 
         let runtime = Runtime::get();
@@ -374,9 +379,15 @@ mod tests {
 
     #[test]
     fn can_wide_mul() {
-        let a = (0..253).into_iter().map(|_| thread_rng().next_u32()).collect::<Vec<_>>();
-        let b = (0..253).into_iter().map(|_| thread_rng().next_u32()).collect::<Vec<_>>();
-        
+        let a = (0..253)
+            .into_iter()
+            .map(|_| thread_rng().next_u32())
+            .collect::<Vec<_>>();
+        let b = (0..253)
+            .into_iter()
+            .map(|_| thread_rng().next_u32())
+            .collect::<Vec<_>>();
+
         let a_len = a.len();
 
         let runtime = Runtime::get();
@@ -387,9 +398,17 @@ mod tests {
 
         let len = GpuU32::new(a.len() as u32);
 
-        let threadgroups = if a.len() % 128 == 0 { a.len() / 128 } else { a.len() / 128 + 1 };
-        
-        runtime.run("test_wide_mul", &[&a_vec, &b_vec, &c_vec, &len.data], &Grid::new(threadgroups as u32, 1, 1));
+        let threadgroups = if a.len() % 128 == 0 {
+            a.len() / 128
+        } else {
+            a.len() / 128 + 1
+        };
+
+        runtime.run(
+            "test_wide_mul",
+            &[&a_vec, &b_vec, &c_vec, &len.data],
+            &Grid::new(threadgroups as u32, 1, 1),
+        );
 
         let c = c_vec.get_data::<u32>();
 
@@ -410,11 +429,23 @@ mod tests {
 
     #[test]
     fn can_u64_add() {
-        let a = (0..253).into_iter().map(|_| thread_rng().next_u64()).collect::<Vec<_>>();
-        let b = (0..253).into_iter().map(|_| thread_rng().next_u64()).collect::<Vec<_>>();
-        let (lo, hi): (Vec<_>, Vec<_>) = a.iter().map(|x| ((x & 0xFFFFFFFF) as u32, (x >> 32) as u32)).unzip();
+        let a = (0..253)
+            .into_iter()
+            .map(|_| thread_rng().next_u64())
+            .collect::<Vec<_>>();
+        let b = (0..253)
+            .into_iter()
+            .map(|_| thread_rng().next_u64())
+            .collect::<Vec<_>>();
+        let (lo, hi): (Vec<_>, Vec<_>) = a
+            .iter()
+            .map(|x| ((x & 0xFFFFFFFF) as u32, (x >> 32) as u32))
+            .unzip();
         let a_packed = [lo, hi].concat();
-        let (lo, hi): (Vec<_>, Vec<_>) = b.iter().map(|x| ((x & 0xFFFFFFFF) as u32, (x >> 32) as u32)).unzip();
+        let (lo, hi): (Vec<_>, Vec<_>) = b
+            .iter()
+            .map(|x| ((x & 0xFFFFFFFF) as u32, (x >> 32) as u32))
+            .unzip();
         let b_packed = [lo, hi].concat();
 
         let a_len = a.len();
@@ -427,9 +458,17 @@ mod tests {
 
         let len = GpuU32::new(a.len() as u32);
 
-        let threadgroups = if a.len() % 128 == 0 { a.len() / 128 } else { a.len() / 128 + 1 };
-        
-        runtime.run("test_u64_add", &[&a_vec, &b_vec, &c_vec, &len.data], &Grid::new(threadgroups as u32, 1, 1));
+        let threadgroups = if a.len() % 128 == 0 {
+            a.len() / 128
+        } else {
+            a.len() / 128 + 1
+        };
+
+        runtime.run(
+            "test_u64_add",
+            &[&a_vec, &b_vec, &c_vec, &len.data],
+            &Grid::new(threadgroups as u32, 1, 1),
+        );
 
         let c = c_vec.get_data::<u32>();
 
@@ -455,11 +494,23 @@ mod tests {
 
     #[test]
     fn can_u64_sub() {
-        let a = (0..253).into_iter().map(|_| thread_rng().next_u64()).collect::<Vec<_>>();
-        let b = (0..253).into_iter().map(|_| thread_rng().next_u64()).collect::<Vec<_>>();
-        let (lo, hi): (Vec<_>, Vec<_>) = a.iter().map(|x| ((x & 0xFFFFFFFF) as u32, (x >> 32) as u32)).unzip();
+        let a = (0..253)
+            .into_iter()
+            .map(|_| thread_rng().next_u64())
+            .collect::<Vec<_>>();
+        let b = (0..253)
+            .into_iter()
+            .map(|_| thread_rng().next_u64())
+            .collect::<Vec<_>>();
+        let (lo, hi): (Vec<_>, Vec<_>) = a
+            .iter()
+            .map(|x| ((x & 0xFFFFFFFF) as u32, (x >> 32) as u32))
+            .unzip();
         let a_packed = [lo, hi].concat();
-        let (lo, hi): (Vec<_>, Vec<_>) = b.iter().map(|x| ((x & 0xFFFFFFFF) as u32, (x >> 32) as u32)).unzip();
+        let (lo, hi): (Vec<_>, Vec<_>) = b
+            .iter()
+            .map(|x| ((x & 0xFFFFFFFF) as u32, (x >> 32) as u32))
+            .unzip();
         let b_packed = [lo, hi].concat();
 
         let a_len = a.len();
@@ -472,9 +523,17 @@ mod tests {
 
         let len = GpuU32::new(a.len() as u32);
 
-        let threadgroups = if a.len() % 128 == 0 { a.len() / 128 } else { a.len() / 128 + 1 };
-        
-        runtime.run("test_u64_sub", &[&a_vec, &b_vec, &c_vec, &len.data], &Grid::new(threadgroups as u32, 1, 1));
+        let threadgroups = if a.len() % 128 == 0 {
+            a.len() / 128
+        } else {
+            a.len() / 128 + 1
+        };
+
+        runtime.run(
+            "test_u64_sub",
+            &[&a_vec, &b_vec, &c_vec, &len.data],
+            &Grid::new(threadgroups as u32, 1, 1),
+        );
 
         let c = c_vec.get_data::<u32>();
 
@@ -500,9 +559,18 @@ mod tests {
 
     #[test]
     fn can_u64_shr() {
-        let a = (0..253).into_iter().map(|_| thread_rng().next_u64()).collect::<Vec<_>>();
-        let b = (0..253).into_iter().map(|_| thread_rng().next_u32() % 32).collect::<Vec<_>>();
-        let (lo, hi): (Vec<_>, Vec<_>) = a.iter().map(|x| ((x & 0xFFFFFFFF) as u32, (x >> 32) as u32)).unzip();
+        let a = (0..253)
+            .into_iter()
+            .map(|_| thread_rng().next_u64())
+            .collect::<Vec<_>>();
+        let b = (0..253)
+            .into_iter()
+            .map(|_| thread_rng().next_u32() % 32)
+            .collect::<Vec<_>>();
+        let (lo, hi): (Vec<_>, Vec<_>) = a
+            .iter()
+            .map(|x| ((x & 0xFFFFFFFF) as u32, (x >> 32) as u32))
+            .unzip();
         let a_packed = [lo, hi].concat();
 
         let a_len = a.len();
@@ -515,9 +583,17 @@ mod tests {
 
         let len = GpuU32::new(a.len() as u32);
 
-        let threadgroups = if a.len() % 128 == 0 { a.len() / 128 } else { a.len() / 128 + 1 };
-        
-        runtime.run("test_u64_shr", &[&a_vec, &b_vec, &c_vec, &len.data], &Grid::new(threadgroups as u32, 1, 1));
+        let threadgroups = if a.len() % 128 == 0 {
+            a.len() / 128
+        } else {
+            a.len() / 128 + 1
+        };
+
+        runtime.run(
+            "test_u64_shr",
+            &[&a_vec, &b_vec, &c_vec, &len.data],
+            &Grid::new(threadgroups as u32, 1, 1),
+        );
 
         let c = c_vec.get_data::<u32>();
 
@@ -540,5 +616,4 @@ mod tests {
             assert_eq!(expected, actual);
         }
     }
-
 }

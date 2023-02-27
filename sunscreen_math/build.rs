@@ -3,7 +3,7 @@
 fn compile_wgsl_shaders() {
     use std::fs::{read_to_string, DirEntry, File};
     use std::io::Write;
-    use std::{path::PathBuf};
+    use std::path::PathBuf;
 
     use naga::valid::{Capabilities, ValidationFlags};
     use wgpu_core::pipeline::{CreateShaderModuleError, ShaderError};
@@ -57,7 +57,7 @@ fn compile_wgsl_shaders() {
             let e = ShaderError {
                 source: shader_contents,
                 label: None,
-                inner: Box::new(e)
+                inner: Box::new(e),
             };
 
             let e = CreateShaderModuleError::Parsing(e);
@@ -73,7 +73,7 @@ fn compile_wgsl_shaders() {
             let e = ShaderError {
                 source: shader_contents,
                 label: None,
-                inner: Box::new(e)
+                inner: Box::new(e),
             };
 
             let e = CreateShaderModuleError::Validation(e);

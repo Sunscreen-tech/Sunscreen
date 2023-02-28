@@ -86,8 +86,6 @@ impl Runtime {
             .new_compute_pipeline_state_with_function(&gpu_fn)
             .unwrap();
 
-        dbg!(gpu_fn.max_total_threads_per_threadgroup());
-
         encoder.set_compute_pipeline_state(&gpu_fn);
 
         for (i, buf) in data.iter().enumerate() {
@@ -131,6 +129,27 @@ impl<'a, P: GpuVec> Iterator for GpuVecIter<'a, P> {
     }
 }
 
+pub struct IntoGpuVecIter<P: GpuVec> {
+    index: usize,
+    gpu_vec: P,
+}
+
+impl<P: GpuVec> Iterator for IntoGpuVecIter<P> {
+    type Item = P::Item;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let item = if self.index >= self.gpu_vec.len() {
+            None
+        } else {
+            Some(self.gpu_vec.get(self.index))
+        };
+
+        self.index += 1;
+
+        item
+    }
+}
+
 /**
  * A vector of items stored on the GPU. This trait is agnostic as to the
  * data layout.
@@ -154,14 +173,21 @@ where
      */
     fn len(&self) -> usize;
 
+    fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
     fn len_bytes(&self) -> usize {
         self.len() * size_of::<Self::Item>()
     }
 
-    /**
-     * Returns a mutable slice of the GPU buffer. Since the data may not have
-     * been initialized, we return `MaybeUninit<u32>` to ensure soundness.
-     */
+    ///
+    /// Returns a mutable slice of the GPU buffer. Since the data may not have
+    /// been initialized, we return `MaybeUninit<u32>` to ensure soundness.
+    ///
+    /// # Safety
+    /// This method returns potentially uninitialized memory.
+    ///
     unsafe fn buffer_slice_mut(&mut self) -> &mut [MaybeUninit<u32>] {
         let byte_len = self.len_bytes();
 
@@ -171,14 +197,14 @@ where
         )
     }
 
-    /**
-     * Return an immutable slice of the GPU buffer as u32 values.
-     *
-     * # Undefined behavior
-     * Before using this method, you must first call `buffer_slice_mut`,
-     * and initialize all the elements. Calling this method before doing
-     * this is unsound.
-     */
+    ///
+    /// Return an immutable slice of the GPU buffer as u32 values.
+    ///
+    /// # Safety
+    /// Before using this method, you must first call `buffer_slice_mut`,
+    /// and initialize all the elements. Calling this method before doing
+    /// this is unsound.
+    ///
     unsafe fn buffer_slice(&self) -> &[u32] {
         let byte_len = self.len_bytes();
 
@@ -189,6 +215,13 @@ where
 
     fn iter(&self) -> GpuVecIter<Self> {
         GpuVecIter {
+            index: 0,
+            gpu_vec: self,
+        }
+    }
+
+    fn into_iter(self) -> IntoGpuVecIter<Self> {
+        IntoGpuVecIter {
             index: 0,
             gpu_vec: self,
         }

@@ -20,6 +20,8 @@ class Scalar29 {
 private:
     u32 _limbs[9];
 
+    Scalar29 montgomery_invert() const thread;
+
 public:
     constant static Scalar29 Zero;
 
@@ -56,23 +58,25 @@ public:
     static Scalar29 mul(const Scalar29 a, const Scalar29 b);
     static Scalar29 square(const Scalar29 a);
 
-    Scalar29 operator+(thread const Scalar29& other) thread {
+    Scalar29 operator+(thread const Scalar29& other) const thread {
         return Scalar29::add(*this, other);
     }
 
-    Scalar29 operator-(thread const Scalar29& other) thread {
+    Scalar29 operator-(thread const Scalar29& other) const thread {
         return Scalar29::sub(*this, other);
     }
 
-    Scalar29 operator*(thread const Scalar29& other) thread {
+    Scalar29 operator*(thread const Scalar29& other) const thread {
         return Scalar29::mul(*this, other);
     }
 
-    Scalar29 operator-() {
+    Scalar29 operator-() const thread {
         return Scalar29::sub(Zero, *this);
     }
 
-    Scalar29 square() thread {
+    Scalar29 invert() const thread;
+
+    Scalar29 square() const thread {
         return square(*this);
     }
 

@@ -5,6 +5,7 @@ use curve25519_dalek::{ristretto::RistrettoPoint, scalar::Scalar, traits::Identi
 use merlin::Transcript;
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
+use sunscreen_math::{RistrettoPointVec, ScalarVec};
 
 use crate::{
     assertions::linear_relation,
@@ -629,10 +630,10 @@ impl LogProof {
     }
 
     fn compute_g_prime(g: &[RistrettoPoint], phi: &[Scalar]) -> Vec<RistrettoPoint> {
-        g.par_iter()
-            .zip(phi.par_iter())
-            .map(|(g, phi)| g * phi.invert())
-            .collect()
+        let phi_inv = ScalarVec::new(phi).invert();
+        let g = RistrettoPointVec::new(g);
+
+        (g * phi_inv).into_iter().collect()
     }
 
     fn compute_v<Q>(

@@ -1181,10 +1181,10 @@ mod benches {
         let a = MatrixPoly::from([
             [delta.clone(), p_0.clone(), one.clone(), zero.clone()],
             [zero.clone(), p_1.clone(), zero.clone(), one.clone()],
-            //[delta.clone(), p_0.clone(), one.clone(), zero.clone()],
-            //[zero.clone(), p_1.clone(), zero.clone(), one.clone()],
-            //[delta.clone(), p_0.clone(), one.clone(), zero.clone()],
-            //[zero.clone(), p_1.clone(), zero.clone(), one.clone()],
+            [delta.clone(), p_0.clone(), one.clone(), zero.clone()],
+            [zero.clone(), p_1.clone(), zero.clone(), one.clone()],
+            [delta.clone(), p_0.clone(), one.clone(), zero.clone()],
+            [zero.clone(), p_1.clone(), zero.clone(), one.clone()],
         ]);
 
         let m = p_0.clone();

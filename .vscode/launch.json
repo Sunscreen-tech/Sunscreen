@@ -288,6 +288,25 @@
         {
             "type": "lldb",
             "request": "launch",
+            "name": "Debug benchmark 'fractional_range_proof'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bench=fractional_range_proof",
+                    "--package=sunscreen"
+                ],
+                "filter": {
+                    "name": "fractional_range_proof",
+                    "kind": "bench"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
             "name": "Debug unit tests in library 'seal_fhe'",
             "cargo": {
                 "args": [
@@ -470,6 +489,177 @@
                 "filter": {
                     "name": "sunscreen_zkp_backend",
                     "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'sunscreen_bulletproofs'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=sunscreen_bulletproofs"
+                ],
+                "filter": {
+                    "name": "sunscreen_bulletproofs",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'range_proof'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=range_proof",
+                    "--package=sunscreen_bulletproofs"
+                ],
+                "filter": {
+                    "name": "range_proof",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'r1cs'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=r1cs",
+                    "--package=sunscreen_bulletproofs"
+                ],
+                "filter": {
+                    "name": "r1cs",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug benchmark 'range_proof'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bench=range_proof",
+                    "--package=sunscreen_bulletproofs"
+                ],
+                "filter": {
+                    "name": "range_proof",
+                    "kind": "bench"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug benchmark 'generators'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bench=generators",
+                    "--package=sunscreen_bulletproofs"
+                ],
+                "filter": {
+                    "name": "generators",
+                    "kind": "bench"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug benchmark 'r1cs'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bench=r1cs",
+                    "--package=sunscreen_bulletproofs"
+                ],
+                "filter": {
+                    "name": "r1cs",
+                    "kind": "bench"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug benchmark 'linear_proof'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bench=linear_proof",
+                    "--package=sunscreen_bulletproofs"
+                ],
+                "filter": {
+                    "name": "linear_proof",
+                    "kind": "bench"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'sunscreen_curve25519'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=sunscreen_curve25519"
+                ],
+                "filter": {
+                    "name": "sunscreen_curve25519",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug benchmark 'dalek_benchmarks'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bench=dalek_benchmarks",
+                    "--package=sunscreen_curve25519"
+                ],
+                "filter": {
+                    "name": "dalek_benchmarks",
+                    "kind": "bench"
                 }
             },
             "args": [],
@@ -803,6 +993,25 @@
                 "filter": {
                     "name": "pir",
                     "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'logproof'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=logproof"
+                ],
+                "filter": {
+                    "name": "logproof",
+                    "kind": "lib"
                 }
             },
             "args": [],

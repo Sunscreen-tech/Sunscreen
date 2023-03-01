@@ -340,8 +340,16 @@ fn constraint_count(graph: &ExecutableZkpProgram) -> Result<usize> {
 
     for i in graph.node_indices() {
         let node = &graph[i];
+        let mut input_count = 0usize;
 
         match node.operation {
+            Operation::Input(_) => {
+                if input_count % 2 == 0 {
+                    count += 1;
+                }
+
+                input_count += 1;
+            }
             Operation::Constraint(_) => count += 1,
             Operation::Mul => {
                 let (left, right) = query.get_binary_operands(i)?;
@@ -350,7 +358,7 @@ fn constraint_count(graph: &ExecutableZkpProgram) -> Result<usize> {
                 match (&graph[left].operation, &graph[right].operation) {
                     (Operation::Constant(_), _) => {}
                     (_, Operation::Constant(_)) => {}
-                    _ => count += 2,
+                    _ => count += 1,
                 }
             }
             _ => {}

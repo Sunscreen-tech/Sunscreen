@@ -1,4 +1,7 @@
-use sunscreen::{types::zkp::NativeField, zkp_program, Compiler, Runtime};
+use sunscreen::{
+    types::zkp::{NativeField, ProgramNode},
+    zkp_program, Compiler, Runtime,
+};
 use sunscreen_runtime::ZkpProgramInput;
 use sunscreen_zkp_backend::{bulletproofs::BulletproofsBackend, BackendField, ZkpBackend};
 
@@ -132,5 +135,44 @@ fn can_use_constant_inputs() {
 
     runtime
         .verify(program, &proof, vec![BPField::from(10u8)], vec![])
+        .unwrap();
+}
+
+#[test]
+fn can_declare_array_inputs() {
+    #[zkp_program(backend = "bulletproofs")]
+    fn in_range<F: BackendField>(a: [[NativeField<F>; 9]; 64]) {
+        for i in 0..a.len() {
+            for j in 0..a[i].len() {
+                a[i][j].constrain_eq(NativeField::from((i + j) as u64));
+            }
+        }
+    }
+
+    let app = Compiler::new()
+        .zkp_backend::<BulletproofsBackend>()
+        .zkp_program(in_range)
+        .compile()
+        .unwrap();
+
+    let runtime = Runtime::new_zkp(&BulletproofsBackend::new()).unwrap();
+
+    let program = app.get_zkp_program(in_range).unwrap();
+
+    let inputs = (0..64u64)
+        .into_iter()
+        .map(|i| {
+            (0..9u64)
+                .into_iter()
+                .map(|j| BPField::from(i + j))
+                .collect::<Vec<_>>()
+        })
+        .flatten()
+        .collect::<Vec<_>>();
+
+    let proof = runtime.prove(program, vec![], vec![], inputs).unwrap();
+
+    runtime
+        .verify(program, &proof, Vec::<ZkpProgramInput>::new(), vec![])
         .unwrap();
 }

@@ -267,6 +267,18 @@ pub trait ToNativeFields {
     fn to_native_fields(&self) -> Vec<BigInt>;
 }
 
+impl<T, const N: usize> ToNativeFields for [T; N]
+where
+    T: ToNativeFields,
+{
+    fn to_native_fields(&self) -> Vec<sunscreen_zkp_backend::BigInt> {
+        self.iter()
+            .map(|x| x.to_native_fields())
+            .flatten()
+            .collect()
+    }
+}
+
 /**
  * This trait specifies one may attempt to convert a plaintext into this type.
  */

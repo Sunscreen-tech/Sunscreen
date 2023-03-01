@@ -207,6 +207,15 @@ where
     fn coerce(nodes: &[NodeIndex]) -> ProgramNode<Self>;
 }
 
+impl<T, const N: usize> NumFieldElements for [T; N]
+where
+    T: ZkpType,
+{
+    const NUM_NATIVE_FIELD_ELEMENTS: usize = T::NUM_NATIVE_FIELD_ELEMENTS * N;
+}
+
+impl<T, const N: usize> ZkpType for [T; N] where T: ZkpType {}
+
 impl<T> Coerce for T
 where
     T: ZkpType,

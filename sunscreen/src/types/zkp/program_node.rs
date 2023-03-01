@@ -89,7 +89,6 @@ where
 {
     fn constant_input() -> Self {
         (0..N)
-            .into_iter()
             .map(|_| T::constant_input())
             .collect::<Vec<_>>()
             .try_into()
@@ -98,7 +97,6 @@ where
 
     fn private_input() -> Self {
         (0..N)
-            .into_iter()
             .map(|_| T::private_input())
             .collect::<Vec<_>>()
             .try_into()
@@ -107,7 +105,6 @@ where
 
     fn public_input() -> Self {
         (0..N)
-            .into_iter()
             .map(|_| T::public_input())
             .collect::<Vec<_>>()
             .try_into()

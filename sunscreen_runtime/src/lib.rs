@@ -272,9 +272,7 @@ where
     T: ToNativeFields,
 {
     fn to_native_fields(&self) -> Vec<sunscreen_zkp_backend::BigInt> {
-        self.iter()
-            .flat_map(|x| x.to_native_fields())
-            .collect()
+        self.iter().flat_map(|x| x.to_native_fields()).collect()
     }
 }
 

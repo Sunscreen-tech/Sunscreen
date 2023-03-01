@@ -335,13 +335,13 @@ impl Default for BulletproofsBackend {
 
 fn constraint_count(graph: &ExecutableZkpProgram) -> Result<usize> {
     let mut count = 0;
+    let mut input_count = 0usize;
 
     let query = GraphQuery::new(graph);
-
+    
     for i in graph.node_indices() {
         let node = &graph[i];
-        let mut input_count = 0usize;
-
+        
         match node.operation {
             Operation::Input(_) => {
                 if input_count % 2 == 0 {

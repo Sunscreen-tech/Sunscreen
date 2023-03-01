@@ -7,7 +7,13 @@ type BPField = <BulletproofsBackend as ZkpBackend>::Field;
 
 fn fractional_range_proof(_c: &mut Criterion) {
     fn to_field_element<F: BackendField, const N: usize>(bits: &[ProgramNode<NativeField<F>>; N]) -> ProgramNode<NativeField<F>> {
-        let powers = (0..N).map(|x| NativeField::from(1u64 << x)).collect::<Vec<_>>();
+        let powers = (0..N).map(|x| {
+            if x == N - 1 {
+                NativeField::from(-1 * 1i64 << x)
+            } else {
+                NativeField::from(1i64 << x)
+            }
+        }).collect::<Vec<_>>();
         let mut val = NativeField::from(0u8).into_program_node();
 
         for (i, bit) in bits.iter().enumerate() {
@@ -24,7 +30,7 @@ fn fractional_range_proof(_c: &mut Criterion) {
 
         let val = to_field_element(&bits);
 
-        val.constrain_eq(NativeField::from(10));
+        val.constrain_eq(NativeField::from(-6));
     }
 
     let app = Compiler::new()

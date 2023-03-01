@@ -1153,6 +1153,12 @@ mod benches {
 
     #[bench]
     fn bfv_benchmark(_: &mut Bencher) {
+        // Secret key
+        // a = random in q
+        // e_1 = q / 2p
+        // c_1 = s * a + e_1 + del * m
+        // c_2 = a
+
         type Q = FqSeal128_4096;
 
         const POLY_DEGREE: u64 = 4096u64;

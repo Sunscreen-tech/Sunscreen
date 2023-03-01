@@ -37,6 +37,26 @@ where
     _phantom: PhantomData<T>,
 }
 
+/**
+ * Trait for adding inputs to a ZKP program
+ */
+pub trait CreateZkpProgramInput {
+    /**
+     * Creates a public program input of type T.
+     */
+    fn public_input() -> Self;
+
+    /**
+     * Creates a private program input of type T.
+     */
+    fn private_input() -> Self;
+
+    /**
+     * Creates a constant program input of type T.
+     */
+    fn constant_input() -> Self;
+}
+
 impl<T> ProgramNode<T>
 where
     T: ZkpType,
@@ -61,11 +81,42 @@ where
             }
         })
     }
+}
 
-    /**
-     * Creates a public program input of type T.
-     */
-    pub fn public_input() -> Self {
+impl<T, const N: usize> CreateZkpProgramInput for [T; N]
+where
+    T: CreateZkpProgramInput + Copy,
+{
+    fn constant_input() -> Self {
+        (0..N)
+            .map(|_| T::constant_input())
+            .collect::<Vec<_>>()
+            .try_into()
+            .unwrap_or_else(|_| unreachable!())
+    }
+
+    fn private_input() -> Self {
+        (0..N)
+            .map(|_| T::private_input())
+            .collect::<Vec<_>>()
+            .try_into()
+            .unwrap_or_else(|_| unreachable!())
+    }
+
+    fn public_input() -> Self {
+        (0..N)
+            .map(|_| T::public_input())
+            .collect::<Vec<_>>()
+            .try_into()
+            .unwrap_or_else(|_| unreachable!())
+    }
+}
+
+impl<T> CreateZkpProgramInput for ProgramNode<T>
+where
+    T: ZkpType,
+{
+    fn public_input() -> Self {
         let mut ids = Vec::with_capacity(T::NUM_NATIVE_FIELD_ELEMENTS);
 
         for _ in 0..T::NUM_NATIVE_FIELD_ELEMENTS {
@@ -75,10 +126,7 @@ where
         Self::new(&ids)
     }
 
-    /**
-     * Creates a private program input of type T.
-     */
-    pub fn private_input() -> Self {
+    fn private_input() -> Self {
         let mut ids = Vec::with_capacity(T::NUM_NATIVE_FIELD_ELEMENTS);
 
         for _ in 0..T::NUM_NATIVE_FIELD_ELEMENTS {
@@ -88,10 +136,7 @@ where
         Self::new(&ids)
     }
 
-    /**
-     * Creates a constant program input of type T.
-     */
-    pub fn constant_input() -> Self {
+    fn constant_input() -> Self {
         let mut ids = Vec::with_capacity(T::NUM_NATIVE_FIELD_ELEMENTS);
 
         for _ in 0..T::NUM_NATIVE_FIELD_ELEMENTS {

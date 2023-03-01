@@ -342,7 +342,7 @@ fn constraint_count(graph: &ExecutableZkpProgram) -> Result<usize> {
         let node = &graph[i];
 
         match node.operation {
-            Operation::Constant(_) => count += 1,
+            Operation::Constraint(_) => count += 1,
             Operation::Mul => {
                 let (left, right) = query.get_binary_operands(i)?;
 

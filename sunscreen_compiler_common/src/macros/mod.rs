@@ -282,7 +282,7 @@ pub fn emit_signature(args: &[Type], return_types: &[Type]) -> TokenStream2 {
         let x = normalize_type_generic_args(x);
 
         quote! {
-            #x::type_name(),
+            <#x>::type_name(),
         }
     });
 
@@ -298,7 +298,7 @@ pub fn emit_signature(args: &[Type], return_types: &[Type]) -> TokenStream2 {
         let alias = format_ident!("R{}", i);
 
         quote! {
-            #alias ::type_name(),
+            <#alias>::type_name(),
         }
     });
 

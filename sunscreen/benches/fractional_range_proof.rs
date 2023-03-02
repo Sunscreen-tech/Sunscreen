@@ -21,7 +21,7 @@ fn fractional_range_proof(_c: &mut Criterion) {
                 let power = NativeField::<F>::from(BigInt::from(BigInt::ONE.shl_vartime(x)));
 
                 let msb = bits.len() - 1;
-                
+
                 if twos_complement && x == msb {
                     -(power.into_program_node())
                 } else {

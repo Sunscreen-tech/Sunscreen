@@ -338,10 +338,10 @@ fn constraint_count(graph: &ExecutableZkpProgram) -> Result<usize> {
     let mut input_count = 0usize;
 
     let query = GraphQuery::new(graph);
-    
+
     for i in graph.node_indices() {
         let node = &graph[i];
-        
+
         match node.operation {
             Operation::Input(_) => {
                 if input_count % 2 == 0 {

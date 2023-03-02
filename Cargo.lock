@@ -2017,6 +2017,7 @@ dependencies = [
  "bumpalo",
  "criterion 0.4.0",
  "crypto-bigint",
+ "env_logger 0.10.0",
  "float-cmp",
  "log",
  "num",

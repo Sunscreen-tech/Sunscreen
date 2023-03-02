@@ -1,14 +1,17 @@
+use std::time::Instant;
+
 use criterion::{criterion_group, criterion_main, Criterion};
 use sunscreen::{
     types::zkp::{ConstrainCmp, IntoProgramNode, NativeField, ProgramNode},
     *,
 };
-use sunscreen_compiler_common::Render;
 use sunscreen_zkp_backend::{bulletproofs::BulletproofsBackend, BigInt};
 
 type BPField = <BulletproofsBackend as ZkpBackend>::Field;
 
 fn fractional_range_proof(_c: &mut Criterion) {
+    env_logger::init();
+
     fn to_field_element<F: BackendField>(
         bits: &[ProgramNode<NativeField<F>>],
         twos_complement: bool,
@@ -33,7 +36,14 @@ fn fractional_range_proof(_c: &mut Criterion) {
     }
 
     #[zkp_program(backend = "bulletproofs")]
-    fn in_range<F: BackendField>(a: [[NativeField<F>; 8]; 64], b: [[NativeField<F>; 8]; 64]) {
+    /**
+     * Proves the 0 < a <= b and a == c
+     */
+    fn in_range<F: BackendField>(
+        a: [[NativeField<F>; 8]; 64],
+        b: [[NativeField<F>; 8]; 64],
+        c: [[NativeField<F>; 8]; 64],
+    ) {
         let a_coeffs = a
             .iter()
             .map(|x| to_field_element(x, true))
@@ -42,12 +52,18 @@ fn fractional_range_proof(_c: &mut Criterion) {
             .iter()
             .map(|x| to_field_element(x, true))
             .collect::<Vec<_>>();
+        let c_coeffs = c
+            .iter()
+            .map(|x| to_field_element(x, true))
+            .collect::<Vec<_>>();
 
         let a_val = to_field_element(&a_coeffs, false);
         let b_val = to_field_element(&b_coeffs, false);
+        let c_val = to_field_element(&c_coeffs, false);
 
         a_val.constrain_gt_bounded(NativeField::<F>::from(0).into_program_node(), 8);
         a_val.constrain_le_bounded(b_val, 8);
+        a_val.constrain_eq(c_val);
     }
 
     let app = Compiler::new()
@@ -57,8 +73,6 @@ fn fractional_range_proof(_c: &mut Criterion) {
         .unwrap();
 
     let prog = app.get_zkp_program(in_range).unwrap();
-
-    std::fs::write("tmp", prog.render()).unwrap();
 
     fn encode(val: i8) -> [NativeField<BPField>; 8] {
         let as_u8 = val.to_le_bytes()[0];
@@ -70,7 +84,7 @@ fn fractional_range_proof(_c: &mut Criterion) {
             .unwrap()
     }
 
-    // 3 * 1 + -7 * 2 = -11
+    // 3 * 1 + 2 * 2 = 7
     let mut a = vec![0i8; 64];
     a[0] = 3;
     a[1] = 2;
@@ -94,13 +108,34 @@ fn fractional_range_proof(_c: &mut Criterion) {
         .try_into()
         .unwrap();
 
+    // 1 * 1 + 1 * 2 + 1 * 4  = 7
+    let mut c = vec![0i8; 64];
+    c[0] = 1;
+    c[1] = 1;
+    c[2] = 1;
+
+    let c: [[NativeField<BPField>; 8]; 64] = c
+        .iter()
+        .map(|x| encode(*x))
+        .collect::<Vec<_>>()
+        .try_into()
+        .unwrap();
+
     let runtime = Runtime::new_zkp(&BulletproofsBackend::new()).unwrap();
 
-    let proof = runtime.prove(&prog, vec![], vec![], vec![a, b]).unwrap();
+    let prover_time = Instant::now();
+
+    let proof = runtime.prove(prog, vec![], vec![], vec![a, b, c]).unwrap();
+
+    println!("Prover time {}s", prover_time.elapsed().as_secs_f64());
+
+    let verifier_time = Instant::now();
 
     runtime
-        .verify(&prog, &proof, Vec::<ZkpProgramInput>::new(), vec![])
+        .verify(prog, &proof, Vec::<ZkpProgramInput>::new(), vec![])
         .unwrap();
+
+    println!("Verifier time {}s", verifier_time.elapsed().as_secs_f64());
 }
 
 criterion_group!(benches, fractional_range_proof);

@@ -41,6 +41,7 @@ thiserror = "1.0.37"
 curve25519-dalek = { path = "../sunscreen_curve25519", package = "sunscreen_curve25519" }
 bulletproofs = { path = "../sunscreen_bulletproofs", package = "sunscreen_bulletproofs" }
 criterion = "0.4.0"
+env_logger = "0.10.0"
 sunscreen_zkp_backend = { path = "../sunscreen_zkp_backend", features = ["bulletproofs"] }
 sunscreen_compiler_common = { path = "../sunscreen_compiler_common" }
 serde_json = "1.0.74"

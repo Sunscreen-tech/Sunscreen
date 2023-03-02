@@ -113,6 +113,11 @@ impl<F: BackendField> From<i32> for NativeField<F> {
 impl<F: BackendField> From<i64> for NativeField<F> {
     fn from(x: i64) -> Self {
         assert!(F::FIELD_MODULUS != BigInt::ZERO);
+        assert_ne!(
+            x,
+            i64::MIN,
+            "Converting i64::MIN to NativeField currently unsupported."
+        );
 
         // Shr on i64 is an arithmetic shift, so we need to mask
         // the LSB so we don't get 255 for negative values.

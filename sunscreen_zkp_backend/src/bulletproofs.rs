@@ -335,6 +335,7 @@ impl Default for BulletproofsBackend {
 
 fn constraint_count(graph: &ExecutableZkpProgram) -> Result<usize> {
     let mut count = 0;
+    let mut input_count = 0usize;
 
     let query = GraphQuery::new(graph);
 
@@ -342,6 +343,13 @@ fn constraint_count(graph: &ExecutableZkpProgram) -> Result<usize> {
         let node = &graph[i];
 
         match node.operation {
+            Operation::Input(_) => {
+                if input_count % 2 == 0 {
+                    count += 1;
+                }
+
+                input_count += 1;
+            }
             Operation::Constraint(_) => count += 1,
             Operation::Mul => {
                 let (left, right) = query.get_binary_operands(i)?;
@@ -350,7 +358,7 @@ fn constraint_count(graph: &ExecutableZkpProgram) -> Result<usize> {
                 match (&graph[left].operation, &graph[right].operation) {
                     (Operation::Constant(_), _) => {}
                     (_, Operation::Constant(_)) => {}
-                    _ => count += 2,
+                    _ => count += 1,
                 }
             }
             _ => {}

@@ -329,7 +329,8 @@ where
                 let parents = query.get_unordered_operands(id)?;
 
                 for parent in parents {
-                    if node_outputs[&parent].clone().zkp_into() != x {
+                    let actual = node_outputs[&parent].clone().zkp_into();
+                    if actual != x {
                         return Err(Error::UnsatisfiableConstraint(id));
                     }
                 }

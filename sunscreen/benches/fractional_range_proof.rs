@@ -19,7 +19,10 @@ fn fractional_range_proof(_c: &mut Criterion) {
         let powers = (0..bits.len())
             .map(|x| {
                 let power = NativeField::<F>::from(BigInt::from(BigInt::ONE.shl_vartime(x)));
-                if twos_complement && x == bits.len() - 1 {
+
+                let msb = bits.len() - 1;
+                
+                if twos_complement && x == msb {
                     -(power.into_program_node())
                 } else {
                     power.into_program_node()
@@ -44,18 +47,13 @@ fn fractional_range_proof(_c: &mut Criterion) {
         b: [[NativeField<F>; 8]; 64],
         c: [[NativeField<F>; 8]; 64],
     ) {
-        let a_coeffs = a
-            .iter()
-            .map(|x| to_field_element(x, true))
-            .collect::<Vec<_>>();
-        let b_coeffs = b
-            .iter()
-            .map(|x| to_field_element(x, true))
-            .collect::<Vec<_>>();
-        let c_coeffs = c
-            .iter()
-            .map(|x| to_field_element(x, true))
-            .collect::<Vec<_>>();
+        let get_coeffs = |x: &[[ProgramNode<NativeField<F>>; 8]]| -> Vec<_> {
+            x.iter().map(|x| to_field_element(x, true)).collect()
+        };
+
+        let a_coeffs = get_coeffs(&a);
+        let b_coeffs = get_coeffs(&b);
+        let c_coeffs = get_coeffs(&c);
 
         let a_val = to_field_element(&a_coeffs, false);
         let b_val = to_field_element(&b_coeffs, false);
@@ -84,6 +82,8 @@ fn fractional_range_proof(_c: &mut Criterion) {
             .unwrap()
     }
 
+    // Create a carryless binary value.
+    // a is 3 in the 1s place, 2 in the 2s place.
     // 3 * 1 + 2 * 2 = 7
     let mut a = vec![0i8; 64];
     a[0] = 3;
@@ -108,6 +108,8 @@ fn fractional_range_proof(_c: &mut Criterion) {
         .try_into()
         .unwrap();
 
+    // This value should equal a. But we're going to test equality with a
+    // different representation of 7.
     // 1 * 1 + 1 * 2 + 1 * 4  = 7
     let mut c = vec![0i8; 64];
     c[0] = 1;

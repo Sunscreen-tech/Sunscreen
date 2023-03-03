@@ -61,7 +61,7 @@ fn make_fractional_value(bits: &[i8]) -> [[BPField; 8]; 64] {
     let a = bits
         .iter()
         .cloned()
-        .chain((0..remain).into_iter().map(|_| 0i8))
+        .chain((0..remain).map(|_| 0i8))
         .collect::<Vec<_>>();
 
     a.iter()

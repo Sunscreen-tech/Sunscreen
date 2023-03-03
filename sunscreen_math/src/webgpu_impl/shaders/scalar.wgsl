@@ -590,7 +590,6 @@ fn scalar29_to_montgomery(val: ptr<function, Scalar29>) -> Scalar29 {
 }
 
 fn scalar29_from_montgomery(val: ptr<function, Scalar29>) -> Scalar29 {
-    let zero = u64(0u, 0u);
     let limbs = array<u64, 17>(
         u64((*val).v[0], 0u),
         u64((*val).v[1], 0u),
@@ -601,17 +600,17 @@ fn scalar29_from_montgomery(val: ptr<function, Scalar29>) -> Scalar29 {
         u64((*val).v[6], 0u),
         u64((*val).v[7], 0u),
         u64((*val).v[8], 0u),
-        u64(0u, 0u),
-        u64(0u, 0u),
-        u64(0u, 0u),
-        u64(0u, 0u),
-        u64(0u, 0u),
-        u64(0u, 0u),
-        u64(0u, 0u),
-        u64(0u, 0u)
+        zero,
+        zero,
+        zero,
+        zero,
+        zero,
+        zero,
+        zero,
+        zero
     );
             
-    //return scalar29_montgomery_reduce(limbs);
+    return scalar29_montgomery_reduce(limbs);
 }
 
 fn scalar29_invert(x: ptr<function, Scalar29>) -> Scalar29 {
@@ -702,6 +701,23 @@ fn kernel_scalar29_square(
     var a = scalar29_unpack_a(gid.x, g_len);
 
     var c = scalar29_square(&a);
+
+    scalar29_pack_c(&c, gid.x, g_len);
+}
+
+@compute
+@workgroup_size(128, 1, 1)
+fn kernel_scalar29_invert(
+    @builtin(global_invocation_id) gid: vec3<u32>,
+) {
+    if gid.x >= g_len {
+        unused_b();
+        return;
+    }
+
+    var a = scalar29_unpack_a(gid.x, g_len);
+
+    var c = scalar29_invert(&a);
 
     scalar29_pack_c(&c, gid.x, g_len);
 }

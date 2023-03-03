@@ -142,14 +142,14 @@ fn scalar29_montgomery_reduce(limbs: array<u64, 17>) -> Scalar29 {
 
     // the first half computes the Montgomery adjustment factor n, and begins adding n*l to make limbs divisible by R
     let x0 = part1(limbs[ 0]);
-    
+ 
     let x_1_1 = mul_wide(x0.n, l.v[1]);
     let x_1_in = u64_add(u64_add(x0.carry, limbs[1]), x_1_1);
     let x1 = part1(x_1_in);
 
     let x_2_1 = mul_wide(x0.n, l.v[2]);
     let x_2_2 = mul_wide(x1.n, l.v[1]);
-    let x_2_in = u64_add(u64_add(u64_add(x1.carry, limbs[2]), x_2_1), x_2_1);
+    let x_2_in = u64_add(u64_add(u64_add(x1.carry, limbs[2]), x_2_1), x_2_2);
     let x2 = part1(x_2_in);
 
     let x_3_1 = mul_wide(x0.n, l.v[3]);
@@ -169,7 +169,7 @@ fn scalar29_montgomery_reduce(limbs: array<u64, 17>) -> Scalar29 {
     let x_5_2 = mul_wide(x2.n, l.v[3]);
     let x_5_3 = mul_wide(x3.n, l.v[2]);
     let x_5_4 = mul_wide(x4.n, l.v[1]);
-    let x_5_in = u64_add(u64_add(u64_add(u64_add(u64_add(x4.carry, limbs[5]), x_4_1), x_4_2), x_4_3), x_4_4);
+    let x_5_in = u64_add(u64_add(u64_add(u64_add(u64_add(x4.carry, limbs[5]), x_5_1), x_5_2), x_5_3), x_5_4);
     let x5 = part1(x_5_in);
 
     let x_6_1 = mul_wide(x2.n, l.v[4]);
@@ -186,11 +186,12 @@ fn scalar29_montgomery_reduce(limbs: array<u64, 17>) -> Scalar29 {
     let x_7_in = u64_add(u64_add(u64_add(u64_add(u64_add(x6.carry, limbs[7]), x_7_1), x_7_2), x_7_3), x_7_4);
     let x7 = part1(x_7_in);
     
-    let x_8_1 = mul_wide(x4.n, l.v[4]);
-    let x_8_2 = mul_wide(x5.n, l.v[3]);
-    let x_8_3 = mul_wide(x6.n, l.v[2]);
-    let x_8_4 = mul_wide(x7.n, l.v[1]);
-    let x_8_in = u64_add(u64_add(u64_add(u64_add(u64_add(x7.carry, limbs[8]), x_8_1), x_8_2), x_8_3), x_8_4);
+    let x_8_1 = mul_wide(x0.n, l.v[8]);
+    let x_8_2 = mul_wide(x4.n, l.v[4]);
+    let x_8_3 = mul_wide(x5.n, l.v[3]);
+    let x_8_4 = mul_wide(x6.n, l.v[2]);
+    let x_8_5 = mul_wide(x7.n, l.v[1]);
+    let x_8_in = u64_add(u64_add(u64_add(u64_add(u64_add(u64_add(x7.carry, limbs[8]), x_8_1), x_8_2), x_8_3), x_8_4), x_8_5);
     let x8 = part1(x_8_in);
 
     // limbs is divisible by R now, so we can divide by R by simply storing the upper half as the result

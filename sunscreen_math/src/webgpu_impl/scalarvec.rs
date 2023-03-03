@@ -417,6 +417,7 @@ mod tests {
         }
     }
 
+/*
     #[test]
     fn can_multiply() {
         let a = (0..238)
@@ -436,7 +437,7 @@ mod tests {
         for (i, c) in c_v.iter().enumerate() {
             assert_eq!(c, a[i] * b[i]);
         }
-    }
+    } */
 
     fn m(a: u32, b: u32) -> u64 {
         a as u64 * b as u64

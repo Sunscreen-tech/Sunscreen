@@ -136,6 +136,17 @@ impl GpuScalarVec {
 
         Scalars { data: packed, i: 0 }
     }
+
+    pub fn square(&self) -> Self {
+        let c = Runtime::get().alloc::<u32>(self.u32_len());
+        
+        GpuScalarVec::run_unary_kernel(self, &c, "kernel_scalar29_square");
+
+        Self {
+            data: c,
+            len: self.len
+        }
+    }
 }
 
 impl Sub<GpuScalarVec> for GpuScalarVec {
@@ -435,6 +446,22 @@ mod tests {
 
         for (i, c) in c_v.iter().enumerate() {
             assert_eq!(c, a[i] * b[i]);
+        }
+    }
+
+    #[test]
+    fn can_square() {
+        let a = (0..238)
+            .into_iter()
+            .map(|_| Scalar::random(&mut thread_rng()))
+            .collect::<Vec<_>>();
+        
+        let a_v = GpuScalarVec::new(&a);
+
+        let c_v = a_v.square();
+
+        for (i, c) in c_v.iter().enumerate() {
+            assert_eq!(c, a[i] * a[i]);
         }
     }
 

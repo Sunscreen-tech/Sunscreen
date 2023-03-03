@@ -407,6 +407,114 @@ fn scalar29_mul_internal(a: ptr<function, Scalar29>, b: ptr<function, Scalar29>)
     return z;
 }
 
+fn scalar29_square_internal(a: ptr<function, Scalar29>) -> array<u64, 17> {
+    let aa = array<u32, 8>(
+        (*a).v[0] * 2u,
+        (*a).v[1] * 2u,
+        (*a).v[2] * 2u,
+        (*a).v[3] * 2u,
+        (*a).v[4] * 2u,
+        (*a).v[5] * 2u,
+        (*a).v[6] * 2u,
+        (*a).v[7] * 2u
+    );
+
+    let r0 = mul_wide((*a).v[0], (*a).v[0]);
+    
+    let r1 = mul_wide(aa[0], (*a).v[1]);
+    
+    let r2_1 = mul_wide(aa[0], (*a).v[2]);
+    let r2_2 = mul_wide((*a).v[1], (*a).v[1]);
+    let r2 = u64_add(r2_1, r2_2);
+
+    let r_3_1 = mul_wide(aa[0],(*a).v[3]);
+    let r_3_2 = mul_wide(aa[1],(*a).v[2]);
+    let r3 = u64_add(r_3_1, r_3_2);
+
+    let r_4_1 = mul_wide(aa[0],(*a).v[4]);
+    let r_4_2 = mul_wide(aa[1],(*a).v[3]);
+    let r_4_3 = mul_wide((*a).v[2],(*a).v[2]);
+    let r4 = u64_add(u64_add(r_4_1, r_4_2), r_4_3);
+
+    let r_5_1 = mul_wide(aa[0],(*a).v[5]);
+    let r_5_2 = mul_wide(aa[1],(*a).v[4]);
+    let r_5_3 = mul_wide(aa[2],(*a).v[3]);
+    let r5 = u64_add(u64_add(r_5_1, r_5_2), r_5_3);
+
+    let r_6_1 = mul_wide(aa[0],(*a).v[6]);
+    let r_6_2 = mul_wide(aa[1],(*a).v[5]);
+    let r_6_3 = mul_wide(aa[2],(*a).v[4]);
+    let r_6_4 = mul_wide((*a).v[3],(*a).v[3]);
+    let r6 = u64_add(u64_add(u64_add(r_6_1, r_6_2), r_6_3), r_6_4);
+
+    let r_7_1 = mul_wide(aa[0],(*a).v[7]);
+    let r_7_2 = mul_wide(aa[1],(*a).v[6]);
+    let r_7_3 = mul_wide(aa[2],(*a).v[5]);
+    let r_7_4 = mul_wide(aa[3],(*a).v[4]);
+    let r7 = u64_add(u64_add(u64_add(r_7_1, r_7_2), r_7_3), r_7_4);
+
+    let r_8_1 = mul_wide(aa[0],(*a).v[8]);
+    let r_8_2 = mul_wide(aa[1],(*a).v[7]);
+    let r_8_3 = mul_wide(aa[2],(*a).v[6]);
+    let r_8_4 = mul_wide(aa[3],(*a).v[5]);
+    let r_8_5 = mul_wide((*a).v[4],(*a).v[4]);
+    let r8 = u64_add(u64_add(u64_add(u64_add(r_8_1, r_8_2), r_8_3), r_8_4), r_8_5);
+
+    let r_9_1 = mul_wide(aa[1],(*a).v[8]);
+    let r_9_2 = mul_wide(aa[2],(*a).v[7]);
+    let r_9_3 = mul_wide(aa[3],(*a).v[6]);
+    let r_9_4 = mul_wide(aa[4],(*a).v[5]);
+    let r9 = u64_add(u64_add(u64_add(r_9_1, r_9_2), r_9_3), r_9_4);
+
+    let r_10_1 = mul_wide(aa[2],(*a).v[8]);
+    let r_10_2 = mul_wide(aa[3],(*a).v[7]);
+    let r_10_3 = mul_wide(aa[4],(*a).v[6]);
+    let r_10_4 = mul_wide((*a).v[5],(*a).v[5]);
+    let r10 = u64_add(u64_add(u64_add(r_10_1, r_10_2), r_10_3), r_10_4);
+
+    let r_11_1 = mul_wide(aa[3],(*a).v[8]);
+    let r_11_2 = mul_wide(aa[4],(*a).v[7]);
+    let r_11_3 = mul_wide(aa[5],(*a).v[6]);
+    let r11 = u64_add(u64_add(r_11_1, r_11_2), r_11_3);
+
+    let r_12_1 = mul_wide(aa[4],(*a).v[8]);
+    let r_12_2 = mul_wide(aa[5],(*a).v[7]);
+    let r_12_3 = mul_wide((*a).v[6],(*a).v[6]);
+    let r12 = u64_add(u64_add(r_12_1, r_12_2), r_12_3);
+
+    let r_13_1 = mul_wide(aa[5],(*a).v[8]);
+    let r_13_2 = mul_wide(aa[6],(*a).v[7]);
+    let r13 = u64_add(r_13_1, r_13_2);
+
+    let r_14_1 = mul_wide(aa[6],(*a).v[8]);
+    let r_14_2 = mul_wide((*a).v[7],(*a).v[7]);
+    let r14 = u64_add(r_14_1, r_14_2);
+
+    let r15 = mul_wide(aa[7],(*a).v[8]);
+    
+    let r16 = mul_wide((*a).v[8],(*a).v[8]);
+
+    return array<u64, 17>(
+        r0,
+        r1,
+        r2,
+        r3,
+        r4,
+        r5,
+        r6,
+        r7,
+        r8,
+        r9,
+        r10,
+        r11,
+        r12,
+        r13,
+        r14,
+        r15,
+        r16
+    );
+}
+
 fn scalar29_montgomery_mul(a: ptr<function, Scalar29>, b: ptr<function, Scalar29>) -> Scalar29 {
     return scalar29_montgomery_reduce(scalar29_mul_internal(a, b));
 }
@@ -414,6 +522,17 @@ fn scalar29_montgomery_mul(a: ptr<function, Scalar29>, b: ptr<function, Scalar29
 fn scalar29_to_montgomery(val: ptr<function, Scalar29>) -> Scalar29 {
     var rr = Scalar29_RR;
     return scalar29_montgomery_mul(val, &rr);
+}
+
+fn scalar29_montgomery_square(x: ptr<function, Scalar29>) -> Scalar29 {
+    return scalar29_montgomery_reduce(scalar29_square_internal(x));
+}
+
+fn scalar29_square(x: ptr<function, Scalar29>) -> Scalar29 {
+    var aa = scalar29_montgomery_reduce(scalar29_square_internal(x));
+    var rr = Scalar29_RR;
+
+    return scalar29_montgomery_reduce(scalar29_mul_internal(&aa, &rr));
 }
 
 @compute
@@ -481,6 +600,23 @@ fn kernel_scalar29_mul(
     var b = scalar29_unpack_b(gid.x, g_len);
 
     var c = scalar29_mul(&a, &b);
+
+    scalar29_pack_c(&c, gid.x, g_len);
+}
+
+@compute
+@workgroup_size(128, 1, 1)
+fn kernel_scalar29_square(
+    @builtin(global_invocation_id) gid: vec3<u32>,
+) {
+    if gid.x >= g_len {
+        unused_b();
+        return;
+    }
+
+    var a = scalar29_unpack_a(gid.x, g_len);
+
+    var c = scalar29_square(&a);
 
     scalar29_pack_c(&c, gid.x, g_len);
 }

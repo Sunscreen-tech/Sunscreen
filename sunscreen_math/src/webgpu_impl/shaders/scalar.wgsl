@@ -515,13 +515,62 @@ fn scalar29_square_internal(a: ptr<function, Scalar29>) -> array<u64, 17> {
     );
 }
 
-fn scalar29_montgomery_mul(a: ptr<function, Scalar29>, b: ptr<function, Scalar29>) -> Scalar29 {
-    return scalar29_montgomery_reduce(scalar29_mul_internal(a, b));
+fn scalar29_square_multiply(y: ptr<function, Scalar29>, squarings: i32, x: ptr<function, Scalar29>) {
+    for (var i = 0; i < squarings; i++) {
+        *y = scalar29_montgomery_square(y);
+    }
+    *y = scalar29_montgomery_mul(y, x);
 }
 
-fn scalar29_to_montgomery(val: ptr<function, Scalar29>) -> Scalar29 {
-    var rr = Scalar29_RR;
-    return scalar29_montgomery_mul(val, &rr);
+fn scalar29_montgomery_invert(val: ptr<function, Scalar29>) -> Scalar29 {
+    // Uses the addition chain from
+    // https://briansmith.org/ecc-inversion-addition-chains-01#curve25519_scalar_inversion
+    var    _1 = *val;
+    var   _10 = scalar29_montgomery_square(&_1);
+    var  _100 = scalar29_montgomery_square(&_10);
+    var   _11 = scalar29_montgomery_mul(&_10,     &_1);
+    var  _101 = scalar29_montgomery_mul(&_10,    &_11);
+    var  _111 = scalar29_montgomery_mul(&_10,   &_101);
+    var _1001 = scalar29_montgomery_mul(&_10,   &_111);
+    var _1011 = scalar29_montgomery_mul(&_10,  &_1001);
+    var _1111 = scalar29_montgomery_mul(&_100, &_1011);
+
+    // _10000
+    var y = scalar29_montgomery_mul(&_1111, &_1);
+
+    scalar29_square_multiply(&y, 123 + 3, &_101);
+    scalar29_square_multiply(&y,   2 + 2, &_11);
+    scalar29_square_multiply(&y,   1 + 4, &_1111);
+    scalar29_square_multiply(&y,   1 + 4, &_1111);
+    scalar29_square_multiply(&y,       4, &_1001);
+    scalar29_square_multiply(&y,       2, &_11);
+    scalar29_square_multiply(&y,   1 + 4, &_1111);
+    scalar29_square_multiply(&y,   1 + 3, &_101);
+    scalar29_square_multiply(&y,   3 + 3, &_101);
+    scalar29_square_multiply(&y,       3, &_111);
+    scalar29_square_multiply(&y,   1 + 4, &_1111);
+    scalar29_square_multiply(&y,   2 + 3, &_111);
+    scalar29_square_multiply(&y,   2 + 2, &_11);
+    scalar29_square_multiply(&y,   1 + 4, &_1011);
+    scalar29_square_multiply(&y,   2 + 4, &_1011);
+    scalar29_square_multiply(&y,   6 + 4, &_1001);
+    scalar29_square_multiply(&y,   2 + 2, &_11);
+    scalar29_square_multiply(&y,   3 + 2, &_11);
+    scalar29_square_multiply(&y,   3 + 2, &_11);
+    scalar29_square_multiply(&y,   1 + 4, &_1001);
+    scalar29_square_multiply(&y,   1 + 3, &_111);
+    scalar29_square_multiply(&y,   2 + 4, &_1111);
+    scalar29_square_multiply(&y,   1 + 4, &_1011);
+    scalar29_square_multiply(&y,       3, &_101);
+    scalar29_square_multiply(&y,   2 + 4, &_1111);
+    scalar29_square_multiply(&y,       3, &_101);
+    scalar29_square_multiply(&y,   1 + 2, &_11);
+
+    return y;
+}
+
+fn scalar29_montgomery_mul(a: ptr<function, Scalar29>, b: ptr<function, Scalar29>) -> Scalar29 {
+    return scalar29_montgomery_reduce(scalar29_mul_internal(a, b));
 }
 
 fn scalar29_montgomery_square(x: ptr<function, Scalar29>) -> Scalar29 {
@@ -533,6 +582,42 @@ fn scalar29_square(x: ptr<function, Scalar29>) -> Scalar29 {
     var rr = Scalar29_RR;
 
     return scalar29_montgomery_reduce(scalar29_mul_internal(&aa, &rr));
+}
+
+fn scalar29_to_montgomery(val: ptr<function, Scalar29>) -> Scalar29 {
+    var rr = Scalar29_RR;
+    return scalar29_montgomery_mul(val, &rr);
+}
+
+fn scalar29_from_montgomery(val: ptr<function, Scalar29>) -> Scalar29 {
+    let zero = u64(0u, 0u);
+    let limbs = array<u64, 17>(
+        u64((*val).v[0], 0u),
+        u64((*val).v[1], 0u),
+        u64((*val).v[2], 0u),
+        u64((*val).v[3], 0u),
+        u64((*val).v[4], 0u),
+        u64((*val).v[5], 0u),
+        u64((*val).v[6], 0u),
+        u64((*val).v[7], 0u),
+        u64((*val).v[8], 0u),
+        u64(0u, 0u),
+        u64(0u, 0u),
+        u64(0u, 0u),
+        u64(0u, 0u),
+        u64(0u, 0u),
+        u64(0u, 0u),
+        u64(0u, 0u),
+        u64(0u, 0u)
+    );
+            
+    //return scalar29_montgomery_reduce(limbs);
+}
+
+fn scalar29_invert(x: ptr<function, Scalar29>) -> Scalar29 {
+    var mont = scalar29_to_montgomery(x);
+    var mont_inv = scalar29_montgomery_invert(&mont);
+    return scalar29_from_montgomery(&mont_inv);
 }
 
 @compute

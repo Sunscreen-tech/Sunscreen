@@ -322,51 +322,51 @@ void square_multiply(thread Scalar29& y, size_t squarings, const thread Scalar29
 }
 
 Scalar29 Scalar29::montgomery_invert() const {
-        // Uses the addition chain from
-        // https://briansmith.org/ecc-inversion-addition-chains-01#curve25519_scalar_inversion
-        auto    _1 = *this;
-        auto   _10 = montgomery_square(_1);
-        auto  _100 = montgomery_square(_10);
-        auto   _11 = montgomery_mul(_10,     _1);
-        auto  _101 = montgomery_mul(_10,    _11);
-        auto  _111 = montgomery_mul(_10,   _101);
-        auto _1001 = montgomery_mul(_10,   _111);
-        auto _1011 = montgomery_mul(_10,  _1001);
-        auto _1111 = montgomery_mul(_100, _1011);
+    // Uses the addition chain from
+    // https://briansmith.org/ecc-inversion-addition-chains-01#curve25519_scalar_inversion
+    auto    _1 = *this;
+    auto   _10 = montgomery_square(_1);
+    auto  _100 = montgomery_square(_10);
+    auto   _11 = montgomery_mul(_10,     _1);
+    auto  _101 = montgomery_mul(_10,    _11);
+    auto  _111 = montgomery_mul(_10,   _101);
+    auto _1001 = montgomery_mul(_10,   _111);
+    auto _1011 = montgomery_mul(_10,  _1001);
+    auto _1111 = montgomery_mul(_100, _1011);
 
-        // _10000
-        auto y = montgomery_mul(_1111, _1);
+    // _10000
+    auto y = montgomery_mul(_1111, _1);
 
-        square_multiply(y, 123 + 3, _101);
-        square_multiply(y,   2 + 2, _11);
-        square_multiply(y,   1 + 4, _1111);
-        square_multiply(y,   1 + 4, _1111);
-        square_multiply(y,       4, _1001);
-        square_multiply(y,       2, _11);
-        square_multiply(y,   1 + 4, _1111);
-        square_multiply(y,   1 + 3, _101);
-        square_multiply(y,   3 + 3, _101);
-        square_multiply(y,       3, _111);
-        square_multiply(y,   1 + 4, _1111);
-        square_multiply(y,   2 + 3, _111);
-        square_multiply(y,   2 + 2, _11);
-        square_multiply(y,   1 + 4, _1011);
-        square_multiply(y,   2 + 4, _1011);
-        square_multiply(y,   6 + 4, _1001);
-        square_multiply(y,   2 + 2, _11);
-        square_multiply(y,   3 + 2, _11);
-        square_multiply(y,   3 + 2, _11);
-        square_multiply(y,   1 + 4, _1001);
-        square_multiply(y,   1 + 3, _111);
-        square_multiply(y,   2 + 4, _1111);
-        square_multiply(y,   1 + 4, _1011);
-        square_multiply(y,       3, _101);
-        square_multiply(y,   2 + 4, _1111);
-        square_multiply(y,       3, _101);
-        square_multiply(y,   1 + 2, _11);
+    square_multiply(y, 123 + 3, _101);
+    square_multiply(y,   2 + 2, _11);
+    square_multiply(y,   1 + 4, _1111);
+    square_multiply(y,   1 + 4, _1111);
+    square_multiply(y,       4, _1001);
+    square_multiply(y,       2, _11);
+    square_multiply(y,   1 + 4, _1111);
+    square_multiply(y,   1 + 3, _101);
+    square_multiply(y,   3 + 3, _101);
+    square_multiply(y,       3, _111);
+    square_multiply(y,   1 + 4, _1111);
+    square_multiply(y,   2 + 3, _111);
+    square_multiply(y,   2 + 2, _11);
+    square_multiply(y,   1 + 4, _1011);
+    square_multiply(y,   2 + 4, _1011);
+    square_multiply(y,   6 + 4, _1001);
+    square_multiply(y,   2 + 2, _11);
+    square_multiply(y,   3 + 2, _11);
+    square_multiply(y,   3 + 2, _11);
+    square_multiply(y,   1 + 4, _1001);
+    square_multiply(y,   1 + 3, _111);
+    square_multiply(y,   2 + 4, _1111);
+    square_multiply(y,   1 + 4, _1011);
+    square_multiply(y,       3, _101);
+    square_multiply(y,   2 + 4, _1111);
+    square_multiply(y,       3, _101);
+    square_multiply(y,   1 + 2, _11);
 
-        return y;
-    }
+    return y;
+}
 
 Scalar29 to_montgomery(const thread Scalar29& val) {
     auto rr = constants::RR;

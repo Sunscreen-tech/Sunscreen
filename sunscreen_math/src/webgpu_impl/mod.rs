@@ -292,8 +292,6 @@ lazy_static! {
             source: wgpu::ShaderSource::Wgsl(Cow::Borrowed(SHADERS)), // Moo
         });
 
-        println!("{:#?}", device.features());
-
         Runtime {
             device,
             queue,

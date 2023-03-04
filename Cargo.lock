@@ -2539,6 +2539,7 @@ name = "sunscreen_math"
 version = "0.1.0"
 dependencies = [
  "bytemuck",
+ "criterion 0.4.0",
  "futures",
  "lazy_static",
  "metal",

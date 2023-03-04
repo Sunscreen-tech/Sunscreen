@@ -139,12 +139,12 @@ impl GpuScalarVec {
 
     pub fn square(&self) -> Self {
         let c = Runtime::get().alloc::<u32>(self.u32_len());
-        
+
         GpuScalarVec::run_unary_kernel(self, &c, "kernel_scalar29_square");
 
         Self {
             data: c,
-            len: self.len
+            len: self.len,
         }
     }
 
@@ -155,7 +155,7 @@ impl GpuScalarVec {
 
         Self {
             data: c,
-            len: self.len
+            len: self.len,
         }
     }
 }
@@ -466,7 +466,7 @@ mod tests {
             .into_iter()
             .map(|_| Scalar::random(&mut thread_rng()))
             .collect::<Vec<_>>();
-        
+
         let a_v = GpuScalarVec::new(&a);
 
         let c_v = a_v.square();
@@ -482,7 +482,7 @@ mod tests {
             .into_iter()
             .map(|_| Scalar::random(&mut thread_rng()))
             .collect::<Vec<_>>();
-        
+
         let a_v = GpuScalarVec::new(&a);
 
         let c_v = a_v.invert();

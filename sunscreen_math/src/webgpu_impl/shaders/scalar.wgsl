@@ -590,6 +590,7 @@ fn scalar29_to_montgomery(val: ptr<function, Scalar29>) -> Scalar29 {
 }
 
 fn scalar29_from_montgomery(val: ptr<function, Scalar29>) -> Scalar29 {
+    let zero = u64(0u, 0u);
     let limbs = array<u64, 17>(
         u64((*val).v[0], 0u),
         u64((*val).v[1], 0u),

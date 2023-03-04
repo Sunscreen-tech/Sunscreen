@@ -1,11 +1,6 @@
-use core::slice;
-use std::{
-    borrow::Cow,
-    mem::{align_of, size_of, MaybeUninit},
-    ops::Deref,
-};
+use std::{borrow::Cow, mem::size_of};
 
-use bytemuck::{cast, cast_slice, Pod};
+use bytemuck::{cast_slice, Pod};
 use futures::channel::oneshot;
 use lazy_static::lazy_static;
 use tokio::runtime::{Builder as TokioRuntimeBuilder, Runtime as TokioRuntime};
@@ -40,10 +35,6 @@ const SHADERS: &str = include_str!(concat!(env!("OUT_DIR"), "/shaders-release.wg
 
 #[cfg(test)]
 const SHADERS: &str = include_str!(concat!(env!("OUT_DIR"), "/shaders-test.wgsl"));
-
-fn assert_aligned<T>(ptr: *const T) {
-    assert!(ptr.cast::<()>().align_offset(align_of::<T>()) == 0);
-}
 
 pub struct Grid((u32, u32, u32));
 
@@ -210,16 +201,6 @@ impl Runtime {
     }
 
     pub fn alloc_from_slice<T: Pod>(&self, data: &[T]) -> Buffer {
-        let len = size_of::<T>() * data.len();
-
-        // Round up len to a multiple of COPY_BUFFER_ALIGNMENT, as required to use
-        // mapped_at_creation=true
-        let len = if len % COPY_BUFFER_ALIGNMENT as usize == 0 {
-            len
-        } else {
-            (len / COPY_BUFFER_ALIGNMENT as usize + 1) * COPY_BUFFER_ALIGNMENT as usize
-        };
-
         let buffer = self.device.create_buffer_init(&BufferInitDescriptor {
             label: None,
             contents: cast_slice(data),

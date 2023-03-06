@@ -56,7 +56,7 @@ public:
     CompletedPoint operator-(const thread ProjectiveNielsPoint& rhs) const thread;
     RistrettoPoint operator*(const thread Scalar29& rhs) const thread;
 
-    static RistrettoPoint scalar_mul(const RistrettoPoint lhs, const Scalar29 rhs);
+    static RistrettoPoint scalar_mul(const thread RistrettoPoint& lhs, const thread Scalar29& rhs);
 };
 
 class ProjectiveNielsPoint {

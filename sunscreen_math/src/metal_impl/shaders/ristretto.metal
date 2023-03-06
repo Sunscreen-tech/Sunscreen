@@ -121,7 +121,7 @@ ProjectiveNielsPoint ProjectiveNielsPoint::operator-() const {
     );
 }
 
-RistrettoPoint RistrettoPoint::scalar_mul(const RistrettoPoint lhs, const Scalar29 rhs) {
+RistrettoPoint RistrettoPoint::scalar_mul(const thread RistrettoPoint& lhs, const thread Scalar29& rhs) {
     // A lookup table for Radix-8 multiplication. Contains [0P, 1P, 2P, ...]
     LookupTable<8> lut(lhs);
 

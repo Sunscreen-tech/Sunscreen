@@ -3,7 +3,12 @@ use std::time::Instant;
 use ark_ff::Field;
 use ark_poly::univariate::DensePolynomial;
 use criterion::{criterion_group, criterion_main, Criterion};
-use logproof::{fields::FqSeal128_4096, math::make_poly, LogProofGenerators, linear_algebra::{Matrix, ScalarRem}, LogProofProverKnowledge, InnerProductVerifierKnowledge, LogProof};
+use logproof::{
+    fields::FqSeal128_4096,
+    linear_algebra::{Matrix, ScalarRem},
+    math::make_poly,
+    InnerProductVerifierKnowledge, LogProof, LogProofGenerators, LogProofProverKnowledge,
+};
 use merlin::Transcript;
 
 type MatrixPoly<Q> = Matrix<DensePolynomial<Q>>;
@@ -35,10 +40,7 @@ fn bfv_3ct_benchmark(_: &mut Criterion) {
 
     println!("Generating data...");
 
-    let coeffs = (0..POLY_DEGREE)
-        .map(|x| x % 2)
-        .into_iter()
-        .collect::<Vec<u64>>();
+    let coeffs = (0..POLY_DEGREE).map(|x| x % 2).collect::<Vec<u64>>();
 
     let delta = make_poly::<Q>(&[1234]);
     let p_0 = make_poly::<Q>(&coeffs);
@@ -52,8 +54,8 @@ fn bfv_3ct_benchmark(_: &mut Criterion) {
         [zero.clone(), p_1.clone(), zero.clone(), one.clone()],
         [delta.clone(), p_0.clone(), one.clone(), zero.clone()],
         [zero.clone(), p_1.clone(), zero.clone(), one.clone()],
-        [delta.clone(), p_0.clone(), one.clone(), zero.clone()],
-        [zero.clone(), p_1.clone(), zero.clone(), one.clone()],
+        [delta, p_0.clone(), one.clone(), zero.clone()],
+        [zero.clone(), p_1, zero, one],
     ]);
 
     // Secret key
@@ -65,7 +67,7 @@ fn bfv_3ct_benchmark(_: &mut Criterion) {
     let m = p_0.clone();
     let u = p_0.clone();
     let e_1 = p_0.clone();
-    let e_2 = p_0.clone();
+    let e_2 = p_0;
 
     let s = MatrixPoly::from([[m], [u], [e_1], [e_2]]);
 

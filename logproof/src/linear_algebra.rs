@@ -14,9 +14,9 @@ use crate::math::{ModSwitch, One, Rem, SmartMul, Tensor, Zero};
 #[derive(Debug, Clone, PartialEq)]
 /**
  * An `m x n` matrix of elements.
- * 
+ *
  * # Remarks
- * Matrix elements can be any type that implements [`Add`], [`Mul`], 
+ * Matrix elements can be any type that implements [`Add`], [`Mul`],
  * [`Clone`], [`Zero`].
  */
 pub struct Matrix<T>
@@ -789,7 +789,7 @@ pub trait HadamardProduct<Rhs> {
 
     /**
      * Compute the Hadamard product between `self` and `rhs`.
-     * 
+     *
      * # Remarks
      * The Hadamard product is element-wise multiplication.
      */

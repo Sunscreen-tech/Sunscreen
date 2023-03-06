@@ -324,7 +324,7 @@ impl<const N: usize> Log2 for BigInt<N> {
 /**
  * A custom [`std::ops::Rem`] trait so we can implement
  * modulus on foreign crate types.
- * 
+ *
  * # Remarks
  * see [`std::ops::Rem`].
  */
@@ -336,7 +336,7 @@ pub trait Rem<Rhs = Self> {
 
     /**
      * Compute `self % rhs`.
-     * 
+     *
      * # Remarks
      * see [`std::ops::Rem::rem`].
      */
@@ -534,7 +534,7 @@ where
 {
     /**
      * Decompose the coefficients into binary 2's complement values.
-     * 
+     *
      */
     fn twos_complement_coeffs(b: usize) -> Vec<Self>;
 }

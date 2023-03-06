@@ -20,9 +20,14 @@ sunscreen_math = { path = "../sunscreen_math" }
 
 [dev-dependencies]
 bincode = "1.3.3"
+criterion = "0.4.0"
 
 [features]
 default = []
 metal = ["sunscreen_math/metal"]
 pina = ["sunscreen_math/pina"]
 nightly-features = []
+
+[[bench]]
+name = "linear_relation"
+harness = false

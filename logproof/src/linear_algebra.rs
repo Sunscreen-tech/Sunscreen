@@ -12,13 +12,28 @@ use crate::fields::{FieldFrom, FpRistretto};
 use crate::math::{ModSwitch, One, Rem, SmartMul, Tensor, Zero};
 
 #[derive(Debug, Clone, PartialEq)]
+/**
+ * An `m x n` matrix of elements.
+ * 
+ * # Remarks
+ * Matrix elements can be any type that implements [`Add`], [`Mul`], 
+ * [`Clone`], [`Zero`].
+ */
 pub struct Matrix<T>
 where
     T: Zero + Clone,
 {
     // Row major
     data: Vec<T>,
+
+    /**
+     * The number of rows in this matrix (e.g. `m`).
+     */
     pub rows: usize,
+
+    /**
+     * The number of columns in this matrix (e.g. `n`).
+     */
     pub cols: usize,
 }
 
@@ -67,6 +82,9 @@ where
         result
     }
 
+    /**
+     * Treat this matrix as a row-major slice of length `m * n`.
+     */
     pub fn as_slice(&self) -> &[T] {
         &self.data
     }
@@ -96,6 +114,9 @@ where
     }
 }
 
+/**
+ * A matrix of polynomials over the field `F`.
+ */
 pub type PolynomialMatrix<F> = Matrix<DensePolynomial<F>>;
 
 impl<F, Rhs> Sub<Rhs> for PolynomialMatrix<F>
@@ -412,6 +433,9 @@ where
  * multiplying a matrix times a scalar.
  */
 pub trait ScalarMul<Rhs> {
+    /**
+     * The result type of a scalar multiplication.
+     */
     type Output;
 
     /**
@@ -483,9 +507,19 @@ where
     }
 }
 
+/**
+ * A trait for performing the remainder operation on each element.
+ */
 pub trait ScalarRem<Rhs = Self> {
+    /**
+     * The type resulting from the remainder operation.
+     */
     type Output;
 
+    /**
+     * Perform an element-wise remainder operation using the given `rhs`
+     * as the modulus.
+     */
     fn scalar_rem(self, rhs: Rhs) -> Self::Output;
 }
 
@@ -594,9 +628,18 @@ where
     }
 }
 
+/**
+ * A trait for computing an inner product.
+ */
 pub trait InnerProduct<Rhs> {
+    /**
+     * The type resulting from an inner product operation.
+     */
     type Output;
 
+    /**
+     * Compute the inner product of `self` and `rhs`.
+     */
     fn inner_product(&self, rhs: Rhs) -> Self::Output;
 }
 
@@ -735,9 +778,21 @@ where
     }
 }
 
+/**
+ * A trait for computing Hadamard products.
+ */
 pub trait HadamardProduct<Rhs> {
+    /**
+     * The type resulting from the Hadamard product.
+     */
     type Output;
 
+    /**
+     * Compute the Hadamard product between `self` and `rhs`.
+     * 
+     * # Remarks
+     * The Hadamard product is element-wise multiplication.
+     */
     fn hadamard_product(&self, rhs: Rhs) -> Self::Output;
 }
 
@@ -760,17 +815,22 @@ where
 }
 
 #[allow(unused)]
-pub fn print_matrix<F: Field>(m: &Matrix<DensePolynomial<F>>) {
-    println!("Matrix [");
-    for i in 0..m.rows {
-        print!("\t[");
-        for j in 0..m.cols {
-            crate::math::print_polynomial(&m[(i, j)]);
-            print!(", ");
+/**
+ * Pretty print the given matrix. Handy for debugging.
+ */
+impl<F: Field> std::fmt::Display for &Matrix<DensePolynomial<F>> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(f, "Matrix [")?;
+        for i in 0..self.rows {
+            writeln!(f, "\t[")?;
+            for j in 0..self.cols {
+                crate::math::print_polynomial(&self[(i, j)]);
+                write!(f, ", ")?;
+            }
+            writeln!(f, "]")?;
         }
-        println!("]");
+        writeln!(f, "]")
     }
-    println!("]")
 }
 
 #[cfg(test)]

@@ -112,52 +112,6 @@ ProjectivePoint CompletedPoint::as_projective() const {
     return ProjectivePoint(X, Y, Z);
 }
 
-/*
-RistrettoPoint RistrettoPoint::scalar_mul(const RistrettoPoint lhs, const Scalar29 rhs) {
-    // Rematerialize the limbs of the scalar from S29 to S32
-    u32 words[8];
-    
-    u32 word = rhs[0] | rhs[1] << 29;
-    words[0] = word;
-    word = rhs[1] >> 3 | rhs[2] << 26;
-    words[1] = word;
-    word = rhs[2] >> 6 | rhs[3] << 23;
-    words[2] = word;
-    word = rhs[3] >> 9 | rhs[4] << 20;
-    words[3] = word;
-    word = rhs[4] >> 12 | rhs[5] << 17;
-    words[4] = word;
-    word = rhs[5] >> 15 | rhs[6] << 14;
-    words[5] = word;
-    word = rhs[6] >> 18 | rhs[7] << 11;
-    words[6] = word;
-    word = rhs[7] >> 21 | rhs[8] << 8;
-    words[7] = word;
-
-    auto sum = RistrettoPoint::IDENTITY;
-    auto pow = lhs;
-
-    for (size_t i = 0; i < 8; i++) {
-        auto word = words[i];
-
-        for (size_t j = 0; j < 32; j++) {
-            if (word & (0x1 << j)) {
-                sum = sum + pow;
-            }
-
-            pow = pow + pow;
-        }
-    }
-
-    return sum;
-}*/
-
-inline u8 get_nibble(u32 word, u8 nibble) {
-    auto shift_amount = nibble * 4;
-
-    return (word & (0xF << shift_amount)) >> shift_amount;
-}
-
 ProjectiveNielsPoint ProjectiveNielsPoint::operator-() const {
     return ProjectiveNielsPoint(
         this->Y_minus_X,

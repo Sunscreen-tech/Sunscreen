@@ -1,8 +1,8 @@
-use std::time::Instant;
+use std::time::Duration;
 
 use ark_ff::Field;
 use ark_poly::univariate::DensePolynomial;
-use criterion::{criterion_group, criterion_main, Criterion};
+use criterion::{criterion_group, criterion_main, BatchSize, Criterion};
 use logproof::{
     fields::FqSeal128_4096,
     linear_algebra::{Matrix, ScalarRem},
@@ -26,13 +26,18 @@ fn f<F: Field>(degree: usize) -> DensePolynomial<F> {
     DensePolynomial { coeffs }
 }
 
-fn bfv_3ct_benchmark(_: &mut Criterion) {
+fn bfv_3ct_benchmark(c: &mut Criterion) {
+    let mut group = c.benchmark_group("logproof");
+    group
+        .sample_size(10) // def 100
+        .significance_level(0.05) // def 0.05
+        .noise_threshold(0.03) // def 0.01
+        .measurement_time(Duration::from_secs(150));
     // Secret key
     // a = random in q
     // e_1 = q / 2p
     // c_1 = s * a + e_1 + del * m
     // c_2 = a
-
     type Q = FqSeal128_4096;
 
     const POLY_DEGREE: u64 = 4096u64;
@@ -80,11 +85,11 @@ fn bfv_3ct_benchmark(_: &mut Criterion) {
 
     println!("Generating prover knowlege");
 
-    let now = Instant::now();
+    group.bench_function("LogProofProverKnowledge::new", |b| {
+        b.iter(|| LogProofProverKnowledge::new(&a, &s, &t, BIT_SIZE, &f));
+    });
 
     let pk = LogProofProverKnowledge::new(&a, &s, &t, BIT_SIZE, &f);
-
-    println!("Generate PK {}s", now.elapsed().as_secs_f64());
 
     println!("b={}", pk.vk.b());
     println!("b_1={}", pk.vk.b_1());
@@ -96,25 +101,34 @@ fn bfv_3ct_benchmark(_: &mut Criterion) {
 
     println!("Starting proof...");
 
+    group.bench_function("LogProof::create", |b| {
+        b.iter_batched(
+            || {
+                (
+                    LogProofGenerators::new(pk.vk.l() as usize),
+                    InnerProductVerifierKnowledge::get_u(),
+                )
+            },
+            |(gens, u)| LogProof::create(&mut transcript, &pk, &gens.g, &gens.h, &u),
+            BatchSize::SmallInput,
+        );
+    });
+
     let gens = LogProofGenerators::new(pk.vk.l() as usize);
     let u = InnerProductVerifierKnowledge::get_u();
-
-    let now = Instant::now();
-
     let proof = LogProof::create(&mut transcript, &pk, &gens.g, &gens.h, &u);
 
-    println!("Prover time {}s", now.elapsed().as_secs_f64());
     println!("Proof size {}B", bincode::serialize(&proof).unwrap().len());
 
     let mut transcript = Transcript::new(b"test");
 
-    let now = Instant::now();
-
-    proof
-        .verify(&mut transcript, &pk.vk, &gens.g, &gens.h, &u)
-        .unwrap();
-
-    println!("Verifier time {}s", now.elapsed().as_secs_f64());
+    group.bench_function("LogProof::verify", |b| {
+        b.iter(|| {
+            proof
+                .verify(&mut transcript, &pk.vk, &gens.g, &gens.h, &u)
+                .unwrap()
+        });
+    });
 }
 
 criterion_group!(benches, bfv_3ct_benchmark);

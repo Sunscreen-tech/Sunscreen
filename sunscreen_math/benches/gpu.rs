@@ -19,7 +19,10 @@ mod benches {
             .collect::<Vec<_>>();
 
         let a_vec = GpuScalarVec::new(&a);
+        // Do it once to cache JIT
+        let _ = a_vec.invert();
 
+        // Time it for real.
         let now = Instant::now();
         let _ = a_vec.invert();
         println!(

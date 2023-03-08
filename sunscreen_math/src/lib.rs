@@ -6,6 +6,9 @@ mod metal_impl;
 #[cfg(feature = "webgpu")]
 mod webgpu_impl;
 
+#[cfg(feature = "opencl")]
+mod opencl_impl;
+
 mod cpu;
 pub use cpu::{CpuRistrettoPointVec, CpuScalarVec};
 
@@ -31,6 +34,12 @@ pub use webgpu_impl::GpuRistrettoPointVec;
 
 #[cfg(feature = "webgpu")]
 pub use webgpu_impl::GpuScalarVec;
+
+#[cfg(feature = "opencl")]
+pub use opencl_impl::GpuRistrettoPointVec;
+
+#[cfg(feature = "opencl")]
+pub use opencl_impl::GpuScalarVec;
 
 #[cfg(feature = "pina")]
 pub type RistrettoPointVec = PinaRistrettoPointVec;

@@ -347,13 +347,9 @@ impl InnerProductProof {
         let c = transcript.challenge_scalar(b"c");
         let c_inv = c.invert();
 
-        println!("mad...");
-
         let g = Self::mad_scalar_point(g_t, g_b, c);
         let h = Self::mad_scalar_point(h_t, h_b, c_inv);
         let t = t_minus1 * c_inv + t + t_1 * c;
-
-        println!("Done mad.");
 
         (g, h, t, c, c_inv)
     }
@@ -383,7 +379,6 @@ impl InnerProductProof {
 
         for (t_1, t_minus1) in self.t_1.iter().zip(self.t_minus1.iter()) {
             let n_2 = g.len() / 2;
-            println!("{}", n_2);
 
             let (g_t, g_b) = g.split_at(n_2);
             let (h_t, h_b) = h.split_at(n_2);
@@ -439,7 +434,6 @@ impl InnerProductProof {
             }
 
             let n_2 = v_1.len() / 2;
-            println!("{}", n_2);
 
             // Split g, h, v_1, v_2 into top and bottom slices
             // (_t and _b respectively)

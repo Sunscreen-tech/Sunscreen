@@ -572,11 +572,6 @@ pub fn parallel_multiscalar_multiplication(s: &[Scalar], p: &[RistrettoPoint]) -
         .map(|(s, p)| RistrettoPoint::vartime_multiscalar_mul(s.into_iter(), p.into_iter()))
         .reduce(RistrettoPoint::default, |x, p| x + p);
 
-    println!(
-        "MSM {} muls/s (naive)",
-        s.len() as f64 / now.elapsed().as_secs_f64()
-    );
-
     msm
 }
 

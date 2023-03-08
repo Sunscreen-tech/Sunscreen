@@ -283,8 +283,6 @@ impl LogProof {
             + Zero
             + FieldModulus<4>,
     {
-        println!("Prover");
-
         let vk = &pk.vk;
         let d = vk.d();
         let m = vk.m();
@@ -312,8 +310,6 @@ impl LogProof {
             linear_relation::assert_factors(pk, f, &r_2, &r_1);
         }
 
-        println!("Serializing...");
-
         let s_serialized = Self::serialize(&pk.s, d as usize);
         let r_1_serialized = Self::serialize(&r_1, (2 * d - 1) as usize);
         let r_2_serialized = Self::serialize(&r_2, (d - 1) as usize);
@@ -321,8 +317,6 @@ impl LogProof {
         assert_eq!(s_serialized.len() as u64, m * k * d);
         assert_eq!(r_1_serialized.len() as u64, n * k * (2 * d - 1));
         assert_eq!(r_2_serialized.len() as u64, n * k * (d - 1));
-
-        println!("To two's complement");
 
         let s_binary = Self::to_2s_complement(&s_serialized, b);
         assert_eq!(s_binary.len() as u64, m * k * d * b);
@@ -347,8 +341,6 @@ impl LogProof {
         let w = Self::make_commitment(&s_1, &s_2, &rho, g, h, u);
 
         transcript.append_point(b"w", &w.compress());
-
-        println!("Generating challenges");
 
         let (alpha, beta, gamma, phi, psi) = Self::create_challenges(&pk.vk, transcript);
 
@@ -401,19 +393,13 @@ impl LogProof {
             );
         }
 
-        println!("Making g'...");
         let g_prime = Self::compute_g_prime(g, &phi);
 
-        println!("Computing v");
         let v = Self::compute_v(vk, alpha, &beta, &gamma);
-
-        println!("Generating commitment...");
 
         let t = Self::compute_t(&w, &g_prime, h, &phi, &psi, &v);
 
-        println!("Computing v_1");
         let v_1 = Self::compute_v1(&v, &phi, &s_2, &psi);
-        println!("Computing 2");
         let v_2 = Self::compute_v2(&s_1, &psi);
 
         if cfg!(debug_assertions) {
@@ -457,8 +443,6 @@ impl LogProof {
             Self::compute_x(vk, &gamma, &alpha, &beta, &phi, &psi, &v)
         );
 
-        println!("Generating inner product proof...");
-
         let inner_product_proof =
             Self::create_inner_product_proof(transcript, &v_1, &v_2, &rho, &t, &g_prime, h, u);
 
@@ -482,8 +466,6 @@ impl LogProof {
     where
         Q: Field + ModSwitch<FpRistretto> + FieldModulus<4> + FieldModulus<4> + CryptoHash + Zero,
     {
-        println!("Verifier");
-
         transcript.linear_relation_domain_separator();
         transcript.append_linear_relation_knowledge(vk);
 

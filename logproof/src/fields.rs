@@ -2,7 +2,7 @@ use std::borrow::Borrow;
 
 use ark_ff::{
     BigInt, BigInteger, Fp, Fp128, Fp256, FpConfig, MontBackend, MontConfig, One as ArkOne,
-    PrimeField, Zero as ArkZero,
+    PrimeField, Zero as ArkZero, Fp64,
 };
 use curve25519_dalek::scalar::Scalar;
 
@@ -68,6 +68,34 @@ pub struct SealQ128_8192 {}
 #[modulus = "649033470896967801447398927572993"]
 pub struct SealQ128_4096 {}
 
+/**
+ * The configuration type for q modulus SEAL BFV uses with 128-bit security
+ * an lattice dimension 4096.
+ *
+ * # Remarks
+ *
+ * SEAL uses Q =
+ * 0xffffee001, 0xffffc4001, 0x1ffffe0001
+ */
+#[derive(MontConfig)]
+#[generator = "3"]
+#[modulus = "4611686014132420865"]
+pub struct SealQ128_2048 {}
+
+/**
+ * The configuration type for q modulus SEAL BFV uses with 128-bit security
+ * an lattice dimension 4096.
+ *
+ * # Remarks
+ *
+ * SEAL uses Q =
+ * 0xffffee001, 0xffffc4001, 0x1ffffe0001
+ */
+#[derive(MontConfig)]
+#[generator = "3"]
+#[modulus = "33822867713"]
+pub struct SealQ128_1024 {}
+
 #[allow(unused)]
 /**
  * The field SEAL's BFV scheme uses with 128-bit security and a poly degree
@@ -89,6 +117,28 @@ pub type FqSeal128_8192 = Fp256<MontBackend<SealQ128_8192, 4>>;
  * children and not use anything that relies on field primality.
  */
 pub type FqSeal128_4096 = Fp128<MontBackend<SealQ128_4096, 2>>;
+
+#[allow(unused)]
+/**
+ * The field SEAL's BFV scheme uses with 128-bit security and a poly degree
+ * of 2048.
+ *
+ * # Remarks
+ * Fp expects the modulus to be prime, but ours isn't. We need to be good
+ * children and not use anything that relies on field primality.
+ */
+pub type FqSeal128_2048 = Fp64<MontBackend<SealQ128_2048, 1>>;
+
+#[allow(unused)]
+/**
+ * The field SEAL's BFV scheme uses with 128-bit security and a poly degree
+ * of 1024.
+ *
+ * # Remarks
+ * Fp expects the modulus to be prime, but ours isn't. We need to be good
+ * children and not use anything that relies on field primality.
+ */
+pub type FqSeal128_1024 = Fp64<MontBackend<SealQ128_1024, 1>>;
 
 /**
  * Extend a [BigInt<M>] to a [BigInt<N>] by appending zeros.

@@ -1,13 +1,13 @@
-use std::time::Instant;
+use std::time::{Instant, Duration};
 
-use ark_ff::Field;
+use ark_ff::{Field, FftField};
 use ark_poly::univariate::DensePolynomial;
 use criterion::{criterion_group, criterion_main, Criterion};
 use logproof::{
-    fields::FqSeal128_4096,
+    fields::{FqSeal128_4096, FpRistretto, FqSeal128_2048, FqSeal128_1024},
     linear_algebra::{Matrix, ScalarRem},
-    math::make_poly,
-    InnerProductVerifierKnowledge, LogProof, LogProofGenerators, LogProofProverKnowledge,
+    math::{make_poly, FieldModulus, ModSwitch, Zero, SmartMul},
+    InnerProductVerifierKnowledge, LogProof, LogProofGenerators, LogProofProverKnowledge, crypto::CryptoHash,
 };
 use merlin::Transcript;
 
@@ -26,14 +26,20 @@ fn f<F: Field>(degree: usize) -> DensePolynomial<F> {
     DensePolynomial { coeffs }
 }
 
-fn bfv_3ct_benchmark(_: &mut Criterion) {
+fn bfv_benchmark<Q, const CT: usize, const CT2: usize>()
+where Q: Field + CryptoHash + FieldModulus<4> + ModSwitch<FpRistretto> + Zero + Clone + SmartMul<Q, Output = Q> + FftField
+{
+    // Really wish we had `generic_const_exprs` in stable...
+    assert_eq!(2 * CT, CT2);
+
+    println!("Sleeping for 120s to prevent thermal throttling of successive benchmarks...");
+    std::thread::sleep(Duration::from_secs(120));
+
     // Secret key
     // a = random in q
     // e_1 = q / 2p
     // c_1 = s * a + e_1 + del * m
     // c_2 = a
-
-    type Q = FqSeal128_4096;
 
     const POLY_DEGREE: u64 = 4096u64;
     const BIT_SIZE: u64 = 2 << 8;
@@ -49,14 +55,16 @@ fn bfv_3ct_benchmark(_: &mut Criterion) {
     let one = make_poly(&[1]);
     let zero = make_poly(&[0]);
 
-    let a = MatrixPoly::from([
-        [delta.clone(), p_0.clone(), one.clone(), zero.clone()],
-        [zero.clone(), p_1.clone(), zero.clone(), one.clone()],
-        [delta.clone(), p_0.clone(), one.clone(), zero.clone()],
-        [zero.clone(), p_1.clone(), zero.clone(), one.clone()],
-        [delta, p_0.clone(), one.clone(), zero.clone()],
-        [zero.clone(), p_1, zero, one],
-    ]);
+    let mut a = vec![];
+
+    for _ in 0..CT {
+        a.push([delta.clone(), p_0.clone(), one.clone(), zero.clone()]);
+        a.push([zero.clone(), p_1.clone(), zero.clone(), one.clone()]);
+    }
+
+    let a: [[DensePolynomial<Q>; 4]; CT2] = a.try_into().unwrap();
+
+    let a = MatrixPoly::from(a);
 
     // Secret key
     // a = random in q
@@ -71,33 +79,19 @@ fn bfv_3ct_benchmark(_: &mut Criterion) {
 
     let s = MatrixPoly::from([[m], [u], [e_1], [e_2]]);
 
-    let f = f::<FqSeal128_4096>(POLY_DEGREE as usize);
+    let f = f::<Q>(POLY_DEGREE as usize);
 
     let t = &a * &s;
     let t = t.scalar_rem(&f);
 
     let mut transcript = Transcript::new(b"test");
 
-    println!("Generating prover knowlege");
-
-    let now = Instant::now();
-
     let pk = LogProofProverKnowledge::new(&a, &s, &t, BIT_SIZE, &f);
 
-    println!("Generate PK {}s", now.elapsed().as_secs_f64());
-
-    println!("b={}", pk.vk.b());
-    println!("b_1={}", pk.vk.b_1());
-    println!("b_2={}", pk.vk.b_2());
-    println!("mkdb={}", pk.vk.mkdb());
-    println!("nk(2d-1)b_1={}", pk.vk.nk_2d_min_1_b_1());
-    println!("nk(d-1)b_2={}", pk.vk.nk_d_min_1_b_2());
-    println!("l={}", pk.vk.l());
-
-    println!("Starting proof...");
-
+    let now = Instant::now();
     let gens = LogProofGenerators::new(pk.vk.l() as usize);
     let u = InnerProductVerifierKnowledge::get_u();
+    println!("Setup time {}s", now.elapsed().as_secs_f64());
 
     let now = Instant::now();
 
@@ -117,6 +111,62 @@ fn bfv_3ct_benchmark(_: &mut Criterion) {
     println!("Verifier time {}s", now.elapsed().as_secs_f64());
 }
 
-criterion_group!(benches, bfv_3ct_benchmark);
+fn params_1024_3ct(_: &mut Criterion) {
+    println!("n=1024, ct=3");
+    bfv_benchmark::<FqSeal128_1024, 3, 6>();
+}
+
+fn params_1024_2ct(_: &mut Criterion) {
+    println!("n=1024, ct=2");
+    bfv_benchmark::<FqSeal128_1024, 2, 4>();
+}
+
+fn params_1024_1ct(_: &mut Criterion) {
+    println!("n=1024, ct=1");
+    bfv_benchmark::<FqSeal128_1024, 1, 2>();
+}
+
+fn params_2048_3ct(_: &mut Criterion) {
+    println!("n=2048, ct=3");
+    bfv_benchmark::<FqSeal128_2048, 3, 6>();
+}
+
+fn params_2048_2ct(_: &mut Criterion) {
+    println!("n=2048, ct=2");
+    bfv_benchmark::<FqSeal128_2048, 2, 4>();
+}
+
+fn params_2048_1ct(_: &mut Criterion) {
+    println!("n=2048, ct=1");
+    bfv_benchmark::<FqSeal128_2048, 1, 2>();
+}
+
+fn params_4096_3ct(_: &mut Criterion) {
+    println!("n=4096, ct=3");
+    bfv_benchmark::<FqSeal128_4096, 3, 6>();
+}
+
+fn params_4096_2ct(_: &mut Criterion) {
+    println!("n=4096, ct=2");
+    bfv_benchmark::<FqSeal128_4096, 2, 4>();
+}
+
+fn params_4096_1ct(_: &mut Criterion) {
+    println!("n=4096, ct=1");
+    bfv_benchmark::<FqSeal128_4096, 1, 2>();
+}
+
+criterion_group!(
+    benches,
+    params_1024_1ct,
+    params_1024_2ct,
+    params_1024_3ct,
+    params_2048_1ct,
+    params_2048_2ct,
+    params_2048_3ct,
+    params_4096_1ct,
+    params_4096_2ct,
+    params_4096_3ct
+);
 
 criterion_main!(benches);

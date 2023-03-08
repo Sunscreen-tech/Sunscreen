@@ -7,6 +7,9 @@ use sha3::Sha3_256;
  * A trait that allows you to get a collision-resistant hash of an object.
  */
 pub trait CryptoHash {
+    /**
+     * Compute a SHA-3 hash of this object.
+     */
     fn crypto_hash(&self, hasher: &mut Sha3_256);
 }
 

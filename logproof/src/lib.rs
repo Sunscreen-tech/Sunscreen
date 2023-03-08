@@ -13,7 +13,11 @@
 //!
 
 mod assertions;
-mod crypto;
+
+/**
+ * Contains traits relating to cryptographic operations.
+ */
+pub mod crypto;
 mod error;
 pub use error::ProofError;
 

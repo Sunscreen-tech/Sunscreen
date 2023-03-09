@@ -1,8 +1,12 @@
 use std::time::Instant;
 
-use sunscreen::{Params, fhe_program, types::{bfv::Fractional, Cipher}, Compiler, Runtime, SchemeType};
+use sunscreen::{
+    fhe_program,
+    types::{bfv::Fractional, Cipher},
+    Compiler, Params, Runtime, SchemeType,
+};
 
-/// This program benchmarks all the FHE pieces of private transactions with 
+/// This program benchmarks all the FHE pieces of private transactions with
 /// SMART FHE.
 
 fn benchmark(params: &Params) {
@@ -30,7 +34,7 @@ fn benchmark(params: &Params) {
         let app = Compiler::new()
             .fhe_program(add)
             .fhe_program(sub)
-            .with_params(&params)
+            .with_params(params)
             .compile()
             .unwrap();
 
@@ -44,19 +48,35 @@ fn benchmark(params: &Params) {
         keygen_time += now.elapsed().as_secs_f64();
 
         let now = Instant::now();
-        
+
         // Encrypt under Alice's key
-        let send_a = runtime.encrypt(Fractional::<32>::from(42.0), &public).unwrap();
+        let send_a = runtime
+            .encrypt(Fractional::<32>::from(42.0), &public)
+            .unwrap();
         // Encrypt under Bob's key, but we'll pretend Alice's key is Bob's.
         // We just want the timings.
-        let send_b = runtime.encrypt(Fractional::<32>::from(42.0), &public).unwrap();
+        let send_b = runtime
+            .encrypt(Fractional::<32>::from(42.0), &public)
+            .unwrap();
 
         encrypt_time += now.elapsed().as_secs_f64();
 
         let now = Instant::now();
-        
-        let add_res = runtime.run(app.get_fhe_program(add).unwrap(), vec![send_a.clone(), send_b.clone()], &public).unwrap();
-        let sub_res = runtime.run(app.get_fhe_program(sub).unwrap(), vec![send_a, send_b], &public).unwrap();
+
+        let add_res = runtime
+            .run(
+                app.get_fhe_program(add).unwrap(),
+                vec![send_a.clone(), send_b.clone()],
+                &public,
+            )
+            .unwrap();
+        let sub_res = runtime
+            .run(
+                app.get_fhe_program(sub).unwrap(),
+                vec![send_a, send_b],
+                &public,
+            )
+            .unwrap();
 
         run_time += now.elapsed().as_secs_f64();
 
@@ -75,8 +95,6 @@ fn benchmark(params: &Params) {
     println!("Keygen time: {}s", keygen_time / RUNS as f64);
     println!("Encrypt time: {}s", encrypt_time / RUNS as f64);
     println!("Run FHE circuit time {}s", run_time / RUNS as f64);
-
-
 }
 
 //262,152
@@ -86,7 +104,7 @@ pub fn main() {
         coeff_modulus: vec![0x7e00001],
         plain_modulus: 4_096,
         scheme_type: SchemeType::Bfv,
-        security_level: sunscreen::SecurityLevel::TC128
+        security_level: sunscreen::SecurityLevel::TC128,
     });
 
     benchmark(&Params {
@@ -94,7 +112,7 @@ pub fn main() {
         coeff_modulus: vec![0x3fffffff000001],
         plain_modulus: 4_096,
         scheme_type: SchemeType::Bfv,
-        security_level: sunscreen::SecurityLevel::TC128
+        security_level: sunscreen::SecurityLevel::TC128,
     });
 
     benchmark(&Params {
@@ -102,6 +120,6 @@ pub fn main() {
         coeff_modulus: vec![0xffffee001, 0xffffc4001, 0x1ffffe0001],
         plain_modulus: 4_096,
         scheme_type: SchemeType::Bfv,
-        security_level: sunscreen::SecurityLevel::TC128
+        security_level: sunscreen::SecurityLevel::TC128,
     });
 }

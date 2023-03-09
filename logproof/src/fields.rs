@@ -1,8 +1,8 @@
 use std::borrow::Borrow;
 
 use ark_ff::{
-    BigInt, BigInteger, Fp, Fp128, Fp256, FpConfig, MontBackend, MontConfig, One as ArkOne,
-    PrimeField, Zero as ArkZero, Fp64,
+    BigInt, BigInteger, Fp, Fp128, Fp256, Fp64, FpConfig, MontBackend, MontConfig, One as ArkOne,
+    PrimeField, Zero as ArkZero,
 };
 use curve25519_dalek::scalar::Scalar;
 

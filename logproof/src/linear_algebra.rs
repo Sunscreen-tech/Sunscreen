@@ -16,8 +16,11 @@ use crate::math::{ModSwitch, One, Rem, SmartMul, Tensor, Zero};
  * An `m x n` matrix of elements.
  *
  * # Remarks
- * Matrix elements can be any type that implements [`Add`], [`Mul`],
+ * Matrix elements can be any type that implements
  * [`Clone`], [`Zero`].
+ *
+ * To actually multiply matrices, `T` should also implement
+ * [`Add`] and [`SmartMul`].
  */
 pub struct Matrix<T>
 where

@@ -1,13 +1,14 @@
-use std::time::{Instant, Duration};
+use std::time::{Duration, Instant};
 
-use ark_ff::{Field, FftField};
+use ark_ff::{FftField, Field};
 use ark_poly::univariate::DensePolynomial;
 use criterion::{criterion_group, criterion_main, Criterion};
 use logproof::{
-    fields::{FqSeal128_4096, FpRistretto, FqSeal128_2048, FqSeal128_1024},
+    crypto::CryptoHash,
+    fields::{FpRistretto, FqSeal128_1024, FqSeal128_2048, FqSeal128_4096},
     linear_algebra::{Matrix, ScalarRem},
-    math::{make_poly, FieldModulus, ModSwitch, Zero, SmartMul},
-    InnerProductVerifierKnowledge, LogProof, LogProofGenerators, LogProofProverKnowledge, crypto::CryptoHash,
+    math::{make_poly, FieldModulus, ModSwitch, SmartMul, Zero},
+    InnerProductVerifierKnowledge, LogProof, LogProofGenerators, LogProofProverKnowledge,
 };
 use merlin::Transcript;
 
@@ -27,7 +28,15 @@ fn f<F: Field>(degree: usize) -> DensePolynomial<F> {
 }
 
 fn bfv_benchmark<Q, const CT: usize, const CT2: usize>()
-where Q: Field + CryptoHash + FieldModulus<4> + ModSwitch<FpRistretto> + Zero + Clone + SmartMul<Q, Output = Q> + FftField
+where
+    Q: Field
+        + CryptoHash
+        + FieldModulus<4>
+        + ModSwitch<FpRistretto>
+        + Zero
+        + Clone
+        + SmartMul<Q, Output = Q>
+        + FftField,
 {
     // Really wish we had `generic_const_exprs` in stable...
     assert_eq!(2 * CT, CT2);
@@ -65,12 +74,6 @@ where Q: Field + CryptoHash + FieldModulus<4> + ModSwitch<FpRistretto> + Zero + 
     let a: [[DensePolynomial<Q>; 4]; CT2] = a.try_into().unwrap();
 
     let a = MatrixPoly::from(a);
-
-    // Secret key
-    // a = random in q
-    // e_1 = q / 2p
-    // c_1 = s * a + e_1 + del * m
-    // c_2 = a
 
     let m = p_0.clone();
     let u = p_0.clone();

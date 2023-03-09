@@ -4,10 +4,10 @@ use criterion::{criterion_group, criterion_main, Criterion};
 #[cfg(feature = "gpu")]
 mod benches {
     use criterion::Criterion;
-    use curve25519_dalek::{scalar::Scalar, ristretto::RistrettoPoint};
+    use curve25519_dalek::{ristretto::RistrettoPoint, scalar::Scalar};
     use rand::thread_rng;
     use std::time::Instant;
-    use sunscreen_math::{GpuScalarVec, GpuRistrettoPointVec};
+    use sunscreen_math::{GpuRistrettoPointVec, GpuScalarVec};
 
     use super::*;
 
@@ -44,10 +44,7 @@ mod benches {
 
         let now = Instant::now();
         let _ = a_vec * b_vec;
-        println!(
-            "{} sm/s",
-            a.len() as f64 / now.elapsed().as_secs_f64()
-        );
+        println!("{} sm/s", a.len() as f64 / now.elapsed().as_secs_f64());
     }
 }
 

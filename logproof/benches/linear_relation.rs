@@ -27,7 +27,7 @@ fn f<F: Field>(degree: usize) -> DensePolynomial<F> {
     DensePolynomial { coeffs }
 }
 
-fn bfv_benchmark<Q, const CT: usize, const CT2: usize>()
+fn bfv_benchmark<Q, const POLY_DEGREE: u64, const CT: usize, const CT2: usize>()
 where
     Q: Field
         + CryptoHash
@@ -49,8 +49,6 @@ where
     // e_1 = q / 2p
     // c_1 = s * a + e_1 + del * m
     // c_2 = a
-
-    const POLY_DEGREE: u64 = 4096u64;
     const BIT_SIZE: u64 = 2 << 8;
 
     println!("Generating data...");
@@ -116,47 +114,47 @@ where
 
 fn params_1024_3ct(_: &mut Criterion) {
     println!("n=1024, ct=3");
-    bfv_benchmark::<FqSeal128_1024, 3, 6>();
+    bfv_benchmark::<FqSeal128_1024, 1024, 3, 6>();
 }
 
 fn params_1024_2ct(_: &mut Criterion) {
     println!("n=1024, ct=2");
-    bfv_benchmark::<FqSeal128_1024, 2, 4>();
+    bfv_benchmark::<FqSeal128_1024, 1024, 2, 4>();
 }
 
 fn params_1024_1ct(_: &mut Criterion) {
     println!("n=1024, ct=1");
-    bfv_benchmark::<FqSeal128_1024, 1, 2>();
+    bfv_benchmark::<FqSeal128_1024, 1024, 1, 2>();
 }
 
 fn params_2048_3ct(_: &mut Criterion) {
     println!("n=2048, ct=3");
-    bfv_benchmark::<FqSeal128_2048, 3, 6>();
+    bfv_benchmark::<FqSeal128_2048, 2048, 3, 6>();
 }
 
 fn params_2048_2ct(_: &mut Criterion) {
     println!("n=2048, ct=2");
-    bfv_benchmark::<FqSeal128_2048, 2, 4>();
+    bfv_benchmark::<FqSeal128_2048, 2048, 2, 4>();
 }
 
 fn params_2048_1ct(_: &mut Criterion) {
     println!("n=2048, ct=1");
-    bfv_benchmark::<FqSeal128_2048, 1, 2>();
+    bfv_benchmark::<FqSeal128_2048, 2048, 1, 2>();
 }
 
 fn params_4096_3ct(_: &mut Criterion) {
     println!("n=4096, ct=3");
-    bfv_benchmark::<FqSeal128_4096, 3, 6>();
+    bfv_benchmark::<FqSeal128_4096, 4096, 3, 6>();
 }
 
 fn params_4096_2ct(_: &mut Criterion) {
     println!("n=4096, ct=2");
-    bfv_benchmark::<FqSeal128_4096, 2, 4>();
+    bfv_benchmark::<FqSeal128_4096, 4096, 2, 4>();
 }
 
 fn params_4096_1ct(_: &mut Criterion) {
     println!("n=4096, ct=1");
-    bfv_benchmark::<FqSeal128_4096, 1, 2>();
+    bfv_benchmark::<FqSeal128_4096, 4096, 1, 2>();
 }
 
 criterion_group!(

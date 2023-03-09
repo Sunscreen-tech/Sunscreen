@@ -71,6 +71,68 @@ fn make_fractional_value(bits: &[i8]) -> [[BPField; 8]; 64] {
         .unwrap()
 }
 
+/// In this scenario, we have an unshielded tx coming from an encrypted
+/// balance. We need to prove that the public shielded value is less than
+/// equal your account balance.
+///
+/// # Remarks
+/// Doing this for real, we would need to scale the public tx amount by
+/// the number of decimal places in the fractional amount. This is
+/// basically free, so we don't need to time it here.
+fn unshield_tx_fractional_range_proof(_c: &mut Criterion) {
+    #[zkp_program(backend = "bulletproofs")]
+    /**
+     * Proves the 0 < a <= b and a == c
+     */
+    fn in_range<F: BackendField>(
+        balance: [[NativeField<F>; 8]; 64],
+        #[constant] unshielded: NativeField<F>,
+    ) {
+        println!("Running unshield proof...");
+
+        let balance_coeffs = get_coeffs(&balance);
+
+        let balance_val = to_field_element(&balance_coeffs, false);
+
+        unshielded.constrain_le_bounded(balance_val, 8);
+    }
+
+    let app = Compiler::new()
+        .zkp_backend::<BulletproofsBackend>()
+        .zkp_program(in_range)
+        .compile()
+        .unwrap();
+
+    let prog = app.get_zkp_program(in_range).unwrap();
+
+    // Create a carryless binary value.
+    // a is 3 in the 1s place, 2 in the 2s place.
+    // 3 * 1 + 2 * 2 = 7
+    let balance = make_fractional_value(&[3, 2]);
+
+    let runtime = Runtime::new_zkp(&BulletproofsBackend::new()).unwrap();
+
+    let prover_time = Instant::now();
+
+    let tx_input: Vec<ZkpProgramInput> = vec![BPField::from(4).into()];
+    let balance_input: Vec<ZkpProgramInput> = vec![balance.into()];
+
+    let proof = runtime
+        .prove(prog, tx_input.clone(), vec![], balance_input)
+        .unwrap();
+
+    println!("Prover time {}s", prover_time.elapsed().as_secs_f64());
+
+    let verifier_time = Instant::now();
+
+    runtime.verify(prog, &proof, tx_input, vec![]).unwrap();
+
+    println!("Verifier time {}s", verifier_time.elapsed().as_secs_f64());
+
+    let proof_ser = bincode::serialize(&proof).unwrap();
+    println!("Proof size {}B", proof_ser.len());
+}
+
 /// In this scenario, we have parts of 3 messages from encrypted ciphertexts. These
 /// are the upper and lower 32 coefficients of 3
 /// [`Fractional`](sunscreen::types::bfv::Fractional) encoded values. We assume we've
@@ -151,6 +213,9 @@ fn private_tx_fractional_range_proof(_c: &mut Criterion) {
         .unwrap();
 
     println!("Verifier time {}s", verifier_time.elapsed().as_secs_f64());
+
+    let proof_ser = bincode::serialize(&proof).unwrap();
+    println!("Proof size {}B", proof_ser.len());
 }
 
 /// Imagine a multi-party computation where each user submits a value between
@@ -211,6 +276,9 @@ fn mean_variance_fractional_range_proof(_c: &mut Criterion) {
         .unwrap();
 
     println!("Verifier time {}s", verifier_time.elapsed().as_secs_f64());
+
+    let proof_ser = bincode::serialize(&proof).unwrap();
+    println!("Proof size {}B", proof_ser.len());
 }
 
 /// Suppose we're adding ZKPs on the inputs to our chi squared example (see
@@ -231,6 +299,7 @@ fn chi_sq_fractional_range_proof(_c: &mut Criterion) {
         a_0: [[NativeField<F>; 8]; 64],
         a_1: [[NativeField<F>; 8]; 64],
         a_2: [[NativeField<F>; 8]; 64],
+        #[constant] n: NativeField<F>,
     ) {
         println!("Running chi_sq_fractional_range_proof...");
 
@@ -242,15 +311,7 @@ fn chi_sq_fractional_range_proof(_c: &mut Criterion) {
         let a_1_val = to_field_element(&a_1_coeffs, false);
         let a_2_val = to_field_element(&a_2_coeffs, false);
 
-        let zero = NativeField::<F>::from(0).into_program_node();
-        let twelve = NativeField::<F>::from(12).into_program_node();
-
-        a_0_val.constrain_ge_bounded(zero, 8);
-        a_0_val.constrain_le_bounded(twelve, 8);
-        a_1_val.constrain_ge_bounded(zero, 8);
-        a_1_val.constrain_le_bounded(twelve, 8);
-        a_2_val.constrain_ge_bounded(zero, 8);
-        a_2_val.constrain_le_bounded(twelve, 8);
+        (a_0_val + a_1_val + a_2_val).constrain_eq(n);
     }
 
     let app = Compiler::new()
@@ -266,34 +327,41 @@ fn chi_sq_fractional_range_proof(_c: &mut Criterion) {
     // 3 * 1 + 2 * 2 = 7
     let a_0 = make_fractional_value(&[3, 2]);
 
-    // 4 * 1 + 1 * 2 = 8
+    // 4 * 1 + 1 * 2 = 6
     let a_1 = make_fractional_value(&[4, 1]);
 
-    // 3 * 1 + 2 * 2 = 11
+    // 3 * 1 + 2 * 2 = 7
     let a_2 = make_fractional_value(&[3, 2]);
+
+    let n = BPField::from(7 + 6 + 7);
+
+    let priv_inputs: Vec<ZkpProgramInput> = vec![a_0.into(), a_1.into(), a_2.into()];
+    let const_inputs: Vec<ZkpProgramInput> = vec![n.into()];
 
     let runtime = Runtime::new_zkp(&BulletproofsBackend::new()).unwrap();
 
     let prover_time = Instant::now();
 
     let proof = runtime
-        .prove(prog, vec![], vec![], vec![a_0, a_1, a_2])
+        .prove(prog, const_inputs.clone(), vec![], priv_inputs)
         .unwrap();
 
     println!("Prover time {}s", prover_time.elapsed().as_secs_f64());
 
     let verifier_time = Instant::now();
 
-    runtime
-        .verify(prog, &proof, Vec::<ZkpProgramInput>::new(), vec![])
-        .unwrap();
+    runtime.verify(prog, &proof, const_inputs, vec![]).unwrap();
 
     println!("Verifier time {}s", verifier_time.elapsed().as_secs_f64());
+
+    let proof_ser = bincode::serialize(&proof).unwrap();
+    println!("Proof size {}B", proof_ser.len());
 }
 
 criterion_group!(
     benches,
     private_tx_fractional_range_proof,
+    unshield_tx_fractional_range_proof,
     mean_variance_fractional_range_proof,
     chi_sq_fractional_range_proof
 );

@@ -1,4 +1,4 @@
-use std::{borrow::Borrow, ops::Mul, time::Instant};
+use std::{borrow::Borrow, ops::Mul};
 
 use ark_ff::{BigInt, BigInteger, FftField, Field, Fp, MontBackend, MontConfig, Zero as ArkZero};
 use ark_poly::univariate::DensePolynomial;
@@ -19,7 +19,13 @@ pub fn rand256() -> [u8; 32] {
     data
 }
 
+/**
+ * A wrapper trait for getting the zero element of a field.
+ */
 pub trait Zero {
+    /**
+     * Returns the zero element.
+     */
     fn zero() -> Self;
 }
 
@@ -35,7 +41,13 @@ impl<F: Field> Zero for DensePolynomial<F> {
     }
 }
 
+/**
+ * A trait for getting the one element of a field.
+ */
 pub trait One {
+    /**
+     * Returns the one element.
+     */
     fn one() -> Self;
 }
 
@@ -53,6 +65,9 @@ impl<F: Field> One for DensePolynomial<F> {
     }
 }
 
+/**
+ * Methods for switching elements between finite fields.
+ */
 pub trait ModSwitch<F> {
     /**
      * Treat the input value as unsigned in the current field and produce
@@ -120,9 +135,18 @@ impl<F: MontConfig<M>, const M: usize, const N: usize> FieldModulus<N>
     }
 }
 
+/**
+ * A trait for computing the infinity norm of a type.
+ */
 pub trait InfinityNorm {
+    /**
+     * The result type containing the norm.
+     */
     type Output;
 
+    /**
+     * Compute the infinity norm.
+     */
     fn infinity_norm(&self) -> Self::Output;
 }
 
@@ -143,6 +167,9 @@ impl<F: Field> InfinityNorm for DensePolynomial<F> {
  * when an FFT isn't possible
  */
 pub trait SmartMul<Rhs> {
+    /**
+     * The type that results from the multiplication.
+     */
     type Output;
 
     /**
@@ -245,6 +272,9 @@ pub fn make_poly<F: Field + From<u64>>(coeffs: &[u64]) -> DensePolynomial<F> {
     DensePolynomial { coeffs }
 }
 
+/**
+ * A trait for computing log base 2 of a given value.
+ */
 pub trait Log2 {
     /**
      * Compute the log2 of the given value.
@@ -292,12 +322,24 @@ impl<const N: usize> Log2 for BigInt<N> {
 }
 
 /**
- * A surrogate for the `std::ops::Rem` trait so we can implement
+ * A custom [`std::ops::Rem`] trait so we can implement
  * modulus on foreign crate types.
+ *
+ * # Remarks
+ * see [`std::ops::Rem`].
  */
 pub trait Rem<Rhs = Self> {
+    /**
+     * The type resulting from the Rem operation.
+     */
     type Output;
 
+    /**
+     * Compute `self % rhs`.
+     *
+     * # Remarks
+     * see [`std::ops::Rem::rem`].
+     */
     fn rem(self, rhs: Rhs) -> Self::Output;
 }
 
@@ -331,6 +373,9 @@ where
  * A trait for computing a tensor product.
  */
 pub trait Tensor<Rhs> {
+    /**
+     * The type resulting from the tensor operation.
+     */
     type Output;
 
     /**
@@ -378,6 +423,9 @@ where
  * power of 2.
  */
 pub trait Pad {
+    /**
+     * The type resulting from the pad operation.
+     */
     type Output;
 
     /**
@@ -484,6 +532,10 @@ pub trait TwosComplementCoeffs
 where
     Self: Sized,
 {
+    /**
+     * Decompose the coefficients into binary 2's complement values.
+     *
+     */
     fn twos_complement_coeffs(b: usize) -> Vec<Self>;
 }
 
@@ -507,20 +559,16 @@ impl TwosComplementCoeffs for Scalar {
     }
 }
 
+/**
+ * A parallelized multiscalar multiplication.
+ */
 pub fn parallel_multiscalar_multiplication(s: &[Scalar], p: &[RistrettoPoint]) -> RistrettoPoint {
-    let now = Instant::now();
-
     let msm = s
         .par_iter()
         .chunks(16384)
         .zip(p.par_iter().chunks(16384))
         .map(|(s, p)| RistrettoPoint::vartime_multiscalar_mul(s.into_iter(), p.into_iter()))
         .reduce(RistrettoPoint::default, |x, p| x + p);
-
-    println!(
-        "MSM {} muls/s (naive)",
-        s.len() as f64 / now.elapsed().as_secs_f64()
-    );
 
     msm
 }

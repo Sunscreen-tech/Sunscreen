@@ -283,8 +283,6 @@ impl LogProof {
             + Zero
             + FieldModulus<4>,
     {
-        println!("Prover");
-
         let vk = &pk.vk;
         let d = vk.d();
         let m = vk.m();
@@ -312,8 +310,6 @@ impl LogProof {
             linear_relation::assert_factors(pk, f, &r_2, &r_1);
         }
 
-        println!("Serializing...");
-
         let s_serialized = Self::serialize(&pk.s, d as usize);
         let r_1_serialized = Self::serialize(&r_1, (2 * d - 1) as usize);
         let r_2_serialized = Self::serialize(&r_2, (d - 1) as usize);
@@ -321,8 +317,6 @@ impl LogProof {
         assert_eq!(s_serialized.len() as u64, m * k * d);
         assert_eq!(r_1_serialized.len() as u64, n * k * (2 * d - 1));
         assert_eq!(r_2_serialized.len() as u64, n * k * (d - 1));
-
-        println!("To two's complement");
 
         let s_binary = Self::to_2s_complement(&s_serialized, b);
         assert_eq!(s_binary.len() as u64, m * k * d * b);
@@ -347,8 +341,6 @@ impl LogProof {
         let w = Self::make_commitment(&s_1, &s_2, &rho, g, h, u);
 
         transcript.append_point(b"w", &w.compress());
-
-        println!("Generating challenges");
 
         let (alpha, beta, gamma, phi, psi) = Self::create_challenges(&pk.vk, transcript);
 
@@ -401,19 +393,13 @@ impl LogProof {
             );
         }
 
-        println!("Making g'...");
         let g_prime = Self::compute_g_prime(g, &phi);
 
-        println!("Computing v");
         let v = Self::compute_v(vk, alpha, &beta, &gamma);
-
-        println!("Generating commitment...");
 
         let t = Self::compute_t(&w, &g_prime, h, &phi, &psi, &v);
 
-        println!("Computing v_1");
         let v_1 = Self::compute_v1(&v, &phi, &s_2, &psi);
-        println!("Computing 2");
         let v_2 = Self::compute_v2(&s_1, &psi);
 
         if cfg!(debug_assertions) {
@@ -457,8 +443,6 @@ impl LogProof {
             Self::compute_x(vk, &gamma, &alpha, &beta, &phi, &psi, &v)
         );
 
-        println!("Generating inner product proof...");
-
         let inner_product_proof =
             Self::create_inner_product_proof(transcript, &v_1, &v_2, &rho, &t, &g_prime, h, u);
 
@@ -482,8 +466,6 @@ impl LogProof {
     where
         Q: Field + ModSwitch<FpRistretto> + FieldModulus<4> + FieldModulus<4> + CryptoHash + Zero,
     {
-        println!("Verifier");
-
         transcript.linear_relation_domain_separator();
         transcript.append_linear_relation_knowledge(vk);
 
@@ -1125,124 +1107,5 @@ mod test {
         let r = verify_transcript.challenge_scalar(b"verify");
 
         assert_eq!(l, r);
-    }
-}
-
-#[cfg(all(test, feature = "nightly-features"))]
-mod benches {
-    use crate::{fields::FqSeal128_4096, math::make_poly, LogProofGenerators};
-
-    use super::*;
-    use std::time::Instant;
-
-    extern crate test;
-    use test::Bencher;
-
-    fn f<F: Field>(degree: usize) -> DensePolynomial<F> {
-        let mut coeffs = Vec::with_capacity(degree + 1);
-        coeffs.push(F::ONE);
-
-        for _ in 0..degree - 1 {
-            coeffs.push(F::ZERO);
-        }
-
-        coeffs.push(F::ONE);
-
-        DensePolynomial { coeffs }
-    }
-
-    #[bench]
-    fn bfv_benchmark(_: &mut Bencher) {
-        // Secret key
-        // a = random in q
-        // e_1 = q / 2p
-        // c_1 = s * a + e_1 + del * m
-        // c_2 = a
-
-        type Q = FqSeal128_4096;
-
-        const POLY_DEGREE: u64 = 4096u64;
-        const BIT_SIZE: u64 = 2 << 8;
-
-        println!("Generating data...");
-
-        let coeffs = (0..POLY_DEGREE)
-            .map(|x| x % 2)
-            .into_iter()
-            .collect::<Vec<u64>>();
-
-        let delta = make_poly::<Q>(&[1234]);
-        let p_0 = make_poly::<Q>(&coeffs);
-        let p_1 = p_0.clone();
-
-        let one = make_poly(&[1]);
-        let zero = make_poly(&[0]);
-
-        let a = MatrixPoly::from([
-            [delta.clone(), p_0.clone(), one.clone(), zero.clone()],
-            [zero.clone(), p_1.clone(), zero.clone(), one.clone()],
-            [delta.clone(), p_0.clone(), one.clone(), zero.clone()],
-            [zero.clone(), p_1.clone(), zero.clone(), one.clone()],
-            [delta.clone(), p_0.clone(), one.clone(), zero.clone()],
-            [zero.clone(), p_1.clone(), zero.clone(), one.clone()],
-        ]);
-
-        // Secret key
-        // a = random in q
-        // e_1 = q / 2p
-        // c_1 = s * a + e_1 + del * m
-        // c_2 = a
-
-        let m = p_0.clone();
-        let u = p_0.clone();
-        let e_1 = p_0.clone();
-        let e_2 = p_0.clone();
-
-        let s = MatrixPoly::from([[m], [u], [e_1], [e_2]]);
-
-        let f = f::<FqSeal128_4096>(POLY_DEGREE as usize);
-
-        let t = &a * &s;
-        let t = t.scalar_rem(&f);
-
-        let mut transcript = Transcript::new(b"test");
-
-        println!("Generating prover knowlege");
-
-        let now = Instant::now();
-
-        let pk = ProverKnowledge::new(&a, &s, &t, BIT_SIZE, &f);
-
-        println!("Generate PK {}s", now.elapsed().as_secs_f64());
-
-        println!("b={}", pk.vk.b());
-        println!("b_1={}", pk.vk.b_1());
-        println!("b_2={}", pk.vk.b_2());
-        println!("mkdb={}", pk.vk.mkdb());
-        println!("nk(2d-1)b_1={}", pk.vk.nk_2d_min_1_b_1());
-        println!("nk(d-1)b_2={}", pk.vk.nk_d_min_1_b_2());
-        println!("l={}", pk.vk.l());
-
-        println!("Starting proof...");
-
-        let gens = LogProofGenerators::new(pk.vk.l() as usize);
-        let u = inner_product::VerifierKnowledge::get_u();
-
-        let now = Instant::now();
-
-        let proof = LogProof::create(&mut transcript, &pk, &gens.g, &gens.h, &u);
-
-        println!("Prover time {}s", now.elapsed().as_secs_f64());
-        println!("Proof size {}B", bincode::serialize(&proof).unwrap().len());
-
-        let mut transcript = Transcript::new(b"test");
-
-        let now = Instant::now();
-
-        proof
-            .verify(&mut transcript, &pk.vk, &gens.g, &gens.h, &u)
-            .unwrap();
-
-        println!("Verifier time {}s", now.elapsed().as_secs_f64());
     }
 }

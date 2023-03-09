@@ -1,4 +1,3 @@
-#![cfg_attr(feature = "nightly-features", feature(test))]
 #![deny(missing_docs)]
 
 //! This crate contains proofs for demonstrating facts about lattice
@@ -14,7 +13,11 @@
 //!
 
 mod assertions;
-mod crypto;
+
+/**
+ * Contains traits relating to cryptographic operations.
+ */
+pub mod crypto;
 mod error;
 pub use error::ProofError;
 
@@ -30,7 +33,11 @@ pub use inner_product::{
     VerifierKnowledge as InnerProductVerifierKnowledge,
 };
 
-mod linear_algebra;
+/**
+ * Contains linear algebra related types and traits (e.g. [`Matrix`]).
+ */
+pub mod linear_algebra;
+
 /**
  * Contains a zero-knowlege proof of a linear relation `As=t` where `A` and `t` are
  * public and `s` is known only to the prover.
@@ -48,6 +55,10 @@ pub use linear_relation::{
 /**
  * A collection of fields Z_q you can use in our log proofs.
  */
-mod fields;
-mod math;
+pub mod fields;
+
+/**
+ * A collection of operations on algebraic structures.
+ */
+pub mod math;
 mod transcript;

@@ -113,11 +113,7 @@ Scalar29 Scalar29::square(Scalar29 a) {
 }
 
 u64 m(u32 a, u32 b) {
-    u64 c;
-
-    c = ((u64)(a * b)) | ((u64)metal::mulhi(a, b)) << 32;
-
-    return c;
+    return ((u64)a) * ((u64)b);
 }
 
 MulResult mul_internal(Scalar29 a, Scalar29 b) {

@@ -71,10 +71,10 @@ fn make_fractional_value(bits: &[i8]) -> [[BPField; 8]; 64] {
         .unwrap()
 }
 
-/// In this scenario, we have an unshielded tx coming from an encrypted 
+/// In this scenario, we have an unshielded tx coming from an encrypted
 /// balance. We need to prove that the public shielded value is less than
 /// equal your account balance.
-/// 
+///
 /// # Remarks
 /// Doing this for real, we would need to scale the public tx amount by
 /// the number of decimal places in the fractional amount. This is
@@ -86,12 +86,12 @@ fn unshield_tx_fractional_range_proof(_c: &mut Criterion) {
      */
     fn in_range<F: BackendField>(
         balance: [[NativeField<F>; 8]; 64],
-        #[constant] unshielded: NativeField<F>
+        #[constant] unshielded: NativeField<F>,
     ) {
         println!("Running unshield proof...");
 
         let balance_coeffs = get_coeffs(&balance);
-        
+
         let balance_val = to_field_element(&balance_coeffs, false);
 
         unshielded.constrain_le_bounded(balance_val, 8);
@@ -117,15 +117,15 @@ fn unshield_tx_fractional_range_proof(_c: &mut Criterion) {
     let tx_input: Vec<ZkpProgramInput> = vec![BPField::from(4).into()];
     let balance_input: Vec<ZkpProgramInput> = vec![balance.into()];
 
-    let proof = runtime.prove(prog, tx_input.clone(), vec![], balance_input).unwrap();
+    let proof = runtime
+        .prove(prog, tx_input.clone(), vec![], balance_input)
+        .unwrap();
 
     println!("Prover time {}s", prover_time.elapsed().as_secs_f64());
 
     let verifier_time = Instant::now();
 
-    runtime
-        .verify(prog, &proof, tx_input, vec![])
-        .unwrap();
+    runtime.verify(prog, &proof, tx_input, vec![]).unwrap();
 
     println!("Verifier time {}s", verifier_time.elapsed().as_secs_f64());
 
@@ -300,7 +300,6 @@ fn chi_sq_fractional_range_proof(_c: &mut Criterion) {
         a_1: [[NativeField<F>; 8]; 64],
         a_2: [[NativeField<F>; 8]; 64],
         #[constant] n: NativeField<F>,
-
     ) {
         println!("Running chi_sq_fractional_range_proof...");
 
@@ -351,9 +350,7 @@ fn chi_sq_fractional_range_proof(_c: &mut Criterion) {
 
     let verifier_time = Instant::now();
 
-    runtime
-        .verify(prog, &proof, const_inputs, vec![])
-        .unwrap();
+    runtime.verify(prog, &proof, const_inputs, vec![]).unwrap();
 
     println!("Verifier time {}s", verifier_time.elapsed().as_secs_f64());
 

@@ -3,9 +3,8 @@ use std::time::Instant;
 use sunscreen::{
     fhe_program,
     types::{bfv::Fractional, Cipher},
-    Compiler, Params, Runtime, SchemeType, FheProgramInput,
+    Compiler, FheProgramInput, Params, Runtime, SchemeType,
 };
-use bincode;
 
 /// This program benchmarks all the FHE pieces of private transactions with
 /// SMART FHE.
@@ -107,11 +106,14 @@ fn benchmark(params: &Params) {
         assert_eq!(sub_res, 0.0);
 
         // Benchmark shielded TX
-        let args: Vec<FheProgramInput> = vec![send_a.clone().into(), Fractional::<32>::from(42.0).into()];
+        let args: Vec<FheProgramInput> =
+            vec![send_a.clone().into(), Fractional::<32>::from(42.0).into()];
 
         let now = Instant::now();
 
-        let add_res = runtime.run(app.get_fhe_program(add_pt).unwrap(), args, &public).unwrap();
+        let add_res = runtime
+            .run(app.get_fhe_program(add_pt).unwrap(), args, &public)
+            .unwrap();
 
         shield += now.elapsed().as_secs_f64();
 
@@ -121,11 +123,14 @@ fn benchmark(params: &Params) {
         assert_eq!(add_res, 84.0);
 
         // Benchmark unshield
-        let args: Vec<FheProgramInput> = vec![send_a.clone().into(), Fractional::<32>::from(42.0).into()];
+        let args: Vec<FheProgramInput> =
+            vec![send_a.clone().into(), Fractional::<32>::from(42.0).into()];
 
         let now = Instant::now();
 
-        let sub_res = runtime.run(app.get_fhe_program(sub_pt).unwrap(), args, &public).unwrap();
+        let sub_res = runtime
+            .run(app.get_fhe_program(sub_pt).unwrap(), args, &public)
+            .unwrap();
 
         unshield += now.elapsed().as_secs_f64();
 
@@ -134,8 +139,8 @@ fn benchmark(params: &Params) {
 
         assert_eq!(sub_res, 0.0);
 
-        let foo = bincode::serialize(&send_a).unwrap();
-        ct_size = foo.len();
+        let ser = bincode::serialize(&send_a).unwrap();
+        ct_size = ser.len();
     }
 
     println!("Compilation time {}s", compile_time / RUNS as f64);

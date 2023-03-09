@@ -5,6 +5,7 @@ use sunscreen::{
     types::{bfv::Fractional, Cipher},
     Compiler, Params, Runtime, SchemeType, FheProgramInput,
 };
+use bincode;
 
 /// This program benchmarks all the FHE pieces of private transactions with
 /// SMART FHE.
@@ -40,6 +41,7 @@ fn benchmark(params: &Params) {
     }
 
     const RUNS: u32 = 100;
+    let mut ct_size = 0usize;
 
     for _ in 0..RUNS {
         let now = Instant::now();
@@ -131,6 +133,9 @@ fn benchmark(params: &Params) {
         let sub_res: f64 = sub_res.into();
 
         assert_eq!(sub_res, 0.0);
+
+        let foo = bincode::serialize(&send_a).unwrap();
+        ct_size = foo.len();
     }
 
     println!("Compilation time {}s", compile_time / RUNS as f64);
@@ -139,6 +144,7 @@ fn benchmark(params: &Params) {
     println!("Run FHE circuit time {}s", run_time / RUNS as f64);
     println!("Shield FHE circuit time {}s", shield / RUNS as f64);
     println!("Unshield FHE circuit time {}s", unshield / RUNS as f64);
+    println!("CT size {}", ct_size);
 }
 
 //262,152

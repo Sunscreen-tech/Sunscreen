@@ -1,3 +1,5 @@
+use std::time::Instant;
+
 use sunscreen::{
     fhe_program,
     types::{bfv::Rational, Cipher},
@@ -26,7 +28,11 @@ struct Miner {
 
 impl Miner {
     pub fn setup() -> Result<Miner, Error> {
+        let now = Instant::now();
+
         let app = Compiler::new().fhe_program(swap_nu).compile()?;
+
+        println!("compile time {}s", now.elapsed().as_secs_f64());
 
         let runtime = Runtime::new_fhe(app.params())?;
 
@@ -41,9 +47,13 @@ impl Miner {
         nu_tokens_to_trade: Ciphertext,
         public_key: &PublicKey,
     ) -> Result<Ciphertext, Error> {
+        let now = Instant::now();
+
         let results =
             self.runtime
                 .run(&self.compiled_swap_nu, vec![nu_tokens_to_trade], public_key)?;
+
+        println!("Run circuit in {}s", now.elapsed().as_secs_f64());
 
         Ok(results[0].clone())
     }
@@ -65,7 +75,11 @@ impl Alice {
     pub fn setup(params: &Params) -> Result<Alice, Error> {
         let runtime = Runtime::new_fhe(params)?;
 
+        let now = Instant::now();
+
         let (public_key, private_key) = runtime.generate_keys()?;
+
+        println!("Keygen {}s", now.elapsed().as_secs_f64());
 
         Ok(Alice {
             public_key,
@@ -75,9 +89,15 @@ impl Alice {
     }
 
     pub fn create_transaction(&self, amount: f64) -> Result<Ciphertext, Error> {
-        Ok(self
+        let now = Instant::now();
+
+        let res = Ok(self
             .runtime
-            .encrypt(Rational::try_from(amount)?, &self.public_key)?)
+            .encrypt(Rational::try_from(amount)?, &self.public_key)?);
+
+        println!("Encrypt time {}s", now.elapsed().as_secs_f64());
+
+        res
     }
 
     pub fn check_received_eth(&self, received_eth: Ciphertext) -> Result<(), Error> {

@@ -1,5 +1,5 @@
 use bincode::Error as BincodeError;
-use std::ops::{Add, Div, Mul, Sub};
+use std::{ops::{Add, Div, Mul, Sub}, time::Instant};
 use sunscreen::{
     fhe_program,
     types::{bfv::Fractional, Cipher},
@@ -81,10 +81,16 @@ impl Bob {
             variance(&data)
         }
 
+        let now = Instant::now();
+
         let app = Compiler::new()
             .fhe_program(mean_fhe)
-            .fhe_program(variance_fhe)
+            .fhe_program(variance_fhe).additional_noise_budget(4)
+            .plain_modulus_constraint(sunscreen::PlainModulusConstraint::Raw(2048* 400))
             .compile()?;
+
+        println!("{:#?}", app.params());
+        println!("Compile time {}", now.elapsed().as_secs_f64());
 
         let mean_program = app.get_fhe_program(mean_fhe).unwrap();
         let variance_program = app.get_fhe_program(variance_fhe).unwrap();

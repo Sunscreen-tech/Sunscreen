@@ -113,6 +113,8 @@ impl Bob {
         let data: Ciphertext = bincode::deserialize(serialized_ciphertext)?;
         let public_key = bincode::deserialize(serialized_public_key)?;
 
+        let now = Instant::now();
+
         let mean_result = self
             .runtime
             .run(&self.mean_fhe, vec![data.clone()], &public_key)?;
@@ -120,6 +122,8 @@ impl Bob {
         let variance_result = self
             .runtime
             .run(&self.variance_fhe, vec![data], &public_key)?;
+
+        println!("Run time {}s", now.elapsed().as_secs_f64());
 
         Ok((
             bincode::serialize(&mean_result[0])?,
@@ -143,7 +147,11 @@ impl Alice {
         let params = bincode::deserialize(serialized_params)?;
         let runtime = Runtime::new_fhe(&params)?;
 
+        let now = Instant::now();
+
         let (public_key, private_key) = runtime.generate_keys()?;
+
+        println!("Keygen {}s", now.elapsed().as_secs_f64());
 
         Ok(Self {
             runtime,
@@ -163,7 +171,10 @@ impl Alice {
 
         let data = create_dataset();
 
+        let now = Instant::now();
         let ciphertext = self.runtime.encrypt(data, &self.public_key)?;
+
+        println!("Encryption time {}s", now.elapsed().as_secs_f64());
 
         Ok(bincode::serialize(&ciphertext)?)
     }

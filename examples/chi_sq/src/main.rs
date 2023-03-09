@@ -89,29 +89,37 @@ where
 
 #[fhe_program(scheme = "bfv")]
 fn chi_sq_fhe_program(
-    n_0: Cipher<Signed>,
-    n_1: Cipher<Signed>,
-    n_2: Cipher<Signed>,
+    n_0: [Cipher<Signed>; 3],
+    n_1: [Cipher<Signed>; 3],
+    n_2: [Cipher<Signed>; 3],
 ) -> (
     Cipher<Signed>,
     Cipher<Signed>,
     Cipher<Signed>,
     Cipher<Signed>,
 ) {
+    let n_0 = n_0[0] + n_0[1] + n_0[2];
+    let n_1 = n_1[0] + n_1[1] + n_1[2];
+    let n_2 = n_2[0] + n_2[1] + n_2[2];
+
     chi_sq_impl(n_0, n_1, n_2)
 }
 
 #[fhe_program(scheme = "bfv")]
 fn chi_sq_optimized_fhe_program(
-    n_0: Cipher<Signed>,
-    n_1: Cipher<Signed>,
-    n_2: Cipher<Signed>,
+    n_0: [Cipher<Signed>; 3],
+    n_1: [Cipher<Signed>; 3],
+    n_2: [Cipher<Signed>; 3],
 ) -> (
     Cipher<Signed>,
     Cipher<Signed>,
     Cipher<Signed>,
     Cipher<Signed>,
 ) {
+    let n_0 = n_0[0] + n_0[1] + n_0[2];
+    let n_1 = n_1[0] + n_1[1] + n_1[2];
+    let n_2 = n_2[0] + n_2[1] + n_2[2];
+
     chi_sq_optimized_impl(n_0, n_1, n_2)
 }
 
@@ -135,10 +143,14 @@ fn chi_sq_batched_fhe_program(
  * resolution, but a typical time on a first gen M1 mac under
  * 40ns.
  */
-fn run_native<F>(f: F, n_0: i64, n_1: i64, n_2: i64)
+fn run_native<F>(f: F, n_0: [i64; 3], n_1: [i64; 3], n_2: [i64; 3])
 where
     F: Fn(i64, i64, i64) -> (i64, i64, i64, i64),
 {
+    let n_0 = n_0[0] + n_0[1] + n_0[2];
+    let n_1 = n_1[0] + n_1[1] + n_1[2];
+    let n_2 = n_2[0] + n_2[1] + n_2[2];
+
     let start = Instant::now();
     let (a, b_1, b_2, b_3) = f(n_0, n_1, n_2);
     let elapsed = start.elapsed().as_secs_f64();
@@ -162,14 +174,14 @@ where
 fn run_fhe<F, T, U>(
     c: F,
     _u: PhantomData<U>,
-    n_0: T,
-    n_1: T,
-    n_2: T,
+    n_0: [T; 3],
+    n_1: [T; 3],
+    n_2: [T; 3],
     plain_modulus: PlainModulusConstraint,
 ) -> Result<(), Error>
 where
     F: FheProgramFn + Clone + 'static + AsRef<str>,
-    U: From<T> + FheType + TypeName + std::fmt::Display,
+    U: From<T> + FheType + TypeName + std::fmt::Display + Clone,
 {
     let start = Instant::now();
 
@@ -177,15 +189,18 @@ where
         .fhe_program(c.clone())
         .plain_modulus_constraint(plain_modulus)
         .compile()?;
+
+    println!("{:#?}", app.params());
+
     let elapsed = start.elapsed().as_secs_f64();
 
     println!("\t\tCompile time {elapsed}s");
 
     let runtime = Runtime::new_fhe(app.params())?;
 
-    let n_0 = U::from(n_0);
-    let n_1 = U::from(n_1);
-    let n_2 = U::from(n_2);
+    let n_0 = n_0.map(|x| U::from(x));
+    let n_1 = n_1.map(|x| U::from(x));
+    let n_2 = n_2.map(|x| U::from(x));
 
     let start = Instant::now();
     let (public_key, private_key) = runtime.generate_keys()?;
@@ -194,12 +209,21 @@ where
     println!("\t\tKeygen time {elapsed}s");
 
     let start = Instant::now();
+
+    // Pretend and time one hospital encrypting their share.
+    let _ = runtime.encrypt(n_0[0].clone(), &public_key)?;
+    let _ = runtime.encrypt(n_0[1].clone(), &public_key)?;
+    let _ = runtime.encrypt(n_0[2].clone(), &public_key)?;
+
+    let elapsed = start.elapsed().as_secs_f64();
+    println!("\t\tEncryption time {elapsed}s");
+
     let n_0_enc = runtime.encrypt(n_0, &public_key)?;
     let n_1_enc = runtime.encrypt(n_1, &public_key)?;
     let n_2_enc = runtime.encrypt(n_2, &public_key)?;
     let elapsed = start.elapsed().as_secs_f64();
 
-    println!("\t\tEncryption time {elapsed}s");
+    
 
     let start = Instant::now();
     let args: Vec<FheProgramInput> = vec![n_0_enc.into(), n_1_enc.into(), n_2_enc.into()];
@@ -224,9 +248,9 @@ where
 }
 
 fn main() -> Result<(), Error> {
-    let n_0 = 2;
-    let n_1 = 7;
-    let n_2 = 9;
+    let n_0 = [2, 4, 8];
+    let n_1 = [4, 8, 16];
+    let n_2 = [8, 16, 32];
 
     env_logger::init();
 
@@ -246,46 +270,5 @@ fn main() -> Result<(), Error> {
         n_2,
         plain_modulus,
     )?;
-    println!("**********Optimized************");
-    println!("\t**********Native************");
-    // run_native(chi_sq_optimized_impl, n_0, n_1, n_2);
-    println!("\t**********FHE************");
-    // On a first-gen M1 mac, the optimized fhe_program is around 6
-    // orders of magnitude slower than running natively, taking
-    // just under 50ms...
-    run_fhe(
-        chi_sq_optimized_fhe_program,
-        PhantomData::<Signed>::default(),
-        n_0,
-        n_1,
-        n_2,
-        plain_modulus,
-    )?;
-
-    // Pack repetitions of n_0, n_1, n_2 into 2x4096 vectors
-    // to demonstrate batching.
-    let n_0 = [[n_0; 4096], [n_0; 4096]];
-    let n_1 = [[n_1; 4096], [n_1; 4096]];
-    let n_2 = [[n_2; 4096], [n_2; 4096]];
-
-    let plain_modulus = PlainModulusConstraint::BatchingMinimum(16);
-
-    // Using batching, we get a fhe_program
-    // that runs with the same latency, but rather than computing
-    // 1 instance of the chi squared function, we can compute
-    // 16_384 values concurrently. This would result in an
-    // amortized throughput only 1-2 orders of magnitude
-    // slower than native!
-    println!("**********Batched************");
-    println!("\t**********FHE************");
-    run_fhe(
-        chi_sq_batched_fhe_program,
-        PhantomData::<Batched<4096>>,
-        n_0,
-        n_1,
-        n_2,
-        plain_modulus,
-    )?;
-
     Ok(())
 }

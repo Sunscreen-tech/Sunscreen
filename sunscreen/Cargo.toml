@@ -38,6 +38,7 @@ static_assertions = "1.1.0"
 thiserror = "1.0.37"
 
 [dev-dependencies]
+bincode = "1.3.3"
 curve25519-dalek = { path = "../sunscreen_curve25519", package = "sunscreen_curve25519" }
 bulletproofs = { path = "../sunscreen_bulletproofs", package = "sunscreen_bulletproofs" }
 criterion = "0.4.0"

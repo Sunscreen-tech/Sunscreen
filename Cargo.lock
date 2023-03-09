@@ -2418,6 +2418,7 @@ checksum = "734676eb262c623cec13c3155096e08d1f8f29adce39ba17948b18dad1e54142"
 name = "sunscreen"
 version = "0.7.0"
 dependencies = [
+ "bincode",
  "bumpalo",
  "criterion 0.4.0",
  "crypto-bigint",

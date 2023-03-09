@@ -54,3 +54,7 @@ hexl = ["seal_fhe/hexl"]
 [[bench]]
 name = "fractional_range_proof"
 harness = false
+
+[[bench]]
+name = "smart_fhe"
+harness = false

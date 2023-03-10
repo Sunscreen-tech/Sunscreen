@@ -176,6 +176,10 @@ impl Alice {
 
         println!("Encryption time {}s", now.elapsed().as_secs_f64());
 
+        let x = self.runtime.encrypt(data[0], &self.public_key)?;
+        let x = bincode::serialize(&x)?;
+        println!("CT = {}B", x.len());
+
         Ok(bincode::serialize(&ciphertext)?)
     }
 

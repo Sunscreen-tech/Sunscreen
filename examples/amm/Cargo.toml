@@ -7,3 +7,4 @@ edition = "2021"
 
 [dependencies]
 sunscreen = { path = "../../sunscreen" }
+bincode = "1.3.3"

@@ -76,6 +76,11 @@ fn benchmark(params: &Params) {
 
         encrypt_time += now.elapsed().as_secs_f64();
 
+        let x = bincode::serialize(&send_a).unwrap();
+        let y = bincode::serialize(&send_b).unwrap();
+
+        println!("CT size {}B", x.len() + y.len());
+
         let now = Instant::now();
 
         let add_res = runtime

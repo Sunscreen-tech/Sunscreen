@@ -4,7 +4,7 @@ use sunscreen::{
     fhe_program,
     types::{bfv::Rational, Cipher},
     Ciphertext, CompiledFheProgram, Compiler, Error, FheRuntime, Params, PrivateKey, PublicKey,
-    Runtime,
+    Runtime, InnerCiphertext,
 };
 
 #[fhe_program(scheme = "bfv")]
@@ -32,6 +32,7 @@ impl Miner {
 
         let app = Compiler::new().fhe_program(swap_nu).compile()?;
 
+        println!("{:#?}", app.params());
         println!("compile time {}s", now.elapsed().as_secs_f64());
 
         let runtime = Runtime::new_fhe(app.params())?;
@@ -96,6 +97,15 @@ impl Alice {
             .encrypt(Rational::try_from(amount)?, &self.public_key)?);
 
         println!("Encrypt time {}s", now.elapsed().as_secs_f64());
+
+        match &res.clone().unwrap().inner {
+            InnerCiphertext::Seal(x) => {
+                let x = bincode::serialize(&x[0]).unwrap();
+
+                println!("CT = {}B", x.len());
+
+            }
+        };
 
         res
     }

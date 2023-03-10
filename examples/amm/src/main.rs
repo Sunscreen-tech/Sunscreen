@@ -30,7 +30,7 @@ impl Miner {
     pub fn setup() -> Result<Miner, Error> {
         let now = Instant::now();
 
-        let app = Compiler::new().fhe_program(swap_nu).compile()?;
+        let app = Compiler::new().fhe_program(swap_nu).additional_noise_budget(40).compile()?;
 
         println!("{:#?}", app.params());
         println!("compile time {}s", now.elapsed().as_secs_f64());

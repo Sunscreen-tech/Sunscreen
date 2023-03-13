@@ -18,6 +18,7 @@ fn benchmark(params: &Params) {
     let mut keygen_time = 0.0;
     let mut shield = 0.0;
     let mut unshield = 0.0;
+    let mut decrypt_time = 0.0;
 
     #[fhe_program(scheme = "bfv")]
     fn add(a: Cipher<Fractional<32>>, b: Cipher<Fractional<32>>) -> Cipher<Fractional<32>> {
@@ -79,8 +80,6 @@ fn benchmark(params: &Params) {
         let x = bincode::serialize(&send_a).unwrap();
         let y = bincode::serialize(&send_b).unwrap();
 
-        println!("CT size {}B", x.len() + y.len());
-
         let now = Instant::now();
 
         let add_res = runtime
@@ -139,7 +138,10 @@ fn benchmark(params: &Params) {
 
         unshield += now.elapsed().as_secs_f64();
 
+        let now = Instant::now();
         let sub_res: Fractional<32> = runtime.decrypt(&sub_res[0], &private).unwrap();
+        decrypt_time += now.elapsed().as_secs_f64();
+
         let sub_res: f64 = sub_res.into();
 
         assert_eq!(sub_res, 0.0);
@@ -154,6 +156,7 @@ fn benchmark(params: &Params) {
     println!("Run FHE circuit time {}s", run_time / RUNS as f64);
     println!("Shield FHE circuit time {}s", shield / RUNS as f64);
     println!("Unshield FHE circuit time {}s", unshield / RUNS as f64);
+    println!("Decrypt time {}s", decrypt_time / RUNS as f64);
     println!("CT size {}", ct_size);
 }
 

@@ -346,7 +346,7 @@ mod tests {
 
         let a_gpu = runtime.alloc_from_slice(&a);
         let b_gpu = runtime.alloc_from_slice(&b);
-        let c_gpu = runtime.alloc::<u32>(a.len());
+        let mut c_gpu = runtime.alloc::<u32>(a.len());
 
         runtime.run_kernel(
             "basic_kernel",
@@ -358,6 +358,9 @@ mod tests {
             ],
             &Grid::from(a.len()),
         );
+
+        c_gpu.map.unmap();
+        c_gpu.map = unsafe { c_gpu.buffer.map().enq() }.unwrap();
 
         assert_eq!(c_gpu.len(), a.len());
 

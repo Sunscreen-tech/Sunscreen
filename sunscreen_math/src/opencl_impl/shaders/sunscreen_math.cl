@@ -317,7 +317,7 @@ Scalar29 Scalar29_montgomery_mul(const Scalar29* a, const Scalar29* b) {
 
 void Scalar29_square_multiply(Scalar29* y, size_t squarings, const Scalar29* x) {
     for (size_t i = 0; i < squarings; i++) {
-        *y = Scalar29_montgomery_square(y);
+        //*y = Scalar29_montgomery_square(y);
     }
     *y = Scalar29_montgomery_mul(y, x);
 }

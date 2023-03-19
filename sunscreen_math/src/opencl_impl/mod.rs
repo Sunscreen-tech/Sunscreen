@@ -21,7 +21,8 @@ pub struct Runtime {
 }
 
 pub(crate) enum KernelArg<'a> {
-    Buffer(&'a MappedBuffer<cl_uint>),
+    MappedBuffer(&'a MappedBuffer<cl_uint>),
+    Buffer(&'a Buffer<cl_uint>),
     U32(cl_uint),
 }
 
@@ -46,6 +47,12 @@ impl<T: OclPrm> MappedBuffer<T> {
 
 impl<'a> From<&'a MappedBuffer<cl_uint>> for KernelArg<'a> {
     fn from(val: &'a MappedBuffer<cl_uint>) -> Self {
+        Self::MappedBuffer(val)
+    }
+}
+
+impl<'a> From<&'a Buffer<cl_uint>> for KernelArg<'a> {
+    fn from(val: &'a Buffer<cl_uint>) -> Self {
         Self::Buffer(val)
     }
 }
@@ -166,7 +173,7 @@ where
 
     fn unary_gpu_kernel(&self, kernel_name: &'static str) -> MappedBuffer<u32> {
         let runtime = Runtime::get();
-        let out_buf = runtime.alloc(self.u32_len());
+        let mut out_buf = runtime.alloc_internal(self.u32_len());
 
         runtime.run_kernel(
             kernel_name,
@@ -178,7 +185,12 @@ where
             &Grid::from(self.len()),
         );
 
-        out_buf
+        let map = unsafe { out_buf.map().enq() }.unwrap();
+
+        MappedBuffer {
+            buffer: out_buf,
+            map
+        }
     }
 
     fn binary_gpu_kernel<Rhs: GpuVec>(
@@ -187,7 +199,7 @@ where
         rhs: &Rhs,
     ) -> MappedBuffer<u32> {
         let runtime = Runtime::get();
-        let out_buf = runtime.alloc(self.u32_len());
+        let out_buf = runtime.alloc_internal(self.u32_len());
 
         runtime.run_kernel(
             kernel_name,
@@ -200,7 +212,12 @@ where
             &Grid::from(self.len()),
         );
 
-        out_buf
+        let map = unsafe { out_buf.map().enq() }.unwrap();
+
+        MappedBuffer {
+            buffer: out_buf,
+            map
+        }
     }
 }
 
@@ -231,8 +248,11 @@ impl Runtime {
         for (i, arg) in args.iter().enumerate() {
             match arg {
                 KernelArg::Buffer(b) => {
+                    kernel = kernel.arg(*b);
+                },
+                KernelArg::MappedBuffer(b) => {
                     kernel = kernel.arg(&b.buffer);
-                }
+                },
                 KernelArg::U32(v) => {
                     kernel = kernel.arg(v);
                 }

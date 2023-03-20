@@ -1109,16 +1109,13 @@ LookupTable8 LookupTable8_init(const RistrettoPoint* p) {
 }
 
 const ProjectiveNielsPoint LookupTable8_select(const LookupTable8* lut, i8 x) {
-    const ProjectiveNielsPoint ident = ProjectiveNielsPoint_IDENTITY;
-    const ProjectiveNielsPoint* ret_ptr = &ident;
-
+    ProjectiveNielsPoint ret = ProjectiveNielsPoint_IDENTITY;
     size_t idx = abs(x);
 
-    ret_ptr = x != 0 ? &lut->entries[idx - 1] : &ident;
-    
-    ProjectiveNielsPoint neg_ret = ProjectiveNielsPoint_neg(ret_ptr);
+    ret = x > 0 ? lut->entries[idx - 1] : ret;
+    ret = x < 0 ? ProjectiveNielsPoint_neg(&lut->entries[idx - 1]) : ret;
 
-    return x < 0 ? neg_ret : *ret_ptr;
+    return ret;
 }
 
 ///

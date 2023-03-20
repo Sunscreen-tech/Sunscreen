@@ -337,8 +337,6 @@ mod tests {
 
     #[test]
     fn can_roundtrip_projective_point() {
-        let runtime = Runtime::get();
-
         let a = [
             RistrettoPoint::random(&mut thread_rng()),
             RistrettoPoint::random(&mut thread_rng()),
@@ -356,6 +354,27 @@ mod tests {
 
         for (i, j) in a_gpu.iter().zip(b_gpu.iter()) {
             assert_eq!(i, j);
+        }
+    }
+
+    #[test]
+    fn can_double_projective_point() {
+        let a = GpuRistrettoPointVec::new(&[
+            RistrettoPoint::random(&mut thread_rng()),
+            RistrettoPoint::random(&mut thread_rng()),
+            RistrettoPoint::random(&mut thread_rng()),
+            RistrettoPoint::random(&mut thread_rng()),
+        ]);
+
+        let b = GpuRistrettoPointVec::unary_gpu_kernel(&a, "test_can_double_projective_point");
+
+        let b = GpuRistrettoPointVec {
+            data: b,
+            len: a.len(),
+        };
+
+        for (p_a, p_b) in a.iter().zip(b.iter()) {
+            assert_eq!(Scalar::from(2u8) * p_a, p_b);
         }
     }
 }

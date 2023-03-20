@@ -843,10 +843,9 @@ FieldElement2625 FieldElement2625_square(const FieldElement2625* val) {
 
 FieldElement2625 FieldElement2625_square2(const FieldElement2625* val) {
     U64_10 sq = FieldElement2625_square_inner(val);
-    u64* coeffs = sq.data;
 
-    for (size_t i = 0; i < 10; i++) {
-        coeffs[i] += coeffs[i];
+    for (int i = 0; i < 10; i++) {
+        sq.data[i] += sq.data[i];
     }
 
     return FieldElement2625_reduce(&sq);
@@ -1352,6 +1351,23 @@ kernel void test_can_roundtrip_projective_point(
         RistrettoPoint x_e = ProjectivePoint_as_extended(&x_p);
 
         RistrettoPoint_pack(&x_e, b, tid, len);
+    }
+}
+
+kernel void test_can_double_projective_point(
+    global const u32* a,
+    global u32* b,
+    const u32 len
+) {
+    u32 tid = get_global_id(0);
+
+    if (tid < len) {
+        RistrettoPoint x = RistrettoPoint_unpack(a, tid, len);
+        ProjectivePoint x_p = RistrettoPoint_as_projective(&x);
+        CompletedPoint x_p_2 = ProjectivePoint_double_point(&x_p);
+        RistrettoPoint y = CompletedPoint_as_extended(&x_p_2);
+
+        RistrettoPoint_pack(&y, b, tid, len);
     }
 }
 

@@ -99,8 +99,13 @@ ProjectivePoint RistrettoPoint_as_projective(const RistrettoPoint* this);
 RistrettoPoint RistrettoPoint_add(const RistrettoPoint* lhs, const RistrettoPoint* rhs);
 CompletedPoint RistrettoPoint_add_projective_niels(const RistrettoPoint* lhs, const ProjectiveNielsPoint* rhs);
 RistrettoPoint RistrettoPoint_sub(const RistrettoPoint* lhs, const RistrettoPoint* rhs);
-CompletedPoint RistrettoPoint_sub_projective_niels(const RistrettoPoint* lhs, const ProjectiveNielsPoint rhs);
+CompletedPoint RistrettoPoint_sub_projective_niels(const RistrettoPoint* lhs, const ProjectiveNielsPoint* rhs);
 RistrettoPoint RistrettoPoint_scalar_mul(const Scalar29* rhs);
+
+///
+/// Completed point prototypes
+///
+RistrettoPoint CompletedPoint_as_extended(const CompletedPoint* x);
 
 ///
 /// Constants
@@ -117,6 +122,10 @@ const constant Scalar29 Scalar29_RR = {{
     0x0b5f9d12, 0x1e141b17, 0x158d7f3d, 0x143f3757,
     0x1972d781, 0x042feb7c, 0x1ceec73d, 0x1e184d1e,
     0x0005046d
+}};
+
+constant const FieldElement2625 FieldElement2625_EDWARDS_D2 = {{
+    45281625, 27714825, 36363642, 13898781, 229458, 15978800, 54557047, 27058993, 29715967, 9444199,
 }};
 
 ///
@@ -785,15 +794,102 @@ void RistrettoPoint_pack(const RistrettoPoint* this, global u32* ptr, size_t gri
     FieldElement2625_pack(&this->T, &ptr[30 * n], grid_tid, n);
 }
 
-/*
-ProjectiveNielsPoint RistrettoPoint_as_projective_niels(const RistrettoPoint* this);
-ProjectivePoint RistrettoPoint_as_projective(const RistrettoPoint* this);
-RistrettoPoint RistrettoPoint_add(const RistrettoPoint* lhs, const RistrettoPoint* rhs);
-CompletedPoint RistrettoPoint_add_projective_niels(const RistrettoPoint* lhs, const ProjectiveNielsPoint* rhs);
-RistrettoPoint RistrettoPoint_sub(const RistrettoPoint* lhs, const RistrettoPoint* rhs);
-CompletedPoint RistrettoPoint_sub_projective_niels(const RistrettoPoint* lhs, const ProjectiveNielsPoint rhs);
-RistrettoPoint RistrettoPoint_scalar_mul(const Scalar29* rhs);
-*/
+ProjectiveNielsPoint RistrettoPoint_as_projective_niels(const RistrettoPoint* this) {
+    FieldElement2625 y_plus_x = FieldElement2625_add(&this->Y, &this->X);
+    FieldElement2625 y_minus_x = FieldElement2625_sub(&this->Y, &this->X);
+
+    FieldElement2625 d2 = FieldElement2625_EDWARDS_D2;
+    FieldElement2625 td2 = FieldElement2625_mul(&this->T, &d2);
+
+    ProjectiveNielsPoint result = {
+        y_plus_x,
+        y_minus_x,
+        this->Z,
+        td2
+    };
+
+    return result;
+}
+
+ProjectivePoint RistrettoPoint_as_projective(const RistrettoPoint* this) {
+    ProjectivePoint result = {
+        this->X,
+        this->Y,
+        this->Z
+    };
+
+    return result;
+}
+
+RistrettoPoint RistrettoPoint_add(const RistrettoPoint* lhs, const RistrettoPoint* rhs) {
+    ProjectiveNielsPoint rhs_pn = RistrettoPoint_as_projective_niels(rhs);
+    CompletedPoint sum = RistrettoPoint_add_projective_niels(lhs, &rhs_pn);
+
+    return CompletedPoint_as_extended(&sum);
+}
+
+CompletedPoint RistrettoPoint_add_projective_niels(const RistrettoPoint* lhs, const ProjectiveNielsPoint* rhs) {
+    FieldElement2625 Y_plus_X = FieldElement2625_add(&lhs->Y, &lhs->X);
+    FieldElement2625 Y_minus_X = FieldElement2625_sub(&lhs->Y, &lhs->X);
+    FieldElement2625 PP = FieldElement2625_mul(&Y_plus_X, &rhs->Y_plus_X);
+    FieldElement2625 MM = FieldElement2625_mul(&Y_minus_X, &rhs->Y_minus_X);
+    FieldElement2625 TT2d = FieldElement2625_mul(&lhs->T, &rhs->T2d);
+    FieldElement2625 ZZ = FieldElement2625_mul(&lhs->Z, &rhs->Z);
+    FieldElement2625 ZZ2 = FieldElement2625_add(&ZZ, &ZZ);
+
+    CompletedPoint result = {
+        FieldElement2625_sub(&PP, &MM),
+        FieldElement2625_add(&PP, &MM),
+        FieldElement2625_add(&ZZ2, &TT2d),
+        FieldElement2625_sub(&ZZ2, &TT2d)
+    };
+
+    return result;
+}
+
+RistrettoPoint RistrettoPoint_sub(const RistrettoPoint* lhs, const RistrettoPoint* rhs) {
+    ProjectiveNielsPoint rhs_pn = RistrettoPoint_as_projective_niels(rhs);
+    CompletedPoint sum = RistrettoPoint_sub_projective_niels(lhs, &rhs_pn);
+
+    return CompletedPoint_as_extended(&sum);
+}
+
+CompletedPoint RistrettoPoint_sub_projective_niels(const RistrettoPoint* lhs, const ProjectiveNielsPoint* rhs) {
+    FieldElement2625 Y_plus_X = FieldElement2625_add(&lhs->Y, &lhs->X);
+    FieldElement2625 Y_minus_X = FieldElement2625_sub(&lhs->Y, &lhs->X);
+    FieldElement2625 PM = FieldElement2625_mul(&Y_plus_X, &rhs->Y_minus_X);
+    FieldElement2625 MP = FieldElement2625_mul(&Y_minus_X, &rhs->Y_plus_X);
+    FieldElement2625 TT2d = FieldElement2625_mul(&lhs->T, &rhs->T2d);
+    FieldElement2625 ZZ = FieldElement2625_mul(&lhs->Z, &rhs->Z);
+    FieldElement2625 ZZ2 = FieldElement2625_add(&ZZ, &ZZ);
+
+    CompletedPoint result = {
+        FieldElement2625_sub(&PM, &MP),
+        FieldElement2625_add(&PM, &MP),
+        FieldElement2625_sub(&ZZ2, &TT2d),
+        FieldElement2625_add(&ZZ2, &TT2d)
+    };
+
+    return result;
+}
+//RistrettoPoint RistrettoPoint_scalar_mul(const Scalar29* rhs);
+
+
+RistrettoPoint CompletedPoint_as_extended(const CompletedPoint* this) {
+    FieldElement2625 X = FieldElement2625_mul(&this->X, &this->T);
+    FieldElement2625 Y = FieldElement2625_mul(&this->Y, &this->Z);
+    FieldElement2625 Z = FieldElement2625_mul(&this->Z, &this->T);
+    FieldElement2625 T = FieldElement2625_mul(&this->X, &this->Y);
+
+    RistrettoPoint result = {
+        X,
+        Y,
+        Z,
+        T
+    };
+
+    return result;
+}
 
 ///
 /// Kernels
@@ -895,6 +991,23 @@ kernel void scalar_square(
         Scalar29 t_a_sq = Scalar29_square(&t_a);
 
         Scalar29_pack(&t_a_sq, b, tid, len);
+    }
+}
+
+kernel void ristretto_add(
+    global const u32* a,
+    global const u32* b,
+    global u32* c,
+    u32 len
+) {
+    u32 tid = get_global_id(0);
+
+    if (tid < len) {
+        RistrettoPoint t_a = RistrettoPoint_unpack(a, tid, len);
+        RistrettoPoint t_b = RistrettoPoint_unpack(b, tid, len);
+        RistrettoPoint t_c = RistrettoPoint_add(&t_a, &t_b);
+        
+        RistrettoPoint_pack(&t_c, c, tid, len);
     }
 }
 

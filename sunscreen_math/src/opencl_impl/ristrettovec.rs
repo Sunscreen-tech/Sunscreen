@@ -1,4 +1,4 @@
-use std::mem::size_of;
+use std::{mem::size_of, ops::Add};
 
 use curve25519_dalek::{ristretto::RistrettoPoint, edwards::EdwardsPoint, CannonicalFieldElement};
 
@@ -112,6 +112,41 @@ impl GpuVec for RistrettoPointVec {
     }
 }
 
+impl Add<GpuRistrettoPointVec> for GpuRistrettoPointVec {
+    type Output = Self;
+
+    fn add(self, rhs: GpuRistrettoPointVec) -> Self::Output {
+        &self + &rhs
+    }
+}
+
+impl Add<&GpuRistrettoPointVec> for GpuRistrettoPointVec {
+    type Output = Self;
+
+    fn add(self, rhs: &GpuRistrettoPointVec) -> Self::Output {
+        &self + rhs
+    }
+}
+
+impl Add<GpuRistrettoPointVec> for &GpuRistrettoPointVec {
+    type Output = GpuRistrettoPointVec;
+
+    fn add(self, rhs: GpuRistrettoPointVec) -> Self::Output {
+        self + &rhs
+    }
+}
+
+impl Add<&GpuRistrettoPointVec> for &GpuRistrettoPointVec {
+    type Output = GpuRistrettoPointVec;
+
+    fn add(self, rhs: &GpuRistrettoPointVec) -> Self::Output {
+        Self::Output {
+            data: self.binary_gpu_kernel("ristretto_add", rhs),
+            len: self.len,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use curve25519_dalek::{scalar::Scalar, traits::Identity};
@@ -158,6 +193,29 @@ mod tests {
 
         for (v, o) in v.iter().zip(o.iter()){
             assert_eq!(v, o)
+        }
+    }
+
+    #[test]
+    fn can_add_ristretto_points() {
+        let a = GpuRistrettoPointVec::new(&[
+            RistrettoPoint::random(&mut thread_rng()),
+            RistrettoPoint::random(&mut thread_rng()),
+            RistrettoPoint::random(&mut thread_rng()),
+            RistrettoPoint::random(&mut thread_rng()),
+        ]);
+
+        let b = GpuRistrettoPointVec::new(&[
+            RistrettoPoint::random(&mut thread_rng()),
+            RistrettoPoint::random(&mut thread_rng()),
+            RistrettoPoint::random(&mut thread_rng()),
+            RistrettoPoint::random(&mut thread_rng()),
+        ]);
+
+        let c = &a + &b;
+
+        for i in 0..c.len() {
+            assert_eq!(c.get(i).compress(), (a.get(i) + b.get(i)).compress());
         }
     }
 }

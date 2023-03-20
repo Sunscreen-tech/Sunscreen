@@ -1,4 +1,4 @@
-use std::{mem::size_of, ops::Add};
+use std::{mem::size_of, ops::{Add, Sub}};
 
 use curve25519_dalek::{ristretto::RistrettoPoint, edwards::EdwardsPoint, CannonicalFieldElement};
 
@@ -147,6 +147,41 @@ impl Add<&GpuRistrettoPointVec> for &GpuRistrettoPointVec {
     }
 }
 
+impl Sub<GpuRistrettoPointVec> for GpuRistrettoPointVec {
+    type Output = Self;
+
+    fn sub(self, rhs: GpuRistrettoPointVec) -> Self::Output {
+        &self - &rhs
+    }
+}
+
+impl Sub<&GpuRistrettoPointVec> for GpuRistrettoPointVec {
+    type Output = Self;
+
+    fn sub(self, rhs: &GpuRistrettoPointVec) -> Self::Output {
+        &self - rhs
+    }
+}
+
+impl Sub<GpuRistrettoPointVec> for &GpuRistrettoPointVec {
+    type Output = GpuRistrettoPointVec;
+
+    fn sub(self, rhs: GpuRistrettoPointVec) -> Self::Output {
+        self - &rhs
+    }
+}
+
+impl Sub<&GpuRistrettoPointVec> for &GpuRistrettoPointVec {
+    type Output = GpuRistrettoPointVec;
+
+    fn sub(self, rhs: &GpuRistrettoPointVec) -> Self::Output {
+        Self::Output {
+            data: self.binary_gpu_kernel("ristretto_sub", rhs),
+            len: self.len,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use curve25519_dalek::{scalar::Scalar, traits::Identity};
@@ -216,6 +251,29 @@ mod tests {
 
         for i in 0..c.len() {
             assert_eq!(c.get(i).compress(), (a.get(i) + b.get(i)).compress());
+        }
+    }
+
+    #[test]
+    fn can_sub_ristretto_points() {
+        let a = GpuRistrettoPointVec::new(&[
+            RistrettoPoint::random(&mut thread_rng()),
+            RistrettoPoint::random(&mut thread_rng()),
+            RistrettoPoint::random(&mut thread_rng()),
+            RistrettoPoint::random(&mut thread_rng()),
+        ]);
+
+        let b = GpuRistrettoPointVec::new(&[
+            RistrettoPoint::random(&mut thread_rng()),
+            RistrettoPoint::random(&mut thread_rng()),
+            RistrettoPoint::random(&mut thread_rng()),
+            RistrettoPoint::random(&mut thread_rng()),
+        ]);
+
+        let c = &a - &b;
+
+        for i in 0..c.len() {
+            assert_eq!(c.get(i), a.get(i) - b.get(i));
         }
     }
 }

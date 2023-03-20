@@ -1011,6 +1011,23 @@ kernel void ristretto_add(
     }
 }
 
+kernel void ristretto_sub(
+    global const u32* a,
+    global const u32* b,
+    global u32* c,
+    u32 len
+) {
+    u32 tid = get_global_id(0);
+
+    if (tid < len) {
+        RistrettoPoint t_a = RistrettoPoint_unpack(a, tid, len);
+        RistrettoPoint t_b = RistrettoPoint_unpack(b, tid, len);
+        RistrettoPoint t_c = RistrettoPoint_sub(&t_a, &t_b);
+        
+        RistrettoPoint_pack(&t_c, c, tid, len);
+    }
+}
+
 ///
 /// TESTS
 ///

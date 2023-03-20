@@ -1,6 +1,6 @@
 mod scalarvec;
 use core::ops::Deref;
-use std::{ffi::CString, mem::size_of};
+use std::{ffi::CString, mem::size_of, ops::DerefMut};
 
 use ocl::{
     prm::cl_uint, Buffer, Context, Device, Kernel, MemMap, OclPrm, Platform, Program, Queue,
@@ -68,6 +68,12 @@ impl<T: OclPrm> Deref for MappedBuffer<T> {
 
     fn deref(&self) -> &Self::Target {
         &self.map
+    }
+}
+
+impl<T: OclPrm> DerefMut for MappedBuffer<T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        self.map.as_mut()
     }
 }
 

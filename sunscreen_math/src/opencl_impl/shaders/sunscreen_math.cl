@@ -56,9 +56,8 @@ typedef struct {
 } ProjectivePoint;
 
 typedef struct {
-    ProjectiveNielsPoint entries[7];
-    ProjectiveNielsPoint identity;
-} LookupTable7;
+    ProjectiveNielsPoint entries[8];
+} LookupTable8;
 
 typedef struct {
     i8 data[64];
@@ -130,10 +129,10 @@ RistrettoPoint CompletedPoint_as_extended(const CompletedPoint* x);
 ProjectivePoint CompletedPoint_as_projective(const CompletedPoint* x);
 
 ///
-/// LookupTable7 prototype
+/// LookupTable8 prototype
 ///
-LookupTable7 LookupTable7_init(const RistrettoPoint* p);
-const ProjectiveNielsPoint LookupTable7_select(const LookupTable7* lut, i8 x);
+LookupTable8 LookupTable8_init(const RistrettoPoint* p);
+const ProjectiveNielsPoint LookupTable8_select(const LookupTable8* lut, i8 x);
 
 ///
 /// Constants
@@ -973,7 +972,7 @@ CompletedPoint RistrettoPoint_sub_projective_niels(const RistrettoPoint* lhs, co
 }
 RistrettoPoint RistrettoPoint_scalar_mul(const RistrettoPoint* lhs, const Scalar29* rhs) {
     // A lookup table for Radix-8 multiplication. Contains [0P, 1P, 2P, ...]
-    LookupTable7 lut = LookupTable7_init(lhs);
+    LookupTable8 lut = LookupTable8_init(lhs);
 
     Radix16 scalar_digits = Scalar29_as_radix_16(rhs);
 
@@ -981,7 +980,7 @@ RistrettoPoint RistrettoPoint_scalar_mul(const RistrettoPoint* lhs, const Scalar
     // projection.
     RistrettoPoint tmp2 = RistrettoPoint_IDENTITY;
 
-    ProjectiveNielsPoint lut_val = LookupTable7_select(&lut, scalar_digits.data[63]);
+    ProjectiveNielsPoint lut_val = LookupTable8_select(&lut, scalar_digits.data[63]);
 
     // Compute the highest nibble scalar's contribution
     CompletedPoint sum = RistrettoPoint_add_projective_niels(&tmp2, &lut_val);
@@ -1000,7 +999,7 @@ RistrettoPoint RistrettoPoint_scalar_mul(const RistrettoPoint* lhs, const Scalar
         sum = ProjectivePoint_double_point(&tmp);
         tmp2 = CompletedPoint_as_extended(&sum);
 
-        lut_val = LookupTable7_select(&lut, scalar_digits.data[j]);
+        lut_val = LookupTable8_select(&lut, scalar_digits.data[j]);
 
         sum = RistrettoPoint_add_projective_niels(&tmp2, &lut_val);
     }
@@ -1091,14 +1090,14 @@ ProjectivePoint CompletedPoint_as_projective(const CompletedPoint* this) {
 }
 
 ///
-/// LookupTable7 impl
+/// LookupTable8 impl
 ///
-LookupTable7 LookupTable7_init(const RistrettoPoint* p) {
-    LookupTable7 table;
+LookupTable8 LookupTable8_init(const RistrettoPoint* p) {
+    LookupTable8 table;
 
     table.entries[0] = RistrettoPoint_as_projective_niels(p);
 
-    for (size_t i = 1; i < 7; i++) {
+    for (size_t i = 1; i < 8; i++) {
         CompletedPoint s = RistrettoPoint_add_projective_niels(p, &table.entries[i - 1]);
         RistrettoPoint s_r = CompletedPoint_as_extended(&s);
         ProjectiveNielsPoint s_p = RistrettoPoint_as_projective_niels(&s_r);
@@ -1106,21 +1105,20 @@ LookupTable7 LookupTable7_init(const RistrettoPoint* p) {
         table.entries[i] = s_p;
     }
 
-    table.identity = ProjectiveNielsPoint_IDENTITY;
-
     return table;
 }
 
-const ProjectiveNielsPoint LookupTable7_select(const LookupTable7* lut, i8 x) {
-    const ProjectiveNielsPoint* ret = &lut->identity;
+const ProjectiveNielsPoint LookupTable8_select(const LookupTable8* lut, i8 x) {
+    const ProjectiveNielsPoint ident = ProjectiveNielsPoint_IDENTITY;
+    const ProjectiveNielsPoint* ret_ptr = &ident;
 
     size_t idx = abs(x);
 
-    ret = x != 0 ? &lut->entries[idx - 1] : ret;
+    ret_ptr = x != 0 ? &lut->entries[idx - 1] : &ident;
     
-    ProjectiveNielsPoint neg_ret = ProjectiveNielsPoint_neg(ret);
+    ProjectiveNielsPoint neg_ret = ProjectiveNielsPoint_neg(ret_ptr);
 
-    return x < 0 ? *ret : neg_ret;
+    return x < 0 ? neg_ret : *ret_ptr;
 }
 
 ///

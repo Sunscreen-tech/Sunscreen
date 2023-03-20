@@ -55,6 +55,15 @@ typedef struct {
     FieldElement2625 Z;
 } ProjectivePoint;
 
+typedef struct {
+    ProjectiveNielsPoint entries[7];
+    ProjectiveNielsPoint identity;
+} LookupTable7;
+
+typedef struct {
+    i8 data[64];
+} Radix16;
+
 ///
 /// Scalar29 prototypes
 ///
@@ -74,6 +83,7 @@ Scalar29 Scalar29_from_montgomery(const Scalar29* val);
 Scalar29 Scalar29_invert(const Scalar29* a);
 Scalar29 Scalar29_montgomery_invert(const Scalar29* this);
 Scalar29 Scalar29_square(const Scalar29* val);
+Radix16 Scalar29_as_radix_16(const Scalar29* this);
 
 ///
 /// Field2625 prototypes
@@ -100,12 +110,30 @@ RistrettoPoint RistrettoPoint_add(const RistrettoPoint* lhs, const RistrettoPoin
 CompletedPoint RistrettoPoint_add_projective_niels(const RistrettoPoint* lhs, const ProjectiveNielsPoint* rhs);
 RistrettoPoint RistrettoPoint_sub(const RistrettoPoint* lhs, const RistrettoPoint* rhs);
 CompletedPoint RistrettoPoint_sub_projective_niels(const RistrettoPoint* lhs, const ProjectiveNielsPoint* rhs);
-RistrettoPoint RistrettoPoint_scalar_mul(const Scalar29* rhs);
+RistrettoPoint RistrettoPoint_scalar_mul(const RistrettoPoint* lhs, const Scalar29* rhs);
 
 ///
-/// Completed point prototypes
+/// ProjectiveNielsPoint prototypes
+///
+ProjectiveNielsPoint ProjectiveNielsPoint_neg(const ProjectiveNielsPoint* x);
+
+///
+/// ProjectivePoint prototypes
+///
+CompletedPoint ProjectivePoint_double_point(const ProjectivePoint* x);
+RistrettoPoint ProjectivePoint_as_extended(const ProjectivePoint* this);
+
+///
+/// CompletedPoint prototypes
 ///
 RistrettoPoint CompletedPoint_as_extended(const CompletedPoint* x);
+ProjectivePoint CompletedPoint_as_projective(const CompletedPoint* x);
+
+///
+/// LookupTable7 prototype
+///
+LookupTable7 LookupTable7_init(const RistrettoPoint* p);
+const ProjectiveNielsPoint LookupTable7_select(const LookupTable7* lut, i8 x);
 
 ///
 /// Constants
@@ -124,9 +152,33 @@ const constant Scalar29 Scalar29_RR = {{
     0x0005046d
 }};
 
-constant const FieldElement2625 FieldElement2625_EDWARDS_D2 = {{
+const constant FieldElement2625 FieldElement2625_EDWARDS_D2 = {{
     45281625, 27714825, 36363642, 13898781, 229458, 15978800, 54557047, 27058993, 29715967, 9444199,
 }};
+
+#define FieldElement2625_ZERO {{0, 0, 0, 0, 0, 0, 0, 0, 0, 0}}
+
+#define FieldElement2625_ONE {{1, 0, 0, 0, 0, 0, 0, 0, 0, 0}}
+
+const constant RistrettoPoint RistrettoPoint_IDENTITY = {
+    FieldElement2625_ZERO,
+    FieldElement2625_ONE,
+    FieldElement2625_ONE,
+    FieldElement2625_ZERO
+};
+
+const constant ProjectiveNielsPoint ProjectiveNielsPoint_IDENTITY = {
+    FieldElement2625_ONE,
+    FieldElement2625_ONE,
+    FieldElement2625_ONE,
+    FieldElement2625_ZERO
+};
+
+const constant ProjectivePoint ProjectivePoint_IDENTITY = {
+    FieldElement2625_ZERO,
+    FieldElement2625_ONE,
+    FieldElement2625_ONE 
+};
 
 ///
 /// Helpers
@@ -498,6 +550,54 @@ Scalar29 Scalar29_square(const Scalar29* val) {
     Scalar29 rr = Scalar29_RR;
     MulResult aa_rr = Scalar29_mul_internal(&aa, &rr);
     return Scalar29_montgomery_reduce(&aa_rr);
+}
+
+Radix16 Scalar29_as_radix_16(const Scalar29* this) {
+    Radix16 res;
+    i8* output = res.data;
+    
+    const u32* self = this->limbs;
+
+    u32 words[8] = { 0, 0, 0, 0, 0, 0, 0, 0 };
+    // Convert Scalar29 to Scalar
+    u32 word = self[0] | self[1] << 29;
+    words[0] = word;
+    word = self[1] >> 3 | self[2] << 26;
+    words[1] = word;
+    word = self[2] >> 6 | self[3] << 23;
+    words[2] = word;
+    word = self[3] >> 9 | self[4] << 20;
+    words[3] = word;
+    word = self[4] >> 12 | self[5] << 17;
+    words[4] = word;
+    word = self[5] >> 15 | self[6] << 14;
+    words[5] = word;
+    word = self[6] >> 18 | self[7] << 11;
+    words[6] = word;
+    word = self[7] >> 21 | self[8] << 8;
+    words[7] = word;
+
+    for (size_t i = 0; i < 8; i++) {
+        u32 word = words[i];
+
+        output[8 * i + 0] = (word >> 0) & 0xF;
+        output[8 * i + 1] = (word >> 4) & 0xF;
+        output[8 * i + 2] = (word >> 8) & 0xF;
+        output[8 * i + 3] = (word >> 12) & 0xF;
+        output[8 * i + 4] = (word >> 16) & 0xF;
+        output[8 * i + 5] = (word >> 20) & 0xF;
+        output[8 * i + 6] = (word >> 24) & 0xF;
+        output[8 * i + 7] = (word >> 28) & 0xF;
+    }
+
+    // Step 2: recenter coefficients from [0,16) to [-8,8)
+    for (size_t i = 0; i < 63; i++) {
+        i8 carry = (output[i] + 8) >> 4;
+        output[i] -= (carry << 4);
+        output[i + 1] += carry;
+    }
+
+    return res;
 }
 
 ///
@@ -872,8 +972,98 @@ CompletedPoint RistrettoPoint_sub_projective_niels(const RistrettoPoint* lhs, co
 
     return result;
 }
-//RistrettoPoint RistrettoPoint_scalar_mul(const Scalar29* rhs);
+RistrettoPoint RistrettoPoint_scalar_mul(const RistrettoPoint* lhs, const Scalar29* rhs) {
+    // A lookup table for Radix-8 multiplication. Contains [0P, 1P, 2P, ...]
+    LookupTable7 lut = LookupTable7_init(lhs);
 
+    Radix16 scalar_digits = Scalar29_as_radix_16(rhs);
+
+    // Copy from contant to thread storage. We'll also use this to store the 16P value in standard
+    // projection.
+    RistrettoPoint tmp2 = RistrettoPoint_IDENTITY;
+
+    ProjectiveNielsPoint lut_val = LookupTable7_select(&lut, scalar_digits.data[63]);
+
+    // Compute the highest nibble scalar's contribution
+    CompletedPoint sum = RistrettoPoint_add_projective_niels(&tmp2, &lut_val);
+    ProjectivePoint tmp = ProjectivePoint_IDENTITY;
+
+    for (size_t i = 0; i < 63; i++) {
+        size_t j = 62 - i;
+
+        tmp = CompletedPoint_as_projective(&sum);
+        sum = ProjectivePoint_double_point(&tmp);
+        tmp = CompletedPoint_as_projective(&sum);
+        sum = ProjectivePoint_double_point(&tmp);
+        tmp = CompletedPoint_as_projective(&sum);
+        sum = ProjectivePoint_double_point(&tmp);
+        tmp = CompletedPoint_as_projective(&sum);
+        sum = ProjectivePoint_double_point(&tmp);
+        tmp2 = CompletedPoint_as_extended(&sum);
+
+        lut_val = LookupTable7_select(&lut, scalar_digits.data[j]);
+
+        sum = RistrettoPoint_add_projective_niels(&tmp2, &lut_val);
+    }
+
+    return CompletedPoint_as_extended(&sum);
+}
+
+///
+/// ProjectiveNielsPoint impl
+///
+ProjectiveNielsPoint ProjectiveNielsPoint_neg(const ProjectiveNielsPoint* this) {
+    ProjectiveNielsPoint ret = {
+        this->Y_minus_X,
+        this->Y_plus_X,
+        this->Z,
+        FieldElement2625_neg(&this->T2d)
+    };
+
+    return ret;
+}
+
+///
+/// ProjectivePoint impl
+///
+CompletedPoint ProjectivePoint_double_point(const ProjectivePoint* this) {
+    FieldElement2625 XX = FieldElement2625_square(&this->X);
+    FieldElement2625 YY = FieldElement2625_square(&this->Y);;
+    FieldElement2625 ZZ2 = FieldElement2625_square2(&this->Z);
+    FieldElement2625 X_plus_Y = FieldElement2625_add(&this->X, &this->Y);
+    FieldElement2625 X_plus_Y_sq = FieldElement2625_square(&X_plus_Y);
+    FieldElement2625 YY_plus_XX = FieldElement2625_add(&YY, &XX);
+    FieldElement2625 YY_minus_XX = FieldElement2625_sub(&YY, &XX);
+
+    CompletedPoint ret = {
+        FieldElement2625_sub(&X_plus_Y_sq, &YY_plus_XX),
+        YY_plus_XX,
+        YY_minus_XX,
+        FieldElement2625_sub(&ZZ2, &YY_minus_XX)
+    };
+
+    return ret;
+}
+
+RistrettoPoint ProjectivePoint_as_extended(const ProjectivePoint* this) {
+    FieldElement2625 X = FieldElement2625_mul(&this->X, &this->Z);
+    FieldElement2625 Y = FieldElement2625_mul(&this->Y, &this->Z);
+    FieldElement2625 Z = FieldElement2625_square(&this->Z);
+    FieldElement2625 T = FieldElement2625_mul(&this->X, &this->Y);
+
+    RistrettoPoint ret = {
+        X,
+        Y,
+        Z,
+        T
+    };
+
+    return ret;
+}
+
+///
+/// CompletedPoint impl
+///
 
 RistrettoPoint CompletedPoint_as_extended(const CompletedPoint* this) {
     FieldElement2625 X = FieldElement2625_mul(&this->X, &this->T);
@@ -889,6 +1079,49 @@ RistrettoPoint CompletedPoint_as_extended(const CompletedPoint* this) {
     };
 
     return result;
+}
+
+ProjectivePoint CompletedPoint_as_projective(const CompletedPoint* this) {
+    FieldElement2625 X = FieldElement2625_mul(&this->X, &this->T);
+    FieldElement2625 Y = FieldElement2625_mul(&this->Y, &this->Z);
+    FieldElement2625 Z = FieldElement2625_mul(&this->Z, &this->T);
+
+    ProjectivePoint result = { X, Y, Z };
+
+    return result;
+}
+
+///
+/// LookupTable7 impl
+///
+LookupTable7 LookupTable7_init(const RistrettoPoint* p) {
+    LookupTable7 table;
+
+    table.entries[0] = RistrettoPoint_as_projective_niels(p);
+
+    for (size_t i = 1; i < 7; i++) {
+        CompletedPoint s = RistrettoPoint_add_projective_niels(p, &table.entries[i - 1]);
+        RistrettoPoint s_r = CompletedPoint_as_extended(&s);
+        ProjectiveNielsPoint s_p = RistrettoPoint_as_projective_niels(&s_r);
+
+        table.entries[i] = s_p;
+    }
+
+    table.identity = ProjectiveNielsPoint_IDENTITY;
+
+    return table;
+}
+
+const ProjectiveNielsPoint LookupTable7_select(const LookupTable7* lut, i8 x) {
+    const ProjectiveNielsPoint* ret = &lut->identity;
+
+    size_t idx = abs(x);
+
+    ret = x != 0 ? &lut->entries[idx - 1] : ret;
+    
+    ProjectiveNielsPoint neg_ret = ProjectiveNielsPoint_neg(ret);
+
+    return x < 0 ? *ret : neg_ret;
 }
 
 ///
@@ -1028,6 +1261,23 @@ kernel void ristretto_sub(
     }
 }
 
+kernel void ristretto_scalar_mul(
+    global const u32* a,
+    global const u32* b,
+    global u32* c,
+    u32 len
+) {
+    u32 tid = get_global_id(0);
+
+    if (tid < len) {
+        RistrettoPoint t_a = RistrettoPoint_unpack(a, tid, len);
+        Scalar29 t_b = Scalar29_unpack(b, tid, len);
+        RistrettoPoint t_c = RistrettoPoint_scalar_mul(&t_a, &t_b);
+        
+        RistrettoPoint_pack(&t_c, c, tid, len);
+    }
+}
+
 ///
 /// TESTS
 ///
@@ -1086,6 +1336,22 @@ kernel void test_can_pack_unpack_ristretto(
     if (tid < len) {
         RistrettoPoint val = RistrettoPoint_unpack(a, tid, len);
         RistrettoPoint_pack(&val, b, tid, len);
+    }
+}
+
+kernel void test_can_roundtrip_projective_point(
+    global const u32* a,
+    global u32* b,
+    const u32 len
+) {
+    u32 tid = get_global_id(0);
+
+    if (tid < len) {
+        RistrettoPoint x = RistrettoPoint_unpack(a, tid, len);
+        ProjectivePoint x_p = RistrettoPoint_as_projective(&x);
+        RistrettoPoint x_e = ProjectivePoint_as_extended(&x_p);
+
+        RistrettoPoint_pack(&x_e, b, tid, len);
     }
 }
 

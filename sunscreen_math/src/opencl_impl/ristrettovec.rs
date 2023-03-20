@@ -1,8 +1,8 @@
-use std::{mem::size_of, ops::{Add, Sub}};
+use std::{mem::size_of, ops::{Add, Sub, Mul}};
 
 use curve25519_dalek::{ristretto::RistrettoPoint, edwards::EdwardsPoint, CannonicalFieldElement};
 
-use crate::{opencl_impl::Runtime, RistrettoPointVec};
+use crate::{opencl_impl::Runtime, RistrettoPointVec, GpuScalarVec};
 
 use super::{MappedBuffer, GpuVec, GpuVecIter};
 
@@ -182,6 +182,41 @@ impl Sub<&GpuRistrettoPointVec> for &GpuRistrettoPointVec {
     }
 }
 
+impl Mul<GpuScalarVec> for GpuRistrettoPointVec {
+    type Output = Self;
+
+    fn mul(self, rhs: GpuScalarVec) -> Self::Output {
+        &self * &rhs
+    }
+}
+
+impl Mul<&GpuScalarVec> for GpuRistrettoPointVec {
+    type Output = Self;
+
+    fn mul(self, rhs: &GpuScalarVec) -> Self::Output {
+        &self * rhs
+    }
+}
+
+impl Mul<GpuScalarVec> for &GpuRistrettoPointVec {
+    type Output = GpuRistrettoPointVec;
+
+    fn mul(self, rhs: GpuScalarVec) -> Self::Output {
+        self * &rhs
+    }
+}
+
+impl Mul<&GpuScalarVec> for &GpuRistrettoPointVec {
+    type Output = GpuRistrettoPointVec;
+
+    fn mul(self, rhs: &GpuScalarVec) -> Self::Output {
+        Self::Output {
+            data: self.binary_gpu_kernel("ristretto_scalar_mul", rhs),
+            len: self.len,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use curve25519_dalek::{scalar::Scalar, traits::Identity};
@@ -274,6 +309,53 @@ mod tests {
 
         for i in 0..c.len() {
             assert_eq!(c.get(i), a.get(i) - b.get(i));
+        }
+    }
+
+    #[test]
+    fn can_scalar_mul_ristretto_points() {
+        let a = GpuRistrettoPointVec::new(&[
+            RistrettoPoint::random(&mut thread_rng()),
+            RistrettoPoint::random(&mut thread_rng()),
+            RistrettoPoint::random(&mut thread_rng()),
+            RistrettoPoint::random(&mut thread_rng()),
+        ]);
+
+        let b = GpuScalarVec::new(&[
+            Scalar::random(&mut thread_rng()),
+            Scalar::random(&mut thread_rng()),
+            Scalar::random(&mut thread_rng()),
+            Scalar::random(&mut thread_rng()),
+        ]);
+
+        let c = &a * &b;
+
+        for i in 0..c.len() {
+            assert_eq!(c.get(i).compress(), (a.get(i) * b.get(i)).compress());
+        }
+    }
+
+    #[test]
+    fn can_roundtrip_projective_point() {
+        let runtime = Runtime::get();
+
+        let a = [
+            RistrettoPoint::random(&mut thread_rng()),
+            RistrettoPoint::random(&mut thread_rng()),
+            RistrettoPoint::random(&mut thread_rng()),
+            RistrettoPoint::random(&mut thread_rng()),
+        ];
+
+        let a_gpu = GpuRistrettoPointVec::new(&a);
+
+        let b_gpu = GpuRistrettoPointVec::unary_gpu_kernel(&a_gpu, "test_can_roundtrip_projective_point");
+        let b_gpu = RistrettoPointVec {
+            data: b_gpu,
+            len: a.len()
+        };
+
+        for (i, j) in a_gpu.iter().zip(b_gpu.iter()) {
+            assert_eq!(i, j);
         }
     }
 }

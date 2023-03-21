@@ -30,7 +30,7 @@ impl GpuScalarVec {
         assert_eq!(size_of::<Scalar>(), u32::BITS as usize);
 
         let len = x.len();
-        let byte_len = x.len() * size_of::<Scalar>();
+        let byte_len = x.len() * size_of::<Scalar>() / size_of::<u32>();
 
         let mut data = vec![0u32; byte_len];
 

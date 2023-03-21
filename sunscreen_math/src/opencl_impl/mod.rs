@@ -154,7 +154,7 @@ where
     fn len(&self) -> usize;
 
     fn u32_len(&self) -> usize {
-        self.len() * size_of::<Self>() / size_of::<u32>()
+        self.len() * size_of::<Self::Item>() / size_of::<u32>()
     }
 
     fn get(&self, i: usize) -> <Self as GpuVec>::Item;
@@ -179,7 +179,10 @@ where
 
     fn unary_gpu_kernel(&self, kernel_name: &'static str) -> MappedBuffer<u32> {
         let runtime = Runtime::get();
-        let mut out_buf = runtime.alloc_internal(self.u32_len());
+        let out_buf = runtime.alloc_internal(self.u32_len());
+
+        dbg!(self.u32_len());
+        dbg!(self.len());
 
         runtime.run_kernel(
             kernel_name,
@@ -251,7 +254,7 @@ impl Runtime {
             .global_work_size(&global)
             .local_work_size(local);
 
-        for (i, arg) in args.iter().enumerate() {
+        for arg in args.iter() {
             match arg {
                 KernelArg::Buffer(b) => {
                     kernel = kernel.arg(*b);
@@ -365,7 +368,7 @@ mod tests {
             &Grid::from(a.len()),
         );
 
-        c_gpu.map.unmap();
+        c_gpu.map.unmap().enq().unwrap();
         c_gpu.map = unsafe { c_gpu.buffer.map().enq() }.unwrap();
 
         assert_eq!(c_gpu.len(), a.len());
@@ -385,5 +388,46 @@ mod tests {
         }
 
         assert_ne!(a.map.as_ptr(), b.map.as_ptr());
+    }
+
+    #[test]
+    fn can_pack_unpack_field2625() {
+        let a = (0..40).into_iter().collect::<Vec<_>>();
+
+        let runtime = Runtime::get();
+
+        let a = runtime.alloc_from_slice(&a);
+        let mut b = runtime.alloc::<u32>(a.len());
+
+        runtime.run_kernel("test_can_pack_unpack_field2625", &[KernelArg::from(&a), KernelArg::from(&b), KernelArg::from(a.len() as u32)], &Grid::from(4));
+
+        b.map.unmap().enq().unwrap();
+        b.map = unsafe { b.buffer.map().enq() }.unwrap();
+
+        for (i, j) in a.iter().zip(b.iter()) {
+            assert_eq!(i, j);
+        }
+    }
+
+    #[test]
+    fn can_pack_unpack_ristretto_raw() {
+        let a = (0..160).into_iter().collect::<Vec<_>>();
+        let a_len = a.len();
+
+        let runtime = Runtime::get();
+
+        let a = runtime.alloc_from_slice(&a);
+        let mut b = runtime.alloc_internal::<u32>(a_len);
+
+        runtime.run_kernel("test_can_pack_unpack_ristretto", &[KernelArg::from(&a), KernelArg::from(&b), KernelArg::from((a.len() / 40) as u32)], &Grid::from(4));
+
+        let b_map = unsafe { b.map().enq() }.unwrap();
+
+        dbg!(&*a.map);
+        dbg!(&*b_map);
+
+        for (i, j) in a.iter().zip(b_map.iter()) {
+            assert_eq!(i, j);
+        }
     }
 }

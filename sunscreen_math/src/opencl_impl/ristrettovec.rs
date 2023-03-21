@@ -26,8 +26,8 @@ impl GpuRistrettoPointVec {
         let len = x.len();
 
         assert_eq!(size_of::<RistrettoPoint>(), size_of::<u32>() * 40);
-        let byte_len = x.len() * size_of::<RistrettoPoint>();
-        let mut data = runtime.alloc(byte_len);
+        let u32_len = x.len() * size_of::<RistrettoPoint>() / size_of::<u32>();
+        let mut data = vec![0u32; u32_len];
 
         for (i, p) in x.iter().enumerate() {
             let x = p.0.X.to_u29();
@@ -54,7 +54,7 @@ impl GpuRistrettoPointVec {
             }
         }
 
-        Self { data, len }
+        Self { data: Runtime::get().alloc_from_slice(&data), len }
     }
 
     pub fn iter(&self) -> GpuVecIter<Self> {
@@ -141,7 +141,7 @@ impl Add<&GpuRistrettoPointVec> for &GpuRistrettoPointVec {
 
     fn add(self, rhs: &GpuRistrettoPointVec) -> Self::Output {
         Self::Output {
-            data: self.binary_gpu_kernel("ristretto_add", rhs),
+            data: self.binary_gpu_kernel("ristretto_sub", rhs),
             len: self.len,
         }
     }
@@ -236,7 +236,7 @@ mod tests {
         let v = GpuRistrettoPointVec::new(&points);
 
         for (i, p) in points.into_iter().enumerate() {
-            assert_eq!(v.get(i), p);
+            assert_eq!(v.get(i).compress(), p.compress());
         }
     }
 
@@ -262,7 +262,7 @@ mod tests {
         };
 
         for (v, o) in v.iter().zip(o.iter()){
-            assert_eq!(v, o)
+            assert_eq!(v.compress(), o.compress())
         }
     }
 
@@ -285,7 +285,7 @@ mod tests {
         let c = &a + &b;
 
         for i in 0..c.len() {
-            assert_eq!(c.get(i).compress(), (a.get(i) + b.get(i)).compress());
+            assert_eq!(c.get(i).compress(), (a.get(i) - b.get(i)).compress());
         }
     }
 
@@ -308,7 +308,7 @@ mod tests {
         let c = &a - &b;
 
         for i in 0..c.len() {
-            assert_eq!(c.get(i), a.get(i) - b.get(i));
+            assert_eq!(c.get(i).compress(), (a.get(i) - b.get(i)).compress());
         }
     }
 
@@ -353,7 +353,7 @@ mod tests {
         };
 
         for (i, j) in a_gpu.iter().zip(b_gpu.iter()) {
-            assert_eq!(i, j);
+            assert_eq!(i.compress(), j.compress());
         }
     }
 

@@ -90,7 +90,7 @@ Radix16 Scalar29_as_radix_16(const Scalar29* this);
 FieldElement2625 FieldElement2625_unpack(const global u32* words, size_t grid_tid, size_t stride);
 void FieldElement2625_pack(const FieldElement2625* a, global u32* ptr, const size_t grid_tid, const size_t n);
 FieldElement2625 FieldElement2625_add(const FieldElement2625* a, const FieldElement2625* b);
-FieldElement2625 FieldElement2625_reduce(U64_10* val);
+FieldElement2625 FieldElement2625_reduce(private U64_10* val);
 FieldElement2625 FieldElement2625_sub(const FieldElement2625* lhs, const FieldElement2625* rhs);
 FieldElement2625 FieldElement2625_mul(const FieldElement2625* lhs, const FieldElement2625* rhs);
 FieldElement2625 FieldElement2625_neg(const FieldElement2625* lhs);
@@ -206,7 +206,7 @@ inline MontMulLRes part2(u64 sum) {
 }
 
 /// Carry the value from limb i = 0..8 to limb i+1
-inline void carry(u64 z[10], size_t i) {
+inline void carry(private u64 z[10], size_t i) {
     const u64 LOW_25_BITS = (1 << 25) - 1;
     const u64 LOW_26_BITS = (1 << 26) - 1;
 
@@ -605,10 +605,9 @@ Radix16 Scalar29_as_radix_16(const Scalar29* this) {
 
 FieldElement2625 FieldElement2625_unpack(const global u32* ptr, const size_t grid_tid, const size_t n) {
     FieldElement2625 res;
-    u32* a = res.limbs;
 
     for (size_t i = 0; i < 10; i++) {
-        a[i] = ptr[i * n + grid_tid];
+        res.limbs[i] = ptr[i * n + grid_tid];
     }
 
     return res;
@@ -620,8 +619,8 @@ void FieldElement2625_pack(const FieldElement2625* a, global u32* ptr, const siz
     }
 }
 
-FieldElement2625 FieldElement2625_reduce(U64_10* val) {
-    u64* z = val->data;
+FieldElement2625 FieldElement2625_reduce(private U64_10* val) {
+    private u64* z = val->data;
     const u64 LOW_25_BITS = (1 << 25) - 1;
 
     // Perform two halves of the carry chain in parallel.
@@ -881,6 +880,7 @@ RistrettoPoint RistrettoPoint_unpack(const global u32* ptr, const size_t grid_ti
     FieldElement2625 t = FieldElement2625_unpack(&ptr[30 * n], grid_tid, n);
 
     RistrettoPoint res = { x, y, z, t };
+    //RistrettoPoint res = RistrettoPoint_IDENTITY;
 
     return res;
 }
@@ -935,11 +935,19 @@ CompletedPoint RistrettoPoint_add_projective_niels(const RistrettoPoint* lhs, co
     FieldElement2625 ZZ = FieldElement2625_mul(&lhs->Z, &rhs->Z);
     FieldElement2625 ZZ2 = FieldElement2625_add(&ZZ, &ZZ);
 
+/*
     CompletedPoint result = {
         FieldElement2625_sub(&PP, &MM),
         FieldElement2625_add(&PP, &MM),
         FieldElement2625_add(&ZZ2, &TT2d),
         FieldElement2625_sub(&ZZ2, &TT2d)
+    };*/
+
+    CompletedPoint result = {
+        {{1, 1, 1, 1, 1, 1, 1, 1, 1, 1}},
+        {{1, 1, 1, 1, 1, 1, 1, 1, 1, 1}},
+        {{1, 1, 1, 1, 1, 1, 1, 1, 1, 1}},
+        {{1, 1, 1, 1, 1, 1, 1, 1, 1, 1}}
     };
 
     return result;
@@ -1363,6 +1371,19 @@ kernel void test_can_double_projective_point(
         RistrettoPoint y = CompletedPoint_as_extended(&x_p_2);
 
         RistrettoPoint_pack(&y, b, tid, len);
+    }
+}
+
+kernel void test_can_pack_unpack_field2625(
+    global const u32* a,
+    global u32* b,
+    const u32 len
+) {
+    u32 tid = get_global_id(0);
+
+    if (tid < len) {
+        FieldElement2625 x = FieldElement2625_unpack(a, tid, len);
+        FieldElement2625_pack(&x, b, tid, len);
     }
 }
 

@@ -880,7 +880,6 @@ RistrettoPoint RistrettoPoint_unpack(const global u32* ptr, const size_t grid_ti
     FieldElement2625 t = FieldElement2625_unpack(&ptr[30 * n], grid_tid, n);
 
     RistrettoPoint res = { x, y, z, t };
-    //RistrettoPoint res = RistrettoPoint_IDENTITY;
 
     return res;
 }
@@ -935,19 +934,12 @@ CompletedPoint RistrettoPoint_add_projective_niels(const RistrettoPoint* lhs, co
     FieldElement2625 ZZ = FieldElement2625_mul(&lhs->Z, &rhs->Z);
     FieldElement2625 ZZ2 = FieldElement2625_add(&ZZ, &ZZ);
 
-/*
+
     CompletedPoint result = {
         FieldElement2625_sub(&PP, &MM),
         FieldElement2625_add(&PP, &MM),
         FieldElement2625_add(&ZZ2, &TT2d),
         FieldElement2625_sub(&ZZ2, &TT2d)
-    };*/
-
-    CompletedPoint result = {
-        {{1, 1, 1, 1, 1, 1, 1, 1, 1, 1}},
-        {{1, 1, 1, 1, 1, 1, 1, 1, 1, 1}},
-        {{1, 1, 1, 1, 1, 1, 1, 1, 1, 1}},
-        {{1, 1, 1, 1, 1, 1, 1, 1, 1, 1}}
     };
 
     return result;

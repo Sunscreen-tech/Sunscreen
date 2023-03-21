@@ -141,7 +141,7 @@ impl Add<&GpuRistrettoPointVec> for &GpuRistrettoPointVec {
 
     fn add(self, rhs: &GpuRistrettoPointVec) -> Self::Output {
         Self::Output {
-            data: self.binary_gpu_kernel("ristretto_sub", rhs),
+            data: self.binary_gpu_kernel("ristretto_add", rhs),
             len: self.len,
         }
     }
@@ -285,7 +285,7 @@ mod tests {
         let c = &a + &b;
 
         for i in 0..c.len() {
-            assert_eq!(c.get(i).compress(), (a.get(i) - b.get(i)).compress());
+            assert_eq!(c.get(i).compress(), (a.get(i) + b.get(i)).compress());
         }
     }
 

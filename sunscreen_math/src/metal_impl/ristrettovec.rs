@@ -251,6 +251,8 @@ impl Mul<&GpuScalarVec> for &GpuRistrettoPointVec {
 impl Mul<Scalar> for GpuRistrettoPointVec {
     type Output = Self;
 
+    // Clippy doesn't know what it's talking about. We want to call the &,&
+    // variant
     #[allow(clippy::op_ref)]
     fn mul(self, rhs: Scalar) -> Self::Output {
         &self * &rhs
@@ -268,6 +270,8 @@ impl Mul<&Scalar> for GpuRistrettoPointVec {
 impl Mul<Scalar> for &GpuRistrettoPointVec {
     type Output = GpuRistrettoPointVec;
 
+    // Clippy doesn't know what it's talking about. Remove the ref and this
+    // becomes infinite recursion.
     #[allow(clippy::op_ref)]
     fn mul(self, rhs: Scalar) -> Self::Output {
         self * &rhs

@@ -25,6 +25,8 @@ pub struct GpuRistrettoPointVec {
 }
 
 impl GpuRistrettoPointVec {
+    #[allow(clippy::erasing_op)]
+    #[allow(clippy::identity_op)]
     pub fn new(x: &[RistrettoPoint]) -> Self {
         let len = x.len();
 
@@ -66,8 +68,13 @@ impl GpuRistrettoPointVec {
     pub fn iter(&self) -> GpuVecIter<Self> {
         <Self as GpuVec>::iter(self)
     }
+}
 
-    pub fn into_iter(self) -> IntoGpuVecIter<Self> {
+impl IntoIterator for GpuRistrettoPointVec {
+    type IntoIter = IntoGpuVecIter<Self>;
+    type Item = RistrettoPoint;
+
+    fn into_iter(self) -> Self::IntoIter {
         <Self as GpuVec>::into_iter(self)
     }
 }
@@ -97,20 +104,20 @@ impl GpuVec for GpuRistrettoPointVec {
 
         let u29_len = x.len();
 
-        for i in 0..10 {
-            x[i] = self.data[(i + 0 * u29_len) * self.len + index];
+        for (i, x) in x.iter_mut().enumerate() {
+            *x = self.data[(i + 0 * u29_len) * self.len + index];
         }
 
-        for i in 0..10 {
-            y[i] = self.data[(i + 1 * u29_len) * self.len + index];
+        for (i, y) in y.iter_mut().enumerate() {
+            *y = self.data[(i + 1 * u29_len) * self.len + index];
         }
 
-        for i in 0..10 {
-            z[i] = self.data[(i + 2 * u29_len) * self.len + index];
+        for (i, z) in z.iter_mut().enumerate() {
+            *z = self.data[(i + 2 * u29_len) * self.len + index];
         }
 
-        for i in 0..10 {
-            t[i] = self.data[(i + 3 * u29_len) * self.len + index];
+        for (i, t) in t.iter_mut().enumerate() {
+            *t = self.data[(i + 3 * u29_len) * self.len + index];
         }
 
         RistrettoPoint(EdwardsPoint {
@@ -230,6 +237,9 @@ impl Mul<&GpuScalarVec> for &GpuRistrettoPointVec {
 impl Mul<Scalar> for GpuRistrettoPointVec {
     type Output = Self;
 
+    // Clippy doesn't know what it's talking about. We want to call the &,&
+    // variant
+    #[allow(clippy::op_ref)]
     fn mul(self, rhs: Scalar) -> Self::Output {
         &self * &rhs
     }
@@ -246,6 +256,9 @@ impl Mul<&Scalar> for GpuRistrettoPointVec {
 impl Mul<Scalar> for &GpuRistrettoPointVec {
     type Output = GpuRistrettoPointVec;
 
+    // Clippy doesn't know what it's talking about. Remove the ref and this
+    // becomes infinite recursion.
+    #[allow(clippy::op_ref)]
     fn mul(self, rhs: Scalar) -> Self::Output {
         self * &rhs
     }

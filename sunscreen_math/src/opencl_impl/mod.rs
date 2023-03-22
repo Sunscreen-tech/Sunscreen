@@ -246,7 +246,7 @@ impl Runtime {
             .program(&self.program)
             .name(name)
             .queue(self.queue.clone())
-            .global_work_size(&global)
+            .global_work_size(global)
             .local_work_size(local);
 
         for arg in args.iter() {
@@ -386,7 +386,7 @@ mod tests {
 
     #[test]
     fn can_pack_unpack_field2625() {
-        let a = (0..40).into_iter().collect::<Vec<_>>();
+        let a = (0..40).collect::<Vec<_>>();
 
         let runtime = Runtime::get();
 
@@ -413,7 +413,7 @@ mod tests {
 
     #[test]
     fn can_pack_unpack_ristretto_raw() {
-        let a = (0..160).into_iter().collect::<Vec<_>>();
+        let a = (0..160).collect::<Vec<_>>();
         let a_len = a.len();
 
         let runtime = Runtime::get();

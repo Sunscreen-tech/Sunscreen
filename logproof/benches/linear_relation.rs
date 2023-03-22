@@ -1,4 +1,4 @@
-use std::time::{Duration, Instant};
+use std::time::{Instant};
 
 use ark_ff::{FftField, Field};
 use ark_poly::univariate::DensePolynomial;
@@ -41,7 +41,9 @@ where
     // Really wish we had `generic_const_exprs` in stable...
     assert_eq!(2 * CT, CT2);
 
-    println!("Sleeping for 120s to prevent thermal throttling of successive benchmarks...");
+    // Uncomment below 2 lines if you're on a machine that has cooling issues and 
+    // thermally throttles CPU e.g. M1 Macbook Air.
+    //println!("Sleeping for 120s to prevent thermal throttling of successive benchmarks...");
     //std::thread::sleep(Duration::from_secs(120));
 
     // Secret key

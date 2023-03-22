@@ -85,7 +85,7 @@ impl From<[(usize, usize); 3]> for Grid {
 
 impl From<usize> for Grid {
     fn from(value: usize) -> Self {
-        Self([(value, 128), (1, 1), (1, 1)])
+        Self([(value, 256), (1, 1), (1, 1)])
     }
 }
 

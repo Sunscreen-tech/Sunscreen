@@ -193,7 +193,7 @@ where
 
         MappedBuffer {
             buffer: out_buf,
-            map
+            map,
         }
     }
 
@@ -220,7 +220,7 @@ where
 
         MappedBuffer {
             buffer: out_buf,
-            map
+            map,
         }
     }
 }
@@ -253,10 +253,10 @@ impl Runtime {
             match arg {
                 KernelArg::Buffer(b) => {
                     kernel = kernel.arg(*b);
-                },
+                }
                 KernelArg::MappedBuffer(b) => {
                     kernel = kernel.arg(&b.buffer);
-                },
+                }
                 KernelArg::U32(v) => {
                     kernel = kernel.arg(v);
                 }
@@ -393,7 +393,15 @@ mod tests {
         let a = runtime.alloc_from_slice(&a);
         let mut b = runtime.alloc::<u32>(a.len());
 
-        runtime.run_kernel("test_can_pack_unpack_field2625", &[KernelArg::from(&a), KernelArg::from(&b), KernelArg::from(a.len() as u32)], &Grid::from(4));
+        runtime.run_kernel(
+            "test_can_pack_unpack_field2625",
+            &[
+                KernelArg::from(&a),
+                KernelArg::from(&b),
+                KernelArg::from(a.len() as u32),
+            ],
+            &Grid::from(4),
+        );
 
         b.map.unmap().enq().unwrap();
         b.map = unsafe { b.buffer.map().enq() }.unwrap();
@@ -413,7 +421,15 @@ mod tests {
         let a = runtime.alloc_from_slice(&a);
         let b = runtime.alloc_internal::<u32>(a_len);
 
-        runtime.run_kernel("test_can_pack_unpack_ristretto", &[KernelArg::from(&a), KernelArg::from(&b), KernelArg::from((a.len() / 40) as u32)], &Grid::from(4));
+        runtime.run_kernel(
+            "test_can_pack_unpack_ristretto",
+            &[
+                KernelArg::from(&a),
+                KernelArg::from(&b),
+                KernelArg::from((a.len() / 40) as u32),
+            ],
+            &Grid::from(4),
+        );
 
         let b_map = unsafe { b.map().enq() }.unwrap();
 

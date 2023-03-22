@@ -136,7 +136,6 @@ impl GpuVec for GpuScalarVec {
     }
 }
 
-
 impl Add<GpuScalarVec> for GpuScalarVec {
     type Output = Self;
 
@@ -282,12 +281,10 @@ mod tests {
             assert_eq!(v, s[i]);
         }
     }
-    
+
     #[test]
     fn can_unpack_and_pack_1_element() {
-        let scalars = [
-            Scalar::random(&mut thread_rng()),
-        ];
+        let scalars = [Scalar::random(&mut thread_rng())];
 
         let v = GpuScalarVec::new(&scalars);
 
@@ -295,7 +292,7 @@ mod tests {
 
         let out = GpuScalarVec {
             data: out,
-            len: v.len()
+            len: v.len(),
         };
 
         for (cpu, (a, b)) in scalars.iter().zip(v.iter().zip(out.iter())) {
@@ -319,7 +316,7 @@ mod tests {
 
         let out = GpuScalarVec {
             data: out,
-            len: v.len()
+            len: v.len(),
         };
 
         for (cpu, (a, b)) in scalars.iter().zip(v.iter().zip(out.iter())) {
@@ -350,7 +347,6 @@ mod tests {
             assert_eq!(c.get(i), a.get(i) + b.get(i));
         }
     }
-
 
     #[test]
     fn can_sub_scalars() {
@@ -443,7 +439,7 @@ mod tests {
 
         let out = GpuScalarVec {
             data: out,
-            len: a.len
+            len: a.len,
         };
 
         for (a, b) in a.iter().zip(out.iter()) {

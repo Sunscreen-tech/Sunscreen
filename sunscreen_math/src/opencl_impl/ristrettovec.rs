@@ -1,18 +1,23 @@
-use std::{mem::size_of, ops::{Add, Sub, Mul}};
+use std::{
+    mem::size_of,
+    ops::{Add, Mul, Sub},
+};
 
-use curve25519_dalek::{ristretto::RistrettoPoint, edwards::EdwardsPoint, CannonicalFieldElement, scalar::Scalar};
+use curve25519_dalek::{
+    edwards::EdwardsPoint, ristretto::RistrettoPoint, scalar::Scalar, CannonicalFieldElement,
+};
 
 use crate::{opencl_impl::Runtime, GpuScalarVec};
 
-use super::{MappedBuffer, GpuVec, GpuVecIter, IntoGpuVecIter};
+use super::{GpuVec, GpuVecIter, IntoGpuVecIter, MappedBuffer};
 
 /// A vector of [`RistrettoPoint`] elements laid out in a way that enables coalesced
 /// reads and writes on a GPU.
-/// 
+///
 /// # Remarks
 /// Conceptually, data is laid out as a row-major `m x n x 4` tensor stored in
 /// a 1 dimensional buffer. The leading dimension iterates over the Ristretto point,
-/// the second dimension iterates over the limbs in a coordinate, and the trailing 
+/// the second dimension iterates over the limbs in a coordinate, and the trailing
 /// dimension iterates over coordinates.
 pub struct GpuRistrettoPointVec {
     pub(crate) data: MappedBuffer<u32>,
@@ -52,7 +57,10 @@ impl GpuRistrettoPointVec {
             }
         }
 
-        Self { data: Runtime::get().alloc_from_slice(&data), len }
+        Self {
+            data: Runtime::get().alloc_from_slice(&data),
+            len,
+        }
     }
 
     pub fn iter(&self) -> GpuVecIter<Self> {
@@ -259,7 +267,7 @@ impl Mul<&Scalar> for &GpuRistrettoPointVec {
 
 #[cfg(test)]
 mod tests {
-    use curve25519_dalek::{scalar::Scalar};
+    use curve25519_dalek::scalar::Scalar;
     use rand::thread_rng;
 
     use super::*;
@@ -291,17 +299,14 @@ mod tests {
 
         let v = GpuRistrettoPointVec::new(&points);
 
-        let o = GpuRistrettoPointVec::unary_gpu_kernel(
-            &v,
-            "test_can_pack_unpack_ristretto",
-        );
+        let o = GpuRistrettoPointVec::unary_gpu_kernel(&v, "test_can_pack_unpack_ristretto");
 
         let o = GpuRistrettoPointVec {
             data: o,
-            len: v.len()
+            len: v.len(),
         };
 
-        for (v, o) in v.iter().zip(o.iter()){
+        for (v, o) in v.iter().zip(o.iter()) {
             assert_eq!(v.compress(), o.compress())
         }
     }
@@ -386,10 +391,11 @@ mod tests {
 
         let a_gpu = GpuRistrettoPointVec::new(&a);
 
-        let b_gpu = GpuRistrettoPointVec::unary_gpu_kernel(&a_gpu, "test_can_roundtrip_projective_point");
+        let b_gpu =
+            GpuRistrettoPointVec::unary_gpu_kernel(&a_gpu, "test_can_roundtrip_projective_point");
         let b_gpu = GpuRistrettoPointVec {
             data: b_gpu,
-            len: a.len()
+            len: a.len(),
         };
 
         for (i, j) in a_gpu.iter().zip(b_gpu.iter()) {

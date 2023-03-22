@@ -1,10 +1,10 @@
 use std::{mem::size_of, ops::{Add, Sub, Mul}};
 
-use curve25519_dalek::{ristretto::RistrettoPoint, edwards::EdwardsPoint, CannonicalFieldElement};
+use curve25519_dalek::{ristretto::RistrettoPoint, edwards::EdwardsPoint, CannonicalFieldElement, scalar::Scalar};
 
-use crate::{opencl_impl::Runtime, RistrettoPointVec, GpuScalarVec};
+use crate::{opencl_impl::Runtime, GpuScalarVec};
 
-use super::{MappedBuffer, GpuVec, GpuVecIter};
+use super::{MappedBuffer, GpuVec, GpuVecIter, IntoGpuVecIter};
 
 /// A vector of [`RistrettoPoint`] elements laid out in a way that enables coalesced
 /// reads and writes on a GPU.
@@ -21,8 +21,6 @@ pub struct GpuRistrettoPointVec {
 
 impl GpuRistrettoPointVec {
     pub fn new(x: &[RistrettoPoint]) -> Self {
-        let runtime = Runtime::get();
-
         let len = x.len();
 
         assert_eq!(size_of::<RistrettoPoint>(), size_of::<u32>() * 40);
@@ -60,9 +58,13 @@ impl GpuRistrettoPointVec {
     pub fn iter(&self) -> GpuVecIter<Self> {
         <Self as GpuVec>::iter(self)
     }
+
+    pub fn into_iter(self) -> IntoGpuVecIter<Self> {
+        <Self as GpuVec>::into_iter(self)
+    }
 }
 
-impl GpuVec for RistrettoPointVec {
+impl GpuVec for GpuRistrettoPointVec {
     type Item = RistrettoPoint;
 
     fn get_buffer(&self) -> &MappedBuffer<u32> {
@@ -217,9 +219,47 @@ impl Mul<&GpuScalarVec> for &GpuRistrettoPointVec {
     }
 }
 
+impl Mul<Scalar> for GpuRistrettoPointVec {
+    type Output = Self;
+
+    fn mul(self, rhs: Scalar) -> Self::Output {
+        &self * &rhs
+    }
+}
+
+impl Mul<&Scalar> for GpuRistrettoPointVec {
+    type Output = Self;
+
+    fn mul(self, rhs: &Scalar) -> Self::Output {
+        &self * rhs
+    }
+}
+
+impl Mul<Scalar> for &GpuRistrettoPointVec {
+    type Output = GpuRistrettoPointVec;
+
+    fn mul(self, rhs: Scalar) -> Self::Output {
+        self * &rhs
+    }
+}
+
+impl Mul<&Scalar> for &GpuRistrettoPointVec {
+    type Output = GpuRistrettoPointVec;
+
+    fn mul(self, rhs: &Scalar) -> Self::Output {
+        let rhs = vec![*rhs; self.len()];
+        let rhs = GpuScalarVec::new(&rhs);
+
+        Self::Output {
+            data: self.binary_gpu_kernel("ristretto_scalar_mul", &rhs),
+            len: self.len,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use curve25519_dalek::{scalar::Scalar, traits::Identity};
+    use curve25519_dalek::{scalar::Scalar};
     use rand::thread_rng;
 
     use super::*;
@@ -251,12 +291,12 @@ mod tests {
 
         let v = GpuRistrettoPointVec::new(&points);
 
-        let o = RistrettoPointVec::unary_gpu_kernel(
+        let o = GpuRistrettoPointVec::unary_gpu_kernel(
             &v,
             "test_can_pack_unpack_ristretto",
         );
 
-        let o = RistrettoPointVec {
+        let o = GpuRistrettoPointVec {
             data: o,
             len: v.len()
         };
@@ -347,7 +387,7 @@ mod tests {
         let a_gpu = GpuRistrettoPointVec::new(&a);
 
         let b_gpu = GpuRistrettoPointVec::unary_gpu_kernel(&a_gpu, "test_can_roundtrip_projective_point");
-        let b_gpu = RistrettoPointVec {
+        let b_gpu = GpuRistrettoPointVec {
             data: b_gpu,
             len: a.len()
         };

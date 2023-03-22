@@ -1,5 +1,5 @@
 #[cfg(feature = "gpu")]
-use criterion::{criterion_group, criterion_main, Criterion};
+use criterion::{criterion_group, criterion_main};
 
 #[cfg(feature = "gpu")]
 mod benches {
@@ -8,8 +8,6 @@ mod benches {
     use rand::thread_rng;
     use std::time::Instant;
     use sunscreen_math::{GpuRistrettoPointVec, GpuScalarVec};
-
-    use super::*;
 
     pub fn invert(_c: &mut Criterion) {
         println!("Invert scalars");

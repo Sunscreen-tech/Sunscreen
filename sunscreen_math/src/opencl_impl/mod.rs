@@ -14,8 +14,6 @@ use lazy_static::lazy_static;
 const KERNEL_SOURCE: &str = include_str!("shaders/sunscreen_math.cl");
 
 pub struct Runtime {
-    device: Device,
-    ctx: Context,
     queue: Queue,
     program: Program,
 }
@@ -181,9 +179,6 @@ where
         let runtime = Runtime::get();
         let out_buf = runtime.alloc_internal(self.u32_len());
 
-        dbg!(self.u32_len());
-        dbg!(self.len());
-
         runtime.run_kernel(
             kernel_name,
             &[
@@ -283,6 +278,7 @@ impl Runtime {
             .unwrap()
     }
 
+    #[allow(unused)]
     fn alloc<T: OclPrm>(&self, len: usize) -> MappedBuffer<T> {
         MappedBuffer::new(self.alloc_internal(len))
     }
@@ -329,8 +325,6 @@ lazy_static! {
         let program = Program::with_source(&ctx, &[CString::new(KERNEL_SOURCE).unwrap()], Some(&[device]), &compile_args).unwrap();
 
         Runtime {
-            device,
-            ctx,
             queue,
             program
         }
@@ -417,7 +411,7 @@ mod tests {
         let runtime = Runtime::get();
 
         let a = runtime.alloc_from_slice(&a);
-        let mut b = runtime.alloc_internal::<u32>(a_len);
+        let b = runtime.alloc_internal::<u32>(a_len);
 
         runtime.run_kernel("test_can_pack_unpack_ristretto", &[KernelArg::from(&a), KernelArg::from(&b), KernelArg::from((a.len() / 40) as u32)], &Grid::from(4));
 

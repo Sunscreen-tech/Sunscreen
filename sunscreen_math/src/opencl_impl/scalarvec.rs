@@ -2,13 +2,10 @@ use core::mem::size_of;
 use std::ops::{Add, Mul, Neg, Sub};
 
 use curve25519_dalek::scalar::Scalar;
-use ocl::Buffer;
 
 use crate::opencl_impl::Runtime;
 
 use super::{GpuVec, GpuVecIter, MappedBuffer};
-
-//use super::{GpuVec, GpuVecIter, IntoGpuVecIter, Runtime};
 
 #[derive(Clone)]
 /// A vector of scalars laid out in a way that enables coalescing on
@@ -268,10 +265,6 @@ impl Mul<&GpuScalarVec> for &GpuScalarVec {
 mod tests {
     use rand::thread_rng;
 
-    //use crate::opencl_impl::{Grid, U32Arg};
-
-    use crate::{opencl_impl::{KernelArg, Grid}, ScalarVec};
-
     use super::*;
 
     #[test]
@@ -385,13 +378,6 @@ mod tests {
     #[test]
     fn can_neg_scalars() {
         let a = GpuScalarVec::new(&[
-            Scalar::random(&mut thread_rng()),
-            Scalar::random(&mut thread_rng()),
-            Scalar::random(&mut thread_rng()),
-            Scalar::random(&mut thread_rng()),
-        ]);
-
-        let b = GpuScalarVec::new(&[
             Scalar::random(&mut thread_rng()),
             Scalar::random(&mut thread_rng()),
             Scalar::random(&mut thread_rng()),

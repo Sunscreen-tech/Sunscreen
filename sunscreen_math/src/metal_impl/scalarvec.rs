@@ -452,13 +452,6 @@ mod tests {
             Scalar::random(&mut thread_rng()),
         ]);
 
-        let b = GpuScalarVec::new(&[
-            Scalar::random(&mut thread_rng()),
-            Scalar::random(&mut thread_rng()),
-            Scalar::random(&mut thread_rng()),
-            Scalar::random(&mut thread_rng()),
-        ]);
-
         let c = -&a;
 
         for i in 0..a.len() {

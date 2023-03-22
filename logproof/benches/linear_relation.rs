@@ -42,7 +42,7 @@ where
     assert_eq!(2 * CT, CT2);
 
     println!("Sleeping for 120s to prevent thermal throttling of successive benchmarks...");
-    std::thread::sleep(Duration::from_secs(120));
+    //std::thread::sleep(Duration::from_secs(120));
 
     // Secret key
     // a = random in q

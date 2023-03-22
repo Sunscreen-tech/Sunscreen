@@ -1,3 +1,31 @@
+#[cfg(feature = "opencl")]
+fn compile_opencl_shaders() {
+    use std::ffi::CString;
+
+    use ocl::{Context, Device, Platform, Program};
+
+    const KERNEL_SOURCE: &str = include_str!("src/opencl_impl/shaders/sunscreen_math.cl");
+
+    let platform = Platform::first().unwrap();
+    let device = Device::first(platform).unwrap();
+    let ctx = Context::builder().devices(device).build().unwrap();
+
+    // Assert we can compile our program and print any errors if not.
+    let program = Program::with_source(
+        &ctx,
+        &[CString::new(KERNEL_SOURCE).unwrap()],
+        Some(&[device]),
+        &CString::new("-DTEST").unwrap(),
+    );
+    match program {
+        Ok(_) => {}
+        Err(e) => {
+            println!("{}", e);
+            panic!();
+        }
+    }
+}
+
 #[cfg(feature = "webgpu")]
 // This simply concatenates all the wgsl shaders, which get compiled at runtime.
 fn compile_wgsl_shaders() {
@@ -183,4 +211,7 @@ fn main() {
 
     #[cfg(feature = "webgpu")]
     compile_wgsl_shaders();
+
+    #[cfg(feature = "opencl")]
+    compile_opencl_shaders();
 }

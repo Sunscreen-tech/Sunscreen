@@ -99,16 +99,22 @@ impl Mul<&PinaScalarVec> for &PinaRistrettoPointVec {
         const GPU_SHARE: f64 = 0.8;
 
         let gpu_count = (GPU_SHARE * self.len() as f64) as usize;
-        let (gpu_a, cpu_a) = self.split_at(gpu_count);
-        let gpu_a = GpuRistrettoPointVec::new(gpu_a);
-        let (gpu_b, cpu_b) = rhs.split_at(gpu_count);
-        let gpu_b = GpuScalarVec::new(gpu_b);
 
-        let mut gpu_out = GpuRistrettoPointVec::new(&[]);
+        let mut gpu_out = vec![];
         let mut cpu_out = vec![];
 
         scope(|s| {
-            s.spawn(|_| gpu_out = gpu_a * gpu_b);
+            let (gpu_a, cpu_a) = self.split_at(gpu_count);
+            let (gpu_b, cpu_b) = rhs.split_at(gpu_count);
+
+            if gpu_count > 0 {
+                let gpu_a = GpuRistrettoPointVec::new(gpu_a);
+                let gpu_b = GpuScalarVec::new(gpu_b);
+                s.spawn(|_| {
+                    let gpu_c = gpu_a * gpu_b;
+                    gpu_out = gpu_c.iter().collect();
+                });
+            }
 
             cpu_out = cpu_a
                 .par_iter()
@@ -117,7 +123,7 @@ impl Mul<&PinaScalarVec> for &PinaRistrettoPointVec {
                 .collect();
         });
 
-        PinaRistrettoPointVec(gpu_out.iter().chain(cpu_out.drain(..)).collect())
+        PinaRistrettoPointVec(gpu_out.into_iter().chain(cpu_out.drain(..)).collect())
     }
 }
 
@@ -172,21 +178,23 @@ impl PinaScalarVec {
 
         let gpu_count = (GPU_SHARE * self.len() as f64) as usize;
         let (gpu_a, cpu_a) = self.split_at(gpu_count);
-        let gpu_a = GpuScalarVec::new(gpu_a);
 
-        let mut gpu_out = GpuScalarVec::new(&[]);
+        let mut gpu_out = vec![];
         let mut cpu_out = vec![];
 
         scope(|s| {
-            s.spawn(|_| {
-                let gpu_a = gpu_a;
-                gpu_out = gpu_a.invert()
-            });
+            if gpu_count > 0 {
+                s.spawn(|_| {
+                    let gpu_a = GpuScalarVec::new(gpu_a);
+                    let gpu_c = gpu_a.invert();
+                    gpu_out = gpu_c.iter().collect();
+                });
+            }
 
             cpu_out = cpu_a.par_iter().map(|a| a.invert()).collect();
         });
 
-        PinaScalarVec(gpu_out.iter().chain(cpu_out.drain(..)).collect())
+        PinaScalarVec(gpu_out.into_iter().chain(cpu_out.drain(..)).collect())
     }
 }
 

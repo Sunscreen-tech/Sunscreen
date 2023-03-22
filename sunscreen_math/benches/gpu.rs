@@ -1,5 +1,5 @@
 #[cfg(feature = "gpu")]
-use criterion::{criterion_group, criterion_main, Criterion};
+use criterion::{criterion_group, criterion_main};
 
 #[cfg(feature = "gpu")]
 mod benches {
@@ -9,8 +9,6 @@ mod benches {
     use std::time::Instant;
     use sunscreen_math::{GpuRistrettoPointVec, GpuScalarVec};
 
-    use super::*;
-
     pub fn invert(_c: &mut Criterion) {
         println!("Invert scalars");
 
@@ -19,7 +17,10 @@ mod benches {
             .collect::<Vec<_>>();
 
         let a_vec = GpuScalarVec::new(&a);
+        // Do it once to cache JIT
+        let _ = a_vec.invert();
 
+        // Time it for real.
         let now = Instant::now();
         let _ = a_vec.invert();
         println!(

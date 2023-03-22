@@ -6,6 +6,9 @@ mod metal_impl;
 #[cfg(feature = "webgpu")]
 mod webgpu_impl;
 
+#[cfg(feature = "opencl")]
+mod opencl_impl;
+
 mod cpu;
 pub use cpu::{CpuRistrettoPointVec, CpuScalarVec};
 
@@ -18,19 +21,16 @@ pub use pina::{PinaRistrettoPointVec, PinaScalarVec};
 compile_error!("feature pina requires a GPU backend feature.");
 
 #[cfg(feature = "metal")]
-pub use metal_impl::GpuRistrettoPointVec;
-
-#[cfg(feature = "metal")]
-pub use metal_impl::GpuScalarVec;
-
-#[cfg(feature = "metal")]
-pub use metal_impl::GpuVec;
+pub use metal_impl::{GpuRistrettoPointVec, GpuScalarVec, GpuVec};
 
 #[cfg(feature = "webgpu")]
 pub use webgpu_impl::GpuRistrettoPointVec;
 
 #[cfg(feature = "webgpu")]
 pub use webgpu_impl::GpuScalarVec;
+
+#[cfg(feature = "opencl")]
+pub use opencl_impl::{GpuRistrettoPointVec, GpuScalarVec, GpuVec};
 
 #[cfg(feature = "pina")]
 pub type RistrettoPointVec = PinaRistrettoPointVec;

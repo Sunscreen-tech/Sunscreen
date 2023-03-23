@@ -1,9 +1,9 @@
 mod scalarvec;
-use core::ops::Deref;
-use std::{ffi::CString, mem::size_of, ops::DerefMut};
+use std::{ffi::CString, marker::PhantomData, mem::size_of};
 
 use ocl::{
-    prm::cl_uint, Buffer, Context, Device, Kernel, MemMap, OclPrm, Platform, Program, Queue,
+    prm::cl_uint, Buffer as OclBuffer, Context, Device, Kernel, OclPrm, Platform, Program,
+    Queue,
 };
 pub use scalarvec::GpuScalarVec;
 mod ristrettovec;
@@ -19,33 +19,46 @@ pub struct Runtime {
 }
 
 pub(crate) enum KernelArg<'a> {
-    MappedBuffer(&'a MappedBuffer<cl_uint>),
     Buffer(&'a Buffer<cl_uint>),
+    OclBuffer(&'a OclBuffer<cl_uint>),
     U32(cl_uint),
 }
 
-pub struct MappedBuffer<T: OclPrm> {
-    buffer: Buffer<T>,
-    map: MemMap<T>,
+pub struct Buffer<T: OclPrm> {
+    buffer: OclBuffer<T>,
 }
 
-impl<T: OclPrm> Clone for MappedBuffer<T> {
+impl<T: OclPrm> Clone for Buffer<T> {
     fn clone(&self) -> Self {
-        Runtime::get().alloc_from_slice(&self.map)
+        let queue = &Runtime::get().queue;
+        let dst = OclBuffer::builder()
+            .queue(queue.clone())
+            .len(self.buffer.len())
+            .build()
+            .unwrap();
+
+        self.buffer.copy(&dst, None, None).enq().unwrap();
+
+        queue.finish().unwrap();
+
+        Self { buffer: dst }
     }
 }
 
-impl<T: OclPrm> MappedBuffer<T> {
-    pub fn new(buffer: Buffer<T>) -> Self {
-        let map = unsafe { buffer.map().read().enq().unwrap() };
-
-        Self { buffer, map }
+impl<T: OclPrm> Buffer<T> {
+    pub fn new(buffer: OclBuffer<T>) -> Self {
+        Self { buffer }
     }
-}
 
-impl<'a> From<&'a MappedBuffer<cl_uint>> for KernelArg<'a> {
-    fn from(val: &'a MappedBuffer<cl_uint>) -> Self {
-        Self::MappedBuffer(val)
+    /**
+     * Allocate a buffer on the host and copy this GPU buffer's contents into it.
+     */
+    pub fn as_vec(&self) -> Vec<T> {
+        let mut dst = vec![];
+
+        self.buffer.read(&mut dst).enq().unwrap();
+
+        dst
     }
 }
 
@@ -55,23 +68,15 @@ impl<'a> From<&'a Buffer<cl_uint>> for KernelArg<'a> {
     }
 }
 
+impl<'a> From<&'a OclBuffer<cl_uint>> for KernelArg<'a> {
+    fn from(val: &'a OclBuffer<cl_uint>) -> Self {
+        Self::OclBuffer(val)
+    }
+}
+
 impl From<cl_uint> for KernelArg<'_> {
     fn from(value: cl_uint) -> Self {
         Self::U32(value)
-    }
-}
-
-impl<T: OclPrm> Deref for MappedBuffer<T> {
-    type Target = [T];
-
-    fn deref(&self) -> &Self::Target {
-        &self.map
-    }
-}
-
-impl<T: OclPrm> DerefMut for MappedBuffer<T> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        self.map.as_mut()
     }
 }
 
@@ -100,8 +105,9 @@ impl Grid {
 }
 
 pub struct IntoGpuVecIter<T: GpuVec> {
-    vec: T,
+    vec: Vec<u32>,
     index: usize,
+    _phantom: PhantomData<T>,
 }
 
 impl<T: GpuVec> Iterator for IntoGpuVecIter<T> {
@@ -111,7 +117,7 @@ impl<T: GpuVec> Iterator for IntoGpuVecIter<T> {
         let item = if self.index >= self.vec.len() {
             None
         } else {
-            Some(self.vec.get(self.index))
+            Some(T::get(&self.vec, self.index))
         };
 
         self.index += 1;
@@ -120,19 +126,20 @@ impl<T: GpuVec> Iterator for IntoGpuVecIter<T> {
     }
 }
 
-pub struct GpuVecIter<'a, T: GpuVec> {
-    vec: &'a T,
+pub struct GpuVecIter<T: GpuVec> {
+    vec: Vec<u32>,
     index: usize,
+    _phantom: PhantomData<T>,
 }
 
-impl<'a, T: GpuVec> Iterator for GpuVecIter<'a, T> {
+impl<'a, T: GpuVec> Iterator for GpuVecIter<T> {
     type Item = T::Item;
 
     fn next(&mut self) -> Option<Self::Item> {
         let item = if self.index >= self.vec.len() {
             None
         } else {
-            Some(self.vec.get(self.index))
+            Some(T::get(&self.vec, self.index))
         };
 
         self.index += 1;
@@ -147,7 +154,7 @@ where
 {
     type Item;
 
-    fn get_buffer(&self) -> &MappedBuffer<u32>;
+    fn get_buffer(&self) -> &Buffer<u32>;
 
     fn len(&self) -> usize;
 
@@ -155,7 +162,7 @@ where
         self.len() * size_of::<Self::Item>() / size_of::<u32>()
     }
 
-    fn get(&self, i: usize) -> <Self as GpuVec>::Item;
+    fn get(data: &[u32], i: usize) -> <Self as GpuVec>::Item;
 
     fn is_empty(&self) -> bool {
         self.len() == 0
@@ -164,19 +171,22 @@ where
     fn iter(&self) -> GpuVecIter<Self> {
         GpuVecIter {
             index: 0,
-            vec: self,
+            vec: self.get_buffer().as_vec(),
+            _phantom: PhantomData,
         }
     }
 
     fn into_iter(self) -> IntoGpuVecIter<Self> {
         IntoGpuVecIter {
-            vec: self,
+            vec: self.get_buffer().as_vec(),
             index: 0,
+            _phantom: PhantomData,
         }
     }
 
-    fn unary_gpu_kernel(&self, kernel_name: &'static str) -> MappedBuffer<u32> {
+    fn unary_gpu_kernel(&self, kernel_name: &'static str) -> Buffer<u32> {
         let runtime = Runtime::get();
+
         let out_buf = runtime.alloc_internal(self.u32_len());
 
         runtime.run_kernel(
@@ -189,19 +199,10 @@ where
             &Grid::from(self.len()),
         );
 
-        let map = unsafe { out_buf.map().enq() }.unwrap();
-
-        MappedBuffer {
-            buffer: out_buf,
-            map,
-        }
+        Buffer { buffer: out_buf }
     }
 
-    fn binary_gpu_kernel<Rhs: GpuVec>(
-        &self,
-        kernel_name: &'static str,
-        rhs: &Rhs,
-    ) -> MappedBuffer<u32> {
+    fn binary_gpu_kernel<Rhs: GpuVec>(&self, kernel_name: &'static str, rhs: &Rhs) -> Buffer<u32> {
         let runtime = Runtime::get();
         let out_buf = runtime.alloc_internal(self.u32_len());
 
@@ -216,12 +217,7 @@ where
             &Grid::from(self.len()),
         );
 
-        let map = unsafe { out_buf.map().enq() }.unwrap();
-
-        MappedBuffer {
-            buffer: out_buf,
-            map,
-        }
+        Buffer { buffer: out_buf }
     }
 }
 
@@ -251,10 +247,10 @@ impl Runtime {
 
         for arg in args.iter() {
             match arg {
-                KernelArg::Buffer(b) => {
+                KernelArg::OclBuffer(b) => {
                     kernel = kernel.arg(*b);
                 }
-                KernelArg::MappedBuffer(b) => {
+                KernelArg::Buffer(b) => {
                     kernel = kernel.arg(&b.buffer);
                 }
                 KernelArg::U32(v) => {
@@ -269,9 +265,8 @@ impl Runtime {
         self.queue.finish().unwrap();
     }
 
-    fn alloc_internal<T: OclPrm>(&self, len: usize) -> Buffer<T> {
-        Buffer::builder()
-            .fill_val(T::default()) // Avoids dealing with MaybeUninit<T>
+    fn alloc_internal<T: OclPrm>(&self, len: usize) -> OclBuffer<T> {
+        OclBuffer::builder()
             .queue(self.queue.clone())
             .len(len)
             .build()
@@ -279,28 +274,19 @@ impl Runtime {
     }
 
     #[allow(unused)]
-    fn alloc<T: OclPrm>(&self, len: usize) -> MappedBuffer<T> {
-        MappedBuffer::new(self.alloc_internal(len))
+    fn alloc<T: OclPrm>(&self, len: usize) -> Buffer<T> {
+        Buffer::new(self.alloc_internal(len))
     }
 
-    fn alloc_from_slice<T: OclPrm>(&self, data: &[T]) -> MappedBuffer<T> {
-        let buffer = self.alloc_internal::<T>(data.len());
+    fn alloc_from_slice<T: OclPrm>(&self, data: &[T]) -> Buffer<T> {
+        let buffer = OclBuffer::builder()
+            .queue(self.queue.clone())
+            .len(data.len())
+            .copy_host_slice(data)
+            .build()
+            .unwrap();
 
-        let mut map = unsafe {
-            buffer
-                .map()
-                .write_invalidate()
-                .queue(&self.queue)
-                .enq()
-                .unwrap()
-        };
-
-        map.copy_from_slice(data);
-        map.unmap().queue(&self.queue).enq().unwrap();
-
-        self.queue.finish().unwrap();
-
-        MappedBuffer::new(buffer)
+        Buffer::new(buffer)
     }
 }
 
@@ -349,7 +335,7 @@ mod tests {
 
         let a_gpu = runtime.alloc_from_slice(&a);
         let b_gpu = runtime.alloc_from_slice(&b);
-        let mut c_gpu = runtime.alloc::<u32>(a.len());
+        let c_gpu = runtime.alloc::<u32>(a.len());
 
         runtime.run_kernel(
             "basic_kernel",
@@ -362,12 +348,7 @@ mod tests {
             &Grid::from(a.len()),
         );
 
-        c_gpu.map.unmap().enq().unwrap();
-        c_gpu.map = unsafe { c_gpu.buffer.map().enq() }.unwrap();
-
-        assert_eq!(c_gpu.len(), a.len());
-
-        for (c, (a, b)) in (*c_gpu).iter().zip(a.iter().zip(b.iter())) {
+        for (c, (a, b)) in c_gpu.as_vec().iter().zip(a.iter().zip(b.iter())) {
             assert_eq!(*c, a + b);
         }
     }
@@ -377,11 +358,12 @@ mod tests {
         let a = Runtime::get().alloc_from_slice(&[1, 2, 3, 4]);
         let b = a.clone();
 
-        for (a, b) in a.iter().zip(b.iter()) {
+        let a_vec = a.as_vec();
+        let b_vec = b.as_vec();
+
+        for (a, b) in a_vec.iter().zip(b_vec.iter()) {
             assert_eq!(a, b);
         }
-
-        assert_ne!(a.map.as_ptr(), b.map.as_ptr());
     }
 
     #[test]
@@ -391,20 +373,20 @@ mod tests {
         let runtime = Runtime::get();
 
         let a = runtime.alloc_from_slice(&a);
-        let mut b = runtime.alloc::<u32>(a.len());
+        let b = runtime.alloc::<u32>(40);
 
         runtime.run_kernel(
             "test_can_pack_unpack_field2625",
             &[
                 KernelArg::from(&a),
                 KernelArg::from(&b),
-                KernelArg::from(a.len() as u32),
+                KernelArg::from(40u32),
             ],
             &Grid::from(4),
         );
 
-        b.map.unmap().enq().unwrap();
-        b.map = unsafe { b.buffer.map().enq() }.unwrap();
+        let a = a.as_vec();
+        let b = b.as_vec();
 
         for (i, j) in a.iter().zip(b.iter()) {
             assert_eq!(i, j);
@@ -419,24 +401,22 @@ mod tests {
         let runtime = Runtime::get();
 
         let a = runtime.alloc_from_slice(&a);
-        let b = runtime.alloc_internal::<u32>(a_len);
+        let b = runtime.alloc::<u32>(a_len);
 
         runtime.run_kernel(
             "test_can_pack_unpack_ristretto",
             &[
                 KernelArg::from(&a),
                 KernelArg::from(&b),
-                KernelArg::from((a.len() / 40) as u32),
+                KernelArg::from(160u32 / 40),
             ],
             &Grid::from(4),
         );
 
-        let b_map = unsafe { b.map().enq() }.unwrap();
+        let a = a.as_vec();
+        let b = b.as_vec();
 
-        dbg!(&*a.map);
-        dbg!(&*b_map);
-
-        for (i, j) in a.iter().zip(b_map.iter()) {
+        for (i, j) in a.iter().zip(b.iter()) {
             assert_eq!(i, j);
         }
     }

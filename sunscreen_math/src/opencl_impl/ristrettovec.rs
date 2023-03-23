@@ -9,7 +9,7 @@ use curve25519_dalek::{
 
 use crate::{opencl_impl::Runtime, GpuScalarVec};
 
-use super::{GpuVec, GpuVecIter, IntoGpuVecIter, MappedBuffer};
+use super::{Buffer, GpuVec, GpuVecIter, IntoGpuVecIter};
 
 /// A vector of [`RistrettoPoint`] elements laid out in a way that enables coalesced
 /// reads and writes on a GPU.
@@ -20,7 +20,7 @@ use super::{GpuVec, GpuVecIter, IntoGpuVecIter, MappedBuffer};
 /// the second dimension iterates over the limbs in a coordinate, and the trailing
 /// dimension iterates over coordinates.
 pub struct GpuRistrettoPointVec {
-    pub(crate) data: MappedBuffer<u32>,
+    pub(crate) data: Buffer<u32>,
     len: usize,
 }
 
@@ -82,7 +82,7 @@ impl IntoIterator for GpuRistrettoPointVec {
 impl GpuVec for GpuRistrettoPointVec {
     type Item = RistrettoPoint;
 
-    fn get_buffer(&self) -> &MappedBuffer<u32> {
+    fn get_buffer(&self) -> &Buffer<u32> {
         &self.data
     }
 
@@ -92,9 +92,11 @@ impl GpuVec for GpuRistrettoPointVec {
 
     #[allow(clippy::erasing_op)]
     #[allow(clippy::identity_op)]
-    fn get(&self, index: usize) -> RistrettoPoint {
-        if index > self.len {
-            panic!("Index {index} exceeds bounds of {}", self.len);
+    fn get(data: &[u32], index: usize) -> RistrettoPoint {
+        let len = data.len() / size_of::<RistrettoPoint>() * size_of::<u32>();
+
+        if index > len {
+            panic!("Index {index} exceeds bounds of {len}");
         }
 
         let mut x = [0u32; 10];
@@ -105,19 +107,19 @@ impl GpuVec for GpuRistrettoPointVec {
         let u29_len = x.len();
 
         for (i, x) in x.iter_mut().enumerate() {
-            *x = self.data[(i + 0 * u29_len) * self.len + index];
+            *x = data[(i + 0 * u29_len) * len + index];
         }
 
         for (i, y) in y.iter_mut().enumerate() {
-            *y = self.data[(i + 1 * u29_len) * self.len + index];
+            *y = data[(i + 1 * u29_len) * len + index];
         }
 
         for (i, z) in z.iter_mut().enumerate() {
-            *z = self.data[(i + 2 * u29_len) * self.len + index];
+            *z = data[(i + 2 * u29_len) * len + index];
         }
 
         for (i, t) in t.iter_mut().enumerate() {
-            *t = self.data[(i + 3 * u29_len) * self.len + index];
+            *t = data[(i + 3 * u29_len) * len + index];
         }
 
         RistrettoPoint(EdwardsPoint {
@@ -296,8 +298,8 @@ mod tests {
 
         let v = GpuRistrettoPointVec::new(&points);
 
-        for (i, p) in points.into_iter().enumerate() {
-            assert_eq!(v.get(i).compress(), p.compress());
+        for (v, p) in points.into_iter().zip(v.iter()) {
+            assert_eq!(v.compress(), p.compress());
         }
     }
 
@@ -342,8 +344,8 @@ mod tests {
 
         let c = &a + &b;
 
-        for i in 0..c.len() {
-            assert_eq!(c.get(i).compress(), (a.get(i) + b.get(i)).compress());
+        for (c, (a, b)) in c.iter().zip(a.iter().zip(b.iter())) {
+            assert_eq!(c.compress(), (a + b).compress());
         }
     }
 
@@ -365,8 +367,8 @@ mod tests {
 
         let c = &a - &b;
 
-        for i in 0..c.len() {
-            assert_eq!(c.get(i).compress(), (a.get(i) - b.get(i)).compress());
+        for (c, (a, b)) in c.iter().zip(a.iter().zip(b.iter())) {
+            assert_eq!(c.compress(), (a - b).compress());
         }
     }
 
@@ -388,8 +390,8 @@ mod tests {
 
         let c = &a * &b;
 
-        for i in 0..c.len() {
-            assert_eq!(c.get(i).compress(), (a.get(i) * b.get(i)).compress());
+        for (c, (a, b)) in c.iter().zip(a.iter().zip(b.iter())) {
+            assert_eq!(c.compress(), (a * b).compress());
         }
     }
 

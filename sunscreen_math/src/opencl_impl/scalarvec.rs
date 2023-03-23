@@ -5,7 +5,7 @@ use curve25519_dalek::scalar::Scalar;
 
 use crate::opencl_impl::Runtime;
 
-use super::{GpuVec, GpuVecIter, MappedBuffer};
+use super::{Buffer, GpuVec, GpuVecIter};
 
 #[derive(Clone)]
 /// A vector of scalars laid out in a way that enables coalescing on
@@ -16,7 +16,7 @@ use super::{GpuVec, GpuVecIter, MappedBuffer};
 /// a 1 dimensional buffer. The leading dimension iterates over the scalars
 /// while the trailing dimension iterates over limbs in the scalar.
 pub struct GpuScalarVec {
-    pub(crate) data: MappedBuffer<u32>,
+    pub(crate) data: Buffer<u32>,
     len: usize,
 }
 
@@ -78,7 +78,7 @@ impl GpuScalarVec {
 impl GpuVec for GpuScalarVec {
     type Item = Scalar;
 
-    fn get_buffer(&self) -> &MappedBuffer<u32> {
+    fn get_buffer(&self) -> &Buffer<u32> {
         &self.data
     }
 
@@ -91,46 +91,47 @@ impl GpuVec for GpuScalarVec {
     #[allow(clippy::identity_op)]
     #[allow(clippy::erasing_op)]
     /// Get the [`Scalar`] at index i.
-    fn get(&self, i: usize) -> Scalar {
-        if i >= self.len {
-            panic!("Index out of {i} range {}.", self.len);
+    fn get(data: &[u32], i: usize) -> Scalar {
+        let len = data.len() / size_of::<Scalar>() * size_of::<u32>();
+
+        if i >= len {
+            panic!("Index out of {i} range {}.", len);
         }
 
-        let data: &[u32] = &self.data;
         let mut bytes = [0u8; 32];
 
-        bytes[0] = ((data[0 * self.len + i] & 0xFF << 0) >> 0) as u8;
-        bytes[1] = ((data[0 * self.len + i] & 0xFF << 8) >> 8) as u8;
-        bytes[2] = ((data[0 * self.len + i] & 0xFF << 16) >> 16) as u8;
-        bytes[3] = ((data[0 * self.len + i] & 0xFF << 24) >> 24) as u8;
-        bytes[4] = ((data[1 * self.len + i] & 0xFF << 0) >> 0) as u8;
-        bytes[5] = ((data[1 * self.len + i] & 0xFF << 8) >> 8) as u8;
-        bytes[6] = ((data[1 * self.len + i] & 0xFF << 16) >> 16) as u8;
-        bytes[7] = ((data[1 * self.len + i] & 0xFF << 24) >> 24) as u8;
-        bytes[8] = ((data[2 * self.len + i] & 0xFF << 0) >> 0) as u8;
-        bytes[9] = ((data[2 * self.len + i] & 0xFF << 8) >> 8) as u8;
-        bytes[10] = ((data[2 * self.len + i] & 0xFF << 16) >> 16) as u8;
-        bytes[11] = ((data[2 * self.len + i] & 0xFF << 24) >> 24) as u8;
-        bytes[12] = ((data[3 * self.len + i] & 0xFF << 0) >> 0) as u8;
-        bytes[13] = ((data[3 * self.len + i] & 0xFF << 8) >> 8) as u8;
-        bytes[14] = ((data[3 * self.len + i] & 0xFF << 16) >> 16) as u8;
-        bytes[15] = ((data[3 * self.len + i] & 0xFF << 24) >> 24) as u8;
-        bytes[16] = ((data[4 * self.len + i] & 0xFF << 0) >> 0) as u8;
-        bytes[17] = ((data[4 * self.len + i] & 0xFF << 8) >> 8) as u8;
-        bytes[18] = ((data[4 * self.len + i] & 0xFF << 16) >> 16) as u8;
-        bytes[19] = ((data[4 * self.len + i] & 0xFF << 24) >> 24) as u8;
-        bytes[20] = ((data[5 * self.len + i] & 0xFF << 0) >> 0) as u8;
-        bytes[21] = ((data[5 * self.len + i] & 0xFF << 8) >> 8) as u8;
-        bytes[22] = ((data[5 * self.len + i] & 0xFF << 16) >> 16) as u8;
-        bytes[23] = ((data[5 * self.len + i] & 0xFF << 24) >> 24) as u8;
-        bytes[24] = ((data[6 * self.len + i] & 0xFF << 0) >> 0) as u8;
-        bytes[25] = ((data[6 * self.len + i] & 0xFF << 8) >> 8) as u8;
-        bytes[26] = ((data[6 * self.len + i] & 0xFF << 16) >> 16) as u8;
-        bytes[27] = ((data[6 * self.len + i] & 0xFF << 24) >> 24) as u8;
-        bytes[28] = ((data[7 * self.len + i] & 0xFF << 0) >> 0) as u8;
-        bytes[29] = ((data[7 * self.len + i] & 0xFF << 8) >> 8) as u8;
-        bytes[30] = ((data[7 * self.len + i] & 0xFF << 16) >> 16) as u8;
-        bytes[31] = ((data[7 * self.len + i] & 0xFF << 24) >> 24) as u8;
+        bytes[0] = ((data[0 * len + i] & 0xFF << 0) >> 0) as u8;
+        bytes[1] = ((data[0 * len + i] & 0xFF << 8) >> 8) as u8;
+        bytes[2] = ((data[0 * len + i] & 0xFF << 16) >> 16) as u8;
+        bytes[3] = ((data[0 * len + i] & 0xFF << 24) >> 24) as u8;
+        bytes[4] = ((data[1 * len + i] & 0xFF << 0) >> 0) as u8;
+        bytes[5] = ((data[1 * len + i] & 0xFF << 8) >> 8) as u8;
+        bytes[6] = ((data[1 * len + i] & 0xFF << 16) >> 16) as u8;
+        bytes[7] = ((data[1 * len + i] & 0xFF << 24) >> 24) as u8;
+        bytes[8] = ((data[2 * len + i] & 0xFF << 0) >> 0) as u8;
+        bytes[9] = ((data[2 * len + i] & 0xFF << 8) >> 8) as u8;
+        bytes[10] = ((data[2 * len + i] & 0xFF << 16) >> 16) as u8;
+        bytes[11] = ((data[2 * len + i] & 0xFF << 24) >> 24) as u8;
+        bytes[12] = ((data[3 * len + i] & 0xFF << 0) >> 0) as u8;
+        bytes[13] = ((data[3 * len + i] & 0xFF << 8) >> 8) as u8;
+        bytes[14] = ((data[3 * len + i] & 0xFF << 16) >> 16) as u8;
+        bytes[15] = ((data[3 * len + i] & 0xFF << 24) >> 24) as u8;
+        bytes[16] = ((data[4 * len + i] & 0xFF << 0) >> 0) as u8;
+        bytes[17] = ((data[4 * len + i] & 0xFF << 8) >> 8) as u8;
+        bytes[18] = ((data[4 * len + i] & 0xFF << 16) >> 16) as u8;
+        bytes[19] = ((data[4 * len + i] & 0xFF << 24) >> 24) as u8;
+        bytes[20] = ((data[5 * len + i] & 0xFF << 0) >> 0) as u8;
+        bytes[21] = ((data[5 * len + i] & 0xFF << 8) >> 8) as u8;
+        bytes[22] = ((data[5 * len + i] & 0xFF << 16) >> 16) as u8;
+        bytes[23] = ((data[5 * len + i] & 0xFF << 24) >> 24) as u8;
+        bytes[24] = ((data[6 * len + i] & 0xFF << 0) >> 0) as u8;
+        bytes[25] = ((data[6 * len + i] & 0xFF << 8) >> 8) as u8;
+        bytes[26] = ((data[6 * len + i] & 0xFF << 16) >> 16) as u8;
+        bytes[27] = ((data[6 * len + i] & 0xFF << 24) >> 24) as u8;
+        bytes[28] = ((data[7 * len + i] & 0xFF << 0) >> 0) as u8;
+        bytes[29] = ((data[7 * len + i] & 0xFF << 8) >> 8) as u8;
+        bytes[30] = ((data[7 * len + i] & 0xFF << 16) >> 16) as u8;
+        bytes[31] = ((data[7 * len + i] & 0xFF << 24) >> 24) as u8;
 
         Scalar::from_bits(bytes)
     }
@@ -343,8 +344,8 @@ mod tests {
 
         let c = &a + &b;
 
-        for i in 0..a.len() {
-            assert_eq!(c.get(i), a.get(i) + b.get(i));
+        for (c, (a, b)) in c.iter().zip(a.iter().zip(b.iter())) {
+            assert_eq!(c, a + b);
         }
     }
 
@@ -366,8 +367,8 @@ mod tests {
 
         let c = &a - &b;
 
-        for i in 0..a.len() {
-            assert_eq!(c.get(i), a.get(i) - b.get(i));
+        for (c, (a, b)) in c.iter().zip(a.iter().zip(b.iter())) {
+            assert_eq!(c, a - b);
         }
     }
 
@@ -382,8 +383,8 @@ mod tests {
 
         let c = -&a;
 
-        for i in 0..a.len() {
-            assert_eq!(c.get(i), -a.get(i));
+        for (c, a) in c.iter().zip(a.iter()) {
+            assert_eq!(c, -a);
         }
     }
 
@@ -405,8 +406,8 @@ mod tests {
 
         let c = &a * &b;
 
-        for i in 0..a.len() {
-            assert_eq!(c.get(i), a.get(i) * b.get(i));
+        for (c, (a, b)) in c.iter().zip(a.iter().zip(b.iter())) {
+            assert_eq!(c, a * b);
         }
     }
 
@@ -421,8 +422,8 @@ mod tests {
 
         let c = a.square();
 
-        for i in 0..a.len() {
-            assert_eq!(c.get(i), a.get(i) * a.get(i));
+        for (c, a) in c.iter().zip(a.iter()) {
+            assert_eq!(c, a * a);
         }
     }
 

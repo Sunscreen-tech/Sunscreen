@@ -26,7 +26,7 @@ ocl = { version = "0.19.4", optional = true }
 criterion = "0.4.0"
 
 [features]
-default = []
+default = ["opencl"]
 nightly-features = []
 metal = ["dep:metal", "gpu"]
 webgpu = ["dep:wgpu", "dep:tokio", "dep:futures", "dep:naga", "dep:wgpu-core", "dep:bytemuck", "gpu"]

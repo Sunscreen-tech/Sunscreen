@@ -1,10 +1,10 @@
+use curve25519_dalek::{
+    edwards::EdwardsPoint, ristretto::RistrettoPoint, scalar::Scalar, CannonicalFieldElement,
+};
+use rayon::prelude::*;
 use std::{
     mem::size_of,
     ops::{Add, Mul, Sub},
-};
-
-use curve25519_dalek::{
-    edwards::EdwardsPoint, ristretto::RistrettoPoint, scalar::Scalar, CannonicalFieldElement,
 };
 
 use crate::{opencl_impl::Runtime, GpuScalarVec};
@@ -34,11 +34,20 @@ impl GpuRistrettoPointVec {
         let u32_len = x.len() * size_of::<RistrettoPoint>() / size_of::<u32>();
         let mut data = vec![0u32; u32_len];
 
-        for (i, p) in x.iter().enumerate() {
-            let x = p.0.X.to_u29();
-            let y = p.0.Y.to_u29();
-            let z = p.0.Z.to_u29();
-            let t = p.0.T.to_u29();
+        let u29 = x
+            .par_iter()
+            .map(|p| {
+                (
+                    p.0.X.to_u29(),
+                    p.0.Y.to_u29(),
+                    p.0.Z.to_u29(),
+                    p.0.T.to_u29(),
+                )
+            })
+            .collect::<Vec<_>>();
+
+        for (i, p) in u29.iter().enumerate() {
+            let (x, y, z, t) = p;
 
             let u29_len = x.len();
 

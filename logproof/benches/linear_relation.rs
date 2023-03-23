@@ -53,6 +53,8 @@ where
     // c_2 = a
     const BIT_SIZE: u64 = 2 << 8;
 
+    env_logger::init();    
+
     println!("Generating data...");
 
     let coeffs = (0..POLY_DEGREE).map(|x| x % 2).collect::<Vec<u64>>();

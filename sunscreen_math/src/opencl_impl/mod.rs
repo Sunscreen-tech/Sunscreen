@@ -1,6 +1,7 @@
 mod scalarvec;
-use std::{ffi::CString, marker::PhantomData, mem::size_of};
+use std::{ffi::CString, marker::PhantomData, mem::size_of, time::Instant};
 
+use log::trace;
 use ocl::{
     prm::cl_uint, Buffer as OclBuffer, Context, Device, Kernel, OclPrm, Platform, Program,
     Queue,
@@ -56,7 +57,14 @@ impl<T: OclPrm> Buffer<T> {
     pub fn as_vec(&self) -> Vec<T> {
         let mut dst = vec![T::default(); self.buffer.len()];
 
+        let start = Instant::now();
+
         self.buffer.read(&mut dst).enq().unwrap();
+
+        let time = start.elapsed().as_secs_f64();
+        let bytes = self.buffer.len() * size_of::<T>();
+
+        trace!("Read GPU buffer: {}b {}s {}b/s", bytes, time, bytes as f64 / time);
 
         dst
     }
@@ -283,12 +291,19 @@ impl Runtime {
     }
 
     fn alloc_from_slice<T: OclPrm>(&self, data: &[T]) -> Buffer<T> {
+        let start = Instant::now();
+
         let buffer = OclBuffer::builder()
             .queue(self.queue.clone())
             .len(data.len())
             .copy_host_slice(data)
             .build()
             .unwrap();
+
+        let time = start.elapsed().as_secs_f64();
+        let bytes = data.len() * size_of::<T>();
+
+        trace!("Read GPU buffer: {}b {}s {}b/s", bytes, time, bytes as f64 / time);
 
         Buffer::new(buffer)
     }

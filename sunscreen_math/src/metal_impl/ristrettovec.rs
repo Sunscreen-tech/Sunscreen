@@ -46,8 +46,8 @@ impl GpuRistrettoPointVec {
         let mut field_vec = Self { data, len };
 
         // Turn the slice into a ptr into a usize so we can share it across threads.
-        // Each cell in the slice is going to be written to exactly 1 time, so a
-        // data race doesn't actually occur.
+        // Each cell in the slice is going to be written to exactly 1 time, so there
+        // is no data race here.
         let data_ptr = unsafe { field_vec.buffer_slice_mut().as_ptr() } as usize;
 
         x.par_iter()
@@ -61,7 +61,10 @@ impl GpuRistrettoPointVec {
             })
             .enumerate()
             .for_each(|(i, (x, y, z, t))| unsafe {
-                // Each cell in the
+                // Cast the usize back to a pointer. No two items (much less threads)
+                // write to the same u32, concurrently or otherwise. Mechanically, this
+                // is equivalent to doing `split_at_mut()` `byte_len` times and moving
+                // a bunch of the slices to each closure and is sound for the same reason.
                 let data_ptr = data_ptr as *mut MaybeUninit<u32>;
 
                 let u29_len = x.len();

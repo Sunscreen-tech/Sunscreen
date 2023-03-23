@@ -93,9 +93,9 @@ impl GpuVec for GpuRistrettoPointVec {
     #[allow(clippy::erasing_op)]
     #[allow(clippy::identity_op)]
     fn get(data: &[u32], index: usize) -> RistrettoPoint {
-        let len = data.len() / size_of::<RistrettoPoint>() * size_of::<u32>();
+        let len = data.len() * size_of::<u32>() / size_of::<RistrettoPoint>();
 
-        if index > len {
+        if index >= len {
             panic!("Index {index} exceeds bounds of {len}");
         }
 

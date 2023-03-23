@@ -54,7 +54,7 @@ impl<T: OclPrm> Buffer<T> {
      * Allocate a buffer on the host and copy this GPU buffer's contents into it.
      */
     pub fn as_vec(&self) -> Vec<T> {
-        let mut dst = vec![];
+        let mut dst = vec![T::default(); self.buffer.len()];
 
         self.buffer.read(&mut dst).enq().unwrap();
 
@@ -114,7 +114,7 @@ impl<T: GpuVec> Iterator for IntoGpuVecIter<T> {
     type Item = T::Item;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let item = if self.index >= self.vec.len() {
+        let item = if self.index >= T::u32_len_to_t_len(self.vec.len()) {
             None
         } else {
             Some(T::get(&self.vec, self.index))
@@ -136,7 +136,7 @@ impl<'a, T: GpuVec> Iterator for GpuVecIter<T> {
     type Item = T::Item;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let item = if self.index >= self.vec.len() {
+        let item = if self.index >= T::u32_len_to_t_len(self.vec.len()) {
             None
         } else {
             Some(T::get(&self.vec, self.index))
@@ -160,6 +160,10 @@ where
 
     fn u32_len(&self) -> usize {
         self.len() * size_of::<Self::Item>() / size_of::<u32>()
+    }
+
+    fn u32_len_to_t_len(len: usize) -> usize {
+        len * size_of::<u32>() / size_of::<<Self as GpuVec>::Item>()
     }
 
     fn get(data: &[u32], i: usize) -> <Self as GpuVec>::Item;

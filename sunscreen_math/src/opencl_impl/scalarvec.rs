@@ -92,7 +92,7 @@ impl GpuVec for GpuScalarVec {
     #[allow(clippy::erasing_op)]
     /// Get the [`Scalar`] at index i.
     fn get(data: &[u32], i: usize) -> Scalar {
-        let len = data.len() / size_of::<Scalar>() * size_of::<u32>();
+        let len = Self::u32_len_to_t_len(data.len());
 
         if i >= len {
             panic!("Index out of {i} range {}.", len);

@@ -88,7 +88,8 @@ pub use sunscreen_runtime::{
 pub use sunscreen_zkp_backend::{BackendField, Error as ZkpError, Result as ZkpResult, ZkpBackend};
 pub use zkp::ZkpProgramFn;
 pub use zkp::{
-    invoke_gadget, with_zkp_ctx, ZkpContext, ZkpData, ZkpFrontendCompilation, CURRENT_ZKP_CTX,
+    invoke_gadget, with_zkp_ctx, ZkpContext, ZkpContextOps, ZkpData, ZkpFrontendCompilation,
+    CURRENT_ZKP_CTX,
 };
 
 #[derive(Clone)]

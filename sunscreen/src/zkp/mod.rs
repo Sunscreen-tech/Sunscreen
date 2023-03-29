@@ -233,27 +233,63 @@ pub type ZkpContext = Context<Operation, ZkpData>;
  */
 pub type ZkpFrontendCompilation = CompilationResult<Operation>;
 
+/**
+ * Defines transformations to ZKP program graphs.
+ */
 pub trait ZkpContextOps {
+    /**
+     * Add public input node
+     */
     fn add_public_input(&mut self) -> NodeIndex;
 
+    /**
+     * Add private input node
+     */
     fn add_private_input(&mut self) -> NodeIndex;
 
+    /**
+     * Add constant input node
+     */
     fn add_constant_input(&mut self) -> NodeIndex;
 
+    /**
+     * Add hidden input node
+     */
     fn add_hidden_input(&mut self, gadget_arg_id: usize) -> NodeIndex;
 
+    /**
+     * Add an addition to this context
+     */
     fn add_addition(&mut self, left: NodeIndex, right: NodeIndex) -> NodeIndex;
 
+    /**
+     * Add a multiplication to this context
+     */
     fn add_multiplication(&mut self, left: NodeIndex, right: NodeIndex) -> NodeIndex;
 
+    /**
+     * Add a negation to this context
+     */
     fn add_negate(&mut self, left: NodeIndex) -> NodeIndex;
 
+    /**
+     * Add a subtraction to this context
+     */
     fn add_subtraction(&mut self, left: NodeIndex, right: NodeIndex) -> NodeIndex;
 
+    /**
+     * Add an equality constraint to this context
+     */
     fn add_constraint(&mut self, left: NodeIndex, val: &BigInt) -> NodeIndex;
 
+    /**
+     * Add a constant to this context
+     */
     fn add_constant(&mut self, val: &BigInt) -> NodeIndex;
 
+    /**
+     * Add a gadget invocation to this context
+     */
     fn add_invoke_gadget<G: Gadget>(&mut self, gadget: &Arc<G>) -> NodeIndex;
 }
 

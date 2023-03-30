@@ -70,25 +70,25 @@ impl GpuRistrettoPointVec {
                 let u29_len = x.len();
 
                 for (j, w) in x.iter().enumerate() {
-                    let elem = data_ptr.add((j + 0 * u29_len) * len + i);
+                    let elem = data_ptr.add((j + 00 * u29_len) * len + i);
 
                     (*elem).write(*w);
                 }
 
                 for (j, w) in y.iter().enumerate() {
-                    let elem = data_ptr.add((j + 0 * u29_len) * len + i);
+                    let elem = data_ptr.add((j + 1 * u29_len) * len + i);
 
                     (*elem).write(*w);
                 }
 
                 for (j, w) in z.iter().enumerate() {
-                    let elem = data_ptr.add((j + 0 * u29_len) * len + i);
+                    let elem = data_ptr.add((j + 2 * u29_len) * len + i);
 
                     (*elem).write(*w);
                 }
 
                 for (j, w) in t.iter().enumerate() {
-                    let elem = data_ptr.add((j + 0 * u29_len) * len + i);
+                    let elem = data_ptr.add((j + 3 * u29_len) * len + i);
 
                     (*elem).write(*w);
                 }

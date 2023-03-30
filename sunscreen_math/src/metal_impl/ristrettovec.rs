@@ -2,9 +2,9 @@ use curve25519_dalek::{
     edwards::EdwardsPoint, ristretto::RistrettoPoint, scalar::Scalar, CannonicalFieldElement,
 };
 use metal::Buffer;
-
+use rayon::prelude::*;
 use std::{
-    mem::size_of,
+    mem::{size_of, MaybeUninit},
     ops::{Add, Mul, Sub},
 };
 
@@ -45,32 +45,54 @@ impl GpuRistrettoPointVec {
 
         let mut field_vec = Self { data, len };
 
-        let data_slice = unsafe { field_vec.buffer_slice_mut() };
+        // Turn the slice into a ptr into a usize so we can share it across threads.
+        // Each cell in the slice is going to be written to exactly 1 time, so there
+        // is no data race here.
+        let data_ptr = unsafe { field_vec.buffer_slice_mut().as_ptr() } as usize;
 
-        for (i, p) in x.iter().enumerate() {
-            let x = p.0.X.to_u29();
-            let y = p.0.Y.to_u29();
-            let z = p.0.Z.to_u29();
-            let t = p.0.T.to_u29();
+        x.par_iter()
+            .map(|p| {
+                (
+                    p.0.X.to_u29(),
+                    p.0.Y.to_u29(),
+                    p.0.Z.to_u29(),
+                    p.0.T.to_u29(),
+                )
+            })
+            .enumerate()
+            .for_each(|(i, (x, y, z, t))| unsafe {
+                // Cast the usize back to a pointer. No two items (much less threads)
+                // write to the same u32, concurrently or otherwise. Mechanically, this
+                // is equivalent to doing `split_at_mut()` `byte_len` times and moving
+                // a bunch of the slices to each closure and is sound for the same reason.
+                let data_ptr = data_ptr as *mut MaybeUninit<u32>;
 
-            let u29_len = x.len();
+                let u29_len = x.len();
 
-            for (j, w) in x.iter().enumerate() {
-                data_slice[(j + 0 * u29_len) * len + i].write(*w);
-            }
+                for (j, w) in x.iter().enumerate() {
+                    let elem = data_ptr.add((j + 00 * u29_len) * len + i);
 
-            for (j, w) in y.iter().enumerate() {
-                data_slice[(j + 1 * u29_len) * len + i].write(*w);
-            }
+                    (*elem).write(*w);
+                }
 
-            for (j, w) in z.iter().enumerate() {
-                data_slice[(j + 2 * u29_len) * len + i].write(*w);
-            }
+                for (j, w) in y.iter().enumerate() {
+                    let elem = data_ptr.add((j + 1 * u29_len) * len + i);
 
-            for (j, w) in t.iter().enumerate() {
-                data_slice[(j + 3 * u29_len) * len + i].write(*w);
-            }
-        }
+                    (*elem).write(*w);
+                }
+
+                for (j, w) in z.iter().enumerate() {
+                    let elem = data_ptr.add((j + 2 * u29_len) * len + i);
+
+                    (*elem).write(*w);
+                }
+
+                for (j, w) in t.iter().enumerate() {
+                    let elem = data_ptr.add((j + 3 * u29_len) * len + i);
+
+                    (*elem).write(*w);
+                }
+            });
 
         field_vec
     }

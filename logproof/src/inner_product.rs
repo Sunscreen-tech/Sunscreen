@@ -1,3 +1,5 @@
+use std::time::Instant;
+
 use curve25519_dalek::{
     ristretto::{CompressedRistretto, RistrettoPoint},
     scalar::Scalar,
@@ -5,10 +7,11 @@ use curve25519_dalek::{
 use digest::ExtendableOutput;
 use digest::XofReader;
 use merlin::Transcript;
+use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 use sha3::{self, digest::Update, Shake256};
 
-use sunscreen_math::RistrettoPointVec;
+use sunscreen_math::{RistrettoPointVec, ScalarVec};
 
 use crate::error::ProofError;
 use crate::{linear_algebra::InnerProduct, math::rand256};
@@ -261,6 +264,9 @@ impl InnerProductProof {
     ) -> Result<(), ProofError> {
         assert_eq!(g.len(), h.len());
 
+        let now = Instant::now();
+        let total = now;
+
         let len = g.len().next_power_of_two();
         let old_len = g.len();
 
@@ -275,7 +281,15 @@ impl InnerProductProof {
 
         let a = transcript.challenge_point(b"a");
 
+        println!("Prefold {}s", now.elapsed().as_secs_f64());
+
+        let now = Instant::now();
+
         let (g, h, t_pprime) = self.folding_verifier(transcript, &vk, &a, &g, &h)?;
+
+        println!("Fold {}s", now.elapsed().as_secs_f64());
+
+        let now = Instant::now();
 
         transcript.append_point(b"w", &self.w);
         transcript.append_point(b"w'", &self.w_prime);
@@ -290,6 +304,9 @@ impl InnerProductProof {
 
         let lhs = t_pprime * c + w + w_prime * c_inv;
         let rhs = g * self.z_1 + h * self.z_2 + a * (c_inv * self.z_1 * self.z_2) + u * self.tau;
+
+        println!("Post fold {}s", now.elapsed().as_secs_f64());
+        println!("Verify time {}s", total.elapsed().as_secs_f64());
 
         if lhs == rhs {
             Ok(())
@@ -364,9 +381,7 @@ impl InnerProductProof {
         a: &RistrettoPoint,
         g: &[RistrettoPoint],
         h: &[RistrettoPoint],
-    ) -> Result<(RistrettoPoint, RistrettoPoint, RistrettoPoint), ProofError> {
-        let mut g = g.to_owned();
-        let mut h = h.to_owned();
+    ) -> Result<(RistrettoPoint, RistrettoPoint, RistrettoPoint), ProofError> {      
         let mut t = vk.t + a * vk.x;
 
         if self.t_1.len() != self.t_minus1.len() {
@@ -377,25 +392,49 @@ impl InnerProductProof {
             return Err(ProofError::MalformedProof);
         }
 
+        let n = g.len();
+
+        let mut c = vec![];
+
+        // See Bulletproofs paper section 3.1 for what this optimization is. We're deferring
+        // folding our generators g and h and instead computing factors s from each of the 
+        // challenge scalars.
+        //
+        // This allows us to compute a single MSM at the end to compute g and h rather that
+        // performing SM folding.
         for (t_1, t_minus1) in self.t_1.iter().zip(self.t_minus1.iter()) {
-            let n_2 = g.len() / 2;
-
-            let (g_t, g_b) = g.split_at(n_2);
-            let (h_t, h_b) = h.split_at(n_2);
-
-            let t_1 = t_1.decompress().ok_or(ProofError::MalformedProof)?;
-            let t_minus1 = t_minus1.decompress().ok_or(ProofError::MalformedProof)?;
-
-            let _c;
-            let _c_inv;
-
-            debug_assert!(g.len() > 1);
-
-            (g, h, t, _c, _c_inv) =
-                Self::fold_verifier(transcript, &t, &t_1, &t_minus1, g_t, g_b, h_t, h_b);
+            transcript.append_point(b"t-1", &t_minus1);
+            transcript.append_point(b"t1", &t_1);
+    
+            c.push(transcript.challenge_scalar(b"c"));
         }
 
-        Ok((g[0], h[0], t))
+        let s_i = |i| {
+            c.iter().rev().enumerate().fold(Scalar::one(), |p, (j, x)| {
+                if i & (0x1 << j) != 0 {
+                    p * x
+                } else {
+                    p
+                }
+            })
+        };
+
+        for ((t_1, t_minus_1), c) in self.t_1.iter().zip(self.t_minus1.iter()).zip(c.iter()) {
+            let c_inv = c.invert();
+            let t_1 = t_1.decompress().ok_or(ProofError::MalformedProof)?;
+            let t_minus_1 = t_minus_1.decompress().ok_or(ProofError::MalformedProof)?;
+
+            t = t_minus_1 * c_inv + t + t_1 * c;
+        }        
+
+        let s = (0..n).into_par_iter().map(|i| s_i(i)).collect::<Vec<_>>();
+        let s_inv = ScalarVec::new(&s).invert().into_iter().collect::<Vec<_>>();
+        let now = Instant::now();
+        let g = parallel_multiscalar_multiplication(&s, &g);
+        let h = parallel_multiscalar_multiplication(&s_inv, &h);
+        println!("MSM {}s: {} SM/s", now.elapsed().as_secs_f64(), (2. * n as f64) / now.elapsed().as_secs_f64());
+
+        Ok((g, h, t))
     }
 
     #[allow(clippy::too_many_arguments)]

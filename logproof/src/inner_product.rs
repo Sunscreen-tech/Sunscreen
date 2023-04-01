@@ -381,7 +381,7 @@ impl InnerProductProof {
         a: &RistrettoPoint,
         g: &[RistrettoPoint],
         h: &[RistrettoPoint],
-    ) -> Result<(RistrettoPoint, RistrettoPoint, RistrettoPoint), ProofError> {      
+    ) -> Result<(RistrettoPoint, RistrettoPoint, RistrettoPoint), ProofError> {
         let mut t = vk.t + a * vk.x;
 
         if self.t_1.len() != self.t_minus1.len() {
@@ -397,15 +397,15 @@ impl InnerProductProof {
         let mut c = vec![];
 
         // See Bulletproofs paper section 3.1 for what this optimization is. We're deferring
-        // folding our generators g and h and instead computing factors s from each of the 
+        // folding our generators g and h and instead computing factors s from each of the
         // challenge scalars.
         //
         // This allows us to compute a single MSM at the end to compute g and h rather that
         // performing SM folding.
         for (t_1, t_minus1) in self.t_1.iter().zip(self.t_minus1.iter()) {
-            transcript.append_point(b"t-1", &t_minus1);
-            transcript.append_point(b"t1", &t_1);
-    
+            transcript.append_point(b"t-1", t_minus1);
+            transcript.append_point(b"t1", t_1);
+
             c.push(transcript.challenge_scalar(b"c"));
         }
 
@@ -425,14 +425,18 @@ impl InnerProductProof {
             let t_minus_1 = t_minus_1.decompress().ok_or(ProofError::MalformedProof)?;
 
             t = t_minus_1 * c_inv + t + t_1 * c;
-        }        
+        }
 
-        let s = (0..n).into_par_iter().map(|i| s_i(i)).collect::<Vec<_>>();
+        let s = (0..n).into_par_iter().map(s_i).collect::<Vec<_>>();
         let s_inv = ScalarVec::new(&s).invert().into_iter().collect::<Vec<_>>();
         let now = Instant::now();
-        let g = parallel_multiscalar_multiplication(&s, &g);
-        let h = parallel_multiscalar_multiplication(&s_inv, &h);
-        println!("MSM {}s: {} SM/s", now.elapsed().as_secs_f64(), (2. * n as f64) / now.elapsed().as_secs_f64());
+        let g = parallel_multiscalar_multiplication(&s, g);
+        let h = parallel_multiscalar_multiplication(&s_inv, h);
+        println!(
+            "MSM {}s: {} SM/s",
+            now.elapsed().as_secs_f64(),
+            (2. * n as f64) / now.elapsed().as_secs_f64()
+        );
 
         Ok((g, h, t))
     }
@@ -702,8 +706,9 @@ mod tests {
         fn can_msm_generator_folding() {
             let gens = LogProofGenerators::new(8);
 
-            let c = (0..3).map(|_| Scalar::random(&mut thread_rng()
-            )).collect::<Vec<_>>();
+            let c = (0..3)
+                .map(|_| Scalar::random(&mut thread_rng()))
+                .collect::<Vec<_>>();
 
             let get_expected_gens = || -> (RistrettoPoint, RistrettoPoint) {
                 let mut g = gens.g.clone();
@@ -713,7 +718,7 @@ mod tests {
                 loop {
                     let n_2 = g.len() / 2;
 
-                    if n_2 == 0  {
+                    if n_2 == 0 {
                         assert_eq!(g.len(), 1);
                         return (g[0], h[0]);
                     }
@@ -749,7 +754,7 @@ mod tests {
 
             let (g_expect, h_expect) = get_expected_gens();
 
-            let s = (0..n).map(|i| s_i(i)).collect::<Vec<_>>();
+            let s = (0..n).map(s_i).collect::<Vec<_>>();
 
             assert_eq!(s[0], Scalar::one());
             assert_eq!(s[1], c[2]);
@@ -762,12 +767,10 @@ mod tests {
 
             let s_inv = s.iter().map(|s| s.invert()).collect::<Vec<_>>();
             let g_actual = RistrettoPoint::multiscalar_mul(s.iter(), gens.g.iter());
-            let h_actual = RistrettoPoint::multiscalar_mul(s_inv
-                .iter(), gens.h.iter());
+            let h_actual = RistrettoPoint::multiscalar_mul(s_inv.iter(), gens.h.iter());
 
             assert_eq!(g_expect, g_actual);
             assert_eq!(h_expect, h_actual);
-
         }
     }
 }

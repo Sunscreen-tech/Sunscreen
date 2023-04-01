@@ -2,7 +2,7 @@ use std::time::Instant;
 
 use ark_ff::{FftField, Field};
 use ark_poly::univariate::DensePolynomial;
-use criterion::{criterion_group, criterion_main, Criterion, black_box};
+use criterion::{criterion_group, criterion_main, Criterion};
 use logproof::{
     crypto::CryptoHash,
     fields::{FpRistretto, FqSeal128_1024, FqSeal128_2048, FqSeal128_4096},
@@ -107,9 +107,9 @@ where
 
     let now = Instant::now();
 
-        proof
-            .verify(&mut transcript, &pk.vk, &gens.g, &gens.h, &u)
-            .unwrap();
+    proof
+        .verify(&mut transcript, &pk.vk, &gens.g, &gens.h, &u)
+        .unwrap();
 
     println!("Verifier time {}s", now.elapsed().as_secs_f64());
 }
@@ -162,14 +162,14 @@ fn params_4096_1ct(_: &mut Criterion) {
 criterion_group!(
     benches,
     params_1024_1ct,
-    /*params_1024_2ct,
+    params_1024_2ct,
     params_1024_3ct,
     params_2048_1ct,
     params_2048_2ct,
     params_2048_3ct,
     params_4096_1ct,
     params_4096_2ct,
-    params_4096_3ct*/
+    params_4096_3ct
 );
 
 criterion_main!(benches);

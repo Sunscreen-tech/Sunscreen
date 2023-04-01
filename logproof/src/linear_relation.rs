@@ -474,7 +474,7 @@ impl LogProof {
         transcript.append_point(b"w", &self.w.compress());
 
         let now = Instant::now();
-        
+
         let (alpha, beta, gamma, phi, psi) = Self::create_challenges(vk, transcript);
 
         println!("Create challenges {}s", now.elapsed().as_secs_f64());

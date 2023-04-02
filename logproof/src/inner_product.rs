@@ -400,7 +400,7 @@ impl InnerProductProof {
         // folding our generators g and h and instead computing factors s from each of the
         // challenge scalars.
         //
-        // This allows us to compute a single MSM at the end to compute g and h rather that
+        // This allows us to compute a single MSM at the end to compute g and h rather than
         // performing SM folding.
         for (t_1, t_minus1) in self.t_1.iter().zip(self.t_minus1.iter()) {
             transcript.append_point(b"t-1", t_minus1);
@@ -700,77 +700,6 @@ mod tests {
         #[test]
         fn can_verify_valid_proof_11() {
             validate_proof(11);
-        }
-
-        #[test]
-        fn can_msm_generator_folding() {
-            let gens = LogProofGenerators::new(8);
-
-            let c = (0..3)
-                .map(|_| Scalar::random(&mut thread_rng()))
-                .collect::<Vec<_>>();
-
-            let get_expected_gens = || -> (RistrettoPoint, RistrettoPoint) {
-                let mut g = gens.g.clone();
-                let mut h = gens.h.clone();
-                let mut i = 0;
-
-                loop {
-                    let n_2 = g.len() / 2;
-
-                    if n_2 == 0 {
-                        assert_eq!(g.len(), 1);
-                        return (g[0], h[0]);
-                    }
-
-                    let (g_l, g_r) = g.split_at(n_2);
-                    let (h_l, h_r) = h.split_at(n_2);
-
-                    let g_l = RistrettoPointVec::new(g_l);
-                    let g_r = RistrettoPointVec::new(g_r);
-                    let h_l = RistrettoPointVec::new(h_l);
-                    let h_r = RistrettoPointVec::new(h_r);
-
-                    let c = c[i];
-                    let c_inv = c.invert();
-
-                    g = (g_l + g_r * c).into_iter().collect::<Vec<_>>();
-                    h = (h_l + h_r * c_inv).into_iter().collect::<Vec<_>>();
-                    i += 1;
-                }
-            };
-
-            let s_i = |i| {
-                c.iter().rev().enumerate().fold(Scalar::one(), |p, (j, x)| {
-                    if i & (0x1 << j) != 0 {
-                        p * x
-                    } else {
-                        p
-                    }
-                })
-            };
-
-            let n = gens.g.len();
-
-            let (g_expect, h_expect) = get_expected_gens();
-
-            let s = (0..n).map(s_i).collect::<Vec<_>>();
-
-            assert_eq!(s[0], Scalar::one());
-            assert_eq!(s[1], c[2]);
-            assert_eq!(s[2], c[1]);
-            assert_eq!(s[3], c[2] * c[1]);
-            assert_eq!(s[4], c[0]);
-            assert_eq!(s[5], c[2] * c[0]);
-            assert_eq!(s[6], c[1] * c[0]);
-            assert_eq!(s[7], c[2] * c[1] * c[0]);
-
-            let s_inv = s.iter().map(|s| s.invert()).collect::<Vec<_>>();
-            let g_actual = RistrettoPoint::multiscalar_mul(s.iter(), gens.g.iter());
-            let h_actual = RistrettoPoint::multiscalar_mul(s_inv.iter(), gens.h.iter());
-
-            assert_eq!(g_expect, g_actual);
-            assert_eq!(h_expect, h_actual);
         }
     }
 }

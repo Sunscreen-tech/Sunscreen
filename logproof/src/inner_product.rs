@@ -606,9 +606,6 @@ mod tests {
 
     #[cfg(test)]
     mod test {
-        use curve25519_dalek::traits::MultiscalarMul;
-        use rand::thread_rng;
-
         use super::*;
 
         fn validate_proof(n: usize) {

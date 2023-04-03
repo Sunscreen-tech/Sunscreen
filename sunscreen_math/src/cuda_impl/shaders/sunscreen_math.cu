@@ -1,39 +1,42 @@
+// A transliteration of the OpenCL shaders
+#if defined(CUDA_C)
+
 ///
 /// Types
 ///
-typedef uint u32;
-typedef ulong u64;
+typedef unsigned int u32;
+typedef unsigned long u64;
 typedef char i8;
-typedef uchar u8;
+typedef unsigned char u8;
 typedef short i16;
 
-typedef struct {
+struct Scalar29 {
     u32 limbs[10];
-} Scalar29;
+};
 
-typedef struct {
+struct MulResult {
     ulong limbs[17];
-} MulResult;
+};
 
-typedef struct {
+struct MontMulLRes {
     u64 carry;
     u32 n;
-} MontMulLRes;
+};
 
-typedef struct {
+struct FieldElement2625 {
     u32 limbs[10];
-} FieldElement2625;
+};
 
-typedef struct {
+struct U64_10 {
     u64 data[10];
-} U64_10;
+};
 
-typedef struct {
+struct RistrettoPoint {
     FieldElement2625 X;
     FieldElement2625 Y;
     FieldElement2625 Z;
     FieldElement2625 T;
-} RistrettoPoint;
+} ;
 
 typedef struct {
     FieldElement2625 Y_plus_X;
@@ -66,31 +69,31 @@ typedef struct {
 ///
 /// Scalar29 prototypes
 ///
-Scalar29 Scalar29_add(const Scalar29* lhs, const Scalar29* rhs);
-Scalar29 Scalar29_sub(const Scalar29* lhs, const Scalar29* rhs);
-Scalar29 Scalar29_mul(const Scalar29* a, const Scalar29* b);
-void Scalar29_pack(const Scalar29* this, global u32* words, size_t grid_tid, size_t stride);
-MulResult Scalar29_square_internal(const Scalar29* a);
-MulResult Scalar29_mul_internal(const Scalar29* a, const Scalar29* b);
-Scalar29 Scalar29_montgomery_reduce(MulResult* limbs);
-Scalar29 Scalar29_unpack(const global u32* words, size_t grid_tid, size_t stride);
-Scalar29 Scalar29_montgomery_square(const Scalar29* x);
-Scalar29 Scalar29_montgomery_mul(const Scalar29* a, const Scalar29* b);
-void Scalar29_square_multiply(volatile Scalar29* y, int squarings, const Scalar29* x);
-Scalar29 Scalar29_to_montgomery(const Scalar29* val);
-Scalar29 Scalar29_from_montgomery(const Scalar29* val);
-Scalar29 Scalar29_invert(const Scalar29* a);
-Scalar29 Scalar29_montgomery_invert(const Scalar29* this);
-Scalar29 Scalar29_square(const Scalar29* val);
-Radix16 Scalar29_as_radix_16(const Scalar29* this);
+__device__ Scalar29 Scalar29_add(const Scalar29* lhs, const Scalar29* rhs);
+__device__ Scalar29 Scalar29_sub(const Scalar29* lhs, const Scalar29* rhs);
+__device__ Scalar29 Scalar29_mul(const Scalar29* a, const Scalar29* b);
+__device__ void Scalar29_pack(const Scalar29* a, u32* words, size_t grid_tid, size_t stride);
+__device__ MulResult Scalar29_square_internal(const Scalar29* a);
+__device__ MulResult Scalar29_mul_internal(const Scalar29* a, const Scalar29* b);
+__device__ Scalar29 Scalar29_montgomery_reduce(MulResult* limbs);
+__device__ Scalar29 Scalar29_unpack(const u32* words, size_t grid_tid, size_t stride);
+__device__ Scalar29 Scalar29_montgomery_square(const Scalar29* x);
+__device__ Scalar29 Scalar29_montgomery_mul(const Scalar29* a, const Scalar29* b);
+__device__ void Scalar29_square_multiply(Scalar29 *volatile y, int squarings, const Scalar29* x);
+__device__ Scalar29 Scalar29_to_montgomery(const Scalar29* val);
+__device__ Scalar29 Scalar29_from_montgomery(const Scalar29* val);
+__device__ Scalar29 Scalar29_invert(const Scalar29* a);
+__device__ Scalar29 Scalar29_montgomery_invert(const Scalar29* a64l);
+__device__ Scalar29 Scalar29_square(const Scalar29* val);
+__device__ Radix16 Scalar29_as_radix_16(const Scalar29* a);
 
 ///
 /// Field2625 prototypes
 ///
-FieldElement2625 FieldElement2625_unpack(const global u32* words, size_t grid_tid, size_t stride);
-void FieldElement2625_pack(const FieldElement2625* a, global u32* ptr, const size_t grid_tid, const size_t n);
+FieldElement2625 FieldElement2625_unpack(const u32* words, size_t grid_tid, size_t stride);
+void FieldElement2625_pack(const FieldElement2625* a, u32* ptr, const size_t grid_tid, const size_t n);
 FieldElement2625 FieldElement2625_add(const FieldElement2625* a, const FieldElement2625* b);
-FieldElement2625 FieldElement2625_reduce(private U64_10* val);
+FieldElement2625 FieldElement2625_reduce( U64_10* val);
 FieldElement2625 FieldElement2625_sub(const FieldElement2625* lhs, const FieldElement2625* rhs);
 FieldElement2625 FieldElement2625_mul(const FieldElement2625* lhs, const FieldElement2625* rhs);
 FieldElement2625 FieldElement2625_neg(const FieldElement2625* lhs);
@@ -101,10 +104,10 @@ FieldElement2625 FieldElement2625_square2(const FieldElement2625* val);
 ///
 /// RistrettoPoint prototypes
 ///
-RistrettoPoint RistrettoPoint_unpack(const global u32* ptr, const size_t grid_tid, const size_t n);
-void RistrettoPoint_pack(const RistrettoPoint* this, global u32* ptr, size_t grid_tid, size_t n);
-ProjectiveNielsPoint RistrettoPoint_as_projective_niels(const RistrettoPoint* this);
-ProjectivePoint RistrettoPoint_as_projective(const RistrettoPoint* this);
+RistrettoPoint RistrettoPoint_unpack(const u32* ptr, const size_t grid_tid, const size_t n);
+void RistrettoPoint_pack(const RistrettoPoint* a, u32* ptr, size_t grid_tid, size_t n);
+ProjectiveNielsPoint RistrettoPoint_as_projective_niels(const RistrettoPoint* a);
+ProjectivePoint RistrettoPoint_as_projective(const RistrettoPoint* a);
 RistrettoPoint RistrettoPoint_add(const RistrettoPoint* lhs, const RistrettoPoint* rhs);
 CompletedPoint RistrettoPoint_add_projective_niels(const RistrettoPoint* lhs, const ProjectiveNielsPoint* rhs);
 RistrettoPoint RistrettoPoint_sub(const RistrettoPoint* lhs, const RistrettoPoint* rhs);
@@ -120,7 +123,7 @@ ProjectiveNielsPoint ProjectiveNielsPoint_neg(const ProjectiveNielsPoint* x);
 /// ProjectivePoint prototypes
 ///
 CompletedPoint ProjectivePoint_double_point(const ProjectivePoint* x);
-RistrettoPoint ProjectivePoint_as_extended(const ProjectivePoint* this);
+RistrettoPoint ProjectivePoint_as_extended(const ProjectivePoint* a);
 
 ///
 /// CompletedPoint prototypes
@@ -135,23 +138,23 @@ LookupTable8 LookupTable8_init(const RistrettoPoint* p);
 const ProjectiveNielsPoint LookupTable8_select(const LookupTable8* lut, i8 x);
 
 ///
-/// Constants
+/// __constant__s
 ///
-const constant Scalar29 Scalar29_Zero = {{0, 0, 0, 0, 0, 0, 0, 0, 0, 0}};
-const constant Scalar29 Scalar29_L = 
+const __constant__ Scalar29 Scalar29_Zero = {{0, 0, 0, 0, 0, 0, 0, 0, 0, 0}};
+const __constant__ Scalar29 Scalar29_L = 
 {{
     0x1cf5d3ed, 0x009318d2, 0x1de73596, 0x1df3bd45,
     0x0000014d, 0x00000000, 0x00000000, 0x00000000,
     0x00100000
 }};
 
-const constant Scalar29 Scalar29_RR = {{
+const __constant__ Scalar29 Scalar29_RR = {{
     0x0b5f9d12, 0x1e141b17, 0x158d7f3d, 0x143f3757,
     0x1972d781, 0x042feb7c, 0x1ceec73d, 0x1e184d1e,
     0x0005046d
 }};
 
-const constant FieldElement2625 FieldElement2625_EDWARDS_D2 = {{
+const __constant__ FieldElement2625 FieldElement2625_EDWARDS_D2 = {{
     45281625, 27714825, 36363642, 13898781, 229458, 15978800, 54557047, 27058993, 29715967, 9444199,
 }};
 
@@ -159,21 +162,21 @@ const constant FieldElement2625 FieldElement2625_EDWARDS_D2 = {{
 
 #define FieldElement2625_ONE {{1, 0, 0, 0, 0, 0, 0, 0, 0, 0}}
 
-const constant RistrettoPoint RistrettoPoint_IDENTITY = {
+const __constant__ RistrettoPoint RistrettoPoint_IDENTITY = {
     FieldElement2625_ZERO,
     FieldElement2625_ONE,
     FieldElement2625_ONE,
     FieldElement2625_ZERO
 };
 
-const constant ProjectiveNielsPoint ProjectiveNielsPoint_IDENTITY = {
+const __constant__ ProjectiveNielsPoint ProjectiveNielsPoint_IDENTITY = {
     FieldElement2625_ONE,
     FieldElement2625_ONE,
     FieldElement2625_ONE,
     FieldElement2625_ZERO
 };
 
-const constant ProjectivePoint ProjectivePoint_IDENTITY = {
+const __constant__ ProjectivePoint ProjectivePoint_IDENTITY = {
     FieldElement2625_ZERO,
     FieldElement2625_ONE,
     FieldElement2625_ONE 
@@ -182,11 +185,11 @@ const constant ProjectivePoint ProjectivePoint_IDENTITY = {
 ///
 /// Helpers
 ///
-inline u64 m(u32 a, u32 b) {
+inline __device__ u64 m(u32 a, u32 b) {
     return (u64)a * (u64)b;
 }
 
-inline MontMulLRes part1(u64 sum) {
+inline __device__ MontMulLRes part1(u64 sum) {
     u32 p = ((u32)sum) * (0x12547e1b) & ((1u << 29) - 1);
 
     MontMulLRes c;
@@ -195,7 +198,7 @@ inline MontMulLRes part1(u64 sum) {
     return c;
 }
 
-inline MontMulLRes part2(u64 sum) {
+inline __device__ MontMulLRes part2(u64 sum) {
     u32 w = ((u32)sum) & ((1u << 29) - 1);
 
     MontMulLRes c;
@@ -206,7 +209,7 @@ inline MontMulLRes part2(u64 sum) {
 }
 
 /// Carry the value from limb i = 0..8 to limb i+1
-inline void carry(private u64 z[10], size_t i) {
+inline __device__ void carry( u64 z[10], size_t i) {
     const u64 LOW_25_BITS = (1 << 25) - 1;
     const u64 LOW_26_BITS = (1 << 26) - 1;
 
@@ -225,7 +228,7 @@ inline void carry(private u64 z[10], size_t i) {
 /// Scalar29 impl
 ///
 
-Scalar29 Scalar29_unpack(const global u32* words, size_t grid_tid, size_t stride) {
+__device__ Scalar29 Scalar29_unpack(const u32* words, size_t grid_tid, size_t stride) {
     words = &words[grid_tid];
     const u32 mask = (1 << 29) - 1;
     const u32 top_mask = (1 << 24) - 1;
@@ -245,9 +248,9 @@ Scalar29 Scalar29_unpack(const global u32* words, size_t grid_tid, size_t stride
     return r;
 }
 
-void Scalar29_pack(const Scalar29* this, global u32* words, size_t grid_tid, size_t stride) {
+__device__ void Scalar29_pack(const Scalar29* a, u32* words, size_t grid_tid, size_t stride) {
     words = &words[grid_tid];
-    const u32* _limbs = this->limbs;
+    const u32* _limbs = a->limbs;
 
     u32 word = _limbs[0] | _limbs[1] << 29;
     words[0 * stride] = word;
@@ -267,7 +270,7 @@ void Scalar29_pack(const Scalar29* this, global u32* words, size_t grid_tid, siz
     words[7 * stride] = word;
 }
 
-Scalar29 Scalar29_add(const Scalar29* lhs, const Scalar29* rhs) {
+__device__ Scalar29 Scalar29_add(const Scalar29* lhs, const Scalar29* rhs) {
     Scalar29 c = Scalar29_Zero;
     const u32 mask = (0x1 << 29) - 1;
     const u32* a = lhs->limbs;
@@ -287,7 +290,7 @@ Scalar29 Scalar29_add(const Scalar29* lhs, const Scalar29* rhs) {
     return Scalar29_sub(&c, &l);
 }
 
-Scalar29 Scalar29_sub(const Scalar29* lhs, const Scalar29* rhs) {
+__device__ Scalar29 Scalar29_sub(const Scalar29* lhs, const Scalar29* rhs) {
     Scalar29 c = Scalar29_Zero;
     const u32 mask = (1 << 29) - 1;
     const Scalar29 ell = Scalar29_L;
@@ -316,7 +319,7 @@ Scalar29 Scalar29_sub(const Scalar29* lhs, const Scalar29* rhs) {
     return c;
 }
 
-Scalar29 Scalar29_mul(const Scalar29* a, const Scalar29* b) {
+__device__ Scalar29 Scalar29_mul(const Scalar29* a, const Scalar29* b) {
     MulResult c = Scalar29_mul_internal(a, b);
     Scalar29 ab = Scalar29_montgomery_reduce(&c);
 
@@ -325,7 +328,7 @@ Scalar29 Scalar29_mul(const Scalar29* a, const Scalar29* b) {
     return Scalar29_montgomery_reduce(&c);
 }
 
-MulResult Scalar29_mul_internal(const Scalar29* lhs, const Scalar29* rhs) {
+__device__ MulResult Scalar29_mul_internal(const Scalar29* lhs, const Scalar29* rhs) {
     MulResult res;
 
     const u32* a = lhs->limbs;
@@ -384,7 +387,7 @@ MulResult Scalar29_mul_internal(const Scalar29* lhs, const Scalar29* rhs) {
     return res;
 }
 
-MulResult Scalar29_square_internal(const Scalar29* lhs) {
+__device__ MulResult Scalar29_square_internal(const Scalar29* lhs) {
     const u32* a = lhs->limbs;
 
     u32 aa[8] = {
@@ -421,7 +424,7 @@ MulResult Scalar29_square_internal(const Scalar29* lhs) {
     return r;
 }
 
-Scalar29 Scalar29_montgomery_reduce(MulResult* a) {
+__device__ Scalar29 Scalar29_montgomery_reduce(MulResult* a) {
     u64* limbs = a->limbs;
 
     // note: l5,l6,l7 are zero, so their multiplies can be skipped
@@ -458,27 +461,27 @@ Scalar29 Scalar29_montgomery_reduce(MulResult* a) {
     return result;
 }
 
-Scalar29 Scalar29_montgomery_square(const Scalar29* x) {
+__device__ Scalar29 Scalar29_montgomery_square(const Scalar29* x) {
     MulResult y = Scalar29_square_internal(x);
     return Scalar29_montgomery_reduce(&y);
 }
 
-Scalar29 Scalar29_montgomery_mul(const Scalar29* a, const Scalar29* b) {
+__device__ Scalar29 Scalar29_montgomery_mul(const Scalar29* a, const Scalar29* b) {
     MulResult y = Scalar29_mul_internal(a, b);
     return Scalar29_montgomery_reduce(&y);
 }
 
-void Scalar29_square_multiply(volatile Scalar29* y, int squarings, const Scalar29* x) {
+__device__ void Scalar29_square_multiply(Scalar29 * volatile y, int squarings, const Scalar29* x) {
     for (int i = 0; i < squarings; i++) {
         *y = Scalar29_montgomery_square((Scalar29*)y);
     }
     *y = Scalar29_montgomery_mul((Scalar29*)y, x);
 }
 
-Scalar29 Scalar29_montgomery_invert(const Scalar29* this) {
+__device__ Scalar29 Scalar29_montgomery_invert(const Scalar29* a) {
     // Uses the addition chain from
     // https://briansmith.org/ecc-inversion-addition-chains-01#curve25519_scalar_inversion
-    const Scalar29*   _1 = this;
+    const Scalar29*   _1 = a;
     Scalar29   _10 = Scalar29_montgomery_square(_1);
     Scalar29  _100 = Scalar29_montgomery_square(&_10);
     Scalar29   _11 = Scalar29_montgomery_mul(&_10,     _1);
@@ -522,12 +525,12 @@ Scalar29 Scalar29_montgomery_invert(const Scalar29* this) {
     return y;
 }
 
-Scalar29 Scalar29_to_montgomery(const Scalar29* val) {
+__device__ Scalar29 Scalar29_to_montgomery(const Scalar29* val) {
     Scalar29 rr = Scalar29_RR;
     return Scalar29_montgomery_mul(val, &rr);
 }
 
-Scalar29 Scalar29_from_montgomery(const Scalar29* val) {
+__device__ Scalar29 Scalar29_from_montgomery(const Scalar29* val) {
     MulResult z = {{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}};
     for (size_t i = 0; i < 9; i++) {
         z.limbs[i] = (u64)val->limbs[i];
@@ -536,13 +539,13 @@ Scalar29 Scalar29_from_montgomery(const Scalar29* val) {
     return Scalar29_montgomery_reduce(&z);
 }
 
-Scalar29 Scalar29_invert(const Scalar29* this) {
-    Scalar29 mont = Scalar29_to_montgomery(this);
+__device__ Scalar29 Scalar29_invert(const Scalar29* a) {
+    Scalar29 mont = Scalar29_to_montgomery(a);
     Scalar29 mont_inv = Scalar29_montgomery_invert(&mont);
     return Scalar29_from_montgomery(&mont_inv);
 }
 
-Scalar29 Scalar29_square(const Scalar29* val) {
+__device__ Scalar29 Scalar29_square(const Scalar29* val) {
     MulResult sq_mont = Scalar29_square_internal(val);
     Scalar29 aa = Scalar29_montgomery_reduce(&sq_mont);
 
@@ -551,11 +554,11 @@ Scalar29 Scalar29_square(const Scalar29* val) {
     return Scalar29_montgomery_reduce(&aa_rr);
 }
 
-Radix16 Scalar29_as_radix_16(const Scalar29* this) {
+__device__ Radix16 Scalar29_as_radix_16(const Scalar29* a) {
     Radix16 res;
     i8* output = res.data;
     
-    const u32* self = this->limbs;
+    const u32* self = a->limbs;
 
     u32 words[8] = { 0, 0, 0, 0, 0, 0, 0, 0 };
     // Convert Scalar29 to Scalar
@@ -603,7 +606,7 @@ Radix16 Scalar29_as_radix_16(const Scalar29* this) {
 /// Field2625 impl
 ///
 
-FieldElement2625 FieldElement2625_unpack(const global u32* ptr, const size_t grid_tid, const size_t n) {
+__device__ FieldElement2625 FieldElement2625_unpack(const u32* ptr, const size_t grid_tid, const size_t n) {
     FieldElement2625 res;
 
     for (size_t i = 0; i < 10; i++) {
@@ -613,14 +616,14 @@ FieldElement2625 FieldElement2625_unpack(const global u32* ptr, const size_t gri
     return res;
 }
 
-void FieldElement2625_pack(const FieldElement2625* a, global u32* ptr, const size_t grid_tid, const size_t n) {
+__device__ void FieldElement2625_pack(const FieldElement2625* a, u32* ptr, const size_t grid_tid, const size_t n) {
     for (size_t i = 0; i < 10; i++) {
         ptr[i * n + grid_tid] = a->limbs[i];
     }
 }
 
-FieldElement2625 FieldElement2625_reduce(private U64_10* val) {
-    private u64* z = val->data;
+__device__ FieldElement2625 FieldElement2625_reduce( U64_10* val) {
+    u64* z = val->data;
     const u64 LOW_25_BITS = (1 << 25) - 1;
 
     // Perform two halves of the carry chain in parallel.
@@ -661,7 +664,7 @@ FieldElement2625 FieldElement2625_reduce(private U64_10* val) {
     return r;
 }
 
-FieldElement2625 FieldElement2625_add(const FieldElement2625* lhs, const FieldElement2625* rhs) {
+__device__ FieldElement2625 FieldElement2625_add(const FieldElement2625* lhs, const FieldElement2625* rhs) {
     const u32* a = lhs->limbs;
     const u32* b = rhs->limbs;
 
@@ -681,7 +684,7 @@ FieldElement2625 FieldElement2625_add(const FieldElement2625* lhs, const FieldEl
     return c;
 }
 
-FieldElement2625 FieldElement2625_sub(const FieldElement2625* lhs, const FieldElement2625* rhs) {
+__device__ FieldElement2625 FieldElement2625_sub(const FieldElement2625* lhs, const FieldElement2625* rhs) {
     const u32* a = lhs->limbs;
     const u32* b = rhs->limbs;
 
@@ -701,7 +704,7 @@ FieldElement2625 FieldElement2625_sub(const FieldElement2625* lhs, const FieldEl
     return FieldElement2625_reduce(&z);
 }
 
-FieldElement2625 FieldElement2625_mul(const FieldElement2625* lhs, const FieldElement2625* rhs) {
+__device__ FieldElement2625 FieldElement2625_mul(const FieldElement2625* lhs, const FieldElement2625* rhs) {
     const u32* x = lhs->limbs;
     const u32* y = rhs->limbs;
 
@@ -796,7 +799,7 @@ FieldElement2625 FieldElement2625_mul(const FieldElement2625* lhs, const FieldEl
     return FieldElement2625_reduce(&z);
 }
 
-U64_10 FieldElement2625_square_inner(const FieldElement2625* val) {
+__device__ U64_10 FieldElement2625_square_inner(const FieldElement2625* val) {
     // Optimized version of multiplication for the case of squaring.
     // Pre- and post- conditions identical to multiplication function.
     const u32* x = val->limbs;
@@ -834,12 +837,12 @@ U64_10 FieldElement2625_square_inner(const FieldElement2625* val) {
     return c;
 }
 
-FieldElement2625 FieldElement2625_square(const FieldElement2625* val) {
+__device__ FieldElement2625 FieldElement2625_square(const FieldElement2625* val) {
     U64_10 z = FieldElement2625_square_inner(val);
     return FieldElement2625_reduce(&z);
 }
 
-FieldElement2625 FieldElement2625_square2(const FieldElement2625* val) {
+__device__ FieldElement2625 FieldElement2625_square2(const FieldElement2625* val) {
     U64_10 sq = FieldElement2625_square_inner(val);
 
     for (int i = 0; i < 10; i++) {
@@ -849,7 +852,7 @@ FieldElement2625 FieldElement2625_square2(const FieldElement2625* val) {
     return FieldElement2625_reduce(&sq);
 }
 
-FieldElement2625 FieldElement2625_neg(const FieldElement2625* lhs) {
+__device__ FieldElement2625 FieldElement2625_neg(const FieldElement2625* lhs) {
     const u32* self = lhs->limbs;
 
     // Compute -b as ((2^4 * p) - b) to avoid underflow.
@@ -873,7 +876,7 @@ FieldElement2625 FieldElement2625_neg(const FieldElement2625* lhs) {
 /// RistrettoPoint impl
 ///
 
-RistrettoPoint RistrettoPoint_unpack(const global u32* ptr, const size_t grid_tid, const size_t n) {
+__device__ RistrettoPoint RistrettoPoint_unpack(const u32* ptr, const size_t grid_tid, const size_t n) {
     FieldElement2625 x = FieldElement2625_unpack(&ptr[00 * n], grid_tid, n);
     FieldElement2625 y = FieldElement2625_unpack(&ptr[10 * n], grid_tid, n);
     FieldElement2625 z = FieldElement2625_unpack(&ptr[20 * n], grid_tid, n);
@@ -884,48 +887,48 @@ RistrettoPoint RistrettoPoint_unpack(const global u32* ptr, const size_t grid_ti
     return res;
 }
 
-void RistrettoPoint_pack(const RistrettoPoint* this, global u32* ptr, size_t grid_tid, size_t n) {
-    FieldElement2625_pack(&this->X, &ptr[00 * n], grid_tid, n);
-    FieldElement2625_pack(&this->Y, &ptr[10 * n], grid_tid, n);
-    FieldElement2625_pack(&this->Z, &ptr[20 * n], grid_tid, n);
-    FieldElement2625_pack(&this->T, &ptr[30 * n], grid_tid, n);
+__device__ void RistrettoPoint_pack(const RistrettoPoint* a, u32* ptr, size_t grid_tid, size_t n) {
+    FieldElement2625_pack(&a->X, &ptr[00 * n], grid_tid, n);
+    FieldElement2625_pack(&a->Y, &ptr[10 * n], grid_tid, n);
+    FieldElement2625_pack(&a->Z, &ptr[20 * n], grid_tid, n);
+    FieldElement2625_pack(&a->T, &ptr[30 * n], grid_tid, n);
 }
 
-ProjectiveNielsPoint RistrettoPoint_as_projective_niels(const RistrettoPoint* this) {
-    FieldElement2625 y_plus_x = FieldElement2625_add(&this->Y, &this->X);
-    FieldElement2625 y_minus_x = FieldElement2625_sub(&this->Y, &this->X);
+__device__ ProjectiveNielsPoint RistrettoPoint_as_projective_niels(const RistrettoPoint* a) {
+    FieldElement2625 y_plus_x = FieldElement2625_add(&a->Y, &a->X);
+    FieldElement2625 y_minus_x = FieldElement2625_sub(&a->Y, &a->X);
 
     FieldElement2625 d2 = FieldElement2625_EDWARDS_D2;
-    FieldElement2625 td2 = FieldElement2625_mul(&this->T, &d2);
+    FieldElement2625 td2 = FieldElement2625_mul(&a->T, &d2);
 
     ProjectiveNielsPoint result = {
         y_plus_x,
         y_minus_x,
-        this->Z,
+        a->Z,
         td2
     };
 
     return result;
 }
 
-ProjectivePoint RistrettoPoint_as_projective(const RistrettoPoint* this) {
+__device__ ProjectivePoint RistrettoPoint_as_projective(const RistrettoPoint* a) {
     ProjectivePoint result = {
-        this->X,
-        this->Y,
-        this->Z
+        a->X,
+        a->Y,
+        a->Z
     };
 
     return result;
 }
 
-RistrettoPoint RistrettoPoint_add(const RistrettoPoint* lhs, const RistrettoPoint* rhs) {
+__device__ RistrettoPoint RistrettoPoint_add(const RistrettoPoint* lhs, const RistrettoPoint* rhs) {
     ProjectiveNielsPoint rhs_pn = RistrettoPoint_as_projective_niels(rhs);
     CompletedPoint sum = RistrettoPoint_add_projective_niels(lhs, &rhs_pn);
 
     return CompletedPoint_as_extended(&sum);
 }
 
-CompletedPoint RistrettoPoint_add_projective_niels(const RistrettoPoint* lhs, const ProjectiveNielsPoint* rhs) {
+__device__ CompletedPoint RistrettoPoint_add_projective_niels(const RistrettoPoint* lhs, const ProjectiveNielsPoint* rhs) {
     FieldElement2625 Y_plus_X = FieldElement2625_add(&lhs->Y, &lhs->X);
     FieldElement2625 Y_minus_X = FieldElement2625_sub(&lhs->Y, &lhs->X);
     FieldElement2625 PP = FieldElement2625_mul(&Y_plus_X, &rhs->Y_plus_X);
@@ -945,14 +948,14 @@ CompletedPoint RistrettoPoint_add_projective_niels(const RistrettoPoint* lhs, co
     return result;
 }
 
-RistrettoPoint RistrettoPoint_sub(const RistrettoPoint* lhs, const RistrettoPoint* rhs) {
+__device__ RistrettoPoint RistrettoPoint_sub(const RistrettoPoint* lhs, const RistrettoPoint* rhs) {
     ProjectiveNielsPoint rhs_pn = RistrettoPoint_as_projective_niels(rhs);
     CompletedPoint sum = RistrettoPoint_sub_projective_niels(lhs, &rhs_pn);
 
     return CompletedPoint_as_extended(&sum);
 }
 
-CompletedPoint RistrettoPoint_sub_projective_niels(const RistrettoPoint* lhs, const ProjectiveNielsPoint* rhs) {
+__device__ CompletedPoint RistrettoPoint_sub_projective_niels(const RistrettoPoint* lhs, const ProjectiveNielsPoint* rhs) {
     FieldElement2625 Y_plus_X = FieldElement2625_add(&lhs->Y, &lhs->X);
     FieldElement2625 Y_minus_X = FieldElement2625_sub(&lhs->Y, &lhs->X);
     FieldElement2625 PM = FieldElement2625_mul(&Y_plus_X, &rhs->Y_minus_X);
@@ -970,7 +973,8 @@ CompletedPoint RistrettoPoint_sub_projective_niels(const RistrettoPoint* lhs, co
 
     return result;
 }
-RistrettoPoint RistrettoPoint_scalar_mul(const RistrettoPoint* lhs, const Scalar29* rhs) {
+
+__device__ RistrettoPoint RistrettoPoint_scalar_mul(const RistrettoPoint* lhs, const Scalar29* rhs) {
     // A lookup table for Radix-8 multiplication. Contains [0P, 1P, 2P, ...]
     LookupTable8 lut = LookupTable8_init(lhs);
 
@@ -1010,12 +1014,12 @@ RistrettoPoint RistrettoPoint_scalar_mul(const RistrettoPoint* lhs, const Scalar
 ///
 /// ProjectiveNielsPoint impl
 ///
-ProjectiveNielsPoint ProjectiveNielsPoint_neg(const ProjectiveNielsPoint* this) {
+__device__ ProjectiveNielsPoint ProjectiveNielsPoint_neg(const ProjectiveNielsPoint* a) {
     ProjectiveNielsPoint ret = {
-        this->Y_minus_X,
-        this->Y_plus_X,
-        this->Z,
-        FieldElement2625_neg(&this->T2d)
+        a->Y_minus_X,
+        a->Y_plus_X,
+        a->Z,
+        FieldElement2625_neg(&a->T2d)
     };
 
     return ret;
@@ -1024,11 +1028,11 @@ ProjectiveNielsPoint ProjectiveNielsPoint_neg(const ProjectiveNielsPoint* this) 
 ///
 /// ProjectivePoint impl
 ///
-CompletedPoint ProjectivePoint_double_point(const ProjectivePoint* this) {
-    FieldElement2625 XX = FieldElement2625_square(&this->X);
-    FieldElement2625 YY = FieldElement2625_square(&this->Y);;
-    FieldElement2625 ZZ2 = FieldElement2625_square2(&this->Z);
-    FieldElement2625 X_plus_Y = FieldElement2625_add(&this->X, &this->Y);
+__device__ CompletedPoint ProjectivePoint_double_point(const ProjectivePoint* a) {
+    FieldElement2625 XX = FieldElement2625_square(&a->X);
+    FieldElement2625 YY = FieldElement2625_square(&a->Y);;
+    FieldElement2625 ZZ2 = FieldElement2625_square2(&a->Z);
+    FieldElement2625 X_plus_Y = FieldElement2625_add(&a->X, &a->Y);
     FieldElement2625 X_plus_Y_sq = FieldElement2625_square(&X_plus_Y);
     FieldElement2625 YY_plus_XX = FieldElement2625_add(&YY, &XX);
     FieldElement2625 YY_minus_XX = FieldElement2625_sub(&YY, &XX);
@@ -1043,11 +1047,11 @@ CompletedPoint ProjectivePoint_double_point(const ProjectivePoint* this) {
     return ret;
 }
 
-RistrettoPoint ProjectivePoint_as_extended(const ProjectivePoint* this) {
-    FieldElement2625 X = FieldElement2625_mul(&this->X, &this->Z);
-    FieldElement2625 Y = FieldElement2625_mul(&this->Y, &this->Z);
-    FieldElement2625 Z = FieldElement2625_square(&this->Z);
-    FieldElement2625 T = FieldElement2625_mul(&this->X, &this->Y);
+__device__ RistrettoPoint ProjectivePoint_as_extended(const ProjectivePoint* a) {
+    FieldElement2625 X = FieldElement2625_mul(&a->X, &a->Z);
+    FieldElement2625 Y = FieldElement2625_mul(&a->Y, &a->Z);
+    FieldElement2625 Z = FieldElement2625_square(&a->Z);
+    FieldElement2625 T = FieldElement2625_mul(&a->X, &a->Y);
 
     RistrettoPoint ret = {
         X,
@@ -1063,11 +1067,11 @@ RistrettoPoint ProjectivePoint_as_extended(const ProjectivePoint* this) {
 /// CompletedPoint impl
 ///
 
-RistrettoPoint CompletedPoint_as_extended(const CompletedPoint* this) {
-    FieldElement2625 X = FieldElement2625_mul(&this->X, &this->T);
-    FieldElement2625 Y = FieldElement2625_mul(&this->Y, &this->Z);
-    FieldElement2625 Z = FieldElement2625_mul(&this->Z, &this->T);
-    FieldElement2625 T = FieldElement2625_mul(&this->X, &this->Y);
+__device__ RistrettoPoint CompletedPoint_as_extended(const CompletedPoint* a) {
+    FieldElement2625 X = FieldElement2625_mul(&a->X, &a->T);
+    FieldElement2625 Y = FieldElement2625_mul(&a->Y, &a->Z);
+    FieldElement2625 Z = FieldElement2625_mul(&a->Z, &a->T);
+    FieldElement2625 T = FieldElement2625_mul(&a->X, &a->Y);
 
     RistrettoPoint result = {
         X,
@@ -1079,10 +1083,10 @@ RistrettoPoint CompletedPoint_as_extended(const CompletedPoint* this) {
     return result;
 }
 
-ProjectivePoint CompletedPoint_as_projective(const CompletedPoint* this) {
-    FieldElement2625 X = FieldElement2625_mul(&this->X, &this->T);
-    FieldElement2625 Y = FieldElement2625_mul(&this->Y, &this->Z);
-    FieldElement2625 Z = FieldElement2625_mul(&this->Z, &this->T);
+__device__ ProjectivePoint CompletedPoint_as_projective(const CompletedPoint* a) {
+    FieldElement2625 X = FieldElement2625_mul(&a->X, &a->T);
+    FieldElement2625 Y = FieldElement2625_mul(&a->Y, &a->Z);
+    FieldElement2625 Z = FieldElement2625_mul(&a->Z, &a->T);
 
     ProjectivePoint result = { X, Y, Z };
 
@@ -1092,7 +1096,7 @@ ProjectivePoint CompletedPoint_as_projective(const CompletedPoint* this) {
 ///
 /// LookupTable8 impl
 ///
-LookupTable8 LookupTable8_init(const RistrettoPoint* p) {
+__device__ LookupTable8 LookupTable8_init(const RistrettoPoint* p) {
     LookupTable8 table;
 
     table.entries[0] = RistrettoPoint_as_projective_niels(p);
@@ -1108,7 +1112,7 @@ LookupTable8 LookupTable8_init(const RistrettoPoint* p) {
     return table;
 }
 
-const ProjectiveNielsPoint LookupTable8_select(const LookupTable8* lut, i8 x) {
+__device__ const ProjectiveNielsPoint LookupTable8_select(const LookupTable8* lut, i8 x) {
     ProjectiveNielsPoint ret = ProjectiveNielsPoint_IDENTITY;
     size_t idx = abs(x);
 
@@ -1122,13 +1126,13 @@ const ProjectiveNielsPoint LookupTable8_select(const LookupTable8* lut, i8 x) {
 /// Kernels
 ///
 
-kernel void scalar_add(
-    global const u32* a,
-    global const u32* b,
-    global u32* c,
+__global__ void scalar_add(
+    const u32* a,
+     const u32* b,
+     u32* c,
     const u32 len
 ) {
-    u32 tid = get_global_id(0);
+    u32 tid = threadIdx.x;
 
     if (tid < len) {
         Scalar29 t_a = Scalar29_unpack(a, tid, len);
@@ -1139,13 +1143,13 @@ kernel void scalar_add(
     }
 }
 
-kernel void scalar_sub(
-    global const u32* a,
-    global const u32* b,
-    global u32* c,
+__global__ void scalar_sub(
+    const u32* a,
+    const u32* b,
+    u32* c,
     u32 len
 ) {
-    u32 tid = get_global_id(0);
+    u32 tid = threadIdx.x;
 
     if (tid < len) {
         Scalar29 t_a = Scalar29_unpack(a, tid, len);
@@ -1157,12 +1161,12 @@ kernel void scalar_sub(
     }
 }
 
-kernel void scalar_neg(
-    global const u32* a,
-    global u32* b,
+__global__ void scalar_neg(
+    const u32* a,
+    u32* b,
     u32 len 
 ) {
-    u32 tid = get_global_id(0);
+    u32 tid = threadIdx.x;
 
     if (tid < len) {
         Scalar29 t_a = Scalar29_unpack(a, tid, len);
@@ -1173,13 +1177,13 @@ kernel void scalar_neg(
     }
 }
 
-kernel void scalar_mul(
-    global const u32* a,
-    global const u32* b,
-    global u32* c ,
+__global__ void scalar_mul(
+    const u32* a,
+    const u32* b,
+    u32* c ,
     u32 len
 ) {
-    u32 tid = get_global_id(0);
+    u32 tid = threadIdx.x;
 
     if (tid < len) {
         Scalar29 t_a = Scalar29_unpack(a, tid, len);
@@ -1191,12 +1195,12 @@ kernel void scalar_mul(
     }
 }
 
-kernel void scalar_invert(
-    global const u32* a,
-    global u32* b,
+__global__ void scalar_invert(
+    const u32* a,
+    u32* b,
     u32 len 
 ) {
-    u32 tid = get_global_id(0);
+    u32 tid = threadIdx.x;
     
     if (tid < len) {
         Scalar29 t_a = Scalar29_unpack(a, tid, len);
@@ -1206,12 +1210,12 @@ kernel void scalar_invert(
     }
 }
 
-kernel void scalar_square(
-    global const u32* a,
-    global u32* b,
+__global__ void scalar_square(
+    const u32* a,
+    u32* b,
     u32 len 
 ) {
-    u32 tid = get_global_id(0);
+    u32 tid = threadIdx.x;
 
     if (tid < len) {
         Scalar29 t_a = Scalar29_unpack(a, tid, len);
@@ -1221,13 +1225,13 @@ kernel void scalar_square(
     }
 }
 
-kernel void ristretto_add(
-    global const u32* a,
-    global const u32* b,
-    global u32* c,
+__global__ void ristretto_add(
+    const u32* a,
+    const u32* b,
+    u32* c,
     u32 len
 ) {
-    u32 tid = get_global_id(0);
+    u32 tid = threadIdx.x;
 
     if (tid < len) {
         RistrettoPoint t_a = RistrettoPoint_unpack(a, tid, len);
@@ -1238,13 +1242,13 @@ kernel void ristretto_add(
     }
 }
 
-kernel void ristretto_sub(
-    global const u32* a,
-    global const u32* b,
-    global u32* c,
+__global__ void ristretto_sub(
+    const u32* a,
+    const u32* b,
+    u32* c,
     u32 len
 ) {
-    u32 tid = get_global_id(0);
+    u32 tid = threadIdx.x;
 
     if (tid < len) {
         RistrettoPoint t_a = RistrettoPoint_unpack(a, tid, len);
@@ -1255,13 +1259,13 @@ kernel void ristretto_sub(
     }
 }
 
-kernel void ristretto_scalar_mul(
-    global const u32* a,
-    global const u32* b,
-    global u32* c,
+__global__ void ristretto_scalar_mul(
+    const u32* a,
+    const u32* b,
+    u32* c,
     u32 len
 ) {
-    u32 tid = get_global_id(0);
+    u32 tid = threadIdx.x;
 
     if (tid < len) {
         RistrettoPoint t_a = RistrettoPoint_unpack(a, tid, len);
@@ -1278,25 +1282,25 @@ kernel void ristretto_scalar_mul(
 
 #if defined(TEST)
 
-kernel void basic_kernel(
+__global__ void basic_kernel(
     global const u32* a,
     global const u32* b,
     global u32* c,
     const u32 len
 ) {
-    u32 tid = get_global_id(0);
+    u32 tid = threadIdx.x;
 
     if (tid < len) {
         c[tid] = a[tid] + b[tid];
     }
 }
 
-kernel void test_can_pack_unpack_scalar(
+__global__ void test_can_pack_unpack_scalar(
     global const u32* a,
     global u32* b,
     const u32 len
 ) {
-    u32 tid = get_global_id(0);
+    u32 tid = threadIdx.x;
 
     if (tid < len) {
         Scalar29 val = Scalar29_unpack(a, tid, len);
@@ -1304,12 +1308,12 @@ kernel void test_can_pack_unpack_scalar(
     }
 }
 
-kernel void test_can_roundtrip_montgomery(
+__global__ void test_can_roundtrip_montgomery(
     global const u32* a,
     global u32* b,
     const u32 len 
 ) {
-    u32 tid = get_global_id(0);
+    u32 tid = threadIdx.x;
 
     if (tid < len) {
         Scalar29 x = Scalar29_unpack(a, tid, len);
@@ -1320,12 +1324,12 @@ kernel void test_can_roundtrip_montgomery(
     }
 }
 
-kernel void test_can_pack_unpack_ristretto(
+__global__ void test_can_pack_unpack_ristretto(
     global const u32* a,
     global u32* b,
     const u32 len 
 ) {
-    u32 tid = get_global_id(0);
+    u32 tid = threadIdx.x;
 
     if (tid < len) {
         RistrettoPoint val = RistrettoPoint_unpack(a, tid, len);
@@ -1333,12 +1337,12 @@ kernel void test_can_pack_unpack_ristretto(
     }
 }
 
-kernel void test_can_roundtrip_projective_point(
+__global__ void test_can_roundtrip_projective_point(
     global const u32* a,
     global u32* b,
     const u32 len
 ) {
-    u32 tid = get_global_id(0);
+    u32 tid = threadIdx.x;
 
     if (tid < len) {
         RistrettoPoint x = RistrettoPoint_unpack(a, tid, len);
@@ -1349,12 +1353,12 @@ kernel void test_can_roundtrip_projective_point(
     }
 }
 
-kernel void test_can_double_projective_point(
+__global__ void test_can_double_projective_point(
     global const u32* a,
     global u32* b,
     const u32 len
 ) {
-    u32 tid = get_global_id(0);
+    u32 tid = threadIdx.x;
 
     if (tid < len) {
         RistrettoPoint x = RistrettoPoint_unpack(a, tid, len);
@@ -1366,12 +1370,12 @@ kernel void test_can_double_projective_point(
     }
 }
 
-kernel void test_can_pack_unpack_field2625(
+__global__ void test_can_pack_unpack_field2625(
     global const u32* a,
     global u32* b,
     const u32 len
 ) {
-    u32 tid = get_global_id(0);
+    u32 tid = threadIdx.x;
 
     if (tid < len) {
         FieldElement2625 x = FieldElement2625_unpack(a, tid, len);
@@ -1379,4 +1383,5 @@ kernel void test_can_pack_unpack_field2625(
     }
 }
 
-#endif
+#endif // ifdef TEST
+#endif // #ifdef CUDA_C

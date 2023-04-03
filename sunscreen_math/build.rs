@@ -1,3 +1,54 @@
+#[cfg(feature = "cuda")]
+fn compile_cuda_shaders() {
+    use std::{path::PathBuf, process::Command};
+
+    use find_cuda_helper::find_cuda_root;
+
+    let outdir = PathBuf::from(std::env::var("OUT_DIR").unwrap());
+    let cuda_root = find_cuda_root().unwrap();
+    let shaders_dir = PathBuf::from(".")
+        .join("src")
+        .join("cuda_impl")
+        .join("shaders");
+
+    let nvcc = cuda_root.join("bin").join("nvcc");
+    let is_cu_file = |file: &std::fs::DirEntry| {
+        file.file_name().to_string_lossy().ends_with(".cu")
+            && file.file_type().unwrap().is_file()
+    };
+    
+    for config in ["test", "release"] {
+        let shaders = std::fs::read_dir(&shaders_dir)
+            .unwrap()
+            .filter_map(Result::ok)
+            .filter(is_cu_file);
+
+        for s in shaders {
+            let filename = s.file_name().to_string_lossy().into_owned();
+            let srcfile = shaders_dir.join(&filename);
+            let outfile = outdir.join(format!("{filename}.o"));
+
+            let c = Command::new(&nvcc)
+                .arg("-c")
+                .arg("-D").arg("CUDA_C")
+                .arg("-o").arg(outfile)
+                .arg(srcfile)
+                .output()
+                .unwrap();
+
+            if !c.status.success() {
+                println!("===STDOUT===");
+                println!("{}", String::from_utf8_lossy(&c.stdout));
+                println!("===STDERR===");
+                println!("{}", String::from_utf8_lossy(&c.stderr));
+                panic!("nvcc compilation failed");
+            }
+        }
+    }
+
+
+}
+
 #[cfg(feature = "opencl")]
 fn compile_opencl_shaders() {
     use std::ffi::CString;
@@ -214,4 +265,7 @@ fn main() {
 
     #[cfg(feature = "opencl")]
     compile_opencl_shaders();
+
+    #[cfg(feature = "cuda")]
+    compile_cuda_shaders();
 }

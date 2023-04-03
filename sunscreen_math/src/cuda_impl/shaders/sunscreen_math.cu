@@ -90,52 +90,52 @@ __device__ Radix16 Scalar29_as_radix_16(const Scalar29* a);
 ///
 /// Field2625 prototypes
 ///
-FieldElement2625 FieldElement2625_unpack(const u32* words, size_t grid_tid, size_t stride);
-void FieldElement2625_pack(const FieldElement2625* a, u32* ptr, const size_t grid_tid, const size_t n);
-FieldElement2625 FieldElement2625_add(const FieldElement2625* a, const FieldElement2625* b);
-FieldElement2625 FieldElement2625_reduce( U64_10* val);
-FieldElement2625 FieldElement2625_sub(const FieldElement2625* lhs, const FieldElement2625* rhs);
-FieldElement2625 FieldElement2625_mul(const FieldElement2625* lhs, const FieldElement2625* rhs);
-FieldElement2625 FieldElement2625_neg(const FieldElement2625* lhs);
-U64_10 FieldElement2625_square_inner(const FieldElement2625* val);
-FieldElement2625 FieldElement2625_square(const FieldElement2625* val);
-FieldElement2625 FieldElement2625_square2(const FieldElement2625* val);
+__device__ FieldElement2625 FieldElement2625_unpack(const u32* words, size_t grid_tid, size_t stride);
+__device__ void FieldElement2625_pack(const FieldElement2625* a, u32* ptr, const size_t grid_tid, const size_t n);
+__device__ FieldElement2625 FieldElement2625_add(const FieldElement2625* a, const FieldElement2625* b);
+__device__ FieldElement2625 FieldElement2625_reduce( U64_10* val);
+__device__ FieldElement2625 FieldElement2625_sub(const FieldElement2625* lhs, const FieldElement2625* rhs);
+__device__ FieldElement2625 FieldElement2625_mul(const FieldElement2625* lhs, const FieldElement2625* rhs);
+__device__ FieldElement2625 FieldElement2625_neg(const FieldElement2625* lhs);
+__device__ U64_10 FieldElement2625_square_inner(const FieldElement2625* val);
+__device__ FieldElement2625 FieldElement2625_square(const FieldElement2625* val);
+__device__ FieldElement2625 FieldElement2625_square2(const FieldElement2625* val);
 
 ///
 /// RistrettoPoint prototypes
 ///
-RistrettoPoint RistrettoPoint_unpack(const u32* ptr, const size_t grid_tid, const size_t n);
-void RistrettoPoint_pack(const RistrettoPoint* a, u32* ptr, size_t grid_tid, size_t n);
-ProjectiveNielsPoint RistrettoPoint_as_projective_niels(const RistrettoPoint* a);
-ProjectivePoint RistrettoPoint_as_projective(const RistrettoPoint* a);
-RistrettoPoint RistrettoPoint_add(const RistrettoPoint* lhs, const RistrettoPoint* rhs);
-CompletedPoint RistrettoPoint_add_projective_niels(const RistrettoPoint* lhs, const ProjectiveNielsPoint* rhs);
-RistrettoPoint RistrettoPoint_sub(const RistrettoPoint* lhs, const RistrettoPoint* rhs);
-CompletedPoint RistrettoPoint_sub_projective_niels(const RistrettoPoint* lhs, const ProjectiveNielsPoint* rhs);
-RistrettoPoint RistrettoPoint_scalar_mul(const RistrettoPoint* lhs, const Scalar29* rhs);
+__device__ RistrettoPoint RistrettoPoint_unpack(const u32* ptr, const size_t grid_tid, const size_t n);
+__device__ void RistrettoPoint_pack(const RistrettoPoint* a, u32* ptr, size_t grid_tid, size_t n);
+__device__ ProjectiveNielsPoint RistrettoPoint_as_projective_niels(const RistrettoPoint* a);
+__device__ ProjectivePoint RistrettoPoint_as_projective(const RistrettoPoint* a);
+__device__ RistrettoPoint RistrettoPoint_add(const RistrettoPoint* lhs, const RistrettoPoint* rhs);
+__device__ CompletedPoint RistrettoPoint_add_projective_niels(const RistrettoPoint* lhs, const ProjectiveNielsPoint* rhs);
+__device__ RistrettoPoint RistrettoPoint_sub(const RistrettoPoint* lhs, const RistrettoPoint* rhs);
+__device__ CompletedPoint RistrettoPoint_sub_projective_niels(const RistrettoPoint* lhs, const ProjectiveNielsPoint* rhs);
+__device__ RistrettoPoint RistrettoPoint_scalar_mul(const RistrettoPoint* lhs, const Scalar29* rhs);
 
 ///
 /// ProjectiveNielsPoint prototypes
 ///
-ProjectiveNielsPoint ProjectiveNielsPoint_neg(const ProjectiveNielsPoint* x);
+__device__ ProjectiveNielsPoint ProjectiveNielsPoint_neg(const ProjectiveNielsPoint* x);
 
 ///
 /// ProjectivePoint prototypes
 ///
-CompletedPoint ProjectivePoint_double_point(const ProjectivePoint* x);
-RistrettoPoint ProjectivePoint_as_extended(const ProjectivePoint* a);
+__device__ CompletedPoint ProjectivePoint_double_point(const ProjectivePoint* x);
+__device__ RistrettoPoint ProjectivePoint_as_extended(const ProjectivePoint* a);
 
 ///
 /// CompletedPoint prototypes
 ///
-RistrettoPoint CompletedPoint_as_extended(const CompletedPoint* x);
-ProjectivePoint CompletedPoint_as_projective(const CompletedPoint* x);
+__device__ RistrettoPoint CompletedPoint_as_extended(const CompletedPoint* x);
+__device__ ProjectivePoint CompletedPoint_as_projective(const CompletedPoint* x);
 
 ///
 /// LookupTable8 prototype
 ///
-LookupTable8 LookupTable8_init(const RistrettoPoint* p);
-const ProjectiveNielsPoint LookupTable8_select(const LookupTable8* lut, i8 x);
+__device__ LookupTable8 LookupTable8_init(const RistrettoPoint* p);
+__device__ const ProjectiveNielsPoint LookupTable8_select(const LookupTable8* lut, i8 x);
 
 ///
 /// __constant__s
@@ -1283,9 +1283,9 @@ __global__ void ristretto_scalar_mul(
 #if defined(TEST)
 
 __global__ void basic_kernel(
-    global const u32* a,
-    global const u32* b,
-    global u32* c,
+    const u32* a,
+    const u32* b,
+    u32* c,
     const u32 len
 ) {
     u32 tid = threadIdx.x;
@@ -1296,8 +1296,8 @@ __global__ void basic_kernel(
 }
 
 __global__ void test_can_pack_unpack_scalar(
-    global const u32* a,
-    global u32* b,
+    const u32* a,
+    u32* b,
     const u32 len
 ) {
     u32 tid = threadIdx.x;
@@ -1309,8 +1309,8 @@ __global__ void test_can_pack_unpack_scalar(
 }
 
 __global__ void test_can_roundtrip_montgomery(
-    global const u32* a,
-    global u32* b,
+    const u32* a,
+    u32* b,
     const u32 len 
 ) {
     u32 tid = threadIdx.x;
@@ -1325,8 +1325,8 @@ __global__ void test_can_roundtrip_montgomery(
 }
 
 __global__ void test_can_pack_unpack_ristretto(
-    global const u32* a,
-    global u32* b,
+    const u32* a,
+    u32* b,
     const u32 len 
 ) {
     u32 tid = threadIdx.x;
@@ -1338,8 +1338,8 @@ __global__ void test_can_pack_unpack_ristretto(
 }
 
 __global__ void test_can_roundtrip_projective_point(
-    global const u32* a,
-    global u32* b,
+    const u32* a,
+    u32* b,
     const u32 len
 ) {
     u32 tid = threadIdx.x;
@@ -1354,8 +1354,8 @@ __global__ void test_can_roundtrip_projective_point(
 }
 
 __global__ void test_can_double_projective_point(
-    global const u32* a,
-    global u32* b,
+    const u32* a,
+    u32* b,
     const u32 len
 ) {
     u32 tid = threadIdx.x;
@@ -1371,8 +1371,8 @@ __global__ void test_can_double_projective_point(
 }
 
 __global__ void test_can_pack_unpack_field2625(
-    global const u32* a,
-    global u32* b,
+    const u32* a,
+    u32* b,
     const u32 len
 ) {
     u32 tid = threadIdx.x;
@@ -1384,4 +1384,17 @@ __global__ void test_can_pack_unpack_field2625(
 }
 
 #endif // ifdef TEST
+#else
+__global__ void basic_kernel(
+    const int* a,
+    const int* b,
+    int* c,
+    const int len
+) {
+    int tid = threadIdx.x;
+
+    if (tid < len) {
+        c[tid] = a[tid] + b[tid];
+    }
+}
 #endif // #ifdef CUDA_C

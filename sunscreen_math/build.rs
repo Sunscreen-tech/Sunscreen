@@ -17,32 +17,47 @@ fn compile_cuda_shaders() {
             && file.file_type().unwrap().is_file()
     };
     
+    println!("cargo:rerun-if-changed=src/cuda_impl/shaders");
+
     for config in ["test", "release"] {
         let shaders = std::fs::read_dir(&shaders_dir)
             .unwrap()
             .filter_map(Result::ok)
             .filter(is_cu_file);
 
+        let mut srcs = vec![];
+
         for s in shaders {
             let filename = s.file_name().to_string_lossy().into_owned();
             let srcfile = shaders_dir.join(&filename);
-            let outfile = outdir.join(format!("{filename}.o"));
+            //let outfile = outdir.join(format!("{filename}.ptx"));
 
-            let c = Command::new(&nvcc)
-                .arg("-c")
-                .arg("-D").arg("CUDA_C")
-                .arg("-o").arg(outfile)
-                .arg(srcfile)
-                .output()
-                .unwrap();
+            srcs.push(srcfile);
+        }
 
-            if !c.status.success() {
-                println!("===STDOUT===");
-                println!("{}", String::from_utf8_lossy(&c.stdout));
-                println!("===STDERR===");
-                println!("{}", String::from_utf8_lossy(&c.stderr));
-                panic!("nvcc compilation failed");
-            }
+        let binary = outdir.join(format!("sunscreen_math.{config}.fatbin"));
+
+        let c = Command::new(&nvcc)
+        .arg("-c")
+        .arg("-Werror").arg("all-warnings")
+        .arg("--fatbin")
+        .arg("--gpu-architecture").arg("compute_75")
+        .arg("--gpu-code").arg("compute_75")
+        .arg("--relocatable-device-code").arg("true")
+        .arg("--resource-usage")
+        //.arg("-D").arg("CUDA_C")
+        .arg("-D").arg(config.to_uppercase())
+        .arg("-o").arg(&binary)
+        .args(srcs)
+        .output()
+        .unwrap();
+
+        if !c.status.success() {
+            println!("===STDOUT===");
+            println!("{}", String::from_utf8_lossy(&c.stdout));
+            println!("===STDERR===");
+            println!("{}", String::from_utf8_lossy(&c.stderr));
+            panic!("nvcc compilation failed");
         }
     }
 
@@ -92,6 +107,8 @@ fn compile_wgsl_shaders() {
         .join("src")
         .join("webgpu_impl")
         .join("shaders");
+
+    println!("cargo:rerun-if-changed=src/webgpu_impl/shaders");
 
     for config in ["test", "release"] {
         let is_wgsl_file = |file: &DirEntry| {

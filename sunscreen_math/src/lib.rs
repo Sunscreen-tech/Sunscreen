@@ -9,6 +9,9 @@ mod webgpu_impl;
 #[cfg(feature = "opencl")]
 mod opencl_impl;
 
+#[cfg(feature = "cuda")]
+mod cuda_impl;
+
 mod cpu;
 pub use cpu::{CpuRistrettoPointVec, CpuScalarVec};
 
@@ -31,6 +34,9 @@ pub use webgpu_impl::GpuScalarVec;
 
 #[cfg(feature = "opencl")]
 pub use opencl_impl::{GpuRistrettoPointVec, GpuScalarVec, GpuVec};
+
+#[cfg(feature = "cuda")]
+pub use cuda_impl::{GpuRistrettoPointVec, GpuScalarVec};
 
 #[cfg(feature = "pina")]
 pub type RistrettoPointVec = PinaRistrettoPointVec;

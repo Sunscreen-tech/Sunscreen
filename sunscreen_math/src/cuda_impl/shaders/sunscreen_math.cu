@@ -1385,7 +1385,7 @@ __global__ void test_can_pack_unpack_field2625(
 
 #endif // ifdef TEST
 #else
-__global__ void basic_kernel(
+extern "C" __global__ void basic_kernel(
     const int* a,
     const int* b,
     int* c,

@@ -1282,7 +1282,7 @@ __global__ void ristretto_scalar_mul(
 
 #if defined(TEST)
 
-__global__ void basic_kernel(
+extern "C" __global__ void basic_kernel(
     const u32* a,
     const u32* b,
     u32* c,
@@ -1295,7 +1295,7 @@ __global__ void basic_kernel(
     }
 }
 
-__global__ void test_can_pack_unpack_scalar(
+extern "C" __global__ void test_can_pack_unpack_scalar(
     const u32* a,
     u32* b,
     const u32 len
@@ -1308,7 +1308,7 @@ __global__ void test_can_pack_unpack_scalar(
     }
 }
 
-__global__ void test_can_roundtrip_montgomery(
+extern "C" __global__ void test_can_roundtrip_montgomery(
     const u32* a,
     u32* b,
     const u32 len 
@@ -1324,7 +1324,7 @@ __global__ void test_can_roundtrip_montgomery(
     }
 }
 
-__global__ void test_can_pack_unpack_ristretto(
+extern "C" __global__ void test_can_pack_unpack_ristretto(
     const u32* a,
     u32* b,
     const u32 len 
@@ -1337,7 +1337,7 @@ __global__ void test_can_pack_unpack_ristretto(
     }
 }
 
-__global__ void test_can_roundtrip_projective_point(
+extern "C" __global__ void test_can_roundtrip_projective_point(
     const u32* a,
     u32* b,
     const u32 len
@@ -1353,7 +1353,7 @@ __global__ void test_can_roundtrip_projective_point(
     }
 }
 
-__global__ void test_can_double_projective_point(
+extern "C" __global__ void test_can_double_projective_point(
     const u32* a,
     u32* b,
     const u32 len
@@ -1370,7 +1370,7 @@ __global__ void test_can_double_projective_point(
     }
 }
 
-__global__ void test_can_pack_unpack_field2625(
+extern "C" __global__ void test_can_pack_unpack_field2625(
     const u32* a,
     u32* b,
     const u32 len
@@ -1385,18 +1385,4 @@ __global__ void test_can_pack_unpack_field2625(
 
 #endif // ifdef TEST
 #else
-typedef unsigned int uint;
-
-extern "C" __global__ void basic_kernel(
-    const uint* a,
-    const uint* b,
-    uint* c,
-    const uint len
-) {
-    int tid = blockDim.x * blockIdx.x + threadIdx.x;
-
-    if (tid < len) {
-        c[tid] = a[tid] + b[tid];
-    }
-}
 #endif // #ifdef CUDA_C

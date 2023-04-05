@@ -1,4 +1,4 @@
-use std::ffi::c_void;
+use std::{ffi::c_void, mem::size_of};
 
 use cust::{init, prelude::*, memory::{DeviceCopy, GpuBuffer, MemoryAdvise}, context::CurrentContext};
 use lazy_static::lazy_static;
@@ -30,21 +30,6 @@ impl<'a> From<&'a Buffer<u32>> for KernelArg<'a> {
     fn from(value: &'a Buffer<u32>) -> Self {
         Self::Buffer(value)
     }
-}
-
-impl<'a> KernelArg<'a> {
-    /*
-    pub fn as_ptr(&self) -> *mut c_void {
-        match self {
-            Self::Buffer(t) => {
-                dbg!(t.data.as_device_ptr());
-                dbg!(&t.data.as_device_ptr() as *const _ as *mut c_void);
-                dbg!(t.data.as_device_ptr().as_ptr());
-                t.data.as_device_ptr().as_ptr()
-            },
-            Self::U32(t) => t as *const _ as *mut c_void
-        }
-    } */
 }
 
 pub(crate) struct Runtime {
@@ -112,6 +97,122 @@ impl Runtime {
     }
 }
 
+pub struct GpuVecIter<'a, T: GpuVec> {
+    vec: &'a T,
+    index: usize,
+}
+
+impl<'a, T: GpuVec> Iterator for GpuVecIter<'a, T> {
+    type Item = T::Item;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let item = if self.index >= self.vec.len() {
+            None
+        } else {
+            Some(self.vec.get(self.index))
+        };
+
+        self.index += 1;
+
+        item
+    }
+}
+
+pub struct IntoGpuVecIter<T: GpuVec> {
+    vec: T,
+    index: usize,
+}
+
+impl<T: GpuVec> Iterator for IntoGpuVecIter<T> {
+    type Item = T::Item;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let item = if self.index >= self.vec.len() {
+            None
+        } else {
+            Some(self.vec.get(self.index))
+        };
+
+        self.index += 1;
+
+        item
+    }
+}
+
+pub trait GpuVec
+where
+    Self: Sized,
+{
+    type Item;
+
+    fn get_buffer(&self) -> &Buffer<u32>;
+
+    fn len(&self) -> usize;
+
+    fn u32_len(&self) -> usize {
+        self.len() * size_of::<Self::Item>() / size_of::<u32>()
+    }
+
+    fn get(&self, i: usize) -> <Self as GpuVec>::Item;
+
+    fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
+    fn iter(&self) -> GpuVecIter<Self> {
+        GpuVecIter {
+            index: 0,
+            vec: self,
+        }
+    }
+
+    fn into_iter(self) -> IntoGpuVecIter<Self> {
+        IntoGpuVecIter {
+            vec: self,
+            index: 0,
+        }
+    }
+
+    fn unary_gpu_kernel(&self, kernel_name: &'static str) -> Buffer<u32> {
+        let runtime = Runtime::get();
+        let out_buf = runtime.alloc(self.u32_len());
+
+        runtime.launch_kernel(
+            kernel_name,
+            &[
+                KernelArg::from(self.get_buffer()),
+                KernelArg::from(&out_buf),
+                KernelArg::from(self.len() as u32),
+            ],
+            &Grid::from(self.len() as u32),
+        );
+
+        out_buf
+    }
+
+    fn binary_gpu_kernel<Rhs: GpuVec>(
+        &self,
+        kernel_name: &'static str,
+        rhs: &Rhs,
+    ) -> Buffer<u32> {
+        let runtime = Runtime::get();
+        let out_buf = runtime.alloc(self.u32_len());
+
+        runtime.launch_kernel(
+            kernel_name,
+            &[
+                KernelArg::from(self.get_buffer()),
+                KernelArg::from(rhs.get_buffer()),
+                KernelArg::from(&out_buf),
+                KernelArg::from(self.len() as u32),
+            ],
+            &Grid::from(self.len() as u32),
+        );
+
+        out_buf
+    }
+}
+
 pub struct Grid(([u32; 3], [u32; 3]));
 
 impl From<u32> for Grid {
@@ -162,8 +263,6 @@ lazy_static! {
 
 #[cfg(test)]
 mod tests {
-    use cust::memory::MemoryAdvise;
-
     use super::*;
 
     #[test]

@@ -12,6 +12,7 @@ fn compile_cuda_shaders() {
         .join("shaders");
 
     let nvcc = cuda_root.join("bin").join("nvcc");
+    let nvlink = cuda_root.join("bin").join("nvlink");
     let is_cu_file = |file: &std::fs::DirEntry| {
         file.file_name().to_string_lossy().ends_with(".cu")
             && file.file_type().unwrap().is_file()
@@ -25,32 +26,49 @@ fn compile_cuda_shaders() {
             .filter_map(Result::ok)
             .filter(is_cu_file);
 
-        let mut srcs = vec![];
+        let mut out_files = vec![];
 
         for s in shaders {
             let filename = s.file_name().to_string_lossy().into_owned();
             let srcfile = shaders_dir.join(&filename);
-            //let outfile = outdir.join(format!("{filename}.ptx"));
+            let outfile = outdir.join(format!("{filename}.ptx"));
 
-            srcs.push(srcfile);
+            let c = Command::new(&nvcc)
+                .arg("-Werror").arg("all-warnings")
+                .arg("-I").arg("src/cuda_impl/shaders/include")
+                .arg("--ptx")
+                .arg("--relocatable-device-code").arg("true")
+                .arg("--resource-usage")
+                .arg("-D").arg("CUDA_C")
+                .arg("-D").arg(config.to_uppercase())
+                .arg("-o").arg(&outfile)
+                .arg(srcfile)
+                .output()
+                .unwrap();
+
+            if !c.status.success() {
+                println!("===STDOUT===");
+                println!("{}", String::from_utf8_lossy(&c.stdout));
+                println!("===STDERR===");
+                println!("{}", String::from_utf8_lossy(&c.stderr));
+                panic!("nvcc compilation failed");
+            } else {
+                println!("===STDOUT===");
+                println!("{}", String::from_utf8_lossy(&c.stdout));
+            }
+
+            out_files.push(outfile);
         }
 
         let binary = outdir.join(format!("sunscreen_math.{config}.fatbin"));
 
-        let c = Command::new(&nvcc)
-        .arg("-c")
-        .arg("-Werror").arg("all-warnings")
-        .arg("--fatbin")
-        //.arg("--gpu-architecture").arg("compute_75")
-        //.arg("--gpu-code").arg("compute_75")
-        .arg("--relocatable-device-code").arg("true")
-        .arg("--resource-usage")
-        //.arg("-D").arg("CUDA_C")
-        .arg("-D").arg(config.to_uppercase())
-        .arg("-o").arg(&binary)
-        .args(srcs)
-        .output()
-        .unwrap();
+        let c = Command::new(&nvlink)
+            //.arg("-D").arg("CUDA_C")
+            .arg("--arch").arg("sm_75")
+            .arg("-o").arg(&binary)
+            .args(out_files)
+            .output()
+            .unwrap();
 
         if !c.status.success() {
             println!("===STDOUT===");
@@ -58,6 +76,9 @@ fn compile_cuda_shaders() {
             println!("===STDERR===");
             println!("{}", String::from_utf8_lossy(&c.stderr));
             panic!("nvcc compilation failed");
+        } else {
+            println!("===STDOUT===");
+            println!("{}", String::from_utf8_lossy(&c.stdout));
         }
     }
 

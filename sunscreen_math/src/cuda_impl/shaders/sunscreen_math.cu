@@ -1126,7 +1126,7 @@ __device__ const ProjectiveNielsPoint LookupTable8_select(const LookupTable8* lu
 /// Kernels
 ///
 
-__global__ void scalar_add(
+extern "C" __global__ void scalar_add(
     const u32* a,
      const u32* b,
      u32* c,
@@ -1143,7 +1143,7 @@ __global__ void scalar_add(
     }
 }
 
-__global__ void scalar_sub(
+extern "C" __global__ void scalar_sub(
     const u32* a,
     const u32* b,
     u32* c,
@@ -1161,7 +1161,7 @@ __global__ void scalar_sub(
     }
 }
 
-__global__ void scalar_neg(
+extern "C" __global__ void scalar_neg(
     const u32* a,
     u32* b,
     u32 len 
@@ -1177,7 +1177,7 @@ __global__ void scalar_neg(
     }
 }
 
-__global__ void scalar_mul(
+extern "C" __global__ void scalar_mul(
     const u32* a,
     const u32* b,
     u32* c ,
@@ -1195,7 +1195,7 @@ __global__ void scalar_mul(
     }
 }
 
-__global__ void scalar_invert(
+extern "C" __global__ void scalar_invert(
     const u32* a,
     u32* b,
     u32 len 
@@ -1210,7 +1210,7 @@ __global__ void scalar_invert(
     }
 }
 
-__global__ void scalar_square(
+extern "C" __global__ void scalar_square(
     const u32* a,
     u32* b,
     u32 len 
@@ -1225,7 +1225,7 @@ __global__ void scalar_square(
     }
 }
 
-__global__ void ristretto_add(
+extern "C" __global__ void ristretto_add(
     const u32* a,
     const u32* b,
     u32* c,
@@ -1242,7 +1242,7 @@ __global__ void ristretto_add(
     }
 }
 
-__global__ void ristretto_sub(
+extern "C" __global__ void ristretto_sub(
     const u32* a,
     const u32* b,
     u32* c,
@@ -1259,7 +1259,7 @@ __global__ void ristretto_sub(
     }
 }
 
-__global__ void ristretto_scalar_mul(
+extern "C" __global__ void ristretto_scalar_mul(
     const u32* a,
     const u32* b,
     u32* c,

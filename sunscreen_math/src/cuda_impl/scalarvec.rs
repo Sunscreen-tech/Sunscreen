@@ -1,4 +1,4 @@
-use std::mem::size_of;
+use std::{mem::size_of, ops::{Neg, Mul, Sub, Add}};
 
 use curve25519_dalek::scalar::Scalar;
 
@@ -120,6 +120,130 @@ impl GpuVec for GpuScalarVec {
     }
 }
 
+impl Add<GpuScalarVec> for GpuScalarVec {
+    type Output = Self;
+
+    fn add(self, rhs: GpuScalarVec) -> Self::Output {
+        &self + &rhs
+    }
+}
+
+impl Add<&GpuScalarVec> for GpuScalarVec {
+    type Output = Self;
+
+    fn add(self, rhs: &GpuScalarVec) -> Self::Output {
+        &self + rhs
+    }
+}
+
+impl Add<GpuScalarVec> for &GpuScalarVec {
+    type Output = GpuScalarVec;
+
+    fn add(self, rhs: GpuScalarVec) -> Self::Output {
+        self + &rhs
+    }
+}
+
+impl Add<&GpuScalarVec> for &GpuScalarVec {
+    type Output = GpuScalarVec;
+
+    fn add(self, rhs: &GpuScalarVec) -> Self::Output {
+        GpuScalarVec {
+            data: self.binary_gpu_kernel("scalar_add", rhs),
+            len: self.len,
+        }
+    }
+}
+
+impl Sub<GpuScalarVec> for GpuScalarVec {
+    type Output = Self;
+
+    fn sub(self, rhs: GpuScalarVec) -> Self::Output {
+        &self - &rhs
+    }
+}
+
+impl Sub<&GpuScalarVec> for GpuScalarVec {
+    type Output = Self;
+
+    fn sub(self, rhs: &GpuScalarVec) -> Self::Output {
+        &self - rhs
+    }
+}
+
+impl Sub<GpuScalarVec> for &GpuScalarVec {
+    type Output = GpuScalarVec;
+
+    fn sub(self, rhs: GpuScalarVec) -> Self::Output {
+        self - &rhs
+    }
+}
+
+impl Sub<&GpuScalarVec> for &GpuScalarVec {
+    type Output = GpuScalarVec;
+
+    fn sub(self, rhs: &GpuScalarVec) -> Self::Output {
+        GpuScalarVec {
+            data: self.binary_gpu_kernel("scalar_sub", rhs),
+            len: self.len,
+        }
+    }
+}
+
+impl Neg for GpuScalarVec {
+    type Output = Self;
+
+    fn neg(self) -> Self::Output {
+        -&self
+    }
+}
+
+impl Neg for &GpuScalarVec {
+    type Output = GpuScalarVec;
+
+    fn neg(self) -> Self::Output {
+        GpuScalarVec {
+            data: self.unary_gpu_kernel("scalar_neg"),
+            len: self.len,
+        }
+    }
+}
+
+impl Mul<GpuScalarVec> for GpuScalarVec {
+    type Output = Self;
+
+    fn mul(self, rhs: GpuScalarVec) -> Self::Output {
+        &self * &rhs
+    }
+}
+
+impl Mul<&GpuScalarVec> for GpuScalarVec {
+    type Output = Self;
+
+    fn mul(self, rhs: &GpuScalarVec) -> Self::Output {
+        &self * rhs
+    }
+}
+
+impl Mul<GpuScalarVec> for &GpuScalarVec {
+    type Output = GpuScalarVec;
+
+    fn mul(self, rhs: GpuScalarVec) -> Self::Output {
+        self * &rhs
+    }
+}
+
+impl Mul<&GpuScalarVec> for &GpuScalarVec {
+    type Output = GpuScalarVec;
+
+    fn mul(self, rhs: &GpuScalarVec) -> Self::Output {
+        GpuScalarVec {
+            data: self.binary_gpu_kernel("scalar_mul", rhs),
+            len: self.len,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use rand::thread_rng;
@@ -158,6 +282,144 @@ mod tests {
         for (cpu, (a, b)) in scalars.iter().zip(v.iter().zip(out.iter())) {
             assert_eq!(*cpu, a);
             assert_eq!(a, b)
+        }
+    }
+
+    #[test]
+    fn can_add_scalars() {
+        let a = GpuScalarVec::new(&[
+            Scalar::random(&mut thread_rng()),
+            Scalar::random(&mut thread_rng()),
+            Scalar::random(&mut thread_rng()),
+            Scalar::random(&mut thread_rng()),
+        ]);
+
+        let b = GpuScalarVec::new(&[
+            Scalar::random(&mut thread_rng()),
+            Scalar::random(&mut thread_rng()),
+            Scalar::random(&mut thread_rng()),
+            Scalar::random(&mut thread_rng()),
+        ]);
+
+        let c = &a + &b;
+
+        for i in 0..a.len() {
+            assert_eq!(c.get(i), a.get(i) + b.get(i));
+        }
+    }
+
+    #[test]
+    fn can_sub_scalars() {
+        let a = GpuScalarVec::new(&[
+            Scalar::random(&mut thread_rng()),
+            Scalar::random(&mut thread_rng()),
+            Scalar::random(&mut thread_rng()),
+            Scalar::random(&mut thread_rng()),
+        ]);
+
+        let b = GpuScalarVec::new(&[
+            Scalar::random(&mut thread_rng()),
+            Scalar::random(&mut thread_rng()),
+            Scalar::random(&mut thread_rng()),
+            Scalar::random(&mut thread_rng()),
+        ]);
+
+        let c = &a - &b;
+
+        for i in 0..a.len() {
+            assert_eq!(c.get(i), a.get(i) - b.get(i));
+        }
+    }
+
+    #[test]
+    fn can_neg_scalars() {
+        let a = GpuScalarVec::new(&[
+            Scalar::random(&mut thread_rng()),
+            Scalar::random(&mut thread_rng()),
+            Scalar::random(&mut thread_rng()),
+            Scalar::random(&mut thread_rng()),
+        ]);
+
+        let c = -&a;
+
+        for i in 0..a.len() {
+            assert_eq!(c.get(i), -a.get(i));
+        }
+    }
+
+    #[test]
+    fn can_mul_scalars() {
+        let a = GpuScalarVec::new(&[
+            Scalar::random(&mut thread_rng()),
+            Scalar::random(&mut thread_rng()),
+            Scalar::random(&mut thread_rng()),
+            Scalar::random(&mut thread_rng()),
+        ]);
+
+        let b = GpuScalarVec::new(&[
+            Scalar::random(&mut thread_rng()),
+            Scalar::random(&mut thread_rng()),
+            Scalar::random(&mut thread_rng()),
+            Scalar::random(&mut thread_rng()),
+        ]);
+
+        let c = &a * &b;
+
+        for i in 0..a.len() {
+            assert_eq!(c.get(i), a.get(i) * b.get(i));
+        }
+    }
+
+    #[test]
+    fn can_square_scalars() {
+        let a = GpuScalarVec::new(&[
+            Scalar::random(&mut thread_rng()),
+            Scalar::random(&mut thread_rng()),
+            Scalar::random(&mut thread_rng()),
+            Scalar::random(&mut thread_rng()),
+        ]);
+
+        let c = a.square();
+
+        for i in 0..a.len() {
+            assert_eq!(c.get(i), a.get(i) * a.get(i));
+        }
+    }
+
+    #[test]
+    fn can_roundtrip_montgomery() {
+        let a = GpuScalarVec::new(&[
+            Scalar::random(&mut thread_rng()),
+            Scalar::random(&mut thread_rng()),
+            Scalar::random(&mut thread_rng()),
+            Scalar::random(&mut thread_rng()),
+        ]);
+
+        let out = GpuScalarVec::unary_gpu_kernel(&a, "test_can_roundtrip_montgomery");
+
+        let out = GpuScalarVec {
+            data: out,
+            len: a.len,
+        };
+
+        for (a, b) in a.iter().zip(out.iter()) {
+            assert_eq!(a, b);
+        }
+    }
+
+    #[test]
+    fn can_invert_scalars() {
+        let a = GpuScalarVec::new(&[
+            Scalar::random(&mut thread_rng()),
+            Scalar::random(&mut thread_rng()),
+            Scalar::random(&mut thread_rng()),
+            Scalar::random(&mut thread_rng()),
+        ]);
+
+        let b = a.invert();
+
+        for (a, b) in a.iter().zip(b.iter()) {
+            assert_eq!(a, b.invert());
         }
     }
 }

@@ -1385,13 +1385,15 @@ __global__ void test_can_pack_unpack_field2625(
 
 #endif // ifdef TEST
 #else
+typedef unsigned int uint;
+
 extern "C" __global__ void basic_kernel(
-    const int* a,
-    const int* b,
-    int* c,
-    const int len
+    const uint* a,
+    const uint* b,
+    uint* c,
+    const uint len
 ) {
-    int tid = threadIdx.x;
+    int tid = blockDim.x * blockIdx.x + threadIdx.x;
 
     if (tid < len) {
         c[tid] = a[tid] + b[tid];

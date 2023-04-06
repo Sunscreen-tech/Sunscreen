@@ -38,7 +38,6 @@ fn compile_cuda_shaders() {
                 .arg("-I").arg("src/cuda_impl/shaders/include")
                 .arg("--ptx")
                 .arg("--relocatable-device-code").arg("true")
-                .arg("--resource-usage")
                 .arg("-O4")
                 .arg("-D").arg("CUDA_C")
                 .arg("-D").arg(config.to_uppercase())
@@ -54,8 +53,11 @@ fn compile_cuda_shaders() {
                 println!("{}", String::from_utf8_lossy(&c.stderr));
                 panic!("nvcc compilation failed");
             } else {
+                println!("nvcc");
                 println!("===STDOUT===");
                 println!("{}", String::from_utf8_lossy(&c.stdout));
+                println!("===STDERR===");
+                println!("{}", String::from_utf8_lossy(&c.stderr));
             }
 
             out_files.push(outfile);
@@ -66,6 +68,7 @@ fn compile_cuda_shaders() {
         let c = Command::new(&nvlink)
             .arg("--arch").arg("sm_75")
             .arg("-o").arg(&binary)
+            .arg("--verbose")
             .args(out_files)
             .output()
             .unwrap();
@@ -77,8 +80,11 @@ fn compile_cuda_shaders() {
             println!("{}", String::from_utf8_lossy(&c.stderr));
             panic!("nvcc compilation failed");
         } else {
+            println!("nvlink");
             println!("===STDOUT===");
             println!("{}", String::from_utf8_lossy(&c.stdout));
+            println!("===STDERR===");
+            println!("{}", String::from_utf8_lossy(&c.stderr));
         }
     }
 

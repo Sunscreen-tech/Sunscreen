@@ -1,14 +1,8 @@
-#if !defined(CUDA_C) && false
+#if !defined(CUDA_C)
 
 #include <field.hpp.cu>
 
-const constant u32 _ZERO[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-const constant u32 _ONE[10] = {1, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-
-const constant FieldElement2625 FieldElement2625::ZERO = FieldElement2625(_ZERO);
-const constant FieldElement2625 FieldElement2625::ONE = FieldElement2625(_ONE);
-
-FieldElement2625 FieldElement2625::unpack(device const u32* ptr, const size_t grid_tid, const size_t n) {
+__device__ FieldElement2625 FieldElement2625::unpack(const u32* ptr, const size_t grid_tid, const size_t n) {
     FieldElement2625 a;
 
     for (size_t i = 0; i < 10; i++) {
@@ -18,13 +12,13 @@ FieldElement2625 FieldElement2625::unpack(device const u32* ptr, const size_t gr
     return a;
 }
 
-void FieldElement2625::pack(device u32* ptr, const size_t grid_tid, const size_t n) {
+__device__ void FieldElement2625::pack(u32* ptr, const size_t grid_tid, const size_t n) {
     for (size_t i = 0; i < 10; i++) {
         ptr[i * n + grid_tid] = (*this)[i];
     }
 }
 
-FieldElement2625 FieldElement2625::operator+(const thread FieldElement2625& b) const thread {
+__device__ FieldElement2625 FieldElement2625::operator+(const FieldElement2625& b) const {
     auto a = *this;
 
     u32 limbs[10] = {
@@ -44,9 +38,9 @@ FieldElement2625 FieldElement2625::operator+(const thread FieldElement2625& b) c
     return FieldElement2625(limbs);
 }
 
-FieldElement2625 reduce(thread u64 z[10]);
+__device__ FieldElement2625 reduce(u64 z[10]);
 
-FieldElement2625 FieldElement2625::operator-(const thread FieldElement2625& b) const thread {
+__device__ FieldElement2625 FieldElement2625::operator-(const FieldElement2625& b) const {
     auto a = *this;
 
     u64 z[10] = {
@@ -67,11 +61,11 @@ FieldElement2625 FieldElement2625::operator-(const thread FieldElement2625& b) c
 
 /// Helper function to multiply two 32-bit integers with 64 bits
 /// of output.
-inline u64 m(u32 x, u32 y) {
+__device__ inline u64 m(u32 x, u32 y) {
     return ((u64)x) * ((u64)y);
 }
 
-FieldElement2625 FieldElement2625::operator*(const thread FieldElement2625& y) const thread {
+__device__ FieldElement2625 FieldElement2625::operator*(const FieldElement2625& y) const {
     auto x = *this;
 
     // We assume that the input limbs x[i], y[i] are bounded by:
@@ -166,7 +160,7 @@ FieldElement2625 FieldElement2625::operator*(const thread FieldElement2625& y) c
 }
 
 /// Carry the value from limb i = 0..8 to limb i+1
-inline void carry(thread u64 z[10], size_t i) {
+__device__ inline void carry(u64 z[10], size_t i) {
     const u64 LOW_25_BITS = (1 << 25) - 1;
     const u64 LOW_26_BITS = (1 << 26) - 1;
 
@@ -181,7 +175,7 @@ inline void carry(thread u64 z[10], size_t i) {
     }
 }
 
-FieldElement2625 reduce(thread u64 z[10]) {
+__device__ FieldElement2625 reduce(u64 z[10]) {
     const u64 LOW_25_BITS = (1 << 25) - 1;
 
     // Perform two halves of the carry chain in parallel.
@@ -222,7 +216,7 @@ FieldElement2625 reduce(thread u64 z[10]) {
     return FieldElement2625(limbs);
 }
 
-u64_10 FieldElement2625::square_inner() const {
+__device__ u64_10 FieldElement2625::square_inner() const {
     // Optimized version of multiplication for the case of squaring.
     // Pre- and post- conditions identical to multiplication function.
     FieldElement2625 x = *this;
@@ -259,11 +253,11 @@ u64_10 FieldElement2625::square_inner() const {
     return z;
 }
 
-FieldElement2625 FieldElement2625::square() const {
+__device__ FieldElement2625 FieldElement2625::square() const {
     return reduce(this->square_inner().data);
 }
 
-FieldElement2625 FieldElement2625::square2() const {
+__device__ FieldElement2625 FieldElement2625::square2() const {
     auto coeffs = this->square_inner();
 
     for (size_t i = 0; i < 10; i++) {
@@ -273,7 +267,7 @@ FieldElement2625 FieldElement2625::square2() const {
     return reduce(coeffs.data);
 }
 
-FieldElement2625 FieldElement2625::operator-() const {
+__device__ FieldElement2625 FieldElement2625::operator-() const {
     auto self = *this;
 
     // Compute -b as ((2^4 * p) - b) to avoid underflow.

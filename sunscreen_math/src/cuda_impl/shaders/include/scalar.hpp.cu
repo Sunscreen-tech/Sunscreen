@@ -62,6 +62,10 @@ public:
 
     __device__ Scalar29 operator=(const Scalar29& rhs) volatile {
         *this = rhs;
+        //#pragma unroll 10
+        //for (int i = 0; i < 10; i++) {
+        //    this->_limbs[i] = rhs._limbs[i];
+        //}
     }
 
     __device__ Scalar29 operator+(const Scalar29& other) const {

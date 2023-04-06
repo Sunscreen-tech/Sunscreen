@@ -1,15 +1,13 @@
 #pragma once
 #include <ristretto.hpp.cu>
 
-using namespace metal;
-
 // Note: N must be >= 1.
 template <size_t N> class LookupTable {
 private:
     ProjectiveNielsPoint _entries[N];
 
 public:
-    LookupTable(const thread RistrettoPoint& p) {
+    __device__ LookupTable(const RistrettoPoint& p) {
         _entries[0] = p.as_projective_niels();
 
         for (size_t i = 1; i < N; i++) {
@@ -18,8 +16,8 @@ public:
     }
 
     // TODO: Eventually make this non vartime. Or not, as Sunscreen doesn't require it.
-    thread ProjectiveNielsPoint select(i8 x) {
-        ProjectiveNielsPoint ret = ProjectiveNielsPoint::IDENTITY;
+    __device__ ProjectiveNielsPoint select(i8 x) {
+        ProjectiveNielsPoint ret = ProjectiveNielsPoint::IDENTITY();
 
         size_t idx = abs(x);
 

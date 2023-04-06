@@ -389,7 +389,7 @@ __device__ Scalar29 Scalar29::invert() const {
     return from_montgomery(mont_inv);
 }
 
-__global__ void scalar_add(
+extern "C" __global__ void scalar_add(
     const u32* a,
     const u32* b,
     u32* c,
@@ -403,7 +403,7 @@ __global__ void scalar_add(
     (t_a + t_b).pack(c, tid, len);
 }
 
-__global__ void scalar_sub(
+extern "C" __global__ void scalar_sub(
     const u32* a,
     const u32* b,
     u32* c,
@@ -417,7 +417,7 @@ __global__ void scalar_sub(
     (t_a - t_b).pack(c, tid, len);
 }
 
-__global__ void scalar_neg(
+extern "C" __global__ void scalar_neg(
     const u32* a,
     u32* b,
     u32 len
@@ -430,7 +430,7 @@ __global__ void scalar_neg(
     (zero - t_a).pack(b, tid, len);
 }
 
-__global__ void scalar_mul(
+extern "C" __global__ void scalar_mul(
     const u32* a,
     const u32* b,
     u32* c,
@@ -444,7 +444,7 @@ __global__ void scalar_mul(
     (t_a * t_b).pack(c, tid, len);
 }
 
-__global__ void scalar_square(
+extern "C" __global__ void scalar_square(
     const u32* a,
     u32* b,
     u32 len
@@ -456,7 +456,7 @@ __global__ void scalar_square(
     t_a.square().pack(b, tid, len);
 }
 
-__global__ void scalar_invert(
+extern "C" __global__ void scalar_invert(
     const u32* a,
     u32* b,
     u32 len
@@ -472,7 +472,7 @@ __global__ void scalar_invert(
 // Test kernels
 //
 #if defined(TEST)
-__global__ void test_get_l(
+extern "C" __global__ void test_get_l(
     u32* a
  ) {
     Scalar29 l = constants::L();
@@ -480,7 +480,7 @@ __global__ void test_get_l(
     l.pack(a, 0, 1);
 }
 
-__global__ void test_can_pack_unpack_scalar(
+extern "C" __global__ void test_can_pack_unpack_scalar(
     const u32* a,
     u32* b,
     u32 len
@@ -492,7 +492,7 @@ __global__ void test_can_pack_unpack_scalar(
     x.pack(b, tid, len);
 }
 
-__global__ void test_can_radix_16(
+extern "C" __global__ void test_can_radix_16(
     const u32* a,
     i8* b,
     u32& len
@@ -507,7 +507,7 @@ __global__ void test_can_radix_16(
     }
 }
 
-__global__ void test_can_roundtrip_montgomery(
+extern "C" __global__ void test_can_roundtrip_montgomery(
     const u32* a,
     u32* b,
     u32 len

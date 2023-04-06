@@ -1,30 +1,10 @@
-#if !defined(CUDA_C) && false
+#if !defined(CUDA_C)
 
 #include <ristretto.hpp.cu>
 #include <constants.hpp.cu>
 #include <lookuptable.hpp.cu>
 
-const RistrettoPoint RistrettoPoint::IDENTITY = RistrettoPoint(
-    FieldElement2625::ZERO,
-    FieldElement2625::ONE,
-    FieldElement2625::ONE,
-    FieldElement2625::ZERO
-);
-
-const ProjectiveNielsPoint ProjectiveNielsPoint::IDENTITY = ProjectiveNielsPoint(
-    FieldElement2625::ONE,
-    FieldElement2625::ONE,
-    FieldElement2625::ONE,
-    FieldElement2625::ZERO
-);
-
-const constant ProjectivePoint ProjectivePoint::IDENTITY = ProjectivePoint(
-    FieldElement2625::ZERO,
-    FieldElement2625::ONE,
-    FieldElement2625::ONE
-);
-
-RistrettoPoint RistrettoPoint::unpack(device const u32* ptr, const size_t grid_tid, const size_t n) {
+__device__ RistrettoPoint RistrettoPoint::unpack(const u32* ptr, const size_t grid_tid, const size_t n) {
     auto x = FieldElement2625::unpack(&ptr[00 * n], grid_tid, n);
     auto y = FieldElement2625::unpack(&ptr[10 * n], grid_tid, n);
     auto z = FieldElement2625::unpack(&ptr[20 * n], grid_tid, n);
@@ -33,7 +13,7 @@ RistrettoPoint RistrettoPoint::unpack(device const u32* ptr, const size_t grid_t
     return RistrettoPoint(x, y, z, t);
 }
 
-void RistrettoPoint::pack(device u32* ptr, size_t grid_tid, size_t n) {
+__device__ void RistrettoPoint::pack(u32* ptr, size_t grid_tid, size_t n) {
     this->X.pack(&ptr[00 * n], grid_tid, n);
     this->Y.pack(&ptr[10 * n], grid_tid, n);
     this->Z.pack(&ptr[20 * n], grid_tid, n);
@@ -41,25 +21,25 @@ void RistrettoPoint::pack(device u32* ptr, size_t grid_tid, size_t n) {
 }
 
 /// Convert to a ProjectiveNielsPoint
-ProjectiveNielsPoint RistrettoPoint::as_projective_niels() const {
-    FieldElement2625 y_plus_x = this->Y + this->X;
-    FieldElement2625 y_minus_x = this->Y - this->X;
-    auto edwards_d2 = constants::EDWARDS_D2;
+__device__ ProjectiveNielsPoint RistrettoPoint::as_projective_niels() const {
+    auto y_plus_x = this->Y + this->X;
+    auto y_minus_x = this->Y - this->X;
+    auto edwards_d2 = constants::EDWARDS_D2();
 
     FieldElement2625 t2d = this->T * edwards_d2;
 
     return ProjectiveNielsPoint(y_plus_x, y_minus_x, this->Z, t2d);
 }
 
-ProjectivePoint RistrettoPoint::as_projective() const {
+__device__ ProjectivePoint RistrettoPoint::as_projective() const {
     return ProjectivePoint(this->X, this->Y, this->Z);
 }
 
-RistrettoPoint RistrettoPoint::operator+(const thread RistrettoPoint& rhs) const {
+__device__ RistrettoPoint RistrettoPoint::operator+(const RistrettoPoint& rhs) const {
     return (*this + rhs.as_projective_niels()).as_extended();
 }
 
-CompletedPoint RistrettoPoint::operator+(const thread ProjectiveNielsPoint& rhs) const thread {
+__device__ CompletedPoint RistrettoPoint::operator+(const ProjectiveNielsPoint& rhs) const {
     FieldElement2625 Y_plus_X = this->Y + this->X;
     FieldElement2625 Y_minus_X = this->Y - this->X;
     FieldElement2625 PP = Y_plus_X * rhs.Y_plus_X;
@@ -76,11 +56,11 @@ CompletedPoint RistrettoPoint::operator+(const thread ProjectiveNielsPoint& rhs)
     );
 }
 
-RistrettoPoint RistrettoPoint::operator-(const thread RistrettoPoint& rhs) const {
+__device__ RistrettoPoint RistrettoPoint::operator-(const RistrettoPoint& rhs) const {
     return (*this - rhs.as_projective_niels()).as_extended();
 }
 
-CompletedPoint RistrettoPoint::operator-(const thread ProjectiveNielsPoint& rhs) const {
+__device__ CompletedPoint RistrettoPoint::operator-(const ProjectiveNielsPoint& rhs) const {
     FieldElement2625 Y_plus_X = this->Y + this->X;
     FieldElement2625 Y_minus_X = this->Y - this->X;
     FieldElement2625 PM = Y_plus_X * rhs.Y_minus_X;
@@ -97,7 +77,7 @@ CompletedPoint RistrettoPoint::operator-(const thread ProjectiveNielsPoint& rhs)
     );
 }
 
-RistrettoPoint CompletedPoint::as_extended() const {
+__device__ RistrettoPoint CompletedPoint::as_extended() const {
     FieldElement2625 X = this->X * this->T;
     FieldElement2625 Y = this->Y * this->Z;
     FieldElement2625 Z = this->Z * this->T;
@@ -106,7 +86,7 @@ RistrettoPoint CompletedPoint::as_extended() const {
     return RistrettoPoint(X, Y, Z, T);
 }
 
-ProjectivePoint CompletedPoint::as_projective() const {
+__device__ ProjectivePoint CompletedPoint::as_projective() const {
     FieldElement2625 X = this->X * this->T;
     FieldElement2625 Y = this->Y * this->Z;
     FieldElement2625 Z = this->Z * this->T;
@@ -114,7 +94,7 @@ ProjectivePoint CompletedPoint::as_projective() const {
     return ProjectivePoint(X, Y, Z);
 }
 
-ProjectiveNielsPoint ProjectiveNielsPoint::operator-() const {
+__device__ ProjectiveNielsPoint ProjectiveNielsPoint::operator-() const {
     return ProjectiveNielsPoint(
         this->Y_minus_X,
         this->Y_plus_X,
@@ -123,7 +103,7 @@ ProjectiveNielsPoint ProjectiveNielsPoint::operator-() const {
     );
 }
 
-RistrettoPoint RistrettoPoint::scalar_mul(const thread RistrettoPoint& lhs, const thread Scalar29& rhs) {
+__device__ RistrettoPoint RistrettoPoint::scalar_mul(const RistrettoPoint& lhs, const Scalar29& rhs) {
     // A lookup table for Radix-8 multiplication. Contains [0P, 1P, 2P, ...]
     LookupTable<8> lut(lhs);
 
@@ -131,11 +111,11 @@ RistrettoPoint RistrettoPoint::scalar_mul(const thread RistrettoPoint& lhs, cons
 
     // Copy from contant to thread storage. We'll also use this to store the 16P value in standard
     // projection.
-    RistrettoPoint tmp2 = RistrettoPoint::IDENTITY;
+    RistrettoPoint tmp2 = RistrettoPoint::IDENTITY();
 
     // Compute the highest nibble scalar's contribution
     CompletedPoint sum = tmp2 + lut.select(scalar_digits[63]);
-    ProjectivePoint tmp = ProjectivePoint::IDENTITY;
+    ProjectivePoint tmp = ProjectivePoint::IDENTITY();
 
     for (size_t i = 0; i < 63; i++) {
         size_t j = 62 - i;
@@ -156,11 +136,11 @@ RistrettoPoint RistrettoPoint::scalar_mul(const thread RistrettoPoint& lhs, cons
     return sum.as_extended();
 }
 
-RistrettoPoint RistrettoPoint::operator*(const thread Scalar29& rhs) const thread {
+__device__ RistrettoPoint RistrettoPoint::operator*(const Scalar29& rhs) const {
     return RistrettoPoint::scalar_mul(*this, rhs);
 }
 
-CompletedPoint ProjectivePoint::double_point() const thread {
+__device__ CompletedPoint ProjectivePoint::double_point() const {
     auto XX = this->X.square();
     auto YY = this->Y.square();
     auto ZZ2 = this->Z.square2();
@@ -177,7 +157,7 @@ CompletedPoint ProjectivePoint::double_point() const thread {
     );
 }
 
-RistrettoPoint ProjectivePoint::as_extended() const thread {
+__device__ RistrettoPoint ProjectivePoint::as_extended() const {
     auto X = this->X * this->Z;
     auto Y = this->Y * this->Z;
     auto Z = this->Z.square();
@@ -191,105 +171,129 @@ RistrettoPoint ProjectivePoint::as_extended() const thread {
     );
 }
 
-kernel void ristretto_add(
-    u32 tid [[thread_position_in_grid]],
-    device const u32* a [[buffer(0)]],
-    device const u32* b [[buffer(1)]],
-    device u32* c [[buffer(2)]],
-    constant u32& len [[buffer(3)]]
+extern "C" __global__ void ristretto_add(
+    const u32* a,
+    const u32* b,
+    u32* c,
+    u32 len
 ) {
-    auto x = RistrettoPoint::unpack(a, tid, len);
-    auto y = RistrettoPoint::unpack(b, tid, len);
+    u32 tid = blockIdx.x * blockDim.x + threadIdx.x;
 
-    (x + y).pack(c, tid, len);
+    if (tid < len) {
+        auto x = RistrettoPoint::unpack(a, tid, len);
+        auto y = RistrettoPoint::unpack(b, tid, len);
+
+        (x + y).pack(c, tid, len);
+    }
 }
 
-kernel void ristretto_sub(
-    u32 tid [[thread_position_in_grid]],
-    device const u32* a [[buffer(0)]],
-    device const u32* b [[buffer(1)]],
-    device u32* c [[buffer(2)]],
-    constant u32& len [[buffer(3)]]
+extern "C" __global__ void ristretto_sub(
+    const u32* a,
+    const u32* b,
+    u32* c,
+    u32 len
 ) {
-    auto x = RistrettoPoint::unpack(a, tid, len);
-    auto y = RistrettoPoint::unpack(b, tid, len);
+    u32 tid = blockIdx.x * blockDim.x + threadIdx.x;
 
-    (x - y).pack(c, tid, len);
+    if (tid < len) {
+        auto x = RistrettoPoint::unpack(a, tid, len);
+        auto y = RistrettoPoint::unpack(b, tid, len);
+
+        (x - y).pack(c, tid, len);
+    }
 }
 
-kernel void ristretto_scalar_mul(
-    u32 tid [[thread_position_in_grid]],
-    device const u32* a [[buffer(0)]], // Packed Ristretto points
-    device const u32* b [[buffer(1)]], // Packed Scalars
-    device u32* c [[buffer(2)]],
-    constant u32& len [[buffer(3)]]
+extern "C" __global__ void ristretto_scalar_mul(
+    const u32* a, // Packed Ristretto points
+    const u32* b, // Packed Scalars
+    u32* c,
+    u32 len
 ) {
-    auto x = RistrettoPoint::unpack(a, tid, len);
-    auto y = Scalar29::unpack(b, tid, len);
+    u32 tid = blockIdx.x * blockDim.x + threadIdx.x;
 
-    (x * y).pack(c, tid, len);
+    if (tid < len) {
+        auto x = RistrettoPoint::unpack(a, tid, len);
+        auto y = Scalar29::unpack(b, tid, len);
+
+        (x * y).pack(c, tid, len);
+    }
 }
 
 ///
 /// TESTS.
 ///
 #if defined(TEST)
-kernel void test_can_pack_unpack_ristretto(
-    u32 tid [[thread_position_in_grid]],
-    device const u32* a [[buffer(0)]],
-    device u32* b [[buffer(1)]],
-    constant u32& len [[buffer(2)]]
+extern "C" __global__ void test_can_pack_unpack_ristretto(
+    const u32* a,
+    u32* b,
+    u32 len
 ) {
-    auto x = RistrettoPoint::unpack(a, tid, len);
-    x.pack(b, tid, len);
+    u32 tid = blockIdx.x * blockDim.x + threadIdx.x;
+
+    if (tid < len) {
+        auto x = RistrettoPoint::unpack(a, tid, len);
+        x.pack(b, tid, len);
+    }
 }
 
-kernel void test_add_identity_ristretto(
-    u32 tid [[thread_position_in_grid]],
-    device const u32* a [[buffer(0)]],
-    device u32* b [[buffer(1)]],
-    constant u32& len [[buffer(2)]]
+extern "C" __global__ void test_add_identity_ristretto(
+    const u32* a,
+    u32* b,
+    u32 len
 ) {
-    auto x = RistrettoPoint::unpack(a, tid, len);
-    auto y = RistrettoPoint::IDENTITY;
+    u32 tid = blockIdx.x * blockDim.x + threadIdx.x;
 
-    (x + y).pack(b, tid, len);
+    if (tid < len) {
+        auto x = RistrettoPoint::unpack(a, tid, len);
+        auto y = RistrettoPoint::IDENTITY();
+
+        (x + y).pack(b, tid, len);
+    }
 }
 
-kernel void test_can_roundtrip_projective_point(
-    u32 tid [[thread_position_in_grid]],
-    device const u32* a [[buffer(0)]],
-    device u32* b [[buffer(1)]],
-    constant u32& len [[buffer(2)]]
+extern "C" __global__ void test_can_roundtrip_projective_point(
+    const u32* a,
+    u32* b,
+    u32 len
 ) {
-    auto x = RistrettoPoint::unpack(a, tid, len);
-    auto y = x.as_projective().as_extended();
+    u32 tid = blockIdx.x * blockDim.x + threadIdx.x;
 
-    y.pack(b, tid, len);
+    if (tid < len) {
+        auto x = RistrettoPoint::unpack(a, tid, len);
+        auto y = x.as_projective().as_extended();
+
+        y.pack(b, tid, len);
+    }
 }
 
-kernel void test_can_add_ristretto_projective_niels_point(
-    u32 tid [[thread_position_in_grid]],
-    device const u32* a [[buffer(0)]],
-    device u32* b [[buffer(1)]],
-    constant u32& len [[buffer(2)]]
+extern "C" __global__ void test_can_add_ristretto_projective_niels_point(
+    const u32* a,
+    u32* b,
+    u32 len
 ) {
-    auto x = RistrettoPoint::unpack(a, tid, len);
-    auto y = x.as_projective_niels();
+    u32 tid = blockIdx.x * blockDim.x + threadIdx.x;
 
-    (x + y).as_extended().pack(b, tid, len);
+    if (tid < len) {
+        auto x = RistrettoPoint::unpack(a, tid, len);
+        auto y = x.as_projective_niels();
+
+        (x + y).as_extended().pack(b, tid, len);
+    }
 }
 
-kernel void test_can_double_projective_point(
-    u32 tid [[thread_position_in_grid]],
-    device const u32* a [[buffer(0)]],
-    device u32* b [[buffer(1)]],
-    constant u32& len [[buffer(2)]]
+extern "C" __global__ void test_can_double_projective_point(
+    const u32* a,
+    u32* b,
+    u32 len
 ) {
-    auto x = RistrettoPoint::unpack(a, tid, len);
-    auto y = x.as_projective().double_point().as_extended();
+    u32 tid = blockIdx.x * blockDim.x + threadIdx.x;
 
-    y.pack(b, tid, len);
+    if (tid < len) {
+        auto x = RistrettoPoint::unpack(a, tid, len);
+        auto y = x.as_projective().double_point().as_extended();
+
+        y.pack(b, tid, len);
+    }
 }
 
 #endif // #if defined(TEST)

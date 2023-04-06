@@ -19,10 +19,17 @@ private:
     FieldElement2625 T;
 
 public:
-    RistrettoPoint(FieldElement2625 x, FieldElement2625 y, FieldElement2625 z, FieldElement2625 t)
+    __device__ RistrettoPoint(FieldElement2625 x, FieldElement2625 y, FieldElement2625 z, FieldElement2625 t)
         : X(x), Y(y), Z(z), T(t) {}
 
-    static const constant RistrettoPoint IDENTITY;
+    __device__ static RistrettoPoint IDENTITY() {
+        return RistrettoPoint(
+            FieldElement2625::ZERO(),
+            FieldElement2625::ONE(),
+            FieldElement2625::ONE(),
+            FieldElement2625::ZERO()
+        );
+    }
 
     /// Loads the value at grid_tid from an `40 x n` row-major u32 matrix. `n` is the length
     /// of the Scalar array.
@@ -33,7 +40,7 @@ public:
     /// When reach thread in a group executes this
     /// function with a consecutive grid_tid,
     /// unpacking is fully coalesced.
-    static RistrettoPoint unpack(device const u32* ptr, const size_t grid_tid, const size_t n);
+    __device__ static RistrettoPoint unpack(const u32* ptr, const size_t grid_tid, const size_t n);
     
     /// Packs this value into an `40 x n` row-major 
     /// u32 matrix.
@@ -44,19 +51,19 @@ public:
     /// When reach thread in a group executes this
     /// function with a consecutive grid_tid,
     /// unpacking is fully coalesced.
-    void pack(device u32* ptr, size_t grid_tid, size_t n);
+    __device__ void pack(u32* ptr, size_t grid_tid, size_t n);
 
     /// Convert to a ProjectiveNielsPoint
-    ProjectiveNielsPoint as_projective_niels() const;
-    ProjectivePoint as_projective() const;
+    __device__ ProjectiveNielsPoint as_projective_niels() const;
+    __device__ ProjectivePoint as_projective() const;
 
-    RistrettoPoint operator+(const thread RistrettoPoint& rhs) const thread;
-    CompletedPoint operator+(const thread ProjectiveNielsPoint& rhs) const thread;
-    RistrettoPoint operator-(const thread RistrettoPoint& rhs) const thread;
-    CompletedPoint operator-(const thread ProjectiveNielsPoint& rhs) const thread;
-    RistrettoPoint operator*(const thread Scalar29& rhs) const thread;
+    __device__ RistrettoPoint operator+(const RistrettoPoint& rhs) const;
+    __device__ CompletedPoint operator+(const ProjectiveNielsPoint& rhs) const;
+    __device__ RistrettoPoint operator-(const RistrettoPoint& rhs) const;
+    __device__ CompletedPoint operator-(const ProjectiveNielsPoint& rhs) const;
+    __device__ RistrettoPoint operator*(const Scalar29& rhs) const;
 
-    static RistrettoPoint scalar_mul(const thread RistrettoPoint& lhs, const thread Scalar29& rhs);
+    __device__ static RistrettoPoint scalar_mul(const RistrettoPoint& lhs, const Scalar29& rhs);
 };
 
 class ProjectiveNielsPoint {
@@ -68,19 +75,26 @@ private:
     FieldElement2625 T2d;
 
 public:
-    static const constant ProjectiveNielsPoint IDENTITY;
+    __device__ static ProjectiveNielsPoint IDENTITY() {
+        return ProjectiveNielsPoint(
+            FieldElement2625::ONE(),
+            FieldElement2625::ONE(),
+            FieldElement2625::ONE(),
+            FieldElement2625::ZERO()
+        );
+    }
 
-    ProjectiveNielsPoint() { };
+    __device__ ProjectiveNielsPoint() { };
 
-    ProjectiveNielsPoint(FieldElement2625 x, FieldElement2625 y, FieldElement2625 z, FieldElement2625 t)
+    __device__ ProjectiveNielsPoint(FieldElement2625 x, FieldElement2625 y, FieldElement2625 z, FieldElement2625 t)
         : Y_plus_X(x), Y_minus_X(y), Z(z), T2d(t) {}
 
-    FieldElement2625 get_y_plus_x() { return Y_plus_X; }
-    FieldElement2625 get_y_minus_x() { return Y_minus_X; }
-    FieldElement2625 get_z() { return Z; }
-    FieldElement2625 get_t2d() { return T2d; }
+    __device__ FieldElement2625 get_y_plus_x() { return Y_plus_X; }
+    __device__ FieldElement2625 get_y_minus_x() { return Y_minus_X; }
+    __device__ FieldElement2625 get_z() { return Z; }
+    __device__ FieldElement2625 get_t2d() { return T2d; }
 
-    ProjectiveNielsPoint operator-() const thread;
+    __device__ ProjectiveNielsPoint operator-() const;
 };
 
 class CompletedPoint {
@@ -92,16 +106,16 @@ private:
     FieldElement2625 T;
 
 public:
-    CompletedPoint(FieldElement2625 x, FieldElement2625 y, FieldElement2625 z, FieldElement2625 t)
+    __device__ CompletedPoint(FieldElement2625 x, FieldElement2625 y, FieldElement2625 z, FieldElement2625 t)
         : X(x), Y(y), Z(z), T(t) {}
 
-    RistrettoPoint as_extended() const;
-    ProjectivePoint as_projective() const;
+    __device__ RistrettoPoint as_extended() const;
+    __device__ ProjectivePoint as_projective() const;
 
-    FieldElement2625 get_x() { return X; }
-    FieldElement2625 get_y() { return Y; }
-    FieldElement2625 get_z() { return Z; }
-    FieldElement2625 get_t() { return T; }
+    __device__ FieldElement2625 get_x() { return X; }
+    __device__ FieldElement2625 get_y() { return Y; }
+    __device__ FieldElement2625 get_z() { return Z; }
+    __device__ FieldElement2625 get_t() { return T; }
 };
 
 class ProjectivePoint {
@@ -111,12 +125,18 @@ private:
     FieldElement2625 Z;
 
 public:
-    static const constant ProjectivePoint IDENTITY;
+    __device__ static ProjectivePoint IDENTITY() {
+        return ProjectivePoint(
+            FieldElement2625::ZERO(),
+            FieldElement2625::ONE(),
+            FieldElement2625::ONE()
+        );
+    };
 
-    ProjectivePoint(FieldElement2625 x, FieldElement2625 y, FieldElement2625 z): X(x), Y(y), Z(z) {}
+    __device__ ProjectivePoint(FieldElement2625 x, FieldElement2625 y, FieldElement2625 z): X(x), Y(y), Z(z) {}
 
     // double is a keyword, so we name our function double_point.
-    CompletedPoint double_point() const thread;
+    __device__ CompletedPoint double_point() const;
 
-    RistrettoPoint as_extended() const thread;
+    __device__ RistrettoPoint as_extended() const;
 };

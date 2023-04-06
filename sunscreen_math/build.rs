@@ -39,6 +39,7 @@ fn compile_cuda_shaders() {
                 .arg("--ptx")
                 .arg("--relocatable-device-code").arg("true")
                 .arg("--resource-usage")
+                .arg("-O4")
                 .arg("-D").arg("CUDA_C")
                 .arg("-D").arg(config.to_uppercase())
                 .arg("-o").arg(&outfile)
@@ -63,7 +64,6 @@ fn compile_cuda_shaders() {
         let binary = outdir.join(format!("sunscreen_math.{config}.fatbin"));
 
         let c = Command::new(&nvlink)
-            //.arg("-D").arg("CUDA_C")
             .arg("--arch").arg("sm_75")
             .arg("-o").arg(&binary)
             .args(out_files)

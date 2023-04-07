@@ -38,6 +38,7 @@ fn compile_cuda_shaders() {
                 .arg("-I").arg("src/cuda_impl/shaders/include")
                 .arg("--ptx")
                 .arg("--relocatable-device-code").arg("true")
+                .arg("--generate-line-info")                
                 .arg("-O4")
                 .arg("-D").arg("CUDA_C")
                 .arg("-D").arg(config.to_uppercase())

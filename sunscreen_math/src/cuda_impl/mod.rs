@@ -249,6 +249,9 @@ pub struct Buffer<T: DeviceCopy> {
     data: UnifiedBuffer<T>,
 }
 
+unsafe impl<T: DeviceCopy> Sync for Buffer<T> {}
+unsafe impl<T: DeviceCopy> Send for Buffer<T> {}
+
 impl<T: DeviceCopy> Buffer<T> {
     pub fn len(&self) -> usize {
         self.data.len()

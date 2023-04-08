@@ -1,11 +1,16 @@
-use std::{mem::size_of, ops::{Mul, Add, Sub}};
+use std::{
+    mem::size_of,
+    ops::{Add, Mul, Sub},
+};
 
-use curve25519_dalek::{ristretto::RistrettoPoint, edwards::EdwardsPoint, CannonicalFieldElement, scalar::Scalar};
+use curve25519_dalek::{
+    edwards::EdwardsPoint, ristretto::RistrettoPoint, scalar::Scalar, CannonicalFieldElement,
+};
 use rayon::prelude::*;
 
 use crate::{cuda_impl::Runtime, GpuScalarVec};
 
-use super::{Buffer, GpuVecIter, GpuVec};
+use super::{Buffer, GpuVec, GpuVecIter};
 
 pub struct GpuRistrettoPointVec {
     data: Buffer<u32>,
@@ -17,7 +22,7 @@ impl GpuRistrettoPointVec {
     #[allow(clippy::identity_op)]
     pub fn new(x: &[RistrettoPoint]) -> Self {
         let len = x.len();
-        
+
         assert_eq!(size_of::<RistrettoPoint>(), size_of::<u32>() * 40);
         let u32_len = x.len() * size_of::<RistrettoPoint>() / size_of::<u32>();
         let mut data = vec![0u32; u32_len];

@@ -14,10 +14,9 @@ fn compile_cuda_shaders() {
     let nvcc = cuda_root.join("bin").join("nvcc");
     let nvlink = cuda_root.join("bin").join("nvlink");
     let is_cu_file = |file: &std::fs::DirEntry| {
-        file.file_name().to_string_lossy().ends_with(".cu")
-            && file.file_type().unwrap().is_file()
+        file.file_name().to_string_lossy().ends_with(".cu") && file.file_type().unwrap().is_file()
     };
-    
+
     println!("cargo:rerun-if-changed=src/cuda_impl/shaders");
 
     for config in ["test", "release"] {
@@ -34,15 +33,21 @@ fn compile_cuda_shaders() {
             let outfile = outdir.join(format!("{filename}.ptx"));
 
             let c = Command::new(&nvcc)
-                .arg("-Werror").arg("all-warnings")
-                .arg("-I").arg("src/cuda_impl/shaders/include")
+                .arg("-Werror")
+                .arg("all-warnings")
+                .arg("-I")
+                .arg("src/cuda_impl/shaders/include")
                 .arg("--ptx")
-                .arg("--relocatable-device-code").arg("true")
-                .arg("--generate-line-info")                
+                .arg("--relocatable-device-code")
+                .arg("true")
+                .arg("--generate-line-info")
                 .arg("-O4")
-                .arg("-D").arg("CUDA_C")
-                .arg("-D").arg(config.to_uppercase())
-                .arg("-o").arg(&outfile)
+                .arg("-D")
+                .arg("CUDA_C")
+                .arg("-D")
+                .arg(config.to_uppercase())
+                .arg("-o")
+                .arg(&outfile)
                 .arg(srcfile)
                 .output()
                 .unwrap();
@@ -67,8 +72,10 @@ fn compile_cuda_shaders() {
         let binary = outdir.join(format!("sunscreen_math.{config}.fatbin"));
 
         let c = Command::new(&nvlink)
-            .arg("--arch").arg("sm_75")
-            .arg("-o").arg(&binary)
+            .arg("--arch")
+            .arg("sm_75")
+            .arg("-o")
+            .arg(&binary)
             .arg("--verbose")
             .args(out_files)
             .output()
@@ -88,8 +95,6 @@ fn compile_cuda_shaders() {
             println!("{}", String::from_utf8_lossy(&c.stderr));
         }
     }
-
-
 }
 
 #[cfg(feature = "opencl")]

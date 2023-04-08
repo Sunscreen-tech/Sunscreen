@@ -1,6 +1,11 @@
 use std::{ffi::c_void, mem::size_of};
 
-use cust::{init, prelude::*, memory::{DeviceCopy, GpuBuffer, MemoryAdvise}, context::CurrentContext};
+use cust::{
+    context::CurrentContext,
+    init,
+    memory::{DeviceCopy, GpuBuffer, MemoryAdvise},
+    prelude::*,
+};
 use lazy_static::lazy_static;
 
 mod ristrettovec;
@@ -34,7 +39,7 @@ impl<'a> From<&'a Buffer<u32>> for KernelArg<'a> {
 
 pub(crate) struct Runtime {
     ctx: Context,
-    module: Module
+    module: Module,
 }
 
 impl Runtime {
@@ -42,14 +47,12 @@ impl Runtime {
         &RUNTIME
     }
 
-    pub fn alloc<T: DeviceCopy+ Default>(&self, len: usize) -> Buffer<T> {
+    pub fn alloc<T: DeviceCopy + Default>(&self, len: usize) -> Buffer<T> {
         CurrentContext::set_current(&self.ctx).unwrap();
         let data = UnifiedBuffer::new(&T::default(), len).unwrap();
         data.advise_read_mostly(false).unwrap();
 
-        Buffer {
-            data
-        }
+        Buffer { data }
     }
 
     pub fn alloc_from_slice<T: DeviceCopy>(&self, data: &[T]) -> Buffer<T> {
@@ -57,9 +60,7 @@ impl Runtime {
         let data = UnifiedBuffer::from_slice(data).unwrap();
         data.advise_read_mostly(true).unwrap();
 
-        Buffer {
-            data
-        }
+        Buffer { data }
     }
 
     pub fn launch_kernel(&self, name: &'static str, args: &[KernelArg], grid: &Grid) {
@@ -67,9 +68,14 @@ impl Runtime {
         let func = self.module.get_function(name).unwrap();
 
         let local = grid.local();
-        let blocks: [u32; 3] = grid.global().iter().zip(local.iter()).map(|(g, l)| {
-            if g % l == 0 { g / l } else { g / l + 1 }
-        }).collect::<Vec<_>>().try_into().unwrap();
+        let blocks: [u32; 3] = grid
+            .global()
+            .iter()
+            .zip(local.iter())
+            .map(|(g, l)| if g % l == 0 { g / l } else { g / l + 1 })
+            .collect::<Vec<_>>()
+            .try_into()
+            .unwrap();
 
         let stream = Stream::new(StreamFlags::DEFAULT, None).unwrap();
 
@@ -78,19 +84,31 @@ impl Runtime {
             buffer: DevicePointer<u32>,
         };
 
-        let args = args.iter().map(|x| {
-            match x {
-                KernelArg::Buffer(x) => ArgUnion { buffer: x.data.as_device_ptr() },
-                KernelArg::U32(x) => ArgUnion { u32: *x }
-            }
-        }).collect::<Vec<_>>();
+        let args = args
+            .iter()
+            .map(|x| match x {
+                KernelArg::Buffer(x) => ArgUnion {
+                    buffer: x.data.as_device_ptr(),
+                },
+                KernelArg::U32(x) => ArgUnion { u32: *x },
+            })
+            .collect::<Vec<_>>();
 
-        let arg_ptrs = args.iter().map(|x| {
-            x as *const _ as *mut c_void
-        }).collect::<Vec<_>>();
+        let arg_ptrs = args
+            .iter()
+            .map(|x| x as *const _ as *mut c_void)
+            .collect::<Vec<_>>();
 
         unsafe {
-            stream.launch(&func, (blocks[0], blocks[1], blocks[2]), (local[0], local[1], local[2]), 0, &arg_ptrs).unwrap();
+            stream
+                .launch(
+                    &func,
+                    (blocks[0], blocks[1], blocks[2]),
+                    (local[0], local[1], local[2]),
+                    0,
+                    &arg_ptrs,
+                )
+                .unwrap();
         }
 
         CurrentContext::synchronize().unwrap();
@@ -190,11 +208,7 @@ where
         out_buf
     }
 
-    fn binary_gpu_kernel<Rhs: GpuVec>(
-        &self,
-        kernel_name: &'static str,
-        rhs: &Rhs,
-    ) -> Buffer<u32> {
+    fn binary_gpu_kernel<Rhs: GpuVec>(&self, kernel_name: &'static str, rhs: &Rhs) -> Buffer<u32> {
         let runtime = Runtime::get();
         let out_buf = runtime.alloc(self.u32_len());
 
@@ -223,11 +237,11 @@ impl From<u32> for Grid {
 
 impl Grid {
     fn global(&self) -> [u32; 3] {
-        self.0.0
+        self.0 .0
     }
 
     fn local(&self) -> [u32; 3] {
-        self.0.1
+        self.0 .1
     }
 }
 
@@ -248,16 +262,13 @@ impl<T: DeviceCopy> Buffer<T> {
 lazy_static! {
     static ref RUNTIME: Runtime = {
         init(CudaFlags::empty()).unwrap();
-        
+
         let device = Device::get_device(0).unwrap();
         let ctx = Context::new(device).unwrap();
 
         let module = Module::from_fatbin(CUBIN, &[]).unwrap();
 
-        Runtime {
-            module,
-            ctx
-        }
+        Runtime { module, ctx }
     };
 }
 
@@ -279,14 +290,23 @@ mod tests {
 
         dbg!(&a.data);
 
-        runtime.launch_kernel("basic_kernel", &[
-            KernelArg::from(&a),
-            KernelArg::from(&b),
-            KernelArg::from(&c),
-            (a.len() as u32).into()
-        ], &Grid::from(a.len() as u32));
+        runtime.launch_kernel(
+            "basic_kernel",
+            &[
+                KernelArg::from(&a),
+                KernelArg::from(&b),
+                KernelArg::from(&c),
+                (a.len() as u32).into(),
+            ],
+            &Grid::from(a.len() as u32),
+        );
 
-        for ((a, b), c) in a.as_slice().iter().zip(b.as_slice().iter()).zip(c.as_slice().iter()) {
+        for ((a, b), c) in a
+            .as_slice()
+            .iter()
+            .zip(b.as_slice().iter())
+            .zip(c.as_slice().iter())
+        {
             assert_eq!(a + b, *c);
         }
     }

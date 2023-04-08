@@ -1,14 +1,17 @@
-use std::{mem::size_of, ops::{Neg, Mul, Sub, Add}};
+use std::{
+    mem::size_of,
+    ops::{Add, Mul, Neg, Sub},
+};
 
 use curve25519_dalek::scalar::Scalar;
 
 use crate::cuda_impl::Runtime;
 
-use super::{Buffer, GpuVecIter, GpuVec};
+use super::{Buffer, GpuVec, GpuVecIter};
 
 pub struct GpuScalarVec {
     data: Buffer<u32>,
-    len: usize
+    len: usize,
 }
 
 impl GpuScalarVec {

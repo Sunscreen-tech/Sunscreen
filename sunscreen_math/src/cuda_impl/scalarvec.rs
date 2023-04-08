@@ -46,10 +46,6 @@ impl GpuScalarVec {
         <Self as GpuVec>::iter(self)
     }
 
-    pub fn into_iter(self) -> IntoGpuVecIter<Self> {
-        <Self as GpuVec>::into_iter(self)
-    }
-
     pub fn invert(&self) -> Self {
         GpuScalarVec {
             data: self.unary_gpu_kernel("scalar_invert"),
@@ -71,6 +67,15 @@ impl GpuScalarVec {
     }
 }
 
+impl IntoIterator for GpuScalarVec {
+    type IntoIter = IntoGpuVecIter<Self>;
+    type Item = Scalar;
+
+    fn into_iter(self) -> IntoGpuVecIter<Self> {
+        <Self as GpuVec>::into_iter(self)
+    }
+}
+
 impl GpuVec for GpuScalarVec {
     type Item = Scalar;
 
@@ -82,12 +87,16 @@ impl GpuVec for GpuScalarVec {
         self.len
     }
 
+    // Multiplying by zero and shifting zero actually makes the code
+    // clearer.
+    #[allow(clippy::identity_op)]
+    #[allow(clippy::erasing_op)]
     fn get(&self, i: usize) -> <Self as GpuVec>::Item {
         if i >= self.len {
             panic!("Index out of {i} range {}.", self.len);
         }
 
-        let data: &[u32] = &self.data.as_slice();
+        let data: &[u32] = self.data.as_slice();
         let mut bytes = [0u8; 32];
 
         bytes[0] = ((data[0 * self.len + i] & 0xFF << 0) >> 0) as u8;

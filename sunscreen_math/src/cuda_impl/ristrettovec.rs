@@ -70,8 +70,13 @@ impl GpuRistrettoPointVec {
     pub fn iter(&self) -> GpuVecIter<Self> {
         <Self as GpuVec>::iter(self)
     }
+}
 
-    pub fn into_iter(self) -> IntoGpuVecIter<Self> {
+impl IntoIterator for GpuRistrettoPointVec {
+    type IntoIter = IntoGpuVecIter<Self>;
+    type Item = RistrettoPoint;
+
+    fn into_iter(self) -> IntoGpuVecIter<Self> {
         <Self as GpuVec>::into_iter(self)
     }
 }

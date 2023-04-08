@@ -82,7 +82,7 @@ impl Runtime {
         union ArgUnion {
             u32: u32,
             buffer: DevicePointer<u32>,
-        };
+        }
 
         let args = args
             .iter()

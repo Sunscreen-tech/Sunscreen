@@ -7,7 +7,7 @@ use curve25519_dalek::scalar::Scalar;
 
 use crate::cuda_impl::Runtime;
 
-use super::{Buffer, GpuVec, GpuVecIter};
+use super::{Buffer, GpuVec, GpuVecIter, IntoGpuVecIter};
 
 pub struct GpuScalarVec {
     data: Buffer<u32>,
@@ -44,6 +44,10 @@ impl GpuScalarVec {
 
     pub fn iter(&self) -> GpuVecIter<Self> {
         <Self as GpuVec>::iter(self)
+    }
+
+    pub fn into_iter(self) -> IntoGpuVecIter<Self> {
+        <Self as GpuVec>::into_iter(self)
     }
 
     pub fn invert(&self) -> Self {

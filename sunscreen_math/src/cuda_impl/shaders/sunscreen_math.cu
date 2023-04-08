@@ -1125,14 +1125,13 @@ __device__ const ProjectiveNielsPoint LookupTable8_select(const LookupTable8* lu
 ///
 /// Kernels
 ///
-
 extern "C" __global__ void scalar_add(
     const u32* a,
      const u32* b,
      u32* c,
     const u32 len
 ) {
-    u32 tid = threadIdx.x;
+    u32 tid = blockIdx.x * blockDim.x + threadIdx.x;
 
     if (tid < len) {
         Scalar29 t_a = Scalar29_unpack(a, tid, len);
@@ -1149,7 +1148,7 @@ extern "C" __global__ void scalar_sub(
     u32* c,
     u32 len
 ) {
-    u32 tid = threadIdx.x;
+    u32 tid = blockIdx.x * blockDim.x + threadIdx.x;
 
     if (tid < len) {
         Scalar29 t_a = Scalar29_unpack(a, tid, len);
@@ -1166,7 +1165,7 @@ extern "C" __global__ void scalar_neg(
     u32* b,
     u32 len 
 ) {
-    u32 tid = threadIdx.x;
+    u32 tid = blockIdx.x * blockDim.x + threadIdx.x;
 
     if (tid < len) {
         Scalar29 t_a = Scalar29_unpack(a, tid, len);
@@ -1183,7 +1182,7 @@ extern "C" __global__ void scalar_mul(
     u32* c ,
     u32 len
 ) {
-    u32 tid = threadIdx.x;
+    u32 tid = blockIdx.x * blockDim.x + threadIdx.x;
 
     if (tid < len) {
         Scalar29 t_a = Scalar29_unpack(a, tid, len);
@@ -1200,7 +1199,7 @@ extern "C" __global__ void scalar_invert(
     u32* b,
     u32 len 
 ) {
-    u32 tid = threadIdx.x;
+    u32 tid = blockIdx.x * blockDim.x + threadIdx.x;
     
     if (tid < len) {
         Scalar29 t_a = Scalar29_unpack(a, tid, len);
@@ -1215,7 +1214,7 @@ extern "C" __global__ void scalar_square(
     u32* b,
     u32 len 
 ) {
-    u32 tid = threadIdx.x;
+    u32 tid = blockIdx.x * blockDim.x + threadIdx.x;
 
     if (tid < len) {
         Scalar29 t_a = Scalar29_unpack(a, tid, len);
@@ -1231,7 +1230,7 @@ extern "C" __global__ void ristretto_add(
     u32* c,
     u32 len
 ) {
-    u32 tid = threadIdx.x;
+    u32 tid = blockIdx.x * blockDim.x + threadIdx.x;
 
     if (tid < len) {
         RistrettoPoint t_a = RistrettoPoint_unpack(a, tid, len);
@@ -1248,7 +1247,7 @@ extern "C" __global__ void ristretto_sub(
     u32* c,
     u32 len
 ) {
-    u32 tid = threadIdx.x;
+    u32 tid = blockIdx.x * blockDim.x + threadIdx.x;
 
     if (tid < len) {
         RistrettoPoint t_a = RistrettoPoint_unpack(a, tid, len);
@@ -1265,7 +1264,7 @@ extern "C" __global__ void ristretto_scalar_mul(
     u32* c,
     u32 len
 ) {
-    u32 tid = threadIdx.x;
+    u32 tid = blockIdx.x * blockDim.x + threadIdx.x;
 
     if (tid < len) {
         RistrettoPoint t_a = RistrettoPoint_unpack(a, tid, len);
@@ -1288,7 +1287,7 @@ extern "C" __global__ void basic_kernel(
     u32* c,
     const u32 len
 ) {
-    u32 tid = threadIdx.x;
+    u32 tid = blockIdx.x * blockDim.x + threadIdx.x;
 
     if (tid < len) {
         c[tid] = a[tid] + b[tid];
@@ -1300,7 +1299,7 @@ extern "C" __global__ void test_can_pack_unpack_scalar(
     u32* b,
     const u32 len
 ) {
-    u32 tid = threadIdx.x;
+    u32 tid = blockIdx.x * blockDim.x + threadIdx.x;
 
     if (tid < len) {
         Scalar29 val = Scalar29_unpack(a, tid, len);
@@ -1313,7 +1312,7 @@ extern "C" __global__ void test_can_roundtrip_montgomery(
     u32* b,
     const u32 len 
 ) {
-    u32 tid = threadIdx.x;
+    u32 tid = blockIdx.x * blockDim.x + threadIdx.x;
 
     if (tid < len) {
         Scalar29 x = Scalar29_unpack(a, tid, len);
@@ -1329,7 +1328,7 @@ extern "C" __global__ void test_can_pack_unpack_ristretto(
     u32* b,
     const u32 len 
 ) {
-    u32 tid = threadIdx.x;
+    u32 tid = blockIdx.x * blockDim.x + threadIdx.x;
 
     if (tid < len) {
         RistrettoPoint val = RistrettoPoint_unpack(a, tid, len);
@@ -1342,7 +1341,7 @@ extern "C" __global__ void test_can_roundtrip_projective_point(
     u32* b,
     const u32 len
 ) {
-    u32 tid = threadIdx.x;
+    u32 tid = blockIdx.x * blockDim.x + threadIdx.x;
 
     if (tid < len) {
         RistrettoPoint x = RistrettoPoint_unpack(a, tid, len);
@@ -1358,7 +1357,7 @@ extern "C" __global__ void test_can_double_projective_point(
     u32* b,
     const u32 len
 ) {
-    u32 tid = threadIdx.x;
+    u32 tid = blockIdx.x * blockDim.x + threadIdx.x;
 
     if (tid < len) {
         RistrettoPoint x = RistrettoPoint_unpack(a, tid, len);
@@ -1375,7 +1374,7 @@ extern "C" __global__ void test_can_pack_unpack_field2625(
     u32* b,
     const u32 len
 ) {
-    u32 tid = threadIdx.x;
+    u32 tid = blockIdx.x * blockDim.x + threadIdx.x;
 
     if (tid < len) {
         FieldElement2625 x = FieldElement2625_unpack(a, tid, len);

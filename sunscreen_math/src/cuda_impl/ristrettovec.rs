@@ -10,7 +10,7 @@ use rayon::prelude::*;
 
 use crate::{cuda_impl::Runtime, GpuScalarVec};
 
-use super::{Buffer, GpuVec, GpuVecIter};
+use super::{Buffer, GpuVec, GpuVecIter, IntoGpuVecIter};
 
 pub struct GpuRistrettoPointVec {
     data: Buffer<u32>,
@@ -69,6 +69,10 @@ impl GpuRistrettoPointVec {
 
     pub fn iter(&self) -> GpuVecIter<Self> {
         <Self as GpuVec>::iter(self)
+    }
+
+    pub fn into_iter(self) -> IntoGpuVecIter<Self> {
+        <Self as GpuVec>::into_iter(self)
     }
 }
 

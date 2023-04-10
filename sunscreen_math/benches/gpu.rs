@@ -43,9 +43,11 @@ mod benches {
         let a_vec = GpuRistrettoPointVec::new(&a);
         let b_vec = GpuScalarVec::new(&b);
 
-        let now = Instant::now();
-        let _ = a_vec * b_vec;
-        println!("{} sm/s", a.len() as f64 / now.elapsed().as_secs_f64());
+        loop {
+            let now = Instant::now();
+            let _ = &a_vec * &b_vec;
+            println!("{} sm/s", a.len() as f64 / now.elapsed().as_secs_f64());
+        }
     }
 }
 

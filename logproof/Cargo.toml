@@ -24,6 +24,7 @@ criterion = "0.4.0"
 
 [features]
 default = []
+cuda = ["sunscreen_math/cuda"]
 opencl = ["sunscreen_math/opencl"]
 metal = ["sunscreen_math/metal"]
 pina = ["sunscreen_math/pina"]

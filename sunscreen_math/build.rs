@@ -1,3 +1,102 @@
+#[cfg(feature = "cuda")]
+fn compile_cuda_shaders() {
+    use std::{path::PathBuf, process::Command};
+
+    use find_cuda_helper::find_cuda_root;
+
+    let outdir = PathBuf::from(std::env::var("OUT_DIR").unwrap());
+    let cuda_root = find_cuda_root().unwrap();
+    let shaders_dir = PathBuf::from(".")
+        .join("src")
+        .join("cuda_impl")
+        .join("shaders");
+
+    let nvcc = cuda_root.join("bin").join("nvcc");
+    let nvlink = cuda_root.join("bin").join("nvlink");
+    let is_cu_file = |file: &std::fs::DirEntry| {
+        file.file_name().to_string_lossy().ends_with(".cu") && file.file_type().unwrap().is_file()
+    };
+
+    println!("cargo:rerun-if-changed=src/cuda_impl/shaders");
+
+    for config in ["test", "release"] {
+        let shaders = std::fs::read_dir(&shaders_dir)
+            .unwrap()
+            .filter_map(Result::ok)
+            .filter(is_cu_file);
+
+        let mut out_files = vec![];
+
+        for s in shaders {
+            let filename = s.file_name().to_string_lossy().into_owned();
+            let srcfile = shaders_dir.join(&filename);
+            let outfile = outdir.join(format!("{filename}.ptx"));
+
+            let c = Command::new(&nvcc)
+                .arg("-Werror")
+                .arg("all-warnings")
+                .arg("-I")
+                .arg("src/cuda_impl/shaders/include")
+                .arg("--ptx")
+                .arg("--relocatable-device-code")
+                .arg("true")
+                .arg("--generate-line-info")
+                .arg("-O4")
+                .arg("-D")
+                .arg("CUDA_C")
+                .arg("-D")
+                .arg(config.to_uppercase())
+                .arg("-o")
+                .arg(&outfile)
+                .arg(srcfile)
+                .output()
+                .unwrap();
+
+            if !c.status.success() {
+                println!("===STDOUT===");
+                println!("{}", String::from_utf8_lossy(&c.stdout));
+                println!("===STDERR===");
+                println!("{}", String::from_utf8_lossy(&c.stderr));
+                panic!("nvcc compilation failed");
+            } else {
+                println!("nvcc");
+                println!("===STDOUT===");
+                println!("{}", String::from_utf8_lossy(&c.stdout));
+                println!("===STDERR===");
+                println!("{}", String::from_utf8_lossy(&c.stderr));
+            }
+
+            out_files.push(outfile);
+        }
+
+        let binary = outdir.join(format!("sunscreen_math.{config}.fatbin"));
+
+        let c = Command::new(&nvlink)
+            .arg("--arch")
+            .arg("sm_75")
+            .arg("-o")
+            .arg(&binary)
+            .arg("--verbose")
+            .args(out_files)
+            .output()
+            .unwrap();
+
+        if !c.status.success() {
+            println!("===STDOUT===");
+            println!("{}", String::from_utf8_lossy(&c.stdout));
+            println!("===STDERR===");
+            println!("{}", String::from_utf8_lossy(&c.stderr));
+            panic!("nvcc compilation failed");
+        } else {
+            println!("nvlink");
+            println!("===STDOUT===");
+            println!("{}", String::from_utf8_lossy(&c.stdout));
+            println!("===STDERR===");
+            println!("{}", String::from_utf8_lossy(&c.stderr));
+        }
+    }
+}
+
 #[cfg(feature = "opencl")]
 fn compile_opencl_shaders() {
     use std::ffi::CString;
@@ -41,6 +140,8 @@ fn compile_wgsl_shaders() {
         .join("src")
         .join("webgpu_impl")
         .join("shaders");
+
+    println!("cargo:rerun-if-changed=src/webgpu_impl/shaders");
 
     for config in ["test", "release"] {
         let is_wgsl_file = |file: &DirEntry| {
@@ -214,4 +315,7 @@ fn main() {
 
     #[cfg(feature = "opencl")]
     compile_opencl_shaders();
+
+    #[cfg(feature = "cuda")]
+    compile_cuda_shaders();
 }

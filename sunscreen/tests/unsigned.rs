@@ -57,24 +57,52 @@ impl FheApp {
     }
 }
 
-#[test]
-fn add_fhe_proptest() {
-    let FheApp { app, rt, pk, sk } = FheApp::new();
+// We could use a single outer #[test] function and just have a macro to
+// populate the inside with multiple proptest! calls. This would rsult in just a
+// single FheApp instantiation, which might speed things up.
+macro_rules! op_proptest {
+    ($($op:ident),+) => {
+        $(
+            paste! {
+                #[test]
+                fn [<$op _fhe_proptest>]() {
+                    let FheApp { app, rt, pk, sk } = FheApp::new();
 
-    proptest!(ProptestConfig::with_cases(20), |(lhs in [ANY; 4], rhs in [ANY; 4])| {
+                    proptest!(ProptestConfig::with_cases(20), |(lhs in [ANY; 4], rhs in [ANY; 4])| {
 
-        let a = U256::from_words(lhs);
-        let a_c = rt.encrypt(Unsigned256::from(a), &pk).unwrap();
-        let b = U256::from_words(rhs);
-        let b_c = rt.encrypt(Unsigned256::from(b), &pk).unwrap();
-        let args: Vec<FheProgramInput> = vec![a_c.into(), b_c.into()];
+                        // Test both operands as ciphertexts
+                        let a = U256::from_words(lhs);
+                        let a_c = rt.encrypt(Unsigned256::from(a), &pk).unwrap();
+                        let b = U256::from_words(rhs);
+                        let b_c = rt.encrypt(Unsigned256::from(b), &pk).unwrap();
+                        let args: Vec<FheProgramInput> = vec![a_c.clone().into(), b_c.clone().into()];
 
-        let result = rt
-            .run(app.get_fhe_program(add).unwrap(), args, &pk)
-            .unwrap();
+                        let result = rt
+                            .run(app.get_fhe_program($op).unwrap(), args, &pk)
+                            .unwrap();
 
-        let c: Unsigned256 = rt.decrypt(&result[0], &sk).unwrap();
+                        let c: Unsigned256 = rt.decrypt(&result[0], &sk).unwrap();
 
-        prop_assert_eq!(a.wrapping_add(&b), c.into())
-    });
+                        prop_assert_eq!(a.[<wrapping_ $op>](&b), c.into());
+
+                        // Test mixed ciphertexts and plaintexts
+                        let args_mixed: Vec<FheProgramInput> = vec![a_c.into(), Unsigned256::from(b).into()];
+                        let result_mixed = rt
+                            .run(app.get_fhe_program([<$op _plain>]).unwrap(), args_mixed, &pk)
+                            .unwrap();
+
+                        let c_mixed: Unsigned256 = rt.decrypt(&result_mixed[0], &sk).unwrap();
+
+                        prop_assert_eq!(a.[<wrapping_ $op>](&b), c_mixed.into());
+                    });
+                }
+            }
+        )+
+     };
+}
+
+op_proptest! {
+    add,
+    sub,
+    mul
 }

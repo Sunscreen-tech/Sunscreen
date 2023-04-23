@@ -90,7 +90,7 @@ impl<const LIMBS: usize> TryIntoPlaintext for Unsigned<LIMBS> {
 impl<const LIMBS: usize> TryFromPlaintext for Unsigned<LIMBS> {
     fn try_from_plaintext(
         plaintext: &Plaintext,
-        _params: &Params,
+        params: &Params,
     ) -> std::result::Result<Self, sunscreen_runtime::Error> {
         let val = match &plaintext.inner {
             InnerPlaintext::Seal(p) => {
@@ -100,13 +100,25 @@ impl<const LIMBS: usize> TryFromPlaintext for Unsigned<LIMBS> {
 
                 let bits = usize::min(std::mem::size_of::<UInt<LIMBS>>() * 8, p[0].len());
 
+                let negative_cutoff = (params.plain_modulus + 1) / 2;
+
                 let mut val = UInt::ZERO;
                 for i in 0..bits {
                     let coeff = p[0].get_coefficient(i);
-                    val = wrapping_add(
-                        val,
-                        wrapping_mul(UInt::from_u8(0x1) << i, UInt::from_u64(coeff)),
-                    );
+                    if coeff < negative_cutoff {
+                        val = wrapping_add(
+                            val,
+                            wrapping_mul(UInt::from_u8(0x1) << i, UInt::from_u64(coeff)),
+                        );
+                    } else {
+                        val = wrapping_sub(
+                            val,
+                            wrapping_mul(
+                                UInt::from_u8(0x1) << i,
+                                UInt::from_u64(params.plain_modulus - coeff),
+                            ),
+                        );
+                    }
                 }
 
                 // Not sure why below doesn't work? It overflows the first limb

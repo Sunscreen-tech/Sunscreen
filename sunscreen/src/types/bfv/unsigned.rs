@@ -121,20 +121,6 @@ impl<const LIMBS: usize> TryFromPlaintext for Unsigned<LIMBS> {
                     }
                 }
 
-                // Not sure why below doesn't work? It overflows the first limb
-                // on bit 63. Perhaps above implementation is acceptable.
-
-                //let mut limbs: [u64; LIMBS] = [0; LIMBS];
-                //let limbsize = std::mem::size_of::<Limb>() * 8;
-                //assert_eq!(limbsize, 64); // TODO remove
-
-                //for i in 0..bits {
-                //let coeff = p[0].get_coefficient(i);
-                //limbs[i / limbsize] += (0x1u64 << (i % limbsize)) * coeff;
-                //}
-
-                //Implicit compile-time guarantee that Limb is u64
-                //let val = UInt::from_words(limbs);
                 Self { val }
             }
         };
@@ -164,8 +150,6 @@ impl<const LIMBS: usize> From<Unsigned<LIMBS>> for UInt<LIMBS> {
     }
 }
 
-// TODO just wrapping for now. would it be preferable to panic on overflow?
-// This would be a departure from bfv::signed.
 fn wrapping_add<const LIMBS: usize>(lhs: UInt<LIMBS>, rhs: UInt<LIMBS>) -> UInt<LIMBS> {
     (Wrapping(lhs) + Wrapping(rhs)).0
 }

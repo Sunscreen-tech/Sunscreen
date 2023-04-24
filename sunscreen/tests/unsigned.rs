@@ -106,3 +106,32 @@ op_proptest! {
     sub,
     mul
 }
+
+#[test]
+fn underflow_wraps_properly() {
+    let FheApp { app, rt, pk, sk } = FheApp::new();
+    let zero = Unsigned256::from(0);
+    let one = Unsigned256::from(1);
+
+    let zero_c = rt.encrypt(zero, &pk).unwrap();
+    let one_c = rt.encrypt(one, &pk).unwrap();
+    let args: Vec<FheProgramInput> = vec![zero_c.clone().into(), one_c.into()];
+
+    let result = rt
+        .run(app.get_fhe_program(sub).unwrap(), args, &pk)
+        .unwrap();
+
+    let c: Unsigned256 = rt.decrypt(&result[0], &sk).unwrap();
+
+    assert_eq!(U256::MAX, c.into());
+
+    // Same test but subtracting plaintext
+    let args_mixed: Vec<FheProgramInput> = vec![zero_c.into(), one.into()];
+    let result_mixed = rt
+        .run(app.get_fhe_program(sub_plain).unwrap(), args_mixed, &pk)
+        .unwrap();
+
+    let c_mixed: Unsigned256 = rt.decrypt(&result_mixed[0], &sk).unwrap();
+
+    assert_eq!(U256::MAX, c_mixed.into());
+}

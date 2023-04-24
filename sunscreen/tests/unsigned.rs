@@ -1,9 +1,12 @@
-use crypto_bigint::U256;
+use crypto_bigint::{UInt, U256, U64};
 use paste::paste;
 use proptest::prelude::{prop::num::u64::ANY, prop_assert_eq, proptest, ProptestConfig};
 use sunscreen::{
     fhe_program,
-    types::{bfv::Unsigned256, Cipher},
+    types::{
+        bfv::{Unsigned, Unsigned256},
+        Cipher,
+    },
     Compiler, FheApplication, FheProgramInput, FheRuntime, PrivateKey, PublicKey, Runtime,
 };
 
@@ -58,7 +61,7 @@ impl FheApp {
 }
 
 // We could use a single outer #[test] function and just have a macro to
-// populate the inside with multiple proptest! calls. This would rsult in just a
+// populate the inside with multiple proptest! calls. This would result in just a
 // single FheApp instantiation, which might speed things up.
 macro_rules! op_proptest {
     ($($op:ident),+) => {
@@ -107,31 +110,58 @@ op_proptest! {
     mul
 }
 
-#[test]
-fn underflow_wraps_properly() {
+fn run_with<const L: usize, O1, O2, F>(a: UInt<L>, b: UInt<L>, op: F, fhe_op: O1, fhe_op_plain: O2)
+where
+    O1: AsRef<str>,
+    O2: AsRef<str>,
+    F: Fn(&UInt<L>, &UInt<L>) -> UInt<L>,
+{
     let FheApp { app, rt, pk, sk } = FheApp::new();
-    let zero = Unsigned256::from(0);
-    let one = Unsigned256::from(1);
+    let a_u = Unsigned::from(a);
+    let b_u = Unsigned::from(b);
 
-    let zero_c = rt.encrypt(zero, &pk).unwrap();
-    let one_c = rt.encrypt(one, &pk).unwrap();
-    let args: Vec<FheProgramInput> = vec![zero_c.clone().into(), one_c.into()];
+    let a_c = rt.encrypt(a_u, &pk).unwrap();
+    let b_c = rt.encrypt(b_u, &pk).unwrap();
+    let args: Vec<FheProgramInput> = vec![a_c.clone().into(), b_c.into()];
 
     let result = rt
-        .run(app.get_fhe_program(sub).unwrap(), args, &pk)
+        .run(app.get_fhe_program(fhe_op).unwrap(), args, &pk)
         .unwrap();
 
-    let c: Unsigned256 = rt.decrypt(&result[0], &sk).unwrap();
+    let c: Unsigned<L> = rt.decrypt(&result[0], &sk).unwrap();
 
-    assert_eq!(U256::MAX, c.into());
+    assert_eq!(op(&a, &b), c.into());
 
     // Same test but subtracting plaintext
-    let args_mixed: Vec<FheProgramInput> = vec![zero_c.into(), one.into()];
+    let args_mixed: Vec<FheProgramInput> = vec![a_c.into(), b_u.into()];
     let result_mixed = rt
-        .run(app.get_fhe_program(sub_plain).unwrap(), args_mixed, &pk)
+        .run(app.get_fhe_program(fhe_op_plain).unwrap(), args_mixed, &pk)
         .unwrap();
 
-    let c_mixed: Unsigned256 = rt.decrypt(&result_mixed[0], &sk).unwrap();
+    let c_mixed: Unsigned<L> = rt.decrypt(&result_mixed[0], &sk).unwrap();
 
-    assert_eq!(U256::MAX, c_mixed.into());
+    assert_eq!(op(&a, &b), c_mixed.into());
+}
+
+#[test]
+fn underflow_wraps_properly() {
+    // U256
+    run_with(U256::ZERO, U256::ONE, U256::wrapping_sub, sub, sub_plain);
+    // U64
+    run_with(U64::ZERO, U64::ONE, U64::wrapping_sub, sub, sub_plain);
+}
+
+#[test]
+fn overflow_wraps_properly() {
+    // U256
+    run_with(U256::MAX, U256::ONE, U256::wrapping_add, add, add_plain);
+    // U64
+    run_with(U64::MAX, U64::ONE, U64::wrapping_add, add, add_plain);
+}
+
+#[test]
+fn carry_at_limb_boundary() {
+    let a = U256::from_words([0, u64::MAX, 0, 0]);
+    let b = U256::from_words([0, 1, 0, 0]);
+    run_with(a, b, U256::wrapping_add, add, add_plain);
 }

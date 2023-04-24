@@ -25,8 +25,6 @@ use crate::{
     FheProgramInputTrait, Params, TypeName as DeriveTypeName, WithContext,
 };
 
-// TODO lil macro to gen all the ones from crypto_bigint?
-
 /// Unsigned 64 bit integer
 pub type Unsigned64 = Unsigned<1>;
 /// Unsigned 128 bit integer

@@ -75,7 +75,7 @@ compile_error!("This crate currently requires a little endian target architectur
  *
  * and outputs (b_0..b_7)
  */
-pub trait Gadget: Any {
+pub trait Gadget: Any + Send + Sync {
     /**
      * Create the subcircuit for this gadget.
      * * `gadget_inputs` are the node indices of the gadget inputs.

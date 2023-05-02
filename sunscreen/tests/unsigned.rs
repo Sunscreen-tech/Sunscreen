@@ -1,4 +1,5 @@
 use crypto_bigint::{UInt, U256, U64};
+use lazy_static::lazy_static;
 use paste::paste;
 use proptest::prelude::{prop::num::u64::ANY, prop_assert_eq, proptest, ProptestConfig};
 use sunscreen::{
@@ -9,10 +10,6 @@ use sunscreen::{
     },
     Compiler, FheApplication, FheProgramInput, FheRuntime, PrivateKey, PublicKey, Runtime,
 };
-
-// Darn, Application is no longer thread safe, no lazy init :(
-// luckily proptest supports something like an expensive setup operation
-// TODO tests for more than just 256?
 
 macro_rules! fhe_program {
     ($(($op:ident, $binop:tt, $ty:ident)),+) => {
@@ -60,28 +57,29 @@ impl FheApp {
     }
 }
 
-// We could use a single outer #[test] function and just have a macro to
-// populate the inside with multiple proptest! calls. This would result in just a
-// single FheApp instantiation, which might speed things up.
+lazy_static! {
+    static ref FHE_APP: FheApp = FheApp::new();
+}
+
 macro_rules! op_proptest {
     ($($op:ident),+) => {
         $(
             paste! {
                 #[test]
                 fn [<$op _fhe_proptest>]() {
-                    let FheApp { app, rt, pk, sk } = FheApp::new();
+                    let FheApp { app, rt, pk, sk } = &*FHE_APP;
 
                     proptest!(ProptestConfig::with_cases(20), |(lhs in [ANY; 4], rhs in [ANY; 4])| {
 
                         // Test both operands as ciphertexts
                         let a = U256::from_words(lhs);
-                        let a_c = rt.encrypt(Unsigned256::from(a), &pk).unwrap();
+                        let a_c = rt.encrypt(Unsigned256::from(a), pk).unwrap();
                         let b = U256::from_words(rhs);
-                        let b_c = rt.encrypt(Unsigned256::from(b), &pk).unwrap();
+                        let b_c = rt.encrypt(Unsigned256::from(b), pk).unwrap();
                         let args: Vec<FheProgramInput> = vec![a_c.clone().into(), b_c.clone().into()];
 
                         let result = rt
-                            .run(app.get_fhe_program($op).unwrap(), args, &pk)
+                            .run(app.get_fhe_program($op).unwrap(), args, pk)
                             .unwrap();
 
                         let c: Unsigned256 = rt.decrypt(&result[0], &sk).unwrap();
@@ -91,7 +89,7 @@ macro_rules! op_proptest {
                         // Test mixed ciphertexts and plaintexts
                         let args_mixed: Vec<FheProgramInput> = vec![a_c.into(), Unsigned256::from(b).into()];
                         let result_mixed = rt
-                            .run(app.get_fhe_program([<$op _plain>]).unwrap(), args_mixed, &pk)
+                            .run(app.get_fhe_program([<$op _plain>]).unwrap(), args_mixed, pk)
                             .unwrap();
 
                         let c_mixed: Unsigned256 = rt.decrypt(&result_mixed[0], &sk).unwrap();
@@ -116,29 +114,29 @@ where
     O2: AsRef<str>,
     F: Fn(&UInt<L>, &UInt<L>) -> UInt<L>,
 {
-    let FheApp { app, rt, pk, sk } = FheApp::new();
+    let FheApp { app, rt, pk, sk } = &*FHE_APP;
     let a_u = Unsigned::from(a);
     let b_u = Unsigned::from(b);
 
-    let a_c = rt.encrypt(a_u, &pk).unwrap();
-    let b_c = rt.encrypt(b_u, &pk).unwrap();
+    let a_c = rt.encrypt(a_u, pk).unwrap();
+    let b_c = rt.encrypt(b_u, pk).unwrap();
     let args: Vec<FheProgramInput> = vec![a_c.clone().into(), b_c.into()];
 
     let result = rt
-        .run(app.get_fhe_program(fhe_op).unwrap(), args, &pk)
+        .run(app.get_fhe_program(fhe_op).unwrap(), args, pk)
         .unwrap();
 
-    let c: Unsigned<L> = rt.decrypt(&result[0], &sk).unwrap();
+    let c: Unsigned<L> = rt.decrypt(&result[0], sk).unwrap();
 
     assert_eq!(op(&a, &b), c.into());
 
     // Same test but subtracting plaintext
     let args_mixed: Vec<FheProgramInput> = vec![a_c.into(), b_u.into()];
     let result_mixed = rt
-        .run(app.get_fhe_program(fhe_op_plain).unwrap(), args_mixed, &pk)
+        .run(app.get_fhe_program(fhe_op_plain).unwrap(), args_mixed, pk)
         .unwrap();
 
-    let c_mixed: Unsigned<L> = rt.decrypt(&result_mixed[0], &sk).unwrap();
+    let c_mixed: Unsigned<L> = rt.decrypt(&result_mixed[0], sk).unwrap();
 
     assert_eq!(op(&a, &b), c_mixed.into());
 }

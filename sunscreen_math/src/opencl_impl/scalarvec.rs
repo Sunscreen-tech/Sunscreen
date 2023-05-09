@@ -5,7 +5,7 @@ use curve25519_dalek::scalar::Scalar;
 
 use crate::opencl_impl::Runtime;
 
-use super::{GpuVec, GpuVecIter, MappedBuffer};
+use super::{GpuVec, GpuVecIter, MappedBuffer, IntoGpuVecIter};
 
 #[derive(Clone)]
 /// A vector of scalars laid out in a way that enables coalescing on
@@ -72,6 +72,15 @@ impl GpuScalarVec {
             data: self.unary_gpu_kernel("scalar_square"),
             len: self.len,
         }
+    }
+}
+
+impl IntoIterator for GpuScalarVec {
+    type IntoIter = IntoGpuVecIter<Self>;
+    type Item = Scalar;
+
+    fn into_iter(self) -> Self::IntoIter {
+        <Self as GpuVec>::into_iter(self)
     }
 }
 

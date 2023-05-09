@@ -1,3 +1,5 @@
+use std::process::Output;
+
 #[cfg(feature = "cuda")]
 fn compile_cuda_shaders() {
     use std::{path::PathBuf, process::Command};
@@ -99,28 +101,77 @@ fn compile_cuda_shaders() {
 
 #[cfg(feature = "opencl")]
 fn compile_opencl_shaders() {
-    use std::ffi::CString;
+    use std::{env, ffi::CString, fs::read_to_string, path::PathBuf, process::Command};
 
     use ocl::{Context, Device, Platform, Program};
 
-    const KERNEL_SOURCE: &str = include_str!("src/opencl_impl/shaders/sunscreen_math.cl");
+    // We first preprocess `main.cl` with Clang so we don't
+    // need to fool with include paths when calling `Program::with_source()`. We
+    // then include_str!() the contents of the preprocessed files in
+    // a constant vector in OUT_DIR/{test,release}-shaders.rs.
+    //
+    // This allows us to have a fairly sane developer workflow for shaders
+    // whereby you can have multiple .cl files and headers under
+    // `src/opencl_impl/sharders/include`.
+    //
+    // We're ultimately targeting OpenCL 1.2, as this is the version with
+    // broadest support from vendors. The OpenCL 3.0 features that make it
+    // compelling (i.e. offline compiler, C++, and SPIRV support) are in
+    // fact optional and not supported by Nvidia, who is one of the most
+    // important vendors.
+    let outdir = PathBuf::from(env::var("OUT_DIR").unwrap());
 
-    let platform = Platform::first().unwrap();
-    let device = Device::first(platform).unwrap();
-    let ctx = Context::builder().devices(device).build().unwrap();
+    let shader_dir = PathBuf::from(".")
+        .join("src")
+        .join("opencl_impl")
+        .join("shaders");
 
-    // Assert we can compile our program and print any errors if not.
-    let program = Program::with_source(
-        &ctx,
-        &[CString::new(KERNEL_SOURCE).unwrap()],
-        Some(&[device]),
-        &CString::new("-DTEST").unwrap(),
-    );
-    match program {
-        Ok(_) => {}
-        Err(e) => {
-            println!("{}", e);
-            panic!();
+    let include_dir = PathBuf::from(".")
+        .join("src")
+        .join("opencl_impl")
+        .join("shaders")
+        .join("include");
+
+    println!("cargo:rerun-if-changed={}", shader_dir.to_string_lossy());
+
+    // We precompile the sources with e.g. -DTEST or -DRELEASE so you can conditionally compile
+    // shaders for using with `cargo test` that don't get included in released libraries.
+    for config in ["test", "release"] {
+        println!("Profile {}", config);
+
+        let main_cl = PathBuf::from(&shader_dir).join("main.cl");
+        let outfile = PathBuf::from(&outdir).join(format!("{}_main.cl", config));
+
+        let output = Command::new("clang")
+            .arg("--precompile")
+            .arg("-cl-no-stdinc")
+            .arg("-I")
+            .arg(&include_dir)
+            .arg(format!("-D{}", config.to_ascii_uppercase()))
+            .arg("-o")
+            .arg(&outfile)
+            .arg(&main_cl)
+            .output()
+            .unwrap();
+
+        validate_command_output(output, "Shader precompilation failed.");
+
+        let src = CString::new(read_to_string(outfile).unwrap()).unwrap();
+
+        let platform = Platform::first().unwrap();
+        let device = Device::first(platform).unwrap();
+        let ctx = Context::builder().devices(device).build().unwrap();
+
+        // Assert we can compile our program and print any errors if not.
+        let program =
+            Program::with_source(&ctx, &[src], Some(&[device]), &CString::new("").unwrap());
+
+        match program {
+            Ok(_) => {}
+            Err(e) => {
+                println!("{}", e);
+                panic!();
+            }
         }
     }
 }
@@ -303,6 +354,18 @@ fn compile_metal_shaders() {
 
             panic!("Shader compilation failed.");
         }
+    }
+}
+
+fn validate_command_output(output: Output, panic_msg: &str) {
+    if !output.status.success() {
+        println!("===stderr===");
+        println!("{}", String::from_utf8_lossy(&output.stderr));
+
+        println!("===stdout===");
+        println!("{}", String::from_utf8_lossy(&output.stdout));
+
+        panic!("{}", panic_msg);
     }
 }
 

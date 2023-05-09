@@ -103,6 +103,8 @@ where
     println!("Prover time {}s", now.elapsed().as_secs_f64());
     println!("Proof size {}B", bincode::serialize(&proof).unwrap().len());
 
+    println!("Verify...");
+
     let mut transcript = Transcript::new(b"test");
 
     let now = Instant::now();
@@ -161,14 +163,14 @@ fn params_4096_1ct(_: &mut Criterion) {
 
 criterion_group!(
     benches,
-    params_1024_1ct,
-    params_1024_2ct,
-    params_1024_3ct,
-    params_2048_1ct,
-    params_2048_2ct,
-    params_2048_3ct,
-    params_4096_1ct,
-    params_4096_2ct,
+    //params_1024_1ct,
+    //params_1024_2ct,
+    //params_1024_3ct,
+    //params_2048_1ct,
+    //params_2048_2ct,
+    //params_2048_3ct,
+    //params_4096_1ct,
+    //params_4096_2ct,
     params_4096_3ct
 );
 

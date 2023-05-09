@@ -1,4 +1,4 @@
-use std::{borrow::Borrow, ops::Mul};
+use std::{borrow::Borrow, ops::Mul, time::Instant};
 
 use ark_ff::{BigInt, BigInteger, FftField, Field, Fp, MontBackend, MontConfig, Zero as ArkZero};
 use ark_poly::univariate::DensePolynomial;
@@ -563,12 +563,20 @@ impl TwosComplementCoeffs for Scalar {
  * A parallelized multiscalar multiplication.
  */
 pub fn parallel_multiscalar_multiplication(s: &[Scalar], p: &[RistrettoPoint]) -> RistrettoPoint {
+    let now = Instant::now();
+
     let msm = s
         .par_iter()
         .chunks(16384)
         .zip(p.par_iter().chunks(16384))
         .map(|(s, p)| RistrettoPoint::vartime_multiscalar_mul(s.into_iter(), p.into_iter()))
         .reduce(RistrettoPoint::default, |x, p| x + p);
+
+    println!(
+        "MSM {}s: {} SM/s",
+        now.elapsed().as_secs_f64(),
+        (s.len() as f64) / now.elapsed().as_secs_f64()
+    );
 
     msm
 }

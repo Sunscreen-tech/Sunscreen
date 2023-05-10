@@ -5,7 +5,7 @@ use curve25519_dalek::scalar::Scalar;
 
 use crate::opencl_impl::Runtime;
 
-use super::{GpuVec, GpuVecIter, MappedBuffer, IntoGpuVecIter};
+use super::{GpuVec, GpuVecIter, IntoGpuVecIter, MappedBuffer};
 
 #[derive(Clone)]
 /// A vector of scalars laid out in a way that enables coalescing on

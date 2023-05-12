@@ -54,19 +54,7 @@ fn compile_cuda_shaders() {
                 .output()
                 .unwrap();
 
-            if !c.status.success() {
-                println!("===STDOUT===");
-                println!("{}", String::from_utf8_lossy(&c.stdout));
-                println!("===STDERR===");
-                println!("{}", String::from_utf8_lossy(&c.stderr));
-                panic!("nvcc compilation failed");
-            } else {
-                println!("nvcc");
-                println!("===STDOUT===");
-                println!("{}", String::from_utf8_lossy(&c.stdout));
-                println!("===STDERR===");
-                println!("{}", String::from_utf8_lossy(&c.stderr));
-            }
+            validate_command_output(c, "nvcc compilation failed.");
 
             out_files.push(outfile);
         }
@@ -83,19 +71,7 @@ fn compile_cuda_shaders() {
             .output()
             .unwrap();
 
-        if !c.status.success() {
-            println!("===STDOUT===");
-            println!("{}", String::from_utf8_lossy(&c.stdout));
-            println!("===STDERR===");
-            println!("{}", String::from_utf8_lossy(&c.stderr));
-            panic!("nvcc compilation failed");
-        } else {
-            println!("nvlink");
-            println!("===STDOUT===");
-            println!("{}", String::from_utf8_lossy(&c.stdout));
-            println!("===STDERR===");
-            println!("{}", String::from_utf8_lossy(&c.stderr));
-        }
+        validate_command_output(c, "nvcc compilation failed.");
     }
 }
 
@@ -322,15 +298,7 @@ fn compile_metal_shaders() {
                 .output()
                 .unwrap();
 
-            if !output.status.success() {
-                println!("===stderr===");
-                println!("{}", String::from_utf8_lossy(&output.stderr));
-
-                println!("===stdout===");
-                println!("{}", String::from_utf8_lossy(&output.stdout));
-
-                panic!("Shader compilation failed.");
-            }
+            validate_command_output(output, "Shader compilation failed.");
         }
 
         let libout = PathBuf::from(&outdir).join(format!("curve25519-dalek.{config}.metallib"));
@@ -345,18 +313,11 @@ fn compile_metal_shaders() {
             .output()
             .unwrap();
 
-        if !output.status.success() {
-            println!("===stderr===");
-            println!("{}", String::from_utf8_lossy(&output.stderr));
-
-            println!("===stdout===");
-            println!("{}", String::from_utf8_lossy(&output.stdout));
-
-            panic!("Shader compilation failed.");
-        }
+        validate_command_output(output, "Shader compilation failed.");
     }
 }
 
+#[allow(unused)]
 fn validate_command_output(output: Output, panic_msg: &str) {
     if !output.status.success() {
         println!("===stderr===");

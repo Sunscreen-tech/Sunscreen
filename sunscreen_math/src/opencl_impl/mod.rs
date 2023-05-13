@@ -11,7 +11,11 @@ pub use ristrettovec::GpuRistrettoPointVec;
 
 use lazy_static::lazy_static;
 
-const KERNEL_SOURCE: &str = include_str!("shaders/sunscreen_math.cl");
+#[cfg(test)]
+const SHADERS: &str = include_str!(concat!(env!("OUT_DIR"), "/test_main.cl"));
+
+#[cfg(not(test))]
+const SHADERS: &str = include_str!(concat!(env!("OUT_DIR"), "/release_main.cl"));
 
 pub struct Runtime {
     queue: Queue,
@@ -322,7 +326,7 @@ lazy_static! {
         };
 
         // Assert we can compile our program and print any errors if not.
-        let program = Program::with_source(&ctx, &[CString::new(KERNEL_SOURCE).unwrap()], Some(&[device]), &compile_args).unwrap();
+        let program = Program::with_source(&ctx, &[CString::new(SHADERS).unwrap()], Some(&[device]), &compile_args).unwrap();
 
         Runtime {
             queue,

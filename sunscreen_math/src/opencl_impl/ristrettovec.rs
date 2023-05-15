@@ -90,10 +90,18 @@ impl GpuRistrettoPointVec {
         } else {
             (self.len() + 1) / NUM_THREADS
         };
+    
+        let scalar_bit_len = std::mem::size_of::<Scalar>();
+        let window_bit_len = 16usize;
+        let num_windows = if scalar_bit_len % window_bit_len == 0 {
+            scalar_bit_len / window_bit_len
+        } else {
+            (scalar_bit_len + 1) / window_bit_len
+        };
 
-        let ell_data = runtime.alloc::<u32>(self.len());
-        let ell_row_len = runtime.alloc::<u32>(NUM_THREADS);
-        let ell_col_index = runtime.alloc::<u32>(max_cols);
+        let ell_data = runtime.alloc::<u32>(self.len() * num_windows);
+        let ell_row_len = runtime.alloc::<u32>(NUM_THREADS * num_windows);
+        let ell_col_index = runtime.alloc::<u32>(max_cols * num_windows);
         
 
     }
@@ -312,6 +320,8 @@ mod tests {
     use curve25519_dalek::scalar::Scalar;
     use rand::thread_rng;
 
+    use crate::{ScalarVec, opencl_impl::Grid};
+
     use super::*;
 
     #[test]
@@ -435,10 +445,12 @@ mod tests {
 
         let b_gpu =
             GpuRistrettoPointVec::unary_gpu_kernel(&a_gpu, "test_can_roundtrip_projective_point");
-        let b_gpu = GpuRistrettoPointVec {
+        let mut b_gpu = GpuRistrettoPointVec {
             data: b_gpu,
             len: a.len(),
         };
+
+        b_gpu.data.remap();
 
         for (i, j) in a_gpu.iter().zip(b_gpu.iter()) {
             assert_eq!(i.compress(), j.compress());
@@ -463,6 +475,51 @@ mod tests {
 
         for (p_a, p_b) in a.iter().zip(b.iter()) {
             assert_eq!(Scalar::from(2u8) * p_a, p_b);
+        }
+    }
+
+    #[test]
+    fn can_get_msm_scalar_windows() {
+        let a = (0..456).map(|_| Scalar::random(&mut thread_rng())).collect::<Vec<_>>();
+
+        let a_gpu = ScalarVec::new(&a);
+        let runtime = Runtime::get();
+
+        println!("{:#?}", a[0]);
+
+        for window_bits in 1..33 {
+            const SCALAR_BITS: usize = 8 * std::mem::size_of::<Scalar>();
+
+            let num_windows = if SCALAR_BITS % window_bits == 0 {
+                SCALAR_BITS / window_bits
+            } else {
+                SCALAR_BITS / window_bits + 1
+            };
+
+            let mut windows_gpu = runtime.alloc::<u32>(num_windows * a.len());
+
+            runtime.run_kernel("test_get_scalar_windows", &[(&a_gpu.data).into(), (&windows_gpu).into(), (window_bits as u32).into(), (a.len() as u32).into()], &Grid::from([(a.len(), 32), (num_windows, 1), (1, 1)]));
+
+            // The windows buffer's contents have changed since running the kernel, so we need
+            // to remap the host address on some (e.g. Nvidia) platforms.
+            windows_gpu.remap();
+
+            let windows = windows_gpu.iter().cloned().collect::<Vec<_>>();
+
+            for i in 0..a.len() {
+                let mut actual = Scalar::zero();
+                let mut radix = Scalar::one();
+
+                for j in 0..num_windows {
+                    let cur_window = windows[j * a.len() + i];
+                    assert!((cur_window as u64) < (0x1u64 << window_bits as u64));
+                    
+                    actual += Scalar::from(cur_window) * radix;
+                    radix *= Scalar::from(0x1u64 << window_bits as u64);
+                }
+
+                assert_eq!(actual, a[i]);
+            }
         }
     }
 }

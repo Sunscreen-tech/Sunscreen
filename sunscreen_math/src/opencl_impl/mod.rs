@@ -45,6 +45,11 @@ impl<T: OclPrm> MappedBuffer<T> {
 
         Self { buffer, map }
     }
+
+    pub fn remap(&mut self) {
+        self.map.unmap().enq().unwrap();
+        self.map = unsafe { self.buffer.map().enq().unwrap() };
+    }
 }
 
 impl<'a> From<&'a MappedBuffer<cl_uint>> for KernelArg<'a> {

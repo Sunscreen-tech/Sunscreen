@@ -28,7 +28,7 @@ find_cuda_helper = { version = "0.2.0", optional = true }
 criterion = "0.4.0"
 
 [features]
-default = []
+default = ["opencl"]
 nightly-features = []
 cuda = ["dep:find_cuda_helper", "dep:cust", "gpu"]
 metal = ["dep:metal", "gpu"]

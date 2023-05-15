@@ -77,6 +77,26 @@ impl GpuRistrettoPointVec {
     pub fn iter(&self) -> GpuVecIter<Self> {
         <Self as GpuVec>::iter(self)
     }
+
+    pub fn multiscalar_multiplication(&self, scalars: &GpuScalarVec) {
+        assert_eq!(self.len(), scalars.len());
+
+        let runtime = Runtime::get();
+
+        const NUM_THREADS: usize = 16384;
+
+        let max_cols = if self.len() % NUM_THREADS == 0 {
+            self.len() / NUM_THREADS
+        } else {
+            (self.len() + 1) / NUM_THREADS
+        };
+
+        let ell_data = runtime.alloc::<u32>(self.len());
+        let ell_row_len = runtime.alloc::<u32>(NUM_THREADS);
+        let ell_col_index = runtime.alloc::<u32>(max_cols);
+        
+
+    }
 }
 
 impl IntoIterator for GpuRistrettoPointVec {

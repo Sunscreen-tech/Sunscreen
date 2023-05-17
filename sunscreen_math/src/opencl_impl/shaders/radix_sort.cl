@@ -12,13 +12,14 @@
 #define RADIX_BITS 4
 #define RADIX 16
 #define RADIX_MASK 0xF
-#define THREADS_PER_GROUP 128
+#define LOG_THREADS_PER_GROUP 7
+#define THREADS_PER_GROUP (0x1 << LOG_THREADS_PER_GROUP)
 #define WORDS_PER_THREAD 8
 #define BLOCK_SIZE THREADS_PER_GROUP * WORDS_PER_THREAD
 
 kernel void create_histograms(
-    const global u32* keys,
-    global u32* histograms,
+    const global u32* restrict keys,
+    global u32* restrict histograms,
     const u32 len,
     const u32 cur_digit
 ) {
@@ -59,6 +60,79 @@ kernel void create_histograms(
         // Store all the 0 counts, then 1 counts, and so on to make
         // prefix summation simpler.
         histograms[radix_offset] = counts[local_id];
-        //histograms[radix_offset] = end - start;
+    }
+}
+
+/// Computes per-block prefix sums.
+///
+/// # Remarks
+/// See https://developer.nvidia.com/gpugems/gpugems3/part-vi-gpu-computing/chapter-39-parallel-prefix-sum-scan-cuda
+// for implementation.
+kernel void prefix_sum_blocks(
+    const global u32* restrict values,
+    global u32* restrict out,
+    u32 len
+) {
+    u32 group_id = get_group_id(0);
+    u32 global_id = get_global_id(0);
+    u32 local_id = get_local_id(0);
+    u32 row_id = get_global_id(1);
+
+    // TODO: Prevent bank conflicts
+    local u32 values_local[THREADS_PER_GROUP];
+
+    if (global_id < len) {
+        values_local[local_id] = values[global_id + row_id * len];
+    } else {
+        values_local[local_id] = 0;
+    }
+
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+    // Up sweep
+    for (u32 i = 0; i < LOG_THREADS_PER_GROUP; i++) {
+        u32 two_n = 0x1 << i;
+        u32 two_n_plus_1 = 0x1 << (i + 1);
+
+        u32 k = two_n_plus_1 * local_id;
+        u32 idx_1 = k + two_n - 1;
+        u32 idx_2 = k + two_n_plus_1 - 1;
+
+        if (idx_2 < THREADS_PER_GROUP) {
+            values_local[idx_2] = values_local[idx_1] + values_local[idx_2];
+        }
+
+        barrier(CLK_LOCAL_MEM_FENCE);
+    }
+
+    // Down sweep
+    if (local_id == 0) {
+        values_local[THREADS_PER_GROUP - 1] = 0;
+    }
+    
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+    for (u32 i = LOG_THREADS_PER_GROUP; i > 0; i--) {
+        u32 d = i - 1;
+        
+        u32 two_d = 0x1 << d;
+        u32 two_d_plus_1 = 0x1 << (d + 1);
+        u32 k = local_id * two_d_plus_1;
+
+        u32 idx_1 = k + two_d - 1;
+        u32 idx_2 = k + two_d_plus_1 - 1;
+
+        if (idx_2 < THREADS_PER_GROUP) {
+            u32 t = values_local[idx_1];
+            values_local[idx_1] = values_local[idx_2];
+            values_local[idx_2] = t + values_local[idx_2];
+        }
+        
+        barrier(CLK_LOCAL_MEM_FENCE);
+    }
+
+    if (global_id < len) {
+        out[global_id + row_id * len] = values_local[local_id];
+        //out[global_id + row_id * len] = global_id + row_id * len;
     }
 }

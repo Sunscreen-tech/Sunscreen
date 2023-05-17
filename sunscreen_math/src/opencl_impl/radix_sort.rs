@@ -17,7 +17,7 @@ fn create_histograms(
     rows: u32,
     cols: u32,
     cur_digit: u32,
-) -> MappedBuffer<u32> {
+) -> (MappedBuffer<u32>, u32) {
     let runtime = Runtime::get();
 
     let num_blocks = if cols as usize % BLOCK_SIZE == 0 {
@@ -41,7 +41,29 @@ fn create_histograms(
         &Grid::from([(num_threads, THREADS_PER_GROUP), (rows as usize, 1), (1, 1)]),
     );
 
-    histograms
+    (histograms, (num_blocks * RADIX) as u32)
+}
+
+fn prefix_sum_blocks(
+    values: &MappedBuffer<u32>,
+    rows: u32,
+    cols: u32,
+) -> MappedBuffer<u32> {
+    let runtime = Runtime::get();
+
+    let prefix_sums = runtime.alloc(rows as usize * cols as usize);
+
+    runtime.run_kernel(
+        "prefix_sum_blocks",
+        &vec![
+            values.into(),
+            (&prefix_sums).into(),
+            cols.into()
+        ],
+        &Grid::from([(cols as usize, THREADS_PER_GROUP), (rows as usize, 1), (1, 1)])
+    );
+
+    prefix_sums
 }
 
 #[cfg(test)]
@@ -61,23 +83,25 @@ mod tests {
 
         let matrix_gpu = runtime.alloc_from_slice(&matrix);
 
-        let mut histograms = create_histograms(&matrix_gpu, 3, cols, 1);
+        let (mut histograms, elems) = create_histograms(&matrix_gpu, 3, cols, 1);
 
         histograms.remap();
 
         let histograms = histograms.iter().cloned().collect::<Vec<_>>();
+
+        let num_blocks = if cols as usize % BLOCK_SIZE == 0 {
+            cols as usize / BLOCK_SIZE
+        } else {
+            cols as usize / BLOCK_SIZE + 1
+        };
+
+        assert_eq!(num_blocks * RADIX, elems as usize);
 
         for row_id in 0..3 {
             let row_start = row_id * cols as usize;
             let row_end = row_start + cols as usize;
 
             let row = &matrix[row_start..row_end];
-
-            let num_blocks = if cols as usize % BLOCK_SIZE == 0 {
-                cols as usize / BLOCK_SIZE
-            } else {
-                cols as usize / BLOCK_SIZE + 1
-            };
 
             for block_id in 0..num_blocks {
                 // Compute the histogram serially and compare to the GPU result.
@@ -100,6 +124,48 @@ mod tests {
 
                     assert_eq!(histograms[histogram_idx], *count);
                 }
+            }
+        }
+    }
+
+    #[test]
+    fn can_prefix_sum_blocks() {
+        let cols = 4567u32;
+
+        let data = (0..cols).map(|x| cols - x).collect::<Vec<_>>();
+        let data = [data.clone(), data.clone(), data.clone()].concat();
+
+        let runtime = Runtime::get();
+
+        let data_gpu = runtime.alloc_from_slice(&data);
+
+        let mut sums = prefix_sum_blocks(&data_gpu, 3, cols);
+
+        sums.remap();
+
+        let sums = sums.iter().cloned().collect::<Vec<_>>();
+
+        for row in 0..3 {
+            let sums_row = &sums[0..(cols as usize)];
+            let data_row = &data[0..(cols as usize)];
+
+            assert_eq!(sums_row.len(), data_row.len());
+
+            for (c_id, (res_chunk, data_chunk)) in sums_row.chunks(THREADS_PER_GROUP).zip(data_row.chunks(THREADS_PER_GROUP)).enumerate() {
+                // Serially compute the chunk's prefix sum
+                let mut data_chunk = data_chunk.to_owned();
+                let mut sum = 0;
+
+                println!("{c_id}");
+
+                for i in 0..data_chunk.len() {
+                    let val = data_chunk[i];
+                    data_chunk[i] = sum;
+
+                    sum += val;
+                }
+
+                assert_eq!(data_chunk, res_chunk);
             }
         }
     }

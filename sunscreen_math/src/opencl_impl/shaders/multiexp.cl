@@ -53,22 +53,63 @@ u32 get_scalar_window(
     return window;
 }
 
-kernel void create_ell_matrix(
+/// Our algorithm deviates from cuZK in a few ways.
+/// * Firstly, we use a COO sparse matrix to store bucketing information. 
+/// Transposing a COO matrix is effectively a no-op as you simply swap the
+/// row and column pointers.
+/// * Secondly, our implementation stores zero bucket items in the matrix
+/// and we simply skip them when doing bucket accumulation. The overhead of
+/// storing zeros and skipping them when reducing buckets in the sparse matrix 
+/// is trivial compared to adding EC points.
+void fill_coo_matrix(
+    global const u32* scalars,
+    global u32* coo_data,
+    global u32* coo_row_idx,
+    global u32* coo_col_idx,
+    u32 window_bits,
+    u32 scalars_len
+) {
+    const u32 window_id = get_global_id(1);
+    const u32 thread_count = get_global_size(0);
+    const u32 thread_id = get_global_id(0);
+    const u32 points_per_thread = scalars_len % thread_count == 0
+        ? scalars_len / thread_count 
+        : scalars_len / thread_count + 1;
+
+    u32 window_offset = window_id * scalars_len;
+
+    u32 thread_scalar_id = 0;
+
+    for (u32 scalar_id = thread_id; scalar_id < scalars_len; scalar_id += thread_count) {
+        u32 window = get_scalar_window(
+            scalars,
+            window_bits,
+            window_id,
+            scalar_id,
+            scalars_len
+        );
+
+        coo_data[window_offset + thread_count * thread_scalar_id + thread_id] = scalar_id;
+
+        // Our matrices can be degenerate and feature the same column more than
+        // once in a row. While mathematically unsound, we aren't doing a real
+        // SPMV, so this is still works.
+        coo_col_idx[window_offset + thread_count * thread_scalar_id + thread_id] = window;
+        coo_row_idx[window_offset + thread_count * thread_scalar_id + thread_id] = thread_id;
+
+        thread_scalar_id++;
+    }
+}
+
+kernel void msm(
     global const u32* scalars,
     global u32* ell_data,
     global u32* ell_row_len,
     global u32* ell_col_index,
-    u32 bits_per_bucket,
+    u32 window_bits,
     u32 scalars_len
 ) {
-    u32 window_id = get_global_id(1);
-    u32 thread_count = get_global_size(0);
-    u32 thread_id = get_global_id(0);
-
-    for (u32 scalar_id = thread_id; scalar_id < scalars_len; scalar_id += thread_count) {
-
-    }
-
+    fill_coo_matrix(scalars, ell_data, ell_row_len, ell_col_index, window_bits, scalars_len);
 }
 
 #if defined(TEST)
@@ -91,5 +132,27 @@ kernel void create_ell_matrix(
                 scalars_len
             );
         }
+    }
+
+    kernel void test_fill_coo_matrix(
+        global const u32* scalars,
+        global u32* coo_data,
+        global u32* coo_row_idx,
+        global u32* coo_col_idx,
+        u32 window_bits,
+        u32 scalars_len
+    ) {
+        u32 window_id = get_global_id(1);
+        u32 scalar_id = get_global_id(0);
+        u32 thread_count = get_global_size(0);
+
+        fill_coo_matrix(
+            scalars,
+            coo_data,
+            coo_row_idx,
+            coo_col_idx,
+            window_bits,
+            scalars_len
+        );
     }
 #endif

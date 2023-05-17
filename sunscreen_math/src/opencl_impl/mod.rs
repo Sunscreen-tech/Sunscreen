@@ -9,6 +9,8 @@ pub use scalarvec::GpuScalarVec;
 mod ristrettovec;
 pub use ristrettovec::GpuRistrettoPointVec;
 
+mod radix_sort;
+
 use lazy_static::lazy_static;
 
 #[cfg(test)]

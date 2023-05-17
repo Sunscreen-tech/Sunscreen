@@ -85,25 +85,27 @@ impl GpuRistrettoPointVec {
 
         const NUM_THREADS: usize = 16384;
 
+        // We require that NUM_THREADS be a multiple of any sane thread group size (i.e. 512).
+        assert!(NUM_THREADS.is_power_of_two());
+        assert!(NUM_THREADS > 512);
+
         let max_cols = if self.len() % NUM_THREADS == 0 {
             self.len() / NUM_THREADS
         } else {
             (self.len() + 1) / NUM_THREADS
         };
-    
-        let scalar_bit_len = std::mem::size_of::<Scalar>();
+
+        let scalar_bit_len = 8 * std::mem::size_of::<Scalar>();
         let window_bit_len = 16usize;
         let num_windows = if scalar_bit_len % window_bit_len == 0 {
             scalar_bit_len / window_bit_len
         } else {
-            (scalar_bit_len + 1) / window_bit_len
+            scalar_bit_len / window_bit_len + 1
         };
 
         let ell_data = runtime.alloc::<u32>(self.len() * num_windows);
         let ell_row_len = runtime.alloc::<u32>(NUM_THREADS * num_windows);
         let ell_col_index = runtime.alloc::<u32>(max_cols * num_windows);
-        
-
     }
 }
 
@@ -320,7 +322,7 @@ mod tests {
     use curve25519_dalek::scalar::Scalar;
     use rand::thread_rng;
 
-    use crate::{ScalarVec, opencl_impl::Grid};
+    use crate::{opencl_impl::Grid, ScalarVec};
 
     use super::*;
 
@@ -480,12 +482,12 @@ mod tests {
 
     #[test]
     fn can_get_msm_scalar_windows() {
-        let a = (0..456).map(|_| Scalar::random(&mut thread_rng())).collect::<Vec<_>>();
+        let a = (0..456)
+            .map(|_| Scalar::random(&mut thread_rng()))
+            .collect::<Vec<_>>();
 
         let a_gpu = ScalarVec::new(&a);
         let runtime = Runtime::get();
-
-        println!("{:#?}", a[0]);
 
         for window_bits in 1..33 {
             const SCALAR_BITS: usize = 8 * std::mem::size_of::<Scalar>();
@@ -498,7 +500,16 @@ mod tests {
 
             let mut windows_gpu = runtime.alloc::<u32>(num_windows * a.len());
 
-            runtime.run_kernel("test_get_scalar_windows", &[(&a_gpu.data).into(), (&windows_gpu).into(), (window_bits as u32).into(), (a.len() as u32).into()], &Grid::from([(a.len(), 32), (num_windows, 1), (1, 1)]));
+            runtime.run_kernel(
+                "test_get_scalar_windows",
+                &[
+                    (&a_gpu.data).into(),
+                    (&windows_gpu).into(),
+                    (window_bits as u32).into(),
+                    (a.len() as u32).into(),
+                ],
+                &Grid::from([(a.len(), 256), (num_windows, 1), (1, 1)]),
+            );
 
             // The windows buffer's contents have changed since running the kernel, so we need
             // to remap the host address on some (e.g. Nvidia) platforms.
@@ -513,13 +524,91 @@ mod tests {
                 for j in 0..num_windows {
                     let cur_window = windows[j * a.len() + i];
                     assert!((cur_window as u64) < (0x1u64 << window_bits as u64));
-                    
+
                     actual += Scalar::from(cur_window) * radix;
                     radix *= Scalar::from(0x1u64 << window_bits as u64);
                 }
 
                 assert_eq!(actual, a[i]);
             }
+        }
+    }
+
+    #[test]
+    fn can_fill_coo_matrix() {
+        let a = (0..5)
+            .map(|_| Scalar::random(&mut thread_rng()))
+            .collect::<Vec<_>>();
+
+        let a_gpu = ScalarVec::new(&a);
+        let runtime = Runtime::get();
+
+        let window_bits = 15;
+
+        const SCALAR_BITS: usize = 8 * std::mem::size_of::<Scalar>();
+
+        let num_windows = if SCALAR_BITS % window_bits == 0 {
+            SCALAR_BITS / window_bits
+        } else {
+            SCALAR_BITS / window_bits + 1
+        };
+
+        let mut windows_gpu = runtime.alloc::<u32>(num_windows * a.len());
+
+        runtime.run_kernel(
+            "test_get_scalar_windows",
+            &[
+                (&a_gpu.data).into(),
+                (&windows_gpu).into(),
+                (window_bits as u32).into(),
+                (a.len() as u32).into(),
+            ],
+            &Grid::from([(a.len(), 256), (num_windows, 1), (1, 1)]),
+        );
+
+        // The windows buffer's contents have changed since running the kernel, so we need
+        // to remap the host address on some (e.g. Nvidia) platforms.
+        windows_gpu.remap();
+
+        let windows = windows_gpu.iter().cloned().collect::<Vec<_>>();
+
+        const NUM_THREADS: usize = 4;
+
+        let mut coo_data = runtime.alloc(a.len() * num_windows);
+        let mut coo_row_idx = runtime.alloc(a.len() * num_windows);
+        let mut coo_col_idx = runtime.alloc(a.len() * num_windows);
+
+        runtime.run_kernel(
+            "test_fill_coo_matrix",
+            &vec![
+                (&a_gpu.data).into(),
+                (&coo_data).into(),
+                (&coo_row_idx).into(),
+                (&coo_col_idx).into(),
+                (window_bits as u32).into(),
+                (a.len() as u32).into(),
+            ],
+            &Grid::from([(NUM_THREADS, 2), (num_windows, 1), (1, 1)]),
+        );
+
+        coo_data.remap();
+        coo_row_idx.remap();
+        coo_col_idx.remap();
+
+        let coo_data = coo_data.iter().cloned().collect::<Vec<_>>();
+        let coo_row_idx = coo_row_idx.iter().cloned().collect::<Vec<_>>();
+        let coo_col_idx = coo_col_idx.iter().cloned().collect::<Vec<_>>();
+
+        for w in 0..num_windows {
+            for r in 0..a.len() {
+                assert_eq!(coo_row_idx[a.len() * w + r], (r % NUM_THREADS) as u32);
+            }
+        }
+
+        assert_eq!(windows, coo_col_idx);
+
+        for i in 0..a.len() {
+            assert!(coo_data.contains(&(i as u32)));
         }
     }
 }

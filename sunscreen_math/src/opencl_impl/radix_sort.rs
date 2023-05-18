@@ -1,3 +1,5 @@
+use std::{borrow::Cow, ops::Deref};
+
 use super::{Grid, MappedBuffer, Runtime};
 
 const THREADS_PER_GROUP: usize = 128;
@@ -44,11 +46,29 @@ fn create_histograms(
     (histograms, (num_blocks * RADIX) as u32)
 }
 
+/**
+ * Computes the prefix sum for each block of 128 elements for the rows of
+ * an input matrix `values`.
+ * 
+ * # Returns
+ * Returns a tuple containing
+ * 1. A `rows x cols` matrix containing the per-block prefix sums of `values`. Each
+ *    block of 128 columns is a prefix sum of the corresponding columns of values.
+ * 2. A `rows x cols / 128` matrix. For the i'th row, the j'th column of this matrix 
+ *    contains the sum of all 128 values in the j'th block of values in the i'th row.
+ * 3. An integer containing the number of blocks per column.
+ * 
+ * # Panics
+ * * The length of `values` must equal `rows * cols`.
+ * * The number of rows and columns must be non-zero.
+ */
 fn prefix_sum_blocks(
     values: &MappedBuffer<u32>,
     rows: u32,
     cols: u32,
-) -> (MappedBuffer<u32>, MappedBuffer<u32>) {
+) -> (MappedBuffer<u32>, MappedBuffer<u32>, u32) {
+    assert_eq!(values.len(), rows as usize * cols as usize);
+
     let runtime = Runtime::get();
 
     let prefix_sums = runtime.alloc(rows as usize * cols as usize);
@@ -72,7 +92,74 @@ fn prefix_sum_blocks(
         &Grid::from([(cols as usize, THREADS_PER_GROUP), (rows as usize, 1), (1, 1)])
     );
 
-    (prefix_sums, block_totals)
+    (prefix_sums, block_totals, num_blocks as u32)
+}
+
+/**
+ * `values` is a `rows x cols` row-major matrix of u32 values. This function computes
+ * and returns a prefix sum matrix `P`, where each row in `P` is the prefix sum of
+ * the corresponding row in `values`.
+ * 
+ * # Panics
+ * * The length of the values matrix must equal rows * cols.
+ * * The number of rows and columns must be non-zero.
+ */
+pub fn prefix_sum(
+    values: &MappedBuffer<u32>,
+    rows: u32,
+    cols: u32,
+) ->  MappedBuffer<u32> {
+    assert_eq!(values.len(), rows as usize * cols as usize);
+    assert!(rows > 0);
+    assert!(cols > 0);
+
+    let (prefix_sums, totals, num_blocks) = prefix_sum_blocks(values, rows, cols);
+
+    fn reduce_totals(totals: &MappedBuffer<u32>, rows: u32, cols: u32) -> Cow<MappedBuffer<u32>> {
+        if cols == 1 {
+            return Cow::Borrowed(totals);
+        }
+
+        let (sums, totals, num_blocks) = prefix_sum_blocks(&totals, rows, cols);
+
+        if num_blocks == 1 {
+            return Cow::Owned(sums);
+        } else {
+            // This recursion isn't a concern for stack overflow since each recursion
+            // divides the work by 128. A mere 6 recursion levels means the inputs would
+            // consume over 4TB of memory, which is not plausible. 
+            let reduced_totals = reduce_totals(&totals, rows, num_blocks);
+
+            offset_blocks(&sums, &reduced_totals, rows, cols);
+
+            return Cow::Owned(sums);
+        }
+    }
+
+    let totals = reduce_totals(&totals, rows, num_blocks);
+
+    offset_blocks(&prefix_sums, &totals, rows, cols);
+
+    prefix_sums
+}
+
+fn offset_blocks(
+    blocks: &MappedBuffer<u32>, // Gets mutated!
+    offsets: &MappedBuffer<u32>,
+    rows: u32,
+    cols: u32
+) {
+    let runtime = Runtime::get();
+
+    runtime.run_kernel(
+        "offset_block",
+        &vec![
+            blocks.into(),
+            offsets.into(),
+            cols.into()
+        ],
+        &Grid::from([(cols as usize, THREADS_PER_GROUP), (rows as usize, 1), (1, 1)])
+    );
 }
 
 #[cfg(test)]
@@ -148,7 +235,7 @@ mod tests {
 
         let data_gpu = runtime.alloc_from_slice(&data);
 
-        let (mut prefix_sums, mut block_totals) = prefix_sum_blocks(&data_gpu, 3, cols);
+        let (mut prefix_sums, mut block_totals, actual_num_blocks) = prefix_sum_blocks(&data_gpu, 3, cols);
 
         prefix_sums.remap();
         block_totals.remap();
@@ -156,11 +243,13 @@ mod tests {
         let prefix_sums = prefix_sums.iter().cloned().collect::<Vec<_>>();
         let block_totals = block_totals.iter().cloned().collect::<Vec<_>>();
 
-        let num_blocks = if cols as usize % THREADS_PER_GROUP == 0 {
+        let expected_num_blocks = if cols as usize % THREADS_PER_GROUP == 0 {
             cols as usize / THREADS_PER_GROUP
         } else {
             cols as usize / THREADS_PER_GROUP + 1
         };
+
+        assert_eq!(expected_num_blocks as u32, actual_num_blocks);
 
         for row in 0..3 {
             let row_start = (row * cols) as usize;
@@ -175,7 +264,7 @@ mod tests {
                 // Check that the block totals match
                 let expected_sum = data_chunk.iter().fold(0u32, |s, x| s + x);
 
-                let actual = block_totals[row as usize * num_blocks + c_id];
+                let actual = block_totals[row as usize * expected_num_blocks + c_id];
 
                 assert_eq!(actual, expected_sum);
 
@@ -195,4 +284,40 @@ mod tests {
             }
         }
     }
+
+    #[test]
+    fn can_prefix_sum() {
+        // This specific value results in 2 recursion levels to reduce the block totals.
+        let cols = 128u32 * 128 * 128 + 1;
+
+        let data = (0..cols).map(|x| cols - x).collect::<Vec<_>>();
+        let data = [data.clone(), data.clone(), data.clone()].concat();
+
+        let runtime = Runtime::get();
+
+        let data_gpu = runtime.alloc_from_slice(&data);
+
+        let mut actual = prefix_sum(&data_gpu, 3, cols);
+
+        let mut expected = Vec::with_capacity(cols as usize);
+
+        for row in 0..3 {
+            let mut sum = 0;
+            let row_start = (row * cols) as usize;
+            let row_end = row_start + cols as usize;
+
+            for i in &data[row_start..row_end] {
+                expected.push(sum);
+                sum = sum + *i;
+            }
+        }
+        
+        
+        actual.remap();
+
+        let actual = actual.iter().cloned().collect::<Vec<_>>();
+
+        assert_eq!(actual, expected);
+    }
+
 }

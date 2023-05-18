@@ -111,6 +111,8 @@ kernel void prefix_sum_blocks(
         barrier(CLK_LOCAL_MEM_FENCE);
     }
 
+    // The last element after up sweeping contains the sum of
+    // all inputs. Write this to the block_totals.
     if (local_id == 0) {
         block_totals[group_id + row_id * get_num_groups(0)] = values_local[THREADS_PER_GROUP - 1];
     }
@@ -144,4 +146,25 @@ kernel void prefix_sum_blocks(
     if (global_id < len) {
         block_prefix_sums[global_id + row_id * len] = values_local[local_id];
     }
+}
+
+kernel void offset_block(
+    global u32* restrict blocks,
+    global const u32* restrict block_offsets,
+    u32 cols
+) {
+    u32 block_id = get_group_id(0);
+    u32 local_id = get_local_id(0);
+    u32 num_blocks = get_num_groups(0);
+    u32 col = get_global_id(0);
+    u32 row = get_global_id(1);
+
+    if (col >= cols) {
+        return;
+    }
+
+    u32 val = blocks[col + cols * row];
+    u32 offset = block_offsets[block_id + num_blocks * row];
+
+    blocks[col + cols * row] = val + offset;
 }

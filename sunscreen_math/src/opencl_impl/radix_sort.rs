@@ -10,10 +10,6 @@ const RADIX: usize = 16;
 // must equal RADIX_BITS in `radix_sort.cl`!
 const RADIX_BITS: usize = 4;
 
-pub fn radix_sort() {
-    todo!();
-}
-
 fn create_histograms(
     keys: &MappedBuffer<u32>,
     rows: u32,
@@ -160,6 +156,85 @@ fn offset_blocks(
         ],
         &Grid::from([(cols as usize, THREADS_PER_GROUP), (rows as usize, 1), (1, 1)])
     );
+}
+
+/**
+ * Sort the keys in each row of the keys matrix such that they appear in increasing order. 
+ * vals_1, vals_2 are 2 u32 arrays that get sorted according to the corresponding key at the same
+ * index.
+ * 
+ * `max_bits` allows you to choose many bits are needed to represent the keys (up to 32). If your
+ * data fits in a smaller number of bits and you reduce this parameter accordingly, this will 
+ * reduce the runtime of the radix sort.
+ * 
+ * # Remarks
+ * Currently, this implementation is non-deterministic and unstable in the event of multiple keys
+ * with the same value, but it will produce *some* valid sorting of the keys.
+ * 
+ * # Panics
+ * * If rows * cols != keys.len()
+ * * If keys.len() != vals_1.len() != vals_2.len()
+ * * If max_bits > 32
+ */
+pub fn radix_sort_2_vals(
+    keys: &MappedBuffer<u32>,
+    vals_1: &MappedBuffer<u32>,
+    vals_2: &MappedBuffer<u32>,
+    max_bits: u32,
+    rows: u32,
+    cols: u32
+) -> (MappedBuffer<u32>, MappedBuffer<u32>, MappedBuffer<u32>) {
+    assert_eq!(keys.len(), vals_1.len());
+    assert_eq!(keys.len(), vals_2.len());
+    assert_eq!(keys.len(), rows as usize * cols as usize);
+    assert!(max_bits <= 32);
+    
+    let num_digits = if max_bits % RADIX_BITS as u32 == 0 {
+        max_bits / RADIX_BITS as u32
+    } else {
+        (max_bits / RADIX_BITS as u32 + 1)
+    };
+
+    let runtime = Runtime::get();
+
+    let keys_clone = [keys.clone(), keys.clone()];
+    let vals_1_clone = [vals_1.clone(), vals_1.clone()];
+    let vals_2_clone = [vals_2.clone(), vals_2.clone()];
+
+    let mut cur = 0;
+    let mut next = 1;
+    
+    for cur_digit in 0..num_digits {
+        let (hist, num_blocks) = create_histograms(keys, rows, cols, cur_digit);
+
+        let bin_locations = prefix_sum(&hist, rows, cols);
+
+        runtime.run_kernel(
+            "radix_sort_emplace",
+            &vec![
+                (&keys_clone[cur]).into(),
+                (&vals_1_clone[cur]).into(),
+                (&vals_2_clone[cur]).into(),
+                (&bin_locations).into(),
+                (&keys_clone[next]).into(),
+                (&vals_1_clone[next]).into(),
+                (&vals_2_clone[next]).into(),
+                cur_digit.into(),
+                cols.into()
+            ],
+            &Grid::from([(cols as usize, 128), (rows as usize, 1), (1, 1)])
+        );
+
+        let tmp = cur;
+        cur = next;
+        next = tmp;
+    }
+
+    (
+        keys_clone.into_iter().skip(cur).next().unwrap(),
+        vals_1_clone.into_iter().skip(cur).next().unwrap(),
+        vals_2_clone.into_iter().skip(cur).next().unwrap(),
+    )
 }
 
 #[cfg(test)]
@@ -320,4 +395,49 @@ mod tests {
         assert_eq!(actual, expected);
     }
 
+    #[test]
+    fn can_radix_sort() {
+        let cols = 128u32 * 128 * 128 + 53;
+
+        let keys = (0..cols).map(|x| cols - x).collect::<Vec<_>>();
+        let keys = [keys.clone(), keys.clone(), keys.clone()].concat();
+
+        let vals_1 = keys.clone();
+        let vals_2 = keys.clone();
+
+        let runtime = Runtime::get();
+
+        let data_gpu = runtime.alloc_from_slice(&keys);
+        let vals_1_gpu = runtime.alloc_from_slice(&vals_1);
+        let vals_2_gpu = runtime.alloc_from_slice(&vals_2);
+
+        let (mut keys_sorted, mut vals_1_sorted, mut vals_2_sorted) = radix_sort_2_vals(
+            &data_gpu,
+            &vals_1_gpu,
+            &vals_2_gpu,
+            22,
+            3,
+            cols
+        );
+
+        keys_sorted.remap();
+        vals_1_sorted.remap();
+        vals_2_sorted.remap();
+
+        let keys_sorted = keys_sorted.iter().cloned().collect::<Vec<_>>();
+        let vals_1_sorted = vals_1_sorted.iter().cloned().collect::<Vec<_>>();
+        let vals_2_sorted = vals_2_sorted.iter().cloned().collect::<Vec<_>>();
+
+        for row in 0..3 {
+            let row_start = (row * cols) as usize;
+            let row_end = row_start + cols as usize;
+
+            let mut expected = (&keys[row_start..row_end]).to_owned();
+            expected.sort();
+            
+            assert_eq!(expected, &keys_sorted[row_start..row_end]);
+            assert_eq!(expected, &vals_1_sorted[row_start..row_end]);
+            assert_eq!(expected, &vals_2_sorted[row_start..row_end]);
+        }
+    }
 }

@@ -168,3 +168,54 @@ kernel void offset_block(
 
     blocks[col + cols * row] = val + offset;
 }
+
+/// Place the input keys and values into the corresponding output key and bin
+/// locations according to the input prefix sum.
+///
+/// TODO: Make sorting stable and deterministic.
+kernel void radix_sort_emplace_2_val(
+    global const u32* restrict keys,
+    global const u32* restrict vals_1,
+    global const u32* restrict vals_2,
+    global const u32* restrict bin_locations,
+    global u32* restrict keys_out,
+    global u32* restrict vals_1_out,
+    global u32* restrict vals_2_out,
+    u32 cur_digit,
+    u32 cols
+) {
+    u32 col = get_global_id(0);
+    u32 row_tid = get_global_id(1);
+    u32 local_id = get_local_id(0);
+    u32 group_id = get_group_id(0);
+
+    local u32 digit_locations[RADIX];
+
+    if (col >= cols) {
+        return;
+    }
+
+    if (local_id < RADIX) {
+        digit_locations[local_id] = bin_locations[group_id + local_id * RADIX];
+    }
+
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+    u32 start = row_tid * cols + group_id * BLOCK_SIZE + local_id;
+    u32 end = min(start + BLOCK_SIZE, cols * (row_tid + 1));
+
+    for (u32 i = start; i < end; i += THREADS_PER_GROUP) {
+        u32 val = keys[i];
+        u32 bin = (val >> (cur_digit * RADIX_BITS)) & RADIX_MASK;
+
+        // TODO: This makes the sorting algorithm both unstable and
+        // non-deterministic in the event of 2 of the same keys.
+        // That is, the relative order of equal keys is undefined,
+        // but the output keys will be sorted in increasing order.
+        u32 idx = atomic_add(&digit_locations[bin], 1);
+
+        keys_out[idx + row_tid * cols] = val;
+        vals_1_out[idx + row_tid * cols] = vals_1[idx + row_tid * cols];
+        vals_2_out[idx + row_tid * cols] = vals_2[idx + row_tid * cols];
+    }
+}

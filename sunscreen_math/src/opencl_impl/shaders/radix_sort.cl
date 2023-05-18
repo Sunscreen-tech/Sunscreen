@@ -111,6 +111,10 @@ kernel void prefix_sum_blocks(
         barrier(CLK_LOCAL_MEM_FENCE);
     }
 
+    if (local_id == 0) {
+        block_totals[group_id + row_id * get_num_groups(0)] = values_local[THREADS_PER_GROUP - 1];
+    }
+
     // Down sweep
     if (local_id == 0) {
         values_local[THREADS_PER_GROUP - 1] = 0;
@@ -139,20 +143,5 @@ kernel void prefix_sum_blocks(
 
     if (global_id < len) {
         block_prefix_sums[global_id + row_id * len] = values_local[local_id];
-    }
-
-    if (local_id == 0) {
-        u32 num_groups = get_num_groups(0);
-
-        if (group_id == num_groups - 1) {
-            u32 last_idx = len - 1;
-            u32 prefix_sum_idx = last_idx % THREADS_PER_GROUP;
-
-            block_totals[group_id + row_id * get_num_groups(0)] = values_local[prefix_sum_idx] + values[last_idx + row_id * len];
-        } else {
-            u32 last_idx = group_id * THREADS_PER_GROUP + THREADS_PER_GROUP - 1;
-
-            block_totals[group_id + row_id * get_num_groups(0)] = values_local[THREADS_PER_GROUP - 1] + values[last_idx + row_id * len];
-        }        
     }
 }

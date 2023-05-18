@@ -63,14 +63,20 @@ kernel void create_histograms(
     }
 }
 
-/// Computes per-block prefix sums.
+/// Given an mxn u32 input matrix, for each row and 
+/// block of THREADS_PER_GROUP columns, this kernel computes:
+/// * Per-block prefix sums that get written into block_prefix_sums.
+/// * The sum of each column block that gets written to block_totals.
 ///
 /// # Remarks
 /// See https://developer.nvidia.com/gpugems/gpugems3/part-vi-gpu-computing/chapter-39-parallel-prefix-sum-scan-cuda
-// for implementation.
+/// for core implementation.
+/// However, this algorithm has been extended to work on multiple rows
+/// in a matrix in parallel.
 kernel void prefix_sum_blocks(
     const global u32* restrict values,
-    global u32* restrict out,
+    global u32* restrict block_prefix_sums,
+    global u32* restrict block_totals,
     u32 len
 ) {
     u32 group_id = get_group_id(0);
@@ -132,7 +138,21 @@ kernel void prefix_sum_blocks(
     }
 
     if (global_id < len) {
-        out[global_id + row_id * len] = values_local[local_id];
-        //out[global_id + row_id * len] = global_id + row_id * len;
+        block_prefix_sums[global_id + row_id * len] = values_local[local_id];
+    }
+
+    if (local_id == 0) {
+        u32 num_groups = get_num_groups(0);
+
+        if (group_id == num_groups - 1) {
+            u32 last_idx = len - 1;
+            u32 prefix_sum_idx = last_idx % THREADS_PER_GROUP;
+
+            block_totals[group_id + row_id * get_num_groups(0)] = values_local[prefix_sum_idx] + values[last_idx + row_id * len];
+        } else {
+            u32 last_idx = group_id * THREADS_PER_GROUP + THREADS_PER_GROUP - 1;
+
+            block_totals[group_id + row_id * get_num_groups(0)] = values_local[THREADS_PER_GROUP - 1] + values[last_idx + row_id * len];
+        }        
     }
 }

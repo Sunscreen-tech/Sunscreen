@@ -48,22 +48,31 @@ fn prefix_sum_blocks(
     values: &MappedBuffer<u32>,
     rows: u32,
     cols: u32,
-) -> MappedBuffer<u32> {
+) -> (MappedBuffer<u32>, MappedBuffer<u32>) {
     let runtime = Runtime::get();
 
     let prefix_sums = runtime.alloc(rows as usize * cols as usize);
+
+    let num_blocks = if cols as usize % THREADS_PER_GROUP == 0 {
+        cols as usize / THREADS_PER_GROUP
+    } else {
+        cols as usize / THREADS_PER_GROUP + 1
+    };
+
+    let block_totals = runtime.alloc(rows as usize * num_blocks);
 
     runtime.run_kernel(
         "prefix_sum_blocks",
         &vec![
             values.into(),
             (&prefix_sums).into(),
+            (&block_totals).into(),
             cols.into()
         ],
         &Grid::from([(cols as usize, THREADS_PER_GROUP), (rows as usize, 1), (1, 1)])
     );
 
-    prefix_sums
+    (prefix_sums, block_totals)
 }
 
 #[cfg(test)]
@@ -139,24 +148,41 @@ mod tests {
 
         let data_gpu = runtime.alloc_from_slice(&data);
 
-        let mut sums = prefix_sum_blocks(&data_gpu, 3, cols);
+        let (mut prefix_sums, mut block_totals) = prefix_sum_blocks(&data_gpu, 3, cols);
 
-        sums.remap();
+        prefix_sums.remap();
+        block_totals.remap();
 
-        let sums = sums.iter().cloned().collect::<Vec<_>>();
+        let prefix_sums = prefix_sums.iter().cloned().collect::<Vec<_>>();
+        let block_totals = block_totals.iter().cloned().collect::<Vec<_>>();
+
+        let num_blocks = if cols as usize % THREADS_PER_GROUP == 0 {
+            cols as usize / THREADS_PER_GROUP
+        } else {
+            cols as usize / THREADS_PER_GROUP + 1
+        };
 
         for row in 0..3 {
-            let sums_row = &sums[0..(cols as usize)];
-            let data_row = &data[0..(cols as usize)];
+            let row_start = (row * cols) as usize;
+            let row_end = row_start + cols as usize;
+
+            let sums_row = &prefix_sums[row_start..row_end];
+            let data_row = &data[row_start..row_end];
 
             assert_eq!(sums_row.len(), data_row.len());
 
             for (c_id, (res_chunk, data_chunk)) in sums_row.chunks(THREADS_PER_GROUP).zip(data_row.chunks(THREADS_PER_GROUP)).enumerate() {
-                // Serially compute the chunk's prefix sum
+                // Check that the block totals match
+                let expected_sum = data_chunk.iter().fold(0u32, |s, x| s + x);
+
+                let actual = block_totals[row as usize * num_blocks + c_id];
+
+                assert_eq!(actual, expected_sum);
+
+                // Serially compute the chunk's prefix sum and check that the
+                // prefix sum matches.
                 let mut data_chunk = data_chunk.to_owned();
                 let mut sum = 0;
-
-                println!("{c_id}");
 
                 for i in 0..data_chunk.len() {
                     let val = data_chunk[i];

@@ -72,9 +72,9 @@ void fill_coo_matrix(
     const u32 window_id = get_global_id(1);
     const u32 thread_count = get_global_size(0);
     const u32 thread_id = get_global_id(0);
-    const u32 points_per_thread = scalars_len % thread_count == 0
-        ? scalars_len / thread_count 
-        : scalars_len / thread_count + 1;
+    //const u32 points_per_thread = scalars_len % thread_count == 0
+    //    ? scalars_len / thread_count 
+    //    : scalars_len / thread_count + 1;
 
     u32 window_offset = window_id * scalars_len;
 
@@ -121,7 +121,7 @@ kernel void msm(
     ) {
         u32 window_id = get_global_id(1);
         u32 scalar_id = get_global_id(0);
-        u32 thread_count = get_global_size(0);
+    //    u32 thread_count = get_global_size(0);
 
         if (scalar_id < scalars_len) {
             windows[window_id * scalars_len + scalar_id] = get_scalar_window(
@@ -142,10 +142,6 @@ kernel void msm(
         u32 window_bits,
         u32 scalars_len
     ) {
-        u32 window_id = get_global_id(1);
-        u32 scalar_id = get_global_id(0);
-        u32 thread_count = get_global_size(0);
-
         fill_coo_matrix(
             scalars,
             coo_data,

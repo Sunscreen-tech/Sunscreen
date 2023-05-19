@@ -118,9 +118,6 @@ pub fn prefix_sum(
     dbg!(dbg_prefix_sums);
 
     fn reduce_totals(totals: &MappedBuffer<u32>, rows: u32, cols: u32) -> Cow<MappedBuffer<u32>> {
-        let dbg_totals = totals.iter().cloned().collect::<Vec<_>>();
-        dbg!(dbg_totals);
-
         let (sums, totals, num_blocks) = prefix_sum_blocks(&totals, rows, cols);
 
         if num_blocks == 1 {
@@ -143,7 +140,7 @@ pub fn prefix_sum(
     //
     // If there is more than one block, reduce the totals into a prefix sum so we can offset
     // each block as appropriate.
-    let totals = if num_blocks == 1 {
+    let totals = if num_blocks > 1 {
         reduce_totals(&totals, rows, num_blocks)
     } else {
         Cow::Owned(totals)

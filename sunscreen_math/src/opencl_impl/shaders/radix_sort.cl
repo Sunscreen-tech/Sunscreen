@@ -12,7 +12,7 @@
 #define RADIX_BITS 4
 #define RADIX 16
 #define RADIX_MASK 0xF
-#define LOG_THREADS_PER_GROUP 7
+#define LOG_THREADS_PER_GROUP 4
 #define THREADS_PER_GROUP (0x1 << LOG_THREADS_PER_GROUP)
 #define LOG_WORDS_PER_THREAD 0
 #define WORDS_PER_THREAD (0x1 << LOG_WORDS_PER_THREAD)
@@ -202,7 +202,6 @@ kernel void radix_sort_emplace_2_val(
     u32 cur_digit,
     u32 cols
 ) {
-    u32 col = get_global_id(0);
     u32 row_tid = get_global_id(1);
     u32 local_id = get_local_id(0);
     u32 group_id = get_group_id(0);
@@ -269,9 +268,9 @@ kernel void radix_sort_emplace_2_val(
             u32 idx = global_digit_idx[digit] + local_digit_idx[digit][(i + 1) % BLOCK_SIZE] - 1;
 
             keys_out[idx + row_tid * cols] = val;
-            //keys_out[i + row_tid * cols] = idx;
-            vals_1_out[idx + row_tid * cols] = vals_1[i];
-            vals_2_out[idx + row_tid * cols] = vals_2[i];
+            //keys_out[col_index + row_tid * cols] = idx;
+            vals_1_out[idx + row_tid * cols] = vals_1[col_index + cols * row_tid];
+            vals_2_out[idx + row_tid * cols] = vals_2[col_index + cols * row_tid];
         }
     }
 }

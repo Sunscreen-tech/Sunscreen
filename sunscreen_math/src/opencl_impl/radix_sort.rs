@@ -3,7 +3,7 @@ use std::{borrow::Cow, ops::Deref};
 use super::{Grid, MappedBuffer, Runtime};
 
 // must equal THREADS_PER_GROUP in `radix_sort.cl`!
-const THREADS_PER_GROUP: usize = 128;
+const THREADS_PER_GROUP: usize = 16;
 // must equal WORDS_PER_THREAD in `radix_sort.cl`!
 const WORDS_PER_THREAD: usize = 1;
 // must equal THREADS_PER_GROUP * WORDS_PER_THREAD in `radix_sort.cl`!
@@ -114,9 +114,6 @@ pub fn prefix_sum(
 
     let (prefix_sums, totals, num_blocks) = prefix_sum_blocks(values, rows, cols);
 
-    let dbg_prefix_sums = prefix_sums.iter().cloned().collect::<Vec<_>>();
-    dbg!(dbg_prefix_sums);
-
     fn reduce_totals(totals: &MappedBuffer<u32>, rows: u32, cols: u32) -> Cow<MappedBuffer<u32>> {
         let (sums, totals, num_blocks) = prefix_sum_blocks(&totals, rows, cols);
 
@@ -145,9 +142,6 @@ pub fn prefix_sum(
     } else {
         Cow::Owned(totals)
     };
-
-    let dbg_totals = totals.iter().cloned().collect::<Vec<_>>();
-    dbg!(dbg_totals);
 
     offset_blocks(&prefix_sums, &totals, rows, cols);
 
@@ -230,10 +224,8 @@ pub fn radix_sort_2_vals(
     for cur_digit in 0..num_digits {
         let (hist, num_blocks) = create_histograms(keys, rows, cols, cur_digit);
 
-        let tmp = hist.iter().cloned().collect::<Vec<_>>();
-        dbg!(tmp.len());
-        dbg!(tmp);
-        
+        let dbg_hist = hist.iter().cloned().collect::<Vec<_>>();
+        dbg!(dbg_hist);        
 
         let mut bin_locations = prefix_sum(&hist, rows, num_blocks);
 
@@ -253,11 +245,11 @@ pub fn radix_sort_2_vals(
                 cur_digit.into(),
                 cols.into()
             ],
-            &Grid::from([(num_threads as usize, 128), (rows as usize, 1), (1, 1)])
+            &Grid::from([(num_threads as usize, THREADS_PER_GROUP), (rows as usize, 1), (1, 1)])
         );
 
-        let dbg_keys_out = keys_clone[next].iter().cloned().collect::<Vec<_>>();
-        dbg!(dbg_keys_out);
+        let dbg_keys = keys_clone[next].iter().cloned().collect::<Vec<_>>();
+        dbg!(dbg_keys);
 
         let tmp = cur;
         cur = next;
@@ -433,10 +425,10 @@ mod tests {
 
     #[test]
     fn can_radix_sort() {
-        let cols = 9u32;
+        let cols = 31u32;
         let rows = 1;
 
-        let keys = (0..cols).map(|x| (cols - x - 1) % 4).collect::<Vec<_>>();
+        let keys = (0..cols).map(|x| (cols - x - 1)).collect::<Vec<_>>();
         //let keys = [keys.clone(), keys.clone(), keys.clone()].concat();
 
         dbg!(&keys);
@@ -454,7 +446,7 @@ mod tests {
             &data_gpu,
             &vals_1_gpu,
             &vals_2_gpu,
-            4,
+            8,
             rows,
             cols
         );

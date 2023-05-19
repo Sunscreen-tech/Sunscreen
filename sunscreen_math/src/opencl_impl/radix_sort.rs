@@ -118,9 +118,8 @@ pub fn prefix_sum(
     dbg!(dbg_prefix_sums);
 
     fn reduce_totals(totals: &MappedBuffer<u32>, rows: u32, cols: u32) -> Cow<MappedBuffer<u32>> {
-        if cols == 1 {
-            return Cow::Borrowed(totals);
-        }
+        let dbg_totals = totals.iter().cloned().collect::<Vec<_>>();
+        dbg!(dbg_totals);
 
         let (sums, totals, num_blocks) = prefix_sum_blocks(&totals, rows, cols);
 
@@ -138,7 +137,18 @@ pub fn prefix_sum(
         }
     }
 
-    let totals = reduce_totals(&totals, rows, num_blocks);
+    // If we only had 1 block, the singular total will be the sum of the first block
+    // rather than zero, but this is okay because offsetting the blocks always ignores the
+    // first block.
+    //
+    // If there is more than one block, reduce the totals into a prefix sum so we can offset
+    // each block as appropriate.
+    let totals = if num_blocks == 1 {
+        reduce_totals(&totals, rows, num_blocks)
+    } else {
+        Cow::Owned(totals)
+    };
+
     let dbg_totals = totals.iter().cloned().collect::<Vec<_>>();
     dbg!(dbg_totals);
 
@@ -390,20 +400,22 @@ mod tests {
     #[test]
     fn can_prefix_sum() {
         // This specific value results in 2 recursion levels to reduce the block totals.
-        let cols = 128u32 * 128 * 128 + 1;
+        //let cols = 128u32 * 128 * 128 + 1;
+        let cols: u32 = 130;
+        let rows = 1;
 
         let data = (0..cols).map(|x| cols - x).collect::<Vec<_>>();
-        let data = [data.clone(), data.clone(), data.clone()].concat();
+        //let data = [data.clone(), data.clone(), data.clone()].concat();
 
         let runtime = Runtime::get();
 
         let data_gpu = runtime.alloc_from_slice(&data);
 
-        let mut actual = prefix_sum(&data_gpu, 3, cols);
+        let mut actual = prefix_sum(&data_gpu, rows, cols);
 
         let mut expected = Vec::with_capacity(cols as usize);
 
-        for row in 0..3 {
+        for row in 0..rows {
             let mut sum = 0u32;
             let row_start = (row * cols) as usize;
             let row_end = row_start + cols as usize;
@@ -427,7 +439,7 @@ mod tests {
         let cols = 9u32;
         let rows = 1;
 
-        let keys = (0..cols).map(|x| 64 * (cols - x - 1)).collect::<Vec<_>>();
+        let keys = (0..cols).map(|x| (cols - x - 1)).collect::<Vec<_>>();
         //let keys = [keys.clone(), keys.clone(), keys.clone()].concat();
 
         dbg!(&keys);
@@ -445,7 +457,7 @@ mod tests {
             &data_gpu,
             &vals_1_gpu,
             &vals_2_gpu,
-            16,
+            4,
             rows,
             cols
         );

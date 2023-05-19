@@ -14,7 +14,8 @@
 #define RADIX_MASK 0xF
 #define LOG_THREADS_PER_GROUP 7
 #define THREADS_PER_GROUP (0x1 << LOG_THREADS_PER_GROUP)
-#define WORDS_PER_THREAD 1
+#define LOG_WORDS_PER_THREAD 0
+#define WORDS_PER_THREAD (0x1 << LOG_WORDS_PER_THREAD)
 #define BLOCK_SIZE THREADS_PER_GROUP * WORDS_PER_THREAD
 
 /// Performs a prefix sum on local memory. The length of this buffer
@@ -177,20 +178,20 @@ kernel void offset_block(
     u32 col = get_global_id(0);
     u32 row = get_global_id(1);
 
+    // The first block doesn't need to be offset because no other block
+    // precedes it that would affect its sums.
     if (col >= cols || block_id == 0) {
         return;
     }
 
     u32 val = blocks[col + cols * row];
-    u32 offset = block_offsets[block_id + num_blocks * row - 1];
+    u32 offset = block_offsets[block_id + num_blocks * row];
 
     blocks[col + cols * row] = val + offset;
 }
 
 /// Place the input keys and values into the corresponding output key and bin
 /// locations according to the input prefix sum.
-///
-/// TODO: Make sorting stable and deterministic.
 kernel void radix_sort_emplace_2_val(
     global const u32* restrict keys,
     global const u32* restrict vals_1,
@@ -256,21 +257,16 @@ kernel void radix_sort_emplace_2_val(
     // Perform prefix sums on the local offsets.
     #pragma unroll
     for (u32 digit = 0; digit < RADIX; digit++) {
-
+        //local_prefix_sum(local_digit_idx[digit], LOG_THREADS_PER_GROUP + LOG_WORDS_PER_THREAD);
     }
-
 
     for (u32 i = start; i < end; i += THREADS_PER_GROUP) {
         u32 val = keys[i];
-        u32 bin = (val >> (cur_digit * RADIX_BITS)) & RADIX_MASK;
+        u32 digit = (val >> (cur_digit * RADIX_BITS)) & RADIX_MASK;
 
-        // TODO: This makes the sorting algorithm both unstable and
-        // non-deterministic in the event of 2 of the same keys.
-        // That is, the relative order of equal keys is undefined,
-        // but the output keys will be sorted in increasing order.
-        u32 idx = atomic_add(&global_digit_idx[bin], 1);
+        u32 idx = global_digit_idx[digit] + local_digit_idx[digit][i];
 
-        keys_out[idx + row_tid * cols] = val;
+        keys_out[idx + row_tid * cols] = local_digit_idx[0][i];  //val;
         vals_1_out[idx + row_tid * cols] = vals_1[i];
         vals_2_out[idx + row_tid * cols] = vals_2[i];
     }

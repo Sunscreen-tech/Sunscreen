@@ -27,7 +27,6 @@ u32 local_prefix_sum(
 ) {
     u32 local_id = get_local_id(0);
     u32 len = 0x1 << log_len;
-    u32 sum = 0;
 
     // Up sweep
     for (u32 i = 0; i < log_len; i++) {
@@ -47,7 +46,7 @@ u32 local_prefix_sum(
 
     // The last element after up sweeping contains the sum of
     // all inputs. Write this to the block_totals.
-    sum = data[len - 1];
+    u32 sum = data[len - 1];
 
     // Down sweep
     if (local_id == 0) {
@@ -209,11 +208,6 @@ kernel void radix_sort_emplace_2_val(
     u32 group_id = get_group_id(0);
     u32 num_groups = get_num_groups(0);
 
-    // The start and end indices of the keys to sort that this thread
-    // handles.
-    u32 start = row_tid * cols + group_id * BLOCK_SIZE + local_id;
-    u32 end = min(start + BLOCK_SIZE, cols * (row_tid + 1));
-
     // The global offset for each digit for this block.
     local u32 global_digit_idx[RADIX];
 
@@ -225,7 +219,7 @@ kernel void radix_sort_emplace_2_val(
 
     // Zero the local index
     #pragma unroll
-    for (u32 word = local_id; word < WORDS_PER_THREAD; word++) {
+    for (u32 word = local_id; word < BLOCK_SIZE; word += THREADS_PER_GROUP) {
         #pragma unroll
         for (u32 radix = 0; radix < RADIX; radix++) {
             local_digit_idx[radix][word] = 0;
@@ -234,10 +228,6 @@ kernel void radix_sort_emplace_2_val(
 
     barrier(CLK_LOCAL_MEM_FENCE);
 
-    if (col >= cols) {
-        return;
-    }
-
     // Load the global radix offsets.
     if (local_id < RADIX) {
         global_digit_idx[local_id] = bin_locations[group_id + local_id * num_groups + row_tid * RADIX * num_groups];
@@ -245,29 +235,43 @@ kernel void radix_sort_emplace_2_val(
 
     // Load each word, compute its digit and place a 1 in the word+digit map.
     // We'll then run a prefix sum to compute the local offsets.
-    for (u32 i = start; i < end; i += THREADS_PER_GROUP) {
-        u32 val = keys[i];
-        u32 digit = (val >> (cur_digit * RADIX_BITS)) & RADIX_MASK;
+    for (u32 word = local_id; word < BLOCK_SIZE; word += THREADS_PER_GROUP) {
+        u32 col_index = word + group_id * BLOCK_SIZE;
 
-        local_digit_idx[digit][i] = 1;
+        if (col_index < cols) {
+            u32 val = keys[col_index + row_tid * cols];
+            u32 digit = (val >> (cur_digit * RADIX_BITS)) & RADIX_MASK;
+
+            local_digit_idx[digit][word] = 1;
+        }
     }
 
     barrier(CLK_LOCAL_MEM_FENCE);
 
-    // Perform prefix sums on the local offsets.
-    #pragma unroll
+    // Perform prefix sums on the local offsets and place the total at index
+    // zero. This effectively means the bin offset is at index (bin + 1) % RADIX.
+    //#pragma unroll
     for (u32 digit = 0; digit < RADIX; digit++) {
-        //local_prefix_sum(local_digit_idx[digit], LOG_THREADS_PER_GROUP + LOG_WORDS_PER_THREAD);
+        u32 sum = local_prefix_sum(local_digit_idx[digit], LOG_THREADS_PER_GROUP + LOG_WORDS_PER_THREAD);
+
+        local_digit_idx[digit][0] = sum;
     }
 
-    for (u32 i = start; i < end; i += THREADS_PER_GROUP) {
-        u32 val = keys[i];
-        u32 digit = (val >> (cur_digit * RADIX_BITS)) & RADIX_MASK;
+    barrier(CLK_LOCAL_MEM_FENCE);
 
-        u32 idx = global_digit_idx[digit] + local_digit_idx[digit][i];
+    for (u32 i = local_id; i < BLOCK_SIZE; i += THREADS_PER_GROUP) {
+        u32 col_index = i + group_id * BLOCK_SIZE;
 
-        keys_out[idx + row_tid * cols] = local_digit_idx[0][i];  //val;
-        vals_1_out[idx + row_tid * cols] = vals_1[i];
-        vals_2_out[idx + row_tid * cols] = vals_2[i];
+        if (col_index < cols) {
+            u32 val = keys[col_index + cols * row_tid];
+            u32 digit = (val >> (cur_digit * RADIX_BITS)) & RADIX_MASK;
+
+            u32 idx = global_digit_idx[digit] + local_digit_idx[digit][(i + 1) % BLOCK_SIZE] - 1;
+
+            keys_out[idx + row_tid * cols] = val;
+            //keys_out[i + row_tid * cols] = idx;
+            vals_1_out[idx + row_tid * cols] = vals_1[i];
+            vals_2_out[idx + row_tid * cols] = vals_2[i];
+        }
     }
 }

@@ -436,7 +436,7 @@ mod tests {
         let cols = 9u32;
         let rows = 1;
 
-        let keys = (0..cols).map(|x| (cols - x - 1)).collect::<Vec<_>>();
+        let keys = (0..cols).map(|x| (cols - x - 1) % 4).collect::<Vec<_>>();
         //let keys = [keys.clone(), keys.clone(), keys.clone()].concat();
 
         dbg!(&keys);

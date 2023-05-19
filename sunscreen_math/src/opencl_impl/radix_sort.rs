@@ -3,7 +3,7 @@ use std::{borrow::Cow, ops::Deref};
 use super::{Grid, MappedBuffer, Runtime};
 
 // must equal THREADS_PER_GROUP in `radix_sort.cl`!
-const THREADS_PER_GROUP: usize = 16;
+const THREADS_PER_GROUP: usize = 128;
 // must equal WORDS_PER_THREAD in `radix_sort.cl`!
 const WORDS_PER_THREAD: usize = 1;
 // must equal THREADS_PER_GROUP * WORDS_PER_THREAD in `radix_sort.cl`!
@@ -224,13 +224,7 @@ pub fn radix_sort_2_vals(
     for cur_digit in 0..num_digits {
         let (hist, num_blocks) = create_histograms(&keys_clone[cur], rows, cols, cur_digit);
 
-        let dbg_hist = hist.iter().cloned().collect::<Vec<_>>();
-        dbg!(dbg_hist);        
-
         let bin_locations = prefix_sum(&hist, rows, num_blocks);
-
-        let dbg_bin_locations = bin_locations.iter().cloned().collect::<Vec<_>>();
-        dbg!(&dbg_bin_locations);
 
         runtime.run_kernel(
             "radix_sort_emplace_2_val",
@@ -247,9 +241,6 @@ pub fn radix_sort_2_vals(
             ],
             &Grid::from([(num_threads as usize, THREADS_PER_GROUP), (rows as usize, 1), (1, 1)])
         );
-
-        let dbg_keys = keys_clone[next].iter().cloned().collect::<Vec<_>>();
-        dbg!(dbg_keys);
 
         let tmp = cur;
         cur = next;
@@ -424,13 +415,11 @@ mod tests {
 
     #[test]
     fn can_radix_sort() {
-        let cols = 1234u32;
+        let cols: u32 = 128 * 128 * 128 + 1;
         let rows = 3;
 
         let keys = (0..cols).map(|x| (cols - x - 1)).collect::<Vec<_>>();
         let keys = [keys.clone(), keys.clone(), keys.clone()].concat();
-
-        dbg!(&keys);
 
         let vals_1 = keys.clone();
         let vals_2 = keys.clone();
@@ -445,7 +434,7 @@ mod tests {
             &data_gpu,
             &vals_1_gpu,
             &vals_2_gpu,
-            16,
+            24,
             rows,
             cols
         );
@@ -457,8 +446,6 @@ mod tests {
         let keys_sorted = keys_sorted.iter().cloned().collect::<Vec<_>>();
         let vals_1_sorted = vals_1_sorted.iter().cloned().collect::<Vec<_>>();
         let vals_2_sorted = vals_2_sorted.iter().cloned().collect::<Vec<_>>();
-
-        dbg!(&keys_sorted);
 
         for row in 0..rows {
             let row_start = (row * cols) as usize;

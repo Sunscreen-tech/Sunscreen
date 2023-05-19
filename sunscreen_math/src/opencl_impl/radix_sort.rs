@@ -389,12 +389,11 @@ mod tests {
     #[test]
     fn can_prefix_sum() {
         // This specific value results in 2 recursion levels to reduce the block totals.
-        //let cols = 128u32 * 128 * 128 + 1;
-        let cols: u32 = 130;
-        let rows = 1;
+        let cols = 128u32 * 128 * 128 + 1;
+        let rows = 3;
 
         let data = (0..cols).map(|x| cols - x).collect::<Vec<_>>();
-        //let data = [data.clone(), data.clone(), data.clone()].concat();
+        let data = [data.clone(), data.clone(), data.clone()].concat();
 
         let runtime = Runtime::get();
 
@@ -446,7 +445,7 @@ mod tests {
             &data_gpu,
             &vals_1_gpu,
             &vals_2_gpu,
-            8,
+            4,
             rows,
             cols
         );

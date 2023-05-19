@@ -268,7 +268,7 @@ kernel void radix_sort_emplace_2_val(
             u32 idx = global_digit_idx[digit] + local_digit_idx[digit][(i + 1) % BLOCK_SIZE] - 1;
 
             keys_out[idx + row_tid * cols] = val;
-            //keys_out[col_index + row_tid * cols] = idx;
+            //keys_out[col_index + row_tid * cols] = global_digit_idx[digit];
             vals_1_out[idx + row_tid * cols] = vals_1[col_index + cols * row_tid];
             vals_2_out[idx + row_tid * cols] = vals_2[col_index + cols * row_tid];
         }

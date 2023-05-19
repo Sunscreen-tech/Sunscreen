@@ -222,12 +222,12 @@ pub fn radix_sort_2_vals(
     let mut next = 1;
     
     for cur_digit in 0..num_digits {
-        let (hist, num_blocks) = create_histograms(keys, rows, cols, cur_digit);
+        let (hist, num_blocks) = create_histograms(&keys_clone[cur], rows, cols, cur_digit);
 
         let dbg_hist = hist.iter().cloned().collect::<Vec<_>>();
         dbg!(dbg_hist);        
 
-        let mut bin_locations = prefix_sum(&hist, rows, num_blocks);
+        let bin_locations = prefix_sum(&hist, rows, num_blocks);
 
         let dbg_bin_locations = bin_locations.iter().cloned().collect::<Vec<_>>();
         dbg!(&dbg_bin_locations);
@@ -424,11 +424,11 @@ mod tests {
 
     #[test]
     fn can_radix_sort() {
-        let cols = 31u32;
-        let rows = 1;
+        let cols = 1234u32;
+        let rows = 3;
 
         let keys = (0..cols).map(|x| (cols - x - 1)).collect::<Vec<_>>();
-        //let keys = [keys.clone(), keys.clone(), keys.clone()].concat();
+        let keys = [keys.clone(), keys.clone(), keys.clone()].concat();
 
         dbg!(&keys);
 
@@ -445,7 +445,7 @@ mod tests {
             &data_gpu,
             &vals_1_gpu,
             &vals_2_gpu,
-            4,
+            16,
             rows,
             cols
         );

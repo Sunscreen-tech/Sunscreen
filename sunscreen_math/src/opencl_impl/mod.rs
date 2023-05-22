@@ -10,6 +10,7 @@ mod ristrettovec;
 pub use ristrettovec::GpuRistrettoPointVec;
 
 mod radix_sort;
+mod rle;
 
 use lazy_static::lazy_static;
 

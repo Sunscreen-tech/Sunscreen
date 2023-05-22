@@ -21,6 +21,11 @@
 /// Performs a prefix sum on local memory. The length of this buffer
 /// must be a power of 2. Each thread will return the sum of all
 /// the input elements.
+///
+/// # Remarks
+/// This implementation isn't exactly efficient for computing the prefix sums of
+/// the rows of a matrix in shared memory. This is potentially future work to
+/// improve performance.
 u32 local_prefix_sum(
     local u32* data,
     u32 log_len

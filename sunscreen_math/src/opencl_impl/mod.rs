@@ -9,6 +9,8 @@ pub use scalarvec::GpuScalarVec;
 mod ristrettovec;
 pub use ristrettovec::GpuRistrettoPointVec;
 
+mod radix_sort;
+
 use lazy_static::lazy_static;
 
 #[cfg(test)]
@@ -44,6 +46,11 @@ impl<T: OclPrm> MappedBuffer<T> {
         let map = unsafe { buffer.map().read().enq().unwrap() };
 
         Self { buffer, map }
+    }
+
+    pub fn remap(&mut self) {
+        self.map.unmap().enq().unwrap();
+        self.map = unsafe { self.buffer.map().enq().unwrap() };
     }
 }
 

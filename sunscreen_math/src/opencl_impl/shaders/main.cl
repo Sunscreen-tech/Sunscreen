@@ -4,3 +4,4 @@
 #include "multiexp.cl"
 #include "ristrettopoint.cl"
 #include "scalar29.cl"
+#include "radix_sort.cl"

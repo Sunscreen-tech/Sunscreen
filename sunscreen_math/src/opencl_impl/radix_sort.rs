@@ -1,4 +1,6 @@
-use std::{borrow::Cow, ops::Deref};
+use std::path::PathBuf;
+use std::{borrow::Cow, ops::Deref, ptr::write_bytes};
+use std::fs::{read, write};
 
 use super::{Grid, MappedBuffer, Runtime};
 
@@ -114,7 +116,7 @@ pub fn prefix_sum(
 
     let (prefix_sums, totals, num_blocks) = prefix_sum_blocks(values, rows, cols);
 
-    fn reduce_totals(totals: &MappedBuffer<u32>, rows: u32, cols: u32) -> Cow<MappedBuffer<u32>> {
+    fn reduce_totals(totals: &MappedBuffer<u32>, rows: u32, cols: u32, recur: u32) -> Cow<MappedBuffer<u32>> {
         let (sums, totals, num_blocks) = prefix_sum_blocks(&totals, rows, cols);
 
         if num_blocks == 1 {
@@ -123,7 +125,7 @@ pub fn prefix_sum(
             // This recursion isn't a concern for stack overflow since each recursion
             // divides the work by 128. A mere 6 recursion levels means the inputs would
             // consume over 4TB of memory, which is not plausible. 
-            let reduced_totals = reduce_totals(&totals, rows, num_blocks);
+            let reduced_totals = reduce_totals(&totals, rows, num_blocks, recur + 1);
 
             offset_blocks(&sums, &reduced_totals, rows, cols);
 
@@ -138,7 +140,7 @@ pub fn prefix_sum(
     // If there is more than one block, reduce the totals into a prefix sum so we can offset
     // each block as appropriate.
     let totals = if num_blocks > 1 {
-        reduce_totals(&totals, rows, num_blocks)
+        reduce_totals(&totals, rows, num_blocks, 0)
     } else {
         Cow::Owned(totals)
     };
@@ -380,7 +382,7 @@ mod tests {
     #[test]
     fn can_prefix_sum() {
         // This specific value results in 2 recursion levels to reduce the block totals.
-        let cols = 128u32 * 128 * 128 + 1;
+        let cols = 1024u32 * 1024 * 32 + 1;
         let rows = 3;
 
         let data = (0..cols).map(|x| cols - x).collect::<Vec<_>>();
@@ -415,11 +417,11 @@ mod tests {
 
     #[test]
     fn can_radix_sort() {
-        let cols: u32 = 128 * 128 * 128 + 1;
-        let rows = 3;
+        let cols: u32 = 128 * 128 * 4 + 1;
+        let rows = 16;
 
         let keys = (0..cols).map(|x| (cols - x - 1)).collect::<Vec<_>>();
-        let keys = [keys.clone(), keys.clone(), keys.clone()].concat();
+        let keys = [keys.clone(), keys.clone(), keys.clone(), keys.clone(), keys.clone(), keys.clone(), keys.clone(), keys.clone(), keys.clone(), keys.clone(), keys.clone(), keys.clone(), keys.clone(), keys.clone(), keys.clone(), keys.clone()].concat();
 
         let vals_1 = keys.clone();
         let vals_2 = keys.clone();

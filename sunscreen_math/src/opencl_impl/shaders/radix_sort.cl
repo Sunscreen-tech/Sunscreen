@@ -37,12 +37,14 @@ u32 local_prefix_sum(
         u32 idx_1 = k + two_n - 1;
         u32 idx_2 = k + two_n_plus_1 - 1;
 
-        if (idx_2 < len) {
+        if (idx_1 < len && idx_2 < len) {
             data[idx_2] = data[idx_1] + data[idx_2];
         }
 
         barrier(CLK_LOCAL_MEM_FENCE);
     }
+
+    barrier(CLK_LOCAL_MEM_FENCE);
 
     // The last element after up sweeping contains the sum of
     // all inputs. Write this to the block_totals.
@@ -65,7 +67,7 @@ u32 local_prefix_sum(
         u32 idx_1 = k + two_d - 1;
         u32 idx_2 = k + two_d_plus_1 - 1;
 
-        if (idx_2 < len) {
+        if (idx_1 < len && idx_2 < len) {
             u32 t = data[idx_1];
             data[idx_1] = data[idx_2];
             data[idx_2] = t + data[idx_2];
@@ -157,10 +159,19 @@ kernel void prefix_sum_blocks(
 
     barrier(CLK_LOCAL_MEM_FENCE);
 
-    block_totals[group_id + row_id * get_num_groups(0)] = local_prefix_sum(
+    u32 sum = local_prefix_sum(
         values_local,
         LOG_THREADS_PER_GROUP
     );
+
+    // TIL, multiple GPU threads writing to the same memory address is 
+    // a bad idea, *even when they're writing the same value*. In particular,
+    // doing this on M1 GPUs results in undefined behavior.
+    //
+    // Thus, just put a stupid guard here.
+    if (local_id == 0) {
+        block_totals[group_id + row_id * get_num_groups(0)] = sum;
+    }
 
     if (global_id < len) {
         block_prefix_sums[global_id + row_id * len] = values_local[local_id];

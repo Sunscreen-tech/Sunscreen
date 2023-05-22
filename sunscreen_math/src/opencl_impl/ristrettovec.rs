@@ -580,12 +580,14 @@ mod tests {
 
         runtime.run_kernel(
             "test_fill_coo_matrix",
-            &[(&a_gpu.data).into(),
+            &[
+                (&a_gpu.data).into(),
                 (&coo_data).into(),
                 (&coo_row_idx).into(),
                 (&coo_col_idx).into(),
                 (window_bits as u32).into(),
-                (a.len() as u32).into()],
+                (a.len() as u32).into(),
+            ],
             &Grid::from([(NUM_THREADS, 2), (num_windows, 1), (1, 1)]),
         );
 

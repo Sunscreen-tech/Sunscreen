@@ -1,6 +1,4 @@
-
-
-use std::{borrow::Cow};
+use std::borrow::Cow;
 
 use super::{Grid, MappedBuffer, Runtime};
 
@@ -35,10 +33,12 @@ fn create_histograms(
 
     runtime.run_kernel(
         "create_histograms",
-        &[keys.into(),
+        &[
+            keys.into(),
             (&histograms).into(),
             cols.into(),
-            cur_digit.into()],
+            cur_digit.into(),
+        ],
         &Grid::from([(num_threads, THREADS_PER_GROUP), (rows as usize, 1), (1, 1)]),
     );
 
@@ -82,10 +82,12 @@ fn prefix_sum_blocks(
 
     runtime.run_kernel(
         "prefix_sum_blocks",
-        &[values.into(),
+        &[
+            values.into(),
             (&prefix_sums).into(),
             (&block_totals).into(),
-            cols.into()],
+            cols.into(),
+        ],
         &Grid::from([
             (cols as usize, THREADS_PER_GROUP),
             (rows as usize, 1),
@@ -231,7 +233,8 @@ pub fn radix_sort_2_vals(
 
         runtime.run_kernel(
             "radix_sort_emplace_2_val",
-            &[(&keys_clone[cur]).into(),
+            &[
+                (&keys_clone[cur]).into(),
                 (&vals_1_clone[cur]).into(),
                 (&vals_2_clone[cur]).into(),
                 (&bin_locations).into(),
@@ -239,12 +242,9 @@ pub fn radix_sort_2_vals(
                 (&vals_1_clone[next]).into(),
                 (&vals_2_clone[next]).into(),
                 cur_digit.into(),
-                cols.into()],
-            &Grid::from([
-                (num_threads, THREADS_PER_GROUP),
-                (rows as usize, 1),
-                (1, 1),
-            ]),
+                cols.into(),
+            ],
+            &Grid::from([(num_threads, THREADS_PER_GROUP), (rows as usize, 1), (1, 1)]),
         );
 
         std::mem::swap(&mut cur, &mut next);

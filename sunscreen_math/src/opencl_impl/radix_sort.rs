@@ -1,6 +1,6 @@
+use std::fs::{read, write};
 use std::path::PathBuf;
 use std::{borrow::Cow, ops::Deref, ptr::write_bytes};
-use std::fs::{read, write};
 
 use super::{Grid, MappedBuffer, Runtime};
 
@@ -50,15 +50,15 @@ fn create_histograms(
 /**
  * Computes the prefix sum for each block of 128 elements for the rows of
  * an input matrix `values`.
- * 
+ *
  * # Returns
  * Returns a tuple containing
  * 1. A `rows x cols` matrix containing the per-block prefix sums of `values`. Each
  *    block of 128 columns is a prefix sum of the corresponding columns of values.
- * 2. A `rows x cols / 128` matrix. For the i'th row, the j'th column of this matrix 
+ * 2. A `rows x cols / 128` matrix. For the i'th row, the j'th column of this matrix
  *    contains the sum of all 128 values in the j'th block of values in the i'th row.
  * 3. An integer containing the number of blocks per column.
- * 
+ *
  * # Panics
  * * The length of `values` must equal `rows * cols`.
  * * The number of rows and columns must be non-zero.
@@ -88,9 +88,13 @@ fn prefix_sum_blocks(
             values.into(),
             (&prefix_sums).into(),
             (&block_totals).into(),
-            cols.into()
+            cols.into(),
         ],
-        &Grid::from([(cols as usize, THREADS_PER_GROUP), (rows as usize, 1), (1, 1)])
+        &Grid::from([
+            (cols as usize, THREADS_PER_GROUP),
+            (rows as usize, 1),
+            (1, 1),
+        ]),
     );
 
     (prefix_sums, block_totals, num_blocks as u32)
@@ -100,23 +104,24 @@ fn prefix_sum_blocks(
  * `values` is a `rows x cols` row-major matrix of u32 values. This function computes
  * and returns a prefix sum matrix `P`, where each row in `P` is the prefix sum of
  * the corresponding row in `values`.
- * 
+ *
  * # Panics
  * * The length of the values matrix must equal rows * cols.
  * * The number of rows and columns must be non-zero.
  */
-pub fn prefix_sum(
-    values: &MappedBuffer<u32>,
-    rows: u32,
-    cols: u32,
-) ->  MappedBuffer<u32> {
+pub fn prefix_sum(values: &MappedBuffer<u32>, rows: u32, cols: u32) -> MappedBuffer<u32> {
     assert_eq!(values.len(), rows as usize * cols as usize);
     assert!(rows > 0);
     assert!(cols > 0);
 
     let (prefix_sums, totals, num_blocks) = prefix_sum_blocks(values, rows, cols);
 
-    fn reduce_totals(totals: &MappedBuffer<u32>, rows: u32, cols: u32, recur: u32) -> Cow<MappedBuffer<u32>> {
+    fn reduce_totals(
+        totals: &MappedBuffer<u32>,
+        rows: u32,
+        cols: u32,
+        recur: u32,
+    ) -> Cow<MappedBuffer<u32>> {
         let (sums, totals, num_blocks) = prefix_sum_blocks(&totals, rows, cols);
 
         if num_blocks == 1 {
@@ -124,7 +129,7 @@ pub fn prefix_sum(
         } else {
             // This recursion isn't a concern for stack overflow since each recursion
             // divides the work by 128. A mere 6 recursion levels means the inputs would
-            // consume over 4TB of memory, which is not plausible. 
+            // consume over 4TB of memory, which is not plausible.
             let reduced_totals = reduce_totals(&totals, rows, num_blocks, recur + 1);
 
             offset_blocks(&sums, &reduced_totals, rows, cols);
@@ -154,34 +159,34 @@ fn offset_blocks(
     blocks: &MappedBuffer<u32>, // Gets mutated!
     offsets: &MappedBuffer<u32>,
     rows: u32,
-    cols: u32
+    cols: u32,
 ) {
     let runtime = Runtime::get();
 
     runtime.run_kernel(
         "offset_block",
-        &vec![
-            blocks.into(),
-            offsets.into(),
-            cols.into()
-        ],
-        &Grid::from([(cols as usize, THREADS_PER_GROUP), (rows as usize, 1), (1, 1)])
+        &vec![blocks.into(), offsets.into(), cols.into()],
+        &Grid::from([
+            (cols as usize, THREADS_PER_GROUP),
+            (rows as usize, 1),
+            (1, 1),
+        ]),
     );
 }
 
 /**
- * Sort the keys in each row of the keys matrix such that they appear in increasing order. 
+ * Sort the keys in each row of the keys matrix such that they appear in increasing order.
  * vals_1, vals_2 are 2 u32 arrays that get sorted according to the corresponding key at the same
  * index.
- * 
+ *
  * `max_bits` allows you to choose many bits are needed to represent the keys (up to 32). If your
- * data fits in a smaller number of bits and you reduce this parameter accordingly, this will 
+ * data fits in a smaller number of bits and you reduce this parameter accordingly, this will
  * reduce the runtime of the radix sort.
- * 
+ *
  * # Remarks
  * Currently, this implementation is non-deterministic and unstable in the event of multiple keys
  * with the same value, but it will produce *some* valid sorting of the keys.
- * 
+ *
  * # Panics
  * * If rows * cols != keys.len()
  * * If keys.len() != vals_1.len() != vals_2.len()
@@ -193,13 +198,13 @@ pub fn radix_sort_2_vals(
     vals_2: &MappedBuffer<u32>,
     max_bits: u32,
     rows: u32,
-    cols: u32
+    cols: u32,
 ) -> (MappedBuffer<u32>, MappedBuffer<u32>, MappedBuffer<u32>) {
     assert_eq!(keys.len(), vals_1.len());
     assert_eq!(keys.len(), vals_2.len());
     assert_eq!(keys.len(), rows as usize * cols as usize);
     assert!(max_bits <= 32);
-    
+
     let num_digits = if max_bits % RADIX_BITS as u32 == 0 {
         max_bits / RADIX_BITS as u32
     } else {
@@ -222,7 +227,7 @@ pub fn radix_sort_2_vals(
 
     let mut cur = 0;
     let mut next = 1;
-    
+
     for cur_digit in 0..num_digits {
         let (hist, num_blocks) = create_histograms(&keys_clone[cur], rows, cols, cur_digit);
 
@@ -239,9 +244,13 @@ pub fn radix_sort_2_vals(
                 (&vals_1_clone[next]).into(),
                 (&vals_2_clone[next]).into(),
                 cur_digit.into(),
-                cols.into()
+                cols.into(),
             ],
-            &Grid::from([(num_threads as usize, THREADS_PER_GROUP), (rows as usize, 1), (1, 1)])
+            &Grid::from([
+                (num_threads as usize, THREADS_PER_GROUP),
+                (rows as usize, 1),
+                (1, 1),
+            ]),
         );
 
         let tmp = cur;
@@ -329,7 +338,8 @@ mod tests {
 
         let data_gpu = runtime.alloc_from_slice(&data);
 
-        let (mut prefix_sums, mut block_totals, actual_num_blocks) = prefix_sum_blocks(&data_gpu, 3, cols);
+        let (mut prefix_sums, mut block_totals, actual_num_blocks) =
+            prefix_sum_blocks(&data_gpu, 3, cols);
 
         prefix_sums.remap();
         block_totals.remap();
@@ -354,7 +364,11 @@ mod tests {
 
             assert_eq!(sums_row.len(), data_row.len());
 
-            for (c_id, (res_chunk, data_chunk)) in sums_row.chunks(THREADS_PER_GROUP).zip(data_row.chunks(THREADS_PER_GROUP)).enumerate() {
+            for (c_id, (res_chunk, data_chunk)) in sums_row
+                .chunks(THREADS_PER_GROUP)
+                .zip(data_row.chunks(THREADS_PER_GROUP))
+                .enumerate()
+            {
                 // Check that the block totals match
                 let expected_sum = data_chunk.iter().fold(0u32, |s, x| s + x);
 
@@ -406,8 +420,7 @@ mod tests {
                 sum = sum.wrapping_add(*i);
             }
         }
-        
-        
+
         actual.remap();
 
         let actual = actual.iter().cloned().collect::<Vec<_>>();
@@ -421,7 +434,25 @@ mod tests {
         let rows = 16;
 
         let keys = (0..cols).map(|x| (cols - x - 1)).collect::<Vec<_>>();
-        let keys = [keys.clone(), keys.clone(), keys.clone(), keys.clone(), keys.clone(), keys.clone(), keys.clone(), keys.clone(), keys.clone(), keys.clone(), keys.clone(), keys.clone(), keys.clone(), keys.clone(), keys.clone(), keys.clone()].concat();
+        let keys = [
+            keys.clone(),
+            keys.clone(),
+            keys.clone(),
+            keys.clone(),
+            keys.clone(),
+            keys.clone(),
+            keys.clone(),
+            keys.clone(),
+            keys.clone(),
+            keys.clone(),
+            keys.clone(),
+            keys.clone(),
+            keys.clone(),
+            keys.clone(),
+            keys.clone(),
+            keys.clone(),
+        ]
+        .concat();
 
         let vals_1 = keys.clone();
         let vals_2 = keys.clone();
@@ -432,14 +463,8 @@ mod tests {
         let vals_1_gpu = runtime.alloc_from_slice(&vals_1);
         let vals_2_gpu = runtime.alloc_from_slice(&vals_2);
 
-        let (mut keys_sorted, mut vals_1_sorted, mut vals_2_sorted) = radix_sort_2_vals(
-            &data_gpu,
-            &vals_1_gpu,
-            &vals_2_gpu,
-            24,
-            rows,
-            cols
-        );
+        let (mut keys_sorted, mut vals_1_sorted, mut vals_2_sorted) =
+            radix_sort_2_vals(&data_gpu, &vals_1_gpu, &vals_2_gpu, 24, rows, cols);
 
         keys_sorted.remap();
         vals_1_sorted.remap();
@@ -455,7 +480,7 @@ mod tests {
 
             let mut expected = (&keys[row_start..row_end]).to_owned();
             expected.sort();
-            
+
             assert_eq!(expected, &keys_sorted[row_start..row_end]);
             assert_eq!(expected, &vals_1_sorted[row_start..row_end]);
             assert_eq!(expected, &vals_2_sorted[row_start..row_end]);

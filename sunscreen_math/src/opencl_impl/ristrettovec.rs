@@ -103,9 +103,9 @@ impl GpuRistrettoPointVec {
             scalar_bit_len / window_bit_len + 1
         };
 
-        let ell_data = runtime.alloc::<u32>(self.len() * num_windows);
-        let ell_row_len = runtime.alloc::<u32>(NUM_THREADS * num_windows);
-        let ell_col_index = runtime.alloc::<u32>(max_cols * num_windows);
+        let _ell_data = runtime.alloc::<u32>(self.len() * num_windows);
+        let _ell_row_len = runtime.alloc::<u32>(NUM_THREADS * num_windows);
+        let _ell_col_index = runtime.alloc::<u32>(max_cols * num_windows);
     }
 }
 
@@ -580,14 +580,12 @@ mod tests {
 
         runtime.run_kernel(
             "test_fill_coo_matrix",
-            &vec![
-                (&a_gpu.data).into(),
+            &[(&a_gpu.data).into(),
                 (&coo_data).into(),
                 (&coo_row_idx).into(),
                 (&coo_col_idx).into(),
                 (window_bits as u32).into(),
-                (a.len() as u32).into(),
-            ],
+                (a.len() as u32).into()],
             &Grid::from([(NUM_THREADS, 2), (num_windows, 1), (1, 1)]),
         );
 

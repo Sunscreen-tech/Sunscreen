@@ -1,6 +1,6 @@
-use std::fs::{read, write};
-use std::path::PathBuf;
-use std::{borrow::Cow, ops::Deref, ptr::write_bytes};
+
+
+use std::{borrow::Cow};
 
 use super::{Grid, MappedBuffer, Runtime};
 
@@ -35,12 +35,10 @@ fn create_histograms(
 
     runtime.run_kernel(
         "create_histograms",
-        &vec![
-            keys.into(),
+        &[keys.into(),
             (&histograms).into(),
             cols.into(),
-            cur_digit.into(),
-        ],
+            cur_digit.into()],
         &Grid::from([(num_threads, THREADS_PER_GROUP), (rows as usize, 1), (1, 1)]),
     );
 
@@ -84,12 +82,10 @@ fn prefix_sum_blocks(
 
     runtime.run_kernel(
         "prefix_sum_blocks",
-        &vec![
-            values.into(),
+        &[values.into(),
             (&prefix_sums).into(),
             (&block_totals).into(),
-            cols.into(),
-        ],
+            cols.into()],
         &Grid::from([
             (cols as usize, THREADS_PER_GROUP),
             (rows as usize, 1),
@@ -122,7 +118,7 @@ pub fn prefix_sum(values: &MappedBuffer<u32>, rows: u32, cols: u32) -> MappedBuf
         cols: u32,
         recur: u32,
     ) -> Cow<MappedBuffer<u32>> {
-        let (sums, totals, num_blocks) = prefix_sum_blocks(&totals, rows, cols);
+        let (sums, totals, num_blocks) = prefix_sum_blocks(totals, rows, cols);
 
         if num_blocks == 1 {
             return Cow::Owned(sums);
@@ -165,7 +161,7 @@ fn offset_blocks(
 
     runtime.run_kernel(
         "offset_block",
-        &vec![blocks.into(), offsets.into(), cols.into()],
+        &[blocks.into(), offsets.into(), cols.into()],
         &Grid::from([
             (cols as usize, THREADS_PER_GROUP),
             (rows as usize, 1),
@@ -235,8 +231,7 @@ pub fn radix_sort_2_vals(
 
         runtime.run_kernel(
             "radix_sort_emplace_2_val",
-            &vec![
-                (&keys_clone[cur]).into(),
+            &[(&keys_clone[cur]).into(),
                 (&vals_1_clone[cur]).into(),
                 (&vals_2_clone[cur]).into(),
                 (&bin_locations).into(),
@@ -244,24 +239,21 @@ pub fn radix_sort_2_vals(
                 (&vals_1_clone[next]).into(),
                 (&vals_2_clone[next]).into(),
                 cur_digit.into(),
-                cols.into(),
-            ],
+                cols.into()],
             &Grid::from([
-                (num_threads as usize, THREADS_PER_GROUP),
+                (num_threads, THREADS_PER_GROUP),
                 (rows as usize, 1),
                 (1, 1),
             ]),
         );
 
-        let tmp = cur;
-        cur = next;
-        next = tmp;
+        std::mem::swap(&mut cur, &mut next);
     }
 
     (
-        keys_clone.into_iter().skip(cur).next().unwrap(),
-        vals_1_clone.into_iter().skip(cur).next().unwrap(),
-        vals_2_clone.into_iter().skip(cur).next().unwrap(),
+        keys_clone.into_iter().nth(cur).unwrap(),
+        vals_1_clone.into_iter().nth(cur).unwrap(),
+        vals_2_clone.into_iter().nth(cur).unwrap(),
     )
 }
 
@@ -332,7 +324,7 @@ mod tests {
         let cols = 4567u32;
 
         let data = (0..cols).map(|x| cols - x).collect::<Vec<_>>();
-        let data = [data.clone(), data.clone(), data.clone()].concat();
+        let data = [data.clone(), data.clone(), data].concat();
 
         let runtime = Runtime::get();
 
@@ -370,7 +362,7 @@ mod tests {
                 .enumerate()
             {
                 // Check that the block totals match
-                let expected_sum = data_chunk.iter().fold(0u32, |s, x| s + x);
+                let expected_sum = data_chunk.iter().sum();
 
                 let actual = block_totals[row as usize * expected_num_blocks + c_id];
 
@@ -400,7 +392,7 @@ mod tests {
         let rows = 3;
 
         let data = (0..cols).map(|x| cols - x).collect::<Vec<_>>();
-        let data = [data.clone(), data.clone(), data.clone()].concat();
+        let data = [data.clone(), data.clone(), data].concat();
 
         let runtime = Runtime::get();
 
@@ -450,7 +442,7 @@ mod tests {
             keys.clone(),
             keys.clone(),
             keys.clone(),
-            keys.clone(),
+            keys,
         ]
         .concat();
 
@@ -478,7 +470,7 @@ mod tests {
             let row_start = (row * cols) as usize;
             let row_end = row_start + cols as usize;
 
-            let mut expected = (&keys[row_start..row_end]).to_owned();
+            let mut expected = keys[row_start..row_end].to_owned();
             expected.sort();
 
             assert_eq!(expected, &keys_sorted[row_start..row_end]);

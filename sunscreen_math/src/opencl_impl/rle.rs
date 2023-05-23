@@ -22,7 +22,7 @@ pub fn rle_counts(
     let (compacted, total_runs) =
         compact_backward_mask(&backward_mask, &scanned_backward_mask, rows, cols);
 
-    let cpu = compacted.iter().cloned().collect::<Vec<_>>();
+    let _cpu = compacted.iter().cloned().collect::<Vec<_>>();
 
     let counts = compute_counts(&compacted, &total_runs, rows, cols);
 
@@ -205,8 +205,8 @@ mod tests {
 
         // In this test, we make each element unique so we should get `cols` run
         // lengths, each of length 1.
-        let data = (0..cols).into_iter().collect::<Vec<_>>();
-        let data = [data.clone(), data.clone(), data.clone()].concat();
+        let data = (0..cols).collect::<Vec<_>>();
+        let data = [data.clone(), data.clone(), data].concat();
 
         let data_gpu = Runtime::get().alloc_from_slice(&data);
 

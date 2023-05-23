@@ -362,7 +362,7 @@ mod tests {
                 .enumerate()
             {
                 // Check that the block totals match
-                let expected_sum = data_chunk.iter().sum();
+                let expected_sum: u32 = data_chunk.iter().sum();
 
                 let actual = block_totals[row as usize * expected_num_blocks + c_id];
 

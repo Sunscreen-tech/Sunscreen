@@ -3,25 +3,30 @@ use rayon::iter::Map;
 use super::{MappedBuffer, radix_sort::prefix_sum, Runtime, Grid};
 
 /**
- * Returns the counts of consecutive elements in an array.
+ * Returns
+ * * A `rows x cols` matrix where each row contains the run lengths of the rows of 
+ * rows of the input matrix. Each row in this output matrix has a leading dimension 
+ * equal to cols, but only the first `runs_length` items will be populated.
+ * * A `row x 1` matrix where each row contains the number of runs in the run matrix.
  * 
  * # Remarks
  * Doesn't compute which value appears for each count as an optimization.
+
  */
 pub fn rle_counts(
     data: &MappedBuffer<u32>,
     rows: u32,
     cols: u32
-) -> MappedBuffer<u32> {
+) -> (MappedBuffer<u32>, MappedBuffer<u32>) {
     let backward_mask = compute_backward_mask(data, rows, cols);
     let scanned_backward_mask = prefix_sum(&backward_mask, rows, cols);
 
     let (compacted, total_runs) = 
-    compact_backward_mask(data, &scanned_backward_mask, rows, cols);
+    compact_backward_mask(&backward_mask, &scanned_backward_mask, rows, cols);
 
     let counts = compute_counts(&compacted, &total_runs, rows, cols);
 
-    counts
+    (counts, total_runs)
 }
 
 fn compute_backward_mask(
@@ -100,7 +105,9 @@ fn compute_counts(
 mod tests {
     use std::iter::repeat;
 
-    use crate::opencl_impl::{rle::{compute_backward_mask, compact_backward_mask}, Runtime, radix_sort::prefix_sum};
+    use super::*;
+
+    use crate::opencl_impl::{Runtime, radix_sort::prefix_sum};
 
     #[test]
     fn can_compute_backward_mask() {
@@ -162,7 +169,7 @@ mod tests {
     }
 
     #[test]
-    fn can_compute_rle_counts() {
+    fn can_rle() {
         let cols = 3 * 4567u32;
         let rows = 3u32;
 
@@ -171,11 +178,18 @@ mod tests {
 
         let data_gpu = Runtime::get().alloc_from_slice(&data);
 
-        let mask = compute_backward_mask(&data_gpu, rows, cols);
-        let mask_sums = prefix_sum(&mask, rows, cols);
+        assert_eq!(data.len(), cols as usize * rows as usize);
 
+        let (counts, total_runs) = rle_counts(&data_gpu, rows, cols);
 
+        for row in 0..rows {
+            let len = total_runs[row as usize];
+            assert_eq!(len, cols / 3);
 
+            for col in 0..len {
+                assert_eq!(counts[col as usize + row as usize * cols as usize], 3);
+            }
+        }
     }
-}
 
+}

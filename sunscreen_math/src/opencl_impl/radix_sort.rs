@@ -118,7 +118,6 @@ pub fn prefix_sum(values: &MappedBuffer<u32>, rows: u32, cols: u32) -> MappedBuf
         totals: &MappedBuffer<u32>,
         rows: u32,
         cols: u32,
-        recur: u32,
     ) -> Cow<MappedBuffer<u32>> {
         let (sums, totals, num_blocks) = prefix_sum_blocks(totals, rows, cols);
 
@@ -128,7 +127,7 @@ pub fn prefix_sum(values: &MappedBuffer<u32>, rows: u32, cols: u32) -> MappedBuf
             // This recursion isn't a concern for stack overflow since each recursion
             // divides the work by 128. A mere 6 recursion levels means the inputs would
             // consume over 4TB of memory, which is not plausible.
-            let reduced_totals = reduce_totals(&totals, rows, num_blocks, recur + 1);
+            let reduced_totals = reduce_totals(&totals, rows, num_blocks);
 
             offset_blocks(&sums, &reduced_totals, rows, cols);
 
@@ -143,7 +142,7 @@ pub fn prefix_sum(values: &MappedBuffer<u32>, rows: u32, cols: u32) -> MappedBuf
     // If there is more than one block, reduce the totals into a prefix sum so we can offset
     // each block as appropriate.
     let totals = if num_blocks > 1 {
-        reduce_totals(&totals, rows, num_blocks, 0)
+        reduce_totals(&totals, rows, num_blocks)
     } else {
         Cow::Owned(totals)
     };

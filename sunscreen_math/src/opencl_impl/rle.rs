@@ -1,3 +1,5 @@
+use rayon::iter::Map;
+
 use super::{MappedBuffer, radix_sort::prefix_sum, Runtime, Grid};
 
 /**
@@ -14,7 +16,12 @@ pub fn rle_counts(
     let backward_mask = compute_backward_mask(data, rows, cols);
     let scanned_backward_mask = prefix_sum(&backward_mask, rows, cols);
 
-    todo!();   
+    let (compacted, total_runs) = 
+    compact_backward_mask(data, &scanned_backward_mask, rows, cols);
+
+    let counts = compute_counts(&compacted, &total_runs, rows, cols);
+
+    counts
 }
 
 fn compute_backward_mask(
@@ -39,11 +46,61 @@ fn compute_backward_mask(
     backward_mask
 }
 
+fn compact_backward_mask(
+    data: &MappedBuffer<u32>,
+    backward_mask: &MappedBuffer<u32>,
+    rows: u32,
+    cols: u32
+) -> (MappedBuffer<u32>, MappedBuffer<u32>) {
+    let runtime = Runtime::get();
+
+    let compacted = runtime.alloc::<u32>(rows as usize * cols as usize);
+    let total_runs = runtime.alloc::<u32>(rows as usize);
+
+    runtime.run_kernel(
+        "rle_compact_backward_mask",
+        &vec![
+            data.into(),
+            backward_mask.into(),
+            (&compacted).into(),
+            (&total_runs).into(),
+            cols.into()
+        ],
+        &Grid::from([(cols as usize, 128), (rows as usize, 1), (1, 1)])
+    );
+
+    (compacted, total_runs)
+}
+
+fn compute_counts(
+    compact_backward_mask: &MappedBuffer<u32>,
+    total_runs: &MappedBuffer<u32>,
+    rows: u32,
+    cols: u32,
+) -> MappedBuffer<u32> {
+    let runtime = Runtime::get();
+
+    let counts_out = runtime.alloc::<u32>(cols as usize * rows as usize);
+
+    runtime.run_kernel(
+        "rle_compute_counts",
+        &vec![
+            compact_backward_mask.into(),
+            total_runs.into(),
+            (&counts_out).into(),
+            cols.into()
+        ],
+        &Grid::from([(cols as usize, 128), (rows as usize, 1), (1, 1)])
+    );
+
+    counts_out
+}
+
 #[cfg(test)]
 mod tests {
     use std::iter::repeat;
 
-    use crate::opencl_impl::{rle::compute_backward_mask, Runtime};
+    use crate::opencl_impl::{rle::{compute_backward_mask, compact_backward_mask}, Runtime, radix_sort::prefix_sum};
 
     #[test]
     fn can_compute_backward_mask() {
@@ -71,6 +128,54 @@ mod tests {
                 }
             }
         }
+    }
+
+    #[test]
+    fn can_compact_backward_mask() {
+        let cols = 3 * 4567u32;
+        let rows = 3u32;
+
+        let data = (0..(cols / 3)).map(|x| repeat(x).take(3)).flatten().collect::<Vec<_>>();
+        let data = [data.clone(), data.clone(), data.clone()].concat();
+
+        let data_gpu = Runtime::get().alloc_from_slice(&data);
+
+        assert_eq!(data.len(), cols as usize * rows as usize);
+
+        let mask = compute_backward_mask(&data_gpu, rows, cols);
+        let mask_sums = prefix_sum(&mask, rows, cols);
+
+        let mask_sums_cpu = mask_sums.iter().cloned().collect::<Vec<_>>();
+
+        let (compacted, total_runs) = compact_backward_mask(&mask,&mask_sums, rows, cols);
+
+        let compacted = compacted.iter().cloned().collect::<Vec<_>>();
+
+        for row in 0..rows {
+            let len = total_runs[row as usize];
+            assert_eq!(len, cols / 3);
+
+            for col in 0..len {
+                assert_eq!(compacted[col as usize + row as usize * cols as usize], col * 3);
+            }
+        }
+    }
+
+    #[test]
+    fn can_compute_rle_counts() {
+        let cols = 3 * 4567u32;
+        let rows = 3u32;
+
+        let data = (0..(cols / 3)).map(|x| repeat(x).take(3)).flatten().collect::<Vec<_>>();
+        let data = [data.clone(), data.clone(), data.clone()].concat();
+
+        let data_gpu = Runtime::get().alloc_from_slice(&data);
+
+        let mask = compute_backward_mask(&data_gpu, rows, cols);
+        let mask_sums = prefix_sum(&mask, rows, cols);
+
+
+
     }
 }
 

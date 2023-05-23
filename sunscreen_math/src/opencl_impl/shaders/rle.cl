@@ -23,7 +23,10 @@ kernel void rle_compute_backward_mask(
     }
 }
 
+/// Compacts the backward mask using an exclusive prefix sum. Takes the original data
+/// as well so we can in-place compute an inclusive prefix sum for the last element.
 kernel void rle_compact_backward_mask(
+    global const u32* restrict mask,
     global const u32* restrict scanned_backward_mask,
     global u32* restrict compact_backward_mask,
     global u32* restrict total_runs,
@@ -32,15 +35,47 @@ kernel void rle_compact_backward_mask(
     u32 col_id = get_global_id(0);
     u32 row_id = get_global_id(1);
 
-    if (col_id == cols - 1) {
-        compact_backward_mask[scanned_backward_mask[col_id + cols * row_id] + cols * row_id] = col_id + 1;
-        total_runs[row_id] = scanned_backward_mask[col_id + cols * row_id];
+    if (col_id >= cols) {
+        return;
     }
 
-    if (col_id == 0) {
-        compact_backward_mask[col_id + cols * row_id] = 0;
+    u32 cur = col_id == cols - 1
+        ? scanned_backward_mask[col_id + cols * row_id] + mask[col_id]
+        : scanned_backward_mask[col_id + cols * row_id + 1];
+
+    u32 prev = scanned_backward_mask[col_id + cols * row_id];
+
+    if (col_id == cols - 1) {
+        compact_backward_mask[cur + cols * row_id] = col_id + 1;
+        total_runs[row_id] = cur;
     }
-    else if (scanned_backward_mask[col_id + cols * row_id] != compact_backward_mask[col_id + cols * row_id - 1]) {
-        compact_backward_mask[scanned_backward_mask[col_id + cols * row_id] - 1] = col_id;
+
+    // This algorithm requires an inclusive scan, but we have an exclusive scan.
+    // We can in-place create an inclusive scan by
+    // 1. For elements col_id < cols - 1, read element cols_id + 1 from the scan.
+    // 2. For element col_id, read the last element from the scan and add it to
+    // the last element of the data from which the scan was created.
+    if (col_id == 0) {
+        compact_backward_mask[0 + cols * row_id] = 0;
+    } else if (cur != prev) {
+        compact_backward_mask[cur + row_id * cols - 1] = col_id;
+    }
+}
+
+/// Computes the RLE counts.
+kernel void rle_compute_counts(
+    global const u32* restrict compact_backward_mask,
+    global const u32* restrict total_runs,
+    global u32* counts_out,
+    u32 cols
+) {
+    u32 col_id = get_global_id(0);
+    u32 row_id = get_global_id(1);
+
+    if (col_id < total_runs[row_id]) {
+        u32 b = compact_backward_mask[col_id + 1 + row_id * cols];
+        u32 a = compact_backward_mask[col_id + row_id * cols];
+
+        counts_out[col_id + row_id * cols] = b - a;
     }
 }

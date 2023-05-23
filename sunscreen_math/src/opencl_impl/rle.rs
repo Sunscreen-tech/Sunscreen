@@ -188,4 +188,15 @@ mod tests {
             }
         }
     }
+
+    #[test]
+    fn can_rle_unique() {
+        let cols = 4567u32;
+        let rows = 3u32;
+
+        // In this test, we make each element unique so we should get `cols` run
+        // lengths, each of length 1.
+        let data = (0..cols).iter().collect::<Vec<_>>()
+        let data = [data.clone(), data.clone(), data.clone()].concat();
+    }
 }

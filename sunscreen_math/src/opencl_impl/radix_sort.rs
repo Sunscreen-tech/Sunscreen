@@ -114,11 +114,7 @@ pub fn prefix_sum(values: &MappedBuffer<u32>, rows: u32, cols: u32) -> MappedBuf
 
     let (prefix_sums, totals, num_blocks) = prefix_sum_blocks(values, rows, cols);
 
-    fn reduce_totals(
-        totals: &MappedBuffer<u32>,
-        rows: u32,
-        cols: u32,
-    ) -> Cow<MappedBuffer<u32>> {
+    fn reduce_totals(totals: &MappedBuffer<u32>, rows: u32, cols: u32) -> Cow<MappedBuffer<u32>> {
         let (sums, totals, num_blocks) = prefix_sum_blocks(totals, rows, cols);
 
         if num_blocks == 1 {

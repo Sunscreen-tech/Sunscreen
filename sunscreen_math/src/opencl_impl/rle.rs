@@ -1,5 +1,3 @@
-
-
 use super::{radix_sort::prefix_sum, Grid, MappedBuffer, Runtime};
 
 /**
@@ -23,6 +21,8 @@ pub fn rle_counts(
 
     let (compacted, total_runs) =
         compact_backward_mask(&backward_mask, &scanned_backward_mask, rows, cols);
+
+    let cpu = compacted.iter().cloned().collect::<Vec<_>>();
 
     let counts = compute_counts(&compacted, &total_runs, rows, cols);
 
@@ -51,16 +51,18 @@ fn compact_backward_mask(
 ) -> (MappedBuffer<u32>, MappedBuffer<u32>) {
     let runtime = Runtime::get();
 
-    let compacted = runtime.alloc::<u32>(rows as usize * cols as usize);
+    let compacted = runtime.alloc::<u32>(rows as usize * (cols + 1) as usize);
     let total_runs = runtime.alloc::<u32>(rows as usize);
 
     runtime.run_kernel(
         "rle_compact_backward_mask",
-        &[data.into(),
+        &[
+            data.into(),
             backward_mask.into(),
             (&compacted).into(),
             (&total_runs).into(),
-            cols.into()],
+            cols.into(),
+        ],
         &Grid::from([(cols as usize, 128), (rows as usize, 1), (1, 1)]),
     );
 
@@ -79,10 +81,12 @@ fn compute_counts(
 
     runtime.run_kernel(
         "rle_compute_counts",
-        &[compact_backward_mask.into(),
+        &[
+            compact_backward_mask.into(),
             total_runs.into(),
             (&counts_out).into(),
-            cols.into()],
+            cols.into(),
+        ],
         &Grid::from([(cols as usize, 128), (rows as usize, 1), (1, 1)]),
     );
 
@@ -156,10 +160,15 @@ mod tests {
 
             for col in 0..len {
                 assert_eq!(
-                    compacted[col as usize + row as usize * cols as usize],
+                    compacted[col as usize + row as usize * (cols as usize + 1)],
                     col * 3
                 );
             }
+
+            assert_eq!(
+                compacted[len as usize + row as usize * (cols as usize + 1)],
+                cols
+            );
         }
     }
 
@@ -196,7 +205,22 @@ mod tests {
 
         // In this test, we make each element unique so we should get `cols` run
         // lengths, each of length 1.
-        let data = (0..cols).iter().collect::<Vec<_>>()
+        let data = (0..cols).into_iter().collect::<Vec<_>>();
         let data = [data.clone(), data.clone(), data.clone()].concat();
+
+        let data_gpu = Runtime::get().alloc_from_slice(&data);
+
+        let (counts, total_runs) = rle_counts(&data_gpu, rows, cols);
+
+        let counts = counts.iter().cloned().collect::<Vec<_>>();
+
+        for row in 0..rows {
+            let len = total_runs[row as usize];
+            assert_eq!(len, cols);
+
+            for col in 0..len {
+                assert_eq!(counts[col as usize + row as usize * cols as usize], 1);
+            }
+        }
     }
 }

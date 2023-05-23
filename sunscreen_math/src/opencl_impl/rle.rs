@@ -1,4 +1,4 @@
-use rayon::iter::Map;
+
 
 use super::{radix_sort::prefix_sum, Grid, MappedBuffer, Runtime};
 
@@ -36,7 +36,7 @@ fn compute_backward_mask(data: &MappedBuffer<u32>, rows: u32, cols: u32) -> Mapp
 
     runtime.run_kernel(
         "rle_compute_backward_mask",
-        &vec![data.into(), (&backward_mask).into(), cols.into()],
+        &[data.into(), (&backward_mask).into(), cols.into()],
         &Grid::from([(cols as usize, 128), (rows as usize, 1), (1, 1)]),
     );
 
@@ -56,13 +56,11 @@ fn compact_backward_mask(
 
     runtime.run_kernel(
         "rle_compact_backward_mask",
-        &vec![
-            data.into(),
+        &[data.into(),
             backward_mask.into(),
             (&compacted).into(),
             (&total_runs).into(),
-            cols.into(),
-        ],
+            cols.into()],
         &Grid::from([(cols as usize, 128), (rows as usize, 1), (1, 1)]),
     );
 
@@ -81,12 +79,10 @@ fn compute_counts(
 
     runtime.run_kernel(
         "rle_compute_counts",
-        &vec![
-            compact_backward_mask.into(),
+        &[compact_backward_mask.into(),
             total_runs.into(),
             (&counts_out).into(),
-            cols.into(),
-        ],
+            cols.into()],
         &Grid::from([(cols as usize, 128), (rows as usize, 1), (1, 1)]),
     );
 
@@ -107,10 +103,9 @@ mod tests {
         let rows = 3u32;
 
         let data = (0..(cols / 3))
-            .map(|x| repeat(x).take(3))
-            .flatten()
+            .flat_map(|x| repeat(x).take(3))
             .collect::<Vec<_>>();
-        let data = [data.clone(), data.clone(), data.clone()].concat();
+        let data = [data.clone(), data.clone(), data].concat();
 
         let data_gpu = Runtime::get().alloc_from_slice(&data);
 
@@ -138,10 +133,9 @@ mod tests {
         let rows = 3u32;
 
         let data = (0..(cols / 3))
-            .map(|x| repeat(x).take(3))
-            .flatten()
+            .flat_map(|x| repeat(x).take(3))
             .collect::<Vec<_>>();
-        let data = [data.clone(), data.clone(), data.clone()].concat();
+        let data = [data.clone(), data.clone(), data].concat();
 
         let data_gpu = Runtime::get().alloc_from_slice(&data);
 
@@ -150,7 +144,7 @@ mod tests {
         let mask = compute_backward_mask(&data_gpu, rows, cols);
         let mask_sums = prefix_sum(&mask, rows, cols);
 
-        let mask_sums_cpu = mask_sums.iter().cloned().collect::<Vec<_>>();
+        let _mask_sums_cpu = mask_sums.iter().cloned().collect::<Vec<_>>();
 
         let (compacted, total_runs) = compact_backward_mask(&mask, &mask_sums, rows, cols);
 
@@ -175,10 +169,9 @@ mod tests {
         let rows = 3u32;
 
         let data = (0..(cols / 3))
-            .map(|x| repeat(x).take(3))
-            .flatten()
+            .flat_map(|x| repeat(x).take(3))
             .collect::<Vec<_>>();
-        let data = [data.clone(), data.clone(), data.clone()].concat();
+        let data = [data.clone(), data.clone(), data].concat();
 
         let data_gpu = Runtime::get().alloc_from_slice(&data);
 

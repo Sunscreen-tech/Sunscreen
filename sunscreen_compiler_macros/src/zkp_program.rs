@@ -67,6 +67,18 @@ fn get_generic_arg(generics: &Generics) -> Result<(Ident, Path)> {
                 "ZKP programs don't support lifetimes.",
             ))
         }
+        TypeParamBound::Verbatim(x) => {
+            return Err(Error::compile_error(
+                x.span(),
+                "ZKP programs don't support verbatim.",
+            ))
+        }
+        _ => {
+            return Err(Error::compile_error(
+                bound.span(),
+                "Sunscreen doesn't understand this.",
+            ))
+        }
     };
 
     Ok((generic.ident.clone(), bound.path))
@@ -99,13 +111,13 @@ fn parse_inner(_attr_params: ZkpProgramAttrs, input_fn: ItemFn) -> Result<TokenS
                 match a.0.len() {
                     0 => {},
                     1 => {
-                        let ident = a.0[0].path.get_ident();
+                        let ident = a.0[0].path().get_ident();
 
                         match ident.map(|x| x.to_string()).as_deref() {
                             Some("public") => arg_kind = ArgumentKind::Public,
                             Some("constant") => arg_kind = ArgumentKind::Constant,
                             _ => {
-                                return Err(Error::compile_error(a.0[0].path.span(), &format!("Expected #[public] or #[constant], found {}", a.0[0].path.to_token_stream())));
+                                return Err(Error::compile_error(a.0[0].path().span(), &format!("Expected #[public] or #[constant], found {}", a.0[0].path().to_token_stream())));
                             }
                         }
                     },

@@ -1,7 +1,7 @@
 use proc_macro2::{Span, TokenStream as TokenStream2};
 use quote::{format_ident, quote, quote_spanned, ToTokens};
 use syn::{
-    parse_quote, parse_quote_spanned, punctuated::Punctuated, spanned::Spanned, token::Colon2,
+    parse_quote, parse_quote_spanned, punctuated::Punctuated, spanned::Spanned, token::PathSep,
     AngleBracketedGenericArguments, Attribute, FnArg, Ident, Index, Pat, PathArguments, ReturnType,
     Token, Type,
 };
@@ -247,7 +247,7 @@ pub fn emit_output_capture(return_types: &[Type]) -> TokenStream2 {
  * With the former, you cannot do `foo::bar::<7>::Baz<Kitty>::my_func()`,
  * the the latter you can do `foo::bar::<7>::Baz::<Kitty>::my_func()`.
  */
-pub fn normalize_type_generic_args(t: &Type) -> Punctuated<TokenStream2, Colon2> {
+pub fn normalize_type_generic_args(t: &Type) -> Punctuated<TokenStream2, PathSep> {
     let mut ret = Punctuated::new();
 
     match t {

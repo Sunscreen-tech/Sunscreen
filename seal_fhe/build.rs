@@ -4,7 +4,7 @@ use emsdk::Config as EmConfig;
 use std::path::{Path, PathBuf};
 
 /// Allow x86_64 <-> aarch64 cross compilation on macOS
-/// https://stackoverflow.com/questions/69803659/what-is-the-proper-way-to-build-for-macos-x86-64-using-cmake-on-apple-m1-arm
+/// https://cmake.org/cmake/help/latest/command/try_run.html#behavior-when-cross-compiling
 fn setup_macos_cross_compile(config: &mut Config) {
     let host_triple = std::env::var("HOST").unwrap();
     let target_triple = std::env::var("TARGET").unwrap();

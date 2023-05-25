@@ -12,7 +12,10 @@ fn setup_macos_cross_compile(config: &mut Config) {
     let host_triple = host_triple.split("-").collect::<Vec<_>>();
     let target_triple = target_triple.split("-").collect::<Vec<_>>();
 
-    if host_triple[1] == "apple" && target_triple[1] == "apple" && host_triple[0] != target_triple[0] {
+    if host_triple[1] == "apple"
+        && target_triple[1] == "apple"
+        && host_triple[0] != target_triple[0]
+    {
         config.define("SEAL_MEMSET_S_FOUND_EXITCODE", "0");
         config.define("SEAL_MEMSET_S_FOUND_EXITCODE__TRYRUN_OUTPUT", "");
         config.define("SEAL___BUILTIN_CLZLL_FOUND_EXITCODE", "0");
@@ -34,7 +37,8 @@ fn compile_native(profile: &str, out_path: &Path) {
 
     let mut builder = Config::new("SEAL");
 
-    builder.define("CMAKE_BUILD_TYPE", profile)
+    builder
+        .define("CMAKE_BUILD_TYPE", profile)
         .define("CMAKE_CXX_FLAGS_RELEASE", "-DNDEBUG -O3")
         .define("CMAKE_C_FLAGS_RELEASE", "-DNDEBUG -O3")
         .define("SEAL_USE_GAUSSIAN_NOISE", "ON")
@@ -50,7 +54,7 @@ fn compile_native(profile: &str, out_path: &Path) {
         .define("SEAL_USE_MSGSL", "OFF")
         .define("SEAL_USE_ZLIB", "ON")
         .define("SEAL_USE_ZSTD", "ON");
-        
+
     setup_macos_cross_compile(&mut builder);
 
     let dst = builder.build();

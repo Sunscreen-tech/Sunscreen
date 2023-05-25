@@ -260,16 +260,9 @@ pub fn compile_proof() -> ZkpApplication {
 fn ark_bigint_to_native_field<B: ZkpBackend, F: MontConfig<N>, const N: usize>(
     x: Fp<MontBackend<F, N>, N>,
 ) -> NativeField<B::Field> {
-    assert!(N <= 8);
-
     let x = x.into_bigint();
-    let mut words = [0; 8];
-
-    for i in 0..N {
-        words[i] = x.0[i];
-    }
-
-    NativeField::from(ZkpBigInt::from_words(words))
+    let zkp_bigint = ark_bigint_to_zkp_bigint(x);
+    NativeField::from(zkp_bigint)
 }
 
 type BpBackendField = <BulletproofsBackend as ZkpBackend>::Field;
@@ -311,10 +304,10 @@ fn into_rns_poly<F: MontConfig<N>, const N: usize>(
 
 fn ark_bigint_to_zkp_bigint<const N: usize>(x: BigInt<N>) -> ZkpBigInt {
     assert!(N <= 8);
+
     let mut words = [0; 8];
-    for i in 0..N {
-        words[i] = x.0[i];
-    }
+    words[..N].copy_from_slice(&x.0[..N]);
+
     ZkpBigInt::from_words(words)
 }
 
@@ -329,13 +322,6 @@ fn signed_into_rns_poly<F: MontConfig<N>, const N: usize>(
     q_div_2.div2();
     let q_div_2 = ark_bigint_to_zkp_bigint(q_div_2);
     let q = ark_bigint_to_zkp_bigint(F::MODULUS);
-
-    assert!(N <= 8);
-    let mut words = [0; 8];
-    for i in 0..N {
-        words[i] = F::MODULUS.0[i];
-    }
-    let q = ZkpBigInt::from_words(words);
 
     let offset = BpBackendField::FIELD_MODULUS.wrapping_sub(&q);
 

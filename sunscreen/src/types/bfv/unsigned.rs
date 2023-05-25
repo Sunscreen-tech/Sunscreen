@@ -65,6 +65,7 @@ impl<const LIMBS: usize> TryIntoPlaintext for Unsigned<LIMBS> {
 
         for i in 0..sig_bits {
             let bit_value = self.val.bit_vartime(i);
+            #[allow(clippy::unnecessary_cast)]
             seal_plaintext.set_coefficient(i, bit_value as u64);
         }
 

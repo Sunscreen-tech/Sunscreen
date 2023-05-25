@@ -63,7 +63,7 @@ fn main() -> Result<(), Error> {
      * Or from the underlying `crypto_bigint::U256` representation. Below is a
      * representation of 10^18.
      */
-    let bigint: U256 = U256::from_words([0x0de0b6b3a7640000, 0x0, 0x0, 0x0]);
+    let bigint: U256 = U256::from_u64(0x0de0b6b3a7640000);
     let b = runtime.encrypt(Unsigned256::from(bigint), &public_key)?;
 
     /*

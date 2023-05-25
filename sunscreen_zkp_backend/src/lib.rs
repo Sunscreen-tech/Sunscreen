@@ -204,7 +204,32 @@ impl BigInt {
      * Create a [`BigInt`] from the given limbs.
      */
     pub const fn from_words(val: [u64; 8]) -> Self {
-        Self(U512::from_words(val))
+        #[cfg(target_pointer_width = "64")]
+        {
+            Self(U512::from_words(val))
+        }
+
+        #[cfg(target_pointer_width = "32")]
+        {
+            Self(U512::from_words([
+                val[0] as u32,
+                (val[0] >> 32) as u32,
+                val[1] as u32,
+                (val[1] >> 32) as u32,
+                val[2] as u32,
+                (val[2] >> 32) as u32,
+                val[3] as u32,
+                (val[3] >> 32) as u32,
+                val[4] as u32,
+                (val[4] >> 32) as u32,
+                val[5] as u32,
+                (val[5] >> 32) as u32,
+                val[6] as u32,
+                (val[6] >> 32) as u32,
+                val[7] as u32,
+                (val[7] >> 32) as u32,
+            ]))
+        }
     }
 
     /**

@@ -1,6 +1,6 @@
 use std::ops::*;
 
-use crypto_bigint::{UInt, Wrapping};
+use crypto_bigint::{nlimbs, UInt, Wrapping};
 use paste::paste;
 use seal_fhe::Plaintext as SealPlaintext;
 
@@ -24,13 +24,6 @@ use crate::{
     types::{intern::FheProgramNode, BfvType, FheType, TypeNameInstance},
     FheProgramInputTrait, Params, TypeName as DeriveTypeName, WithContext,
 };
-
-/// Unsigned 64 bit integer
-pub type Unsigned64 = Unsigned<1>;
-/// Unsigned 128 bit integer
-pub type Unsigned128 = Unsigned<2>;
-/// Unsigned 256 bit integer
-pub type Unsigned256 = Unsigned<4>;
 
 #[derive(Debug, Clone, Copy, DeriveTypeName, PartialEq, Eq)]
 /**
@@ -72,7 +65,7 @@ impl<const LIMBS: usize> TryIntoPlaintext for Unsigned<LIMBS> {
 
         for i in 0..sig_bits {
             let bit_value = self.val.bit_vartime(i);
-            seal_plaintext.set_coefficient(i, bit_value);
+            seal_plaintext.set_coefficient(i, bit_value as u64);
         }
 
         Ok(Plaintext {
@@ -319,6 +312,21 @@ impl<const LIMBS: usize> GraphPlainCipherSub for Unsigned<LIMBS> {
             FheProgramNode::new(&[n])
         })
     }
+}
+
+macro_rules! type_synonyms {
+    ($($bits:expr),+) => {
+        $(
+            paste! {
+                #[doc= concat!("Unsigned ", stringify!($bits), "-bit integer")]
+                pub type [<Unsigned $bits>] = Unsigned<{nlimbs!($bits)}>;
+            }
+        )+
+    };
+}
+
+type_synonyms! {
+    64, 128, 256, 512
 }
 
 #[cfg(test)]

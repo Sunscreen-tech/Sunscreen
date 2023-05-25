@@ -263,13 +263,13 @@ fn ark_bigint_to_native_field<B: ZkpBackend, F: MontConfig<N>, const N: usize>(
     assert!(N <= 8);
 
     let x = x.into_bigint();
-    let mut out = ZkpBigInt::ZERO;
+    let mut words = [0; 8];
 
-    for (i, l) in x.0.iter().enumerate() {
-        out.0.limbs_mut()[i] = crypto_bigint::Limb(*l);
+    for i in 0..N {
+        words[i] = x.0[i];
     }
 
-    NativeField::from(out)
+    NativeField::from(ZkpBigInt::from_words(words))
 }
 
 type BpBackendField = <BulletproofsBackend as ZkpBackend>::Field;
@@ -310,13 +310,12 @@ fn into_rns_poly<F: MontConfig<N>, const N: usize>(
 }
 
 fn ark_bigint_to_zkp_bigint<const N: usize>(x: BigInt<N>) -> ZkpBigInt {
-    let mut r = ZkpBigInt::ZERO;
-
+    assert!(N <= 8);
+    let mut words = [0; 8];
     for i in 0..N {
-        r.0.as_words_mut()[i] = x.0[i];
+        words[i] = x.0[i];
     }
-
-    r
+    ZkpBigInt::from_words(words)
 }
 
 /**
@@ -332,12 +331,11 @@ fn signed_into_rns_poly<F: MontConfig<N>, const N: usize>(
     let q = ark_bigint_to_zkp_bigint(F::MODULUS);
 
     assert!(N <= 8);
-
-    let mut q = ZkpBigInt::ZERO;
-
+    let mut words = [0; 8];
     for i in 0..N {
-        q.0.as_words_mut()[i] = F::MODULUS.0[i];
+        words[i] = F::MODULUS.0[i];
     }
+    let q = ZkpBigInt::from_words(words);
 
     let offset = BpBackendField::FIELD_MODULUS.wrapping_sub(&q);
 

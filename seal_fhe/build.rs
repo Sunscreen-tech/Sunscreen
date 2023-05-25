@@ -9,8 +9,8 @@ fn setup_macos_cross_compile(config: &mut Config) {
     let host_triple = std::env::var("HOST").unwrap();
     let target_triple = std::env::var("TARGET").unwrap();
 
-    let host_triple = host_triple.split("-").collect::<Vec<_>>();
-    let target_triple = target_triple.split("-").collect::<Vec<_>>();
+    let host_triple = host_triple.split('-').collect::<Vec<_>>();
+    let target_triple = target_triple.split('-').collect::<Vec<_>>();
 
     if host_triple[1] == "apple"
         && target_triple[1] == "apple"
@@ -24,7 +24,6 @@ fn setup_macos_cross_compile(config: &mut Config) {
         config.define("SEAL__ADDCARRY_U64_FOUND_EXITCODE__TRYRUN_OUTPUT", "");
         config.define("SEAL__SUBBORROW_U64_FOUND_EXITCODE", "0");
         config.define("SEAL__SUBBORROW_U64_FOUND_EXITCODE__TRYRUN_OUTPUT", "");
-        //config.define("CMAKE_OSX_ARCHITECTURES", target_triple[0]);
     }
 }
 

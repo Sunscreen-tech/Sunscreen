@@ -1,6 +1,6 @@
 [submodule "seal_fhe/SEAL"]
 	path = seal_fhe/SEAL
-	url = git@github.com:rickwebiii/SEAL.git
+	url = https://github.com/rickwebiii/SEAL.git
 	branch = wasm
   fetchRecurseSubmodules = true
 [submodule "emsdk/emsdk"]
@@ -8,14 +8,14 @@
 	url = https://github.com/emscripten-core/emsdk.git
 [submodule "mdBook"]
 	path = mdBook
-	url = git@github.com:rickwebiii/mdBook.git
+	url = https://github.com/rickwebiii/mdBook.git
 [submodule "rust-playground"]
 	path = rust-playground
-	url = git@github.com:Sunscreen-tech/rust-playground.git
+	url = https://github.com/Sunscreen-tech/rust-playground.git
   branch = sunscreen
 [submodule "sunscreen_bulletproofs"]
 	path = sunscreen_bulletproofs
-	url = git@github.com:Sunscreen-tech/bulletproofs_zkcrypto.git
+	url = https://github.com/Sunscreen-tech/bulletproofs_zkcrypto.git
 [submodule "sunscreen_curve25519"]
 	path = sunscreen_curve25519
-	url = git@github.com:Sunscreen-tech/curve25519-dalek-ng.git
+	url = https://github.com/Sunscreen-tech/curve25519-dalek-ng.git

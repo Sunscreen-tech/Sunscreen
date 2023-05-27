@@ -605,18 +605,51 @@ impl GenericRuntime<(), ()> {
  */
 pub type FheZkpRuntime<B> = GenericRuntime<FheZkp, B>;
 
+impl<B> FheZkpRuntime<B> {
+    /**
+     * Creates a new Runtime supporting both ZKP and FHE operations.
+     */
+    pub fn new(params: &Params, zkp_backend: &B) -> Result<Self>
+    where
+        B: ZkpBackend + Clone + 'static,
+    {
+        Runtime::new_fhe_zkp(params, zkp_backend)
+    }
+}
+
 /**
  * A runtime capable of only FHE operations.
  */
 pub type FheRuntime = GenericRuntime<Fhe, ()>;
+
+impl FheRuntime {
+    /**
+     * Create a new [`FheRuntime`].
+     */
+    pub fn new(params: &Params) -> Result<Self> {
+        Runtime::new_fhe(params)
+    }
+}
 
 /**
  * A runtime capable of only ZKP operations.
  */
 pub type ZkpRuntime<B> = GenericRuntime<Zkp, B>;
 
+impl<B> ZkpRuntime<B> {
+    /**
+     * Create a new [`ZkpRuntime`].
+     */
+    pub fn new(backend: &B) -> Result<Self>
+    where
+        B: ZkpBackend + Clone + 'static,
+    {
+        Runtime::new_zkp(backend)
+    }
+}
+
 /**
- * An type containing the `Runtime::new_*` constructor methods to create
+ * A type containing the `Runtime::new_*` constructor methods to create
  * the appropriate runtime:
  *
  * * [`Runtime::new_fhe`] constructs an [`FheRuntime`] capable of

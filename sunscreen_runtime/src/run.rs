@@ -1,7 +1,7 @@
 use crate::{InnerPlaintext, SealData};
 use static_assertions::const_assert;
 use sunscreen_compiler_common::{GraphQuery, GraphQueryError};
-use sunscreen_fhe_program::{FheProgram, Literal, Operation::*};
+use sunscreen_fhe_program::{FheProgram, FheProgramTrait, Literal, Operation::*};
 
 use crossbeam::atomic::AtomicCell;
 use petgraph::{stable_graph::NodeIndex, Direction};
@@ -377,8 +377,6 @@ pub fn traverse<F>(
 where
     F: Fn(NodeIndex) -> Result<(), FheProgramRunFailure> + Sync + Send,
 {
-    use sunscreen_fhe_program::FheProgramTrait;
-
     let ir = if let Some(x) = run_to {
         Cow::Owned(ir.prune(&[x])) // MOO
     } else {
@@ -474,6 +472,18 @@ where
 }
 
 #[cfg(target_arch = "wasm32")]
+/**
+ * Traverses the FheProgram's nodes in topological order, executing
+ * callback on each node.
+ *
+ * # Remarks
+ * This implementation cannot mutate the graph during traversal (as indicated by
+ * the lack of `mut` on `ir`).
+ *
+ * The optional `run_to` specifies to only run the given node and
+ * its ancestors, topologically. If not specified, every node in the
+ * program gets visited.
+ */
 pub fn traverse<F>(
     ir: &FheProgram,
     callback: F,

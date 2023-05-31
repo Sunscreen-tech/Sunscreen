@@ -25,7 +25,7 @@ u32 get_scalar_window(
     const u32 BITS_PER_LIMB = 8 * sizeof(u32);
     const u32 LIMBS_PER_SCALAR = 8;
 
-    // index measured in bits, bot bytes.
+    // index measured in bits, not bytes.
     u32 window_start_idx = window_bits * window_id;
 
     // A window can span at most 2 limbs.
@@ -40,7 +40,10 @@ u32 get_scalar_window(
     // If this window spans 2 limbs, concatenate load the next limb and 
     // concatenate its contribution. Note that windows beginning in the most
     // significant scalar limb never span 2 limbs.
-    if (window_bits + window_start_idx > limb_boundary && limb_id_1 < LIMBS_PER_SCALAR) {
+    //
+    // If the window would span beyond the scalar, then don't go beyond
+    // the number; we're done.
+    if (window_bits + window_start_idx > limb_boundary && limb_id_1 < LIMBS_PER_SCALAR - 1) {
         u32 limb_id_2 = limb_id_1 + 1;
         u32 limb_2 = scalars[limb_id_2 * scalars_len + scalar_id];
 
@@ -107,7 +110,6 @@ kernel void fill_coo_matrix(
     ) {
         u32 window_id = get_global_id(1);
         u32 scalar_id = get_global_id(0);
-    //    u32 thread_count = get_global_size(0);
 
         if (scalar_id < scalars_len) {
             windows[window_id * scalars_len + scalar_id] = get_scalar_window(

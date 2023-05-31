@@ -7,9 +7,9 @@ use std::{
     ops::{Add, Mul, Sub},
 };
 
-use crate::{opencl_impl::Runtime, GpuScalarVec};
+use crate::{opencl_impl::{Runtime, Grid, radix_sort::radix_sort_2_vals}, GpuScalarVec};
 
-use super::{GpuVec, GpuVecIter, IntoGpuVecIter, MappedBuffer};
+use super::{GpuVec, GpuVecIter, IntoGpuVecIter, MappedBuffer, multiexp::multiscalar_multiplication};
 
 /// A vector of [`RistrettoPoint`] elements laid out in a way that enables coalesced
 /// reads and writes on a GPU.
@@ -78,35 +78,9 @@ impl GpuRistrettoPointVec {
         <Self as GpuVec>::iter(self)
     }
 
-    pub fn multiscalar_multiplication(&self, scalars: &GpuScalarVec) {
-        assert_eq!(self.len(), scalars.len());
-
-        let runtime = Runtime::get();
-
-        const NUM_THREADS: usize = 16384;
-
-        // We require that NUM_THREADS be a multiple of any sane thread group size (i.e. 512).
-        assert!(NUM_THREADS.is_power_of_two());
-        assert!(NUM_THREADS > 512);
-
-        let max_cols = if self.len() % NUM_THREADS == 0 {
-            self.len() / NUM_THREADS
-        } else {
-            (self.len() + 1) / NUM_THREADS
-        };
-
-        let scalar_bit_len = 8 * std::mem::size_of::<Scalar>();
-        let window_bit_len = 16usize;
-        let num_windows = if scalar_bit_len % window_bit_len == 0 {
-            scalar_bit_len / window_bit_len
-        } else {
-            scalar_bit_len / window_bit_len + 1
-        };
-
-        let _ell_data = runtime.alloc::<u32>(self.len() * num_windows);
-        let _ell_row_len = runtime.alloc::<u32>(NUM_THREADS * num_windows);
-        let _ell_col_index = runtime.alloc::<u32>(max_cols * num_windows);
-    }
+    pub fn multiscalar_multiplication(&self, scalars: &GpuScalarVec) -> RistrettoPoint {
+        multiscalar_multiplication(self, scalars)
+    }    
 }
 
 impl IntoIterator for GpuRistrettoPointVec {
@@ -536,7 +510,7 @@ mod tests {
 
     #[test]
     fn can_fill_coo_matrix() {
-        let a = (0..5)
+        let a = (0..4567)
             .map(|_| Scalar::random(&mut thread_rng()))
             .collect::<Vec<_>>();
 
@@ -579,7 +553,7 @@ mod tests {
         let mut coo_col_idx = runtime.alloc(a.len() * num_windows);
 
         runtime.run_kernel(
-            "test_fill_coo_matrix",
+            "fill_coo_matrix",
             &[
                 (&a_gpu.data).into(),
                 (&coo_data).into(),

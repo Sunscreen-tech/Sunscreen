@@ -61,7 +61,7 @@ u32 get_scalar_window(
 /// and we simply skip them when doing bucket accumulation. The overhead of
 /// storing zeros and skipping them when reducing buckets in the sparse matrix 
 /// is trivial compared to adding EC points.
-void fill_coo_matrix(
+kernel void fill_coo_matrix(
     global const u32* scalars,
     global u32* coo_data,
     global u32* coo_row_idx,
@@ -72,9 +72,6 @@ void fill_coo_matrix(
     const u32 window_id = get_global_id(1);
     const u32 thread_count = get_global_size(0);
     const u32 thread_id = get_global_id(0);
-    //const u32 points_per_thread = scalars_len % thread_count == 0
-    //    ? scalars_len / thread_count 
-    //    : scalars_len / thread_count + 1;
 
     u32 window_offset = window_id * scalars_len;
 
@@ -101,17 +98,6 @@ void fill_coo_matrix(
     }
 }
 
-kernel void msm(
-    global const u32* scalars,
-    global u32* ell_data,
-    global u32* ell_row_len,
-    global u32* ell_col_index,
-    u32 window_bits,
-    u32 scalars_len
-) {
-    fill_coo_matrix(scalars, ell_data, ell_row_len, ell_col_index, window_bits, scalars_len);
-}
-
 #if defined(TEST)
     kernel void test_get_scalar_windows(
         global const u32* scalars,
@@ -132,23 +118,5 @@ kernel void msm(
                 scalars_len
             );
         }
-    }
-
-    kernel void test_fill_coo_matrix(
-        global const u32* scalars,
-        global u32* coo_data,
-        global u32* coo_row_idx,
-        global u32* coo_col_idx,
-        u32 window_bits,
-        u32 scalars_len
-    ) {
-        fill_coo_matrix(
-            scalars,
-            coo_data,
-            coo_row_idx,
-            coo_col_idx,
-            window_bits,
-            scalars_len
-        );
     }
 #endif

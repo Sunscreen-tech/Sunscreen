@@ -1,10 +1,23 @@
 use curve25519_dalek::{scalar::Scalar, ristretto::RistrettoPoint};
 
-use crate::{RistrettoPointVec, GpuScalarVec, GpuRistrettoPointVec, GpuVec, opencl_impl::{Runtime, radix_sort::radix_sort_2_vals, Grid}};
+use crate::{RistrettoPointVec, GpuScalarVec, GpuRistrettoPointVec, GpuVec, opencl_impl::{Runtime, radix_sort::{radix_sort_vals}, Grid, rle::run_length_encoding}};
+
+use super::MappedBuffer;
 
 pub fn multiscalar_multiplication(points: &GpuRistrettoPointVec, scalars: &GpuScalarVec) -> RistrettoPoint {
     assert_eq!(points.len(), scalars.len());
 
+     todo!();
+}
+
+struct WindowData {
+    bin_idx: MappedBuffer<u32>,
+    scalar_id: MappedBuffer<u32>,
+    bin_counts: MappedBuffer<u32>,
+    bin_count_prefix_sum: MappedBuffer<u32>,
+}
+
+fn construct_window_data(scalars: &GpuScalarVec) -> WindowData {
     let runtime = Runtime::get();
 
     const NUM_THREADS: usize = 16384;
@@ -13,10 +26,10 @@ pub fn multiscalar_multiplication(points: &GpuRistrettoPointVec, scalars: &GpuSc
     assert!(NUM_THREADS.is_power_of_two());
     assert!(NUM_THREADS > 512);
 
-    let max_cols = if points.len() % NUM_THREADS == 0 {
-        points.len() / NUM_THREADS
+    let max_cols = if scalars.len() % NUM_THREADS == 0 {
+        scalars.len() / NUM_THREADS
     } else {
-        (points.len() + 1) / NUM_THREADS
+        (scalars.len() + 1) / NUM_THREADS
     };
 
     let scalar_bit_len = 8 * std::mem::size_of::<Scalar>();
@@ -47,7 +60,6 @@ pub fn multiscalar_multiplication(points: &GpuRistrettoPointVec, scalars: &GpuSc
     // correspond to window values, and the values in the matrix are indices into 
     // the EC point (and scalar) arrays.
     let coo_data = runtime.alloc::<u32>(scalars.len() * num_windows);
-    let coo_row_index = runtime.alloc::<u32>(scalars.len() * num_windows);
     let coo_col_index = runtime.alloc::<u32>(scalars.len() * num_windows);
 
     // The first grid dimension corresponds to the number of threads `t`
@@ -70,7 +82,6 @@ pub fn multiscalar_multiplication(points: &GpuRistrettoPointVec, scalars: &GpuSc
         &vec![
             (&scalars.data).into(),
             (&coo_data).into(),
-            (&coo_row_index).into(),
             (&coo_col_index).into(),
             (window_bit_len as u32).into(),
             (scalars.len() as u32).into()
@@ -89,16 +100,24 @@ pub fn multiscalar_multiplication(points: &GpuRistrettoPointVec, scalars: &GpuSc
     //
     // Our radix-sort implementation sorts rows of a dense matrix, so a single
     // call to this function will sort every window concurrently.
-    let (coo_col_index, coo_row_index, coo_data) = radix_sort_2_vals(
+    let (bin_idx, vals) = radix_sort_vals(
         &coo_col_index, 
-        &coo_row_index,
         &coo_data,
         window_bit_len as u32,
         num_windows as u32,
         scalars.len() as u32
     );
 
-     todo!();
+    // Coun
+    let rle = run_length_encoding(&bin_idx, num_windows as u32, scalars.len() as u32);
+
+    todo!()
+
+    /*WindowData {
+        bin_idx,
+        scalar_id: vals,
+
+    }*/
 }
 
 #[cfg(test)]
@@ -204,7 +223,6 @@ mod tests {
         const NUM_THREADS: usize = 4;
 
         let mut coo_data = runtime.alloc(a.len() * num_windows);
-        let mut coo_row_idx = runtime.alloc(a.len() * num_windows);
         let mut coo_col_idx = runtime.alloc(a.len() * num_windows);
 
         runtime.run_kernel(
@@ -212,7 +230,6 @@ mod tests {
             &[
                 (&a_gpu.data).into(),
                 (&coo_data).into(),
-                (&coo_row_idx).into(),
                 (&coo_col_idx).into(),
                 (window_bits as u32).into(),
                 (a.len() as u32).into(),
@@ -221,18 +238,10 @@ mod tests {
         );
 
         coo_data.remap();
-        coo_row_idx.remap();
         coo_col_idx.remap();
 
         let coo_data = coo_data.iter().cloned().collect::<Vec<_>>();
-        let coo_row_idx = coo_row_idx.iter().cloned().collect::<Vec<_>>();
         let coo_col_idx = coo_col_idx.iter().cloned().collect::<Vec<_>>();
-
-        for w in 0..num_windows {
-            for r in 0..a.len() {
-                assert_eq!(coo_row_idx[a.len() * w + r], (r % NUM_THREADS) as u32);
-            }
-        }
 
         for w in 0..num_windows {
             let start = a.len() * w;

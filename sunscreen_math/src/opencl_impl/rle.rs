@@ -1,30 +1,53 @@
 use super::{radix_sort::prefix_sum, Grid, MappedBuffer, Runtime};
 
+/// The results of running RLE on the rows of a matrix. To reconstruct the
+/// original row, repeat the values[i] value run_lengths[i] time for all
+/// i in 0..num_runs[row].
+///
+/// # Remarks
+/// values and run_lengths are stored as `rows x stride` row-major dense matrices.
+/// The actual
+pub struct RunLengthEncoding {
+    /// The number of items per row.
+    stride: u32,
+
+    /// The values. The ith value appears run_lengths[i] times.
+    values: MappedBuffer<u32>,
+
+    /// The number of times each value appears.
+    run_lengths: MappedBuffer<u32>,
+
+    /// The number of runs actually stored in the (values, run_lengths) arrays
+    /// for each row.
+    /// 
+    /// # Remarks
+    /// These values are at most equal to stride.
+    num_runs: MappedBuffer<u32>,
+}
+
 /// For the given `rows x cols` matrix `data`, compute the run-length encoding of
 /// each row.
-/// 
-/// * Returns
-/// * A `rows x cols` matrix where each row contains the run lengths of the rows of
-///   rows of the input matrix. Each row in this output matrix has a leading dimension
-///   equal to cols, but only the first `runs_length` items will be populated.
-/// * A `rows x cols` matrix containing the values associated with each run.
-/// * A `row x 1` matrix where each row contains the number of runs in the run matrix.
 pub fn run_length_encoding(
     data: &MappedBuffer<u32>,
     rows: u32,
     cols: u32,
-) -> (MappedBuffer<u32>, MappedBuffer<u32>, MappedBuffer<u32>) {
+) -> RunLengthEncoding {
     let backward_mask = compute_backward_mask(data, rows, cols);
     let scanned_backward_mask = prefix_sum(&backward_mask, rows, cols);
 
-    let (compacted, total_runs) =
+    let (compacted, num_runs) =
         compact_backward_mask(&backward_mask, &scanned_backward_mask, rows, cols);
 
     let _cpu = compacted.iter().cloned().collect::<Vec<_>>();
 
-    let (counts, run_vals) = compute_runs(data, &compacted, &total_runs, rows, cols);
+    let (run_lengths, values) = compute_runs(data, &compacted, &num_runs, rows, cols);
 
-    (counts, run_vals, total_runs)
+    RunLengthEncoding {
+        stride: cols,
+        values,
+        run_lengths,
+        num_runs
+    }
 }
 
 fn compute_backward_mask(data: &MappedBuffer<u32>, rows: u32, cols: u32) -> MappedBuffer<u32> {
@@ -189,17 +212,17 @@ mod tests {
 
         assert_eq!(data.len(), cols as usize * rows as usize);
 
-        let (counts, vals, total_runs) = run_length_encoding(&data_gpu, rows, cols);
+        let rle = run_length_encoding(&data_gpu, rows, cols);
 
-        let vals = vals.iter().cloned().collect::<Vec<_>>();
+        let vals = rle.values.iter().cloned().collect::<Vec<_>>();
 
         for row in 0..rows {
-            let len = total_runs[row as usize];
+            let len = rle.num_runs[row as usize];
             assert_eq!(len, cols / 3);
 
             for col in 0..len {
                 let i = col as usize + row as usize * cols as usize;
-                assert_eq!(counts[i], 3);
+                assert_eq!(rle.run_lengths[i], 3);
                 assert_eq!(vals[i], data[3 * col as usize + row as usize * cols as usize]);
             }
         }
@@ -217,13 +240,13 @@ mod tests {
 
         let data_gpu = Runtime::get().alloc_from_slice(&data);
 
-        let (counts, vals, total_runs) = run_length_encoding(&data_gpu, rows, cols);
+        let rle = run_length_encoding(&data_gpu, rows, cols);
 
-        let counts = counts.iter().cloned().collect::<Vec<_>>();
-        let vals = vals.iter().cloned().collect::<Vec<_>>();
+        let counts = rle.run_lengths.iter().cloned().collect::<Vec<_>>();
+        let vals = rle.values.iter().cloned().collect::<Vec<_>>();
 
         for row in 0..rows {
-            let len = total_runs[row as usize];
+            let len = rle.num_runs[row as usize];
             assert_eq!(len, cols);
 
             for col in 0..len {

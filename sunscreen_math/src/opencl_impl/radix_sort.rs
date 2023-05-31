@@ -185,16 +185,14 @@ fn offset_blocks(
  * * If keys.len() != vals_1.len() != vals_2.len()
  * * If max_bits > 32
  */
-pub fn radix_sort_2_vals(
+pub fn radix_sort_vals(
     keys: &MappedBuffer<u32>,
     vals_1: &MappedBuffer<u32>,
-    vals_2: &MappedBuffer<u32>,
     max_bits: u32,
     rows: u32,
     cols: u32,
-) -> (MappedBuffer<u32>, MappedBuffer<u32>, MappedBuffer<u32>) {
+) -> (MappedBuffer<u32>, MappedBuffer<u32>) {
     assert_eq!(keys.len(), vals_1.len());
-    assert_eq!(keys.len(), vals_2.len());
     assert_eq!(keys.len(), rows as usize * cols as usize);
     assert!(max_bits <= 32);
 
@@ -216,7 +214,6 @@ pub fn radix_sort_2_vals(
 
     let keys_clone = [keys.clone(), keys.clone()];
     let vals_1_clone = [vals_1.clone(), vals_1.clone()];
-    let vals_2_clone = [vals_2.clone(), vals_2.clone()];
 
     let mut cur = 0;
     let mut next = 1;
@@ -227,15 +224,13 @@ pub fn radix_sort_2_vals(
         let bin_locations = prefix_sum(&hist, rows, num_blocks);
 
         runtime.run_kernel(
-            "radix_sort_emplace_2_val",
+            "radix_sort_emplace_val",
             &[
                 (&keys_clone[cur]).into(),
                 (&vals_1_clone[cur]).into(),
-                (&vals_2_clone[cur]).into(),
                 (&bin_locations).into(),
                 (&keys_clone[next]).into(),
                 (&vals_1_clone[next]).into(),
-                (&vals_2_clone[next]).into(),
                 cur_digit.into(),
                 cols.into(),
             ],
@@ -248,7 +243,6 @@ pub fn radix_sort_2_vals(
     (
         keys_clone.into_iter().nth(cur).unwrap(),
         vals_1_clone.into_iter().nth(cur).unwrap(),
-        vals_2_clone.into_iter().nth(cur).unwrap(),
     )
 }
 
@@ -448,18 +442,15 @@ mod tests {
 
         let data_gpu = runtime.alloc_from_slice(&keys);
         let vals_1_gpu = runtime.alloc_from_slice(&vals_1);
-        let vals_2_gpu = runtime.alloc_from_slice(&vals_2);
 
-        let (mut keys_sorted, mut vals_1_sorted, mut vals_2_sorted) =
-            radix_sort_2_vals(&data_gpu, &vals_1_gpu, &vals_2_gpu, 24, rows, cols);
+        let (mut keys_sorted, mut vals_1_sorted) =
+            radix_sort_vals(&data_gpu, &vals_1_gpu, 24, rows, cols);
 
         keys_sorted.remap();
         vals_1_sorted.remap();
-        vals_2_sorted.remap();
 
         let keys_sorted = keys_sorted.iter().cloned().collect::<Vec<_>>();
         let vals_1_sorted = vals_1_sorted.iter().cloned().collect::<Vec<_>>();
-        let vals_2_sorted = vals_2_sorted.iter().cloned().collect::<Vec<_>>();
 
         for row in 0..rows {
             let row_start = (row * cols) as usize;
@@ -470,7 +461,6 @@ mod tests {
 
             assert_eq!(expected, &keys_sorted[row_start..row_end]);
             assert_eq!(expected, &vals_1_sorted[row_start..row_end]);
-            assert_eq!(expected, &vals_2_sorted[row_start..row_end]);
         }
     }
 }

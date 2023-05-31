@@ -7,7 +7,7 @@ use std::{
     ops::{Add, Mul, Sub},
 };
 
-use crate::{opencl_impl::{Runtime, Grid, radix_sort::radix_sort_2_vals}, GpuScalarVec};
+use crate::{opencl_impl::{Runtime, Grid}, GpuScalarVec};
 
 use super::{GpuVec, GpuVecIter, IntoGpuVecIter, MappedBuffer, multiexp::multiscalar_multiplication};
 

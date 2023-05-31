@@ -67,7 +67,6 @@ u32 get_scalar_window(
 kernel void fill_coo_matrix(
     global const u32* scalars,
     global u32* coo_data,
-    global u32* coo_row_idx,
     global u32* coo_col_idx,
     u32 window_bits,
     u32 scalars_len
@@ -95,7 +94,7 @@ kernel void fill_coo_matrix(
         // once in a row. While mathematically unsound, we aren't doing a real
         // SPMV, so this is still works.
         coo_col_idx[window_offset + thread_count * thread_scalar_id + thread_id] = window;
-        coo_row_idx[window_offset + thread_count * thread_scalar_id + thread_id] = thread_id;
+        //coo_row_idx[window_offset + thread_count * thread_scalar_id + thread_id] = thread_id;
 
         thread_scalar_id++;
     }

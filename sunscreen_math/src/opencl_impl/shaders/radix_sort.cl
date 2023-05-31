@@ -207,14 +207,12 @@ kernel void offset_block(
 
 /// Place the input keys and values into the corresponding output key and bin
 /// locations according to the input prefix sum.
-kernel void radix_sort_emplace_2_val(
+kernel void radix_sort_emplace_val(
     global const u32* restrict keys,
     global const u32* restrict vals_1,
-    global const u32* restrict vals_2,
     global const u32* restrict bin_locations,
     global u32* restrict keys_out,
     global u32* restrict vals_1_out,
-    global u32* restrict vals_2_out,
     u32 cur_digit,
     u32 cols
 ) {
@@ -286,7 +284,6 @@ kernel void radix_sort_emplace_2_val(
             keys_out[idx + row_tid * cols] = val;
             //keys_out[col_index + row_tid * cols] = idx;
             vals_1_out[idx + row_tid * cols] = vals_1[col_index + cols * row_tid];
-            vals_2_out[idx + row_tid * cols] = vals_2[col_index + cols * row_tid];
         }
     }
 }

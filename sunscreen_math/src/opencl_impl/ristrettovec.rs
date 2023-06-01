@@ -7,10 +7,7 @@ use std::{
     ops::{Add, Mul, Sub},
 };
 
-use crate::{
-    opencl_impl::{Runtime},
-    GpuScalarVec,
-};
+use crate::{opencl_impl::Runtime, GpuScalarVec};
 
 use super::{
     multiexp::multiscalar_multiplication, GpuVec, GpuVecIter, IntoGpuVecIter, MappedBuffer,
@@ -300,8 +297,6 @@ impl Mul<&Scalar> for &GpuRistrettoPointVec {
 mod tests {
     use curve25519_dalek::scalar::Scalar;
     use rand::thread_rng;
-
-    
 
     use super::*;
 

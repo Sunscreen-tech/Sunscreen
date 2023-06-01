@@ -33,7 +33,7 @@ const CONSTRUCT_BIN_DATA_NUM_THREADS: usize = 16383;
 
 fn construct_bin_data(scalars: &GpuScalarVec) -> BinData {
     let runtime = Runtime::get();
-    
+
     let _max_cols = if scalars.len() % CONSTRUCT_BIN_DATA_NUM_THREADS == 0 {
         scalars.len() / CONSTRUCT_BIN_DATA_NUM_THREADS
     } else {
@@ -84,11 +84,13 @@ fn construct_bin_data(scalars: &GpuScalarVec) -> BinData {
     //   the overall algorithm as we aren't doing actual linear algebra.
     runtime.run_kernel(
         "fill_coo_matrix",
-        &[(&scalars.data).into(),
+        &[
+            (&scalars.data).into(),
             (&scalar_id).into(),
             (&bin_idx).into(),
             (window_bit_len as u32).into(),
-            (scalars.len() as u32).into()],
+            (scalars.len() as u32).into(),
+        ],
         &Grid::from([
             (CONSTRUCT_BIN_DATA_NUM_THREADS, 256),
             (num_windows, 1),

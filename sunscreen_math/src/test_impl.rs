@@ -112,10 +112,7 @@ fn prefix_sum(x: &[u32]) -> Vec<u32> {
 
 /// A serial implementation of constructing multiexp bin data used for
 /// testing.
-pub(crate) fn construct_bin_data(
-    scalars: &[Scalar],
-    window_bits: usize,
-) -> Vec<BinData> {
+pub(crate) fn construct_bin_data(scalars: &[Scalar], window_bits: usize) -> Vec<BinData> {
     const SCALAR_BIT_LEN: usize = 8 * std::mem::size_of::<Scalar>();
 
     let num_windows = if SCALAR_BIT_LEN % window_bits == 0 {

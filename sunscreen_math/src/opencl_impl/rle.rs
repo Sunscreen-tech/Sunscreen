@@ -257,4 +257,43 @@ mod tests {
             }
         }
     }
+
+    #[test]
+    fn can_rle_non_unique() {
+        let cols = 5usize;
+        let rows = 2u32;
+
+        // In this test, we make each element unique so we should get `cols` run
+        // lengths, each of length 1.
+        let data = (0..cols).map(|x| x as u32).collect::<Vec<_>>();
+        let data = [data.clone(), vec![0; cols], vec![0; cols]].concat();
+
+        let data_gpu = Runtime::get().alloc_from_slice(&data);
+
+        let rle = run_length_encoding(&data_gpu, rows, cols as u32);
+
+        let counts = rle.run_lengths.iter().cloned().collect::<Vec<_>>();
+        let vals = rle.values.iter().cloned().collect::<Vec<_>>();
+
+        for row in 0..rows {
+            let len = rle.num_runs[row as usize];
+
+            if row == 0 {
+                assert_eq!(len, cols as u32);
+            } else {
+                assert_eq!(len, 1);
+            }
+
+            for col in 0..len {
+                let i = col as usize + row as usize * cols as usize;
+
+                if row == 0 {
+                    assert_eq!(counts[i], 1);
+                } else {
+                    assert_eq!(counts[i], cols as u32);
+                }
+                assert_eq!(vals[i], data[i]);
+            }
+        }
+    }
 }

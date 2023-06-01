@@ -41,7 +41,7 @@ kernel void rle_compact_backward_mask(
 
     u32 cols_1 = cols + 1;
     u32 cur = col_id == cols - 1
-        ? scanned_backward_mask[col_id + cols * row_id] + mask[col_id]
+        ? scanned_backward_mask[col_id + cols * row_id] + mask[col_id + cols * row_id]
         : scanned_backward_mask[col_id + cols * row_id + 1];
 
     u32 prev = scanned_backward_mask[col_id + cols * row_id];

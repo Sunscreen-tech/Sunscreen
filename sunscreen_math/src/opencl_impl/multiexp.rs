@@ -18,6 +18,7 @@ pub struct BinData {
     num_bins: MappedBuffer<u32>,
 }
 
+const SCALAR_BIT_LEN: usize = 8 * std::mem::size_of::<Scalar>();
 const CONSTRUCT_BIN_DATA_NUM_THREADS: usize = 16384;
 
 fn construct_bin_data(scalars: &GpuScalarVec) -> BinData {
@@ -32,8 +33,6 @@ fn construct_bin_data(scalars: &GpuScalarVec) -> BinData {
     } else {
         (scalars.len() + 1) / CONSTRUCT_BIN_DATA_NUM_THREADS
     };
-
-    let scalar_bit_len = 8 * std::mem::size_of::<Scalar>();
     
     // In Pippenger's algorithm, we break N-bit scalar values into w windows of
     // b-bit values. For example, for 256-bit scalars and a 16-bit window size,
@@ -43,10 +42,10 @@ fn construct_bin_data(scalars: &GpuScalarVec) -> BinData {
     // bucket value) to produce a point for the given window. Finally, for each
     // window id w, we sum the window points scaled by `2^(w * b)`.
     let window_bit_len = 16usize;
-    let num_windows = if scalar_bit_len % window_bit_len == 0 {
-        scalar_bit_len / window_bit_len
+    let num_windows = if SCALAR_BIT_LEN % window_bit_len == 0 {
+        SCALAR_BIT_LEN / window_bit_len
     } else {
-        scalar_bit_len / window_bit_len + 1
+        SCALAR_BIT_LEN / window_bit_len + 1
     };
 
     // Fill out COO format sparse matrices
@@ -294,12 +293,56 @@ mod tests {
         let scalar_id_cpu = bin_info.bin_ids.iter().cloned().collect::<Vec<_>>();
         let num_runs = bin_info.num_bins.iter().cloned().collect::<Vec<_>>();
 
-        assert_eq!(num_runs, vec![7, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2]);
+        assert_eq!(num_runs, vec![7, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]);
 
         // I did this example by hand and confirmed its correctness.
         // TODO: write a serial CPU implementation and test against that.
         assert_eq!(bin_counts[0..num_runs[0] as usize], vec![1, 1, 1, 2, 2, 3, 4]);
         assert_eq!(bin_start_idx[0..num_runs[0] as usize], vec![5, 10, 13, 3, 11, 0, 6]);
         assert_eq!(scalar_id_cpu[0..num_runs[0] as usize], vec![4, 6, 8, 2, 7, 1, 5]);
+    }
+
+    #[test]
+    fn can_construct_bin_data() {
+        let count = 11u32;
+
+        let a = (0..count).rev().map(|x| Scalar::from(x)).collect::<Vec<_>>();
+        let a_gpu = ScalarVec::new(&a);
+        
+        let bin_info = construct_bin_data(&a_gpu);
+
+        let bin_counts = bin_info.bin_counts.iter().cloned().collect::<Vec<_>>();
+        let bin_start_idx = bin_info.bin_start_idx.iter().cloned().collect::<Vec<_>>();
+        let scalar_ids = bin_info.scalar_ids.iter().cloned().collect::<Vec<_>>();
+        let bin_ids = bin_info.bin_ids.iter().cloned().collect::<Vec<_>>();
+        let num_runs = bin_info.num_bins.iter().cloned().collect::<Vec<_>>();
+
+        let window_bits = 16;
+        let num_windows = if SCALAR_BIT_LEN % window_bits == 0 {
+            SCALAR_BIT_LEN / window_bits
+        } else {
+            SCALAR_BIT_LEN / window_bits + 1
+        };
+
+        let expected = crate::test_impl::construct_bin_data(
+            &a,
+            CONSTRUCT_BIN_DATA_NUM_THREADS,
+            16
+        );
+
+        assert_eq!(expected.len(), num_windows);
+
+        for i in 0..num_windows {
+            let start = i * a.len();
+            let end = start + a.len();
+            assert_eq!(scalar_ids[start..end], expected[i].sorted_scalar_ids);
+
+            let bin_len = num_runs[i];
+            assert_eq!(bin_len as usize, expected[i].bin_ids.len());
+            assert_eq!(bin_len as usize, expected[i].bin_counts.len());
+            assert_eq!(bin_len as usize, expected[i].bin_start_idx.len());
+
+
+        }
     }
 }

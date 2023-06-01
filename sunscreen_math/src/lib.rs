@@ -12,7 +12,7 @@ mod opencl_impl;
 #[cfg(feature = "cuda")]
 mod cuda_impl;
 
-#[cfg(test)]
+#[cfg(all(test, feature = "gpu"))]
 /// CPU implementation
 mod test_impl;
 

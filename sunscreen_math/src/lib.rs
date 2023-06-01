@@ -12,6 +12,10 @@ mod opencl_impl;
 #[cfg(feature = "cuda")]
 mod cuda_impl;
 
+#[cfg(feature = "gpu")]
+/// CPU implementation
+mod test_impl;
+
 mod cpu;
 pub use cpu::{CpuRistrettoPointVec, CpuScalarVec};
 

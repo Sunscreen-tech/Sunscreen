@@ -10,26 +10,26 @@ pub fn multiscalar_multiplication(points: &GpuRistrettoPointVec, scalars: &GpuSc
      todo!();
 }
 
-struct BinData {
+pub struct BinData {
     bin_ids: MappedBuffer<u32>,
     bin_counts: MappedBuffer<u32>,
     bin_start_idx: MappedBuffer<u32>,
     num_bins: MappedBuffer<u32>,
 }
 
+const CONSTRUCT_BIN_DATA_NUM_THREADS: usize = 16384;
+
 fn construct_bin_data(scalars: &GpuScalarVec) -> BinData {
     let runtime = Runtime::get();
 
-    const NUM_THREADS: usize = 16384;
-
     // We require that NUM_THREADS be a multiple of any sane thread group size (i.e. 512).
-    assert!(NUM_THREADS.is_power_of_two());
-    assert!(NUM_THREADS > 512);
+    assert!(CONSTRUCT_BIN_DATA_NUM_THREADS.is_power_of_two());
+    assert!(CONSTRUCT_BIN_DATA_NUM_THREADS > 512);
 
-    let max_cols = if scalars.len() % NUM_THREADS == 0 {
-        scalars.len() / NUM_THREADS
+    let max_cols = if scalars.len() % CONSTRUCT_BIN_DATA_NUM_THREADS == 0 {
+        scalars.len() / CONSTRUCT_BIN_DATA_NUM_THREADS
     } else {
-        (scalars.len() + 1) / NUM_THREADS
+        (scalars.len() + 1) / CONSTRUCT_BIN_DATA_NUM_THREADS
     };
 
     let scalar_bit_len = 8 * std::mem::size_of::<Scalar>();
@@ -85,7 +85,7 @@ fn construct_bin_data(scalars: &GpuScalarVec) -> BinData {
             (window_bit_len as u32).into(),
             (scalars.len() as u32).into()
         ],
-        &Grid::from([(NUM_THREADS, 256), (num_windows, 1), (1, 1)])
+        &Grid::from([(CONSTRUCT_BIN_DATA_NUM_THREADS, 256), (num_windows, 1), (1, 1)])
     );
 
     let bins = bin_idx.iter().cloned().collect::<Vec<_>>();

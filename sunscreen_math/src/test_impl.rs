@@ -1,7 +1,6 @@
 ///! Our GPU implementation of some of the intermediate steps
 ///! of multiexp are quite complex. This module provides simple
 ///! sequential implementations to compare against.
-
 use curve25519_dalek::scalar::Scalar;
 use rand::thread_rng;
 
@@ -32,7 +31,7 @@ fn get_scalar_window(
 ) -> u32 {
     let mut window: u32 = 0;
 
-    const BITS_PER_LIMB: u32  = 8 * std::mem::size_of::<u32>() as u32;
+    const BITS_PER_LIMB: u32 = 8 * std::mem::size_of::<u32>() as u32;
 
     // index measured in bits, not bytes.
     let window_start_idx = window_bits * window_id;
@@ -42,12 +41,16 @@ fn get_scalar_window(
     let limbs = bytemuck::cast_slice::<_, u32>(scalar.as_bytes());
     let limb_1 = limbs[limb_id_1 as usize];
 
-    let lo_mask = if window_bits < 32 { (0x1 << window_bits) - 1 } else { 0xFFFFFFFF };
+    let lo_mask = if window_bits < 32 {
+        (0x1 << window_bits) - 1
+    } else {
+        0xFFFFFFFF
+    };
     window = (limb_1 >> (window_start_idx % BITS_PER_LIMB)) & lo_mask;
 
     let limb_boundary: u32 = (limb_id_1 + 1) * BITS_PER_LIMB;
 
-    // If this window spans 2 limbs, concatenate load the next limb and 
+    // If this window spans 2 limbs, concatenate load the next limb and
     // concatenate its contribution. Note that windows beginning in the most
     // significant scalar limb never span 2 limbs.
     //
@@ -68,7 +71,7 @@ fn get_scalar_window(
 
 fn rle(data: &[u32]) -> (Vec<u32>, Vec<u32>) {
     if data.len() == 0 {
-        return (vec![], vec![])
+        return (vec![], vec![]);
     }
 
     let mut prev = data[0];
@@ -109,12 +112,12 @@ fn prefix_sum(x: &[u32]) -> Vec<u32> {
     sum
 }
 
-/// A serial implementation of constructing multiexp bin data used for 
+/// A serial implementation of constructing multiexp bin data used for
 /// testing.
 pub(crate) fn construct_bin_data(
     scalars: &[Scalar],
     num_threads: usize,
-    window_bits: usize
+    window_bits: usize,
 ) -> Vec<BinData> {
     let max_cols = if scalars.len() % num_threads == 0 {
         scalars.len() / num_threads
@@ -133,10 +136,14 @@ pub(crate) fn construct_bin_data(
     let mut bin_data = vec![];
 
     for i in 0..num_windows {
-        let mut bins = scalars.iter().enumerate().map(|x| (x.0, get_scalar_window(x.1, window_bits as u32, i as u32))).collect::<Vec<_>>();
+        let mut bins = scalars
+            .iter()
+            .enumerate()
+            .map(|x| (x.0, get_scalar_window(x.1, window_bits as u32, i as u32)))
+            .collect::<Vec<_>>();
 
         // Sort the tuples by the bin id
-        bins.sort_by(|x, y| { x.1.cmp(&y.1) });
+        bins.sort_by(|x, y| x.1.cmp(&y.1));
 
         let sorted_scalar_ids = bins.iter().map(|x| x.0 as u32).collect::<Vec<_>>();
 
@@ -146,20 +153,31 @@ pub(crate) fn construct_bin_data(
         let rle_sum = prefix_sum(&rle_bins.1);
 
         // A tuple of the number of items in the bin, offset into the sorted
-        // scalars array for the bin, and bin id. 
-        let mut bin_offset_lengths = rle_bins.1.iter().zip(rle_sum.iter()).zip(&rle_bins.0).collect::<Vec<_>>();
+        // scalars array for the bin, and bin id.
+        let mut bin_offset_lengths = rle_bins
+            .1
+            .iter()
+            .zip(rle_sum.iter())
+            .zip(&rle_bins.0)
+            .collect::<Vec<_>>();
 
-        bin_offset_lengths.sort_by(|x, y| x.0.0.cmp(&y.0.0));
+        bin_offset_lengths.sort_by(|x, y| x.0 .0.cmp(&y.0 .0));
 
-        let sorted_bin_counts = bin_offset_lengths.iter().map(|x| *x.0.0).collect::<Vec<_>>();
-        let sorted_bin_offsets = bin_offset_lengths.iter().map(|x| *x.0.1).collect::<Vec<_>>();
+        let sorted_bin_counts = bin_offset_lengths
+            .iter()
+            .map(|x| *x.0 .0)
+            .collect::<Vec<_>>();
+        let sorted_bin_offsets = bin_offset_lengths
+            .iter()
+            .map(|x| *x.0 .1)
+            .collect::<Vec<_>>();
         let sorted_bin_ids = bin_offset_lengths.iter().map(|x| *x.1).collect::<Vec<_>>();
 
         bin_data.push(BinData {
             sorted_scalar_ids,
             bin_start_idx: sorted_bin_offsets,
             bin_ids: sorted_bin_ids,
-            bin_counts: sorted_bin_counts
+            bin_counts: sorted_bin_counts,
         });
     }
 

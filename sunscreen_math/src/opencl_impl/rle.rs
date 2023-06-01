@@ -19,7 +19,7 @@ pub struct RunLengthEncoding {
 
     /// The number of runs actually stored in the (values, run_lengths) arrays
     /// for each row.
-    /// 
+    ///
     /// # Remarks
     /// These values are at most equal to stride.
     pub num_runs: MappedBuffer<u32>,
@@ -27,11 +27,7 @@ pub struct RunLengthEncoding {
 
 /// For the given `rows x cols` matrix `data`, compute the run-length encoding of
 /// each row.
-pub fn run_length_encoding(
-    data: &MappedBuffer<u32>,
-    rows: u32,
-    cols: u32,
-) -> RunLengthEncoding {
+pub fn run_length_encoding(data: &MappedBuffer<u32>, rows: u32, cols: u32) -> RunLengthEncoding {
     let backward_mask = compute_backward_mask(data, rows, cols);
     let scanned_backward_mask = prefix_sum(&backward_mask, rows, cols);
 
@@ -46,7 +42,7 @@ pub fn run_length_encoding(
         stride: cols,
         values,
         run_lengths,
-        num_runs
+        num_runs,
     }
 }
 
@@ -223,7 +219,10 @@ mod tests {
             for col in 0..len {
                 let i = col as usize + row as usize * cols as usize;
                 assert_eq!(rle.run_lengths[i], 3);
-                assert_eq!(vals[i], data[3 * col as usize + row as usize * cols as usize]);
+                assert_eq!(
+                    vals[i],
+                    data[3 * col as usize + row as usize * cols as usize]
+                );
             }
         }
     }

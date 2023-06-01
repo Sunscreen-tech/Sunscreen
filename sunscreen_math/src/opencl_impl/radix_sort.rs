@@ -173,8 +173,8 @@ pub struct RadixSort {
 }
 
 /// Sort the keys in each row of the keys matrix such that they appear in increasing order. This variant sorts one values array
-/// vals_1 is a u32 array that get sorted according to the corresponding key at 
-/// the same index. 
+/// vals_1 is a u32 array that get sorted according to the corresponding key at
+/// the same index.
 ///
 /// `max_bits` allows you to choose many bits are needed to represent the keys (up to 32). If your
 /// data fits in a smaller number of bits and you reduce this parameter accordingly, this will
@@ -251,13 +251,13 @@ pub struct RadixSort2 {
 }
 
 /// Sort the keys in each row of the keys matrix such that they appear in increasing order. This variant sorts 2 values arrays alongside the keys.
-/// vals_1, vals_2 are u32 arrays that get sorted according to the corresponding key at 
-/// the same index. 
+/// vals_1, vals_2 are u32 arrays that get sorted according to the corresponding key at
+/// the same index.
 ///
 /// `max_bits` allows you to choose many bits are needed to represent the keys (up to 32).
-///  If your data fits in a smaller number of bits and you reduce this parameter 
+///  If your data fits in a smaller number of bits and you reduce this parameter
 /// accordingly, this will reduce the runtime of the radix sort
-/// 
+///
 /// # Panics
 /// * If rows * cols != keys.len()
 /// * If keys.len() != vals_1.len() != vals_2.len()
@@ -525,8 +525,7 @@ mod tests {
         let data_gpu = runtime.alloc_from_slice(&keys);
         let vals_1_gpu = runtime.alloc_from_slice(&vals_1);
 
-        let mut sorted =
-            radix_sort_1(&data_gpu, &vals_1_gpu, 24, rows, cols);
+        let mut sorted = radix_sort_1(&data_gpu, &vals_1_gpu, 24, rows, cols);
 
         sorted.keys.remap();
         sorted.values.remap();

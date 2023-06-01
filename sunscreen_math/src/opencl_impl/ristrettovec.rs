@@ -7,9 +7,14 @@ use std::{
     ops::{Add, Mul, Sub},
 };
 
-use crate::{opencl_impl::{Runtime, Grid}, GpuScalarVec};
+use crate::{
+    opencl_impl::{Grid, Runtime},
+    GpuScalarVec,
+};
 
-use super::{GpuVec, GpuVecIter, IntoGpuVecIter, MappedBuffer, multiexp::multiscalar_multiplication};
+use super::{
+    multiexp::multiscalar_multiplication, GpuVec, GpuVecIter, IntoGpuVecIter, MappedBuffer,
+};
 
 /// A vector of [`RistrettoPoint`] elements laid out in a way that enables coalesced
 /// reads and writes on a GPU.
@@ -80,7 +85,7 @@ impl GpuRistrettoPointVec {
 
     pub fn multiscalar_multiplication(&self, scalars: &GpuScalarVec) -> RistrettoPoint {
         multiscalar_multiplication(self, scalars)
-    }    
+    }
 }
 
 impl IntoIterator for GpuRistrettoPointVec {

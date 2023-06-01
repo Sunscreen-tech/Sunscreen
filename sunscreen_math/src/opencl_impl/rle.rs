@@ -34,8 +34,6 @@ pub fn run_length_encoding(data: &MappedBuffer<u32>, rows: u32, cols: u32) -> Ru
     let (compacted, num_runs) =
         compact_backward_mask(&backward_mask, &scanned_backward_mask, rows, cols);
 
-    let _cpu = compacted.iter().cloned().collect::<Vec<_>>();
-
     let (run_lengths, values) = compute_runs(data, &compacted, &num_runs, rows, cols);
 
     RunLengthEncoding {

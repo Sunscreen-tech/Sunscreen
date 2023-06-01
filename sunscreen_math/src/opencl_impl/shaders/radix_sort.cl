@@ -263,7 +263,7 @@ kernel void radix_sort_emplace_val_1(
 
     // Perform prefix sums on the local offsets and place the total at index
     // zero. This effectively means the bin offset is at index (bin + 1) % RADIX.
-    //#pragma unroll
+    #pragma unroll
     for (u32 digit = 0; digit < RADIX; digit++) {
         u32 sum = local_prefix_sum(local_digit_idx[digit], LOG_THREADS_PER_GROUP + LOG_WORDS_PER_THREAD);
 

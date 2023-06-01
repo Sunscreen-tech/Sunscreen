@@ -119,21 +119,12 @@ fn construct_bin_data(scalars: &GpuScalarVec) -> BinData {
         scalars.len() as u32,
     );
 
-    let _sorted_bin_idx_cpu = sorted_bins.keys.iter().cloned().collect::<Vec<_>>();
-    let _sorted_scalar_idx_cpu = sorted_bins.values.iter().cloned().collect::<Vec<_>>();
-
     // Compute the RLE of the column indices and prefix sum them. We'll sort them
     // by run count, which effectively groups similarly length rows together
     // so warps have minimal branch divergence.
     let rle = run_length_encoding(&sorted_bins.keys, num_windows as u32, scalars.len() as u32);
 
-    let _num_runs_cpu = rle.num_runs.iter().cloned().collect::<Vec<_>>();
-    let _run_lengths_cpu = rle.run_lengths.iter().cloned().collect::<Vec<_>>();
-    let _values_cpu = rle.values.iter().cloned().collect::<Vec<_>>();
-
     let rle_sum = prefix_sum(&rle.run_lengths, num_windows as u32, scalars.len() as u32);
-
-    let _rle_sum_cpu = rle_sum.iter().cloned().collect::<Vec<_>>();
 
     let sorted_bin_counts = radix_sort_2(
         &rle.run_lengths,
@@ -143,18 +134,6 @@ fn construct_bin_data(scalars: &GpuScalarVec) -> BinData {
         num_windows as u32,
         scalars.len() as u32,
     );
-
-    let _keys_cpu = sorted_bin_counts.keys.iter().cloned().collect::<Vec<_>>();
-    let _vals_cpu = sorted_bin_counts
-        .values_1
-        .iter()
-        .cloned()
-        .collect::<Vec<_>>();
-    let _bin_ids_cpu = sorted_bin_counts
-        .values_2
-        .iter()
-        .cloned()
-        .collect::<Vec<_>>();
 
     BinData {
         scalar_ids: sorted_bins.values,

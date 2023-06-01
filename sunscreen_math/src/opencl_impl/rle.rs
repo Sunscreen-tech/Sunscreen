@@ -265,7 +265,7 @@ mod tests {
         // In this test, we make each element unique so we should get `cols` run
         // lengths, each of length 1.
         let data = (0..cols).map(|x| x as u32).collect::<Vec<_>>();
-        let data = [data.clone(), vec![0; cols], vec![0; cols]].concat();
+        let data = [data, vec![0; cols], vec![0; cols]].concat();
 
         let data_gpu = Runtime::get().alloc_from_slice(&data);
 
@@ -284,7 +284,7 @@ mod tests {
             }
 
             for col in 0..len {
-                let i = col as usize + row as usize * cols as usize;
+                let i = col as usize + row as usize * cols;
 
                 if row == 0 {
                     assert_eq!(counts[i], 1);

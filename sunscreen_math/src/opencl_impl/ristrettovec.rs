@@ -8,7 +8,7 @@ use std::{
 };
 
 use crate::{
-    opencl_impl::{Grid, Runtime},
+    opencl_impl::{Runtime},
     GpuScalarVec,
 };
 
@@ -301,7 +301,7 @@ mod tests {
     use curve25519_dalek::scalar::Scalar;
     use rand::thread_rng;
 
-    use crate::{opencl_impl::Grid, ScalarVec};
+    
 
     use super::*;
 

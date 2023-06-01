@@ -6,7 +6,7 @@ use crate::{
         rle::run_length_encoding,
         Grid, Runtime,
     },
-    GpuRistrettoPointVec, GpuScalarVec, GpuVec, RistrettoPointVec,
+    GpuRistrettoPointVec, GpuScalarVec, GpuVec,
 };
 
 use super::MappedBuffer;
@@ -38,7 +38,7 @@ fn construct_bin_data(scalars: &GpuScalarVec) -> BinData {
     assert!(CONSTRUCT_BIN_DATA_NUM_THREADS.is_power_of_two());
     assert!(CONSTRUCT_BIN_DATA_NUM_THREADS > 512);
 
-    let max_cols = if scalars.len() % CONSTRUCT_BIN_DATA_NUM_THREADS == 0 {
+    let _max_cols = if scalars.len() % CONSTRUCT_BIN_DATA_NUM_THREADS == 0 {
         scalars.len() / CONSTRUCT_BIN_DATA_NUM_THREADS
     } else {
         (scalars.len() + 1) / CONSTRUCT_BIN_DATA_NUM_THREADS
@@ -88,13 +88,11 @@ fn construct_bin_data(scalars: &GpuScalarVec) -> BinData {
     //   the overall algorithm as we aren't doing actual linear algebra.
     runtime.run_kernel(
         "fill_coo_matrix",
-        &vec![
-            (&scalars.data).into(),
+        &[(&scalars.data).into(),
             (&scalar_id).into(),
             (&bin_idx).into(),
             (window_bit_len as u32).into(),
-            (scalars.len() as u32).into(),
-        ],
+            (scalars.len() as u32).into()],
         &Grid::from([
             (CONSTRUCT_BIN_DATA_NUM_THREADS, 256),
             (num_windows, 1),
@@ -102,7 +100,7 @@ fn construct_bin_data(scalars: &GpuScalarVec) -> BinData {
         ]),
     );
 
-    let bins = bin_idx.iter().cloned().collect::<Vec<_>>();
+    let _bins = bin_idx.iter().cloned().collect::<Vec<_>>();
 
     // We transpose the matrix by just swapping references to `coo_col_index`
     // and `coo_row_index`.
@@ -123,21 +121,21 @@ fn construct_bin_data(scalars: &GpuScalarVec) -> BinData {
         scalars.len() as u32,
     );
 
-    let sorted_bin_idx_cpu = sorted_bins.keys.iter().cloned().collect::<Vec<_>>();
-    let sorted_scalar_idx_cpu = sorted_bins.values.iter().cloned().collect::<Vec<_>>();
+    let _sorted_bin_idx_cpu = sorted_bins.keys.iter().cloned().collect::<Vec<_>>();
+    let _sorted_scalar_idx_cpu = sorted_bins.values.iter().cloned().collect::<Vec<_>>();
 
     // Compute the RLE of the column indices and prefix sum them. We'll sort them
     // by run count, which effectively groups similarly length rows together
     // so warps have minimal branch divergence.
     let rle = run_length_encoding(&sorted_bins.keys, num_windows as u32, scalars.len() as u32);
 
-    let num_runs_cpu = rle.num_runs.iter().cloned().collect::<Vec<_>>();
-    let run_lengths_cpu = rle.run_lengths.iter().cloned().collect::<Vec<_>>();
-    let values_cpu = rle.values.iter().cloned().collect::<Vec<_>>();
+    let _num_runs_cpu = rle.num_runs.iter().cloned().collect::<Vec<_>>();
+    let _run_lengths_cpu = rle.run_lengths.iter().cloned().collect::<Vec<_>>();
+    let _values_cpu = rle.values.iter().cloned().collect::<Vec<_>>();
 
     let rle_sum = prefix_sum(&rle.run_lengths, num_windows as u32, scalars.len() as u32);
 
-    let rle_sum_cpu = rle_sum.iter().cloned().collect::<Vec<_>>();
+    let _rle_sum_cpu = rle_sum.iter().cloned().collect::<Vec<_>>();
 
     let sorted_bin_counts = radix_sort_2(
         &rle.run_lengths,
@@ -148,13 +146,13 @@ fn construct_bin_data(scalars: &GpuScalarVec) -> BinData {
         scalars.len() as u32,
     );
 
-    let keys_cpu = sorted_bin_counts.keys.iter().cloned().collect::<Vec<_>>();
-    let vals_cpu = sorted_bin_counts
+    let _keys_cpu = sorted_bin_counts.keys.iter().cloned().collect::<Vec<_>>();
+    let _vals_cpu = sorted_bin_counts
         .values_1
         .iter()
         .cloned()
         .collect::<Vec<_>>();
-    let bin_ids_cpu = sorted_bin_counts
+    let _bin_ids_cpu = sorted_bin_counts
         .values_2
         .iter()
         .cloned()

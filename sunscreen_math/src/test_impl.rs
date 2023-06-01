@@ -66,11 +66,11 @@ fn get_scalar_window(
         window |= (limb_2 & hi_mask) << (window_bits - bits_remaining);
     }
 
-    return window;
+    window
 }
 
 fn rle(data: &[u32]) -> (Vec<u32>, Vec<u32>) {
-    if data.len() == 0 {
+    if data.is_empty() {
         return (vec![], vec![]);
     }
 
@@ -99,7 +99,7 @@ fn rle(data: &[u32]) -> (Vec<u32>, Vec<u32>) {
 }
 
 fn prefix_sum(x: &[u32]) -> Vec<u32> {
-    if x.len() == 0 {
+    if x.is_empty() {
         return vec![];
     }
 
@@ -119,7 +119,7 @@ pub(crate) fn construct_bin_data(
     num_threads: usize,
     window_bits: usize,
 ) -> Vec<BinData> {
-    let max_cols = if scalars.len() % num_threads == 0 {
+    let _max_cols = if scalars.len() % num_threads == 0 {
         scalars.len() / num_threads
     } else {
         (scalars.len() + 1) / num_threads
@@ -161,7 +161,7 @@ pub(crate) fn construct_bin_data(
             .zip(&rle_bins.0)
             .collect::<Vec<_>>();
 
-        bin_offset_lengths.sort_by(|x, y| x.0 .0.cmp(&y.0 .0));
+        bin_offset_lengths.sort_by(|x, y| x.0 .0.cmp(y.0 .0));
 
         let sorted_bin_counts = bin_offset_lengths
             .iter()
@@ -221,7 +221,7 @@ fn test_impl_get_scalar_window() {
 
 #[test]
 fn test_rle_impl_works() {
-    let (vals, runs) = rle(&vec![1, 1, 1, 2, 2, 3, 4, 4, 4, 4, 5, 5, 7, 7, 7]);
+    let (vals, runs) = rle(&[1, 1, 1, 2, 2, 3, 4, 4, 4, 4, 5, 5, 7, 7, 7]);
 
     assert_eq!(vals, vec![1, 2, 3, 4, 5, 7]);
     assert_eq!(runs, vec![3, 2, 1, 4, 2, 3]);
@@ -229,7 +229,7 @@ fn test_rle_impl_works() {
 
 #[test]
 fn test_prefix_sum_works() {
-    let sum = prefix_sum(&vec![1, 3, 5, 7, 8, 11]);
+    let sum = prefix_sum(&[1, 3, 5, 7, 8, 11]);
 
     assert_eq!(sum, vec![0, 1, 4, 9, 16, 24]);
 }

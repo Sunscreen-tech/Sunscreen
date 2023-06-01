@@ -518,7 +518,7 @@ mod tests {
         .concat();
 
         let vals_1 = keys.clone();
-        let vals_2 = keys.clone();
+        let _vals_2 = keys.clone();
 
         let runtime = Runtime::get();
 

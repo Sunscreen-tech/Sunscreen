@@ -444,9 +444,9 @@ mod tests {
                 let mut data_chunk = data_chunk.to_owned();
                 let mut sum = 0;
 
-                for i in 0..data_chunk.len() {
-                    let val = data_chunk[i];
-                    data_chunk[i] = sum;
+                for i in data_chunk.iter_mut() {
+                    let val = *i;
+                    *i = sum;
 
                     sum += val;
                 }

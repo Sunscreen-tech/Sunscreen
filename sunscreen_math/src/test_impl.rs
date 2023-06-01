@@ -29,8 +29,6 @@ fn get_scalar_window(
     window_bits: u32, // assumed to be between 1 and 32
     window_id: u32,
 ) -> u32 {
-    let mut window: u32 = 0;
-
     const BITS_PER_LIMB: u32 = 8 * std::mem::size_of::<u32>() as u32;
 
     // index measured in bits, not bytes.
@@ -46,7 +44,7 @@ fn get_scalar_window(
     } else {
         0xFFFFFFFF
     };
-    window = (limb_1 >> (window_start_idx % BITS_PER_LIMB)) & lo_mask;
+    let mut window = (limb_1 >> (window_start_idx % BITS_PER_LIMB)) & lo_mask;
 
     let limb_boundary: u32 = (limb_id_1 + 1) * BITS_PER_LIMB;
 
@@ -116,15 +114,8 @@ fn prefix_sum(x: &[u32]) -> Vec<u32> {
 /// testing.
 pub(crate) fn construct_bin_data(
     scalars: &[Scalar],
-    num_threads: usize,
     window_bits: usize,
 ) -> Vec<BinData> {
-    let _max_cols = if scalars.len() % num_threads == 0 {
-        scalars.len() / num_threads
-    } else {
-        (scalars.len() + 1) / num_threads
-    };
-
     const SCALAR_BIT_LEN: usize = 8 * std::mem::size_of::<Scalar>();
 
     let num_windows = if SCALAR_BIT_LEN % window_bits == 0 {

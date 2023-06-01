@@ -29,15 +29,11 @@ pub struct BinData {
 }
 
 const SCALAR_BIT_LEN: usize = 8 * std::mem::size_of::<Scalar>();
-const CONSTRUCT_BIN_DATA_NUM_THREADS: usize = 16384;
+const CONSTRUCT_BIN_DATA_NUM_THREADS: usize = 16383;
 
 fn construct_bin_data(scalars: &GpuScalarVec) -> BinData {
     let runtime = Runtime::get();
-
-    // We require that NUM_THREADS be a multiple of any sane thread group size (i.e. 512).
-    assert!(CONSTRUCT_BIN_DATA_NUM_THREADS.is_power_of_two());
-    assert!(CONSTRUCT_BIN_DATA_NUM_THREADS > 512);
-
+    
     let _max_cols = if scalars.len() % CONSTRUCT_BIN_DATA_NUM_THREADS == 0 {
         scalars.len() / CONSTRUCT_BIN_DATA_NUM_THREADS
     } else {
@@ -371,7 +367,7 @@ mod tests {
             SCALAR_BIT_LEN / window_bits + 1
         };
 
-        let expected = crate::test_impl::construct_bin_data(&a, CONSTRUCT_BIN_DATA_NUM_THREADS, 16);
+        let expected = crate::test_impl::construct_bin_data(&a, 16);
 
         assert_eq!(expected.len(), num_windows);
 

@@ -11,6 +11,7 @@ pub fn multiscalar_multiplication(points: &GpuRistrettoPointVec, scalars: &GpuSc
 }
 
 pub struct BinData {
+    scalar_ids: MappedBuffer<u32>,
     bin_ids: MappedBuffer<u32>,
     bin_counts: MappedBuffer<u32>,
     bin_start_idx: MappedBuffer<u32>,
@@ -131,6 +132,7 @@ fn construct_bin_data(scalars: &GpuScalarVec) -> BinData {
     let vals_cpu = sorted_bin_counts.values_1.iter().cloned().collect::<Vec<_>>();
 
     BinData {
+        scalar_ids: sorted_bins.values,
         bin_ids: sorted_bin_counts.values_2,
         bin_counts: sorted_bin_counts.keys,
         bin_start_idx: sorted_bin_counts.values_1,

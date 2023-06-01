@@ -1,10 +1,14 @@
 #[cfg(test)]
 mod test_impl {
+    ///! Our GPU implementation of some of the intermediate steps
+    ///! of multiexp are quite complex. This module provides simple
+    ///! sequential implementations to compare against.
+
     use curve25519_dalek::scalar::Scalar;
     use rand::thread_rng;
-    use super::*;
 
     pub(crate) struct BinData {
+        scalar_id: Vec<u32>,
         bin_ids: Vec<u32>,
         bin_counts: Vec<u32>,
         bin_start_idx: Vec<u32>,
@@ -54,18 +58,88 @@ mod test_impl {
         return window;
     }
 
+    fn rle(data: &[u32]) -> (Vec<u32>, Vec<u32>) {
+        if data.len() == 0 {
+            return (vec![], vec![])
+        }
+
+        let mut prev = data[0];
+        let mut count = 1;
+
+        let mut vals = vec![prev];
+        let mut runs = vec![];
+
+        for val in data.iter().skip(1).cloned() {
+            if val != prev {
+                vals.push(val);
+                runs.push(count);
+                prev = val;
+                count = 1;
+            } else {
+                count += 1;
+            }
+        }
+
+        runs.push(count);
+
+        assert_eq!(vals.len(), runs.len());
+
+        (vals, runs)
+    }
+
+    fn prefix_sum(x: &[u32]) -> Vec<u32> {
+        if x.len() == 0 {
+            return vec![];
+        }
+
+        let mut sum = vec![0];
+
+        for (i, val) in x[0..(x.len() - 1)].iter().enumerate() {
+            sum.push(sum[i] + val);
+        }
+
+        sum
+    }
+
     /// A serial implementation of constructing multiexp bin data used for 
     /// testing.
     pub(crate) fn construct_bin_data(
         scalars: &[Scalar],
         num_threads: usize,
-        window_bit_len: usize
+        window_bits: usize
     ) -> BinData {
         let max_cols = if scalars.len() % num_threads == 0 {
             scalars.len() / num_threads
         } else {
             (scalars.len() + 1) / num_threads
         };
+
+        const SCALAR_BIT_LEN: usize = 8 * std::mem::size_of::<Scalar>();
+
+        let num_windows = if SCALAR_BIT_LEN % window_bits == 0 {
+            SCALAR_BIT_LEN / window_bits
+        } else {
+            SCALAR_BIT_LEN / window_bits + 1
+        };
+
+        // indexed by window id, then scalar id. Contains tuples of the 
+        // original scalar index and bin id.
+        let mut bin_idx = vec![];
+
+        for i in 0..num_windows {
+            let mut bins = scalars.iter().enumerate().map(|x| (x.0, get_scalar_window(x.1, window_bits as u32, i as u32))).collect::<Vec<_>>();
+
+            // Sort the tuples by the bin id
+            bins.sort_by(|x, y| { x.1.cmp(&y.1) });
+
+            let sorted_scalar_ids = bins.iter().map(|x| x.0 as u32).collect::<Vec<_>>();
+
+            let sorted_bin_ids = bins.iter().map(|x| x.1).collect::<Vec<_>>();
+
+            let rle_bins = rle(&sorted_bin_ids);
+
+            bin_idx.push(bins);
+        }
 
         todo!();
     }
@@ -103,5 +177,20 @@ mod test_impl {
 
             assert_eq!(actual, expected);
         }
+    }
+
+    #[test]
+    fn test_rle_impl_works() {
+        let (vals, runs) = rle(&vec![1, 1, 1, 2, 2, 3, 4, 4, 4, 4, 5, 5, 7, 7, 7]);
+
+        assert_eq!(vals, vec![1, 2, 3, 4, 5, 7]);
+        assert_eq!(runs, vec![3, 2, 1, 4, 2, 3]);
+    }
+
+    #[test]
+    fn test_prefix_sum_works() {
+        let sum = prefix_sum(&vec![1, 3, 5, 7, 8, 11]);
+
+        assert_eq!(sum, vec![0, 1, 4, 9, 16, 24]);
     }
 }

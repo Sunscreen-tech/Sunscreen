@@ -129,6 +129,7 @@ fn construct_bin_data(scalars: &GpuScalarVec) -> BinData {
 
     let keys_cpu = sorted_bin_counts.keys.iter().cloned().collect::<Vec<_>>();
     let vals_cpu = sorted_bin_counts.values_1.iter().cloned().collect::<Vec<_>>();
+    let bin_ids_cpu = sorted_bin_counts.values_2.iter().cloned().collect::<Vec<_>>();
 
     BinData {
         scalar_ids: sorted_bins.values,
@@ -306,7 +307,7 @@ mod tests {
     fn can_construct_bin_data() {
         let count = 11u32;
 
-        let a = (0..count).rev().map(|x| Scalar::from(x)).collect::<Vec<_>>();
+        let a = (0..count).rev().map(|_| Scalar::random(&mut thread_rng())).collect::<Vec<_>>();
         let a_gpu = ScalarVec::new(&a);
         
         let bin_info = construct_bin_data(&a_gpu);
@@ -342,6 +343,10 @@ mod tests {
             assert_eq!(bin_len as usize, expected[i].bin_counts.len());
             assert_eq!(bin_len as usize, expected[i].bin_start_idx.len());
 
+            let end = start + bin_len as usize;
+            assert_eq!(bin_counts[start..end], expected[i].bin_counts);
+            assert_eq!(bin_start_idx[start..end], expected[i].bin_start_idx);
+            assert_eq!(bin_ids[start..end], expected[i].bin_ids);
 
         }
     }

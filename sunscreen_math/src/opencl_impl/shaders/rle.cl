@@ -80,7 +80,7 @@ kernel void rle_compute_runs(
         u32 a = compact_backward_mask[col_id + row_id * cols_1];
         u32 b = compact_backward_mask[col_id + 1 + row_id * cols_1];
 
-        vals_out[col_id + row_id * cols] = vals_in[a];
+        vals_out[col_id + row_id * cols] = vals_in[a + row_id * cols];
         counts_out[col_id + row_id * cols] = b - a;
     } else if (col_id < cols) {
         // Write UINT_MAX to entries that extend beyond the total runs. This

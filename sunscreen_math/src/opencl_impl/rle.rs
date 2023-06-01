@@ -9,20 +9,20 @@ use super::{radix_sort::prefix_sum, Grid, MappedBuffer, Runtime};
 /// The actual
 pub struct RunLengthEncoding {
     /// The number of items per row.
-    stride: u32,
+    pub stride: u32,
 
     /// The values. The ith value appears run_lengths[i] times.
-    values: MappedBuffer<u32>,
+    pub values: MappedBuffer<u32>,
 
     /// The number of times each value appears.
-    run_lengths: MappedBuffer<u32>,
+    pub run_lengths: MappedBuffer<u32>,
 
     /// The number of runs actually stored in the (values, run_lengths) arrays
     /// for each row.
     /// 
     /// # Remarks
     /// These values are at most equal to stride.
-    num_runs: MappedBuffer<u32>,
+    pub num_runs: MappedBuffer<u32>,
 }
 
 /// For the given `rows x cols` matrix `data`, compute the run-length encoding of

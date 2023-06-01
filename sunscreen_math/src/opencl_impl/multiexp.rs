@@ -1,6 +1,6 @@
 use curve25519_dalek::{scalar::Scalar, ristretto::RistrettoPoint};
 
-use crate::{RistrettoPointVec, GpuScalarVec, GpuRistrettoPointVec, GpuVec, opencl_impl::{Runtime, radix_sort::{radix_sort_vals}, Grid, rle::run_length_encoding}};
+use crate::{RistrettoPointVec, GpuScalarVec, GpuRistrettoPointVec, GpuVec, opencl_impl::{Runtime, radix_sort::{radix_sort_1, radix_sort_2, prefix_sum}, Grid, rle::run_length_encoding}};
 
 use super::MappedBuffer;
 
@@ -10,14 +10,14 @@ pub fn multiscalar_multiplication(points: &GpuRistrettoPointVec, scalars: &GpuSc
      todo!();
 }
 
-struct WindowData {
-    bin_idx: MappedBuffer<u32>,
-    scalar_id: MappedBuffer<u32>,
+struct BinData {
+    bin_ids: MappedBuffer<u32>,
     bin_counts: MappedBuffer<u32>,
-    bin_count_prefix_sum: MappedBuffer<u32>,
+    bin_start_idx: MappedBuffer<u32>,
+    num_bins: MappedBuffer<u32>,
 }
 
-fn construct_window_data(scalars: &GpuScalarVec) -> WindowData {
+fn construct_bin_data(scalars: &GpuScalarVec) -> BinData {
     let runtime = Runtime::get();
 
     const NUM_THREADS: usize = 16384;
@@ -59,8 +59,8 @@ fn construct_window_data(scalars: &GpuScalarVec) -> WindowData {
     // For a given window, the rows correspond to GPU threads, the columns 
     // correspond to window values, and the values in the matrix are indices into 
     // the EC point (and scalar) arrays.
-    let coo_data = runtime.alloc::<u32>(scalars.len() * num_windows);
-    let coo_col_index = runtime.alloc::<u32>(scalars.len() * num_windows);
+    let scalar_id = runtime.alloc::<u32>(scalars.len() * num_windows);
+    let bin_idx = runtime.alloc::<u32>(scalars.len() * num_windows);
 
     // The first grid dimension corresponds to the number of threads `t`
     // among which we wish to split work for parallelism. The second grid
@@ -76,18 +76,19 @@ fn construct_window_data(scalars: &GpuScalarVec) -> WindowData {
     //   simply insert multiple scalar indices for the same row and column pair.
     //   While this creates a degenerate matrix, it doesn't break anything in
     //   the overall algorithm as we aren't doing actual linear algebra.
-    // * If t doesn't divide N, the last thread simply terminates early.
     runtime.run_kernel(
-        "kernel_fill_coo_matrix", 
+        "fill_coo_matrix", 
         &vec![
             (&scalars.data).into(),
-            (&coo_data).into(),
-            (&coo_col_index).into(),
+            (&scalar_id).into(),
+            (&bin_idx).into(),
             (window_bit_len as u32).into(),
             (scalars.len() as u32).into()
         ],
         &Grid::from([(NUM_THREADS, 256), (num_windows, 1), (1, 1)])
     );
+
+    let bins = bin_idx.iter().cloned().collect::<Vec<_>>();
 
     // We transpose the matrix by just swapping references to `coo_col_index`
     // and `coo_row_index`.
@@ -100,24 +101,41 @@ fn construct_window_data(scalars: &GpuScalarVec) -> WindowData {
     //
     // Our radix-sort implementation sorts rows of a dense matrix, so a single
     // call to this function will sort every window concurrently.
-    let (bin_idx, vals) = radix_sort_vals(
-        &coo_col_index, 
-        &coo_data,
+    let sorted_bins = radix_sort_1(
+        &bin_idx, 
+        &scalar_id,
         window_bit_len as u32,
         num_windows as u32,
         scalars.len() as u32
     );
 
-    // Coun
-    let rle = run_length_encoding(&bin_idx, num_windows as u32, scalars.len() as u32);
+    let sorted_bin_idx_cpu = sorted_bins.keys.iter().cloned().collect::<Vec<_>>();
+    let sorted_scalar_idx_cpu = sorted_bins.values.iter().cloned().collect::<Vec<_>>();
 
-    todo!()
+    // Compute the RLE of the column indices and prefix sum them. We'll sort them
+    // by run count, which effectively groups similarly length rows together
+    // so warps have minimal branch divergence.
+    let rle = run_length_encoding(&sorted_bins.keys, num_windows as u32, scalars.len() as u32);
 
-    /*WindowData {
-        bin_idx,
-        scalar_id: vals,
+    let num_runs_cpu = rle.num_runs.iter().cloned().collect::<Vec<_>>();
+    let run_lengths_cpu = rle.run_lengths.iter().cloned().collect::<Vec<_>>();
+    let values_cpu = rle.values.iter().cloned().collect::<Vec<_>>();
 
-    }*/
+    let rle_sum = prefix_sum(&rle.run_lengths, num_windows as u32, scalars.len() as u32);
+    
+    let rle_sum_cpu = rle_sum.iter().cloned().collect::<Vec<_>>();    
+
+    let sorted_bin_counts = radix_sort_2(&rle.run_lengths, &rle_sum, &rle.values, window_bit_len as u32, num_windows as u32, scalars.len() as u32);
+
+    let keys_cpu = sorted_bin_counts.keys.iter().cloned().collect::<Vec<_>>();
+    let vals_cpu = sorted_bin_counts.values_1.iter().cloned().collect::<Vec<_>>();
+
+    BinData {
+        bin_ids: sorted_bin_counts.values_2,
+        bin_counts: sorted_bin_counts.keys,
+        bin_start_idx: sorted_bin_counts.values_1,
+        num_bins: rle.num_runs
+    }
 }
 
 #[cfg(test)]
@@ -258,5 +276,28 @@ mod tests {
         for i in 0..a.len() {
             assert!(coo_data.contains(&(i as u32)));
         }
+    }
+
+    #[test]
+    fn can_construct_bin_data_basic() {
+        let a = vec![1, 1, 1, 2, 2, 4, 5, 5, 5, 5, 6, 7, 7, 8];
+        let a_scalar = a.iter().rev().map(|x| Scalar::from(*x as u32)).collect::<Vec<_>>();
+
+        let a_gpu = ScalarVec::new(&a_scalar);
+        
+        let bin_info = construct_bin_data(&a_gpu);
+
+        let bin_counts = bin_info.bin_counts.iter().cloned().collect::<Vec<_>>();
+        let bin_start_idx = bin_info.bin_start_idx.iter().cloned().collect::<Vec<_>>();
+        let scalar_id_cpu = bin_info.bin_ids.iter().cloned().collect::<Vec<_>>();
+        let num_runs = bin_info.num_bins.iter().cloned().collect::<Vec<_>>();
+
+        assert_eq!(num_runs, vec![7, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2]);
+
+        // I did this example by hand and confirmed its correctness.
+        // TODO: write a serial CPU implementation and test against that.
+        assert_eq!(bin_counts[0..num_runs[0] as usize], vec![1, 1, 1, 2, 2, 3, 4]);
+        assert_eq!(bin_start_idx[0..num_runs[0] as usize], vec![5, 10, 13, 3, 11, 0, 6]);
+        assert_eq!(scalar_id_cpu[0..num_runs[0] as usize], vec![4, 6, 8, 2, 7, 1, 5]);
     }
 }

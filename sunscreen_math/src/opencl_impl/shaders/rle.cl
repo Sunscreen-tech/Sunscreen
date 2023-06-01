@@ -82,5 +82,11 @@ kernel void rle_compute_runs(
 
         vals_out[col_id + row_id * cols] = vals_in[a];
         counts_out[col_id + row_id * cols] = b - a;
+    } else if (col_id < cols) {
+        // Write UINT_MAX to entries that extend beyond the total runs. This
+        // allows us to radix sort the padding area while ensuring it still
+        // appears at the end.
+        vals_out[col_id + row_id * cols] = UINT_MAX;
+        counts_out[col_id + row_id * cols] = UINT_MAX;
     }
 }

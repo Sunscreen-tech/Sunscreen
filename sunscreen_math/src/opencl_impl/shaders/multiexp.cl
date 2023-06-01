@@ -94,7 +94,6 @@ kernel void fill_coo_matrix(
         // once in a row. While mathematically unsound, we aren't doing a real
         // SPMV, so this is still works.
         coo_col_idx[window_offset + thread_count * thread_scalar_id + thread_id] = window;
-        //coo_row_idx[window_offset + thread_count * thread_scalar_id + thread_id] = thread_id;
 
         thread_scalar_id++;
     }

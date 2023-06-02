@@ -41,7 +41,7 @@ kernel void rle_compact_backward_mask(
 
     u32 cols_1 = cols + 1;
     u32 cur = col_id == cols - 1
-        ? scanned_backward_mask[col_id + cols * row_id] + mask[col_id]
+        ? scanned_backward_mask[col_id + cols * row_id] + mask[col_id + cols * row_id]
         : scanned_backward_mask[col_id + cols * row_id + 1];
 
     u32 prev = scanned_backward_mask[col_id + cols * row_id];
@@ -64,10 +64,12 @@ kernel void rle_compact_backward_mask(
 }
 
 /// Computes the RLE counts.
-kernel void rle_compute_counts(
+kernel void rle_compute_runs(
+    global const u32* restrict vals_in,
     global const u32* restrict compact_backward_mask,
     global const u32* restrict total_runs,
     global u32* counts_out,
+    global u32* vals_out,
     u32 cols
 ) {
     u32 col_id = get_global_id(0);
@@ -75,9 +77,16 @@ kernel void rle_compute_counts(
     u32 cols_1 = cols + 1;
 
     if (col_id < total_runs[row_id]) {
-        u32 b = compact_backward_mask[col_id + 1 + row_id * cols_1];
         u32 a = compact_backward_mask[col_id + row_id * cols_1];
+        u32 b = compact_backward_mask[col_id + 1 + row_id * cols_1];
 
+        vals_out[col_id + row_id * cols] = vals_in[a + row_id * cols];
         counts_out[col_id + row_id * cols] = b - a;
+    } else if (col_id < cols) {
+        // Write UINT_MAX to entries that extend beyond the total runs. This
+        // allows us to radix sort the padding area while ensuring it still
+        // appears at the end.
+        vals_out[col_id + row_id * cols] = UINT_MAX;
+        counts_out[col_id + row_id * cols] = UINT_MAX;
     }
 }

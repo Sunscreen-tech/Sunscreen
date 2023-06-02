@@ -167,34 +167,110 @@ fn offset_blocks(
     );
 }
 
-/**
- * Sort the keys in each row of the keys matrix such that they appear in increasing order.
- * vals_1, vals_2 are 2 u32 arrays that get sorted according to the corresponding key at the same
- * index.
- *
- * `max_bits` allows you to choose many bits are needed to represent the keys (up to 32). If your
- * data fits in a smaller number of bits and you reduce this parameter accordingly, this will
- * reduce the runtime of the radix sort.
- *
- * # Remarks
- * Currently, this implementation is non-deterministic and unstable in the event of multiple keys
- * with the same value, but it will produce *some* valid sorting of the keys.
- *
- * # Panics
- * * If rows * cols != keys.len()
- * * If keys.len() != vals_1.len() != vals_2.len()
- * * If max_bits > 32
- */
-pub fn radix_sort_2_vals(
+pub struct RadixSort {
+    pub keys: MappedBuffer<u32>,
+    pub values: MappedBuffer<u32>,
+}
+
+/// Sort the keys in each row of the keys matrix such that they appear in increasing order. This variant sorts one values array
+/// vals_1 is a u32 array that get sorted according to the corresponding key at
+/// the same index.
+///
+/// `max_bits` allows you to choose many bits are needed to represent the keys (up to 32). If your
+/// data fits in a smaller number of bits and you reduce this parameter accordingly, this will
+/// reduce the runtime of the radix sort
+/// # Panics
+/// * If rows * cols != keys.len()
+/// * If keys.len() != vals_1.len() != vals_2.len()
+/// * If max_bits > 32
+pub fn radix_sort_1(
+    keys: &MappedBuffer<u32>,
+    vals_1: &MappedBuffer<u32>,
+    max_bits: u32,
+    rows: u32,
+    cols: u32,
+) -> RadixSort {
+    assert_eq!(keys.len(), vals_1.len());
+    assert_eq!(keys.len(), rows as usize * cols as usize);
+    assert!(max_bits <= 32);
+
+    let num_digits = if max_bits % RADIX_BITS as u32 == 0 {
+        max_bits / RADIX_BITS as u32
+    } else {
+        max_bits / RADIX_BITS as u32 + 1
+    };
+
+    let num_blocks = if cols as usize % BLOCK_SIZE == 0 {
+        cols as usize / BLOCK_SIZE
+    } else {
+        cols as usize / BLOCK_SIZE + 1
+    };
+
+    let num_threads = num_blocks * THREADS_PER_GROUP;
+
+    let runtime = Runtime::get();
+
+    let keys_clone = [keys.clone(), keys.clone()];
+    let vals_1_clone = [vals_1.clone(), vals_1.clone()];
+
+    let mut cur = 0;
+    let mut next = 1;
+
+    for cur_digit in 0..num_digits {
+        let (hist, num_blocks) = create_histograms(&keys_clone[cur], rows, cols, cur_digit);
+
+        let bin_locations = prefix_sum(&hist, rows, num_blocks);
+
+        runtime.run_kernel(
+            "radix_sort_emplace_val_1",
+            &[
+                (&keys_clone[cur]).into(),
+                (&vals_1_clone[cur]).into(),
+                (&bin_locations).into(),
+                (&keys_clone[next]).into(),
+                (&vals_1_clone[next]).into(),
+                cur_digit.into(),
+                cols.into(),
+            ],
+            &Grid::from([(num_threads, THREADS_PER_GROUP), (rows as usize, 1), (1, 1)]),
+        );
+
+        std::mem::swap(&mut cur, &mut next);
+    }
+
+    RadixSort {
+        keys: keys_clone.into_iter().nth(cur).unwrap(),
+        values: vals_1_clone.into_iter().nth(cur).unwrap(),
+    }
+}
+
+pub struct RadixSort2 {
+    pub keys: MappedBuffer<u32>,
+    pub values_1: MappedBuffer<u32>,
+    pub values_2: MappedBuffer<u32>,
+}
+
+/// Sort the keys in each row of the keys matrix such that they appear in increasing order. This variant sorts 2 values arrays alongside the keys.
+/// vals_1, vals_2 are u32 arrays that get sorted according to the corresponding key at
+/// the same index.
+///
+/// `max_bits` allows you to choose many bits are needed to represent the keys (up to 32).
+///  If your data fits in a smaller number of bits and you reduce this parameter
+/// accordingly, this will reduce the runtime of the radix sort
+///
+/// # Panics
+/// * If rows * cols != keys.len()
+/// * If keys.len() != vals_1.len() != vals_2.len()
+/// * If max_bits > 32
+pub fn radix_sort_2(
     keys: &MappedBuffer<u32>,
     vals_1: &MappedBuffer<u32>,
     vals_2: &MappedBuffer<u32>,
     max_bits: u32,
     rows: u32,
     cols: u32,
-) -> (MappedBuffer<u32>, MappedBuffer<u32>, MappedBuffer<u32>) {
+) -> RadixSort2 {
     assert_eq!(keys.len(), vals_1.len());
-    assert_eq!(keys.len(), vals_2.len());
     assert_eq!(keys.len(), rows as usize * cols as usize);
     assert!(max_bits <= 32);
 
@@ -227,7 +303,7 @@ pub fn radix_sort_2_vals(
         let bin_locations = prefix_sum(&hist, rows, num_blocks);
 
         runtime.run_kernel(
-            "radix_sort_emplace_2_val",
+            "radix_sort_emplace_val_2",
             &[
                 (&keys_clone[cur]).into(),
                 (&vals_1_clone[cur]).into(),
@@ -245,11 +321,11 @@ pub fn radix_sort_2_vals(
         std::mem::swap(&mut cur, &mut next);
     }
 
-    (
-        keys_clone.into_iter().nth(cur).unwrap(),
-        vals_1_clone.into_iter().nth(cur).unwrap(),
-        vals_2_clone.into_iter().nth(cur).unwrap(),
-    )
+    RadixSort2 {
+        keys: keys_clone.into_iter().nth(cur).unwrap(),
+        values_1: vals_1_clone.into_iter().nth(cur).unwrap(),
+        values_2: vals_2_clone.into_iter().nth(cur).unwrap(),
+    }
 }
 
 #[cfg(test)]
@@ -368,9 +444,9 @@ mod tests {
                 let mut data_chunk = data_chunk.to_owned();
                 let mut sum = 0;
 
-                for i in 0..data_chunk.len() {
-                    let val = data_chunk[i];
-                    data_chunk[i] = sum;
+                for i in data_chunk.iter_mut() {
+                    let val = *i;
+                    *i = sum;
 
                     sum += val;
                 }
@@ -442,24 +518,20 @@ mod tests {
         .concat();
 
         let vals_1 = keys.clone();
-        let vals_2 = keys.clone();
+        let _vals_2 = keys.clone();
 
         let runtime = Runtime::get();
 
         let data_gpu = runtime.alloc_from_slice(&keys);
         let vals_1_gpu = runtime.alloc_from_slice(&vals_1);
-        let vals_2_gpu = runtime.alloc_from_slice(&vals_2);
 
-        let (mut keys_sorted, mut vals_1_sorted, mut vals_2_sorted) =
-            radix_sort_2_vals(&data_gpu, &vals_1_gpu, &vals_2_gpu, 24, rows, cols);
+        let mut sorted = radix_sort_1(&data_gpu, &vals_1_gpu, 24, rows, cols);
 
-        keys_sorted.remap();
-        vals_1_sorted.remap();
-        vals_2_sorted.remap();
+        sorted.keys.remap();
+        sorted.values.remap();
 
-        let keys_sorted = keys_sorted.iter().cloned().collect::<Vec<_>>();
-        let vals_1_sorted = vals_1_sorted.iter().cloned().collect::<Vec<_>>();
-        let vals_2_sorted = vals_2_sorted.iter().cloned().collect::<Vec<_>>();
+        let keys_sorted = sorted.keys.iter().cloned().collect::<Vec<_>>();
+        let vals_1_sorted = sorted.values.iter().cloned().collect::<Vec<_>>();
 
         for row in 0..rows {
             let row_start = (row * cols) as usize;
@@ -470,7 +542,6 @@ mod tests {
 
             assert_eq!(expected, &keys_sorted[row_start..row_end]);
             assert_eq!(expected, &vals_1_sorted[row_start..row_end]);
-            assert_eq!(expected, &vals_2_sorted[row_start..row_end]);
         }
     }
 }

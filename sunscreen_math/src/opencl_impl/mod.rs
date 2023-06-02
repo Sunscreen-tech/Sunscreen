@@ -9,6 +9,7 @@ pub use scalarvec::GpuScalarVec;
 mod ristrettovec;
 pub use ristrettovec::GpuRistrettoPointVec;
 
+mod multiexp;
 mod radix_sort;
 mod rle;
 

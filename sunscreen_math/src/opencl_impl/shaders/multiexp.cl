@@ -25,7 +25,7 @@ u32 get_scalar_window(
     const u32 BITS_PER_LIMB = 8 * sizeof(u32);
     const u32 LIMBS_PER_SCALAR = 8;
 
-    // index measured in bits, bot bytes.
+    // index measured in bits, not bytes.
     u32 window_start_idx = window_bits * window_id;
 
     // A window can span at most 2 limbs.
@@ -40,7 +40,10 @@ u32 get_scalar_window(
     // If this window spans 2 limbs, concatenate load the next limb and 
     // concatenate its contribution. Note that windows beginning in the most
     // significant scalar limb never span 2 limbs.
-    if (window_bits + window_start_idx > limb_boundary && limb_id_1 < LIMBS_PER_SCALAR) {
+    //
+    // If the window would span beyond the scalar, then don't go beyond
+    // the number; we're done.
+    if (window_bits + window_start_idx > limb_boundary && limb_id_1 < LIMBS_PER_SCALAR - 1) {
         u32 limb_id_2 = limb_id_1 + 1;
         u32 limb_2 = scalars[limb_id_2 * scalars_len + scalar_id];
 
@@ -61,10 +64,9 @@ u32 get_scalar_window(
 /// and we simply skip them when doing bucket accumulation. The overhead of
 /// storing zeros and skipping them when reducing buckets in the sparse matrix 
 /// is trivial compared to adding EC points.
-void fill_coo_matrix(
+kernel void fill_coo_matrix(
     global const u32* scalars,
     global u32* coo_data,
-    global u32* coo_row_idx,
     global u32* coo_col_idx,
     u32 window_bits,
     u32 scalars_len
@@ -72,9 +74,6 @@ void fill_coo_matrix(
     const u32 window_id = get_global_id(1);
     const u32 thread_count = get_global_size(0);
     const u32 thread_id = get_global_id(0);
-    //const u32 points_per_thread = scalars_len % thread_count == 0
-    //    ? scalars_len / thread_count 
-    //    : scalars_len / thread_count + 1;
 
     u32 window_offset = window_id * scalars_len;
 
@@ -95,21 +94,9 @@ void fill_coo_matrix(
         // once in a row. While mathematically unsound, we aren't doing a real
         // SPMV, so this is still works.
         coo_col_idx[window_offset + thread_count * thread_scalar_id + thread_id] = window;
-        coo_row_idx[window_offset + thread_count * thread_scalar_id + thread_id] = thread_id;
 
         thread_scalar_id++;
     }
-}
-
-kernel void msm(
-    global const u32* scalars,
-    global u32* ell_data,
-    global u32* ell_row_len,
-    global u32* ell_col_index,
-    u32 window_bits,
-    u32 scalars_len
-) {
-    fill_coo_matrix(scalars, ell_data, ell_row_len, ell_col_index, window_bits, scalars_len);
 }
 
 #if defined(TEST)
@@ -121,7 +108,6 @@ kernel void msm(
     ) {
         u32 window_id = get_global_id(1);
         u32 scalar_id = get_global_id(0);
-    //    u32 thread_count = get_global_size(0);
 
         if (scalar_id < scalars_len) {
             windows[window_id * scalars_len + scalar_id] = get_scalar_window(
@@ -132,23 +118,5 @@ kernel void msm(
                 scalars_len
             );
         }
-    }
-
-    kernel void test_fill_coo_matrix(
-        global const u32* scalars,
-        global u32* coo_data,
-        global u32* coo_row_idx,
-        global u32* coo_col_idx,
-        u32 window_bits,
-        u32 scalars_len
-    ) {
-        fill_coo_matrix(
-            scalars,
-            coo_data,
-            coo_row_idx,
-            coo_col_idx,
-            window_bits,
-            scalars_len
-        );
     }
 #endif

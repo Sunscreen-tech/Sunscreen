@@ -207,7 +207,93 @@ kernel void offset_block(
 
 /// Place the input keys and values into the corresponding output key and bin
 /// locations according to the input prefix sum.
-kernel void radix_sort_emplace_2_val(
+kernel void radix_sort_emplace_val_1(
+    global const u32* restrict keys,
+    global const u32* restrict vals_1,
+    global const u32* restrict bin_locations,
+    global u32* restrict keys_out,
+    global u32* restrict vals_1_out,
+    u32 cur_digit,
+    u32 cols
+) {
+    u32 row_tid = get_global_id(1);
+    u32 local_id = get_local_id(0);
+    u32 group_id = get_group_id(0);
+    u32 num_groups = get_num_groups(0);
+
+    // The global offset for each digit for this block.
+    local u32 global_digit_idx[RADIX];
+
+    // The offset for each digit within the current block.
+    local u32 local_digit_idx[RADIX][BLOCK_SIZE];
+
+    // We read the same word from global memory multiple times, but these
+    // should fit in L1 cache, so no need for shared memory for them.
+
+    // Zero the local index
+    #pragma unroll
+    for (u32 word = local_id; word < BLOCK_SIZE; word += THREADS_PER_GROUP) {
+        #pragma unroll
+        for (u32 radix = 0; radix < RADIX; radix++) {
+            local_digit_idx[radix][word] = 0;
+        }
+    }
+
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+    // Load the global radix offsets.
+    if (local_id < RADIX) {
+        global_digit_idx[local_id] = bin_locations[group_id + local_id * num_groups + row_tid * RADIX * num_groups];
+    }
+
+    // Load each word, compute its digit and place a 1 in the word+digit map.
+    // We'll then run a prefix sum to compute the local offsets.
+    for (u32 word = local_id; word < BLOCK_SIZE; word += THREADS_PER_GROUP) {
+        u32 col_index = word + group_id * BLOCK_SIZE;
+
+        if (col_index < cols) {
+            u32 val = keys[col_index + row_tid * cols];
+            u32 digit = (val >> (cur_digit * RADIX_BITS)) & RADIX_MASK;
+
+            local_digit_idx[digit][word] = 1;
+        }
+    }
+
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+    // Perform prefix sums on the local offsets and place the total at index
+    // zero. This effectively means the bin offset is at index (bin + 1) % RADIX.
+    #pragma unroll
+    for (u32 digit = 0; digit < RADIX; digit++) {
+        u32 sum = local_prefix_sum(local_digit_idx[digit], LOG_THREADS_PER_GROUP + LOG_WORDS_PER_THREAD);
+
+        local_digit_idx[digit][0] = sum;
+    }
+
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+    for (u32 i = local_id; i < BLOCK_SIZE; i += THREADS_PER_GROUP) {
+        u32 col_index = i + group_id * BLOCK_SIZE;
+
+        if (col_index < cols) {
+            u32 val = keys[col_index + cols * row_tid];
+            u32 digit = (val >> (cur_digit * RADIX_BITS)) & RADIX_MASK;
+
+            u32 idx = global_digit_idx[digit] + local_digit_idx[digit][(i + 1) % BLOCK_SIZE] - 1;
+
+            keys_out[idx + row_tid * cols] = val;
+            //keys_out[col_index + row_tid * cols] = idx;
+            vals_1_out[idx + row_tid * cols] = vals_1[col_index + cols * row_tid];
+        }
+    }
+}
+
+/// Place the input keys and values into the corresponding output key and bin
+/// locations according to the input prefix sum.
+///
+/// # Remarks
+/// This variant outputs 2 values.
+kernel void radix_sort_emplace_val_2(
     global const u32* restrict keys,
     global const u32* restrict vals_1,
     global const u32* restrict vals_2,
@@ -287,6 +373,7 @@ kernel void radix_sort_emplace_2_val(
             //keys_out[col_index + row_tid * cols] = idx;
             vals_1_out[idx + row_tid * cols] = vals_1[col_index + cols * row_tid];
             vals_2_out[idx + row_tid * cols] = vals_2[col_index + cols * row_tid];
+
         }
     }
 }

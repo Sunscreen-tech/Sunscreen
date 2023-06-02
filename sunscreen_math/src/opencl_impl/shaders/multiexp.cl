@@ -1,4 +1,5 @@
 #include <inttypes.h.cl>
+#include <ristrettopoint.h.cl>
 
 /// Extracts the `window_id`'th window for a given scalar.
 ///
@@ -14,7 +15,7 @@
 /// `scalar_id` is 
 /// `scalar_count` is the total number of scalar values.
 u32 get_scalar_window(
-    global const u32* scalars,
+    global const u32* restrict scalars,
     u32 window_bits, // assumed to be between 1 and 32
     u32 window_id,
     u32 scalar_id,
@@ -65,9 +66,9 @@ u32 get_scalar_window(
 /// storing zeros and skipping them when reducing buckets in the sparse matrix 
 /// is trivial compared to adding EC points.
 kernel void fill_coo_matrix(
-    global const u32* scalars,
-    global u32* coo_data,
-    global u32* coo_col_idx,
+    global const u32* restrict scalars,
+    global u32* restrict coo_data,
+    global u32* restrict coo_col_idx,
     u32 window_bits,
     u32 scalars_len
 ) {
@@ -99,24 +100,62 @@ kernel void fill_coo_matrix(
     }
 }
 
-#if defined(TEST)
-    kernel void test_get_scalar_windows(
-        global const u32* scalars,
-        global u32* windows,
-        u32 window_bits,
-        u32 scalars_len
-    ) {
-        u32 window_id = get_global_id(1);
-        u32 scalar_id = get_global_id(0);
+kernel void compute_bucket_points(
+    global const u32* restrict points,
+    global const u32* restrict scalar_ids,
+    global const u32* restrict bin_ids,
+    global const u32* restrict bin_counts,
+    global const u32* restrict bin_start_idx,
+    // lengths of bin_ids, bin_start_idx, bin_counts
+    global const u32* restrict num_bins,
+    global u32* restrict bucket_points,
+    u32 num_points
+) {
+    u32 thread_id = get_global_id(0);
+    u32 window_id = get_global_id(1);
+    u32 num_windows = get_global_size(1);
 
-        if (scalar_id < scalars_len) {
-            windows[window_id * scalars_len + scalar_id] = get_scalar_window(
-                scalars,
-                window_bits,
-                window_id,
-                scalar_id,
-                scalars_len
-            );
-        }
+    // If this thread extends beyond the bins or is the zero bin,
+    // don't do anything.
+    if (
+        thread_id >= num_bins[window_id] ||
+        bin_ids[thread_id + num_points * window_id] == 0
+    ) {
+        return;
     }
+
+    u32 start = bin_start_idx[thread_id + num_points * window_id];
+    u32 end = start + bin_counts[thread_id + num_points * window_id];
+    u32 first_point = bin_ids[start + num_points * window_id];
+
+    RistrettoPoint bucket_point = RistrettoPoint_unpack(points, first_point, num_points);
+
+    for (u32 i = start + 1; i < end; i++) {
+        RistrettoPoint x = RistrettoPoint_unpack(points, first_point, num_points);
+        bucket_point = RistrettoPoint_add(&bucket_point, &x);
+    }
+
+    RistrettoPoint_pack(&bucket_point, bucket_points, thread_id + num_points * window_id, num_points * num_windows);
+}
+
+#if defined(TEST)
+kernel void test_get_scalar_windows(
+    global const u32* scalars,
+    global u32* windows,
+    u32 window_bits,
+    u32 scalars_len
+) {
+    u32 window_id = get_global_id(1);
+    u32 scalar_id = get_global_id(0);
+
+    if (scalar_id < scalars_len) {
+        windows[window_id * scalars_len + scalar_id] = get_scalar_window(
+            scalars,
+            window_bits,
+            window_id,
+            scalar_id,
+            scalars_len
+        );
+    }
+}
 #endif

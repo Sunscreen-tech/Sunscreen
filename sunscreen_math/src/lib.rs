@@ -89,6 +89,7 @@ pub(crate) const fn multiexp_num_buckets(window_size_bits: usize) -> usize {
 /// false positives. This version is a bit spicier and bitwise compares the points.
 /// It's also significantly faster than compressing the points and comparing for
 /// equality.
+#[allow(unused)]
 pub(crate) fn ristretto_bitwise_eq(a: RistrettoPoint, b: RistrettoPoint) -> bool {
     let a: [u32; 40] = unsafe { std::mem::transmute(a) };
     let b: [u32; 40] = unsafe { std::mem::transmute(b) };

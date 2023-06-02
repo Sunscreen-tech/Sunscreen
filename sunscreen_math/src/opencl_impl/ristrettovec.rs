@@ -79,7 +79,7 @@ impl GpuRistrettoPointVec {
         }
     }
 
-    /// Allocate a new [`RistrettoPointVev`] initialized to zero.
+    /// Allocate a new [`GpuRistrettoPointVec`] initialized to zero.
     pub(crate) fn alloc(len: usize) -> Self {
         assert_eq!(size_of::<RistrettoPoint>(), size_of::<u32>() * 40);
 

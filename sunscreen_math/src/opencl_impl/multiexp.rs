@@ -456,6 +456,8 @@ mod tests {
 
         let num_buckets = multiexp_num_buckets(window_size_bits);
 
+        assert_eq!(actual.len(), expected.len() * expected[0].len());
+
         for (actual_window_buckets, expected_window_buckets) in
             actual.chunks(num_buckets).zip(expected)
         {

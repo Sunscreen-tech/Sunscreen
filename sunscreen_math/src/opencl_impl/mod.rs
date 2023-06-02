@@ -284,7 +284,6 @@ impl Runtime {
 
     fn alloc_internal<T: OclPrm>(&self, len: usize) -> Buffer<T> {
         Buffer::builder()
-            .fill_val(T::default()) // Avoids dealing with MaybeUninit<T>
             .queue(self.queue.clone())
             .len(len)
             .build()
@@ -445,9 +444,6 @@ mod tests {
         );
 
         let b_map = unsafe { b.map().enq() }.unwrap();
-
-        dbg!(&*a.map);
-        dbg!(&*b_map);
 
         for (i, j) in a.iter().zip(b_map.iter()) {
             assert_eq!(i, j);

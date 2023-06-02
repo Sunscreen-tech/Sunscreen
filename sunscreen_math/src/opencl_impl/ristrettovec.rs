@@ -22,7 +22,10 @@ use super::{
 /// the second dimension iterates over the limbs in a coordinate, and the trailing
 /// dimension iterates over coordinates.
 pub struct GpuRistrettoPointVec {
+    /// The GPU buffer holding the points.
     pub(crate) data: MappedBuffer<u32>,
+
+    /// The length of the vector, in points (not bytes).
     len: usize,
 }
 
@@ -72,6 +75,16 @@ impl GpuRistrettoPointVec {
 
         Self {
             data: Runtime::get().alloc_from_slice(&data),
+            len,
+        }
+    }
+
+    /// Allocate a new [`RistrettoPointVev`] initialized to zero.
+    pub(crate) fn alloc(len: usize) -> Self {
+        assert_eq!(size_of::<RistrettoPoint>(), size_of::<u32>() * 40);
+
+        Self {
+            data: Runtime::get().alloc(len * size_of::<RistrettoPoint>()),
             len,
         }
     }

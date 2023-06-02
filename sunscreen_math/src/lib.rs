@@ -21,6 +21,8 @@ pub use cpu::{CpuRistrettoPointVec, CpuScalarVec};
 
 #[cfg(feature = "pina")]
 mod pina;
+use curve25519_dalek::ristretto::RistrettoPoint;
+use curve25519_dalek::scalar::Scalar;
 #[cfg(feature = "pina")]
 pub use pina::{PinaRistrettoPointVec, PinaScalarVec};
 
@@ -59,3 +61,33 @@ pub type ScalarVec = GpuScalarVec;
 
 #[cfg(not(feature = "gpu"))]
 pub type ScalarVec = CpuScalarVec;
+
+/// Returns the size of [`Scalar`] in bits.
+#[allow(unused)]
+pub(crate) const fn scalar_size_bits() -> usize {
+    std::mem::size_of::<Scalar>() * 8
+}
+
+/// Computes the number of windows over a [`Scalar`] type for the given
+/// `window_size` bits per window.
+#[allow(unused)]
+pub(crate) const fn multiexp_num_windows(window_size_bits: usize) -> usize {
+    if scalar_size_bits() % window_size_bits == 0 {
+        scalar_size_bits() / window_size_bits
+    } else {
+        scalar_size_bits() / window_size_bits + 1
+    }
+}
+
+/// Compute the number of buckets for the given `window_size` bits per window.
+#[allow(unused)]
+pub(crate) const fn multiexp_num_buckets(window_size_bits: usize) -> usize {
+    0x1 << window_size_bits
+}
+
+pub(crate) fn ristretto_bitwise_eq(a: RistrettoPoint, b: RistrettoPoint) -> bool {
+    let a: [u32; 40] = unsafe { std::mem::transmute(a) };
+    let b: [u32; 40] = unsafe { std::mem::transmute(b) };
+
+    a == b
+}

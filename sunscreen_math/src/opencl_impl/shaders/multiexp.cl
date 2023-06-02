@@ -1,5 +1,6 @@
 #include <inttypes.h.cl>
 #include <ristrettopoint.h.cl>
+#include <constants.h.cl>
 
 /// Extracts the `window_id`'th window for a given scalar.
 ///
@@ -100,6 +101,34 @@ kernel void fill_coo_matrix(
     }
 }
 
+/// Fills the `40 x w x b` row-major tensor of bucket points with
+/// the identity point.
+kernel void init_bucket_points(
+    global u32* restrict bucket_points,
+    u32 num_points
+) {
+    u32 bucket_id = get_global_id(0);
+    u32 window_id = get_global_id(1);
+    u32 num_windows = get_global_size(1);
+
+    if (bucket_id >= num_points) {
+        return;
+    }
+
+    RistrettoPoint identity = RistrettoPoint_IDENTITY;
+
+    RistrettoPoint_pack(&identity, bucket_points, bucket_id + window_id * num_points, num_windows * num_points);
+}
+
+/// Given a whole bunch of information computed from calling 
+/// `construct_bucket_data` on the host, populate `bucket_points`
+/// with the sum of each point in `points` that goes in said bucket.
+/// Do this for each window (`get_global_id(1)`).
+///
+/// # Remarks
+/// `bucket_points` is a `40 x w x b` dense tensor in row-major format,
+/// where `w` is the number of windows, `b` is the number of buckets, and
+/// the magic number 40 is the number of u32 limbs in a [`RistrettoPoint`].
 kernel void compute_bucket_points(
     global const u32* restrict points,
     global const u32* restrict scalar_ids,
@@ -109,33 +138,39 @@ kernel void compute_bucket_points(
     // lengths of bin_ids, bin_start_idx, bin_counts
     global const u32* restrict num_bins,
     global u32* restrict bucket_points,
-    u32 num_points
+    u32 num_points,
+    u32 num_buckets
 ) {
     u32 thread_id = get_global_id(0);
     u32 window_id = get_global_id(1);
     u32 num_windows = get_global_size(1);
+    u32 bin_id = bin_ids[thread_id + num_points * window_id];
 
     // If this thread extends beyond the bins or is the zero bin,
     // don't do anything.
     if (
-        thread_id >= num_bins[window_id] ||
-        bin_ids[thread_id + num_points * window_id] == 0
+        thread_id >= num_bins[window_id] || bin_id == 0
     ) {
         return;
     }
 
     u32 start = bin_start_idx[thread_id + num_points * window_id];
     u32 end = start + bin_counts[thread_id + num_points * window_id];
-    u32 first_point = bin_ids[start + num_points * window_id];
+    u32 first_point = scalar_ids[start + num_points * window_id];
 
     RistrettoPoint bucket_point = RistrettoPoint_unpack(points, first_point, num_points);
 
     for (u32 i = start + 1; i < end; i++) {
-        RistrettoPoint x = RistrettoPoint_unpack(points, first_point, num_points);
+        u32 cur_point = scalar_ids[i + num_points * window_id];
+        RistrettoPoint x = RistrettoPoint_unpack(points, cur_point, num_points * window_id);
         bucket_point = RistrettoPoint_add(&bucket_point, &x);
+
+        RistrettoPoint_pack(&x, bucket_points, bin_id + num_buckets * window_id, num_buckets * num_windows);
     }
 
-    RistrettoPoint_pack(&bucket_point, bucket_points, thread_id + num_points * window_id, num_points * num_windows);
+    //bucket_points[window_id] = bin_id + num_buckets * window_id;
+
+    //RistrettoPoint_pack(&bucket_point, bucket_points, bin_id + num_buckets * window_id, num_buckets * num_windows);
 }
 
 #if defined(TEST)

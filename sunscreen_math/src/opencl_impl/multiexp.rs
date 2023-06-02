@@ -1,12 +1,13 @@
-use curve25519_dalek::{ristretto::RistrettoPoint, scalar::Scalar};
+use curve25519_dalek::ristretto::RistrettoPoint;
 
 use crate::{
+    multiexp_num_buckets, multiexp_num_windows,
     opencl_impl::{
         radix_sort::{prefix_sum, radix_sort_1, radix_sort_2},
         rle::run_length_encoding,
         Grid, Runtime,
     },
-    GpuRistrettoPointVec, GpuScalarVec, GpuVec,
+    scalar_size_bits, GpuRistrettoPointVec, GpuScalarVec, GpuVec,
 };
 
 use super::MappedBuffer;
@@ -20,7 +21,7 @@ pub fn multiscalar_multiplication(
     todo!();
 }
 
-pub struct BinData {
+pub struct BucketData {
     scalar_ids: MappedBuffer<u32>,
     bin_ids: MappedBuffer<u32>,
     bin_counts: MappedBuffer<u32>,
@@ -28,17 +29,10 @@ pub struct BinData {
     num_bins: MappedBuffer<u32>,
 }
 
-const SCALAR_BIT_LEN: usize = 8 * std::mem::size_of::<Scalar>();
-const CONSTRUCT_BIN_DATA_NUM_THREADS: usize = 16383;
+const CONSTRUCT_BIN_DATA_NUM_THREADS: usize = 16384;
 
-fn construct_bin_data(scalars: &GpuScalarVec) -> BinData {
+fn compute_bucket_data(scalars: &GpuScalarVec, window_size_bits: usize) -> BucketData {
     let runtime = Runtime::get();
-
-    let _max_cols = if scalars.len() % CONSTRUCT_BIN_DATA_NUM_THREADS == 0 {
-        scalars.len() / CONSTRUCT_BIN_DATA_NUM_THREADS
-    } else {
-        (scalars.len() + 1) / CONSTRUCT_BIN_DATA_NUM_THREADS
-    };
 
     // In Pippenger's algorithm, we break N-bit scalar values into w windows of
     // b-bit values. For example, for 256-bit scalars and a 16-bit window size,
@@ -47,12 +41,7 @@ fn construct_bin_data(scalars: &GpuScalarVec) -> BinData {
     // to produce 2^b points. We then sum these bucket points (scaled by the
     // bucket value) to produce a point for the given window. Finally, for each
     // window id w, we sum the window points scaled by `2^(w * b)`.
-    let window_bit_len = 16usize;
-    let num_windows = if SCALAR_BIT_LEN % window_bit_len == 0 {
-        SCALAR_BIT_LEN / window_bit_len
-    } else {
-        SCALAR_BIT_LEN / window_bit_len + 1
-    };
+    let num_windows = multiexp_num_windows(window_size_bits);
 
     // Fill out COO format sparse matrices
     // (https://en.wikipedia.org/wiki/Sparse_matrix#Coordinate_list_(COO))
@@ -88,7 +77,7 @@ fn construct_bin_data(scalars: &GpuScalarVec) -> BinData {
             (&scalars.data).into(),
             (&scalar_id).into(),
             (&bin_idx).into(),
-            (window_bit_len as u32).into(),
+            (window_size_bits as u32).into(),
             (scalars.len() as u32).into(),
         ],
         &Grid::from([
@@ -114,7 +103,7 @@ fn construct_bin_data(scalars: &GpuScalarVec) -> BinData {
     let sorted_bins = radix_sort_1(
         &bin_idx,
         &scalar_id,
-        window_bit_len as u32,
+        window_size_bits as u32,
         num_windows as u32,
         scalars.len() as u32,
     );
@@ -130,12 +119,12 @@ fn construct_bin_data(scalars: &GpuScalarVec) -> BinData {
         &rle.run_lengths,
         &rle_sum,
         &rle.values,
-        window_bit_len as u32,
+        window_size_bits as u32,
         num_windows as u32,
         scalars.len() as u32,
     );
 
-    BinData {
+    BucketData {
         scalar_ids: sorted_bins.values,
         bin_ids: sorted_bin_counts.values_2,
         bin_counts: sorted_bin_counts.keys,
@@ -144,11 +133,63 @@ fn construct_bin_data(scalars: &GpuScalarVec) -> BinData {
     }
 }
 
+/// Given the bucket information we've previously computed, fill the buckets
+/// sum of the appropriate ristretto points for each window.
+fn compute_bucket_points(
+    points: &GpuRistrettoPointVec,
+    bucket_data: &BucketData,
+    window_size_bits: usize,
+) -> GpuRistrettoPointVec {
+    let runtime = Runtime::get();
+
+    let bucket_points = init_bucket_points(window_size_bits);
+
+    runtime.run_kernel(
+        "compute_bucket_points",
+        &vec![
+            (&points.data).into(),
+            (&bucket_data.scalar_ids).into(),
+            (&bucket_data.bin_ids).into(),
+            (&bucket_data.bin_counts).into(),
+            (&bucket_data.bin_start_idx).into(),
+            (&bucket_data.num_bins).into(),
+            (&bucket_points.data).into(),
+            (points.len() as u32).into(),
+            (multiexp_num_buckets(window_size_bits) as u32).into()
+        ],
+        &Grid::from([
+            (points.len(), 128),
+            (multiexp_num_windows(window_size_bits), 1),
+            (1, 1),
+        ]),
+    );
+
+    bucket_points
+}
+
+fn init_bucket_points(window_size_bits: usize) -> GpuRistrettoPointVec {
+    let num_buckets = multiexp_num_buckets(window_size_bits);
+    let num_windows = multiexp_num_windows(window_size_bits);
+
+    let bucket_points = GpuRistrettoPointVec::alloc(num_windows * num_buckets);
+
+    Runtime::get().run_kernel(
+        "init_bucket_points",
+        &vec![(&bucket_points.data).into(), (num_buckets as u32).into()],
+        &Grid::from([(num_buckets, 128), (num_windows, 1), (1, 1)]),
+    );
+
+    bucket_points
+}
+
 #[cfg(test)]
 mod tests {
+    use std::time::Instant;
+
+    use curve25519_dalek::{scalar::Scalar, traits::Identity};
     use rand::thread_rng;
 
-    use crate::ScalarVec;
+    use crate::{ristretto_bitwise_eq, test_impl, RistrettoPointVec, ScalarVec};
 
     use super::*;
 
@@ -295,7 +336,7 @@ mod tests {
 
         let a_gpu = ScalarVec::new(&a_scalar);
 
-        let bin_info = construct_bin_data(&a_gpu);
+        let bin_info = compute_bucket_data(&a_gpu, 16);
 
         let bin_counts = bin_info.bin_counts.iter().cloned().collect::<Vec<_>>();
         let bin_start_idx = bin_info.bin_start_idx.iter().cloned().collect::<Vec<_>>();
@@ -333,7 +374,9 @@ mod tests {
             .collect::<Vec<_>>();
         let a_gpu = ScalarVec::new(&a);
 
-        let bin_info = construct_bin_data(&a_gpu);
+        let window_size_bits = 7;
+
+        let bin_info = compute_bucket_data(&a_gpu, window_size_bits);
 
         let bin_counts = bin_info.bin_counts.iter().cloned().collect::<Vec<_>>();
         let bin_start_idx = bin_info.bin_start_idx.iter().cloned().collect::<Vec<_>>();
@@ -341,14 +384,9 @@ mod tests {
         let bin_ids = bin_info.bin_ids.iter().cloned().collect::<Vec<_>>();
         let num_runs = bin_info.num_bins.iter().cloned().collect::<Vec<_>>();
 
-        let window_bits = 16;
-        let num_windows = if SCALAR_BIT_LEN % window_bits == 0 {
-            SCALAR_BIT_LEN / window_bits
-        } else {
-            SCALAR_BIT_LEN / window_bits + 1
-        };
+        let expected = crate::test_impl::construct_bin_data(&a, window_size_bits);
 
-        let expected = crate::test_impl::construct_bin_data(&a, 16);
+        let num_windows = multiexp_num_windows(window_size_bits);
 
         assert_eq!(expected.len(), num_windows);
 
@@ -366,6 +404,71 @@ mod tests {
             assert_eq!(bin_counts[start..end], expected[i].bin_counts);
             assert_eq!(bin_start_idx[start..end], expected[i].bin_start_idx);
             assert_eq!(bin_ids[start..end], expected[i].bin_ids);
+        }
+    }
+
+    #[test]
+    fn can_init_buckets() {
+        for window_size_bits in 1..17 {
+            let num_buckets = multiexp_num_buckets(window_size_bits);
+            let num_windows = multiexp_num_windows(window_size_bits);
+
+            let buckets = init_bucket_points(window_size_bits);
+
+            let buckets = buckets.iter().collect::<Vec<_>>();
+
+            let identity = RistrettoPoint::identity();
+
+            for w in 0..num_windows {
+                for b in 0..num_buckets {
+                    let bucket_point = buckets[b + w * num_buckets];
+
+                    // RistrettoPoint's eq function returns true for invalid points.
+                    // So use something spicier.
+                    assert!(ristretto_bitwise_eq(identity, bucket_point));
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn can_populate_bins() {
+        let count = 1u32;
+
+        let scalars = (0..count).map(|x| Scalar::from(x + 2)).collect::<Vec<_>>();
+        let points = (0..count)
+            .map(|x| RistrettoPoint::from_uniform_bytes(&[count as u8; 64]))
+            .collect::<Vec<_>>();
+
+        let scalars_gpu = ScalarVec::new(&scalars);
+        let points_gpu = RistrettoPointVec::new(&points);
+
+        let window_size_bits = 4;
+
+        let bucket_data = compute_bucket_data(&scalars_gpu, window_size_bits);
+
+        let actual = compute_bucket_points(&points_gpu, &bucket_data, window_size_bits)
+            .iter()
+            .collect::<Vec<_>>();
+
+        let expected = crate::test_impl::compute_bucket_points(&scalars, &points, window_size_bits);
+
+        let num_buckets = multiexp_num_buckets(window_size_bits);
+
+        for (w, (actual_window_buckets, expected_window_buckets)) in
+            actual.chunks(num_buckets).zip(expected).enumerate()
+        {
+            for (b, (actual_bucket, expected_bucket)) in actual_window_buckets
+                .iter()
+                .zip(expected_window_buckets)
+                .enumerate()
+            {
+                dbg!(w);
+                dbg!(b);
+                //dbg!(actual_bucket);
+                //panic!();
+                //assert!(ristretto_bitwise_eq(*actual_bucket, expected_bucket));
+            }
         }
     }
 }

@@ -6,8 +6,7 @@ use crate::{
         radix_sort::{prefix_sum, radix_sort_1, radix_sort_2},
         rle::run_length_encoding,
         Grid, Runtime,
-    },
-    scalar_size_bits, GpuRistrettoPointVec, GpuScalarVec, GpuVec,
+    }, GpuRistrettoPointVec, GpuScalarVec, GpuVec,
 };
 
 use super::MappedBuffer;
@@ -146,8 +145,7 @@ fn compute_bucket_points(
 
     runtime.run_kernel(
         "compute_bucket_points",
-        &vec![
-            (&points.data).into(),
+        &[(&points.data).into(),
             (&bucket_data.scalar_ids).into(),
             (&bucket_data.bin_ids).into(),
             (&bucket_data.bin_counts).into(),
@@ -155,8 +153,7 @@ fn compute_bucket_points(
             (&bucket_data.num_bins).into(),
             (&bucket_points.data).into(),
             (points.len() as u32).into(),
-            (multiexp_num_buckets(window_size_bits) as u32).into(),
-        ],
+            (multiexp_num_buckets(window_size_bits) as u32).into()],
         &Grid::from([
             (points.len(), 128),
             (multiexp_num_windows(window_size_bits), 1),
@@ -175,7 +172,7 @@ fn init_bucket_points(window_size_bits: usize) -> GpuRistrettoPointVec {
 
     Runtime::get().run_kernel(
         "init_bucket_points",
-        &vec![(&bucket_points.data).into(), (num_buckets as u32).into()],
+        &[(&bucket_points.data).into(), (num_buckets as u32).into()],
         &Grid::from([(num_buckets, 128), (num_windows, 1), (1, 1)]),
     );
 
@@ -184,12 +181,12 @@ fn init_bucket_points(window_size_bits: usize) -> GpuRistrettoPointVec {
 
 #[cfg(test)]
 mod tests {
-    use std::time::Instant;
+    
 
     use curve25519_dalek::{scalar::Scalar, traits::Identity};
     use rand::thread_rng;
 
-    use crate::{ristretto_bitwise_eq, test_impl, RistrettoPointVec, ScalarVec};
+    use crate::{ristretto_bitwise_eq, RistrettoPointVec, ScalarVec};
 
     use super::*;
 
@@ -436,10 +433,10 @@ mod tests {
         let count = 4567u32;
 
         let scalars = (0..count)
-            .map(|x| Scalar::random(&mut thread_rng()))
+            .map(|_x| Scalar::random(&mut thread_rng()))
             .collect::<Vec<_>>();
         let points = (0..count)
-            .map(|x| RistrettoPoint::random(&mut thread_rng()))
+            .map(|_x| RistrettoPoint::random(&mut thread_rng()))
             .collect::<Vec<_>>();
 
         let scalars_gpu = ScalarVec::new(&scalars);

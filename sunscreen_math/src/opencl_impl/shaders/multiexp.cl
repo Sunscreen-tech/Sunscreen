@@ -162,15 +162,11 @@ kernel void compute_bucket_points(
 
     for (u32 i = start + 1; i < end; i++) {
         u32 cur_point = scalar_ids[i + num_points * window_id];
-        RistrettoPoint x = RistrettoPoint_unpack(points, cur_point, num_points * window_id);
+        RistrettoPoint x = RistrettoPoint_unpack(points, cur_point, num_points);
         bucket_point = RistrettoPoint_add(&bucket_point, &x);
-
-        RistrettoPoint_pack(&x, bucket_points, bin_id + num_buckets * window_id, num_buckets * num_windows);
     }
 
-    //bucket_points[window_id] = bin_id + num_buckets * window_id;
-
-    //RistrettoPoint_pack(&bucket_point, bucket_points, bin_id + num_buckets * window_id, num_buckets * num_windows);
+    RistrettoPoint_pack(&bucket_point, bucket_points, bin_id + num_buckets * window_id, num_buckets * num_windows);
 }
 
 #if defined(TEST)

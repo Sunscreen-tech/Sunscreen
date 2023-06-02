@@ -311,6 +311,8 @@ mod tests {
     use curve25519_dalek::scalar::Scalar;
     use rand::thread_rng;
 
+    use crate::ristretto_bitwise_eq;
+
     use super::*;
 
     #[test]

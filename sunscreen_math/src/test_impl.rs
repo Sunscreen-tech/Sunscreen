@@ -189,6 +189,7 @@ pub(crate) fn compute_bucket_points(
     let mut window_bucket_points = vec![];
 
     for window_id in 0..num_windows {
+        let mut written = vec![false; num_buckets];
         let mut bucket_points = vec![RistrettoPoint::identity(); num_buckets];
 
         for (i, s) in scalars.iter().enumerate() {
@@ -198,7 +199,12 @@ pub(crate) fn compute_bucket_points(
 
             // Don't bother computing zero windows
             if cur_window != 0 {
-                bucket_points[cur_window as usize] += points[i];
+                if !written[cur_window as usize] {
+                    bucket_points[cur_window as usize] = points[i];
+                    written[cur_window as usize] = true;
+                } else {
+                    bucket_points[cur_window as usize] += points[i];
+                }
             }
         }
 

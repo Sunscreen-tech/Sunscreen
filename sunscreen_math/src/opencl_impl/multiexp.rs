@@ -155,7 +155,7 @@ fn compute_bucket_points(
             (&bucket_data.num_bins).into(),
             (&bucket_points.data).into(),
             (points.len() as u32).into(),
-            (multiexp_num_buckets(window_size_bits) as u32).into()
+            (multiexp_num_buckets(window_size_bits) as u32).into(),
         ],
         &Grid::from([
             (points.len(), 128),
@@ -433,41 +433,37 @@ mod tests {
 
     #[test]
     fn can_populate_bins() {
-        let count = 1u32;
+        let count = 4567u32;
 
-        let scalars = (0..count).map(|x| Scalar::from(x + 2)).collect::<Vec<_>>();
+        let scalars = (0..count)
+            .map(|x| Scalar::random(&mut thread_rng()))
+            .collect::<Vec<_>>();
         let points = (0..count)
-            .map(|x| RistrettoPoint::from_uniform_bytes(&[count as u8; 64]))
+            .map(|x| RistrettoPoint::random(&mut thread_rng()))
             .collect::<Vec<_>>();
 
         let scalars_gpu = ScalarVec::new(&scalars);
         let points_gpu = RistrettoPointVec::new(&points);
 
-        let window_size_bits = 4;
+        let window_size_bits = 16;
 
         let bucket_data = compute_bucket_data(&scalars_gpu, window_size_bits);
 
-        let actual = compute_bucket_points(&points_gpu, &bucket_data, window_size_bits)
-            .iter()
-            .collect::<Vec<_>>();
+        let actual_gpu = compute_bucket_points(&points_gpu, &bucket_data, window_size_bits);
+
+        let actual = actual_gpu.iter().collect::<Vec<_>>();
 
         let expected = crate::test_impl::compute_bucket_points(&scalars, &points, window_size_bits);
 
         let num_buckets = multiexp_num_buckets(window_size_bits);
 
-        for (w, (actual_window_buckets, expected_window_buckets)) in
-            actual.chunks(num_buckets).zip(expected).enumerate()
+        for (actual_window_buckets, expected_window_buckets) in
+            actual.chunks(num_buckets).zip(expected)
         {
-            for (b, (actual_bucket, expected_bucket)) in actual_window_buckets
-                .iter()
-                .zip(expected_window_buckets)
-                .enumerate()
+            for (actual_bucket, expected_bucket) in
+                actual_window_buckets.iter().zip(expected_window_buckets)
             {
-                dbg!(w);
-                dbg!(b);
-                //dbg!(actual_bucket);
-                //panic!();
-                //assert!(ristretto_bitwise_eq(*actual_bucket, expected_bucket));
+                assert!(ristretto_bitwise_eq(*actual_bucket, expected_bucket));
             }
         }
     }

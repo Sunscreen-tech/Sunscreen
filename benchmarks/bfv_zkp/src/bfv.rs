@@ -1,6 +1,10 @@
 // TODO: Remove
 #![allow(unused)]
 
+//! STOP. DO NOT USE THIS CODE FOR PRODUCTION.
+//! Security is a non-goal for this library. In fact, this library is known
+//! to be insecure.
+
 use ark_ff::{BigInt, BigInteger, Field, Fp, FpConfig, MontBackend, MontConfig, PrimeField};
 use ark_poly::univariate::DensePolynomial;
 use sunscreen::{

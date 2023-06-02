@@ -6,7 +6,8 @@ use crate::{
         radix_sort::{prefix_sum, radix_sort_1, radix_sort_2},
         rle::run_length_encoding,
         Grid, Runtime,
-    }, GpuRistrettoPointVec, GpuScalarVec, GpuVec,
+    },
+    GpuRistrettoPointVec, GpuScalarVec, GpuVec,
 };
 
 use super::MappedBuffer;
@@ -145,7 +146,8 @@ fn compute_bucket_points(
 
     runtime.run_kernel(
         "compute_bucket_points",
-        &[(&points.data).into(),
+        &[
+            (&points.data).into(),
             (&bucket_data.scalar_ids).into(),
             (&bucket_data.bin_ids).into(),
             (&bucket_data.bin_counts).into(),
@@ -153,7 +155,8 @@ fn compute_bucket_points(
             (&bucket_data.num_bins).into(),
             (&bucket_points.data).into(),
             (points.len() as u32).into(),
-            (multiexp_num_buckets(window_size_bits) as u32).into()],
+            (multiexp_num_buckets(window_size_bits) as u32).into(),
+        ],
         &Grid::from([
             (points.len(), 128),
             (multiexp_num_windows(window_size_bits), 1),
@@ -181,7 +184,6 @@ fn init_bucket_points(window_size_bits: usize) -> GpuRistrettoPointVec {
 
 #[cfg(test)]
 mod tests {
-    
 
     use curve25519_dalek::{scalar::Scalar, traits::Identity};
     use rand::thread_rng;

@@ -311,7 +311,7 @@ mod tests {
     use curve25519_dalek::scalar::Scalar;
     use rand::thread_rng;
 
-    
+    use crate::ristretto_bitwise_eq;
 
     use super::*;
 
@@ -327,7 +327,7 @@ mod tests {
         let v = GpuRistrettoPointVec::new(&points);
 
         for (i, p) in points.into_iter().enumerate() {
-            assert_eq!(v.get(i).compress(), p.compress());
+            assert!(ristretto_bitwise_eq(v.get(i), p));
         }
     }
 
@@ -350,7 +350,7 @@ mod tests {
         };
 
         for (v, o) in v.iter().zip(o.iter()) {
-            assert_eq!(v.compress(), o.compress())
+            assert!(ristretto_bitwise_eq(v, o));
         }
     }
 
@@ -373,7 +373,7 @@ mod tests {
         let c = &a + &b;
 
         for i in 0..c.len() {
-            assert_eq!(c.get(i).compress(), (a.get(i) + b.get(i)).compress());
+            assert!(ristretto_bitwise_eq(c.get(i), a.get(i) + b.get(i)));
         }
     }
 
@@ -396,7 +396,7 @@ mod tests {
         let c = &a - &b;
 
         for i in 0..c.len() {
-            assert_eq!(c.get(i).compress(), (a.get(i) - b.get(i)).compress());
+            assert!(ristretto_bitwise_eq(c.get(i), a.get(i) - b.get(i)));
         }
     }
 
@@ -419,7 +419,7 @@ mod tests {
         let c = &a * &b;
 
         for i in 0..c.len() {
-            assert_eq!(c.get(i).compress(), (a.get(i) * b.get(i)).compress());
+            assert!(ristretto_bitwise_eq(c.get(i), a.get(i) * b.get(i)));
         }
     }
 
@@ -444,6 +444,8 @@ mod tests {
         b_gpu.data.remap();
 
         for (i, j) in a_gpu.iter().zip(b_gpu.iter()) {
+            // The points may have different representations, so don't use bitwise
+            // equality here.
             assert_eq!(i.compress(), j.compress());
         }
     }
@@ -465,7 +467,8 @@ mod tests {
         };
 
         for (p_a, p_b) in a.iter().zip(b.iter()) {
-            assert_eq!(Scalar::from(2u8) * p_a, p_b);
+            // Representations will be different, so don't use bitwise equality.
+            assert_eq!((Scalar::from(2u8) * p_a).compress(), p_b.compress());
         }
     }
 }

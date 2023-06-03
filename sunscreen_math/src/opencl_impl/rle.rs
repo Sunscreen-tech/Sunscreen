@@ -47,7 +47,7 @@ pub fn run_length_encoding(data: &MappedBuffer<u32>, rows: u32, cols: u32) -> Ru
 fn compute_backward_mask(data: &MappedBuffer<u32>, rows: u32, cols: u32) -> MappedBuffer<u32> {
     let runtime = Runtime::get();
 
-    let backward_mask = runtime.alloc::<u32>(rows as usize * cols as usize);
+    let backward_mask = unsafe { runtime.alloc::<u32>(rows as usize * cols as usize) };
 
     runtime.run_kernel(
         "rle_compute_backward_mask",
@@ -66,8 +66,8 @@ fn compact_backward_mask(
 ) -> (MappedBuffer<u32>, MappedBuffer<u32>) {
     let runtime = Runtime::get();
 
-    let compacted = runtime.alloc::<u32>(rows as usize * (cols + 1) as usize);
-    let total_runs = runtime.alloc::<u32>(rows as usize);
+    let compacted = unsafe { runtime.alloc::<u32>(rows as usize * (cols + 1) as usize) };
+    let total_runs = unsafe { runtime.alloc::<u32>(rows as usize) };
 
     runtime.run_kernel(
         "rle_compact_backward_mask",
@@ -94,8 +94,8 @@ fn compute_runs(
 ) -> (MappedBuffer<u32>, MappedBuffer<u32>) {
     let runtime = Runtime::get();
 
-    let counts_out = runtime.alloc::<u32>(cols as usize * rows as usize);
-    let vals_out = runtime.alloc::<u32>(cols as usize * rows as usize);
+    let counts_out = unsafe { runtime.alloc::<u32>(cols as usize * rows as usize) };
+    let vals_out = unsafe { runtime.alloc::<u32>(cols as usize * rows as usize) };
 
     runtime.run_kernel(
         "rle_compute_runs",
@@ -131,7 +131,7 @@ mod tests {
             .collect::<Vec<_>>();
         let data = [data.clone(), data.clone(), data].concat();
 
-        let data_gpu = Runtime::get().alloc_from_slice(&data);
+        let data_gpu = unsafe { Runtime::get().alloc_from_slice(&data) };
 
         assert_eq!(data.len(), cols as usize * rows as usize);
 
@@ -161,7 +161,7 @@ mod tests {
             .collect::<Vec<_>>();
         let data = [data.clone(), data.clone(), data].concat();
 
-        let data_gpu = Runtime::get().alloc_from_slice(&data);
+        let data_gpu = unsafe { Runtime::get().alloc_from_slice(&data) };
 
         assert_eq!(data.len(), cols as usize * rows as usize);
 
@@ -202,7 +202,7 @@ mod tests {
             .collect::<Vec<_>>();
         let data = [data.clone(), data.clone(), data].concat();
 
-        let data_gpu = Runtime::get().alloc_from_slice(&data);
+        let data_gpu = unsafe { Runtime::get().alloc_from_slice(&data) };
 
         assert_eq!(data.len(), cols as usize * rows as usize);
 
@@ -235,7 +235,7 @@ mod tests {
         let data = (0..cols).collect::<Vec<_>>();
         let data = [data.clone(), data.clone(), data].concat();
 
-        let data_gpu = Runtime::get().alloc_from_slice(&data);
+        let data_gpu = unsafe { Runtime::get().alloc_from_slice(&data) };
 
         let rle = run_length_encoding(&data_gpu, rows, cols);
 
@@ -265,7 +265,7 @@ mod tests {
         let data = (0..cols).map(|x| x as u32).collect::<Vec<_>>();
         let data = [data, vec![0; cols], vec![0; cols]].concat();
 
-        let data_gpu = Runtime::get().alloc_from_slice(&data);
+        let data_gpu = unsafe { Runtime::get().alloc_from_slice(&data) };
 
         let rle = run_length_encoding(&data_gpu, rows, cols as u32);
 

@@ -1,8 +1,10 @@
 ///! Our GPU implementation of some of the intermediate steps
 ///! of multiexp are quite complex. This module provides simple
 ///! sequential implementations to compare against.
-use curve25519_dalek::scalar::Scalar;
+use curve25519_dalek::{ristretto::RistrettoPoint, scalar::Scalar, traits::Identity};
 use rand::thread_rng;
+
+use crate::{multiexp_num_buckets, multiexp_num_windows};
 
 pub(crate) struct BinData {
     /// The scalar ids sorted by the corresponding bin id as the key.
@@ -170,6 +172,48 @@ pub(crate) fn construct_bin_data(scalars: &[Scalar], window_bits: usize) -> Vec<
     }
 
     bin_data
+}
+
+/// A simple serial implementation of bucket population for comparison
+/// in testing complex GPU implementations.
+pub(crate) fn compute_bucket_points(
+    scalars: &[Scalar],
+    points: &[RistrettoPoint],
+    window_size: usize,
+) -> Vec<Vec<RistrettoPoint>> {
+    assert_eq!(scalars.len(), points.len());
+
+    let num_buckets = multiexp_num_buckets(window_size);
+    let num_windows = multiexp_num_windows(window_size);
+
+    let mut window_bucket_points = vec![];
+
+    for window_id in 0..num_windows {
+        let mut written = vec![false; num_buckets];
+        let mut bucket_points = vec![RistrettoPoint::identity(); num_buckets];
+
+        for (i, s) in scalars.iter().enumerate() {
+            let cur_window = get_scalar_window(s, window_size as u32, window_id as u32);
+
+            assert!((cur_window as usize) < num_buckets);
+
+            // Don't bother computing zero windows
+            if cur_window != 0 {
+                if !written[cur_window as usize] {
+                    bucket_points[cur_window as usize] = points[i];
+                    written[cur_window as usize] = true;
+                } else {
+                    bucket_points[cur_window as usize] += points[i];
+                }
+            }
+        }
+
+        window_bucket_points.push(bucket_points);
+    }
+
+    assert_eq!(window_bucket_points.len(), num_windows);
+
+    window_bucket_points
 }
 
 #[test]

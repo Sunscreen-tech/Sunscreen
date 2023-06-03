@@ -74,7 +74,7 @@ impl GpuRistrettoPointVec {
         }
 
         Self {
-            data: Runtime::get().alloc_from_slice(&data),
+            data: unsafe { Runtime::get().alloc_from_slice(&data) },
             len,
         }
     }
@@ -84,7 +84,7 @@ impl GpuRistrettoPointVec {
         assert_eq!(size_of::<RistrettoPoint>(), size_of::<u32>() * 40);
 
         Self {
-            data: Runtime::get().alloc(len * size_of::<RistrettoPoint>()),
+            data: unsafe { Runtime::get().alloc(len * size_of::<RistrettoPoint>()) },
             len,
         }
     }

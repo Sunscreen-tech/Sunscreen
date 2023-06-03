@@ -54,8 +54,8 @@ fn compute_bucket_data(scalars: &GpuScalarVec, window_size_bits: usize) -> Bucke
     // For a given window, the rows correspond to GPU threads, the columns
     // correspond to window values, and the values in the matrix are indices into
     // the EC point (and scalar) arrays.
-    let scalar_id = runtime.alloc::<u32>(scalars.len() * num_windows);
-    let bin_idx = runtime.alloc::<u32>(scalars.len() * num_windows);
+    let scalar_id = unsafe { runtime.alloc::<u32>(scalars.len() * num_windows) };
+    let bin_idx = unsafe { runtime.alloc::<u32>(scalars.len() * num_windows) };
 
     // The first grid dimension corresponds to the number of threads `t`
     // among which we wish to split work for parallelism. The second grid
@@ -210,7 +210,7 @@ mod tests {
                 SCALAR_BITS / window_bits + 1
             };
 
-            let mut windows_gpu = runtime.alloc::<u32>(num_windows * a.len());
+            let mut windows_gpu = unsafe { runtime.alloc::<u32>(num_windows * a.len()) };
 
             runtime.run_kernel(
                 "test_get_scalar_windows",
@@ -265,7 +265,7 @@ mod tests {
             SCALAR_BITS / window_bits + 1
         };
 
-        let mut windows_gpu = runtime.alloc::<u32>(num_windows * a.len());
+        let mut windows_gpu = unsafe { runtime.alloc::<u32>(num_windows * a.len()) };
 
         runtime.run_kernel(
             "test_get_scalar_windows",
@@ -286,8 +286,8 @@ mod tests {
 
         const NUM_THREADS: usize = 4;
 
-        let mut coo_data = runtime.alloc(a.len() * num_windows);
-        let mut coo_col_idx = runtime.alloc(a.len() * num_windows);
+        let mut coo_data = unsafe { runtime.alloc(a.len() * num_windows) };
+        let mut coo_col_idx = unsafe { runtime.alloc(a.len() * num_windows) };
 
         runtime.run_kernel(
             "fill_coo_matrix",

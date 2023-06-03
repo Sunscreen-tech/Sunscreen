@@ -1,6 +1,10 @@
 mod scalarvec;
 use core::ops::Deref;
-use std::{ffi::CString, mem::size_of, ops::DerefMut};
+use std::{
+    ffi::CString,
+    mem::{size_of, MaybeUninit},
+    ops::DerefMut,
+};
 
 use ocl::{
     prm::cl_uint, Buffer, Context, Device, Kernel, MemMap, OclPrm, Platform, Program, Queue,
@@ -39,7 +43,7 @@ pub struct MappedBuffer<T: OclPrm> {
 
 impl<T: OclPrm> Clone for MappedBuffer<T> {
     fn clone(&self) -> Self {
-        Runtime::get().alloc_from_slice(&self.map)
+        unsafe { Runtime::get().alloc_from_slice(&self.map) }
     }
 }
 
@@ -190,7 +194,7 @@ where
 
     fn unary_gpu_kernel(&self, kernel_name: &'static str) -> MappedBuffer<u32> {
         let runtime = Runtime::get();
-        let out_buf = runtime.alloc_internal(self.u32_len());
+        let out_buf = unsafe { runtime.alloc_internal(self.u32_len()) };
 
         runtime.run_kernel(
             kernel_name,
@@ -216,7 +220,7 @@ where
         rhs: &Rhs,
     ) -> MappedBuffer<u32> {
         let runtime = Runtime::get();
-        let out_buf = runtime.alloc_internal(self.u32_len());
+        let out_buf = unsafe { runtime.alloc_internal(self.u32_len()) };
 
         runtime.run_kernel(
             kernel_name,
@@ -282,7 +286,7 @@ impl Runtime {
         self.queue.finish().unwrap();
     }
 
-    fn alloc_internal<T: OclPrm>(&self, len: usize) -> Buffer<T> {
+    unsafe fn alloc_internal<T: OclPrm>(&self, len: usize) -> Buffer<T> {
         Buffer::builder()
             .queue(self.queue.clone())
             .len(len)
@@ -290,14 +294,27 @@ impl Runtime {
             .unwrap()
     }
 
+    /// Allocate a buffer of the given `len` (in T items) on the GPU.
+    /// The values contained in the buffer is undefined.
+    ///
+    /// # Undefined behavior
+    /// T must be a type for which all bit patterns are valid, which
+    /// includes all the types that impl OclPrm (u32, f64, etc).
     #[allow(unused)]
-    fn alloc<T: OclPrm>(&self, len: usize) -> MappedBuffer<T> {
+    unsafe fn alloc<T: OclPrm>(&self, len: usize) -> MappedBuffer<T> {
         MappedBuffer::new(self.alloc_internal(len))
     }
 
-    fn alloc_from_slice<T: OclPrm>(&self, data: &[T]) -> MappedBuffer<T> {
-        let buffer = self.alloc_internal::<T>(data.len());
+    /// Allocate data on the GPU and copy the given slice to it.
+    ///
+    /// # Undefined behavior
+    /// T must be a type for which all bit patterns are valid, which
+    /// includes all the types that impl OclPrm (u32, f64, etc).
+    unsafe fn alloc_from_slice<T: OclPrm>(&self, data: &[T]) -> MappedBuffer<T> {
+        let buffer = unsafe { self.alloc_internal::<T>(data.len()) };
 
+        // We don't fill the buffer, as that takes nontrivial time and
+        // fails in some OpenCL implementations for large buffers.
         let mut map = unsafe {
             buffer
                 .map()
@@ -307,6 +324,9 @@ impl Runtime {
                 .unwrap()
         };
 
+        // If T is an OpenCL type (int, float, etc.), then it's defined for
+        // all bit patterns and this should be sound. Rust assumes the data
+        // is initialized after we perform the map operation.
         map.copy_from_slice(data);
         map.unmap().queue(&self.queue).enq().unwrap();
 
@@ -359,9 +379,9 @@ mod tests {
         let a = [1u32, 2, 3, 4];
         let b = [2u32, 3, 4, 5];
 
-        let a_gpu = runtime.alloc_from_slice(&a);
-        let b_gpu = runtime.alloc_from_slice(&b);
-        let mut c_gpu = runtime.alloc::<u32>(a.len());
+        let a_gpu = unsafe { runtime.alloc_from_slice(&a) };
+        let b_gpu = unsafe { runtime.alloc_from_slice(&b) };
+        let mut c_gpu = unsafe { runtime.alloc::<u32>(a.len()) };
 
         runtime.run_kernel(
             "basic_kernel",
@@ -386,7 +406,7 @@ mod tests {
 
     #[test]
     fn can_clone_buffer() {
-        let a = Runtime::get().alloc_from_slice(&[1, 2, 3, 4]);
+        let a = unsafe { Runtime::get().alloc_from_slice(&[1, 2, 3, 4]) };
         let b = a.clone();
 
         for (a, b) in a.iter().zip(b.iter()) {
@@ -402,8 +422,8 @@ mod tests {
 
         let runtime = Runtime::get();
 
-        let a = runtime.alloc_from_slice(&a);
-        let mut b = runtime.alloc::<u32>(a.len());
+        let a = unsafe { runtime.alloc_from_slice(&a) };
+        let mut b = unsafe { runtime.alloc::<u32>(a.len()) };
 
         runtime.run_kernel(
             "test_can_pack_unpack_field2625",
@@ -430,8 +450,8 @@ mod tests {
 
         let runtime = Runtime::get();
 
-        let a = runtime.alloc_from_slice(&a);
-        let b = runtime.alloc_internal::<u32>(a_len);
+        let a = unsafe { runtime.alloc_from_slice(&a) };
+        let b = unsafe { runtime.alloc_internal::<u32>(a_len) };
 
         runtime.run_kernel(
             "test_can_pack_unpack_ristretto",

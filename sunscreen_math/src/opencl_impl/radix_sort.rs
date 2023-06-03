@@ -29,7 +29,7 @@ fn create_histograms(
 
     let num_threads = num_blocks * THREADS_PER_GROUP;
 
-    let histograms = runtime.alloc(rows as usize * RADIX * num_blocks);
+    let histograms = unsafe { runtime.alloc(rows as usize * RADIX * num_blocks) };
 
     runtime.run_kernel(
         "create_histograms",
@@ -70,7 +70,7 @@ fn prefix_sum_blocks(
 
     let runtime = Runtime::get();
 
-    let prefix_sums = runtime.alloc(rows as usize * cols as usize);
+    let prefix_sums = unsafe { runtime.alloc(rows as usize * cols as usize) };
 
     let num_blocks = if cols as usize % THREADS_PER_GROUP == 0 {
         cols as usize / THREADS_PER_GROUP
@@ -78,7 +78,7 @@ fn prefix_sum_blocks(
         cols as usize / THREADS_PER_GROUP + 1
     };
 
-    let block_totals = runtime.alloc(rows as usize * num_blocks);
+    let block_totals = unsafe { runtime.alloc(rows as usize * num_blocks) };
 
     runtime.run_kernel(
         "prefix_sum_blocks",
@@ -343,7 +343,7 @@ mod tests {
 
         let runtime = Runtime::get();
 
-        let matrix_gpu = runtime.alloc_from_slice(&matrix);
+        let matrix_gpu = unsafe { runtime.alloc_from_slice(&matrix) };
 
         let (mut histograms, elems) = create_histograms(&matrix_gpu, 3, cols, 1);
 
@@ -399,7 +399,7 @@ mod tests {
 
         let runtime = Runtime::get();
 
-        let data_gpu = runtime.alloc_from_slice(&data);
+        let data_gpu = unsafe { runtime.alloc_from_slice(&data) };
 
         let (mut prefix_sums, mut block_totals, actual_num_blocks) =
             prefix_sum_blocks(&data_gpu, 3, cols);
@@ -467,7 +467,7 @@ mod tests {
 
         let runtime = Runtime::get();
 
-        let data_gpu = runtime.alloc_from_slice(&data);
+        let data_gpu = unsafe { runtime.alloc_from_slice(&data) };
 
         let mut actual = prefix_sum(&data_gpu, rows, cols);
 
@@ -522,8 +522,8 @@ mod tests {
 
         let runtime = Runtime::get();
 
-        let data_gpu = runtime.alloc_from_slice(&keys);
-        let vals_1_gpu = runtime.alloc_from_slice(&vals_1);
+        let data_gpu = unsafe { runtime.alloc_from_slice(&keys) };
+        let vals_1_gpu = unsafe { runtime.alloc_from_slice(&vals_1) };
 
         let mut sorted = radix_sort_1(&data_gpu, &vals_1_gpu, 24, rows, cols);
 

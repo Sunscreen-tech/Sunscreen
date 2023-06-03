@@ -45,7 +45,7 @@ impl GpuScalarVec {
         }
 
         Self {
-            data: Runtime::get().alloc_from_slice(&data),
+            data: unsafe { Runtime::get().alloc_from_slice(&data) },
             len,
         }
     }

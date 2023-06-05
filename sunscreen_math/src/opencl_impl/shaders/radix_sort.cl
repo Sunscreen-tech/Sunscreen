@@ -9,6 +9,15 @@
 /// # Remarks
 /// The local work size must be 128x1
 
+#undef RADIX_BITS
+#undef RADIX
+#undef RADIX_MASK
+#undef LOG_THREADS_PER_GROUP
+#undef THREADS_PER_GROUP
+#undef LOG_WORDS_PER_THREAD
+#undef WORDS_PER_THREAD
+#undef BLOCK_SIZE
+
 #define RADIX_BITS 4
 #define RADIX 16
 #define RADIX_MASK 0xF
@@ -16,7 +25,7 @@
 #define THREADS_PER_GROUP (0x1 << LOG_THREADS_PER_GROUP)
 #define LOG_WORDS_PER_THREAD 0
 #define WORDS_PER_THREAD (0x1 << LOG_WORDS_PER_THREAD)
-#define BLOCK_SIZE THREADS_PER_GROUP * WORDS_PER_THREAD
+#define BLOCK_SIZE (THREADS_PER_GROUP * WORDS_PER_THREAD)
 
 /// Performs a prefix sum on local memory. The length of this buffer
 /// must be a power of 2. Each thread will return the sum of all
@@ -282,7 +291,6 @@ kernel void radix_sort_emplace_val_1(
             u32 idx = global_digit_idx[digit] + local_digit_idx[digit][(i + 1) % BLOCK_SIZE] - 1;
 
             keys_out[idx + row_tid * cols] = val;
-            //keys_out[col_index + row_tid * cols] = idx;
             vals_1_out[idx + row_tid * cols] = vals_1[col_index + cols * row_tid];
         }
     }
@@ -351,7 +359,7 @@ kernel void radix_sort_emplace_val_2(
 
     // Perform prefix sums on the local offsets and place the total at index
     // zero. This effectively means the bin offset is at index (bin + 1) % RADIX.
-    //#pragma unroll
+    #pragma unroll
     for (u32 digit = 0; digit < RADIX; digit++) {
         u32 sum = local_prefix_sum(local_digit_idx[digit], LOG_THREADS_PER_GROUP + LOG_WORDS_PER_THREAD);
 

@@ -1,5 +1,6 @@
 use std::borrow::Cow;
 
+use curve25519_dalek::ristretto::RistrettoPoint;
 use ocl::OclPrm;
 
 use super::{Grid, MappedBuffer, Runtime};
@@ -72,7 +73,7 @@ fn prefix_sum_blocks<T: PrefixSum>(
 
     let runtime = Runtime::get();
 
-    let prefix_sums = unsafe { runtime.alloc(rows as usize * cols as usize) };
+    let prefix_sums = unsafe { runtime.alloc(rows as usize * cols as usize * T::LEN_IN_U32) };
 
     let num_blocks = if cols as usize % THREADS_PER_GROUP == 0 {
         cols as usize / THREADS_PER_GROUP
@@ -80,7 +81,7 @@ fn prefix_sum_blocks<T: PrefixSum>(
         cols as usize / THREADS_PER_GROUP + 1
     };
 
-    let block_totals = unsafe { runtime.alloc(rows as usize * num_blocks) };
+    let block_totals = unsafe { runtime.alloc(rows as usize * num_blocks * T::LEN_IN_U32) };
 
     runtime.run_kernel(
         T::PREFIX_SUM_BLOCKS_KERNEL,
@@ -103,11 +104,19 @@ fn prefix_sum_blocks<T: PrefixSum>(
 pub trait PrefixSum {
     const PREFIX_SUM_BLOCKS_KERNEL: &'static str;
     const OFFSET_BLOCKS_KERNEL: &'static str;
+    const LEN_IN_U32: usize;
 }
 
 impl PrefixSum for u32 {
     const PREFIX_SUM_BLOCKS_KERNEL: &'static str = "prefix_sum_blocks_u32";
-    const OFFSET_BLOCKS_KERNEL: &'static str = "offset_blocks_u32";   
+    const OFFSET_BLOCKS_KERNEL: &'static str = "offset_blocks_u32";
+    const LEN_IN_U32: usize = 1;
+}
+
+impl PrefixSum for RistrettoPoint {
+    const PREFIX_SUM_BLOCKS_KERNEL: &'static str = "prefix_sum_blocks_ristretto";
+    const OFFSET_BLOCKS_KERNEL: &'static str = "offset_blocks_ristretto";
+    const LEN_IN_U32: usize = std::mem::size_of::<RistrettoPoint>() / std::mem::size_of::<u32>();
 }
 
 /**

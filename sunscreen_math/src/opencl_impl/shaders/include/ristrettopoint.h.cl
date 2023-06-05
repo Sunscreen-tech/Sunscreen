@@ -35,7 +35,9 @@ typedef struct {
 } LookupTable8;
 
 RistrettoPoint RistrettoPoint_unpack(const global u32* ptr, const size_t grid_tid, const size_t n);
+RistrettoPoint RistrettoPoint_unpack_local(const local u32* ptr, const size_t grid_tid, const size_t n);
 void RistrettoPoint_pack(const RistrettoPoint* this, global u32* ptr, size_t grid_tid, size_t n);
+void RistrettoPoint_pack_local(const RistrettoPoint* this, local u32* ptr, size_t grid_tid, size_t n);
 ProjectiveNielsPoint RistrettoPoint_as_projective_niels(const RistrettoPoint* this);
 ProjectivePoint RistrettoPoint_as_projective(const RistrettoPoint* this);
 RistrettoPoint RistrettoPoint_add(const RistrettoPoint* lhs, const RistrettoPoint* rhs);

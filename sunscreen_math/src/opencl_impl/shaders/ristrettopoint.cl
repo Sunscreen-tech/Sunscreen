@@ -43,11 +43,30 @@ RistrettoPoint RistrettoPoint_unpack(const global u32* ptr, const size_t grid_ti
     return res;
 }
 
+
+RistrettoPoint RistrettoPoint_unpack_local(const local u32* ptr, const size_t grid_tid, const size_t n) {
+    FieldElement2625 x = FieldElement2625_unpack_local(&ptr[00 * n], grid_tid, n);
+    FieldElement2625 y = FieldElement2625_unpack_local(&ptr[10 * n], grid_tid, n);
+    FieldElement2625 z = FieldElement2625_unpack_local(&ptr[20 * n], grid_tid, n);
+    FieldElement2625 t = FieldElement2625_unpack_local(&ptr[30 * n], grid_tid, n);
+
+    RistrettoPoint res = { x, y, z, t };
+
+    return res;
+}
+
 void RistrettoPoint_pack(const RistrettoPoint* this, global u32* ptr, size_t grid_tid, size_t n) {
     FieldElement2625_pack(&this->X, &ptr[00 * n], grid_tid, n);
     FieldElement2625_pack(&this->Y, &ptr[10 * n], grid_tid, n);
     FieldElement2625_pack(&this->Z, &ptr[20 * n], grid_tid, n);
     FieldElement2625_pack(&this->T, &ptr[30 * n], grid_tid, n);
+}
+
+void RistrettoPoint_pack_local(const RistrettoPoint* this, local u32* ptr, size_t grid_tid, size_t n) {
+    FieldElement2625_pack_local(&this->X, &ptr[00 * n], grid_tid, n);
+    FieldElement2625_pack_local(&this->Y, &ptr[10 * n], grid_tid, n);
+    FieldElement2625_pack_local(&this->Z, &ptr[20 * n], grid_tid, n);
+    FieldElement2625_pack_local(&this->T, &ptr[30 * n], grid_tid, n);
 }
 
 ProjectiveNielsPoint RistrettoPoint_as_projective_niels(const RistrettoPoint* this) {

@@ -1,5 +1,7 @@
 use std::borrow::Cow;
 
+use ocl::OclPrm;
+
 use super::{Grid, MappedBuffer, Runtime};
 
 // must equal THREADS_PER_GROUP in `radix_sort.cl`!
@@ -61,7 +63,7 @@ fn create_histograms(
  * * The length of `values` must equal `rows * cols`.
  * * The number of rows and columns must be non-zero.
  */
-fn prefix_sum_blocks(
+fn prefix_sum_blocks<T: PrefixSum>(
     values: &MappedBuffer<u32>,
     rows: u32,
     cols: u32,
@@ -81,7 +83,7 @@ fn prefix_sum_blocks(
     let block_totals = unsafe { runtime.alloc(rows as usize * num_blocks) };
 
     runtime.run_kernel(
-        "prefix_sum_blocks",
+        T::PREFIX_SUM_BLOCKS_KERNEL,
         &[
             values.into(),
             (&prefix_sums).into(),
@@ -98,6 +100,16 @@ fn prefix_sum_blocks(
     (prefix_sums, block_totals, num_blocks as u32)
 }
 
+pub trait PrefixSum {
+    const PREFIX_SUM_BLOCKS_KERNEL: &'static str;
+    const OFFSET_BLOCKS_KERNEL: &'static str;
+}
+
+impl PrefixSum for u32 {
+    const PREFIX_SUM_BLOCKS_KERNEL: &'static str = "prefix_sum_blocks_u32";
+    const OFFSET_BLOCKS_KERNEL: &'static str = "offset_blocks_u32";   
+}
+
 /**
  * `values` is a `rows x cols` row-major matrix of u32 values. This function computes
  * and returns a prefix sum matrix `P`, where each row in `P` is the prefix sum of
@@ -107,15 +119,15 @@ fn prefix_sum_blocks(
  * * The length of the values matrix must equal rows * cols.
  * * The number of rows and columns must be non-zero.
  */
-pub fn prefix_sum(values: &MappedBuffer<u32>, rows: u32, cols: u32) -> MappedBuffer<u32> {
+pub fn prefix_sum<T: PrefixSum>(values: &MappedBuffer<u32>, rows: u32, cols: u32) -> MappedBuffer<u32> {
     assert_eq!(values.len(), rows as usize * cols as usize);
     assert!(rows > 0);
     assert!(cols > 0);
 
-    let (prefix_sums, totals, num_blocks) = prefix_sum_blocks(values, rows, cols);
+    let (prefix_sums, totals, num_blocks) = prefix_sum_blocks::<T>(values, rows, cols);
 
-    fn reduce_totals(totals: &MappedBuffer<u32>, rows: u32, cols: u32) -> Cow<MappedBuffer<u32>> {
-        let (sums, totals, num_blocks) = prefix_sum_blocks(totals, rows, cols);
+    fn reduce_totals<T: PrefixSum>(totals: &MappedBuffer<u32>, rows: u32, cols: u32) -> Cow<MappedBuffer<u32>> {
+        let (sums, totals, num_blocks) = prefix_sum_blocks::<T>(totals, rows, cols);
 
         if num_blocks == 1 {
             return Cow::Owned(sums);
@@ -123,9 +135,9 @@ pub fn prefix_sum(values: &MappedBuffer<u32>, rows: u32, cols: u32) -> MappedBuf
             // This recursion isn't a concern for stack overflow since each recursion
             // divides the work by 128. A mere 6 recursion levels means the inputs would
             // consume over 4TB of memory, which is not plausible.
-            let reduced_totals = reduce_totals(&totals, rows, num_blocks);
+            let reduced_totals = reduce_totals::<T>(&totals, rows, num_blocks);
 
-            offset_blocks(&sums, &reduced_totals, rows, cols);
+            offset_blocks::<T>(&sums, &reduced_totals, rows, cols);
 
             return Cow::Owned(sums);
         }
@@ -138,17 +150,17 @@ pub fn prefix_sum(values: &MappedBuffer<u32>, rows: u32, cols: u32) -> MappedBuf
     // If there is more than one block, reduce the totals into a prefix sum so we can offset
     // each block as appropriate.
     let totals = if num_blocks > 1 {
-        reduce_totals(&totals, rows, num_blocks)
+        reduce_totals::<T>(&totals, rows, num_blocks)
     } else {
         Cow::Owned(totals)
     };
 
-    offset_blocks(&prefix_sums, &totals, rows, cols);
+    offset_blocks::<T>(&prefix_sums, &totals, rows, cols);
 
     prefix_sums
 }
 
-fn offset_blocks(
+fn offset_blocks<T: PrefixSum>(
     blocks: &MappedBuffer<u32>, // Gets mutated!
     offsets: &MappedBuffer<u32>,
     rows: u32,
@@ -157,7 +169,7 @@ fn offset_blocks(
     let runtime = Runtime::get();
 
     runtime.run_kernel(
-        "offset_block",
+        T::OFFSET_BLOCKS_KERNEL,
         &[blocks.into(), offsets.into(), cols.into()],
         &Grid::from([
             (cols as usize, THREADS_PER_GROUP),
@@ -219,7 +231,7 @@ pub fn radix_sort_1(
     for cur_digit in 0..num_digits {
         let (hist, num_blocks) = create_histograms(&keys_clone[cur], rows, cols, cur_digit);
 
-        let bin_locations = prefix_sum(&hist, rows, num_blocks);
+        let bin_locations = prefix_sum::<u32>(&hist, rows, num_blocks);
 
         runtime.run_kernel(
             "radix_sort_emplace_val_1",
@@ -300,7 +312,7 @@ pub fn radix_sort_2(
     for cur_digit in 0..num_digits {
         let (hist, num_blocks) = create_histograms(&keys_clone[cur], rows, cols, cur_digit);
 
-        let bin_locations = prefix_sum(&hist, rows, num_blocks);
+        let bin_locations = prefix_sum::<u32>(&hist, rows, num_blocks);
 
         runtime.run_kernel(
             "radix_sort_emplace_val_2",
@@ -402,7 +414,7 @@ mod tests {
         let data_gpu = unsafe { runtime.alloc_from_slice(&data) };
 
         let (mut prefix_sums, mut block_totals, actual_num_blocks) =
-            prefix_sum_blocks(&data_gpu, 3, cols);
+            prefix_sum_blocks::<u32>(&data_gpu, 3, cols);
 
         prefix_sums.remap();
         block_totals.remap();
@@ -469,7 +481,7 @@ mod tests {
 
         let data_gpu = unsafe { runtime.alloc_from_slice(&data) };
 
-        let mut actual = prefix_sum(&data_gpu, rows, cols);
+        let mut actual = prefix_sum::<u32>(&data_gpu, rows, cols);
 
         let mut expected = Vec::with_capacity(cols as usize);
 

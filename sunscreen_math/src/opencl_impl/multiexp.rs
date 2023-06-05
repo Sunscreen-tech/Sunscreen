@@ -113,7 +113,7 @@ fn compute_bucket_data(scalars: &GpuScalarVec, window_size_bits: usize) -> Bucke
     // so warps have minimal branch divergence.
     let rle = run_length_encoding(&sorted_bins.keys, num_windows as u32, scalars.len() as u32);
 
-    let rle_sum = prefix_sum(&rle.run_lengths, num_windows as u32, scalars.len() as u32);
+    let rle_sum = prefix_sum::<u32>(&rle.run_lengths, num_windows as u32, scalars.len() as u32);
 
     let sorted_bin_counts = radix_sort_2(
         &rle.run_lengths,

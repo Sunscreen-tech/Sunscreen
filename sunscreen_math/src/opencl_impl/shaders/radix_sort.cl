@@ -142,7 +142,7 @@ kernel void create_histograms(
 /// for core implementation.
 /// However, this algorithm has been extended to work on multiple rows
 /// in a matrix in parallel.
-kernel void prefix_sum_blocks(
+kernel void prefix_sum_blocks_u32(
     const global u32* restrict values,
     global u32* restrict block_prefix_sums,
     global u32* restrict block_totals,
@@ -183,7 +183,7 @@ kernel void prefix_sum_blocks(
     }
 }
 
-kernel void offset_block(
+kernel void offset_blocks_u32(
     global u32* restrict blocks,
     global const u32* restrict block_offsets,
     u32 cols

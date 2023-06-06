@@ -85,7 +85,7 @@ RistrettoPoint local_prefix_sum_ristretto(
 #undef LOCAL_LEN
 #undef LOCAL_WORDS
 
-#define LOG_THREADS_PER_GROUP 7
+#define LOG_THREADS_PER_GROUP 6
 #define THREADS_PER_GROUP (0x1 << LOG_THREADS_PER_GROUP)
 #define LOCAL_LEN (2 * THREADS_PER_GROUP)
 #define LOCAL_WORDS (LOCAL_LEN * WORDS_PER_RISTRETTO_POINT)
@@ -103,7 +103,6 @@ kernel void prefix_sum_blocks_ristretto(
 
     // TODO: Prevent bank conflicts
     local u32 values_local[LOCAL_WORDS];
-#if 0
 
     if (global_id < len) {
         RistrettoPoint val = RistrettoPoint_unpack(
@@ -126,9 +125,6 @@ kernel void prefix_sum_blocks_ristretto(
         LOG_THREADS_PER_GROUP
     );
 
-    RistrettoPoint sum = RistrettoPoint_IDENTITY;
-
-
     // TIL, multiple GPU threads writing to the same memory address is 
     // a bad idea, *even when they're writing the same value*. In particular,
     // doing this on M1 GPUs results in undefined behavior.
@@ -144,7 +140,7 @@ kernel void prefix_sum_blocks_ristretto(
             block_totals_len
         );
     }
-#endif
+
     if (global_id < len) {
         RistrettoPoint val = RistrettoPoint_unpack_local(
             values_local, 

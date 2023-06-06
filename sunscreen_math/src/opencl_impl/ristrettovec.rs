@@ -26,7 +26,7 @@ pub struct GpuRistrettoPointVec {
     pub(crate) data: MappedBuffer<u32>,
 
     /// The length of the vector, in points (not bytes).
-    len: usize,
+    pub(crate) len: usize,
 }
 
 impl GpuRistrettoPointVec {

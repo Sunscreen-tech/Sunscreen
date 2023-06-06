@@ -75,10 +75,10 @@ fn prefix_sum_blocks<T: PrefixSum>(
 
     let prefix_sums = unsafe { runtime.alloc(rows as usize * cols as usize * T::LEN_IN_U32) };
 
-    let num_blocks = if cols as usize % THREADS_PER_GROUP == 0 {
-        cols as usize / THREADS_PER_GROUP
+    let num_blocks = if cols as usize % T::LOCAL_THREADS == 0 {
+        cols as usize / T::LOCAL_THREADS
     } else {
-        cols as usize / THREADS_PER_GROUP + 1
+        cols as usize / T::LOCAL_THREADS + 1
     };
 
     let block_totals = unsafe { runtime.alloc(rows as usize * num_blocks * T::LEN_IN_U32) };
@@ -92,7 +92,7 @@ fn prefix_sum_blocks<T: PrefixSum>(
             cols.into(),
         ],
         &Grid::from([
-            (cols as usize, THREADS_PER_GROUP),
+            (cols as usize, T::LOCAL_THREADS),
             (rows as usize, 1),
             (1, 1),
         ]),
@@ -105,18 +105,21 @@ pub trait PrefixSum {
     const PREFIX_SUM_BLOCKS_KERNEL: &'static str;
     const OFFSET_BLOCKS_KERNEL: &'static str;
     const LEN_IN_U32: usize;
+    const LOCAL_THREADS: usize;
 }
 
 impl PrefixSum for u32 {
     const PREFIX_SUM_BLOCKS_KERNEL: &'static str = "prefix_sum_blocks_u32";
     const OFFSET_BLOCKS_KERNEL: &'static str = "offset_blocks_u32";
     const LEN_IN_U32: usize = 1;
+    const LOCAL_THREADS: usize = 128;
 }
 
 impl PrefixSum for RistrettoPoint {
     const PREFIX_SUM_BLOCKS_KERNEL: &'static str = "prefix_sum_blocks_ristretto";
     const OFFSET_BLOCKS_KERNEL: &'static str = "offset_blocks_ristretto";
     const LEN_IN_U32: usize = std::mem::size_of::<RistrettoPoint>() / std::mem::size_of::<u32>();
+    const LOCAL_THREADS: usize = 64;
 }
 
 /**
@@ -351,7 +354,9 @@ pub fn radix_sort_2(
 
 #[cfg(test)]
 mod tests {
-    use crate::{RistrettoPointVec, GpuRistrettoPointVec};
+    use curve25519_dalek::traits::Identity;
+
+    use crate::{RistrettoPointVec, GpuRistrettoPointVec, GpuVec};
 
     use super::*;
 
@@ -516,8 +521,6 @@ mod tests {
 
     #[test]
     fn can_prefix_sum_ristretto() {
-        use sha2::Sha512;
-
         let cols = 1024u32 * 65 + 1;
         let rows = 3;
 
@@ -532,8 +535,37 @@ mod tests {
 
         let sum = prefix_sum::<RistrettoPoint>(&points.data, rows, cols);
 
+        let actual = GpuRistrettoPointVec {
+            data: sum,
+            len: points.len()
+        };
 
+        let actual = actual.iter().collect::<Vec<_>>();
 
+        let mut expected = data.clone();
+
+        for row in 0..rows {
+            let start = row as usize * cols as usize;
+            let end = start + cols as usize;
+
+            let expected_slice = &mut expected[start..end];
+            let actual_slice = &actual[start..end];
+
+            let mut t;
+            let mut sum = RistrettoPoint::identity();
+
+            for i in 0..expected_slice.len() - 1 {
+                t = expected_slice[i];
+                expected_slice[i] = sum;
+                sum += t;
+            }
+
+            for i in 0..expected_slice.len() {
+                assert_eq!(expected_slice[i], actual_slice[i]);
+            }
+        }
+
+        
     }
 
     #[test]

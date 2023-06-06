@@ -7,7 +7,8 @@ use std::{
 };
 
 use ocl::{
-    prm::cl_uint, Buffer, Context, Device, Kernel, MemMap, OclPrm, Platform, Program, Queue, enums::ProgramInfo,
+    enums::ProgramInfo, prm::cl_uint, Buffer, Context, Device, Kernel, MemMap, OclPrm, Platform,
+    Program, Queue,
 };
 pub use scalarvec::GpuScalarVec;
 mod ristrettovec;

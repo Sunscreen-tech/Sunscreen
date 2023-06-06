@@ -325,7 +325,6 @@ fn validate_command_output(output: Output, panic_msg: &str) {
     println!("===stdout===");
     println!("{}", String::from_utf8_lossy(&output.stdout));
     if !output.status.success() {
-
         panic!("{}", panic_msg);
     }
 }

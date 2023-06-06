@@ -122,7 +122,7 @@ kernel void prefix_sum_blocks_ristretto(
 
     RistrettoPoint sum = local_prefix_sum_ristretto(
         values_local,
-        LOG_THREADS_PER_GROUP
+        LOG_THREADS_PER_GROUP + 1
     );
 
     // TIL, multiple GPU threads writing to the same memory address is 

@@ -356,9 +356,10 @@ mod tests {
 
     #[test]
     fn can_pack_and_unpack_local() {
-        let points = vec![
-            || RistrettoPoint::random(&mut thread_rng()); 128
-        ].iter().map(|x| x()).collect::<Vec<_>>();
+        let points = vec![|| RistrettoPoint::random(&mut thread_rng()); 128]
+            .iter()
+            .map(|x| x())
+            .collect::<Vec<_>>();
 
         let v = GpuRistrettoPointVec::new(&points);
 
@@ -373,7 +374,6 @@ mod tests {
             assert!(ristretto_bitwise_eq(v, o));
         }
     }
-
 
     #[test]
     fn can_add_ristretto_points() {

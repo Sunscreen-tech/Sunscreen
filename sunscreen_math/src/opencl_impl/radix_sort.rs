@@ -131,14 +131,22 @@ impl PrefixSum for RistrettoPoint {
  * * The length of the values matrix must equal rows * cols.
  * * The number of rows and columns must be non-zero.
  */
-pub fn prefix_sum<T: PrefixSum>(values: &MappedBuffer<u32>, rows: u32, cols: u32) -> MappedBuffer<u32> {
+pub fn prefix_sum<T: PrefixSum>(
+    values: &MappedBuffer<u32>,
+    rows: u32,
+    cols: u32,
+) -> MappedBuffer<u32> {
     assert_eq!(values.len(), rows as usize * cols as usize * T::LEN_IN_U32);
     assert!(rows > 0);
     assert!(cols > 0);
 
     let (prefix_sums, totals, num_blocks) = prefix_sum_blocks::<T>(values, rows, cols);
 
-    fn reduce_totals<T: PrefixSum>(totals: &MappedBuffer<u32>, rows: u32, cols: u32) -> Cow<MappedBuffer<u32>> {
+    fn reduce_totals<T: PrefixSum>(
+        totals: &MappedBuffer<u32>,
+        rows: u32,
+        cols: u32,
+    ) -> Cow<MappedBuffer<u32>> {
         let (sums, totals, num_blocks) = prefix_sum_blocks::<T>(totals, rows, cols);
 
         if num_blocks == 1 {
@@ -356,9 +364,12 @@ pub fn radix_sort_2(
 mod tests {
     use curve25519_dalek::traits::Identity;
 
-    use crate::{RistrettoPointVec, GpuRistrettoPointVec, GpuVec};
+    use crate::{GpuRistrettoPointVec, GpuVec, RistrettoPointVec};
 
     use super::*;
+
+    const WORDS_PER_POINT: usize =
+        std::mem::size_of::<RistrettoPoint>() / std::mem::size_of::<u32>();
 
     #[test]
     fn can_create_histograms() {
@@ -419,7 +430,7 @@ mod tests {
     }
 
     #[test]
-    fn can_prefix_sum_blocks() {
+    fn can_prefix_sum_blocks_u32() {
         let cols = 4567u32;
 
         let data = (0..cols).map(|x| cols - x).collect::<Vec<_>>();
@@ -485,6 +496,99 @@ mod tests {
     }
 
     #[test]
+    fn can_prefix_sum_blocks_ristretto() {
+        let cols = 128u32;
+        let rows = 1;
+
+        let data = (0..cols)
+            .map(|x| RistrettoPoint::identity())
+            .collect::<Vec<_>>();
+
+        //let data = [data.clone(), data.clone(), data].concat();
+
+        let runtime = Runtime::get();
+
+        let data_gpu = RistrettoPointVec::new(&data);
+
+        let (mut prefix_sums, mut block_totals, actual_num_blocks) =
+            prefix_sum_blocks::<RistrettoPoint>(&data_gpu.data, rows, cols);
+
+        prefix_sums.remap();
+        block_totals.remap();
+
+        let expected_num_blocks = if cols as usize % RistrettoPoint::LOCAL_THREADS == 0 {
+            cols as usize / RistrettoPoint::LOCAL_THREADS
+        } else {
+            cols as usize / RistrettoPoint::LOCAL_THREADS + 1
+        };
+
+        assert_eq!(prefix_sums.len() % WORDS_PER_POINT, 0);
+        assert_eq!(block_totals.len() % WORDS_PER_POINT, 0);
+        assert_eq!(prefix_sums.len() / WORDS_PER_POINT, data_gpu.len());
+        assert_eq!(
+            block_totals.len() / WORDS_PER_POINT,
+            expected_num_blocks
+        );
+
+        let prefix_sums = RistrettoPointVec {
+            data: prefix_sums,
+            len: cols as usize,
+        }
+        .iter()
+        .collect::<Vec<_>>();
+
+        let block_totals = RistrettoPointVec {
+            data: block_totals,
+            len: expected_num_blocks,
+        }
+        .iter()
+        .collect::<Vec<_>>();
+
+        assert_eq!(expected_num_blocks as u32, actual_num_blocks);
+
+        for row in 0..rows {
+            let row_start = (row * cols) as usize;
+            let row_end = row_start + cols as usize;
+
+            let sums_row = &prefix_sums[row_start..row_end];
+            let data_row = &data[row_start..row_end];
+
+            assert_eq!(sums_row.len(), data_row.len());
+
+            for (c_id, (res_chunk, data_chunk)) in sums_row
+                .chunks(THREADS_PER_GROUP)
+                .zip(data_row.chunks(THREADS_PER_GROUP))
+                .enumerate()
+            {
+                // Check that the block totals match
+                let expected_sum = data_chunk
+                    .iter()
+                    .fold(RistrettoPoint::identity(), |s, x| s + x);
+
+                let actual = block_totals[row as usize * expected_num_blocks + c_id];
+
+                assert_eq!(actual, expected_sum);
+
+                // Serially compute the chunk's prefix sum and check that the
+                // prefix sum matches.
+                let mut data_chunk = data_chunk.to_owned();
+                let mut sum = RistrettoPoint::identity();
+
+                for i in data_chunk.iter_mut() {
+                    let val = *i;
+                    *i = sum;
+
+                    sum += val;
+                }
+
+                for (a, e) in data_chunk.iter().zip(res_chunk.iter()) {
+                    assert_eq!(a.compress(), e.compress());
+                }
+            }
+        }
+    }
+
+    #[test]
     fn can_prefix_sum_u32() {
         // This specific value results in 2 recursion levels to reduce the block totals.
         let cols = 1024u32 * 1024 * 32 + 1;
@@ -521,14 +625,20 @@ mod tests {
 
     #[test]
     fn can_prefix_sum_ristretto() {
-        let cols = 1024u32 * 65 + 1;
+        let cols = 1u32;
         let rows = 3;
 
-        let data = (0..cols).map(|x| {
-            let bytes = [x.to_le_bytes().iter().cloned().collect::<Vec<_>>(), vec![0; 60]].concat();
+        let data = (0..cols)
+            .map(|x| {
+                let bytes = [
+                    x.to_le_bytes().iter().cloned().collect::<Vec<_>>(),
+                    vec![0; 60],
+                ]
+                .concat();
 
-            RistrettoPoint::from_uniform_bytes(&bytes.try_into().unwrap())
-        }).collect::<Vec<_>>();
+                RistrettoPoint::from_uniform_bytes(&bytes.try_into().unwrap())
+            })
+            .collect::<Vec<_>>();
         let data = [data.clone(), data.clone(), data].concat();
 
         let points = GpuRistrettoPointVec::new(&data);
@@ -537,7 +647,7 @@ mod tests {
 
         let actual = GpuRistrettoPointVec {
             data: sum,
-            len: points.len()
+            len: points.len(),
         };
 
         let actual = actual.iter().collect::<Vec<_>>();
@@ -564,8 +674,6 @@ mod tests {
                 assert_eq!(expected_slice[i], actual_slice[i]);
             }
         }
-
-        
     }
 
     #[test]

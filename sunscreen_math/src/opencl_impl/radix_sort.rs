@@ -69,7 +69,7 @@ fn prefix_sum_blocks<T: PrefixSum>(
     rows: u32,
     cols: u32,
 ) -> (MappedBuffer<u32>, MappedBuffer<u32>, u32) {
-    assert_eq!(values.len(), rows as usize * cols as usize);
+    assert_eq!(values.len(), rows as usize * cols as usize * T::LEN_IN_U32);
 
     let runtime = Runtime::get();
 
@@ -129,7 +129,7 @@ impl PrefixSum for RistrettoPoint {
  * * The number of rows and columns must be non-zero.
  */
 pub fn prefix_sum<T: PrefixSum>(values: &MappedBuffer<u32>, rows: u32, cols: u32) -> MappedBuffer<u32> {
-    assert_eq!(values.len(), rows as usize * cols as usize);
+    assert_eq!(values.len(), rows as usize * cols as usize * T::LEN_IN_U32);
     assert!(rows > 0);
     assert!(cols > 0);
 
@@ -351,6 +351,8 @@ pub fn radix_sort_2(
 
 #[cfg(test)]
 mod tests {
+    use crate::{RistrettoPointVec, GpuRistrettoPointVec};
+
     use super::*;
 
     #[test]
@@ -478,7 +480,7 @@ mod tests {
     }
 
     #[test]
-    fn can_prefix_sum() {
+    fn can_prefix_sum_u32() {
         // This specific value results in 2 recursion levels to reduce the block totals.
         let cols = 1024u32 * 1024 * 32 + 1;
         let rows = 3;
@@ -510,6 +512,28 @@ mod tests {
         let actual = actual.iter().cloned().collect::<Vec<_>>();
 
         assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn can_prefix_sum_ristretto() {
+        use sha2::Sha512;
+
+        let cols = 1024u32 * 65 + 1;
+        let rows = 3;
+
+        let data = (0..cols).map(|x| {
+            let bytes = [x.to_le_bytes().iter().cloned().collect::<Vec<_>>(), vec![0; 60]].concat();
+
+            RistrettoPoint::from_uniform_bytes(&bytes.try_into().unwrap())
+        }).collect::<Vec<_>>();
+        let data = [data.clone(), data.clone(), data].concat();
+
+        let points = GpuRistrettoPointVec::new(&data);
+
+        let sum = prefix_sum::<RistrettoPoint>(&points.data, rows, cols);
+
+
+
     }
 
     #[test]

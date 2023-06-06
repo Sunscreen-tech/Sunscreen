@@ -319,12 +319,12 @@ fn compile_metal_shaders() {
 
 #[allow(unused)]
 fn validate_command_output(output: Output, panic_msg: &str) {
-    if !output.status.success() {
-        println!("===stderr===");
-        println!("{}", String::from_utf8_lossy(&output.stderr));
+    println!("===stderr===");
+    println!("{}", String::from_utf8_lossy(&output.stderr));
 
-        println!("===stdout===");
-        println!("{}", String::from_utf8_lossy(&output.stdout));
+    println!("===stdout===");
+    println!("{}", String::from_utf8_lossy(&output.stdout));
+    if !output.status.success() {
 
         panic!("{}", panic_msg);
     }

@@ -3,6 +3,8 @@
 #include <inttypes.h.cl>
 #include <field2625.h.cl>
 
+#define WORDS_PER_RISTRETTO_POINT (sizeof(RistrettoPoint) / sizeof(u32))
+
 typedef struct {
     FieldElement2625 X;
     FieldElement2625 Y;

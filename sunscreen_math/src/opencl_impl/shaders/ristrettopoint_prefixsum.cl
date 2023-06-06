@@ -1,9 +1,6 @@
 #include <inttypes.h.cl>
 #include <ristrettopoint.h.cl>
 
-#undef WORDS_PER_RISTRETTO_POINT
-#define WORDS_PER_RISTRETTO_POINT (sizeof(RistrettoPoint) / sizeof(u32))
-
 /// Performs a prefix sum on local memory. The length of this buffer
 /// must be a power of 2. Each thread will return the sum of all
 /// the input elements.
@@ -13,7 +10,7 @@
 /// the rows of a matrix in shared memory. This is potentially future work to
 /// improve performance.
 RistrettoPoint local_prefix_sum_ristretto(
-    local u32* data,
+    local u32* restrict data,
     u32 log_len
 ) {
     u32 local_id = get_local_id(0);
@@ -44,7 +41,8 @@ RistrettoPoint local_prefix_sum_ristretto(
 
     // The last element after up sweeping contains the sum of
     // all inputs. Write this to the block_totals.
-    RistrettoPoint sum = RistrettoPoint_unpack_local(data, len - 1, len);
+    //RistrettoPoint sum = RistrettoPoint_unpack_local(data, len - 1, len);
+    RistrettoPoint sum;
 
     // Down sweep
     if (local_id == 0) {
@@ -94,8 +92,8 @@ RistrettoPoint local_prefix_sum_ristretto(
 
 kernel void prefix_sum_blocks_ristretto(
     const global u32* restrict values,
-    global u32* restrict block_prefix_sums,
-    global u32* restrict block_totals,
+    global u32* block_prefix_sums,
+    global u32* block_totals,
     u32 len
 ) {
     u32 group_id = get_group_id(0);
@@ -105,6 +103,7 @@ kernel void prefix_sum_blocks_ristretto(
 
     // TODO: Prevent bank conflicts
     local u32 values_local[LOCAL_WORDS];
+#if 0
 
     if (global_id < len) {
         RistrettoPoint val = RistrettoPoint_unpack(
@@ -127,6 +126,9 @@ kernel void prefix_sum_blocks_ristretto(
         LOG_THREADS_PER_GROUP
     );
 
+    RistrettoPoint sum = RistrettoPoint_IDENTITY;
+
+
     // TIL, multiple GPU threads writing to the same memory address is 
     // a bad idea, *even when they're writing the same value*. In particular,
     // doing this on M1 GPUs results in undefined behavior.
@@ -142,9 +144,13 @@ kernel void prefix_sum_blocks_ristretto(
             block_totals_len
         );
     }
-
+#endif
     if (global_id < len) {
-        RistrettoPoint val = RistrettoPoint_unpack_local(values_local, local_id, LOCAL_LEN);
+        RistrettoPoint val = RistrettoPoint_unpack_local(
+            values_local, 
+            local_id,
+            LOCAL_LEN
+        );
 
         RistrettoPoint_pack(
             &val,
@@ -153,6 +159,7 @@ kernel void prefix_sum_blocks_ristretto(
             len
         );
     }
+
 }
 
 kernel void offset_blocks_ristretto(

@@ -458,4 +458,24 @@ kernel void test_can_pack_unpack_field2625(
     }
 }
 
+kernel void test_can_pack_unpack_ristretto_local(
+    global const u32* restrict a,
+    global u32* restrict b,
+    u32 len
+) {
+    u32 global_id = get_global_id(0);
+    u32 local_id = get_local_id(0);
+
+    local u32 vals[128 * WORDS_PER_RISTRETTO_POINT];
+
+    if (global_id < len) {
+
+        RistrettoPoint val = RistrettoPoint_unpack(a, global_id, len);
+        RistrettoPoint_pack_local(&val, vals, local_id, 128);
+        val = RistrettoPoint_unpack_local(vals, local_id, 128);
+
+        RistrettoPoint_pack(&val, b, global_id, len);
+    }
+}
+
 #endif

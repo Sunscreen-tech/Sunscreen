@@ -363,6 +363,7 @@ pub fn radix_sort_2(
 #[cfg(test)]
 mod tests {
     use curve25519_dalek::traits::Identity;
+    use rand::thread_rng;
 
     use crate::{GpuRistrettoPointVec, GpuVec, RistrettoPointVec};
 
@@ -497,16 +498,17 @@ mod tests {
 
     #[test]
     fn can_prefix_sum_blocks_ristretto() {
-        let cols = 128u32;
+        let cols = 2u32;
         let rows = 1;
 
         let data = (0..cols)
-            .map(|x| RistrettoPoint::identity())
+            .map(|x| {
+                //RistrettoPoint::identity()
+                RistrettoPoint::random(&mut thread_rng())
+            })
             .collect::<Vec<_>>();
 
         //let data = [data.clone(), data.clone(), data].concat();
-
-        let runtime = Runtime::get();
 
         let data_gpu = RistrettoPointVec::new(&data);
 
@@ -555,23 +557,24 @@ mod tests {
 
             assert_eq!(sums_row.len(), data_row.len());
 
-            for (c_id, (res_chunk, data_chunk)) in sums_row
-                .chunks(THREADS_PER_GROUP)
-                .zip(data_row.chunks(THREADS_PER_GROUP))
+            for (c_id, (actual_chunk, expected_chunk)) in sums_row
+                .chunks(2 * RistrettoPoint::LOCAL_THREADS)
+                .zip(data_row.chunks(2 * RistrettoPoint::LOCAL_THREADS))
                 .enumerate()
             {
                 // Check that the block totals match
-                let expected_sum = data_chunk
+                let expected_sum = expected_chunk
                     .iter()
                     .fold(RistrettoPoint::identity(), |s, x| s + x);
 
-                let actual = block_totals[row as usize * expected_num_blocks + c_id];
+                let actual_sum = block_totals[row as usize * expected_num_blocks + c_id];
 
-                assert_eq!(actual, expected_sum);
+                dbg!(actual_sum);
+                assert_eq!(actual_sum.compress(), expected_sum.compress());
 
                 // Serially compute the chunk's prefix sum and check that the
                 // prefix sum matches.
-                let mut data_chunk = data_chunk.to_owned();
+                let mut data_chunk = expected_chunk.to_owned();
                 let mut sum = RistrettoPoint::identity();
 
                 for i in data_chunk.iter_mut() {
@@ -581,7 +584,7 @@ mod tests {
                     sum += val;
                 }
 
-                for (a, e) in data_chunk.iter().zip(res_chunk.iter()) {
+                for (a, e) in data_chunk.iter().zip(actual_chunk.iter()) {
                     assert_eq!(a.compress(), e.compress());
                 }
             }

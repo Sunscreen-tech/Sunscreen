@@ -5,7 +5,7 @@
 use sunscreen::{
     fhe_program,
     types::{bfv::Batched, Cipher, LaneCount, SwapRows},
-    Compiler, FheProgramInput, PlainModulusConstraint, Runtime,
+    Compiler, FheProgramInput, FheRuntime, PlainModulusConstraint,
 };
 
 use std::ops::*;
@@ -164,7 +164,7 @@ fn main() -> Result<(), sunscreen::Error> {
 
     println!("Compiled in {}s", end.as_secs_f64());
 
-    let runtime = Runtime::new_fhe(app.params())?;
+    let runtime = FheRuntime::new(app.params())?;
 
     let (public_key, private_key) = runtime.generate_keys()?;
     let a_enc = runtime.encrypt(a_batched, &public_key)?;

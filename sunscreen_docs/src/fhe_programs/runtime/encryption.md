@@ -1,10 +1,10 @@
 # Encryption
-To encrypt data, simply call `encrypt()` on `Runtime`:
+To encrypt data, simply call `encrypt()` on `FheRuntime`:
 ```rust
 # use sunscreen::{
 #     fhe_program,
 #     types::{bfv::Signed, Cipher},
-#     Compiler, Runtime, PublicKey
+#     Compiler, FheRuntime, PublicKey
 # };
 #
 # #[fhe_program(scheme = "bfv")]
@@ -17,7 +17,7 @@ To encrypt data, simply call `encrypt()` on `Runtime`:
 #        .compile()
 #        .unwrap();
 #
-#    let runtime = Runtime::new_fhe(app.params()).unwrap();
+#    let runtime = FheRuntime::new(app.params()).unwrap();
 #    let (public_key, private_key) = runtime.generate_keys().unwrap();
 #
     let val = Signed::from(15);

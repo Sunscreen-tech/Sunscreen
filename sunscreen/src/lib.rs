@@ -7,7 +7,7 @@
 //! # Examples
 //! This example is further annotated in `examples/simple_multiply`.
 //! ```
-//! # use sunscreen::{fhe_program, Compiler, types::{bfv::Signed, Cipher}, PlainModulusConstraint, Params, Runtime};
+//! # use sunscreen::{fhe_program, Compiler, types::{bfv::Signed, Cipher}, PlainModulusConstraint, Params, FheRuntime};
 //!
 //! #[fhe_program(scheme = "bfv")]
 //! fn simple_multiply(a: Cipher<Signed>, b: Cipher<Signed>) -> Cipher<Signed> {
@@ -22,7 +22,7 @@
 //!       .compile()
 //!       .unwrap();
 //!
-//!   let runtime = Runtime::new_fhe(app.params()).unwrap();
+//!   let runtime = FheRuntime::new(app.params()).unwrap();
 //!
 //!   let (public_key, private_key) = runtime.generate_keys().unwrap();
 //!

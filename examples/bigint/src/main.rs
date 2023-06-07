@@ -2,7 +2,7 @@ use crypto_bigint::U256;
 use sunscreen::{
     fhe_program,
     types::{bfv::Unsigned256, Cipher},
-    Compiler, Error, Runtime,
+    Compiler, Error, FheRuntime,
 };
 
 /**
@@ -46,7 +46,7 @@ fn main() -> Result<(), Error> {
      * decryption, and running an FHE program. We need to pass
      * the scheme parameters our compiler chose.
      */
-    let runtime = Runtime::new_fhe(app.params())?;
+    let runtime = FheRuntime::new(app.params())?;
 
     /*
      * Here, we generate a public and private key pair. Normally, Alice does this,

@@ -5,7 +5,7 @@ In our simple example, we called `runtime.run` to execute our FHE program
 ```rust
 # use sunscreen::{*, types::{{bfv::Signed}, Cipher}};
 #
-# fn main() { 
+# fn main() {
 #   #[fhe_program(scheme = "bfv")]
 #   fn multiply(a: Cipher<Signed>, b: Cipher<Signed>) -> Cipher<Signed> {
 #   a * b
@@ -17,7 +17,7 @@ In our simple example, we called `runtime.run` to execute our FHE program
 #       .compile()
 #       .unwrap();
 #
-#   let runtime = Runtime::new_fhe(app.params()).unwrap();
+#   let runtime = FheRuntime::new(app.params()).unwrap();
 #   let (public_key, _) = runtime.generate_keys().unwrap();
     let a_enc = runtime.encrypt(Signed::from(5), &public_key).unwrap();
     let b_enc = runtime.encrypt(Signed::from(15), &public_key).unwrap();
@@ -32,7 +32,7 @@ Let's break down the arguments to `runtime.run`:
 3. The final `public_key` argument is the public key used to generate the encrypted program inputs (i.e. `a_enc` and `b_enc`).
 
 ## FHE program inputs
-Rust requires collections be homogenous (i.e. each item is the same type). However, program arguments may not be always be of the same type! 
+Rust requires collections be homogenous (i.e. each item is the same type). However, program arguments may not be always be of the same type!
 
 Our `FheProgramInput` wrapper enum solves this problem; it wraps values so they can exist in a homogeneous collection. The run function's second argument is a `Vec<T>` where `T` readily converts into an `FheProgramInput` (i.e. `T impl` [`Into<FheProgramInput>`](https://doc.rust-lang.org/std/convert/trait.Into.html)[^1]). `Ciphertext` and all types under `sunscreen::bfv::types::*` do this.
 
@@ -54,7 +54,7 @@ If your FHE program only accepts ciphertexts (a common scenario), it's sufficien
 #         .compile()
 #         .unwrap();
 #
-#     let runtime = Runtime::new_fhe(app.params()).unwrap();
+#     let runtime = FheRuntime::new(app.params()).unwrap();
 #     let (public_key, _) = runtime.generate_keys().unwrap();
 
     let a_enc = runtime.encrypt(Signed::from(5), &public_key).unwrap();

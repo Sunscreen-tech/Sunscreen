@@ -22,7 +22,7 @@ fn dot_product(a: &[i64], b: &[i64]) -> i64 {
 #   let b = (10..20).into_iter().collect::<Vec<i64>>();
 #
 #   let c = dot_product(&a, &b);
-#   
+#
 #   println!("{:?} dot {:?} = {}", a, b, c);
 # }
 ```
@@ -34,7 +34,7 @@ First, some boilerplate code
 use sunscreen_compiler::{
     fhe_program,
     types::{bfv::Batched, Cipher, LaneCount, SwapRows},
-    Compiler, FheProgramInput, PlainModulusConstraint, Runtime,
+    Compiler, FheProgramInput, FheRuntime, PlainModulusConstraint,
 };
 
 use std::ops::*;
@@ -92,7 +92,7 @@ We're going to write this algorithm [generically](/fhe_programs/plaintext_execut
 use sunscreen_compiler::{
     fhe_program,
     types::{bfv::Batched, Cipher, LaneCount, SwapRows},
-    Compiler, FheProgramInput, PlainModulusConstraint, Runtime,
+    Compiler, FheProgramInput, FheRuntime, PlainModulusConstraint,
 };
 
 use std::ops::*;
@@ -132,7 +132,7 @@ fn main() {
 
 ## Make test data
 
-Next, we'll make some test data. Let's write a function `make_vector` that generates a vector with 8192 elements of the sequence `0..32` repeated and packed as described in the algorithm outline. 
+Next, we'll make some test data. Let's write a function `make_vector` that generates a vector with 8192 elements of the sequence `0..32` repeated and packed as described in the algorithm outline.
 
 ```rust
 fn is_power_of_2(value: usize) -> bool {
@@ -164,7 +164,7 @@ Finally, we'll put it all together to compute a dot product with FHE:
 use sunscreen_compiler::{
     fhe_program,
     types::{bfv::Batched, Cipher, LaneCount, SwapRows},
-    Compiler, FheProgramInput, PlainModulusConstraint, Runtime,
+    Compiler, FheProgramInput, FheRuntime, PlainModulusConstraint,
 };
 
 use std::ops::*;
@@ -241,7 +241,7 @@ fn main() {
         // prime number. `PlainModulusConstraint::BatchingMinimum(24)` says
         // set the plain modulus to be a prime number capable of supporting
         // batching with at least 24 bits of precision. We choose 24 because
-        // the final value of our dot product requires this much integer 
+        // the final value of our dot product requires this much integer
         // precision.
         .plain_modulus_constraint(PlainModulusConstraint::BatchingMinimum(24))
         .compile()
@@ -250,7 +250,7 @@ fn main() {
 
     // 3. Make our runtime, generate keys, encrypt our data, run our
     // program, and check the result
-    let runtime = Runtime::new_fhe(&fhe_program.metadata.params).unwrap();
+    let runtime = FheRuntime::new(&fhe_program.metadata.params).unwrap();
 
     let (public_key, private_key) = runtime.generate_keys().unwrap();
     let a_enc = runtime.encrypt(a_batched, &public_key).unwrap();

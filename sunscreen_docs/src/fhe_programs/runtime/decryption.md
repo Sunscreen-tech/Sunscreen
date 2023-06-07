@@ -5,7 +5,7 @@ To decrypt, simply call `decrypt()` using your private key and the data you want
 # use sunscreen::{
 #     fhe_program,
 #     types::{bfv::Signed, Cipher},
-#     Compiler, Runtime, PublicKey, PlainModulusConstraint
+#     Compiler, FheRuntime, PublicKey, PlainModulusConstraint
 # };
 #
 # #[fhe_program(scheme = "bfv")]
@@ -19,7 +19,7 @@ To decrypt, simply call `decrypt()` using your private key and the data you want
 #        .compile()
 #        .unwrap();
 #
-#    let runtime = Runtime::new_fhe(app.params()).unwrap();
+#    let runtime = FheRuntime::new(app.params()).unwrap();
 #    let (public_key, private_key) = runtime.generate_keys().unwrap();
 #
 #    let val = Signed::from(15);

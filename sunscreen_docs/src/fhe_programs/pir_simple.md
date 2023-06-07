@@ -1,5 +1,5 @@
 # Warm up: a very simple PIR algorithm
-We'll start with a very simple algorithm that uses a dot product to return an item privately. 
+We'll start with a very simple algorithm that uses a dot product to return an item privately.
 
 ## How will our algorithm work?
 Everything in the database will be *un*encrypted. We'll represent our database as a [vector](https://en.wikipedia.org/wiki/Euclidean_vector) of `n` items.
@@ -8,10 +8,10 @@ Let's say that Alice wants to retrieve the 2nd item from the database. Alice wil
 
 ### Information retrieval (**without privacy**)
  Every element of this query vector, *except* the one Alice is interested in, will have a 0 in its place. Alice will place a 1 in the 2nd entry (since she's interested in the 2nd item). When the server take the dot product of these two vectors, Alice will get back the item she wanted to retrieve:
- 
- [item<sub>1</sub>, item<sub>2</sub>, item<sub>3</sub>, ... , item<sub>n</sub>] &middot; [0, 1, 0, ... , 0]<sup>t</sup> 
 
-= item<sub>1</sub> &middot; 0 + item<sub>2</sub> &middot; 1 + item<sub>3</sub> &middot; 0 + ... + item<sub>n</sub> &middot; 0 
+ [item<sub>1</sub>, item<sub>2</sub>, item<sub>3</sub>, ... , item<sub>n</sub>] &middot; [0, 1, 0, ... , 0]<sup>t</sup>
+
+= item<sub>1</sub> &middot; 0 + item<sub>2</sub> &middot; 1 + item<sub>3</sub> &middot; 0 + ... + item<sub>n</sub> &middot; 0
 
 = item<sub>2</sub>
 
@@ -23,9 +23,9 @@ For simplicity, let Enc(x) denote that we encrypt x.[^1]
 
 Since Alice doesn't want to reveal to the server *which* item she's interested in, she encrypts each of the elements in her query vector with respect to her FHE public key. Voila! We can now retrieve the information privately:
 
-[item<sub>1</sub>, item<sub>2</sub>, item<sub>3</sub>, ... , item<sub>n</sub>] &middot; [Enc(0), Enc(1), Enc(0), ... , Enc(0)]<sup>t</sup> 
+[item<sub>1</sub>, item<sub>2</sub>, item<sub>3</sub>, ... , item<sub>n</sub>] &middot; [Enc(0), Enc(1), Enc(0), ... , Enc(0)]<sup>t</sup>
 
- = item<sub>1</sub> &middot; Enc(0) + item<sub>2</sub> &middot; Enc(1) + item<sub>3</sub> &middot; Enc(0) + ... + item<sub>n</sub> &middot; Enc(0) 
+ = item<sub>1</sub> &middot; Enc(0) + item<sub>2</sub> &middot; Enc(1) + item<sub>3</sub> &middot; Enc(0) + ... + item<sub>n</sub> &middot; Enc(0)
 
 = Enc(item<sub>2</sub>)
 
@@ -70,8 +70,8 @@ We declare our `lookup` function as an FHE program with the appropriate attribut
 # use sunscreen::{
 #     fhe_program,
 #     types::{bfv::Signed, Cipher},
-#     Ciphertext, CompiledFheProgram, Compiler, Error, FheProgramInput, Params, PrivateKey,
-#     PublicKey, Runtime,
+#     Ciphertext, CompiledFheProgram, Compiler, Error, FheProgramInput, FheRuntime,
+#     Params, PrivateKey, PublicKey,
 # };
 #
 /// Alice is a party that wants to look up a value in the database without
@@ -84,7 +84,7 @@ struct Alice {
     private_key: PrivateKey,
 
     /// Alice's runtime
-    runtime: Runtime,
+    runtime: FheRuntime,
 }
 ```
 
@@ -94,8 +94,8 @@ Alice wants to retrieve an item from the database privately. She'll need a publi
 # use sunscreen::{
 #     fhe_program,
 #     types::{bfv::Signed, Cipher},
-#     Ciphertext, CompiledFheProgram, Compiler, Error, FheProgramInput, Params, PrivateKey,
-#     PublicKey, Runtime, FheRuntime
+#     Ciphertext, CompiledFheProgram, Compiler, Error, FheProgramInput, FheRuntime,
+#     Params, PrivateKey, PublicKey,
 # };
 #
 # const DATABASE_SIZE: usize = 100;
@@ -115,7 +115,7 @@ Alice wants to retrieve an item from the database privately. She'll need a publi
 #
 impl Alice {
     pub fn setup(params: &Params) -> Result<Alice, Error> {
-        let runtime = Runtime::new_fhe(params)?;
+        let runtime = FheRuntime::new(params)?;
 
         let (public_key, private_key) = runtime.generate_keys()?;
 
@@ -145,7 +145,7 @@ impl Alice {
 }
 ```
 
-Alice will need to construct a runtime. Once that's done, she can generate her public/private key pair. 
+Alice will need to construct a runtime. Once that's done, she can generate her public/private key pair.
 
 Alice can create her unencrypted query "vector" (actually an [array](./types/types.md/#array)) of 0's and 1's by calling `create_query`. Recall that the we'll have a 1 in the place of her desired item's index and a 0 elsewhere. Since she wants her query to be private, she'll `encrypt` her `query`, passing in her `public_key` as necessary.
 
@@ -159,8 +159,8 @@ Let's look at the server next.
 # use sunscreen::{
 #     fhe_program,
 #     types::{bfv::Signed, Cipher},
-#     Ciphertext, CompiledFheProgram, Compiler, Error, FheProgramInput, Params, PrivateKey,
-#     PublicKey, Runtime,
+#     Ciphertext, CompiledFheProgram, Compiler, Error, FheProgramInput, FheRuntime,
+#     Params, PrivateKey, PublicKey,
 # };
 /// This is the server that processes Alice's query.
 struct Server {
@@ -168,7 +168,7 @@ struct Server {
     pub compiled_lookup: CompiledFheProgram,
 
     /// The server's runtime
-    runtime: Runtime,
+    runtime: FheRuntime,
 }
 ```
 
@@ -178,8 +178,8 @@ Recall that the server is responsible for retrieving Alice's item from the datab
 # use sunscreen::{
 #     fhe_program,
 #     types::{bfv::Signed, Cipher},
-#     Ciphertext, CompiledFheProgram, Compiler, Error, FheProgramInput, Params, PrivateKey,
-#     PublicKey, Runtime, FheRuntime
+#     Ciphertext, CompiledFheProgram, Compiler, Error, FheProgramInput, FheRuntime,
+#     Params, PrivateKey, PublicKey,
 # };
 #
 # const DATABASE_SIZE: usize = 100;
@@ -190,11 +190,11 @@ Recall that the server is responsible for retrieving Alice's item from the datab
 # /// desired item's index and 0s elsewhere.
 # fn lookup(query: [Cipher<Signed>; DATABASE_SIZE], database: [Signed; DATABASE_SIZE]) -> Cipher<Signed> {
 #     let mut sum = query[0] * database[0];
-# 
+#
 #     for i in 1..DATABASE_SIZE {
 #         sum = sum + query[i] * database[i]
 #     }
-# 
+#
 #     sum
 # }
 #
@@ -213,7 +213,7 @@ impl Server {
             .fhe_program(lookup)
             .compile()?;
 
-        let runtime = Runtime::new_fhe(app.params())?;
+        let runtime = FheRuntime::new(app.params())?;
 
         Ok(Server {
             compiled_lookup: app.get_fhe_program(lookup).unwrap().clone(),
@@ -248,9 +248,9 @@ Using `run_query`, the server can return an (encrypted) response to Alice's quer
 
 The items in the database will be the integers from 400 to 499, stored in ascending order. Recall that `lookup` takes in two arguments---the encrypted query and the unencrypted database. Unfortunately, we'll need to do some type conversion for the `database` as Sunscreen's compiler needs the `Signed` type *not* `i64` for its programs.
 
-Additionally, to `run` FHE programs, we need to pass in arguments as a `vec`. Thus, we create a `vec` called `args` that contains our encrypted `query` and unencrypted `database` (which now has `Signed` entries rather than `i64` entries in it). 
+Additionally, to `run` FHE programs, we need to pass in arguments as a `vec`. Thus, we create a `vec` called `args` that contains our encrypted `query` and unencrypted `database` (which now has `Signed` entries rather than `i64` entries in it).
 
-Once all that's done, the server can `run` the FHE program by passing in the `compiled_lookup` program, the arguments to the program `args` (now contained in a `vec`), and Alice's `public_key`. 
+Once all that's done, the server can `run` the FHE program by passing in the `compiled_lookup` program, the arguments to the program `args` (now contained in a `vec`), and Alice's `public_key`.
 
 
 ### Retrieving the item privately
@@ -258,8 +258,8 @@ Once all that's done, the server can `run` the FHE program by passing in the `co
 # use sunscreen::{
 #     fhe_program,
 #     types::{bfv::Signed, Cipher},
-#     Ciphertext, CompiledFheProgram, Compiler, Error, FheProgramInput, Params, PrivateKey,
-#     PublicKey, Runtime, FheRuntime
+#     Ciphertext, CompiledFheProgram, Compiler, Error, FheProgramInput, FheRuntime,
+#     Params, PrivateKey, PublicKey,
 # };
 #
 # const DATABASE_SIZE: usize = 100;
@@ -270,11 +270,11 @@ Once all that's done, the server can `run` the FHE program by passing in the `co
 # /// desired item's index and 0s elsewhere.
 # fn lookup(query: [Cipher<Signed>; DATABASE_SIZE], database: [Signed; DATABASE_SIZE]) -> Cipher<Signed> {
 #     let mut sum = query[0] * database[0];
-# 
+#
 #     for i in 1..DATABASE_SIZE {
 #         sum = sum + query[i] * database[i]
 #     }
-# 
+#
 #     sum
 # }
 #
@@ -293,7 +293,7 @@ Once all that's done, the server can `run` the FHE program by passing in the `co
 #
 # impl Alice {
 #     pub fn setup(params: &Params) -> Result<Alice, Error> {
-#         let runtime = Runtime::new_fhe(params)?;
+#         let runtime = FheRuntime::new(params)?;
 #
 #         let (public_key, private_key) = runtime.generate_keys()?;
 #
@@ -336,9 +336,9 @@ Once all that's done, the server can `run` the FHE program by passing in the `co
 #         let app = Compiler::new()
 #             .fhe_program(lookup)
 #             .compile()?;
-# 
-#         let runtime = Runtime::new_fhe(app.params())?;
-# 
+#
+#         let runtime = FheRuntime::new(app.params())?;
+#
 #         Ok(Server {
 #             compiled_lookup: app.get_fhe_program(lookup).unwrap().clone(),
 #             runtime,

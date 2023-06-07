@@ -8,7 +8,7 @@ use sunscreen::{
         bfv::{Unsigned, Unsigned256},
         Cipher,
     },
-    Compiler, FheApplication, FheProgramInput, FheRuntime, PrivateKey, PublicKey, Runtime,
+    Compiler, FheApplication, FheProgramInput, FheRuntime, PrivateKey, PublicKey,
 };
 
 macro_rules! fhe_program {
@@ -51,7 +51,7 @@ impl FheApp {
             .fhe_program(mul_plain)
             .compile()
             .unwrap();
-        let rt: FheRuntime = Runtime::new_fhe(app.params()).unwrap();
+        let rt: FheRuntime = FheRuntime::new(app.params()).unwrap();
         let (pk, sk) = rt.generate_keys().unwrap();
         Self { app, rt, pk, sk }
     }

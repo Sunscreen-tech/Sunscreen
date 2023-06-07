@@ -1,11 +1,11 @@
 # Runtime
-To create a runtime, you simply call `Runtime::new`, passing a `Params` object. You get a params object from compiling an FHE program as we did in our example.
+To create a runtime, you simply call `FheRuntime::new`, passing a `Params` object. You get a params object from compiling an FHE program as we did in our example.
 
 ```rust
 # use sunscreen::{
 #     fhe_program,
 #     types::{bfv::Signed, Cipher},
-#     Compiler, Runtime, PublicKey
+#     Compiler, FheRuntime, PublicKey
 # };
 #
 # #[fhe_program(scheme = "bfv")]
@@ -18,7 +18,7 @@ To create a runtime, you simply call `Runtime::new`, passing a `Params` object. 
 #        .compile()
 #        .unwrap();
 #
-    let runtime = Runtime::new_fhe(app.params()).unwrap();
+    let runtime = FheRuntime::new(app.params()).unwrap();
 # }
 ```
 

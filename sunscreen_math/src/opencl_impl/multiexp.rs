@@ -1,4 +1,4 @@
-use curve25519_dalek::ristretto::RistrettoPoint;
+use curve25519_dalek::{ristretto::RistrettoPoint, scalar::Scalar, traits::Identity};
 
 use crate::{
     multiexp_num_buckets, multiexp_num_windows,
@@ -7,7 +7,7 @@ use crate::{
         rle::run_length_encoding,
         Grid, Runtime,
     },
-    GpuRistrettoPointVec, GpuScalarVec, GpuVec,
+    GpuRistrettoPointVec, GpuScalarVec, GpuVec, RistrettoPointVec,
 };
 
 use super::MappedBuffer;
@@ -18,7 +18,59 @@ pub fn multiscalar_multiplication(
 ) -> RistrettoPoint {
     assert_eq!(points.len(), scalars.len());
 
-    todo!();
+    let window_bits = 3;
+
+    assert!(window_bits < 32);
+
+    let num_buckets = multiexp_num_buckets(window_bits);
+    let num_windows = multiexp_num_windows(window_bits);
+
+    let bucket_data = compute_bucket_data(scalars, window_bits);
+    let bucket_points = compute_bucket_points(points, &bucket_data, window_bits);
+
+    //dbg!(bucket_points.iter().map(|x| x.compress()).collect::<Vec<_>>());
+
+    dbg!(bucket_points.get(0).compress());
+    dbg!(bucket_points.get(1).compress());
+    dbg!(bucket_points.get(2).compress());
+
+    dbg!((bucket_points.get(1) + Scalar::from(2u32) * bucket_points.get(2)).compress());
+
+    let buckets = prefix_sum::<RistrettoPoint>(&bucket_points.data, num_windows as u32, num_buckets as u32);
+
+    let buckets = RistrettoPointVec {
+        data: buckets,
+        len: num_windows * num_buckets
+    };
+
+    dbg!(buckets.iter().map(|x| x.compress()).collect::<Vec<_>>());
+
+    let buckets = (0..multiexp_num_windows(window_bits))
+        .map(|x| {
+            let last_bucket = num_buckets - 1;
+
+            let a = bucket_points.get(last_bucket + x * num_buckets);
+            let b = buckets.get(last_bucket + x * num_buckets);
+
+            a + b
+        })
+        .collect::<Vec<_>>();
+
+    let radix = Scalar::from((0x1 << window_bits) as u32);
+    let mut cur_radix = Scalar::one();
+    let mut total = RistrettoPoint::identity();
+
+    for b in buckets {
+        dbg!(cur_radix);
+        dbg!(b.compress());
+
+        total += b * cur_radix;
+
+        dbg!(total.compress());
+        cur_radix *= radix;
+    }
+
+    total
 }
 
 pub struct BucketData {
@@ -184,8 +236,7 @@ fn init_bucket_points(window_size_bits: usize) -> GpuRistrettoPointVec {
 
 #[cfg(test)]
 mod tests {
-
-    use curve25519_dalek::{scalar::Scalar, traits::Identity};
+    use curve25519_dalek::{scalar::Scalar, traits::{Identity, VartimeMultiscalarMul}};
     use rand::thread_rng;
 
     use crate::{ristretto_bitwise_eq, RistrettoPointVec, ScalarVec};
@@ -467,5 +518,28 @@ mod tests {
                 assert!(ristretto_bitwise_eq(*actual_bucket, expected_bucket));
             }
         }
+    }
+
+    #[test]
+    fn can_msm() {
+        let len = 3u32;
+
+        let p = (0..len).map(|x| {
+            RistrettoPoint::from_uniform_bytes(&[x as u8; 64])
+            //RistrettoPoint::random(&mut thread_rng())
+        }).collect::<Vec<_>>();
+        let s = (0..len).map(|x| {
+            //Scalar::random(&mut thread_rng())
+            Scalar::from(x)
+        }).collect::<Vec<_>>();
+
+        let expected: RistrettoPoint = <RistrettoPoint as VartimeMultiscalarMul>::vartime_multiscalar_mul(s.iter(), p.iter());
+
+        let points = RistrettoPointVec::new(&p);
+        let scalars = ScalarVec::new(&s);
+
+        let actual = multiscalar_multiplication(&points, &scalars);
+
+        assert_eq!(actual.compress(), expected.compress());
     }
 }

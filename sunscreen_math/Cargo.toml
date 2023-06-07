@@ -29,7 +29,7 @@ bytemuck = { version = "1.13.0" }
 criterion = "0.4.0"
 
 [features]
-default = ["opencl"]
+default = []
 nightly-features = []
 cuda = ["dep:find_cuda_helper", "dep:cust", "gpu"]
 metal = ["dep:metal", "gpu"]

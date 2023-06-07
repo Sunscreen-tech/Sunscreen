@@ -43,11 +43,30 @@ RistrettoPoint RistrettoPoint_unpack(const global u32* ptr, const size_t grid_ti
     return res;
 }
 
+
+RistrettoPoint RistrettoPoint_unpack_local(const local u32* ptr, const size_t grid_tid, const size_t n) {
+    FieldElement2625 x = FieldElement2625_unpack_local(&ptr[00 * n], grid_tid, n);
+    FieldElement2625 y = FieldElement2625_unpack_local(&ptr[10 * n], grid_tid, n);
+    FieldElement2625 z = FieldElement2625_unpack_local(&ptr[20 * n], grid_tid, n);
+    FieldElement2625 t = FieldElement2625_unpack_local(&ptr[30 * n], grid_tid, n);
+
+    RistrettoPoint res = { x, y, z, t };
+
+    return res;
+}
+
 void RistrettoPoint_pack(const RistrettoPoint* this, global u32* ptr, size_t grid_tid, size_t n) {
     FieldElement2625_pack(&this->X, &ptr[00 * n], grid_tid, n);
     FieldElement2625_pack(&this->Y, &ptr[10 * n], grid_tid, n);
     FieldElement2625_pack(&this->Z, &ptr[20 * n], grid_tid, n);
     FieldElement2625_pack(&this->T, &ptr[30 * n], grid_tid, n);
+}
+
+void RistrettoPoint_pack_local(const RistrettoPoint* this, local u32* ptr, size_t grid_tid, size_t n) {
+    FieldElement2625_pack_local(&this->X, &ptr[00 * n], grid_tid, n);
+    FieldElement2625_pack_local(&this->Y, &ptr[10 * n], grid_tid, n);
+    FieldElement2625_pack_local(&this->Z, &ptr[20 * n], grid_tid, n);
+    FieldElement2625_pack_local(&this->T, &ptr[30 * n], grid_tid, n);
 }
 
 ProjectiveNielsPoint RistrettoPoint_as_projective_niels(const RistrettoPoint* this) {
@@ -436,6 +455,26 @@ kernel void test_can_pack_unpack_field2625(
     if (tid < len) {
         FieldElement2625 x = FieldElement2625_unpack(a, tid, len);
         FieldElement2625_pack(&x, b, tid, len);
+    }
+}
+
+kernel void test_can_pack_unpack_ristretto_local(
+    global const u32* restrict a,
+    global u32* restrict b,
+    u32 len
+) {
+    u32 global_id = get_global_id(0);
+    u32 local_id = get_local_id(0);
+
+    local u32 vals[128 * WORDS_PER_RISTRETTO_POINT];
+
+    if (global_id < len) {
+
+        RistrettoPoint val = RistrettoPoint_unpack(a, global_id, len);
+        RistrettoPoint_pack_local(&val, vals, local_id, 128);
+        val = RistrettoPoint_unpack_local(vals, local_id, 128);
+
+        RistrettoPoint_pack(&val, b, global_id, len);
     }
 }
 

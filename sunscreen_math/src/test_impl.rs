@@ -251,6 +251,57 @@ fn test_impl_get_scalar_window() {
     }
 }
 
+pub(crate) struct PrefixSumBlockRistretto {
+    /// Length = input
+    pub block_sums: Vec<RistrettoPoint>,
+
+    /// Length = input / block_size
+    pub block_totals: Vec<RistrettoPoint>,
+}
+
+pub(crate) fn prefix_sum_blocks_ristretto(
+    points: &[RistrettoPoint],
+    block_size: usize,
+) -> PrefixSumBlockRistretto {
+    let block_totals = points
+        .chunks(block_size)
+        .map(|c| c.iter().fold(RistrettoPoint::identity(), |s, x| s + x))
+        .collect::<Vec<_>>();
+
+    let block_sums = points
+        .chunks(block_size)
+        .map(|c| {
+            let mut sum = RistrettoPoint::identity();
+            let mut t;
+
+            let mut out = c.to_owned();
+
+            for val in out.iter_mut() {
+                t = *val;
+                *val = sum;
+                sum += t;
+            }
+
+            out
+        })
+        .collect::<Vec<_>>()
+        .concat();
+
+    let expected_total_len = if points.len() % block_size == 0 {
+        points.len() / block_size
+    } else {
+        points.len() / block_size + 1
+    };
+
+    assert_eq!(block_totals.len(), expected_total_len);
+    assert_eq!(block_sums.len(), points.len());
+
+    PrefixSumBlockRistretto {
+        block_sums,
+        block_totals,
+    }
+}
+
 #[test]
 fn test_rle_impl_works() {
     let (vals, runs) = rle(&[1, 1, 1, 2, 2, 3, 4, 4, 4, 4, 5, 5, 7, 7, 7]);

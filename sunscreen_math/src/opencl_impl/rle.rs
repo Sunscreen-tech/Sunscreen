@@ -29,7 +29,7 @@ pub struct RunLengthEncoding {
 /// each row.
 pub fn run_length_encoding(data: &MappedBuffer<u32>, rows: u32, cols: u32) -> RunLengthEncoding {
     let backward_mask = compute_backward_mask(data, rows, cols);
-    let scanned_backward_mask = prefix_sum(&backward_mask, rows, cols);
+    let scanned_backward_mask = prefix_sum::<u32>(&backward_mask, rows, cols);
 
     let (compacted, num_runs) =
         compact_backward_mask(&backward_mask, &scanned_backward_mask, rows, cols);
@@ -166,7 +166,7 @@ mod tests {
         assert_eq!(data.len(), cols as usize * rows as usize);
 
         let mask = compute_backward_mask(&data_gpu, rows, cols);
-        let mask_sums = prefix_sum(&mask, rows, cols);
+        let mask_sums = prefix_sum::<u32>(&mask, rows, cols);
 
         let _mask_sums_cpu = mask_sums.iter().cloned().collect::<Vec<_>>();
 

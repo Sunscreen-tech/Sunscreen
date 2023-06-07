@@ -26,7 +26,7 @@ pub struct GpuRistrettoPointVec {
     pub(crate) data: MappedBuffer<u32>,
 
     /// The length of the vector, in points (not bytes).
-    len: usize,
+    pub(crate) len: usize,
 }
 
 impl GpuRistrettoPointVec {
@@ -343,6 +343,27 @@ mod tests {
         let v = GpuRistrettoPointVec::new(&points);
 
         let o = GpuRistrettoPointVec::unary_gpu_kernel(&v, "test_can_pack_unpack_ristretto");
+
+        let o = GpuRistrettoPointVec {
+            data: o,
+            len: v.len(),
+        };
+
+        for (v, o) in v.iter().zip(o.iter()) {
+            assert!(ristretto_bitwise_eq(v, o));
+        }
+    }
+
+    #[test]
+    fn can_pack_and_unpack_local() {
+        let points = vec![|| RistrettoPoint::random(&mut thread_rng()); 128]
+            .iter()
+            .map(|x| x())
+            .collect::<Vec<_>>();
+
+        let v = GpuRistrettoPointVec::new(&points);
+
+        let o = GpuRistrettoPointVec::unary_gpu_kernel(&v, "test_can_pack_unpack_ristretto_local");
 
         let o = GpuRistrettoPointVec {
             data: o,

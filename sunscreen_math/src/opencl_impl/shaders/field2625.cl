@@ -19,6 +19,18 @@ inline void carry(private u64 z[10], size_t i) {
 FieldElement2625 FieldElement2625_unpack(const global u32* ptr, const size_t grid_tid, const size_t n) {
     FieldElement2625 res;
 
+    #pragma unroll
+    for (size_t i = 0; i < 10; i++) {
+        res.limbs[i] = ptr[i * n + grid_tid];
+    }
+
+    return res;
+}
+
+FieldElement2625 FieldElement2625_unpack_local(const local u32* ptr, const size_t grid_tid, const size_t n) {
+    FieldElement2625 res;
+
+    #pragma unroll
     for (size_t i = 0; i < 10; i++) {
         res.limbs[i] = ptr[i * n + grid_tid];
     }
@@ -27,6 +39,15 @@ FieldElement2625 FieldElement2625_unpack(const global u32* ptr, const size_t gri
 }
 
 void FieldElement2625_pack(const FieldElement2625* a, global u32* ptr, const size_t grid_tid, const size_t n) {
+    
+    #pragma unroll
+    for (size_t i = 0; i < 10; i++) {
+        ptr[i * n + grid_tid] = a->limbs[i];
+    }
+}
+
+void FieldElement2625_pack_local(const FieldElement2625* a, local u32* ptr, const size_t grid_tid, const size_t n) {
+    #pragma unroll
     for (size_t i = 0; i < 10; i++) {
         ptr[i * n + grid_tid] = a->limbs[i];
     }

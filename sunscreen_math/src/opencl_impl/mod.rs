@@ -1,10 +1,6 @@
 mod scalarvec;
 use core::ops::Deref;
-use std::{
-    ffi::CString,
-    mem::{size_of, MaybeUninit},
-    ops::DerefMut,
-};
+use std::{ffi::CString, mem::size_of, ops::DerefMut};
 
 use ocl::{
     prm::cl_uint, Buffer, Context, Device, Kernel, MemMap, OclPrm, Platform, Program, Queue,

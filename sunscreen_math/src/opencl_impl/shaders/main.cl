@@ -6,3 +6,4 @@
 #include "scalar29.cl"
 #include "radix_sort.cl"
 #include "rle.cl"
+#include "ristrettopoint_prefixsum.cl"

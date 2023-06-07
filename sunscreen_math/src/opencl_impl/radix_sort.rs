@@ -1,5 +1,7 @@
 use std::borrow::Cow;
 
+use curve25519_dalek::ristretto::RistrettoPoint;
+
 use super::{Grid, MappedBuffer, Runtime};
 
 // must equal THREADS_PER_GROUP in `radix_sort.cl`!
@@ -61,27 +63,27 @@ fn create_histograms(
  * * The length of `values` must equal `rows * cols`.
  * * The number of rows and columns must be non-zero.
  */
-fn prefix_sum_blocks(
+fn prefix_sum_blocks<T: PrefixSum>(
     values: &MappedBuffer<u32>,
     rows: u32,
     cols: u32,
 ) -> (MappedBuffer<u32>, MappedBuffer<u32>, u32) {
-    assert_eq!(values.len(), rows as usize * cols as usize);
+    assert_eq!(values.len(), rows as usize * cols as usize * T::LEN_IN_U32);
 
     let runtime = Runtime::get();
 
-    let prefix_sums = unsafe { runtime.alloc(rows as usize * cols as usize) };
+    let prefix_sums = unsafe { runtime.alloc(rows as usize * cols as usize * T::LEN_IN_U32) };
 
-    let num_blocks = if cols as usize % THREADS_PER_GROUP == 0 {
-        cols as usize / THREADS_PER_GROUP
+    let num_blocks = if cols as usize % T::LOCAL_THREADS == 0 {
+        cols as usize / T::LOCAL_THREADS
     } else {
-        cols as usize / THREADS_PER_GROUP + 1
+        cols as usize / T::LOCAL_THREADS + 1
     };
 
-    let block_totals = unsafe { runtime.alloc(rows as usize * num_blocks) };
+    let block_totals = unsafe { runtime.alloc(rows as usize * num_blocks * T::LEN_IN_U32) };
 
     runtime.run_kernel(
-        "prefix_sum_blocks",
+        T::PREFIX_SUM_BLOCKS_KERNEL,
         &[
             values.into(),
             (&prefix_sums).into(),
@@ -89,13 +91,34 @@ fn prefix_sum_blocks(
             cols.into(),
         ],
         &Grid::from([
-            (cols as usize, THREADS_PER_GROUP),
+            (cols as usize, T::LOCAL_THREADS),
             (rows as usize, 1),
             (1, 1),
         ]),
     );
 
     (prefix_sums, block_totals, num_blocks as u32)
+}
+
+pub trait PrefixSum {
+    const PREFIX_SUM_BLOCKS_KERNEL: &'static str;
+    const OFFSET_BLOCKS_KERNEL: &'static str;
+    const LEN_IN_U32: usize;
+    const LOCAL_THREADS: usize;
+}
+
+impl PrefixSum for u32 {
+    const PREFIX_SUM_BLOCKS_KERNEL: &'static str = "prefix_sum_blocks_u32";
+    const OFFSET_BLOCKS_KERNEL: &'static str = "offset_blocks_u32";
+    const LEN_IN_U32: usize = 1;
+    const LOCAL_THREADS: usize = 128;
+}
+
+impl PrefixSum for RistrettoPoint {
+    const PREFIX_SUM_BLOCKS_KERNEL: &'static str = "prefix_sum_blocks_ristretto";
+    const OFFSET_BLOCKS_KERNEL: &'static str = "offset_blocks_ristretto";
+    const LEN_IN_U32: usize = std::mem::size_of::<RistrettoPoint>() / std::mem::size_of::<u32>();
+    const LOCAL_THREADS: usize = 128;
 }
 
 /**
@@ -107,15 +130,23 @@ fn prefix_sum_blocks(
  * * The length of the values matrix must equal rows * cols.
  * * The number of rows and columns must be non-zero.
  */
-pub fn prefix_sum(values: &MappedBuffer<u32>, rows: u32, cols: u32) -> MappedBuffer<u32> {
-    assert_eq!(values.len(), rows as usize * cols as usize);
+pub fn prefix_sum<T: PrefixSum>(
+    values: &MappedBuffer<u32>,
+    rows: u32,
+    cols: u32,
+) -> MappedBuffer<u32> {
+    assert_eq!(values.len(), rows as usize * cols as usize * T::LEN_IN_U32);
     assert!(rows > 0);
     assert!(cols > 0);
 
-    let (prefix_sums, totals, num_blocks) = prefix_sum_blocks(values, rows, cols);
+    let (prefix_sums, totals, num_blocks) = prefix_sum_blocks::<T>(values, rows, cols);
 
-    fn reduce_totals(totals: &MappedBuffer<u32>, rows: u32, cols: u32) -> Cow<MappedBuffer<u32>> {
-        let (sums, totals, num_blocks) = prefix_sum_blocks(totals, rows, cols);
+    fn reduce_totals<T: PrefixSum>(
+        totals: &MappedBuffer<u32>,
+        rows: u32,
+        cols: u32,
+    ) -> Cow<MappedBuffer<u32>> {
+        let (sums, totals, num_blocks) = prefix_sum_blocks::<T>(totals, rows, cols);
 
         if num_blocks == 1 {
             return Cow::Owned(sums);
@@ -123,9 +154,9 @@ pub fn prefix_sum(values: &MappedBuffer<u32>, rows: u32, cols: u32) -> MappedBuf
             // This recursion isn't a concern for stack overflow since each recursion
             // divides the work by 128. A mere 6 recursion levels means the inputs would
             // consume over 4TB of memory, which is not plausible.
-            let reduced_totals = reduce_totals(&totals, rows, num_blocks);
+            let reduced_totals = reduce_totals::<T>(&totals, rows, num_blocks);
 
-            offset_blocks(&sums, &reduced_totals, rows, cols);
+            offset_blocks::<T>(&sums, &reduced_totals, rows, cols);
 
             return Cow::Owned(sums);
         }
@@ -138,17 +169,17 @@ pub fn prefix_sum(values: &MappedBuffer<u32>, rows: u32, cols: u32) -> MappedBuf
     // If there is more than one block, reduce the totals into a prefix sum so we can offset
     // each block as appropriate.
     let totals = if num_blocks > 1 {
-        reduce_totals(&totals, rows, num_blocks)
+        reduce_totals::<T>(&totals, rows, num_blocks)
     } else {
         Cow::Owned(totals)
     };
 
-    offset_blocks(&prefix_sums, &totals, rows, cols);
+    offset_blocks::<T>(&prefix_sums, &totals, rows, cols);
 
     prefix_sums
 }
 
-fn offset_blocks(
+fn offset_blocks<T: PrefixSum>(
     blocks: &MappedBuffer<u32>, // Gets mutated!
     offsets: &MappedBuffer<u32>,
     rows: u32,
@@ -157,7 +188,7 @@ fn offset_blocks(
     let runtime = Runtime::get();
 
     runtime.run_kernel(
-        "offset_block",
+        T::OFFSET_BLOCKS_KERNEL,
         &[blocks.into(), offsets.into(), cols.into()],
         &Grid::from([
             (cols as usize, THREADS_PER_GROUP),
@@ -219,7 +250,7 @@ pub fn radix_sort_1(
     for cur_digit in 0..num_digits {
         let (hist, num_blocks) = create_histograms(&keys_clone[cur], rows, cols, cur_digit);
 
-        let bin_locations = prefix_sum(&hist, rows, num_blocks);
+        let bin_locations = prefix_sum::<u32>(&hist, rows, num_blocks);
 
         runtime.run_kernel(
             "radix_sort_emplace_val_1",
@@ -300,7 +331,7 @@ pub fn radix_sort_2(
     for cur_digit in 0..num_digits {
         let (hist, num_blocks) = create_histograms(&keys_clone[cur], rows, cols, cur_digit);
 
-        let bin_locations = prefix_sum(&hist, rows, num_blocks);
+        let bin_locations = prefix_sum::<u32>(&hist, rows, num_blocks);
 
         runtime.run_kernel(
             "radix_sort_emplace_val_2",
@@ -330,7 +361,16 @@ pub fn radix_sort_2(
 
 #[cfg(test)]
 mod tests {
+
+    use crate::{
+        test_impl::{self, prefix_sum_blocks_ristretto},
+        GpuRistrettoPointVec, GpuVec, RistrettoPointVec,
+    };
+
     use super::*;
+
+    const WORDS_PER_POINT: usize =
+        std::mem::size_of::<RistrettoPoint>() / std::mem::size_of::<u32>();
 
     #[test]
     fn can_create_histograms() {
@@ -391,7 +431,7 @@ mod tests {
     }
 
     #[test]
-    fn can_prefix_sum_blocks() {
+    fn can_prefix_sum_blocks_u32() {
         let cols = 4567u32;
 
         let data = (0..cols).map(|x| cols - x).collect::<Vec<_>>();
@@ -402,7 +442,7 @@ mod tests {
         let data_gpu = unsafe { runtime.alloc_from_slice(&data) };
 
         let (mut prefix_sums, mut block_totals, actual_num_blocks) =
-            prefix_sum_blocks(&data_gpu, 3, cols);
+            prefix_sum_blocks::<u32>(&data_gpu, 3, cols);
 
         prefix_sums.remap();
         block_totals.remap();
@@ -457,7 +497,90 @@ mod tests {
     }
 
     #[test]
-    fn can_prefix_sum() {
+    fn can_prefix_sum_blocks_ristretto() {
+        let cols = 4567u32;
+        let rows = 3;
+
+        let data = (0..cols)
+            .map(|x| {
+                //RistrettoPoint::identity()
+
+                RistrettoPoint::from_uniform_bytes(&[x as u8; 64])
+            })
+            .collect::<Vec<_>>();
+
+        let data = [data.clone(), data.clone(), data].concat();
+
+        let data_gpu = RistrettoPointVec::new(&data);
+
+        let (mut prefix_sums, mut block_totals, actual_num_blocks) =
+            prefix_sum_blocks::<RistrettoPoint>(&data_gpu.data, rows, cols);
+
+        prefix_sums.remap();
+        block_totals.remap();
+
+        let expected_num_blocks = if cols as usize % RistrettoPoint::LOCAL_THREADS == 0 {
+            cols as usize / RistrettoPoint::LOCAL_THREADS
+        } else {
+            cols as usize / RistrettoPoint::LOCAL_THREADS + 1
+        };
+
+        assert_eq!(prefix_sums.len() % WORDS_PER_POINT, 0);
+        assert_eq!(block_totals.len() % WORDS_PER_POINT, 0);
+        assert_eq!(prefix_sums.len() / WORDS_PER_POINT, data_gpu.len());
+        assert_eq!(
+            prefix_sums.len(),
+            rows as usize * cols as usize * WORDS_PER_POINT
+        );
+        assert_eq!(
+            block_totals.len() / WORDS_PER_POINT,
+            rows as usize * expected_num_blocks
+        );
+
+        let prefix_sums = RistrettoPointVec {
+            data: prefix_sums,
+            len: cols as usize * rows as usize,
+        }
+        .iter()
+        .collect::<Vec<_>>();
+
+        let block_totals = RistrettoPointVec {
+            data: block_totals,
+            len: expected_num_blocks * rows as usize,
+        }
+        .iter()
+        .collect::<Vec<_>>();
+
+        assert_eq!(expected_num_blocks as u32, actual_num_blocks);
+
+        for row in 0..rows {
+            let row_start = (row * cols) as usize;
+            let row_end = row_start + cols as usize;
+
+            let sums_row = &prefix_sums[row_start..row_end];
+            let data_row = &data[row_start..row_end];
+
+            let totals_start = row as usize * expected_num_blocks;
+            let totals_end = totals_start + expected_num_blocks;
+
+            let totals_row = &block_totals[totals_start..totals_end];
+
+            assert_eq!(sums_row.len(), data_row.len());
+
+            let expected = prefix_sum_blocks_ristretto(data_row, RistrettoPoint::LOCAL_THREADS);
+
+            for (e, a) in expected.block_sums.iter().zip(sums_row.iter()) {
+                assert_eq!(e.compress(), a.compress());
+            }
+
+            for (e, a) in expected.block_totals.iter().zip(totals_row.iter()) {
+                assert_eq!(e.compress(), a.compress());
+            }
+        }
+    }
+
+    #[test]
+    fn can_prefix_sum_u32() {
         // This specific value results in 2 recursion levels to reduce the block totals.
         let cols = 1024u32 * 1024 * 32 + 1;
         let rows = 3;
@@ -469,7 +592,7 @@ mod tests {
 
         let data_gpu = unsafe { runtime.alloc_from_slice(&data) };
 
-        let mut actual = prefix_sum(&data_gpu, rows, cols);
+        let mut actual = prefix_sum::<u32>(&data_gpu, rows, cols);
 
         let mut expected = Vec::with_capacity(cols as usize);
 
@@ -489,6 +612,49 @@ mod tests {
         let actual = actual.iter().cloned().collect::<Vec<_>>();
 
         assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn can_prefix_sum_ristretto() {
+        let cols = 4567u32;
+        let rows = 3;
+
+        let data = (0..cols)
+            .map(|x| {
+                let bytes = [x.to_le_bytes().to_vec(), vec![0; 60]].concat();
+
+                RistrettoPoint::from_uniform_bytes(&bytes.try_into().unwrap())
+            })
+            .collect::<Vec<_>>();
+        let data = [data.clone(), data.clone(), data].concat();
+
+        let points = GpuRistrettoPointVec::new(&data);
+
+        let sum = prefix_sum::<RistrettoPoint>(&points.data, rows, cols);
+
+        let actual = GpuRistrettoPointVec {
+            data: sum,
+            len: points.len(),
+        };
+
+        let actual = actual.iter().collect::<Vec<_>>();
+
+        let mut expected = data;
+
+        for row in 0..rows {
+            let start = row as usize * cols as usize;
+            let end = start + cols as usize;
+
+            let expected_slice = &mut expected[start..end];
+            let actual_slice = &actual[start..end];
+
+            let expected =
+                test_impl::prefix_sum_blocks_ristretto(expected_slice, expected_slice.len());
+
+            for (e, a) in expected.block_sums.iter().zip(actual_slice.iter()) {
+                assert_eq!(e.compress(), a.compress());
+            }
+        }
     }
 
     #[test]

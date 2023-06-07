@@ -36,11 +36,12 @@ pub fn multiscalar_multiplication(
 
     dbg!((bucket_points.get(1) + Scalar::from(2u32) * bucket_points.get(2)).compress());
 
-    let buckets = prefix_sum::<RistrettoPoint>(&bucket_points.data, num_windows as u32, num_buckets as u32);
+    let buckets =
+        prefix_sum::<RistrettoPoint>(&bucket_points.data, num_windows as u32, num_buckets as u32);
 
     let buckets = RistrettoPointVec {
         data: buckets,
-        len: num_windows * num_buckets
+        len: num_windows * num_buckets,
     };
 
     dbg!(buckets.iter().map(|x| x.compress()).collect::<Vec<_>>());
@@ -236,7 +237,10 @@ fn init_bucket_points(window_size_bits: usize) -> GpuRistrettoPointVec {
 
 #[cfg(test)]
 mod tests {
-    use curve25519_dalek::{scalar::Scalar, traits::{Identity, VartimeMultiscalarMul}};
+    use curve25519_dalek::{
+        scalar::Scalar,
+        traits::{Identity, VartimeMultiscalarMul},
+    };
     use rand::thread_rng;
 
     use crate::{ristretto_bitwise_eq, RistrettoPointVec, ScalarVec};
@@ -524,16 +528,21 @@ mod tests {
     fn can_msm() {
         let len = 3u32;
 
-        let p = (0..len).map(|x| {
-            RistrettoPoint::from_uniform_bytes(&[x as u8; 64])
-            //RistrettoPoint::random(&mut thread_rng())
-        }).collect::<Vec<_>>();
-        let s = (0..len).map(|x| {
-            //Scalar::random(&mut thread_rng())
-            Scalar::from(x)
-        }).collect::<Vec<_>>();
+        let p = (0..len)
+            .map(|x| {
+                RistrettoPoint::from_uniform_bytes(&[x as u8; 64])
+                //RistrettoPoint::random(&mut thread_rng())
+            })
+            .collect::<Vec<_>>();
+        let s = (0..len)
+            .map(|x| {
+                //Scalar::random(&mut thread_rng())
+                Scalar::from(x)
+            })
+            .collect::<Vec<_>>();
 
-        let expected: RistrettoPoint = <RistrettoPoint as VartimeMultiscalarMul>::vartime_multiscalar_mul(s.iter(), p.iter());
+        let expected: RistrettoPoint =
+            <RistrettoPoint as VartimeMultiscalarMul>::vartime_multiscalar_mul(s.iter(), p.iter());
 
         let points = RistrettoPointVec::new(&p);
         let scalars = ScalarVec::new(&s);

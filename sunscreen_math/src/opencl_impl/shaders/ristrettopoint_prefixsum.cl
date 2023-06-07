@@ -162,6 +162,7 @@ kernel void offset_blocks_ristretto(
     u32 num_blocks = get_num_groups(0);
     u32 col = get_global_id(0);
     u32 row = get_global_id(1);
+    u32 rows = get_global_size(1);
 
     // The first block doesn't need to be offset because no other block
     // precedes it that would affect its sums.
@@ -171,14 +172,14 @@ kernel void offset_blocks_ristretto(
 
     RistrettoPoint val = RistrettoPoint_unpack(
         blocks,
-        col + cols * row * WORDS_PER_RISTRETTO_POINT,
-        cols
+        col + cols * row,
+        cols * rows
     );
 
     RistrettoPoint offset = RistrettoPoint_unpack(
         block_offsets,
-        block_id + num_blocks * row * WORDS_PER_RISTRETTO_POINT,
-        num_blocks
+        block_id + num_blocks * row,
+        num_blocks * rows
     );
 
     val = RistrettoPoint_add(&val, &offset);
@@ -186,7 +187,7 @@ kernel void offset_blocks_ristretto(
     RistrettoPoint_pack(
         &val,
         blocks,
-        col + cols * row * WORDS_PER_RISTRETTO_POINT,
-        cols
+        col + cols * row,
+        cols * rows
     );
 }

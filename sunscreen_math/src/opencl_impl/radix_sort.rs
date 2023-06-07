@@ -365,7 +365,7 @@ mod tests {
     use curve25519_dalek::{traits::Identity, ristretto::CompressedRistretto};
     use rand::thread_rng;
 
-    use crate::{GpuRistrettoPointVec, GpuVec, RistrettoPointVec, test_impl::prefix_sum_blocks_ristretto};
+    use crate::{GpuRistrettoPointVec, GpuVec, RistrettoPointVec, test_impl::{prefix_sum_blocks_ristretto, self}};
 
     use super::*;
 
@@ -613,7 +613,7 @@ mod tests {
 
     #[test]
     fn can_prefix_sum_ristretto() {
-        let cols = 1u32;
+        let cols = 4567u32;
         let rows = 3;
 
         let data = (0..cols)
@@ -649,17 +649,10 @@ mod tests {
             let expected_slice = &mut expected[start..end];
             let actual_slice = &actual[start..end];
 
-            let mut t;
-            let mut sum = RistrettoPoint::identity();
+            let expected = test_impl::prefix_sum_blocks_ristretto(&expected_slice, expected_slice.len());
 
-            for i in 0..expected_slice.len() - 1 {
-                t = expected_slice[i];
-                expected_slice[i] = sum;
-                sum += t;
-            }
-
-            for i in 0..expected_slice.len() {
-                assert_eq!(expected_slice[i], actual_slice[i]);
+            for i in 0..expected.block_sums.len() {
+                assert_eq!(expected.block_sums[i].compress(), actual_slice[i].compress());
             }
         }
     }

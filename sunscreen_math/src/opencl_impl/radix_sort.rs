@@ -362,10 +362,13 @@ pub fn radix_sort_2(
 
 #[cfg(test)]
 mod tests {
-    use curve25519_dalek::{traits::Identity, ristretto::CompressedRistretto};
+    use curve25519_dalek::{ristretto::CompressedRistretto, traits::Identity};
     use rand::thread_rng;
 
-    use crate::{GpuRistrettoPointVec, GpuVec, RistrettoPointVec, test_impl::{prefix_sum_blocks_ristretto, self}};
+    use crate::{
+        test_impl::{self, prefix_sum_blocks_ristretto},
+        GpuRistrettoPointVec, GpuVec, RistrettoPointVec,
+    };
 
     use super::*;
 
@@ -504,7 +507,7 @@ mod tests {
         let data = (0..cols)
             .map(|x| {
                 //RistrettoPoint::identity()
-            
+
                 RistrettoPoint::from_uniform_bytes(&[x as u8; 64])
             })
             .collect::<Vec<_>>();
@@ -528,7 +531,10 @@ mod tests {
         assert_eq!(prefix_sums.len() % WORDS_PER_POINT, 0);
         assert_eq!(block_totals.len() % WORDS_PER_POINT, 0);
         assert_eq!(prefix_sums.len() / WORDS_PER_POINT, data_gpu.len());
-        assert_eq!(prefix_sums.len(), rows as usize * cols as usize * WORDS_PER_POINT);
+        assert_eq!(
+            prefix_sums.len(),
+            rows as usize * cols as usize * WORDS_PER_POINT
+        );
         assert_eq!(
             block_totals.len() / WORDS_PER_POINT,
             rows as usize * expected_num_blocks
@@ -649,10 +655,14 @@ mod tests {
             let expected_slice = &mut expected[start..end];
             let actual_slice = &actual[start..end];
 
-            let expected = test_impl::prefix_sum_blocks_ristretto(&expected_slice, expected_slice.len());
+            let expected =
+                test_impl::prefix_sum_blocks_ristretto(&expected_slice, expected_slice.len());
 
             for i in 0..expected.block_sums.len() {
-                assert_eq!(expected.block_sums[i].compress(), actual_slice[i].compress());
+                assert_eq!(
+                    expected.block_sums[i].compress(),
+                    actual_slice[i].compress()
+                );
             }
         }
     }

@@ -658,10 +658,10 @@ mod tests {
             let expected =
                 test_impl::prefix_sum_blocks_ristretto(expected_slice, expected_slice.len());
 
-            for i in 0..expected.block_sums.len() {
+            for (e, a) in expected.block_sums.iter().zip(actual_slice.iter()) {
                 assert_eq!(
-                    expected.block_sums[i].compress(),
-                    actual_slice[i].compress()
+                    e.compress(),
+                    a.compress()
                 );
             }
         }

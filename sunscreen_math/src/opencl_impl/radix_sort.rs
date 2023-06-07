@@ -365,7 +365,7 @@ mod tests {
     use curve25519_dalek::{traits::Identity, ristretto::CompressedRistretto};
     use rand::thread_rng;
 
-    use crate::{GpuRistrettoPointVec, GpuVec, RistrettoPointVec};
+    use crate::{GpuRistrettoPointVec, GpuVec, RistrettoPointVec, test_impl::prefix_sum_blocks_ristretto};
 
     use super::*;
 
@@ -556,41 +556,21 @@ mod tests {
             let sums_row = &prefix_sums[row_start..row_end];
             let data_row = &data[row_start..row_end];
 
+            let totals_start = row as usize * expected_num_blocks;
+            let totals_end = totals_start + expected_num_blocks;
+
+            let totals_row = &block_totals[totals_start..totals_end];
+
             assert_eq!(sums_row.len(), data_row.len());
 
-            for (c_id, (actual_chunk, expected_chunk)) in sums_row
-                .chunks(2 * RistrettoPoint::LOCAL_THREADS)
-                .zip(data_row.chunks(2 * RistrettoPoint::LOCAL_THREADS))
-                .enumerate()
-            {
-                // Check that the block totals match
-                let expected_sum = expected_chunk
-                    .iter()
-                    .fold(RistrettoPoint::identity(), |s, x| s + x);
+            let expected = prefix_sum_blocks_ristretto(data_row, RistrettoPoint::LOCAL_THREADS);
 
-                let actual_sum = block_totals[row as usize * expected_num_blocks + c_id];
+            for (e, a) in expected.block_sums.iter().zip(sums_row.iter()) {
+                assert_eq!(e.compress(), a.compress());
+            }
 
-                dbg!(actual_sum.compress());
-
-                assert_eq!(actual_sum.compress(), expected_sum.compress());
-
-                // Serially compute the chunk's prefix sum and check that the
-                // prefix sum matches.
-                let mut data_chunk = expected_chunk.to_owned();
-                let mut sum = RistrettoPoint::identity();
-
-                for i in data_chunk.iter_mut() {
-                    let val = *i;
-                    *i = sum;
-
-                    sum += val;
-                }
-
-                dbg!(sum.compress());
-
-                for (e, a) in data_chunk.iter().zip(actual_chunk.iter()) {
-                    assert_eq!(a.compress(), e.compress());
-                }
+            for (e, a) in expected.block_totals.iter().zip(totals_row.iter()) {
+                assert_eq!(e.compress(), a.compress());
             }
         }
     }

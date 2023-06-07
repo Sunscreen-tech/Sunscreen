@@ -119,7 +119,7 @@ impl PrefixSum for RistrettoPoint {
     const PREFIX_SUM_BLOCKS_KERNEL: &'static str = "prefix_sum_blocks_ristretto";
     const OFFSET_BLOCKS_KERNEL: &'static str = "offset_blocks_ristretto";
     const LEN_IN_U32: usize = std::mem::size_of::<RistrettoPoint>() / std::mem::size_of::<u32>();
-    const LOCAL_THREADS: usize = 64;
+    const LOCAL_THREADS: usize = 128;
 }
 
 /**
@@ -362,7 +362,7 @@ pub fn radix_sort_2(
 
 #[cfg(test)]
 mod tests {
-    use curve25519_dalek::traits::Identity;
+    use curve25519_dalek::{traits::Identity, ristretto::CompressedRistretto};
     use rand::thread_rng;
 
     use crate::{GpuRistrettoPointVec, GpuVec, RistrettoPointVec};
@@ -498,13 +498,14 @@ mod tests {
 
     #[test]
     fn can_prefix_sum_blocks_ristretto() {
-        let cols = 2u32;
+        let cols = 128u32;
         let rows = 1;
 
         let data = (0..cols)
             .map(|x| {
                 //RistrettoPoint::identity()
-                RistrettoPoint::random(&mut thread_rng())
+            
+                RistrettoPoint::from_uniform_bytes(&[x as u8; 64])
             })
             .collect::<Vec<_>>();
 
@@ -569,7 +570,32 @@ mod tests {
 
                 let actual_sum = block_totals[row as usize * expected_num_blocks + c_id];
 
-                dbg!(actual_sum);
+                for i in 0..expected_chunk.len() {
+                    for d in (0..8).rev() {
+                        if (i + 1) % (0x1 << d) == 0 {
+                            let pow = if d == 0 {
+                                0
+                            } else {
+                                0x1 << (d - 1)
+                            };
+
+                            let start = (i + 1) - (0x1 << d);
+                            let end = i + 1;
+                            
+                            assert_eq!(actual_chunk[i].compress(), expected_chunk[start..end].iter().fold(RistrettoPoint::identity(), |s, x| s + x).compress());
+
+                            dbg!((pow, start, end));
+                            break;
+                        }
+                    }
+                }
+
+                assert_eq!(actual_sum.compress(), actual_chunk[127].compress());
+
+                dbg!(actual_sum.compress());
+                dbg!(actual_sum.compress());
+                dbg!(actual_chunk[127].compress());
+
                 assert_eq!(actual_sum.compress(), expected_sum.compress());
 
                 // Serially compute the chunk's prefix sum and check that the
@@ -584,7 +610,9 @@ mod tests {
                     sum += val;
                 }
 
-                for (a, e) in data_chunk.iter().zip(actual_chunk.iter()) {
+                dbg!(sum.compress());
+
+                for (e, a) in data_chunk.iter().zip(actual_chunk.iter()) {
                     assert_eq!(a.compress(), e.compress());
                 }
             }

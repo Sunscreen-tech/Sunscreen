@@ -17,7 +17,7 @@ RistrettoPoint local_prefix_sum_ristretto(
     u32 len = 0x1 << (log_len + 1);
 
     // Up sweep
-    for (u32 i = 0; i < 1; i++) {//log_len; i++) {
+    for (u32 i = 0; i <= log_len; i++) {
         u32 two_n = 0x1 << i;
         u32 two_n_plus_1 = 0x1 << (i + 1);
 
@@ -25,15 +25,14 @@ RistrettoPoint local_prefix_sum_ristretto(
         u32 idx_1 = k + two_n - 1;
         u32 idx_2 = k + two_n_plus_1 - 1;
 
-        if (idx_1 < len && idx_2 < len) {
+        if (idx_2 < len) {
             RistrettoPoint a = data[idx_1];
             RistrettoPoint b = data[idx_2];
 
             RistrettoPoint c = RistrettoPoint_add(&a, &b);
-        }
 
-        //data[local_id].X.limbs[0] = idx_2;
-        //data[local_id].X.limbs[1] = 0;
+            data[idx_2] = c;
+        }
 
         barrier(CLK_LOCAL_MEM_FENCE);
     }
@@ -43,6 +42,7 @@ RistrettoPoint local_prefix_sum_ristretto(
     // The last element after up sweeping contains the sum of
     // all inputs. Write this to the block_totals.
     RistrettoPoint sum = data[len - 1];
+
 /*
     // Down sweep
     if (local_id == 0) {
@@ -96,9 +96,14 @@ kernel void prefix_sum_blocks_ristretto(
     u32 len
 ) {
     u32 group_id = get_group_id(0);
-    u32 global_id = get_global_id(0);
     u32 local_id = get_local_id(0);
+    u32 local_size = get_local_size(0);
+    u32 global_id = get_global_id(0);
     u32 row_id = get_global_id(1);
+
+    if (group_id > 0) {
+        return;
+    }
 
     // TODO: Prevent bank conflicts
     local RistrettoPoint values_local[0x1 << (LOG_THREADS_PER_GROUP + 1)];
@@ -116,7 +121,7 @@ kernel void prefix_sum_blocks_ristretto(
 
         values_local[local_id] = identity;
     }
-
+    
     barrier(CLK_LOCAL_MEM_FENCE);
 
     RistrettoPoint sum = local_prefix_sum_ristretto(
@@ -150,7 +155,6 @@ kernel void prefix_sum_blocks_ristretto(
             len
         );
     }
-
 }
 
 kernel void offset_blocks_ristretto(

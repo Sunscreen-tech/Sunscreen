@@ -498,7 +498,7 @@ mod tests {
 
     #[test]
     fn can_prefix_sum_blocks_ristretto() {
-        let cols = 5u32;
+        let cols = 4567u32;
         let rows = 3;
 
         let data = (0..cols)
@@ -534,8 +534,6 @@ mod tests {
             rows as usize * expected_num_blocks
         );
 
-        dbg!(block_totals.iter().collect::<Vec<_>>());
-
         let prefix_sums = RistrettoPointVec {
             data: prefix_sums,
             len: cols as usize * rows as usize,
@@ -568,7 +566,7 @@ mod tests {
 
             let expected = prefix_sum_blocks_ristretto(data_row, RistrettoPoint::LOCAL_THREADS);
 
-            for (i, (e, a)) in expected.block_sums.iter().zip(sums_row.iter()).enumerate() {
+            for (e, a) in expected.block_sums.iter().zip(sums_row.iter()) {
                 assert_eq!(e.compress(), a.compress());
             }
 

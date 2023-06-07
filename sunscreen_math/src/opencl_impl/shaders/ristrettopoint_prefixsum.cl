@@ -96,15 +96,11 @@ kernel void prefix_sum_blocks_ristretto(
 ) {
     u32 group_id = get_group_id(0);
     u32 local_id = get_local_id(0);
-    u32 local_size = get_local_size(0);
     u32 global_id = get_global_id(0);
     u32 row_id = get_global_id(1);
 
-    if (group_id > 0) {
-        return;
-    }
-
     // TODO: Prevent bank conflicts
+    // TODO: kernel should actually get half # of threads as elements in this buffer
     local RistrettoPoint values_local[0x1 << (LOG_THREADS_PER_GROUP + 1)];
 
     if (global_id < len) {

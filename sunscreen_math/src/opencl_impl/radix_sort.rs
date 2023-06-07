@@ -498,7 +498,7 @@ mod tests {
 
     #[test]
     fn can_prefix_sum_blocks_ristretto() {
-        let cols = 128u32;
+        let cols = 4567u32;
         let rows = 1;
 
         let data = (0..cols)
@@ -530,7 +530,7 @@ mod tests {
         assert_eq!(prefix_sums.len() / WORDS_PER_POINT, data_gpu.len());
         assert_eq!(
             block_totals.len() / WORDS_PER_POINT,
-            expected_num_blocks
+            rows as usize * expected_num_blocks
         );
 
         let prefix_sums = RistrettoPointVec {

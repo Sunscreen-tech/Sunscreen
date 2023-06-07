@@ -613,7 +613,7 @@ mod tests {
 
     #[test]
     fn can_prefix_sum_ristretto() {
-        let cols = 4567u32;
+        let cols = 128u32 * 128u32 * 32 + 1;
         let rows = 3;
 
         let data = (0..cols)

@@ -2,7 +2,6 @@ use std::borrow::Cow;
 
 use curve25519_dalek::ristretto::RistrettoPoint;
 
-
 use super::{Grid, MappedBuffer, Runtime};
 
 // must equal THREADS_PER_GROUP in `radix_sort.cl`!
@@ -362,8 +361,6 @@ pub fn radix_sort_2(
 
 #[cfg(test)]
 mod tests {
-    
-    
 
     use crate::{
         test_impl::{self, prefix_sum_blocks_ristretto},
@@ -624,11 +621,7 @@ mod tests {
 
         let data = (0..cols)
             .map(|x| {
-                let bytes = [
-                    x.to_le_bytes().to_vec(),
-                    vec![0; 60],
-                ]
-                .concat();
+                let bytes = [x.to_le_bytes().to_vec(), vec![0; 60]].concat();
 
                 RistrettoPoint::from_uniform_bytes(&bytes.try_into().unwrap())
             })
@@ -659,10 +652,7 @@ mod tests {
                 test_impl::prefix_sum_blocks_ristretto(expected_slice, expected_slice.len());
 
             for (e, a) in expected.block_sums.iter().zip(actual_slice.iter()) {
-                assert_eq!(
-                    e.compress(),
-                    a.compress()
-                );
+                assert_eq!(e.compress(), a.compress());
             }
         }
     }

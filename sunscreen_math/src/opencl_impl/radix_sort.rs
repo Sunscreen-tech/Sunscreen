@@ -498,8 +498,8 @@ mod tests {
 
     #[test]
     fn can_prefix_sum_blocks_ristretto() {
-        let cols = 4567u32;
-        let rows = 1;
+        let cols = 5u32;
+        let rows = 3;
 
         let data = (0..cols)
             .map(|x| {
@@ -509,7 +509,7 @@ mod tests {
             })
             .collect::<Vec<_>>();
 
-        //let data = [data.clone(), data.clone(), data].concat();
+        let data = [data.clone(), data.clone(), data].concat();
 
         let data_gpu = RistrettoPointVec::new(&data);
 
@@ -528,21 +528,24 @@ mod tests {
         assert_eq!(prefix_sums.len() % WORDS_PER_POINT, 0);
         assert_eq!(block_totals.len() % WORDS_PER_POINT, 0);
         assert_eq!(prefix_sums.len() / WORDS_PER_POINT, data_gpu.len());
+        assert_eq!(prefix_sums.len(), rows as usize * cols as usize * WORDS_PER_POINT);
         assert_eq!(
             block_totals.len() / WORDS_PER_POINT,
             rows as usize * expected_num_blocks
         );
 
+        dbg!(block_totals.iter().collect::<Vec<_>>());
+
         let prefix_sums = RistrettoPointVec {
             data: prefix_sums,
-            len: cols as usize,
+            len: cols as usize * rows as usize,
         }
         .iter()
         .collect::<Vec<_>>();
 
         let block_totals = RistrettoPointVec {
             data: block_totals,
-            len: expected_num_blocks,
+            len: expected_num_blocks * rows as usize,
         }
         .iter()
         .collect::<Vec<_>>();
@@ -565,7 +568,7 @@ mod tests {
 
             let expected = prefix_sum_blocks_ristretto(data_row, RistrettoPoint::LOCAL_THREADS);
 
-            for (e, a) in expected.block_sums.iter().zip(sums_row.iter()) {
+            for (i, (e, a)) in expected.block_sums.iter().zip(sums_row.iter()).enumerate() {
                 assert_eq!(e.compress(), a.compress());
             }
 

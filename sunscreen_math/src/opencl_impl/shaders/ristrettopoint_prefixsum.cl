@@ -92,22 +92,23 @@ kernel void prefix_sum_blocks_ristretto(
     const global u32* restrict values,
     global u32* block_prefix_sums,
     global u32* block_totals,
-    u32 len
+    u32 cols
 ) {
     u32 group_id = get_group_id(0);
     u32 local_id = get_local_id(0);
-    u32 global_id = get_global_id(0);
+    u32 col_id = get_global_id(0);
     u32 row_id = get_global_id(1);
+    u32 rows = get_global_size(1);
 
     // TODO: Prevent bank conflicts
     // TODO: kernel should actually get half # of threads as elements in this buffer
     local RistrettoPoint values_local[0x1 << (LOG_THREADS_PER_GROUP + 1)];
 
-    if (global_id < len) {
+    if (col_id < cols) {
         RistrettoPoint val = RistrettoPoint_unpack(
             values,
-            global_id + row_id * len * WORDS_PER_RISTRETTO_POINT,
-            len
+            col_id + row_id * cols,
+            cols * rows
         );
 
         values_local[local_id] = val;
@@ -130,24 +131,24 @@ kernel void prefix_sum_blocks_ristretto(
     //
     // Thus, just put a stupid guard here.
     if (local_id == 0) {
-        u32 block_totals_len = len % 128 ? len / 128 + 1 : len / 128;
+        u32 block_totals_len = cols % 128 ? cols / 128 + 1 : cols / 128;
 
         RistrettoPoint_pack(
             &sum,
             block_totals,
-            group_id + row_id * get_num_groups(0),
-            block_totals_len
+            group_id + row_id * block_totals_len,
+            block_totals_len * rows
         );
     }
 
-    if (global_id < len) {
+    if (col_id < cols) {
         RistrettoPoint val = values_local[local_id];
-
+    
         RistrettoPoint_pack(
             &val,
             block_prefix_sums,
-            global_id + row_id * len * WORDS_PER_RISTRETTO_POINT,
-            len
+            col_id + row_id * cols,
+            cols * rows
         );
     }
 }

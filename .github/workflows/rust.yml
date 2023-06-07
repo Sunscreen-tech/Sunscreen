@@ -102,4 +102,6 @@ jobs:
       run: cargo check --release
     # Check the documentation builds, links work, etc.
     - name: Cargo doc
+      env:
+        RUSTDOCFLAGS: -D warnings
       run: cargo doc --release --no-deps

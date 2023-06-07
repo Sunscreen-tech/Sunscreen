@@ -1,7 +1,7 @@
 use std::borrow::Cow;
 
 use curve25519_dalek::ristretto::RistrettoPoint;
-use ocl::OclPrm;
+
 
 use super::{Grid, MappedBuffer, Runtime};
 
@@ -362,8 +362,8 @@ pub fn radix_sort_2(
 
 #[cfg(test)]
 mod tests {
-    use curve25519_dalek::{ristretto::CompressedRistretto, traits::Identity};
-    use rand::thread_rng;
+    
+    
 
     use crate::{
         test_impl::{self, prefix_sum_blocks_ristretto},
@@ -625,7 +625,7 @@ mod tests {
         let data = (0..cols)
             .map(|x| {
                 let bytes = [
-                    x.to_le_bytes().iter().cloned().collect::<Vec<_>>(),
+                    x.to_le_bytes().to_vec(),
                     vec![0; 60],
                 ]
                 .concat();
@@ -646,7 +646,7 @@ mod tests {
 
         let actual = actual.iter().collect::<Vec<_>>();
 
-        let mut expected = data.clone();
+        let mut expected = data;
 
         for row in 0..rows {
             let start = row as usize * cols as usize;
@@ -656,7 +656,7 @@ mod tests {
             let actual_slice = &actual[start..end];
 
             let expected =
-                test_impl::prefix_sum_blocks_ristretto(&expected_slice, expected_slice.len());
+                test_impl::prefix_sum_blocks_ristretto(expected_slice, expected_slice.len());
 
             for i in 0..expected.block_sums.len() {
                 assert_eq!(

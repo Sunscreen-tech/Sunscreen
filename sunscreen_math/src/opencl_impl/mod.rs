@@ -2,12 +2,12 @@ mod scalarvec;
 use core::ops::Deref;
 use std::{
     ffi::CString,
-    mem::{size_of, MaybeUninit},
+    mem::{size_of},
     ops::DerefMut,
 };
 
 use ocl::{
-    enums::ProgramInfo, prm::cl_uint, Buffer, Context, Device, Kernel, MemMap, OclPrm, Platform,
+    prm::cl_uint, Buffer, Context, Device, Kernel, MemMap, OclPrm, Platform,
     Program, Queue,
 };
 pub use scalarvec::GpuScalarVec;

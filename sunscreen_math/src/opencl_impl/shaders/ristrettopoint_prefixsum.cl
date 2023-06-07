@@ -43,7 +43,6 @@ RistrettoPoint local_prefix_sum_ristretto(
     // all inputs. Write this to the block_totals.
     RistrettoPoint sum = data[len - 1];
 
-/*
     // Down sweep
     if (local_id == 0) {
         RistrettoPoint identity = RistrettoPoint_IDENTITY;
@@ -52,7 +51,7 @@ RistrettoPoint local_prefix_sum_ristretto(
     
     barrier(CLK_LOCAL_MEM_FENCE);
 
-    for (u32 i = log_len; i > 0; i--) {
+    for (u32 i = log_len + 1; i > 0; i--) {
         u32 d = i - 1;
         
         u32 two_d = 0x1 << d;
@@ -74,7 +73,7 @@ RistrettoPoint local_prefix_sum_ristretto(
         }
         
         barrier(CLK_LOCAL_MEM_FENCE);
-    }*/
+    }
 
     return sum;
 }

@@ -570,31 +570,7 @@ mod tests {
 
                 let actual_sum = block_totals[row as usize * expected_num_blocks + c_id];
 
-                for i in 0..expected_chunk.len() {
-                    for d in (0..8).rev() {
-                        if (i + 1) % (0x1 << d) == 0 {
-                            let pow = if d == 0 {
-                                0
-                            } else {
-                                0x1 << (d - 1)
-                            };
-
-                            let start = (i + 1) - (0x1 << d);
-                            let end = i + 1;
-                            
-                            assert_eq!(actual_chunk[i].compress(), expected_chunk[start..end].iter().fold(RistrettoPoint::identity(), |s, x| s + x).compress());
-
-                            dbg!((pow, start, end));
-                            break;
-                        }
-                    }
-                }
-
-                assert_eq!(actual_sum.compress(), actual_chunk[127].compress());
-
                 dbg!(actual_sum.compress());
-                dbg!(actual_sum.compress());
-                dbg!(actual_chunk[127].compress());
 
                 assert_eq!(actual_sum.compress(), expected_sum.compress());
 

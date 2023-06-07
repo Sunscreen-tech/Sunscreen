@@ -432,7 +432,7 @@ where
 }
 
 /**
- * This trait is used to define multiplying a U<T> by a T. In particular,
+ * This trait is used to define multiplying a `U<T>` by a `T`. In particular,
  * multiplying a matrix times a scalar.
  */
 pub trait ScalarMul<Rhs> {

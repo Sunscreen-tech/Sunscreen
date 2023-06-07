@@ -5,7 +5,7 @@ While some of the code and ideas presented here could be useful for constructing
 
 Alice would like to swap some NU tokens for some ETH tokens. She'd like to perform this token swap without revealing to anyone her order amount. This might be done to prevent malicious actors from [front-running](https://arxiv.org/pdf/1902.05164.pdf) her order.
 
-To swap her tokens, she interacts with a "pool" that has reserves of both NU and ETH (implemented as a smart contract). For this example, we'll say the pool contains 100 ETH tokens and 1000 NU tokens. The reserve values here are public information. The exchange rate for NU ⇔ ETH [changes](https://docs.uniswap.org/protocol/V2/concepts/core-concepts/swaps) based on the pool's reserves of the two tokens. 
+To swap her tokens, she interacts with a "pool" that has reserves of both NU and ETH (implemented as a smart contract). For this example, we'll say the pool contains 100 ETH tokens and 1000 NU tokens. The reserve values here are public information. The exchange rate for NU ⇔ ETH [changes](https://docs.uniswap.org/protocol/V2/concepts/core-concepts/swaps) based on the pool's reserves of the two tokens.
 
 Alice will encrypt her order (i.e. the amount of NU tokens she wants to swap) and then submit it to the blockchain miner. The miner can then calculate how much *encrypted* ETH Alice should receive in exchange for her encrypted amount of NU tokens via FHE.
 
@@ -17,9 +17,9 @@ AMMs can be a great alternative to centralized exchanges since they allow you to
 
 The exchange rate between the two tokens evolves automatically based on a known mathematical formula.
 
-Unfortunately, the open and public nature of AMMs combined with the predictable behavior of the exchange rate allows for front-running attacks. Bad actors observe pending trades and then submit their own trades to "manipulate" the exchange rate in a way favorable to themselves. What does this mean for you as a potential AMM user? You may end up with a worse price than expected when your trade executes as these front-running attacks are fairly common and widespread. 
+Unfortunately, the open and public nature of AMMs combined with the predictable behavior of the exchange rate allows for front-running attacks. Bad actors observe pending trades and then submit their own trades to "manipulate" the exchange rate in a way favorable to themselves. What does this mean for you as a potential AMM user? You may end up with a worse price than expected when your trade executes as these front-running attacks are fairly common and widespread.
 
-Privacy (specifically hiding trade values) is one solution to this front-running problem. 
+Privacy (specifically hiding trade values) is one solution to this front-running problem.
 
 ## Program walkthrough
 
@@ -32,7 +32,7 @@ use sunscreen::{
     fhe_program,
     types::{bfv::Rational, Cipher},
     Ciphertext, CompiledFheProgram, Compiler, Params, PrivateKey, PublicKey,
-    Runtime, FheRuntime,
+    FheRuntime,
 };
 
 #[fhe_program(scheme = "bfv")]
@@ -51,21 +51,20 @@ We begin by importing the stuff we're going to use.
 We declare our `swap_nu` function as an FHE program with the appropriate attribute (`#[fhe_program(scheme = "bfv")]`).
 
 `swap_nu` computes how much encrypted ETH a user will receive in exchange for `nu_tokens_to_trade` some amount of encrypted NU . Since we'll need to divide by a ciphertext, we'll have to use the `Rational` type here. Thus, notice that `swap_nu` takes in a `Cipher<Rational>` and returns a `Cipher<Rational>`. If you're wondering where the formula for `swap_nu` came from, it's from the constant product formula used by some automated market makers.
-    
-Notice that the other values in `swap_nu` (i.e. the pool reserves for ETH `total_eth` and NU `total_nu`) are in the clear.  
+
+Notice that the other values in `swap_nu` (i.e. the pool reserves for ETH `total_eth` and NU `total_nu`) are in the clear.
 
 ### Alice
 ```rust
 # use sunscreen::{
 #     fhe_program,
 #     types::{bfv::Rational, Cipher},
-#     Ciphertext, CompiledFheProgram, Compiler, Params, PrivateKey, 
+#     Ciphertext, CompiledFheProgram, Compiler, Params, PrivateKey,
 #     Error,
 #     PublicKey,
-#     Runtime,
 #     FheRuntime
 # };
-# 
+#
 /// Alice is a party that would like to trade some NU for ETH.
 struct Alice {
     /// Alice's public key
@@ -84,28 +83,27 @@ Alice wants to swap some encrypted (i.e. hidden) amount of NU for an encrypted (
 # use sunscreen::{
 #     fhe_program,
 #     types::{bfv::Rational, Cipher},
-#     Ciphertext, CompiledFheProgram, Compiler, Params, PrivateKey, 
+#     Ciphertext, CompiledFheProgram, Compiler, Params, PrivateKey,
 #     Error,
 #     PublicKey,
-#     Runtime,
 #     FheRuntime
 # };
-# 
+#
 # /// Alice is a party that would like to trade some NU for ETH.
 # struct Alice {
 #     /// Alice's public key
 #     pub public_key: PublicKey,
-# 
+#
 #     /// Alice's private key
 #     private_key: PrivateKey,
-# 
+#
 #     /// Alice's runtime
 #     runtime: FheRuntime,
 # }
-# 
+#
 impl Alice {
     pub fn setup(params: &Params) -> Result<Alice, Error> {
-        let runtime = Runtime::new_fhe(params)?;
+        let runtime = FheRuntime::new(params)?;
 
         let (public_key, private_key) = runtime.generate_keys()?;
 
@@ -150,10 +148,9 @@ Let's look at the miner next.
 # use sunscreen::{
 #     fhe_program,
 #     types::{bfv::Rational, Cipher},
-#     Ciphertext, CompiledFheProgram, Compiler, Params, PrivateKey, 
+#     Ciphertext, CompiledFheProgram, Compiler, Params, PrivateKey,
 #     Error,
 #     PublicKey,
-#     Runtime,
 #     FheRuntime,
 # };
 /// Imagine this is a miner in a blockchain application. They're responsible
@@ -172,13 +169,12 @@ struct Miner {
 # use sunscreen::{
 #     fhe_program,
 #     types::{bfv::Rational, Cipher},
-#     Ciphertext, CompiledFheProgram, Compiler, Params, PrivateKey, 
+#     Ciphertext, CompiledFheProgram, Compiler, Params, PrivateKey,
 #     Error,
 #     PublicKey,
-#     Runtime,
 #     FheRuntime,
 # };
-# 
+#
 # #[fhe_program(scheme = "bfv")]
 # /// This program swaps NU tokens for ETH.
 # fn swap_nu(
@@ -186,7 +182,7 @@ struct Miner {
 # ) -> Cipher<Rational> {
 #     let total_eth = 100.0;
 #     let total_nu = 1_000.0;
-# 
+#
 #     -(total_eth * total_nu / (total_nu + nu_tokens_to_trade) - total_eth)
 # }
 #
@@ -195,7 +191,7 @@ struct Miner {
 # struct Miner {
 #     /// The compiled FHE swap program
 #     pub compiled_swap_nu: CompiledFheProgram,
-# 
+#
 #     /// The Miner's runtime
 #     runtime: FheRuntime,
 # }
@@ -206,7 +202,7 @@ impl Miner {
             .fhe_program(swap_nu)
             .compile()?;
 
-        let runtime = Runtime::new_fhe(app.params())?;
+        let runtime = FheRuntime::new(app.params())?;
 
         Ok(Miner {
             compiled_swap_nu: app.get_fhe_program(swap_nu).unwrap().clone(),
@@ -227,7 +223,7 @@ impl Miner {
 ```
 
 In `setup`, we compile `swap_nu` and save the runnable program as `compiled_swap_nu`.
-We also construct and save a `Runtime` for our miner to allow him to run it.
+We also construct and save an `FheRuntime` for our miner to allow him to run it.
 
 The miner can run the token swap contract (see `run_contract`) by calling `runtime.run` with the `compiled_swap_nu` program, Alice's encrypted order amount (`nu_tokens_to_trade`), and Alice's `public_key`. Recall that we must pass in arguments to an FHE program (such as `compiled_swap_nu`) via a `Vec`.
 
@@ -237,13 +233,12 @@ The miner can run the token swap contract (see `run_contract`) by calling `runti
 # use sunscreen::{
 #     fhe_program,
 #     types::{bfv::Rational, Cipher},
-#     Ciphertext, CompiledFheProgram, Compiler, Params, PrivateKey, 
+#     Ciphertext, CompiledFheProgram, Compiler, Params, PrivateKey,
 #     Error,
 #     PublicKey,
-#     Runtime,
 #     FheRuntime,
 # };
-# 
+#
 #  #[fhe_program(scheme = "bfv")]
 # /// This program swaps NU tokens to receive ETH.
 # fn swap_nu(
@@ -251,89 +246,89 @@ The miner can run the token swap contract (see `run_contract`) by calling `runti
 # ) -> Cipher<Rational> {
 #     let total_eth = 100.0;
 #     let total_nu = 1_000.0;
-# 
+#
 #     -(total_eth * total_nu / (total_nu + nu_tokens_to_trade) - total_eth)
 # }
-# 
+#
 # /// Imagine this is a miner in a blockchain application. They're responsible
 # /// for processing transactions
 # struct Miner {
 #     /// The compiled swap_nu program
 #     pub compiled_swap_nu: CompiledFheProgram,
-# 
+#
 #     /// The Miner's runtime
 #     runtime: FheRuntime,
 # }
-# 
+#
 # impl Miner {
 #     pub fn setup() -> Result<Miner, Error> {
 #         let app = Compiler::new()
 #             .fhe_program(swap_nu)
 #             .compile()?;
-# 
-#         let runtime = Runtime::new_fhe(app.params())?;
-# 
+#
+#         let runtime = FheRuntime::new(app.params())?;
+#
 #         Ok(Miner {
 #             compiled_swap_nu: app.get_fhe_program(swap_nu).unwrap().clone(),
 #             runtime,
 #         })
 #     }
-# 
+#
 #     pub fn run_contract(
 #         &self,
 #         nu_tokens_to_trade: Ciphertext,
 #         public_key: &PublicKey,
 #     ) -> Result<Ciphertext, Error> {
 #         let results = self.runtime.run(&self.compiled_swap_nu, vec![nu_tokens_to_trade], public_key)?;
-# 
+#
 #         Ok(results[0].clone())
 #     }
 # }
-# 
+#
 # /// Alice is a party that would like to trade some NU for ETH.
 # struct Alice {
 #     /// Alice's public key
 #     pub public_key: PublicKey,
-# 
+#
 #     /// Alice's private key
 #     private_key: PrivateKey,
-# 
+#
 #     /// Alice's runtime
 #     runtime: FheRuntime,
 # }
-# 
+#
 # impl Alice {
 #     pub fn setup(params: &Params) -> Result<Alice, Error> {
-#         let runtime = Runtime::new_fhe(params)?;
-# 
+#         let runtime = FheRuntime::new(params)?;
+#
 #         let (public_key, private_key) = runtime.generate_keys()?;
-# 
+#
 #         Ok(Alice {
 #             public_key,
 #             private_key,
 #             runtime,
 #         })
 #     }
-# 
+#
 #     pub fn create_transaction(&self, amount: f64) -> Result<Ciphertext, Error> {
 #         Ok(self.runtime
 #             .encrypt(Rational::try_from(amount)?, &self.public_key)?
 #         )
 #     }
-# 
+#
 #     pub fn check_received_eth(&self, received_eth: Ciphertext) -> Result<(), Error> {
 #         let received_eth: Rational = self
 #             .runtime
 #             .decrypt(&received_eth, &self.private_key)?;
-# 
+#
 #         let received_eth: f64 = received_eth.into();
-# 
+#
 #         println!("Alice received {}ETH", received_eth);
-# 
+#
 #         Ok(())
 #     }
 # }
-# 
+#
 fn main() -> Result<(), Error> {
     // Set up the miner with some NU and ETH tokens.
     let miner = Miner::setup()?;
@@ -370,7 +365,7 @@ For simplicity, we've omitted many details that are needed to actually execute a
 If you're curious about the answers:
 - we've omitted account balances for simplicity (but such account balances would be encrypted as well)
 - to ensure Alice is behaving honestly, we would need additional cryptographic tools such as zero-knowledge proofs
-- the primary goal of private token swaps would be to prevent [front-running](https://ethereum.org/en/developers/docs/mev/#mev-examples-sandwich-trading), thus there would be some additional step to "reveal" the new reserve values 
+- the primary goal of private token swaps would be to prevent [front-running](https://ethereum.org/en/developers/docs/mev/#mev-examples-sandwich-trading), thus there would be some additional step to "reveal" the new reserve values
 
 
 

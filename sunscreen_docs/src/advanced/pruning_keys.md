@@ -1,5 +1,5 @@
 # Pruning public keys
-For convenience, the `generate_keys` function creates several keys in the returned `PublicKey` object. 
+For convenience, the `generate_keys` function creates several keys in the returned `PublicKey` object.
 
 ## Why you might want to prune `PublicKey`
 Some of these keys can be fairly large, the size of which is determined by scheme parameters. However, they may or may not be needed in your application:
@@ -15,7 +15,7 @@ Each compiled FHE program contains a list the keys it needs at runtime in `fhe_p
 # use sunscreen::{
 #     fhe_program,
 #     types::{bfv::Signed, Cipher},
-#     Compiler, Runtime, PublicKey
+#     Compiler, FheRuntime, PublicKey
 # };
 #
 # #[fhe_program(scheme = "bfv")]
@@ -28,7 +28,7 @@ Each compiled FHE program contains a list the keys it needs at runtime in `fhe_p
 #        .compile()
 #        .unwrap();
 #
-#    let runtime = Runtime::new_fhe(app.params()).unwrap();
+#    let runtime = FheRuntime::new(app.params()).unwrap();
 let (public_key, private_key) = runtime.generate_keys().unwrap();
 
 // Shadow and overwrite the public_key, removing the galois_key and relin_key

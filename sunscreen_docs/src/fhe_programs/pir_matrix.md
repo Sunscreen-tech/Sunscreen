@@ -85,17 +85,17 @@ fn lookup(
 
 We begin by importing the stuff we're going to use.
 
-We declare our `lookup` function as an FHE program with the appropriate attribute `(#[fhe_program(scheme = "bfv")])`. 
+We declare our `lookup` function as an FHE program with the appropriate attribute `(#[fhe_program(scheme = "bfv")])`.
 
 We'll represent our database as an array of length `SQRT_DATABASE_SIZE` (in this case = 10) with entries that are arrays of length `SQRT_DATABASE_SIZE` (also = 10). Since we want to write into the database, we'll need to initialize the array in the FHE program's function body.
 
-`lookup` implements the matrix-vector and dot product formulas explained above to retrieve Alice's item privately. It takes in an unencrypted `database` along with Alice's encrypted query "vectors" (actually arrays). Recall that we have two queries&mdash; `col_query` will be used to select the appropriate column of the database whereas `row_query` will be used to select the appropriate row of the database. 
+`lookup` implements the matrix-vector and dot product formulas explained above to retrieve Alice's item privately. It takes in an unencrypted `database` along with Alice's encrypted query "vectors" (actually arrays). Recall that we have two queries&mdash; `col_query` will be used to select the appropriate column of the database whereas `row_query` will be used to select the appropriate row of the database.
 
 ### Alice
 
 ```rust
 # use sunscreen::{
-#     PrivateKey, PublicKey, Runtime,
+#     FheRuntime, PrivateKey, PublicKey,
 # };
 
 /// Alice is a party that wants to look up a value in the database without
@@ -108,7 +108,7 @@ struct Alice {
     private_key: PrivateKey,
 
     /// Alice's runtime
-    runtime: Runtime,
+    runtime: FheRuntime,
 }
 ```
 
@@ -118,28 +118,28 @@ Alice wants to retrieve an item from the database privately. She'll need a publi
 # use sunscreen::{
 #     fhe_program,
 #     types::{bfv::Signed, Cipher},
-#     Ciphertext, CompiledFheProgram, Compiler, Error, FheProgramInput, Params, PrivateKey,
-#     PublicKey, Runtime, FheRuntime
+#     Ciphertext, CompiledFheProgram, Compiler, Error, FheProgramInput, FheRuntime,
+#     Params, PrivateKey, PublicKey,
 # };
 #
 # const SQRT_DATABASE_SIZE: usize = 10;
-# 
+#
 # /// Alice is a party that wants to look up a value in the database without
 # /// revealing what she looked up.
 # struct Alice {
 #     /// Alice's public key
 #     pub public_key: PublicKey,
-# 
+#
 #     /// Alice's private key
 #     private_key: PrivateKey,
-# 
+#
 #     /// Alice's runtime
 #     runtime: FheRuntime,
 # }
 #
 impl Alice {
     pub fn setup(params: &Params) -> Result<Alice, Error> {
-        let runtime = Runtime::new_fhe(params)?;
+        let runtime = FheRuntime::new(params)?;
 
         let (public_key, private_key) = runtime.generate_keys()?;
 
@@ -178,7 +178,7 @@ impl Alice {
 ```
 Alice will need to construct a runtime. Once that's done, she can generate her public/private key pair.
 
-`create_query` will allow Alice to create and encrypt her two query "vectors" (i.e. arrays). Alice will pass in an `index` which contains her desired column and row indices. Notice the 1's place of the `index` will allow Alice to select her desired column #, whereas the 10's place will allow Alice to select her desired row # (e.g. if `index` is 85, this denotes Alice is interested in entry located in the 5th column, 8th row). 
+`create_query` will allow Alice to create and encrypt her two query "vectors" (i.e. arrays). Alice will pass in an `index` which contains her desired column and row indices. Notice the 1's place of the `index` will allow Alice to select her desired column #, whereas the 10's place will allow Alice to select her desired row # (e.g. if `index` is 85, this denotes Alice is interested in entry located in the 5th column, 8th row).
 
 We won't use this until the very end but `check_response` allows Alice to decrypt the server's response by passing in the ciphertext she received (`value`) along with her `private_key`.
 
@@ -190,8 +190,8 @@ Let's look at the server next.
 # use sunscreen::{
 #     fhe_program,
 #     types::{bfv::Signed, Cipher},
-#     Ciphertext, CompiledFheProgram, Compiler, Error, FheProgramInput, Params, PrivateKey,
-#     PublicKey, Runtime,
+#     Ciphertext, CompiledFheProgram, Compiler, Error, FheProgramInput, FheRuntime,
+#     Params, PrivateKey, PublicKey,
 # };
 #
 /// This is the server that processes Alice's query.
@@ -200,7 +200,7 @@ struct Server {
     pub compiled_lookup: CompiledFheProgram,
 
     /// The server's runtime
-    runtime: Runtime,
+    runtime: FheRuntime,
 }
 ```
 
@@ -210,8 +210,8 @@ Recall that the server is responsible for retrieving Alice's item from the datab
 # use sunscreen::{
 #     fhe_program,
 #     types::{bfv::Signed, Cipher},
-#     Ciphertext, CompiledFheProgram, Compiler, Error, FheProgramInput, Params, PrivateKey,
-#     PublicKey, Runtime, FheRuntime
+#     Ciphertext, CompiledFheProgram, Compiler, Error, FheProgramInput, FheRuntime,
+#     Params, PrivateKey, PublicKey,
 # };
 #
 # #[fhe_program(scheme = "bfv")]
@@ -226,7 +226,7 @@ Recall that the server is responsible for retrieving Alice's item from the datab
 #     // Copy col_query just so we get an initialized object of the right
 #     // type in col.
 #     let mut col = [col_query[0]; SQRT_DATABASE_SIZE];
-# 
+#
 #     // Perform matrix-vector multiplication with col_query to extract
 #     // Alice's desired column
 #     for i in 0..SQRT_DATABASE_SIZE {
@@ -238,14 +238,14 @@ Recall that the server is responsible for retrieving Alice's item from the datab
 #             }
 #         }
 #     }
-# 
+#
 #     let mut sum = col[0] * row_query[0];
-# 
+#
 #     // Dot product the result with the row query to get the result
 #     for i in 1..SQRT_DATABASE_SIZE {
 #         sum = sum + col[i] * row_query[i];
 #     }
-# 
+#
 #     sum
 # }
 #
@@ -266,7 +266,7 @@ impl Server {
             .fhe_program(lookup)
             .compile()?;
 
-        let runtime = Runtime::new_fhe(app.params())?;
+        let runtime = FheRuntime::new(app.params())?;
 
         Ok(Server {
             compiled_lookup: app.get_fhe_program(lookup).unwrap().clone(),
@@ -317,8 +317,8 @@ Once all that's done, the server can `run` the FHE program by passing in the `co
 # use sunscreen::{
 #     fhe_program,
 #     types::{bfv::Signed, Cipher},
-#     Ciphertext, CompiledFheProgram, Compiler, Error, FheProgramInput, Params, PrivateKey,
-#     PublicKey, Runtime, FheRuntime
+#     Ciphertext, CompiledFheProgram, Compiler, Error, FheProgramInput, FheRuntime,
+#     Params, PrivateKey, PublicKey,
 # };
 #
 # const SQRT_DATABASE_SIZE: usize = 10;
@@ -335,7 +335,7 @@ Once all that's done, the server can `run` the FHE program by passing in the `co
 #     // Copy col_query just so we get an initialized object of the right
 #     // type in col.
 #     let mut col = [col_query[0]; SQRT_DATABASE_SIZE];
-# 
+#
 #     // Perform matrix-vector multiplication with col_query to extract
 #     // Alice's desired column
 #     for i in 0..SQRT_DATABASE_SIZE {
@@ -347,14 +347,14 @@ Once all that's done, the server can `run` the FHE program by passing in the `co
 #             }
 #         }
 #     }
-# 
+#
 #     let mut sum = col[0] * row_query[0];
-# 
+#
 #     // Dot product the result with the row query to get the result
 #     for i in 1..SQRT_DATABASE_SIZE {
 #         sum = sum + col[i] * row_query[i];
 #     }
-# 
+#
 #     sum
 # }
 #
@@ -363,50 +363,50 @@ Once all that's done, the server can `run` the FHE program by passing in the `co
 # struct Alice {
 #     /// Alice's public key
 #     pub public_key: PublicKey,
-# 
+#
 #     /// Alice's private key
 #     private_key: PrivateKey,
-# 
+#
 #     /// Alice's runtime
 #     runtime: FheRuntime,
 # }
 #
-# impl Alice { 
-#     pub fn setup(params: &Params) -> Result<Alice, Error> { 
-#         let runtime = Runtime::new_fhe(params)?; 
-#  
-#         let (public_key, private_key) = runtime.generate_keys()?; 
-#  
-#         Ok(Alice { 
-#             public_key, 
-#             private_key, 
-#             runtime, 
-#         }) 
-#     } 
-#  
-#     pub fn create_query(&self, index: usize) -> Result<(Ciphertext, Ciphertext), Error> { 
-#         let col = index % SQRT_DATABASE_SIZE; 
-#         let row = index / SQRT_DATABASE_SIZE; 
-#  
-#         let mut col_query = [Signed::from(0); SQRT_DATABASE_SIZE]; 
-#         let mut row_query = [Signed::from(0); SQRT_DATABASE_SIZE]; 
-#         col_query[col] = Signed::from(1); 
-#         row_query[row] = Signed::from(1); 
-#  
-#         Ok(( 
-#             self.runtime.encrypt(col_query, &self.public_key)?, 
-#             self.runtime.encrypt(row_query, &self.public_key)?, 
-#         )) 
-#     } 
-#  
-#     pub fn check_response(&self, value: Ciphertext) -> Result<(), Error> { 
-#         let value: Signed = self.runtime.decrypt(&value, &self.private_key)?; 
-#  
-#         let value: i64 = value.into(); 
-#  
-#         println!("Alice received {}", value); 
-#  
-#         Ok(()) 
+# impl Alice {
+#     pub fn setup(params: &Params) -> Result<Alice, Error> {
+#         let runtime = FheRuntime::new(params)?;
+#
+#         let (public_key, private_key) = runtime.generate_keys()?;
+#
+#         Ok(Alice {
+#             public_key,
+#             private_key,
+#             runtime,
+#         })
+#     }
+#
+#     pub fn create_query(&self, index: usize) -> Result<(Ciphertext, Ciphertext), Error> {
+#         let col = index % SQRT_DATABASE_SIZE;
+#         let row = index / SQRT_DATABASE_SIZE;
+#
+#         let mut col_query = [Signed::from(0); SQRT_DATABASE_SIZE];
+#         let mut row_query = [Signed::from(0); SQRT_DATABASE_SIZE];
+#         col_query[col] = Signed::from(1);
+#         row_query[row] = Signed::from(1);
+#
+#         Ok((
+#             self.runtime.encrypt(col_query, &self.public_key)?,
+#             self.runtime.encrypt(row_query, &self.public_key)?,
+#         ))
+#     }
+#
+#     pub fn check_response(&self, value: Ciphertext) -> Result<(), Error> {
+#         let value: Signed = self.runtime.decrypt(&value, &self.private_key)?;
+#
+#         let value: i64 = value.into();
+#
+#         println!("Alice received {}", value);
+#
+#         Ok(())
 #     }
 # }
 #
@@ -419,43 +419,43 @@ Once all that's done, the server can `run` the FHE program by passing in the `co
 #     runtime: FheRuntime,
 # }
 #
-# impl Server { 
-#     pub fn setup() -> Result<Server, Error> { 
+# impl Server {
+#     pub fn setup() -> Result<Server, Error> {
 #         let app = Compiler::new()
 #             .fhe_program(lookup)
-#             .compile()?; 
-#  
-#         let runtime = Runtime::new_fhe(app.params())?; 
-#  
-#         Ok(Server { 
-#             compiled_lookup: app.get_fhe_program(lookup).unwrap().clone(), 
-#             runtime, 
-#         }) 
-#     } 
-#  
-#     pub fn run_query( 
-#         &self, 
-#         col_query: Ciphertext, 
-#         row_query: Ciphertext, 
-#         public_key: &PublicKey, 
-#     ) -> Result<Ciphertext, Error> { 
-#         // Our database will consist of values between 400 and 500. 
-#         let mut database = [[Signed::from(0); SQRT_DATABASE_SIZE]; SQRT_DATABASE_SIZE]; 
-#         let mut val = Signed::from(400); 
-#  
-#         for i in 0..SQRT_DATABASE_SIZE { 
-#             for j in 0..SQRT_DATABASE_SIZE { 
-#                 database[i][j] = val; 
-#                 val = val + 1; 
-#             } 
-#         } 
-#  
-#         let args: Vec<FheProgramInput> = vec![col_query.into(), row_query.into(), database.into()]; 
-#  
-#         let results = self.runtime.run(&self.compiled_lookup, args, public_key)?; 
-#  
-#         Ok(results[0].clone()) 
-#     } 
+#             .compile()?;
+#
+#         let runtime = FheRuntime::new(app.params())?;
+#
+#         Ok(Server {
+#             compiled_lookup: app.get_fhe_program(lookup).unwrap().clone(),
+#             runtime,
+#         })
+#     }
+#
+#     pub fn run_query(
+#         &self,
+#         col_query: Ciphertext,
+#         row_query: Ciphertext,
+#         public_key: &PublicKey,
+#     ) -> Result<Ciphertext, Error> {
+#         // Our database will consist of values between 400 and 500.
+#         let mut database = [[Signed::from(0); SQRT_DATABASE_SIZE]; SQRT_DATABASE_SIZE];
+#         let mut val = Signed::from(400);
+#
+#         for i in 0..SQRT_DATABASE_SIZE {
+#             for j in 0..SQRT_DATABASE_SIZE {
+#                 database[i][j] = val;
+#                 val = val + 1;
+#             }
+#         }
+#
+#         let args: Vec<FheProgramInput> = vec![col_query.into(), row_query.into(), database.into()];
+#
+#         let results = self.runtime.run(&self.compiled_lookup, args, public_key)?;
+#
+#         Ok(results[0].clone())
+#     }
 # }
 fn main() -> Result<(), Error> {
     // Set up the database
@@ -487,7 +487,7 @@ Finally, Alice can decrypt to check what item she received via `check_response`.
 The entire program (not including compilation time) takes ~376 ms on an Intel Xeon @ 3.0 GHz (with 8 cores and 16 GB RAM) and ~716 ms on a Macbook Air M1.
 
 # What's missing?
-If you're interested in using PIR in a real application, there are much better PIR algorithms out there (e.g. [SealPIR](https://eprint.iacr.org/2017/1142.pdf), [Spiral](https://eprint.iacr.org/2022/368.pdf)) that are faster and compress the query vector further. 
+If you're interested in using PIR in a real application, there are much better PIR algorithms out there (e.g. [SealPIR](https://eprint.iacr.org/2017/1142.pdf), [Spiral](https://eprint.iacr.org/2022/368.pdf)) that are faster and compress the query vector further.
 
 Additionally, in PIR, we assume that the user knows the index of the item she wants to retrieve. For many applications though, this might not be the case. [Oblivious message detection](https://eprint.iacr.org/2021/1256.pdf) allows the user to detect *which* item she's interested in and can be combined with PIR.
 

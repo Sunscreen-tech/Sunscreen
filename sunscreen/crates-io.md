@@ -4,7 +4,7 @@ Sunscreen is an ecosystem for building privacy-preserving applications using ful
 
 This project is licensed under the terms of the GNU AGPLv3 license. If you require a different license for your application, please reach out to us.
 
-*WARNING!* This library is meant for experiments only. It has not been externally audited and is *not* intended for use in production. 
+*WARNING!* This library is meant for experiments only. It has not been externally audited and is *not* intended for use in production.
 
 # Example
 Below, we look at how to multiply two encrypted integers together.
@@ -13,7 +13,7 @@ Below, we look at how to multiply two encrypted integers together.
 use sunscreen::{
     fhe_program,
     types::{bfv::Signed, Cipher},
-    Compiler, Error, Runtime,
+    Compiler, Error, FheRuntime,
 };
 
 #[fhe_program(scheme = "bfv")]
@@ -26,7 +26,7 @@ fn main() -> Result<(), Error> {
         .fhe_program(simple_multiply)
         .compile()?;
 
-    let runtime = Runtime::new_fhe(app.params())?;
+    let runtime = FheRuntime::new(app.params())?;
 
     let (public_key, private_key) = runtime.generate_keys()?;
 

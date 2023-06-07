@@ -5,7 +5,7 @@ Once you've created a runtime, generating keys is simple:
 # use sunscreen::{
 #     fhe_program,
 #     types::{bfv::Signed, Cipher},
-#     Compiler, Runtime, PublicKey
+#     Compiler, FheRuntime, PublicKey
 # };
 #
 # #[fhe_program(scheme = "bfv")]
@@ -18,7 +18,7 @@ Once you've created a runtime, generating keys is simple:
 #        .compile()
 #        .unwrap();
 #
-#    let runtime = Runtime::new_fhe(app.params()).unwrap();
+#    let runtime = FheRuntime::new(app.params()).unwrap();
 #
     let (public_key, private_key) = runtime.generate_keys().unwrap();
 # }

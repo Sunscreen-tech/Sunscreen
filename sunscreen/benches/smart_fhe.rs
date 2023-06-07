@@ -3,7 +3,7 @@ use std::time::Instant;
 use sunscreen::{
     fhe_program,
     types::{bfv::Fractional, Cipher},
-    Compiler, FheProgramInput, Params, Runtime, SchemeType,
+    Compiler, FheProgramInput, FheRuntime, Params, SchemeType,
 };
 
 /// This program benchmarks all the FHE pieces of private transactions with
@@ -55,7 +55,7 @@ fn benchmark(params: &Params) {
 
         compile_time += now.elapsed().as_secs_f64();
 
-        let runtime = Runtime::new_fhe(params).unwrap();
+        let runtime = FheRuntime::new(params).unwrap();
 
         let now = Instant::now();
         let (public, private) = runtime.generate_keys().unwrap();

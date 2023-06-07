@@ -654,7 +654,7 @@ mod tests {
 
             let expected_slice = &mut expected[start..end];
             let actual_slice = &actual[start..end];
-/*
+
             let expected =
                 test_impl::prefix_sum_blocks_ristretto(&expected_slice, expected_slice.len());
 
@@ -663,7 +663,7 @@ mod tests {
                     expected.block_sums[i].compress(),
                     actual_slice[i].compress()
                 );
-            } */
+            }
         }
     }
 

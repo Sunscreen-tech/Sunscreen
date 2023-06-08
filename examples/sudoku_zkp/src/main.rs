@@ -1,10 +1,55 @@
 use sunscreen::{
     types::zkp::{ConstrainCmp, NativeField},
-    zkp_program, BackendField
+    zkp_program, BackendField, ZkpProgramInput, Compiler, Runtime,
 };
+use sunscreen_zkp_backend::{bulletproofs::BulletproofsBackend, ZkpBackend};
+
+type BPField = NativeField<<BulletproofsBackend as ZkpBackend>::Field>;
 
 fn main() {
-    println!("Hello, world!");
+    let app = Compiler::new()
+        .zkp_backend::<BulletproofsBackend>()
+        .zkp_program(sudoku_proof)
+        .compile()
+        .unwrap();
+
+    let prog = app.get_zkp_program(sudoku_proof).unwrap();
+
+    let runtime = Runtime::new_zkp(&BulletproofsBackend::new()).unwrap();
+
+    let ex_puzzle = [
+        [0, 7, 0, 0, 2, 0, 0, 4, 6],
+        [0, 6, 0, 0, 0, 0, 8, 9, 0],
+        [2, 0, 0, 8, 0, 0, 7, 1, 5],
+        [0, 8, 4, 0, 9, 7, 0, 0, 0],
+        [7, 1, 0, 0, 0, 0, 0, 5, 9],
+        [0, 0, 0, 1, 3, 0, 4, 8, 0],
+        [6, 9, 7, 0, 0, 2, 0, 0, 8],
+        [0, 5, 8, 0, 0, 0, 0, 6, 0],
+        [4, 3, 0, 0, 8, 0, 0, 7, 0],
+    ];
+
+    let ex_sol = [
+        [8, 7, 5, 9, 2, 1, 3, 4, 6],
+        [3, 6, 1, 7, 5, 4, 8, 9, 2],
+        [2, 4, 9, 8, 6, 3, 7, 1, 5],
+        [5, 8, 4, 6, 9, 7, 1, 2, 3],
+        [7, 1, 3, 2, 4, 8, 6, 5, 9],
+        [9, 2, 6, 1, 3, 5, 4, 8, 7],
+        [6, 9, 7, 4, 1, 2, 5, 3, 8],
+        [1, 5, 8, 3, 7, 9, 2, 6, 4],
+        [4, 3, 2, 5, 8, 6, 9, 7, 1],
+    ];
+
+    let board: Vec<ZkpProgramInput> = vec![ex_sol.map(|a| a.map(BPField::from)).into()];
+
+    let cons: Vec<ZkpProgramInput> = vec![ex_puzzle.map(|a| a.map(BPField::from)).into()];
+
+    let proof = runtime.prove(prog, cons.clone(), vec![], board).unwrap();
+
+    let verify = runtime.verify(prog, &proof, cons.clone(), vec![]);
+
+    assert!(verify.is_ok());
 }
 
 #[zkp_program(backend = "bulletproofs")]
@@ -78,12 +123,8 @@ fn sudoku_proof<F: BackendField>(
 
 #[cfg(test)]
 mod tests {
-    use sunscreen::{Runtime, Compiler, ZkpProgramInput};
-    use sunscreen_zkp_backend::{bulletproofs::BulletproofsBackend, ZkpBackend};
-
     use super::*;
 
-    type BPField = NativeField<<BulletproofsBackend as ZkpBackend>::Field>;
 
     #[test]
     fn valid_example() {
@@ -211,6 +252,4 @@ mod tests {
 
         assert!(proof.is_err());
     }
-
-
 }

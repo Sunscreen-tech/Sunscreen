@@ -1,6 +1,6 @@
 use sunscreen::{
     types::zkp::{ConstrainCmp, NativeField},
-    zkp_program, BackendField, ZkpProgramInput, Compiler, Runtime,
+    zkp_program, BackendField, Compiler, Runtime, ZkpProgramInput,
 };
 use sunscreen_zkp_backend::{bulletproofs::BulletproofsBackend, ZkpBackend};
 
@@ -124,7 +124,6 @@ fn sudoku_proof<F: BackendField>(
 #[cfg(test)]
 mod tests {
     use super::*;
-
 
     #[test]
     fn valid_example() {

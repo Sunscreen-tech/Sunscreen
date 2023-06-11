@@ -10,7 +10,7 @@ bytemuck = { version = "1.13.0", optional = true }
 lazy_static = "1.4.0"
 metal = { version = "0.24.0", optional = true }
 rand = "0.8.5"
-curve25519_dalek = { package = "sunscreen_curve25519", path = "../sunscreen_curve25519", features = ["serde", "u64_backend"], default-features = false }
+curve25519_dalek = { package = "sunscreen_curve25519", path = "../sunscreen_curve25519", features = ["serde", "u64_backend", "alloc"], default-features = false }
 rayon = "1.6.1"
 ocl = { version = "0.19.4", optional = true }
 futures = { version = "0.3.26", optional = true }

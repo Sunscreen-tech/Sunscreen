@@ -7,7 +7,10 @@ use std::{
     ops::{Add, Mul, Sub},
 };
 
-use crate::{opencl_impl::Runtime, GpuScalarVec};
+use crate::{
+    opencl_impl::{radix_sort::PrefixSum, Runtime},
+    GpuScalarVec,
+};
 
 use super::{
     multiexp::multiscalar_multiplication, GpuVec, GpuVecIter, IntoGpuVecIter, MappedBuffer,
@@ -84,7 +87,7 @@ impl GpuRistrettoPointVec {
         assert_eq!(size_of::<RistrettoPoint>(), size_of::<u32>() * 40);
 
         Self {
-            data: unsafe { Runtime::get().alloc(len * size_of::<RistrettoPoint>()) },
+            data: unsafe { Runtime::get().alloc(len * RistrettoPoint::LEN_IN_U32) },
             len,
         }
     }

@@ -92,7 +92,8 @@ kernel void prefix_sum_blocks_ristretto(
     const global u32* restrict values,
     global u32* block_prefix_sums,
     global u32* block_totals,
-    u32 cols
+    u32 cols,
+    u32 is_inclusive
 ) {
     u32 group_id = get_group_id(0);
     u32 local_id = get_local_id(0);
@@ -142,8 +143,18 @@ kernel void prefix_sum_blocks_ristretto(
     }
 
     if (col_id < cols) {
-        RistrettoPoint val = values_local[local_id];
-    
+        RistrettoPoint val;
+        
+        if (!is_inclusive) {
+            val = values_local[local_id];
+        } else {
+            u32 block_end = col_id == cols - 1
+                ? col_id
+                : (group_id + 1) * get_local_size(0) - 1;
+
+            val = col_id == block_end ? sum : values_local[local_id + 1];
+        }
+        
         RistrettoPoint_pack(
             &val,
             block_prefix_sums,

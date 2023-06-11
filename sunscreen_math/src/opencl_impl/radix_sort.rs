@@ -67,6 +67,7 @@ fn prefix_sum_blocks<T: PrefixSum>(
     values: &MappedBuffer<u32>,
     rows: u32,
     cols: u32,
+    kind: PrefixSumType,
 ) -> (MappedBuffer<u32>, MappedBuffer<u32>, u32) {
     assert_eq!(values.len(), rows as usize * cols as usize * T::LEN_IN_U32);
 
@@ -82,6 +83,11 @@ fn prefix_sum_blocks<T: PrefixSum>(
 
     let block_totals = unsafe { runtime.alloc(rows as usize * num_blocks * T::LEN_IN_U32) };
 
+    let inclusive = match kind {
+        PrefixSumType::Exclusive => 0u32,
+        PrefixSumType::Inclusive => 1u32,
+    };
+
     runtime.run_kernel(
         T::PREFIX_SUM_BLOCKS_KERNEL,
         &[
@@ -89,6 +95,7 @@ fn prefix_sum_blocks<T: PrefixSum>(
             (&prefix_sums).into(),
             (&block_totals).into(),
             cols.into(),
+            inclusive.into(),
         ],
         &Grid::from([
             (cols as usize, T::LOCAL_THREADS),
@@ -121,6 +128,13 @@ impl PrefixSum for RistrettoPoint {
     const LOCAL_THREADS: usize = 128;
 }
 
+/// Whether the prefix sum is inclusive or exclusive.
+#[derive(Debug, Copy, Clone)]
+pub enum PrefixSumType {
+    Inclusive,
+    Exclusive,
+}
+
 /**
  * `values` is a `rows x cols` row-major matrix of u32 values. This function computes
  * and returns a prefix sum matrix `P`, where each row in `P` is the prefix sum of
@@ -134,19 +148,21 @@ pub fn prefix_sum<T: PrefixSum>(
     values: &MappedBuffer<u32>,
     rows: u32,
     cols: u32,
+    kind: PrefixSumType,
 ) -> MappedBuffer<u32> {
     assert_eq!(values.len(), rows as usize * cols as usize * T::LEN_IN_U32);
     assert!(rows > 0);
     assert!(cols > 0);
 
-    let (prefix_sums, totals, num_blocks) = prefix_sum_blocks::<T>(values, rows, cols);
+    let (prefix_sums, totals, num_blocks) = prefix_sum_blocks::<T>(values, rows, cols, kind);
 
     fn reduce_totals<T: PrefixSum>(
         totals: &MappedBuffer<u32>,
         rows: u32,
         cols: u32,
     ) -> Cow<MappedBuffer<u32>> {
-        let (sums, totals, num_blocks) = prefix_sum_blocks::<T>(totals, rows, cols);
+        let (sums, totals, num_blocks) =
+            prefix_sum_blocks::<T>(totals, rows, cols, PrefixSumType::Exclusive);
 
         if num_blocks == 1 {
             return Cow::Owned(sums);
@@ -250,7 +266,7 @@ pub fn radix_sort_1(
     for cur_digit in 0..num_digits {
         let (hist, num_blocks) = create_histograms(&keys_clone[cur], rows, cols, cur_digit);
 
-        let bin_locations = prefix_sum::<u32>(&hist, rows, num_blocks);
+        let bin_locations = prefix_sum::<u32>(&hist, rows, num_blocks, PrefixSumType::Exclusive);
 
         runtime.run_kernel(
             "radix_sort_emplace_val_1",
@@ -331,7 +347,7 @@ pub fn radix_sort_2(
     for cur_digit in 0..num_digits {
         let (hist, num_blocks) = create_histograms(&keys_clone[cur], rows, cols, cur_digit);
 
-        let bin_locations = prefix_sum::<u32>(&hist, rows, num_blocks);
+        let bin_locations = prefix_sum::<u32>(&hist, rows, num_blocks, PrefixSumType::Exclusive);
 
         runtime.run_kernel(
             "radix_sort_emplace_val_2",
@@ -442,7 +458,7 @@ mod tests {
         let data_gpu = unsafe { runtime.alloc_from_slice(&data) };
 
         let (mut prefix_sums, mut block_totals, actual_num_blocks) =
-            prefix_sum_blocks::<u32>(&data_gpu, 3, cols);
+            prefix_sum_blocks::<u32>(&data_gpu, 3, cols, PrefixSumType::Exclusive);
 
         prefix_sums.remap();
         block_totals.remap();
@@ -514,7 +530,12 @@ mod tests {
         let data_gpu = RistrettoPointVec::new(&data);
 
         let (mut prefix_sums, mut block_totals, actual_num_blocks) =
-            prefix_sum_blocks::<RistrettoPoint>(&data_gpu.data, rows, cols);
+            prefix_sum_blocks::<RistrettoPoint>(
+                &data_gpu.data,
+                rows,
+                cols,
+                PrefixSumType::Exclusive,
+            );
 
         prefix_sums.remap();
         block_totals.remap();
@@ -592,7 +613,7 @@ mod tests {
 
         let data_gpu = unsafe { runtime.alloc_from_slice(&data) };
 
-        let mut actual = prefix_sum::<u32>(&data_gpu, rows, cols);
+        let mut actual = prefix_sum::<u32>(&data_gpu, rows, cols, PrefixSumType::Exclusive);
 
         let mut expected = Vec::with_capacity(cols as usize);
 
@@ -630,7 +651,9 @@ mod tests {
 
         let points = GpuRistrettoPointVec::new(&data);
 
-        let sum = prefix_sum::<RistrettoPoint>(&points.data, rows, cols);
+        let sum = prefix_sum::<RistrettoPoint>(&points.data, rows, cols, PrefixSumType::Exclusive);
+
+        //let inclusive_sum = prefix_sum::<RistrettoPoint>(&points.data, rows, cols, PrefixSumType::Exclusive);
 
         let actual = GpuRistrettoPointVec {
             data: sum,

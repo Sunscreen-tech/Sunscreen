@@ -166,7 +166,15 @@ kernel void compute_bucket_points(
         bucket_point = RistrettoPoint_add(&bucket_point, &x);
     }
 
-    RistrettoPoint_pack(&bucket_point, bucket_points, bin_id + num_buckets * window_id, num_buckets * num_windows);
+    // Write the bucket points in reverse order (largest bucket to smallest). This way,
+    // we can prefix sum the buckets, then prefix sum that prefix sum and this will
+    // effectively scale the bucket points by their bucket id.
+    RistrettoPoint_pack(
+        &bucket_point,
+        bucket_points,
+        num_buckets - bin_id - 1 + num_buckets * window_id,
+        num_buckets * num_windows
+    );
 }
 
 #if defined(TEST)

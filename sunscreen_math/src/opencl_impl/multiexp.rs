@@ -30,11 +30,19 @@ pub fn multiscalar_multiplication(
 
     // Prefix sum the bucket points, them prefix sum the prefix sum. This will scale each bucket
     // by its respective bucket index.
-    let buckets =
-        prefix_sum::<RistrettoPoint>(&bucket_points.data, num_windows as u32, num_buckets as u32, PrefixSumType::Inclusive);
+    let buckets = prefix_sum::<RistrettoPoint>(
+        &bucket_points.data,
+        num_windows as u32,
+        num_buckets as u32,
+        PrefixSumType::Inclusive,
+    );
 
-    let buckets =
-        prefix_sum::<RistrettoPoint>(&buckets, num_windows as u32, num_buckets as u32, PrefixSumType::Exclusive);
+    let buckets = prefix_sum::<RistrettoPoint>(
+        &buckets,
+        num_windows as u32,
+        num_buckets as u32,
+        PrefixSumType::Exclusive,
+    );
 
     let buckets = RistrettoPointVec {
         data: buckets,
@@ -157,7 +165,12 @@ fn compute_bucket_data(scalars: &GpuScalarVec, window_size_bits: usize) -> Bucke
     // so warps have minimal branch divergence.
     let rle = run_length_encoding(&sorted_bins.keys, num_windows as u32, scalars.len() as u32);
 
-    let rle_sum = prefix_sum::<u32>(&rle.run_lengths, num_windows as u32, scalars.len() as u32, PrefixSumType::Exclusive);
+    let rle_sum = prefix_sum::<u32>(
+        &rle.run_lengths,
+        num_windows as u32,
+        scalars.len() as u32,
+        PrefixSumType::Exclusive,
+    );
 
     let sorted_bin_counts = radix_sort_2(
         &rle.run_lengths,
@@ -507,8 +520,10 @@ mod tests {
         for (actual_window_buckets, expected_window_buckets) in
             actual.chunks(num_buckets).zip(expected)
         {
-            for (actual_bucket, expected_bucket) in
-                actual_window_buckets.iter().rev().zip(expected_window_buckets)
+            for (actual_bucket, expected_bucket) in actual_window_buckets
+                .iter()
+                .rev()
+                .zip(expected_window_buckets)
             {
                 assert!(ristretto_bitwise_eq(*actual_bucket, expected_bucket));
             }
@@ -520,16 +535,10 @@ mod tests {
         let len = 4567u32;
 
         let p = (0..len)
-            .map(|x| {
-                //RistrettoPoint::from_uniform_bytes(&[x as u8; 64])
-                RistrettoPoint::random(&mut thread_rng())
-            })
+            .map(|_| RistrettoPoint::random(&mut thread_rng()))
             .collect::<Vec<_>>();
         let s = (0..len)
-            .map(|x| {
-                Scalar::random(&mut thread_rng())
-                //Scalar::from(x)
-            })
+            .map(|_| Scalar::random(&mut thread_rng()))
             .collect::<Vec<_>>();
 
         let expected: RistrettoPoint =

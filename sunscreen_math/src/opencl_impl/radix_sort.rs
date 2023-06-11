@@ -67,7 +67,7 @@ fn prefix_sum_blocks<T: PrefixSum>(
     values: &MappedBuffer<u32>,
     rows: u32,
     cols: u32,
-    kind: PrefixSumType
+    kind: PrefixSumType,
 ) -> (MappedBuffer<u32>, MappedBuffer<u32>, u32) {
     assert_eq!(values.len(), rows as usize * cols as usize * T::LEN_IN_U32);
 
@@ -95,7 +95,7 @@ fn prefix_sum_blocks<T: PrefixSum>(
             (&prefix_sums).into(),
             (&block_totals).into(),
             cols.into(),
-            inclusive.into()
+            inclusive.into(),
         ],
         &Grid::from([
             (cols as usize, T::LOCAL_THREADS),
@@ -132,14 +132,14 @@ impl PrefixSum for RistrettoPoint {
 #[derive(Debug, Copy, Clone)]
 pub enum PrefixSumType {
     Inclusive,
-    Exclusive
+    Exclusive,
 }
 
 /**
  * `values` is a `rows x cols` row-major matrix of u32 values. This function computes
  * and returns a prefix sum matrix `P`, where each row in `P` is the prefix sum of
  * the corresponding row in `values`.
- * 
+ *
  * # Panics
  * * The length of the values matrix must equal rows * cols.
  * * The number of rows and columns must be non-zero.
@@ -148,7 +148,7 @@ pub fn prefix_sum<T: PrefixSum>(
     values: &MappedBuffer<u32>,
     rows: u32,
     cols: u32,
-    kind: PrefixSumType
+    kind: PrefixSumType,
 ) -> MappedBuffer<u32> {
     assert_eq!(values.len(), rows as usize * cols as usize * T::LEN_IN_U32);
     assert!(rows > 0);
@@ -161,7 +161,8 @@ pub fn prefix_sum<T: PrefixSum>(
         rows: u32,
         cols: u32,
     ) -> Cow<MappedBuffer<u32>> {
-        let (sums, totals, num_blocks) = prefix_sum_blocks::<T>(totals, rows, cols, PrefixSumType::Exclusive);
+        let (sums, totals, num_blocks) =
+            prefix_sum_blocks::<T>(totals, rows, cols, PrefixSumType::Exclusive);
 
         if num_blocks == 1 {
             return Cow::Owned(sums);
@@ -529,7 +530,12 @@ mod tests {
         let data_gpu = RistrettoPointVec::new(&data);
 
         let (mut prefix_sums, mut block_totals, actual_num_blocks) =
-            prefix_sum_blocks::<RistrettoPoint>(&data_gpu.data, rows, cols, PrefixSumType::Exclusive);
+            prefix_sum_blocks::<RistrettoPoint>(
+                &data_gpu.data,
+                rows,
+                cols,
+                PrefixSumType::Exclusive,
+            );
 
         prefix_sums.remap();
         block_totals.remap();

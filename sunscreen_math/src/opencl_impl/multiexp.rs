@@ -3,7 +3,7 @@ use curve25519_dalek::{ristretto::RistrettoPoint, scalar::Scalar, traits::Identi
 use crate::{
     multiexp_num_buckets, multiexp_num_windows,
     opencl_impl::{
-        radix_sort::{prefix_sum, radix_sort_1, radix_sort_2},
+        radix_sort::{prefix_sum, radix_sort_1, radix_sort_2, PrefixSumType},
         rle::run_length_encoding,
         Grid, Runtime,
     },
@@ -37,7 +37,7 @@ pub fn multiscalar_multiplication(
     dbg!((bucket_points.get(1) + Scalar::from(2u32) * bucket_points.get(2)).compress());
 
     let buckets =
-        prefix_sum::<RistrettoPoint>(&bucket_points.data, num_windows as u32, num_buckets as u32);
+        prefix_sum::<RistrettoPoint>(&bucket_points.data, num_windows as u32, num_buckets as u32, PrefixSumType::Exclusive);
 
     let buckets = RistrettoPointVec {
         data: buckets,
@@ -166,7 +166,7 @@ fn compute_bucket_data(scalars: &GpuScalarVec, window_size_bits: usize) -> Bucke
     // so warps have minimal branch divergence.
     let rle = run_length_encoding(&sorted_bins.keys, num_windows as u32, scalars.len() as u32);
 
-    let rle_sum = prefix_sum::<u32>(&rle.run_lengths, num_windows as u32, scalars.len() as u32);
+    let rle_sum = prefix_sum::<u32>(&rle.run_lengths, num_windows as u32, scalars.len() as u32, PrefixSumType::Exclusive);
 
     let sorted_bin_counts = radix_sort_2(
         &rle.run_lengths,
@@ -517,7 +517,7 @@ mod tests {
             actual.chunks(num_buckets).zip(expected)
         {
             for (actual_bucket, expected_bucket) in
-                actual_window_buckets.iter().zip(expected_window_buckets)
+                actual_window_buckets.iter().rev().zip(expected_window_buckets)
             {
                 assert!(ristretto_bitwise_eq(*actual_bucket, expected_bucket));
             }

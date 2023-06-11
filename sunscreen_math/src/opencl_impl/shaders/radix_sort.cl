@@ -155,7 +155,8 @@ kernel void prefix_sum_blocks_u32(
     const global u32* restrict values,
     global u32* restrict block_prefix_sums,
     global u32* restrict block_totals,
-    u32 len
+    u32 len,
+    u32 is_inclusive
 ) {
     u32 group_id = get_group_id(0);
     u32 global_id = get_global_id(0);
@@ -188,6 +189,18 @@ kernel void prefix_sum_blocks_u32(
     }
 
     if (global_id < len) {
+        u32 val;
+        
+        if (!is_inclusive) {
+            val = values_local[local_id];
+        } else {
+            u32 block_end = global_id == len - 1
+                ? global_id
+                : (group_id + 1) * get_local_size(0) - 1;
+
+            val = global_id == block_end ? sum : values_local[local_id + 1];
+        }
+
         block_prefix_sums[global_id + row_id * len] = values_local[local_id];
     }
 }

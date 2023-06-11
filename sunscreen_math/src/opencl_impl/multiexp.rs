@@ -18,7 +18,7 @@ pub fn multiscalar_multiplication(
 ) -> RistrettoPoint {
     assert_eq!(points.len(), scalars.len());
 
-    let window_bits = 3;
+    let window_bits = 16;
 
     assert!(window_bits < 32);
 
@@ -28,23 +28,18 @@ pub fn multiscalar_multiplication(
     let bucket_data = compute_bucket_data(scalars, window_bits);
     let bucket_points = compute_bucket_points(points, &bucket_data, window_bits);
 
-    //dbg!(bucket_points.iter().map(|x| x.compress()).collect::<Vec<_>>());
-
-    dbg!(bucket_points.get(0).compress());
-    dbg!(bucket_points.get(1).compress());
-    dbg!(bucket_points.get(2).compress());
-
-    dbg!((bucket_points.get(1) + Scalar::from(2u32) * bucket_points.get(2)).compress());
+    // Prefix sum the bucket points, them prefix sum the prefix sum. This will scale each bucket
+    // by its respective bucket index.
+    let buckets =
+        prefix_sum::<RistrettoPoint>(&bucket_points.data, num_windows as u32, num_buckets as u32, PrefixSumType::Inclusive);
 
     let buckets =
-        prefix_sum::<RistrettoPoint>(&bucket_points.data, num_windows as u32, num_buckets as u32, PrefixSumType::Exclusive);
+        prefix_sum::<RistrettoPoint>(&buckets, num_windows as u32, num_buckets as u32, PrefixSumType::Exclusive);
 
     let buckets = RistrettoPointVec {
         data: buckets,
         len: num_windows * num_buckets,
     };
-
-    dbg!(buckets.iter().map(|x| x.compress()).collect::<Vec<_>>());
 
     let buckets = (0..multiexp_num_windows(window_bits))
         .map(|x| {
@@ -62,12 +57,8 @@ pub fn multiscalar_multiplication(
     let mut total = RistrettoPoint::identity();
 
     for b in buckets {
-        dbg!(cur_radix);
-        dbg!(b.compress());
-
         total += b * cur_radix;
 
-        dbg!(total.compress());
         cur_radix *= radix;
     }
 
@@ -526,18 +517,18 @@ mod tests {
 
     #[test]
     fn can_msm() {
-        let len = 3u32;
+        let len = 4567u32;
 
         let p = (0..len)
             .map(|x| {
-                RistrettoPoint::from_uniform_bytes(&[x as u8; 64])
-                //RistrettoPoint::random(&mut thread_rng())
+                //RistrettoPoint::from_uniform_bytes(&[x as u8; 64])
+                RistrettoPoint::random(&mut thread_rng())
             })
             .collect::<Vec<_>>();
         let s = (0..len)
             .map(|x| {
-                //Scalar::random(&mut thread_rng())
-                Scalar::from(x)
+                Scalar::random(&mut thread_rng())
+                //Scalar::from(x)
             })
             .collect::<Vec<_>>();
 

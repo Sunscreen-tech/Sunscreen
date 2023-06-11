@@ -53,10 +53,7 @@ pub fn multiscalar_multiplication(
         .map(|x| {
             let last_bucket = num_buckets - 1;
 
-            let a = bucket_points.get(last_bucket + x * num_buckets);
-            let b = buckets.get(last_bucket + x * num_buckets);
-
-            a + b
+            buckets.get(last_bucket + x * num_buckets)            
         })
         .collect::<Vec<_>>();
 

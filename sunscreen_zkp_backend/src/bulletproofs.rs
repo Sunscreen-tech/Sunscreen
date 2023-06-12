@@ -128,6 +128,8 @@ impl BulletproofsCircuit {
     }
 
     fn make_gens(len: usize) -> (PedersenGens, BulletproofGens) {
+        let len = len.next_power_of_two();
+
         let pc_gens = PedersenGens::default();
         let bp_gens = BulletproofGens::new(len, 1);
 

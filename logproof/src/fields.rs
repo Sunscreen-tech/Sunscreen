@@ -141,7 +141,7 @@ pub type FqSeal128_2048 = Fp64<MontBackend<SealQ128_2048, 1>>;
 pub type FqSeal128_1024 = Fp64<MontBackend<SealQ128_1024, 1>>;
 
 /**
- * Extend a [BigInt<M>] to a [BigInt<N>] by appending zeros.
+ * Extend a [`struct@BigInt<M>`] to a [`struct@BigInt<N>`] by appending zeros.
  *
  * # Panics
  * If M > N

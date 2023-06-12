@@ -34,7 +34,7 @@ pub use inner_product::{
 };
 
 /**
- * Contains linear algebra related types and traits (e.g. [`Matrix`]).
+ * Contains linear algebra related types and traits (e.g. [`linear_algebra::Matrix`]).
  */
 pub mod linear_algebra;
 

@@ -1,0 +1,8 @@
+[package]
+name = "sudoku_zkp"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+sunscreen = { path = "../../sunscreen" }
+sunscreen_zkp_backend = { path = "../../sunscreen_zkp_backend" }

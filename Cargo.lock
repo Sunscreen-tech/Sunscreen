@@ -2615,6 +2615,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "734676eb262c623cec13c3155096e08d1f8f29adce39ba17948b18dad1e54142"
 
 [[package]]
+name = "sudoku_zkp"
+version = "0.1.0"
+dependencies = [
+ "sunscreen",
+ "sunscreen_zkp_backend",
+]
+
+[[package]]
 name = "sunscreen"
 version = "0.7.0"
 dependencies = [

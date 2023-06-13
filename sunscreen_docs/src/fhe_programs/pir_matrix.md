@@ -1,7 +1,7 @@
 # A better PIR algorithm
 In the previous PIR algorithm, the user had to send a query vector of the same size as the database itself. Can we do better than that? Yes!
 
-Let's look at how to reduce the user's query size by making use of matrix-vector product *and* dot prodct.
+Let's look at how to reduce the user's query size by making use of matrix-vector product *and* dot product.
 
 ## How will our improved algorithm work?
 Instead of representing the database as a vector of length n, we'll represent it as a [matrix](https://en.wikipedia.org/wiki/Matrix_(mathematics)) of dimension sqrt(n) by sqrt(n). As prior, everything in the database is *un*encrypted.

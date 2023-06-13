@@ -152,7 +152,7 @@ mod tests {
 
         let proof = runtime.prove(prog, cons.clone(), vec![], board).unwrap();
 
-        let verify = runtime.verify(prog, &proof, cons.clone(), vec![]);
+        let verify = runtime.verify(prog, &proof, cons, vec![]);
 
         assert!(verify.is_ok());
     }
@@ -197,7 +197,7 @@ mod tests {
 
         let cons: Vec<ZkpProgramInput> = vec![ex_puzzle.map(|a| a.map(BPField::from)).into()];
 
-        let proof = runtime.prove(prog, cons.clone(), vec![], board);
+        let proof = runtime.prove(prog, cons, vec![], board);
 
         assert!(proof.is_err());
     }
@@ -232,7 +232,7 @@ mod tests {
 
         let cons: Vec<ZkpProgramInput> = vec![ex_puzzle.map(|a| a.map(BPField::from)).into()];
 
-        let proof = runtime.prove(prog, cons.clone(), vec![], board);
+        let proof = runtime.prove(prog, cons, vec![], board);
 
         assert!(proof.is_err());
     }

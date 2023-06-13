@@ -1,5 +1,5 @@
 use sunscreen::{
-    types::zkp::{ConstrainCmp, NativeField},
+    types::zkp::{NativeField},
     zkp_program, BackendField, Compiler, Runtime, ZkpProgramInput,
 };
 use sunscreen_zkp_backend::{bulletproofs::BulletproofsBackend, ZkpBackend};
@@ -47,7 +47,7 @@ fn main() {
 
     let proof = runtime.prove(prog, cons.clone(), vec![], board).unwrap();
 
-    let verify = runtime.verify(prog, &proof, cons.clone(), vec![]);
+    let verify = runtime.verify(prog, &proof, cons, vec![]);
 
     assert!(verify.is_ok());
 }
@@ -57,46 +57,35 @@ fn sudoku_proof<F: BackendField>(
     #[constant] constraints: [[NativeField<F>; 9]; 9],
     board: [[NativeField<F>; 9]; 9],
 ) {
-    fn contains_circuit<F: BackendField>(
-        arr: [ProgramNode<NativeField<F>>; 9],
-        i: NativeField<F>,
-    ) -> ProgramNode<NativeField<F>> {
-        let mut circuit = NativeField::<F>::from(1).into_program_node();
-        for a in arr {
-            circuit = circuit * (i.into_program_node() - a);
+    fn assert_unique_numbers<F: BackendField>(arr: [ProgramNode<NativeField<F>>; 9]) {
+        for i in 1..=9 {
+            let mut circuit = NativeField::<F>::from(1).into_program_node();
+            for a in arr {
+                circuit = circuit * (NativeField::<F>::from(i).into_program_node() - a);
+            }
+            circuit.constrain_eq(NativeField::<F>::from(0));
         }
-        return circuit;
     }
-    // Proves that the board is actually valid: All inputs are from 1 to 9
-    let one = NativeField::<F>::from(1).into_program_node();
-    let nine = NativeField::<F>::from(9).into_program_node();
+    // Proves that the board matches up with the puzzle where applicable
     let zero = NativeField::<F>::from(0).into_program_node();
 
     for i in 0..9 {
         for j in 0..9 {
             let square = board[i][j].into_program_node();
             let constraint = constraints[i][j].into_program_node();
-            square.constrain_ge_bounded(one, 8);
-            square.constrain_le_bounded(nine, 8);
             (constraint * (constraint - square)).constrain_eq(zero);
         }
     }
 
     // Checks rows contain every number from 1 to 9
     for row in board {
-        for i in 1..=9 {
-            let circuit = contains_circuit(row, NativeField::<F>::from(i));
-            circuit.constrain_eq(zero);
-        }
+        assert_unique_numbers(row);
     }
 
     // Checks columns contain each number from 1 to 9
     for col in 0..9 {
-        for i in 1..=9 {
-            let column = board.map(|r| r[col]);
-            let circuit = contains_circuit(column, NativeField::<F>::from(i));
-            circuit.constrain_eq(zero);
-        }
+        let column = board.map(|r| r[col]);
+        assert_unique_numbers(column);
     }
 
     // Checks squares contain each number from 1 to 9
@@ -113,10 +102,7 @@ fn sudoku_proof<F: BackendField>(
                 .try_into()
                 .unwrap_or([zero; 9]);
 
-            for k in 1..=9 {
-                let circuit = contains_circuit(flattened_sq, NativeField::<F>::from(k));
-                circuit.constrain_eq(zero);
-            }
+            assert_unique_numbers(flattened_sq);
         }
     }
 }

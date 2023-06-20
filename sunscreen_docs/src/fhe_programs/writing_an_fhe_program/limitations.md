@@ -79,7 +79,7 @@ Notice that their conditions don't depend on their argument `x`, so they're lega
 [^1]: This is not merely a Sunscreen limitation; if an FHE scheme supported traditional branching, it would be fundamentally insecure.
 
 ## Bounded computation
-You currently cannot perform computations *indefinitely* on ciphertexts. See [here](./advanced/noise_margin.md) for a more in-depth discussion of this.
+You currently cannot perform computations *indefinitely* on ciphertexts. See [here](/advanced/noise_margin.md) for a more in-depth discussion of this.
 
 ## Avoid "transparent" ciphertexts
 Some trivial operations destroy the randomness essential to the security of the resultant ciphertext &mdash; an outside observer can trivially decode them! Sunscreen will detect this and cause `run()` to fail to prevent data from leaking. Fortunately, such operations are not particularly useful in the first place. 

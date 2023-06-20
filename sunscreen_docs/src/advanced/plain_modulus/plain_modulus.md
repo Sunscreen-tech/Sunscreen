@@ -8,7 +8,7 @@ FHE uses some [funky math](/intro/why.md). At the lowest level, plaintexts are p
 A few reasons you would change the plain modulus include:
 * If the default is too conservative, decreasing the plaintext modulus can improve performance.
 * Very very rarely, the default can cause overflow in some FHE programs. Increasing the plaintext modulus solves this issue at the expense of performance.
-* You wish to use [batching](/advanced/batching/batching.md), which requires very specific values.
+* You wish to use batching, which requires very specific values.
 
 When setting the plaintext modulus, you call `compiler.plain_modulus_constraint()` and pass a `PlainModulusConstraint`, which comes in two forms:
 * `Raw(x)` sets the plaintext modulus to `x`.

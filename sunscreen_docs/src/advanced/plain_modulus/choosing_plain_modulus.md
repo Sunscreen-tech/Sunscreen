@@ -4,7 +4,7 @@ The Sunscreen compiler makes your life easy by choosing encryption parameters on
 Sunscreen defaults to a conservative modulus that ensures correctness for most applications, but there are reasons to change it:
 * The default is too conservative. Decreasing the plain modulus can allow the compiler to choose more performant scheme parameters.
 * You encounter overflow issues and need to increase it. This can reduce FHE program performance.
-* You wish to use [batching](/advanced/batching/batching.md), which requires very specific values.
+* You wish to use batching, which requires very specific values.
 
 When setting the plain modulus, you pass a `PlainModulusConstraint`, which come in two forms
 * `Raw(x)` sets the plain modulus to `x`.

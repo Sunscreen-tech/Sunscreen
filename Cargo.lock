@@ -937,6 +937,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "fhe-debugger"
+version = "0.1.0"
+
+[[package]]
 name = "find_cuda_helper"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"

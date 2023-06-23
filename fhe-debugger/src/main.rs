@@ -1,7 +1,8 @@
 use actix_cors::Cors;
 use actix_web::{get, http::header, web, App, HttpResponse, HttpServer, Responder};
-use rand::Rng;
 use env_logger;
+use rand::Rng;
+use sunscreen::{Ciphertext, Plaintext};
 
 // Setup to build front-end with `cargo run`
 const INDEX_HTML: &str = include_str!(concat!(
@@ -54,7 +55,6 @@ async fn manifest_json() -> impl Responder {
 
 #[get("/random")]
 async fn rand_function(functions: web::Data<Vec<String>>) -> impl Responder {
-
     // Grab a function at random
     let mut rng = rand::thread_rng();
     let ind = rng.gen_range(0..functions.len());
@@ -68,10 +68,7 @@ async fn main() -> std::io::Result<()> {
     std::env::set_var("RUST_LOG", "actix_web=debug");
 
     //List of random function bodies
-    let lst = web::Data::new(vec![
-        "test1".to_string(),
-        "test2".to_string()
-    ]);
+    let lst = web::Data::new(vec!["test1".to_string(), "test2".to_string()]);
 
     env_logger::init();
 

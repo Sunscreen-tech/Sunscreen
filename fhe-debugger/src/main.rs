@@ -1,8 +1,9 @@
 use actix_cors::Cors;
 use actix_web::{get, http::header, web, App, HttpResponse, HttpServer, Responder};
 use rand::Rng;
-use serde::{Deserialize, Serialize};
+use env_logger;
 
+// Setup to build front-end with `cargo run`
 const INDEX_HTML: &str = include_str!(concat!(
     env!("OUT_DIR"),
     "/fhe-debugger-frontend/build/index.html"
@@ -51,16 +52,37 @@ async fn manifest_json() -> impl Responder {
         .body(MANIFEST_JSON)
 }
 
+#[get("/random")]
+async fn rand_function(functions: web::Data<Vec<String>>) -> impl Responder {
+
+    // Grab a function at random
+    let mut rng = rand::thread_rng();
+    let ind = rng.gen_range(0..functions.len());
+    let rand_function = String::from(&functions[ind]);
+
+    HttpResponse::Ok().body(rand_function)
+}
+
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     std::env::set_var("RUST_LOG", "actix_web=debug");
 
+    //List of random function bodies
+    let lst = web::Data::new(vec![
+        "test1".to_string(),
+        "test2".to_string()
+    ]);
+
+    env_logger::init();
+
     HttpServer::new(move || {
         App::new()
+            .app_data(lst.clone())
             .service(index)
             .service(main_js)
             .service(main_css)
             .service(manifest_json)
+            .service(rand_function)
     })
     .bind(("127.0.0.1", 8080))?
     .run()

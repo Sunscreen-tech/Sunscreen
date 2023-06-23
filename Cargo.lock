@@ -1274,6 +1274,7 @@ dependencies = [
  "actix-rt",
  "actix-web",
  "copy_dir",
+ "env_logger 0.10.0",
  "mime",
  "rand",
  "serde",

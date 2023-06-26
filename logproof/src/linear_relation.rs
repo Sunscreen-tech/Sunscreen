@@ -834,12 +834,64 @@ impl LogProof {
     }
 
     /**
+     * Takes an individual values in a field `Zq`, treats the value as signed [q's
+     * complement](https://en.wikipedia.org/wiki/Method_of_complements) and
+     * converts the value to binary 2's complement. This is then appended to an
+     * provided BitVec.
+     *
+     * `value` is the element in Zq and `b` is the number of bits needed
+     * to represent the signed value.
+     *
+     * This modifies bitvec in place.
+     *
+     */
+    #[inline]
+    fn to_2s_complement_single<Q, const N: usize>(
+        value: &Fp<MontBackend<Q, N>, N>,
+        log_b: u64,
+        bitvec: &mut BitVec,
+    ) where
+        Q: MontConfig<N>,
+    {
+        // Get the value out of Montgomery form.
+        let value = MontBackend::into_bigint(*value);
+
+        let mod_div_2 = Fp::<MontBackend<Q, N>, N>::field_modulus_div_2();
+        let modulus = Fp::<MontBackend<Q, N>, N>::field_modulus();
+        let is_negative = value > mod_div_2;
+
+        // Compute the q's complement of value
+        let mut as_neg: BigInt<N> = modulus;
+        as_neg.sub_with_borrow(&value);
+
+        // The smaller of value and it's q's complement is the absolute
+        // value.
+        let mut abs_value = BigInt::min(value, as_neg);
+
+        // To make a positive number negative in 2's complement,
+        // subtract 1 and flip the bits. So, here we sub 1 from abs if
+        // original value was negative.
+        let big_negative = BigInt::from(is_negative as u8);
+        abs_value.sub_with_borrow(&big_negative);
+
+        for i in 0..(log_b - 1) {
+            let bit = abs_value.get_bit(i as usize);
+
+            // Invert the bit if the original value was negative
+            bitvec.push(bit ^ is_negative);
+        }
+
+        // Now push the sign bit
+        bitvec.push(is_negative);
+    }
+
+    /**
      * Takes a slice of values in a field `Zq`, treats the values as signed [q's
      * complement](https://en.wikipedia.org/wiki/Method_of_complements)
      * and converts the value to binary 2's complement.
      *
      * `value` is the element in Zq and `b` is the number of bits needed
-     * to represent the
+     * to represent the signed value.
      */
     fn to_2s_complement<Q, const N: usize>(
         values: &[Fp<MontBackend<Q, N>, N>],
@@ -852,36 +904,7 @@ impl LogProof {
 
         // This code should not feature timing side-channels.
         for value in values.iter() {
-            // Get the value out of Montgomery form.
-            let value = MontBackend::into_bigint(*value);
-
-            let mod_div_2 = Fp::<MontBackend<Q, N>, N>::field_modulus_div_2();
-            let modulus = Fp::<MontBackend<Q, N>, N>::field_modulus();
-            let is_negative = value > mod_div_2;
-
-            // Compute the q's complement of value
-            let mut as_neg: BigInt<N> = modulus;
-            as_neg.sub_with_borrow(&value);
-
-            // The smaller of value and it's q's complement is the absolute
-            // value.
-            let mut abs_value = BigInt::min(value, as_neg);
-
-            // To make a positive number negative in 2's complement,
-            // subtract 1 and flip the bits. So, here we sub 1 from abs if
-            // original value was negative.
-            let big_negative = BigInt::from(is_negative as u8);
-            abs_value.sub_with_borrow(&big_negative);
-
-            for i in 0..(log_b - 1) {
-                let bit = abs_value.get_bit(i as usize);
-
-                // Invert the bit if the original value was negative
-                bitvec.push(bit ^ is_negative);
-            }
-
-            // Now push the sign bit
-            bitvec.push(is_negative);
+            LogProof::to_2s_complement_single(value, log_b, &mut bitvec);
         }
 
         bitvec

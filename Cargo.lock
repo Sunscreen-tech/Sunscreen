@@ -2619,7 +2619,6 @@ name = "sudoku_zkp"
 version = "0.1.0"
 dependencies = [
  "sunscreen",
- "sunscreen_zkp_backend",
 ]
 
 [[package]]

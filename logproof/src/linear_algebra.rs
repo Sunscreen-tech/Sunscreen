@@ -350,6 +350,45 @@ where
     }
 }
 
+impl<F, const M: usize, const N: usize> From<[[F; N]; M]> for Matrix<F>
+where
+    F: Zero + Clone,
+{
+    fn from(x: [[F; N]; M]) -> Self {
+        let x = x.iter().flatten().cloned().collect();
+
+        Self {
+            data: x,
+            rows: M,
+            cols: N,
+        }
+    }
+}
+
+impl<F> From<(usize, usize, &[F])> for Matrix<F>
+where
+    F: Zero + Clone,
+{
+    fn from(data: (usize, usize, &[F])) -> Self {
+        let (rows, cols, data) = data;
+
+        if rows * cols != data.len() {
+            panic!(
+                "Dimension mismatch: {}x{} doesn't match data length {}",
+                rows,
+                cols,
+                data.len()
+            );
+        }
+
+        Self {
+            rows,
+            cols,
+            data: data.to_owned(),
+        }
+    }
+}
+
 impl<F, Rhs> Mul<Rhs> for &Matrix<F>
 where
     Rhs: Borrow<Matrix<F>>,
@@ -408,45 +447,6 @@ where
             rows: self.rows,
             cols: self.cols,
             data: switched,
-        }
-    }
-}
-
-impl<F, const M: usize, const N: usize> From<[[F; N]; M]> for Matrix<F>
-where
-    F: Zero + Clone,
-{
-    fn from(x: [[F; N]; M]) -> Self {
-        let x = x.iter().flatten().cloned().collect();
-
-        Self {
-            data: x,
-            rows: M,
-            cols: N,
-        }
-    }
-}
-
-impl<F> From<(usize, usize, &[F])> for Matrix<F>
-where
-    F: Zero + Clone,
-{
-    fn from(data: (usize, usize, &[F])) -> Self {
-        let (rows, cols, data) = data;
-
-        if rows * cols != data.len() {
-            panic!(
-                "Dimension mismatch: {}x{} doesn't match data length {}",
-                rows,
-                cols,
-                data.len()
-            );
-        }
-
-        Self {
-            rows,
-            cols,
-            data: data.to_owned(),
         }
     }
 }

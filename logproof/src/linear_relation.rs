@@ -1,4 +1,4 @@
-use std::time::Instant;
+use std::{iter::zip, ops::Mul, time::Instant};
 
 use ark_ff::{BigInt, BigInteger, FftField, Field, Fp, FpConfig, MontBackend, MontConfig};
 use ark_poly::{univariate::DensePolynomial, Polynomial};
@@ -24,6 +24,22 @@ use crate::{
 };
 
 type MatrixPoly<Q> = Matrix<DensePolynomial<Q>>;
+type Bounds = Vec<u64>;
+
+impl Zero for Bounds {
+    // The empty vector could be seen as no bounds. Also follows the field
+    // properties.  Although realistically this would be indexed by the
+    // dimension d.
+    fn zero() -> Self {
+        Vec::new()
+    }
+}
+
+impl Zero for u64 {
+    fn zero() -> Self {
+        0
+    }
+}
 
 #[derive(Debug)]
 /**
@@ -46,9 +62,9 @@ where
     pub t: Matrix<DensePolynomial<Q>>,
 
     /**
-     * A bound on the largest coefficient in any polynomial in s.
+     * A bound on each coefficient in the secret matrix S
      */
-    pub bound: u64,
+    pub bounds: Matrix<Bounds>,
 
     /**
      * The ideal `f` that defines the quotient ring `Z_q[X]/f`.
@@ -70,11 +86,19 @@ where
         a: Matrix<DensePolynomial<Q>>,
         t: Matrix<DensePolynomial<Q>>,
         f: DensePolynomial<Q>,
-        bound: u64,
+        bounds: Matrix<Bounds>,
     ) -> Self {
-        // Fill in surrogates for g, h, and u. This way we can create the
-        // object and compute `l` to pass to get_generators().
-        Self { a, t, bound, f }
+        let d = f.degree() as u64;
+
+        assert_eq!(a.cols, bounds.rows);
+        assert_eq!(t.cols, bounds.cols);
+
+        // All coefficients must have a bound.
+        for bound in bounds.as_slice() {
+            assert_eq!(bound.len() as u64, d);
+        }
+
+        Self { a, t, bounds, f }
     }
 
     /**
@@ -102,8 +126,37 @@ where
      * The number of bits in `B` plus 1 where `B` is the upper bound on the
      * coefficients in the polynomials in `S`.
      */
-    pub fn b(&self) -> u64 {
-        Log2::ceil_log2(&self.bound) + 1
+    pub fn b(&self) -> Matrix<Bounds> {
+        // Note the odd case here: if the bounds are zero then by the formula in
+        // the original paper we should get an undefined value. Here we say that
+        // a zero bound produces a zero `b` value from the paper. This is later
+        // used to ignore coefficients that have a bound of zero.
+        fn calculate_bound(v: &[u64]) -> Vec<u64> {
+            v.iter()
+                .map(|b| if *b > 0 { Log2::ceil_log2(b) + 1 } else { 0 })
+                .collect()
+        }
+
+        let mut new_matrix: Matrix<Bounds> = Matrix::new(self.bounds.rows, self.bounds.cols);
+
+        for i in 0..self.bounds.rows {
+            for j in 0..self.bounds.cols {
+                new_matrix[(i, j)] = calculate_bound(&self.bounds[(i, j)])
+            }
+        }
+
+        new_matrix
+    }
+
+    /**
+     * Sum of all the bounds
+     */
+    pub fn b_sum(&self) -> u64 {
+        self.b()
+            .as_slice()
+            .iter()
+            .map(|v| v.iter().sum::<u64>())
+            .sum()
     }
 
     /**
@@ -111,6 +164,13 @@ where
      */
     pub fn d(&self) -> u64 {
         self.f.degree() as u64
+    }
+
+    /**
+     * Number of coefficients in secret vector s
+     */
+    pub fn number_coeff_in_s(&self) -> u64 {
+        self.m() * self.d()
     }
 
     /**
@@ -128,23 +188,26 @@ where
     }
 
     /**
-     * Computes the mkdb term in l.
+     * Sum of the bounds in for s.
      */
-    pub fn mkdb(&self) -> u64 {
-        self.m() * self.k() * self.d() * self.b()
+    pub fn bounds_sum(&self) -> u64 {
+        self.bounds
+            .as_slice()
+            .iter()
+            .map(|v| v.iter().sum::<u64>())
+            .sum()
     }
 
     /**
      * The number of bits needed to store the elements of R1.
      */
     pub fn b_1(&self) -> u64 {
-        let m_big = FpRistretto::from(self.m());
         let d_big = FpRistretto::from(self.d());
-        let bound_big = FpRistretto::from(self.bound);
+        let bounds_sum = FpRistretto::from(self.bounds_sum());
 
         let inf_norm_f: FpRistretto = self.f.infinity_norm().mod_switch_signed();
 
-        let b1 = m_big * d_big * bound_big + d_big * inf_norm_f;
+        let b1 = bounds_sum + d_big * inf_norm_f;
         let b1 = MontBackend::into_bigint(b1);
 
         Log2::ceil_log2(&b1)
@@ -161,14 +224,7 @@ where
      * The length in bits of the binary expansion of the serialized secret * vectors.
      */
     pub fn l(&self) -> u64 {
-        let mkdb = self
-            .m()
-            .checked_mul(self.k())
-            .unwrap()
-            .checked_mul(self.d())
-            .unwrap()
-            .checked_mul(self.b())
-            .unwrap();
+        let total_bounds_all_equations = self.b_sum();
         let nk = self.n().checked_mul(self.k()).unwrap();
 
         let d2_minus_1 = self.d().checked_mul(2).unwrap().checked_sub(1).unwrap();
@@ -185,7 +241,8 @@ where
             .checked_mul(self.b_2())
             .unwrap();
 
-        mkdb.checked_add(nk_d2_minus_1_b_1)
+        total_bounds_all_equations
+            .checked_add(nk_d2_minus_1_b_1)
             .unwrap()
             .checked_add(nk_d_minus_1_b_2)
             .unwrap()
@@ -227,14 +284,14 @@ where
         a: &MatrixPoly<Q>,
         s: &MatrixPoly<Q>,
         t: &MatrixPoly<Q>,
-        bound: u64,
+        bounds: Matrix<Bounds>,
         f: &DensePolynomial<Q>,
     ) -> Self {
         assert_eq!(a.cols, s.rows);
         assert_eq!(a.rows, t.rows);
         assert_eq!(s.cols, t.cols);
 
-        let vk = VerifierKnowledge::new(a.clone(), t.clone(), f.clone(), bound);
+        let vk = VerifierKnowledge::new(a.clone(), t.clone(), f.clone(), bounds);
 
         Self { s: s.clone(), vk }
     }
@@ -295,9 +352,12 @@ impl LogProof {
         let b_1 = vk.b_1();
         let b_2 = vk.b_2();
         let l = vk.l();
+        let total_bounds_all_equations = vk.b_sum();
 
         assert_eq!(g.len(), l as usize);
         assert_eq!(h.len(), l as usize);
+
+        let b_serialized = LogProof::serialize_bounds(&b);
 
         transcript.linear_relation_domain_separator();
         transcript.append_linear_relation_knowledge(vk);
@@ -312,28 +372,27 @@ impl LogProof {
             linear_relation::assert_factors(pk, f, &r_2, &r_1);
         }
 
-        let s_serialized = Self::serialize(&pk.s, d as usize);
+        let s_serialized: Vec<FpRistretto> = Self::serialize(&pk.s, d as usize);
         let r_1_serialized = Self::serialize(&r_1, (2 * d - 1) as usize);
         let r_2_serialized = Self::serialize(&r_2, (d - 1) as usize);
 
         assert_eq!(s_serialized.len() as u64, m * k * d);
+
         assert_eq!(r_1_serialized.len() as u64, n * k * (2 * d - 1));
         assert_eq!(r_2_serialized.len() as u64, n * k * (d - 1));
 
-        let s_binary = Self::to_2s_complement(&s_serialized, b);
-        assert_eq!(s_binary.len() as u64, m * k * d * b);
+        let s_binary: BitVec = Self::to_2s_complement_multibound(&s_serialized, &b_serialized);
+        assert_eq!(s_binary.len() as u64, total_bounds_all_equations);
+
         let r_1_binary = Self::to_2s_complement(&r_1_serialized, b_1);
         assert_eq!(r_1_binary.len() as u64, n * k * (2 * d - 1) * b_1);
+
         let r_2_binary = Self::to_2s_complement(&r_2_serialized, b_2);
         assert_eq!(r_2_binary.len() as u64, n * k * (d - 1) * b_2);
 
-        // Yes, cloning isn't ideal, but we want to keep the
-        // non-concatenated vectors around for the debug assertions below.
-        // The memory overhead of a bitvec with even 1M elements is only
-        // 128kB and a copy at 40GB/s is 3us.
         let mut s_1 = s_binary.clone();
-        s_1.append(&mut r_1_binary.clone());
-        s_1.append(&mut r_2_binary.clone());
+        s_1.extend(r_1_binary.iter());
+        s_1.extend(r_2_binary.iter());
 
         // The SDLP paper calls for xoring s_1 with the constant 1, which
         // inverts the bits. Bitwise NOT does the same thing.
@@ -641,6 +700,30 @@ impl LogProof {
         (g * phi_inv).into_iter().collect()
     }
 
+    /**
+     * Uses the single elements in a first vector to scale a vector of vectors,
+     * and flattens the result. If the each vector happens to be the same
+     * length, then this is the same as the following operation:
+     * `vec(diag(v) * M)` where `vec` is row major vectorization.
+     *
+     * - v: Vector to diagonalize
+     * - m: Matrix as an array of vectors
+     *
+     * Note: the elements in `m` do not need to be the same size.
+     */
+    pub(crate) fn scale_rows_and_flatten<T>(v: &[T], m: &[Vec<T>]) -> Vec<T>
+    where
+        T: Mul<T, Output = T> + Copy,
+    {
+        // Only works if the number of elements in the vector is equal to the
+        // number of rows in the matrix.
+        assert_eq!(v.len(), m.len());
+
+        zip(v, m)
+            .flat_map(|(v_i, row)| row.iter().map(|element| (*v_i) * (*element)))
+            .collect()
+    }
+
     fn compute_v<Q>(
         vk: &VerifierKnowledge<Q>,
         alpha: Scalar,
@@ -654,16 +737,17 @@ impl LogProof {
         assert_eq!(gamma.len(), vk.a.rows);
 
         let n = vk.n();
-        let m = vk.m();
         let k = vk.k();
         let d = vk.d();
-        let b = vk.b();
         let l = vk.l();
+        let b = vk.b();
         let b_1 = vk.b_1();
         let b_2 = vk.b_2();
+        let b_sum = vk.b_sum();
 
         // Compute term 1
-        let two_b = Scalar::twos_complement_coeffs(b as usize);
+        let two_b = Self::serialize_bounds_twos_complement_coefficients(&b);
+
         let alpha_d = alpha.powers(d as usize);
 
         // vk.a is in (Z_q[X]/f)^(m x k), so we need to mod switch to Z_p[X].
@@ -675,8 +759,12 @@ impl LogProof {
 
         let a_eval_gamma = a_eval * &gamma_as_matrix;
 
-        let mut term_1 = a_eval_gamma.tensor(beta).tensor(alpha_d).tensor(two_b);
-        assert_eq!(term_1.len() as u64, b * d * m * k);
+        let mut term_1 = Self::scale_rows_and_flatten(
+            a_eval_gamma.tensor(beta).tensor(alpha_d).as_slice(),
+            two_b.as_slice(),
+        );
+
+        assert_eq!(term_1.len() as u64, b_sum);
 
         // Compute term 2
         let q = FpRistretto::from(Q::field_modulus());
@@ -855,6 +943,10 @@ impl LogProof {
     ) where
         Q: MontConfig<N>,
     {
+        if log_b == 0 {
+            return;
+        }
+
         // Get the value out of Montgomery form.
         let value = MontBackend::into_bigint(*value);
 
@@ -913,6 +1005,69 @@ impl LogProof {
     }
 
     /**
+     * Takes a slice of values in a field `Zq`, treats the values as signed [q's
+     * complement](https://en.wikipedia.org/wiki/Method_of_complements) and
+     * converts the value to binary 2's complement with a specific bit size for
+     * each element in the slice. Note that the number of values must equal the
+     * number of bounds, otherwise this function will cause an assertion error.
+     *
+     * `value` is the element in Zq and `b` is the number of bits needed
+     * to represent the signed value.
+     */
+    fn to_2s_complement_multibound<Q, const N: usize>(
+        values: &[Fp<MontBackend<Q, N>, N>],
+        log_b: &[u64],
+    ) -> BitVec
+    where
+        Q: MontConfig<N>,
+    {
+        // Make sure we have an equal number of values and bounds to serialize
+        assert_eq!(values.len(), log_b.len());
+
+        let mut bitvec = BitVec::with_capacity(values.len() * log_b.iter().sum::<u64>() as usize);
+
+        // This code should not feature timing side-channels.
+        for (value, bound) in zip(values.iter(), log_b.iter()) {
+            LogProof::to_2s_complement_single(value, *bound, &mut bitvec);
+        }
+
+        bitvec
+    }
+
+    /**
+     * Turns a `Matrix<Bounds>` into a `Vec<u64>`.
+     *
+     * # Remarks
+     * The matrix is serialized in row-major order, with bound
+     * coefficients being contiguous.
+     */
+    pub fn serialize_bounds(bounds: &Matrix<Bounds>) -> Vec<u64> {
+        bounds.as_slice().concat()
+    }
+
+    /**
+     * Converts a matrix of bounds into a version serialized and then expanded
+     * by the coefficients.
+     *
+     * The matrix of bounds is a m x k matrix with each element being a d
+     * dimensional vector (the bound per coefficient). This function converts
+     * the result into a m * k * d x 1 vector where each element is a vector of
+     * size B_{m,k,d} size; put another way, each element in the resulting
+     * vector is the twos complement expansion of the bound on a specific
+     * coefficient.
+     */
+    pub fn serialize_bounds_twos_complement_coefficients<F>(bounds: &Matrix<Bounds>) -> Vec<Vec<F>>
+    where
+        F: TwosComplementCoeffs,
+    {
+        Self::serialize_bounds(bounds)
+            .as_slice()
+            .iter()
+            .map(|x| F::twos_complement_coeffs(*x as usize))
+            .collect()
+    }
+
+    /**
      * Turns a `Matrix<DensePolynomial<Q>>` into a `Vec<FpRistretto>`.
      *
      * # Remarks
@@ -933,8 +1088,6 @@ impl LogProof {
                     result.push(c.mod_switch_signed());
                 }
 
-                // The polynomial may be less than degree d, in which case
-                // we need to pad with zeros.
                 for _ in poly.coeffs.len()..d {
                     result.push(FpRistretto::zero());
                 }
@@ -950,20 +1103,24 @@ mod test {
     use crate::{
         fields::FqSeal128_8192,
         linear_algebra::ScalarRem,
-        math::{make_poly, Zero},
+        math::{make_poly, next_higher_power_of_two, Zero},
         LogProofGenerators,
     };
 
     use super::*;
 
-    fn test_lattice<Q>(
-        k: usize,
-    ) -> (
-        MatrixPoly<Q>,
-        MatrixPoly<Q>,
-        MatrixPoly<Q>,
-        DensePolynomial<Q>,
-    )
+    struct LatticeProblem<Q>
+    where
+        Q: Field + Zero + Clone + FftField,
+    {
+        a: MatrixPoly<Q>,
+        s: MatrixPoly<Q>,
+        t: MatrixPoly<Q>,
+        f: DensePolynomial<Q>,
+        b: Matrix<Bounds>,
+    }
+
+    fn test_lattice<Q>(k: usize) -> LatticeProblem<Q>
     where
         Q: Field + Zero + Clone + FftField,
     {
@@ -1000,18 +1157,56 @@ mod test {
         // x^8 + 1
         let f = make_poly::<Q>(&[1, 0, 0, 0, 0, 0, 0, 0, 1]);
 
+        let d = f.degree();
+
         let t = &a * &s;
 
         let t_mod_f = (&t).scalar_rem(&f);
 
-        (a, s, t_mod_f, f)
+        let b = Matrix::from(
+            s_coeff
+                .iter()
+                .map(|row| {
+                    row.iter()
+                        .map(|coeffs| {
+                            let mut coeffs = coeffs.clone();
+                            coeffs.resize(d, 0);
+                            coeffs
+                                .into_iter()
+                                .map(|x| {
+                                    if x == 0 {
+                                        0
+                                    } else {
+                                        next_higher_power_of_two(x)
+                                    }
+                                })
+                                .collect::<Vec<u64>>()
+                        })
+                        .collect::<Vec<Vec<u64>>>()
+                })
+                .collect::<Vec<Vec<Vec<u64>>>>(),
+        );
+
+        LatticeProblem {
+            a,
+            s,
+            t: t_mod_f,
+            f,
+            b,
+        }
     }
 
     #[test]
     fn can_compute_residues() {
         type Q = FqSeal128_8192;
 
-        let (a, s, t_mod_f, f) = test_lattice::<Q>(1);
+        let LatticeProblem {
+            a,
+            s,
+            t: t_mod_f,
+            f,
+            b: _,
+        } = test_lattice::<Q>(1);
 
         let (r_2, r_1) = LogProof::compute_factors(&a, &s, &t_mod_f, &f);
 
@@ -1144,9 +1339,9 @@ mod test {
     fn transcripts_match(k: usize) {
         type Fq = FqSeal128_8192;
 
-        let (a, s, t, f) = test_lattice::<Fq>(k);
+        let LatticeProblem { a, s, t, f, b } = test_lattice::<Fq>(k);
 
-        let pk = ProverKnowledge::new(&a, &s, &t, 16, &f);
+        let pk = ProverKnowledge::new(&a, &s, &t, b, &f);
 
         let mut transcript = Transcript::new(b"test");
         let mut verify_transcript = transcript.clone();

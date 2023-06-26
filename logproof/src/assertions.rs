@@ -16,6 +16,8 @@ use crate::{
 
 #[allow(unused)]
 pub mod linear_relation {
+    use crate::LogProof;
+
     use super::*;
 
     /**
@@ -292,7 +294,7 @@ pub mod linear_relation {
 
         let vk = &pk.vk;
         let d = vk.d() as usize;
-        let b = vk.b() as usize;
+        let b = vk.b();
         let b_1 = vk.b_1() as usize;
         let b_2 = vk.b_2() as usize;
         let f = vk.f.mod_switch_signed();
@@ -304,9 +306,10 @@ pub mod linear_relation {
         let alpha_d = alpha.powers(d);
         let alpha_2d_min_1 = alpha.powers(2 * d - 1);
         let alpha_d_min_1 = alpha.powers(d - 1);
-        let two_b = Fp::twos_complement_coeffs(b);
-        let two_b_1 = Fp::twos_complement_coeffs(b_1);
-        let two_b_2 = Fp::twos_complement_coeffs(b_2);
+
+        let two_b = LogProof::serialize_bounds_twos_complement_coefficients(&b);
+        let two_b_1: Vec<Fp> = Fp::twos_complement_coeffs(b_1);
+        let two_b_2: Vec<Fp> = Fp::twos_complement_coeffs(b_2);
 
         let gamma = gamma.iter().map(|x| (*x).field_into()).collect::<Vec<Fp>>();
         let gamma = gamma.as_slice();
@@ -318,10 +321,13 @@ pub mod linear_relation {
         let f_eval = f.evaluate(&alpha);
         let t_eval = t.evaluate(&alpha);
 
-        let term_1 = (a_eval_t * Matrix::from(gamma))
-            .tensor(beta)
-            .tensor(alpha_d)
-            .tensor(two_b);
+        let term_1 = LogProof::scale_rows_and_flatten(
+            (a_eval_t * Matrix::from(gamma))
+                .tensor(beta)
+                .tensor(alpha_d)
+                .as_slice(),
+            two_b.as_slice(),
+        );
         let term_1 = s_binary.inner_product(&term_1);
 
         // Compute LHS term 2
@@ -362,13 +368,18 @@ pub mod linear_relation {
     ) where
         Q: Field + FieldModulus<4> + ModSwitch<FpRistretto> + CryptoHash + Zero,
     {
-        let b = pk.vk.b() as usize;
+        let b = pk.vk.b();
         let b_1 = pk.vk.b_1() as usize;
         let b_2 = pk.vk.b_2() as usize;
 
-        let two_b = FpRistretto::twos_complement_coeffs(b).repeat(s_serialized.len());
-        let two_b_1 = FpRistretto::twos_complement_coeffs(b_1).repeat(r_1_serialized.len());
-        let two_b_2 = FpRistretto::twos_complement_coeffs(b_2).repeat(r_2_serialized.len());
+        let two_b: Vec<FpRistretto> = LogProof::serialize_bounds_twos_complement_coefficients(&b)
+            .into_iter()
+            .flatten()
+            .collect();
+        let two_b_1: Vec<FpRistretto> =
+            FpRistretto::twos_complement_coeffs(b_1).repeat(r_1_serialized.len());
+        let two_b_2: Vec<FpRistretto> =
+            FpRistretto::twos_complement_coeffs(b_2).repeat(r_2_serialized.len());
 
         let s_actual = s_binary.inner_product(&two_b);
         let r_1_actual = r_1_binary.inner_product(&two_b_1);

@@ -103,7 +103,7 @@ where
      * coefficients in the polynomials in `S`.
      */
     pub fn b(&self) -> u64 {
-        Log2::log2(&self.bound) + 1
+        Log2::ceil_log2(&self.bound) + 1
     }
 
     /**
@@ -147,14 +147,14 @@ where
         let b1 = m_big * d_big * bound_big + d_big * inf_norm_f;
         let b1 = MontBackend::into_bigint(b1);
 
-        Log2::log2(&b1)
+        Log2::ceil_log2(&b1)
     }
 
     /**
      * The number of bits needed to store values in `Fp<Q>`.
      */
     pub fn b_2(&self) -> u64 {
-        Log2::log2(&Q::field_modulus()) + 1
+        Log2::ceil_log2(&Q::field_modulus())
     }
 
     /**

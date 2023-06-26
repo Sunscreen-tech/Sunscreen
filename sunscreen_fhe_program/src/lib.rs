@@ -384,6 +384,8 @@ impl FheProgramTrait for FheProgram {
         Self {
             data: self.data,
             graph: CompilationResult(StableGraph::from(pruned)),
+            #[cfg(feature = "debug")]  // TODO: need to make sure that every construction of a Context object passes in group id
+            group_id: self.group_id
         }
     }
 

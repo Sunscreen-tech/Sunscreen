@@ -221,7 +221,7 @@ where
      */
     pub data: D,
 
-    #[cfg(feature = "debug")]
+    #[cfg(feature = "debugger")]
     /**
      * Group-set ID for debugging.
      */
@@ -236,7 +236,7 @@ where
      * Create a new [`Context`].
      */
     pub fn new(data: D) -> Self {
-        #[cfg(not(feature = "debug"))]
+        #[cfg(not(feature = "debugger"))]
         {
             Self {
                 graph: CompilationResult::<O>::new(),
@@ -244,7 +244,7 @@ where
             }
         }
         
-        #[cfg(feature = "debug")]
+        #[cfg(feature = "debugger")]
         {
             static GROUP_ID: AtomicU64 = AtomicU64::new(0);
             let group_id = GROUP_ID.fetch_add(1, Ordering::SeqCst);

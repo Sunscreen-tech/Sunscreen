@@ -35,7 +35,10 @@ pub fn zkp_program_impl(
 
 fn get_generic_arg(generics: &Generics) -> Result<(Ident, Path)> {
     if generics.type_params().count() != 1 {
-        return Err(Error::compile_error(generics.span(), "ZKP programs must take 1 generic argument with bound sunscreen::BackendField.sunscreen::BackendField"));
+        return Err(Error::compile_error(
+            generics.span(),
+            "ZKP programs must take 1 generic argument with bound sunscreen::BackendField",
+        ));
     }
 
     if generics.lifetimes().count() > 0 {

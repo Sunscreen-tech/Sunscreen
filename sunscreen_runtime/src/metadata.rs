@@ -8,7 +8,8 @@ use sunscreen_fhe_program::{FheProgram, SchemeType};
 use crate::{Error, Result};
 
 /**
- * Indicates the type signatures of an Fhe Program. Serves as a piece of the [`FheProgramMetadata`].
+ * Indicates the type signature of an FHE or ZKP program. Serves as a piece of the
+ * [`FheProgramMetadata`] or [`ZkpProgramFn`] respectively.
  *
  * # Remarks
  * This type is serializable and FHE program implementors can give this object
@@ -18,28 +19,29 @@ use crate::{Error, Result};
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CallSignature {
     /**
-     * The type of each argument in the FHE program.
+     * The type of each argument in the program.
      *
      * # Remarks
-     * The ith argument to the FHE program occupies the ith argument of the vector.
-     * The length of this vector equals the number of arguments to the FHE program.
+     * The ith argument to the program occupies the ith element of the vector.
+     * The length of this vector equals the number of arguments to the program.
      */
     pub arguments: Vec<Type>,
 
     /**
-     * The type of the single return value of the FHE program if the return type is
-     * not a type. If the return type of the FHE program is a tuple, then this contains
+     * The type of the single return value of the program if the return type is
+     * not a tuple. If the return type of the program is a tuple, then this contains
      * each type in the tuple.
-     *
-     * # Remarks
-     * The ith argument to the FHE program occupies the ith argument of the vector.
-     * The length of this vector equals the number of arguments to the FHE program.
      */
     pub returns: Vec<Type>,
 
     /**
-     * The number of ciphertexts that compose the nth return value.
+     * The number of ciphertexts that compose the corresponding return value.
+     *
+     * # Remarks
+     * The number of ciphertexts composing the ith return value of the program occupies the ith
+     * element of the vector. The length of this vector equals the length of the returns.
      */
+    // TODO This field is specific to FHE; should we segment the types here? CallSignature<Fhe|Zkp> ?
     pub num_ciphertexts: Vec<usize>,
 }
 

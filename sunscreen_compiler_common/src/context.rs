@@ -219,6 +219,12 @@ where
      * Data given by the consumer.
      */
     pub data: D,
+
+    #[cfg(feature = "debug")]
+    /**
+     * Group-set ID for debugging.
+     */
+    pub group_id: u64
 }
 
 impl<O, D> Context<O, D>
@@ -229,9 +235,21 @@ where
      * Create a new [`Context`].
      */
     pub fn new(data: D) -> Self {
-        Self {
-            graph: CompilationResult::<O>::new(),
-            data,
+        #[cfg(not(feature = "debug"))]
+        {
+            Self {
+                graph: CompilationResult::<O>::new(),
+                data,
+            }
+        }
+        
+        #[cfg(feature = "debug")]
+        {
+            Self { 
+                graph: CompilationResult::<O>::new(),
+                data,
+                group_id: 0
+            }
         }
     }
 

@@ -34,13 +34,23 @@ where
     O: Operation,
 {
     /**
-     * Creates a new [`NodeInfo`].
+     * Creates a new [`NodeInfo`] without debug information.
      */
+    #[cfg(not(feature = "debugger"))]
     pub fn new(operation: O) -> Self {
         Self {
             operation,
-            #[cfg(feature = "debugger")]
-            group_id: 0,
+        }
+    }
+
+    /**
+     * Creates a new [`NodeInfo`] with debug information.
+     */
+    #[cfg(feature = "debugger")]
+    pub fn new(operation: O, group_id: u64) -> Self {
+        Self {
+            operation,
+            group_id
         }
     }
 }
@@ -271,7 +281,6 @@ where
         #[cfg(feature = "debugger")]
         {
             let group_id = self.group_counter;
-            self.group_counter += 1;
             self.graph.add_node(NodeInfo {
                 operation,
                 group_id,

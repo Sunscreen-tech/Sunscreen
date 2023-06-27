@@ -3,7 +3,7 @@ use sunscreen::{Ciphertext, Plaintext};
 /**
  * A node in the directed graph representing the FHE program.
  */
-struct ExpressionTreeNode {
+struct FHEExpressionTreeNode {
 /**
  * The ID of the ExpressionTreeNode in the debugger graph.
  */
@@ -47,6 +47,7 @@ struct ExpressionTreeNode {
     local_multiplicative_depth: u32 
 }
 
-impl ExpressionTreeNode {
+impl FHEExpressionTreeNode {
+
 
 }

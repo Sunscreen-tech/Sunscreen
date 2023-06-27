@@ -223,7 +223,7 @@ where
     #[cfg(feature = "debugger")]
     /**
      * Used to assign group-set ID's for debugging.
-     * Updated whenever a group-set ID is assigned so that FHEProgramNodes are sequentially identified.
+     * Updated whenever a group-set ID is assigned so that ProgramNodes are sequentially identified.
      */
     pub group_counter: u64
 }

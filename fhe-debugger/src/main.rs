@@ -75,15 +75,14 @@ async fn main() -> std::io::Result<()> {
     env_logger::init();
 
     HttpServer::new(move || {
-        App::new()
-            .app_data(lst.clone())
-            /* 
-            .service(index)
-            .service(main_js)
-            .service(main_css)
-            .service(manifest_json)
-            .service(rand_function)
-            */
+        App::new().app_data(lst.clone())
+        /*
+        .service(index)
+        .service(main_js)
+        .service(main_css)
+        .service(manifest_json)
+        .service(rand_function)
+        */
     })
     .bind(("127.0.0.1", 8080))?
     .run()

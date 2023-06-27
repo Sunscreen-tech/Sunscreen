@@ -38,9 +38,7 @@ where
      */
     #[cfg(not(feature = "debugger"))]
     pub fn new(operation: O) -> Self {
-        Self {
-            operation,
-        }
+        Self { operation }
     }
 
     /**
@@ -50,7 +48,7 @@ where
     pub fn new(operation: O, group_id: u64) -> Self {
         Self {
             operation,
-            group_id
+            group_id,
         }
     }
 }

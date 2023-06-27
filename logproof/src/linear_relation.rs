@@ -845,7 +845,6 @@ impl LogProof {
      * This modifies bitvec in place.
      *
      */
-    #[inline]
     fn to_2s_complement_single<Q, const N: usize>(
         value: &Fp<MontBackend<Q, N>, N>,
         log_b: u64,

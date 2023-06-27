@@ -566,7 +566,7 @@ where
             let constraint = transforms.push(Transform::AddNode(NodeInfo {
                 operation: Operation::Constraint(as_bigint),
                 #[cfg(feature = "debugger")]
-                group_id: node.group_id
+                group_id: node.group_id,
             }));
             transforms.push(Transform::AddEdge(
                 id.into(),

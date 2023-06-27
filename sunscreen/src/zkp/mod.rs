@@ -414,7 +414,11 @@ pub(crate) fn compile(program: &ZkpFrontendCompilation) -> CompiledZkpProgram {
                 Operation::Constant(x) => JitOperation::Constant(x),
             };
 
-            NodeInfo { operation }
+            NodeInfo {
+                operation,
+                #[cfg(feature = "debugger")]
+                group_id: n.group_id,
+            }
         },
         |_, e| *e,
     );

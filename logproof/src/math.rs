@@ -283,6 +283,14 @@ pub trait Log2 {
      * When the given value is zero.
      */
     fn log2(x: &Self) -> u64;
+
+    /**
+     * Compute the ceiling of the log2 of the given value.
+     *
+     * # Panics
+     * When the given value is zero.
+     */
+    fn ceil_log2(x: &Self) -> u64;
 }
 
 impl Log2 for u64 {
@@ -302,6 +310,15 @@ impl Log2 for u64 {
 
         panic!("Value was zero.");
     }
+
+    fn ceil_log2(x: &Self) -> u64 {
+        let ceil_factor = if x.is_power_of_two() { 0 } else { 1 };
+        Self::log2(x) + ceil_factor
+    }
+}
+
+fn is_power_of_two_bigint<const N: usize>(b: &BigInt<N>) -> bool {
+    b.as_ref().iter().map(|u| u.count_ones()).sum::<u32>() == 1
 }
 
 impl<const N: usize> Log2 for BigInt<N> {
@@ -318,6 +335,12 @@ impl<const N: usize> Log2 for BigInt<N> {
         }
 
         panic!("Value was zero.");
+    }
+
+    fn ceil_log2(x: &Self) -> u64 {
+        let ceil_factor = if is_power_of_two_bigint(x) { 0 } else { 1 };
+
+        Self::log2(x) + ceil_factor
     }
 }
 
@@ -787,5 +810,61 @@ mod test {
         assert_encoding(i8::MIN);
         assert_encoding(i8::MAX);
         assert_encoding(42);
+    }
+
+    #[test]
+    fn big_int_pow_two() {
+        let options = [
+            (1u64, true),
+            (2, true),
+            (4, true),
+            (5, false),
+            (19, false),
+            (8192, true),
+            (8193, false),
+        ];
+
+        for (value, expected) in options {
+            println!("{:?}, {:?}", value, expected);
+            let b: BigInt<1> = BigInt::from(value);
+            assert_eq!(is_power_of_two_bigint(&b), expected);
+        }
+
+        // Testing higher limbs
+        // value is 1 << 68
+        let b: BigInt<2> = BigInt!("295147905179352825856");
+        assert!(is_power_of_two_bigint(&b));
+
+        let b: BigInt<2> = BigInt!("295147905179352825857");
+        assert!(!is_power_of_two_bigint(&b));
+    }
+
+    #[test]
+    fn ceil_log2_u64() {
+        let options = [1u64, 2, 4, 5, 19, 8192, 8193];
+
+        for value in options {
+            let f = value as f64;
+            let expected = f.log2().ceil() as u64;
+
+            let calculated = Log2::ceil_log2(&value);
+
+            assert_eq!(calculated, expected);
+        }
+    }
+
+    #[test]
+    fn ceil_log2_bitint() {
+        let options = [1u64, 2, 4, 5, 19, 8192, 8193];
+
+        for value in options {
+            let f = value as f64;
+            let expected = f.log2().ceil() as u64;
+
+            let b: BigInt<1> = BigInt::from(value);
+            let calculated = Log2::ceil_log2(&b);
+
+            assert_eq!(calculated, expected);
+        }
     }
 }

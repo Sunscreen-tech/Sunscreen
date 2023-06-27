@@ -1,6 +1,6 @@
 use sunscreen::{
-    types::zkp::NativeField, zkp_program, BackendField, BulletproofsBackend, Compiler, Runtime,
-    ZkpBackend, ZkpProgramInput,
+    types::zkp::NativeField, zkp_program, BackendField, BulletproofsBackend, Compiler, ZkpBackend,
+    ZkpProgramInput, ZkpRuntime,
 };
 
 type BPField = NativeField<<BulletproofsBackend as ZkpBackend>::Field>;
@@ -14,7 +14,7 @@ fn main() {
 
     let prog = app.get_zkp_program(sudoku_proof).unwrap();
 
-    let runtime = Runtime::new_zkp(&BulletproofsBackend::new()).unwrap();
+    let runtime = ZkpRuntime::new(&BulletproofsBackend::new()).unwrap();
 
     let ex_puzzle = [
         [0, 7, 0, 0, 2, 0, 0, 4, 6],
@@ -120,7 +120,7 @@ mod tests {
 
         let prog = app.get_zkp_program(sudoku_proof).unwrap();
 
-        let runtime = Runtime::new_zkp(&BulletproofsBackend::new()).unwrap();
+        let runtime = ZkpRuntime::new(&BulletproofsBackend::new()).unwrap();
 
         let ex_puzzle = [
             [0, 7, 0, 0, 2, 0, 0, 4, 6],
@@ -167,7 +167,7 @@ mod tests {
 
         let prog = app.get_zkp_program(sudoku_proof).unwrap();
 
-        let runtime = Runtime::new_zkp(&BulletproofsBackend::new()).unwrap();
+        let runtime = ZkpRuntime::new(&BulletproofsBackend::new()).unwrap();
 
         let ex_puzzle = [
             [0, 7, 0, 0, 2, 0, 0, 4, 6],
@@ -212,7 +212,7 @@ mod tests {
 
         let prog = app.get_zkp_program(sudoku_proof).unwrap();
 
-        let runtime = Runtime::new_zkp(&BulletproofsBackend::new()).unwrap();
+        let runtime = ZkpRuntime::new(&BulletproofsBackend::new()).unwrap();
 
         let ex_puzzle = [[0; 9]; 9];
 

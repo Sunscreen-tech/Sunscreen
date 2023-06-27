@@ -6,7 +6,6 @@ use petgraph::stable_graph::{NodeIndex, StableGraph};
 use petgraph::visit::{EdgeRef, IntoEdgeReferences, IntoNodeReferences};
 use petgraph::Graph;
 use serde::{Deserialize, Serialize};
-use std::sync::atomic::{AtomicU64, Ordering};
 
 use crate::{Operation, Render};
 
@@ -223,9 +222,9 @@ where
 
     #[cfg(feature = "debugger")]
     /**
-     * Group-set ID for debugging.
+     * Used to assign group-set ID's for debugging.
      */
-    pub group_id: u64
+    pub group_counter: u64
 }
 
 impl<O, D> Context<O, D>
@@ -246,13 +245,11 @@ where
         
         #[cfg(feature = "debugger")]
         {
-            static GROUP_ID: AtomicU64 = AtomicU64::new(0);
-            let group_id = GROUP_ID.fetch_add(1, Ordering::SeqCst);
-            
             Self {
                 graph: CompilationResult::<O>::new(),
                 data,
-                group_id,
+                //Increment this as id's are assigned to nodes 
+                group_counter: 0, 
             }
         }
     }

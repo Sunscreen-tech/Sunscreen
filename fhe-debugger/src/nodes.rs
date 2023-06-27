@@ -7,7 +7,7 @@ struct ExpressionTreeNode {
 /**
  * The ID of the ExpressionTreeNode in the debugger graph.
  */
-    node_id: Hash,
+    node_id: u64,
 
 /**
  * The label/name of the ExpressionTreeNode in the debugger graph.
@@ -18,18 +18,18 @@ struct ExpressionTreeNode {
 /**
  * The node_id's of the parent nodes of the ExpressionTreeNode.
  */
-    parent_nodes: vec![Hash],
+    parent_nodes: vec![u64],
 
 /**
  * The node_id's of the child nodes of the ExpressionTreeNode.
  */
-    child_nodes: vec![Hash],
+    child_nodes: vec![u64],
 
 /**
  * The node_id's of the ExpressionTreeNodes of the subgraph corresponding
  * to the operation of the current ExpressionTreeNode.
  */
-    group_nodes: vec![Hash],
+    group_nodes: vec![u64],
 
 /**
  * The list of ciphertext/plaintext inputs to the ExpressionTreeNode.

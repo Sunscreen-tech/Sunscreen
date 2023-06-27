@@ -253,7 +253,6 @@ where
                 data,
             }
         }
-
         #[cfg(feature = "debugger")]
         {
             Self {

@@ -1,20 +1,19 @@
 use sunscreen::{
-    types::zkp::NativeField, zkp_program, BackendField, BulletproofsBackend, Compiler, ZkpBackend,
-    ZkpProgramInput, ZkpRuntime,
+    types::zkp::NativeField, zkp_program, BackendField, BulletproofsBackend, Compiler, Error,
+    ZkpBackend, ZkpProgramInput, ZkpRuntime,
 };
 
 type BPField = NativeField<<BulletproofsBackend as ZkpBackend>::Field>;
 
-fn main() {
+fn main() -> Result<(), Error> {
     let app = Compiler::new()
         .zkp_backend::<BulletproofsBackend>()
         .zkp_program(sudoku_proof)
-        .compile()
-        .unwrap();
+        .compile()?;
 
     let prog = app.get_zkp_program(sudoku_proof).unwrap();
 
-    let runtime = ZkpRuntime::new(&BulletproofsBackend::new()).unwrap();
+    let runtime = ZkpRuntime::new(&BulletproofsBackend::new())?;
 
     let ex_puzzle = [
         [0, 7, 0, 0, 2, 0, 0, 4, 6],
@@ -44,11 +43,11 @@ fn main() {
 
     let cons: Vec<ZkpProgramInput> = vec![ex_puzzle.map(|a| a.map(BPField::from)).into()];
 
-    let proof = runtime.prove(prog, cons.clone(), vec![], board).unwrap();
+    let proof = runtime.prove(prog, cons.clone(), vec![], board)?;
 
-    let verify = runtime.verify(prog, &proof, cons, vec![]);
+    runtime.verify(prog, &proof, cons, vec![])?;
 
-    assert!(verify.is_ok());
+    Ok(())
 }
 
 #[zkp_program(backend = "bulletproofs")]

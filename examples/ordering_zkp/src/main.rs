@@ -1,33 +1,30 @@
 use sunscreen::{
     types::zkp::{ConstrainCmp, NativeField},
-    zkp_program, BackendField, BulletproofsBackend, Compiler, ZkpBackend, ZkpRuntime,
+    zkp_program, BackendField, BulletproofsBackend, Compiler, Error, ZkpBackend, ZkpRuntime,
 };
 
 type BPField = NativeField<<BulletproofsBackend as ZkpBackend>::Field>;
 
-fn main() {
+fn main() -> Result<(), Error> {
     let app = Compiler::new()
         .zkp_backend::<BulletproofsBackend>()
         .zkp_program(greater_than)
-        .compile()
-        .unwrap();
+        .compile()?;
 
     let greater_than_zkp = app.get_zkp_program(greater_than).unwrap();
 
-    let runtime = ZkpRuntime::new(&BulletproofsBackend::new()).unwrap();
+    let runtime = ZkpRuntime::new(&BulletproofsBackend::new())?;
 
     let amount = BPField::from(64);
     let threshold = BPField::from(232);
 
     // Prove that amount > threshold
 
-    let proof = runtime
-        .prove(greater_than_zkp, vec![threshold], vec![], vec![amount])
-        .unwrap();
+    let proof = runtime.prove(greater_than_zkp, vec![threshold], vec![], vec![amount])?;
 
-    let verify = runtime.verify(greater_than_zkp, &proof, vec![threshold], vec![]);
+    runtime.verify(greater_than_zkp, &proof, vec![threshold], vec![])?;
 
-    assert!(verify.is_ok());
+    Ok(())
 }
 
 #[zkp_program(backend = "bulletproofs")]

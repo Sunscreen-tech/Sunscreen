@@ -558,12 +558,15 @@ where
     forward_traverse_mut(prog, |query, id| {
         let mut transforms = GraphTransforms::new();
 
-        if let Operation::PublicInput(x) = query.get_node(id).unwrap().operation {
+        let node = query.get_node(id).unwrap();
+
+        if let Operation::PublicInput(x) = node.operation {
             let as_bigint: BigInt = public_inputs[x].clone().zkp_into();
 
             let constraint = transforms.push(Transform::AddNode(NodeInfo {
                 operation: Operation::Constraint(as_bigint),
-                group_id: 0
+                #[cfg(feature = "debugger")]
+                group_id: node.group_id
             }));
             transforms.push(Transform::AddEdge(
                 id.into(),

@@ -8,8 +8,7 @@ use sunscreen_fhe_program::{FheProgram, SchemeType};
 use crate::{Error, Result};
 
 /**
- * Indicates the type signature of an FHE or ZKP program. Serves as a piece of the
- * [`FheProgramMetadata`] or [`ZkpProgramFn`] respectively.
+ * Indicates the type signature of an FHE or ZKP program.
  *
  * # Remarks
  * This type is serializable and FHE program implementors can give this object

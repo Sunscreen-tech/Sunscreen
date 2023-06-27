@@ -384,6 +384,7 @@ impl FheProgramTrait for FheProgram {
         Self {
             data: self.data,
             graph: CompilationResult(StableGraph::from(pruned)),
+            group_counter: self.group_counter
         }
     }
 

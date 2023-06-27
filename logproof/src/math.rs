@@ -318,20 +318,7 @@ impl Log2 for u64 {
 }
 
 fn is_power_of_two_bigint<const N: usize>(b: &BigInt<N>) -> bool {
-    let num_bits = b.num_bits();
-    let mut seen_a_one = false;
-
-    for n in 0..(num_bits as usize) {
-        let bit_set = b.get_bit(n);
-
-        if bit_set && seen_a_one {
-            return false;
-        } else if bit_set {
-            seen_a_one = true;
-        }
-    }
-
-    true
+    b.as_ref().iter().map(|u| u.count_ones()).sum::<u32>() == 1
 }
 
 impl<const N: usize> Log2 for BigInt<N> {

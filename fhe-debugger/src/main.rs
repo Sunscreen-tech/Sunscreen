@@ -4,6 +4,7 @@ use env_logger;
 use rand::Rng;
 use sunscreen::{Ciphertext, Plaintext};
 
+/* 
 // Setup to build front-end with `cargo run`
 const INDEX_HTML: &str = include_str!(concat!(
     env!("OUT_DIR"),
@@ -62,6 +63,7 @@ async fn rand_function(functions: web::Data<Vec<String>>) -> impl Responder {
 
     HttpResponse::Ok().body(rand_function)
 }
+*/
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -75,11 +77,13 @@ async fn main() -> std::io::Result<()> {
     HttpServer::new(move || {
         App::new()
             .app_data(lst.clone())
+            /* 
             .service(index)
             .service(main_js)
             .service(main_css)
             .service(manifest_json)
             .service(rand_function)
+            */
     })
     .bind(("127.0.0.1", 8080))?
     .run()

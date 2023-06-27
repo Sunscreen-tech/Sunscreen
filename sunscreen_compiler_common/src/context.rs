@@ -219,6 +219,12 @@ where
      * Data given by the consumer.
      */
     pub data: D,
+
+    #[cfg(feature = "debugger")]
+    /**
+     * Used to assign group-set ID's for debugging.
+     */
+    pub group_counter: u64
 }
 
 impl<O, D> Context<O, D>
@@ -229,9 +235,22 @@ where
      * Create a new [`Context`].
      */
     pub fn new(data: D) -> Self {
-        Self {
-            graph: CompilationResult::<O>::new(),
-            data,
+        #[cfg(not(feature = "debugger"))]
+        {
+            Self {
+                graph: CompilationResult::<O>::new(),
+                data,
+            }
+        }
+        
+        #[cfg(feature = "debugger")]
+        {
+            Self {
+                graph: CompilationResult::<O>::new(),
+                data,
+                //Increment this as id's are assigned to nodes 
+                group_counter: 0, 
+            }
         }
     }
 

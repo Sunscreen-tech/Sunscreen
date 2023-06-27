@@ -24,3 +24,4 @@ bulletproofs = [
     "dep:bulletproofs",
     "dep:merlin"
 ]
+debugger = []

@@ -563,6 +563,7 @@ where
 
             let constraint = transforms.push(Transform::AddNode(NodeInfo {
                 operation: Operation::Constraint(as_bigint),
+                group_id: 0
             }));
             transforms.push(Transform::AddEdge(
                 id.into(),

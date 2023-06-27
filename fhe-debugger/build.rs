@@ -2,7 +2,7 @@ use core::panic;
 use std::{path::PathBuf, process::Command, thread::panicking};
 
 fn main() {
-    /*
+    /* 
     println!("cargo:rerun-if-changed=fhe-debugger-frontend");
 
     let out_dir = std::env::var("OUT_DIR").unwrap();

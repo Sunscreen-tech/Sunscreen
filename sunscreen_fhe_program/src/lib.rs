@@ -384,7 +384,7 @@ impl FheProgramTrait for FheProgram {
         Self {
             data: self.data,
             graph: CompilationResult(StableGraph::from(pruned)),
-            #[cfg(feature = "debugger")]
+            #[cfg(feature = "debugger")]  
             group_counter: self.group_counter,
         }
     }

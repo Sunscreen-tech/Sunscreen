@@ -99,7 +99,7 @@ impl Neg for Node {
 /**
  * A Bulletproofs R1CS circuit.
  */
-pub struct BulletproofsCircuit {
+struct BulletproofsCircuit {
     nodes: Vec<Option<Node>>,
 }
 

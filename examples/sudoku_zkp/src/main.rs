@@ -1,7 +1,7 @@
 use sunscreen::{
-    types::zkp::NativeField, zkp_program, BackendField, Compiler, Runtime, ZkpProgramInput,
+    types::zkp::NativeField, zkp_program, BackendField, BulletproofsBackend, Compiler, Runtime,
+    ZkpBackend, ZkpProgramInput,
 };
-use sunscreen_zkp_backend::{bulletproofs::BulletproofsBackend, ZkpBackend};
 
 type BPField = NativeField<<BulletproofsBackend as ZkpBackend>::Field>;
 

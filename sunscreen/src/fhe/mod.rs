@@ -353,69 +353,95 @@ impl FheCompile for FheFrontendCompilation {
 
         let mapped_graph = self.0.map(
             |id, n| match &n.operation {
-                FheOperation::Add => NodeInfo::new(FheProgramOperation::Add,
+                FheOperation::Add => NodeInfo::new(
+                    FheProgramOperation::Add,
                     #[cfg(feature = "debugger")]
-                    n.group_id),
+                    n.group_id,
+                ),
                 FheOperation::InputCiphertext => {
                     // HACKHACK: Input nodes are always added first to the graph in the order
                     // they're specified as function arguments. We should not depend on this.
-                    NodeInfo::new(FheProgramOperation::InputCiphertext(id.index()),
-                    #[cfg(feature = "debugger")]
-                    n.group_id)
+                    NodeInfo::new(
+                        FheProgramOperation::InputCiphertext(id.index()),
+                        #[cfg(feature = "debugger")]
+                        n.group_id,
+                    )
                 }
                 FheOperation::InputPlaintext => {
                     // HACKHACK: Input nodes are always added first to the graph in the order
                     // they're specified as function arguments. We should not depend on this.
-                    NodeInfo::new(FheProgramOperation::InputPlaintext(id.index()),
-                    #[cfg(feature = "debugger")]
-                    n.group_id)
+                    NodeInfo::new(
+                        FheProgramOperation::InputPlaintext(id.index()),
+                        #[cfg(feature = "debugger")]
+                        n.group_id,
+                    )
                 }
-                FheOperation::Literal(Literal::U64(x)) => {
-                    NodeInfo::new(FheProgramOperation::Literal(FheProgramLiteral::U64(*x)),
+                FheOperation::Literal(Literal::U64(x)) => NodeInfo::new(
+                    FheProgramOperation::Literal(FheProgramLiteral::U64(*x)),
                     #[cfg(feature = "debugger")]
-                    n.group_id)
-                }
+                    n.group_id,
+                ),
                 FheOperation::Literal(Literal::Plaintext(x)) => {
                     // It's okay to unwrap here because fhe_program compilation will
                     // catch the panic and return a compilation error.
-                    NodeInfo::new(FheProgramOperation::Literal(FheProgramLiteral::Plaintext(
-                        x.to_bytes().expect("Failed to serialize plaintext."),
-                    )),
-                    #[cfg(feature = "debugger")]
-                    n.group_id)
-                }
-                FheOperation::Sub => NodeInfo::new(FheProgramOperation::Sub, 
-                    #[cfg(feature = "debugger")]
-                    n.group_id),
-                FheOperation::SubPlaintext => NodeInfo::new(FheProgramOperation::SubPlaintext,
-                    #[cfg(feature = "debugger")]
-                    n.group_id),
-                FheOperation::Negate => NodeInfo::new(FheProgramOperation::Negate,
-                    #[cfg(feature = "debugger")]
-                    n.group_id),
-                FheOperation::Multiply => NodeInfo::new(FheProgramOperation::Multiply,
-                    #[cfg(feature = "debugger")]
-                    n.group_id),
-                FheOperation::MultiplyPlaintext => {
-                    NodeInfo::new(FheProgramOperation::MultiplyPlaintext,
+                    NodeInfo::new(
+                        FheProgramOperation::Literal(FheProgramLiteral::Plaintext(
+                            x.to_bytes().expect("Failed to serialize plaintext."),
+                        )),
                         #[cfg(feature = "debugger")]
-                        n.group_id)
+                        n.group_id,
+                    )
                 }
-                FheOperation::Output => NodeInfo::new(FheProgramOperation::OutputCiphertext,
+                FheOperation::Sub => NodeInfo::new(
+                    FheProgramOperation::Sub,
                     #[cfg(feature = "debugger")]
-                    n.group_id),
-                FheOperation::RotateLeft => NodeInfo::new(FheProgramOperation::ShiftLeft,
+                    n.group_id,
+                ),
+                FheOperation::SubPlaintext => NodeInfo::new(
+                    FheProgramOperation::SubPlaintext,
                     #[cfg(feature = "debugger")]
-                    n.group_id),
-                FheOperation::RotateRight => NodeInfo::new(FheProgramOperation::ShiftRight,
+                    n.group_id,
+                ),
+                FheOperation::Negate => NodeInfo::new(
+                    FheProgramOperation::Negate,
                     #[cfg(feature = "debugger")]
-                    n.group_id),
-                FheOperation::SwapRows => NodeInfo::new(FheProgramOperation::SwapRows,
+                    n.group_id,
+                ),
+                FheOperation::Multiply => NodeInfo::new(
+                    FheProgramOperation::Multiply,
                     #[cfg(feature = "debugger")]
-                    n.group_id),
-                FheOperation::AddPlaintext => NodeInfo::new(FheProgramOperation::AddPlaintext,
+                    n.group_id,
+                ),
+                FheOperation::MultiplyPlaintext => NodeInfo::new(
+                    FheProgramOperation::MultiplyPlaintext,
                     #[cfg(feature = "debugger")]
-                    n.group_id),
+                    n.group_id,
+                ),
+                FheOperation::Output => NodeInfo::new(
+                    FheProgramOperation::OutputCiphertext,
+                    #[cfg(feature = "debugger")]
+                    n.group_id,
+                ),
+                FheOperation::RotateLeft => NodeInfo::new(
+                    FheProgramOperation::ShiftLeft,
+                    #[cfg(feature = "debugger")]
+                    n.group_id,
+                ),
+                FheOperation::RotateRight => NodeInfo::new(
+                    FheProgramOperation::ShiftRight,
+                    #[cfg(feature = "debugger")]
+                    n.group_id,
+                ),
+                FheOperation::SwapRows => NodeInfo::new(
+                    FheProgramOperation::SwapRows,
+                    #[cfg(feature = "debugger")]
+                    n.group_id,
+                ),
+                FheOperation::AddPlaintext => NodeInfo::new(
+                    FheProgramOperation::AddPlaintext,
+                    #[cfg(feature = "debugger")]
+                    n.group_id,
+                ),
             },
             |_, e| match e {
                 EdgeInfo::Left => EdgeInfo::Left,

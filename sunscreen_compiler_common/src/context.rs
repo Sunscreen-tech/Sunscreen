@@ -21,6 +21,12 @@ where
      * The operation this node performs.
      */
     pub operation: O,
+
+    #[cfg(feature = "debugger")]
+    /**
+     * The group ID associated with the ProgramNode.
+     */
+    pub group_id: u64,
 }
 
 impl<O> NodeInfo<O>
@@ -28,10 +34,22 @@ where
     O: Operation,
 {
     /**
-     * Creates a new [`NodeInfo`].
+     * Creates a new [`NodeInfo`] without debug information.
      */
+    #[cfg(not(feature = "debugger"))]
     pub fn new(operation: O) -> Self {
         Self { operation }
+    }
+
+    /**
+     * Creates a new [`NodeInfo`] with debug information.
+     */
+    #[cfg(feature = "debugger")]
+    pub fn new(operation: O, group_id: u64) -> Self {
+        Self {
+            operation,
+            group_id,
+        }
     }
 }
 
@@ -223,8 +241,9 @@ where
     #[cfg(feature = "debugger")]
     /**
      * Used to assign group-set ID's for debugging.
+     * Updated whenever a group-set ID is assigned so that ProgramNodes are sequentially identified.
      */
-    pub group_counter: u64
+    pub group_counter: u64,
 }
 
 impl<O, D> Context<O, D>
@@ -242,14 +261,13 @@ where
                 data,
             }
         }
-        
         #[cfg(feature = "debugger")]
         {
             Self {
                 graph: CompilationResult::<O>::new(),
                 data,
-                //Increment this as id's are assigned to nodes 
-                group_counter: 0, 
+                //Increment this as id's are assigned to nodes
+                group_counter: 0,
             }
         }
     }
@@ -258,6 +276,16 @@ where
      * Add a node to the parse graph.
      */
     pub fn add_node(&mut self, operation: O) -> NodeIndex {
+        #[cfg(feature = "debugger")]
+        {
+            let group_id = self.group_counter;
+            self.graph.add_node(NodeInfo {
+                operation,
+                group_id,
+            })
+        }
+
+        #[cfg(not(feature = "debugger"))]
         self.graph.add_node(NodeInfo { operation })
     }
 

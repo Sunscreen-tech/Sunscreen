@@ -474,26 +474,66 @@ where
 
     let executable_graph = prog.map(
         |id, n| match n.operation {
-            Operation::Add => NodeInfo::new(ExecOperation::Add),
-            Operation::Mul => NodeInfo::new(ExecOperation::Mul),
-            Operation::Sub => NodeInfo::new(ExecOperation::Sub),
-            Operation::Neg => NodeInfo::new(ExecOperation::Neg),
-            Operation::Constant(x) => NodeInfo::new(ExecOperation::Constant(x)),
-            Operation::Constraint(x) => NodeInfo::new(ExecOperation::Constraint(x)),
-            Operation::PublicInput(id) => NodeInfo::new(ExecOperation::Input(id)),
-            Operation::PrivateInput(id) => {
-                NodeInfo::new(ExecOperation::Input(public_inputs.len() + id))
-            }
+            Operation::Add => NodeInfo::new(
+                ExecOperation::Add,
+                #[cfg(feature = "debugger")]
+                n.group_id,
+            ),
+            Operation::Mul => NodeInfo::new(
+                ExecOperation::Mul,
+                #[cfg(feature = "debugger")]
+                n.group_id,
+            ),
+            Operation::Sub => NodeInfo::new(
+                ExecOperation::Sub,
+                #[cfg(feature = "debugger")]
+                n.group_id,
+            ),
+            Operation::Neg => NodeInfo::new(
+                ExecOperation::Neg,
+                #[cfg(feature = "debugger")]
+                n.group_id,
+            ),
+            Operation::Constant(x) => NodeInfo::new(
+                ExecOperation::Constant(x),
+                #[cfg(feature = "debugger")]
+                n.group_id,
+            ),
+            Operation::Constraint(x) => NodeInfo::new(
+                ExecOperation::Constraint(x),
+                #[cfg(feature = "debugger")]
+                n.group_id,
+            ),
+            Operation::PublicInput(id) => NodeInfo::new(
+                ExecOperation::Input(id),
+                #[cfg(feature = "debugger")]
+                n.group_id,
+            ),
+            Operation::PrivateInput(id) => NodeInfo::new(
+                ExecOperation::Input(public_inputs.len() + id),
+                #[cfg(feature = "debugger")]
+                n.group_id,
+            ),
             Operation::ConstantInput(x) => {
                 let val = constant_inputs[x].clone();
 
-                NodeInfo::new(ExecOperation::Constant(val.zkp_into()))
+                NodeInfo::new(
+                    ExecOperation::Constant(val.zkp_into()),
+                    #[cfg(feature = "debugger")]
+                    n.group_id,
+                )
             }
             Operation::HiddenInput(_) => match node_outputs.as_ref() {
-                Some(node_outputs) => NodeInfo::new(ExecOperation::HiddenInput(Some(
-                    node_outputs[&id].clone().zkp_into(),
-                ))),
-                None => NodeInfo::new(ExecOperation::HiddenInput(None)),
+                Some(node_outputs) => NodeInfo::new(
+                    ExecOperation::HiddenInput(Some(node_outputs[&id].clone().zkp_into())),
+                    #[cfg(feature = "debugger")]
+                    n.group_id,
+                ),
+                None => NodeInfo::new(
+                    ExecOperation::HiddenInput(None),
+                    #[cfg(feature = "debugger")]
+                    n.group_id,
+                ),
             },
             Operation::InvokeGadget(_) => unreachable!("Not all gadgets processed and removed"),
         },
@@ -558,11 +598,15 @@ where
     forward_traverse_mut(prog, |query, id| {
         let mut transforms = GraphTransforms::new();
 
-        if let Operation::PublicInput(x) = query.get_node(id).unwrap().operation {
+        let node = query.get_node(id).unwrap();
+
+        if let Operation::PublicInput(x) = node.operation {
             let as_bigint: BigInt = public_inputs[x].clone().zkp_into();
 
             let constraint = transforms.push(Transform::AddNode(NodeInfo {
                 operation: Operation::Constraint(as_bigint),
+                #[cfg(feature = "debugger")]
+                group_id: node.group_id,
             }));
             transforms.push(Transform::AddEdge(
                 id.into(),

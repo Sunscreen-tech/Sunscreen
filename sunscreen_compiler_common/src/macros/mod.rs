@@ -95,7 +95,7 @@ pub enum ExtractFnArgumentsError {
     IllegalType(Span),
 
     /**
-     * The given type pattern is not of the a qualified path to a type.
+     * The given type pattern is not a qualified path to a type.
      */
     IllegalPat(Span),
 }
@@ -121,18 +121,11 @@ pub fn extract_fn_arguments(
                 return Err(ExtractFnArgumentsError::ContainsSelf(i.span()));
             }
             FnArg::Typed(t) => match (&*t.ty, &*t.pat) {
-                (Type::Path(_), Pat::Ident(i)) => (t.attrs.clone(), &*t.ty, &i.ident),
-                (Type::Array(_), Pat::Ident(i)) => (t.attrs.clone(), &*t.ty, &i.ident),
-                _ => {
-                    match &*t.pat {
-                        Pat::Ident(_) => {}
-                        _ => {
-                            return Err(ExtractFnArgumentsError::IllegalPat(t.span()));
-                        }
-                    };
-
-                    return Err(ExtractFnArgumentsError::IllegalType(t.span()));
+                (Type::Path(_) | Type::Array(_), Pat::Ident(i)) => {
+                    (t.attrs.clone(), &*t.ty, &i.ident)
                 }
+                (_, Pat::Ident(_)) => return Err(ExtractFnArgumentsError::IllegalType(t.span())),
+                _ => return Err(ExtractFnArgumentsError::IllegalPat(t.span())),
             },
         };
 

@@ -2,8 +2,8 @@ use proc_macro2::{Span, TokenStream as TokenStream2};
 use quote::{format_ident, quote, quote_spanned, ToTokens};
 use syn::{
     parse_quote, parse_quote_spanned, punctuated::Punctuated, spanned::Spanned, token::PathSep,
-    AngleBracketedGenericArguments, Attribute, FnArg, Ident, Index, Pat, PathArguments, ReturnType,
-    Token, Type,
+    AngleBracketedGenericArguments, Attribute, FnArg, Ident, Index, Pat, PatIdent, PathArguments,
+    ReturnType, Token, Type,
 };
 
 mod type_name;
@@ -90,6 +90,14 @@ pub enum ExtractFnArgumentsError {
     ContainsSelf(Span),
 
     /**
+     * The method specifies a mutable argument.
+     *
+     * # Remarks
+     * FHE and ZKP programs must be pure functions.
+     */
+    ContainsMut(Span),
+
+    /**
      * The given type is not allowed.
      */
     IllegalType(Span),
@@ -120,11 +128,17 @@ pub fn extract_fn_arguments(
             FnArg::Receiver(_) => {
                 return Err(ExtractFnArgumentsError::ContainsSelf(i.span()));
             }
-            FnArg::Typed(t) => match (&*t.ty, &*t.pat) {
-                (Type::Path(_) | Type::Array(_), Pat::Ident(i)) => {
-                    (t.attrs.clone(), &*t.ty, &i.ident)
+            FnArg::Typed(t) => match &*t.pat {
+                Pat::Ident(PatIdent {
+                    mutability: Some(m),
+                    ..
+                }) => {
+                    return Err(ExtractFnArgumentsError::ContainsMut(m.span()));
                 }
-                (_, Pat::Ident(_)) => return Err(ExtractFnArgumentsError::IllegalType(t.span())),
+                Pat::Ident(i) => match *t.ty {
+                    Type::Path(_) | Type::Array(_) => (t.attrs.clone(), &*t.ty, &i.ident),
+                    _ => return Err(ExtractFnArgumentsError::IllegalType(t.span())),
+                },
                 _ => return Err(ExtractFnArgumentsError::IllegalPat(t.span())),
             },
         };
@@ -541,6 +555,24 @@ mod test {
             Err(ExtractFnArgumentsError::ContainsSelf(_)) => {}
             _ => {
                 panic!("Expected ExtractFnArgumentsError::ContainsSelf");
+            }
+        };
+    }
+
+    #[test]
+    fn disallows_mut_arguments() {
+        let type_name = quote! {
+            mut a: [[Cipher<Rational>; 7]; 6], b: Cipher<Rational>
+        };
+
+        let args: Punctuated<FnArg, Token!(,)> = parse_quote!(#type_name);
+
+        let extracted = extract_fn_arguments(&args);
+
+        match extracted {
+            Err(ExtractFnArgumentsError::ContainsMut(_)) => {}
+            _ => {
+                panic!("Expected ExtractFnArgumentsError::ContainsMut");
             }
         };
     }

@@ -132,7 +132,8 @@ fn parse_inner(_attr_params: ZkpProgramAttrs, input_fn: ItemFn) -> Result<TokenS
                 Ok((arg_kind, a.1, a.2))
             }).collect::<Result<Vec<(ArgumentKind, &Type, &Ident)>>>()?
         },
-        Err(ExtractFnArgumentsError::ContainsSelf(s)) => Err(Error::compile_error(s, "ZKP programs must not contain self"))?,
+        Err(ExtractFnArgumentsError::ContainsSelf(s)) => Err(Error::compile_error(s, "ZKP programs must not contain `self`"))?,
+        Err(ExtractFnArgumentsError::ContainsMut(s)) => Err(Error::compile_error(s, "ZKP program arguments cannot be `mut`"))?,
         Err(ExtractFnArgumentsError::IllegalPat(s)) => Err(Error::compile_error(s, "Expected Identifier"))?,
         Err(ExtractFnArgumentsError::IllegalType(s)) => Err(Error::compile_error(s, "ZKP program arguments must be an array or named struct type"))?,
     };

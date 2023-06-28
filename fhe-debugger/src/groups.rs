@@ -1,4 +1,5 @@
 use radix_trie::{Trie, SubTrieMut, SubTrie};
+use std::backtrace::{Backtrace, BacktraceFrame};
 
 /**
  * Stores information about stack calls. 
@@ -31,6 +32,8 @@ pub struct StackTrie {
     /**
      * Stores stack frames as nodes.
      */
+
+    //TODO: maybe this needs to be updated to BacktraceFrame? not sure, very little documentation on this 
     pub trie: Trie<u64, StackFrame>,
     /**
      * Allows for indexing into a stack frame given a `group_id` associated with a program node.

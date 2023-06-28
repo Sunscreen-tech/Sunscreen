@@ -1,6 +1,3 @@
-
-
-
 fn main() {
     /*
     println!("cargo:rerun-if-changed=fhe-debugger-frontend");

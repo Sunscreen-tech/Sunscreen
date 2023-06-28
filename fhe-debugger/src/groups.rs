@@ -25,55 +25,43 @@ pub struct StackFrame {
      */
     pub caller_line: u64,
 }
-/**
- * A wrapper struct to efficiently store stack traces for each program node,
- */
-pub struct StackTrie {
-    /**
-     * Stores stack frames as nodes.
-     */
+trait StackFrames {
+    fn add_stack_trace(&self, key: Vec<u64>, val: StackFrame);
 
-    //TODO: maybe this needs to be updated to BacktraceFrame? not sure, very little documentation on this 
-    pub trie: Trie<u64, StackFrame>,
-    /**
-     * Allows for indexing into a stack frame given a `group_id` associated with a program node.
-     */
-    pub group_id: u64
+    fn get_stack_trace(&self, key: Vec<u64>);
 }
 
-impl StackTrie {
+// Implement StackFrames for Trie
+impl StackFrames for Trie<Vec<u64>, StackFrame> {
+    
     /**
-     * Creates an empty StackTrie.
+     * Adds a stack trace to the StackTrie.
      */
-    fn new() -> Self {
-        StackTrie {
-            trie: Trie::new(),
-            group_id: 0
-        }
+
+    fn add_stack_trace(&self, key: Vec<u64>, val: StackFrame) {
+
     }
 
     /** 
      * Returns a sequence of StackFrames given a node in the StackTrie.
+     * 
+     * This needs to be implemented to just like concatenate strings/values together. 
+     * Otherwise we run into lifetime issues
+     * You can't just append to a list and return the list
      */
-    fn get_stack_trace(&self) -> Vec<StackFrame> {
-        let mut ancestors = Vec::<StackFrame>::new();
-        let mut ancestor = self.trie.subtrie(&self.group_id);
-        while let Some(subtrie) = ancestor {
-            ancestors.push(*subtrie.value().unwrap());
-            ancestor = self.trie.get_ancestor(&self.group_id);
-        }
-        ancestors
-    }
-    /**
-     * Adds a stack trace to the StackTrie.
-     */
-    fn add_stack_trace(&self, trace: Vec::<StackFrame>) -> Self {
+    fn get_stack_trace(&self, key: Vec<u64>) {
 
-        let mut current = self.trie.subtrie_mut(self.group_id).unwrap(); 
-
-        for frame in trace.iter() {
-            // TODO: Insert with a group ID, not 0
-            current = current.insert(0, frame);
-        }
     }
+}
+
+/**
+ * Allows for lookup of call stack information given a ProgramNode's `group_id`.
+ */
+struct StackFrameLookup {
+    dict: HashMap<u64, Vec<u64>>,
+    frames: Trie<Vec<u64>, StackFrame>
+}
+
+impl StackFrameLookup {
+    
 }

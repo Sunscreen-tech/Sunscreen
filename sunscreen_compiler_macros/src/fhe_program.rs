@@ -46,10 +46,10 @@ pub fn fhe_program_impl(
         Err(e) => {
             return proc_macro::TokenStream::from(match e {
                 ExtractFnArgumentsError::ContainsSelf(s) => {
-                    quote_spanned! {s => compile_error!("FHE programs must not contain `self`") }
+                    quote_spanned! {s => compile_error! { "FHE programs must not contain `self`" } }
                 }
                 ExtractFnArgumentsError::ContainsMut(s) => {
-                    quote_spanned! {s => compile_error!("FHE program arguments cannot be `mut`") }
+                    quote_spanned! {s => compile_error! { "FHE program arguments cannot be `mut`" } }
                 }
                 ExtractFnArgumentsError::IllegalPat(s) => quote_spanned! {
                     s => compile_error! { "Expected Identifier" }

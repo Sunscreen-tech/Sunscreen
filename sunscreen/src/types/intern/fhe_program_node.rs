@@ -580,9 +580,9 @@ where
     })
 }
 
-// TODO make this automatic somehow
+// TODO make this automatic somehow?
 /// Output your fhe program variable as a ciphertext. This will fail (at fhe program compile time)
-/// if the variable is still a literal.
+/// if the variable is still a literal. You can also use `.into()` to accomplish the same thing.
 pub fn fhe_out<L, T>(var: FheProgramNode<Indeterminate<L, T>, Stage>) -> FheProgramNode<Cipher<T>>
 where
     L: FheLiteral,
@@ -597,6 +597,16 @@ where
         _phantom: std::marker::PhantomData,
     }
         }
+    }
+}
+
+impl<L, T> From<FheProgramNode<Indeterminate<L, T>, Stage>> for FheProgramNode<Cipher<T>>
+where
+    L: FheLiteral,
+    T: FheType,
+{
+    fn from(value: FheProgramNode<Indeterminate<L, T>, Stage>) -> Self {
+        fhe_out(value)
     }
 }
 

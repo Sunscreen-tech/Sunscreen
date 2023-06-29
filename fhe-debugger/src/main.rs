@@ -2,7 +2,7 @@ use std::vec;
 
 // use actix_web::{web, App, HttpServer};
 use backtrace::{Backtrace, BacktraceFrame};
-use radix_trie::{SubTrie, SubTrieMut, Trie};
+use radix_trie::{Trie};
 
 mod groups;
 
@@ -106,7 +106,7 @@ fn main() {
     trie.insert(trace1_key, trace1);
     println!("{:?}", trie);
 
-    println!("{}", "bruh".to_string());
+    println!("bruh");
     trie.insert(trace2_key, trace2);
     println!("{:?}", trie);
 

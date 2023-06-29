@@ -1,5 +1,5 @@
 use backtrace::{Backtrace, BacktraceFrame};
-use radix_trie::{SubTrie, SubTrieMut, Trie};
+use radix_trie::{Trie};
 use std::collections::HashMap;
 
 pub trait StackFrames {
@@ -30,7 +30,7 @@ impl StackFrames for Trie<Vec<u64>, BacktraceFrame> {
      * Otherwise we run into lifetime issues
      * You can't just append to a list and return the list
      */
-    fn get_stack_trace(&self, key: Vec<u64>) {}
+    fn get_stack_trace(&self, _key: Vec<u64>) {}
 }
 
 /**

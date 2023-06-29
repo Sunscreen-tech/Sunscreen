@@ -508,3 +508,79 @@ where
         T::type_name()
     }
 }
+
+/// Marker that indeterminate value is in stage literal
+pub struct StageLiteral;
+/// Marker that indeterminate value is in stage cipher
+pub struct StageCipher; // TODO or StageT ? do ppl lit + plain?
+
+/// This type comes in handy when constructing values that start off as literals but turn into
+/// ciphertexts; e.g. `let sum = 0; sum = sum + cipher`.
+// Notice `lit` is the only field; if this turns into a cipher text value, it won't actually be
+// held at the value level, but rather in the graph as a node. This will be denoted at the type
+// level via the stage `S`.
+pub struct Indeterminate<L: FheLiteral, T: FheType, S> {
+    lit: L,
+    _type: std::marker::PhantomData<T>,
+    _stage: std::marker::PhantomData<S>,
+}
+
+impl<L: FheLiteral, T: FheType> Indeterminate<L, T, StageLiteral> {
+    /// Create a new `Indeterminate` value. This _always_ starts off as a literal value.
+    pub fn new(lit: L) -> Self {
+        Self {
+            lit,
+            _type: std::marker::PhantomData,
+            _stage: std::marker::PhantomData,
+        }
+    }
+}
+
+impl<L: FheLiteral, T: FheType> NumCiphertexts for Indeterminate<L, T, StageCipher> {
+    const NUM_CIPHERTEXTS: usize = <T as NumCiphertexts>::NUM_CIPHERTEXTS;
+}
+
+// Below is kinda hacky, but it would be very tedious to add impls for GraphCipher* on each of the
+// FHE types.
+
+// [literal]|cipher + cipher outputs literal|[cipher]
+impl<L, T> Add<FheProgramNode<Cipher<T>>> for Indeterminate<L, T, StageLiteral>
+where
+    T: FheType + GraphCipherConstAdd<Left = T, Right = L>,
+    L: FheLiteral,
+{
+    type Output = FheProgramNode<Indeterminate<L, T, StageCipher>>;
+
+    fn add(self, rhs: FheProgramNode<Cipher<T>>) -> Self::Output {
+        // perform addition as usual
+        let node = T::graph_cipher_const_add(rhs, self.lit);
+        // but swap marker type
+        FheProgramNode {
+            ids: node.ids,
+            _phantom: std::marker::PhantomData,
+        }
+    }
+}
+// literal|[cipher] + cipher outputs literal|[cipher]
+impl<L, T> Add<FheProgramNode<Cipher<T>>> for FheProgramNode<Indeterminate<L, T, StageCipher>>
+where
+    T: FheType + GraphCipherAdd<Left = T, Right = T>,
+    L: FheLiteral,
+{
+    type Output = Self;
+
+    fn add(self, rhs: FheProgramNode<Cipher<T>>) -> Self::Output {
+        // swap marker on the indeterminate; we know its in stage cipher
+        let cipher_node = FheProgramNode {
+            ids: self.ids,
+            _phantom: std::marker::PhantomData,
+        };
+        // perform addition as usual
+        let out = T::graph_cipher_add(cipher_node, rhs);
+        // swap marker type back
+        FheProgramNode {
+            ids: out.ids,
+            _phantom: std::marker::PhantomData,
+        }
+    }
+}

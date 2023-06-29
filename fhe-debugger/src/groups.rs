@@ -92,4 +92,12 @@ struct StackFrameLookup {
     frames: Trie<Vec<u64>, Backtrace>,
 }
 
-impl StackFrameLookup {}
+impl StackFrameLookup {
+    fn new() -> Self {
+        StackFrameLookup { 
+            dict: HashMap::<u64, Vec<u64>>::new(), 
+            frames: Trie::<Vec<u64>, Backtrace>::new() 
+        }
+    }
+
+}

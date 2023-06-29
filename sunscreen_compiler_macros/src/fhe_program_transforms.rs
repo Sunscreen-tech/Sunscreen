@@ -119,17 +119,21 @@ pub fn pack_return_type(return_types: &[Type]) -> Type {
 }
 
 pub fn emit_output_capture(return_types: &[Type]) -> TokenStream2 {
-    match return_types.len() {
-        1 => quote_spanned! { return_types[0].span() => v.output(); },
+    match return_types {
+        [ty] => quote_spanned! { ty.span() => {
+            struct _AssertOutput where FheProgramNode<#ty>: Output;
+            v.output();
+        }},
         _ => return_types
             .iter()
             .enumerate()
-            .map(|(i, t)| {
+            .map(|(i, ty)| {
                 let index = Index::from(i);
 
-                quote_spanned! {t.span() =>
+                quote_spanned! {ty.span() => {
+                    struct _AssertOutput where FheProgramNode<#ty>: Output;
                     v.#index.output();
-                }
+                }}
             })
             .collect(),
     }

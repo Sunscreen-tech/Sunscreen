@@ -59,7 +59,7 @@ impl StackFrames for Trie<Vec<u64>, BacktraceFrame> {
             println!("{:?}", frame.symbols()[0].filename().unwrap());
             println!("{:?}", frame.symbols()[0].lineno().unwrap());
             println!("{:?}", frame.symbols()[0].colno().unwrap());
-            println!("");
+            println!();
             self.insert(temp_key.clone(), frame.clone());
         }
     }
@@ -73,7 +73,7 @@ impl StackFrames for Trie<Vec<u64>, BacktraceFrame> {
      */
     fn get_stack_trace(&self, key: Vec<u64>) -> Vec<StackFrameInfo> {
         let mut trace = Vec::<StackFrameInfo>::new();
-        let mut temp_key = key.clone();
+        let mut temp_key = key;
         while !temp_key.is_empty() {
             let frame = self.get(&temp_key).unwrap();
             let frame_info = StackFrameInfo::new(frame);

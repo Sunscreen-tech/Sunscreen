@@ -113,7 +113,7 @@ fn main() {
     */
 
     let mut trie2: Trie<Vec<u64>, BacktraceFrame> = Trie::new();
-    let mut trace3 = Backtrace::new();
+    let trace3 = Backtrace::new();
 
     // keys should be vectors of instruction pointers
     // values should be the frame information like filename, functionname, line number, etc

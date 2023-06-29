@@ -18,5 +18,8 @@
     "OpenCL.server.buildOptions": [
         "-I", "${workspaceFolder}/sunscreen_math/src/opencl_impl/shaders/include"
     ],
-    "OpenCL.server.deviceID": 124252029
+    "OpenCL.server.deviceID": 124252029,
+    "rust-analyzer.linkedProjects": [
+        "./fhe-debugger/Cargo.toml"
+    ]
 }

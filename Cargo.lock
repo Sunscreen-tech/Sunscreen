@@ -1279,6 +1279,7 @@ dependencies = [
  "actix-cors",
  "actix-rt",
  "actix-web",
+ "backtrace",
  "copy_dir",
  "env_logger 0.10.0",
  "mime",

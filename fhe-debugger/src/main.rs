@@ -1,4 +1,12 @@
+use std::vec;
+
 use actix_web::{web, App, HttpServer};
+use backtrace::{Backtrace, BacktraceFrame};
+use radix_trie::{SubTrie, SubTrieMut, Trie};
+
+mod groups;
+
+use groups::StackFrames;
 
 /*
 // Setup to build front-end with `cargo run`
@@ -61,6 +69,7 @@ async fn rand_function(functions: web::Data<Vec<String>>) -> impl Responder {
 }
 */
 
+/*
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     std::env::set_var("RUST_LOG", "actix_web=debug");
@@ -83,4 +92,28 @@ async fn main() -> std::io::Result<()> {
     .bind(("127.0.0.1", 8080))?
     .run()
     .await
+}
+*/
+
+fn main() {
+    let trace1 = Backtrace::new().frames().last().unwrap().clone();
+    let trace2 = Backtrace::new().frames().last().unwrap().clone();
+
+    let trace1_key: Vec<u64> = vec![1, 2, 3];
+    let trace2_key: Vec<u64> = vec![1, 2, 3, 4, 5]; //try experimenting with this to turn it into 1, 2, 3, 4 or whatnot
+    let mut trie: Trie<Vec<u64>, BacktraceFrame> = Trie::new();
+
+    trie.insert(trace1_key, trace1);
+    println!("{:?}", trie);
+
+    println!("{}", "bruh".to_string());
+    trie.insert(trace2_key, trace2);
+    println!("{:?}", trie);
+
+    let mut trie2: Trie<Vec<u64>, BacktraceFrame> = Trie::new();
+    let trace3 = Backtrace::new();
+    let key: Vec<u64> = vec![1, 2, 3, 4, 5, 6, 7, 8, 9];
+    trie2.add_stack_trace(key, trace3);
+
+    println!("{:?}", trie2);
 }

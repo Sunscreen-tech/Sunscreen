@@ -6,6 +6,7 @@ use crate::{
     },
     INDEX_ARENA,
 };
+use paste::paste;
 use petgraph::stable_graph::NodeIndex;
 use sunscreen_runtime::TypeNameInstance;
 
@@ -156,6 +157,8 @@ where
         U::graph_cipher_const_add(self, rhs)
     }
 }
+
+// TODO can these literal impls be combined into `L: FheLiteral` ?
 
 // literal + cipher
 impl<T> Add<FheProgramNode<Cipher<T>>> for u64
@@ -539,8 +542,6 @@ pub struct Indeterminate<L: FheLiteral, T: FheType> {
     _type: std::marker::PhantomData<T>,
 }
 
-// TypeNameInstance + TryIntoPlaintext + TryFromPlaintext + FheProgramInputTrait + NumCiphertexts
-
 impl<L, T> TypeNameInstance for Indeterminate<L, T>
 where
     L: FheLiteral,
@@ -600,32 +601,6 @@ where
     }
 }
 
-// literal|cipher + cipher outputs literal|[cipher]
-impl<L, T> Add<FheProgramNode<Cipher<T>>> for FheProgramNode<Indeterminate<L, T>, Stage>
-where
-    T: FheType + GraphCipherPlainAdd<Left = T, Right = T> + GraphCipherAdd<Left = T, Right = T>,
-    L: FheLiteral,
-{
-    type Output = Self;
-
-    fn add(self, rhs: FheProgramNode<Cipher<T>>) -> Self::Output {
-        let node = match self.stage {
-            Stage::Literal => {
-                let lit_node = coerce(self, ());
-                // N.B. we've already added this literal as a plaintext node
-                T::graph_cipher_plain_add(rhs, lit_node)
-            }
-            Stage::Cipher => {
-                let cipher_node = coerce(self, ());
-                T::graph_cipher_add(rhs, cipher_node)
-            }
-        };
-        // No matter what `self.stage` currently is, it is being added to a ciphertext, so its next
-        // stage is cipher.
-        coerce(node, Stage::Cipher)
-    }
-}
-
 /// WARNING: This is an unsafe function. It allows casting graph nodes arbitrarily. Use with
 /// caution.
 fn coerce<B: NumCiphertexts, T, A: NumCiphertexts, S>(
@@ -638,3 +613,68 @@ fn coerce<B: NumCiphertexts, T, A: NumCiphertexts, S>(
         _phantom: std::marker::PhantomData,
     }
 }
+
+macro_rules! impl_indeterminate_arithmetic_op {
+    ($($op:ident),+) => {
+        $(
+            paste! {
+                // literal|cipher <> cipher outputs literal|[cipher]
+                impl<L, T> $op<FheProgramNode<Cipher<T>>> for FheProgramNode<Indeterminate<L, T>, Stage>
+                where
+                    T: FheType + [<GraphCipherPlain $op>]<Left = T, Right = T> + [<GraphCipher $op>]<Left = T, Right = T>,
+                    L: FheLiteral,
+                {
+                    type Output = Self;
+
+                    fn [<$op:lower>](self, rhs: FheProgramNode<Cipher<T>>) -> Self::Output {
+                        let node = match self.stage {
+                            Stage::Literal => {
+                                let lit_node = coerce(self, ());
+                                // N.B. we've already added this literal as a plaintext node
+                                T::[<graph_cipher_plain_ $op:lower>](rhs, lit_node)
+                            }
+                            Stage::Cipher => {
+                                let cipher_node = coerce(self, ());
+                                T::[<graph_cipher_ $op:lower>](rhs, cipher_node)
+                            }
+                        };
+                        // No matter what `self.stage` currently is, it is being operated on with a
+                        // ciphertext, so its next stage is cipher.
+                        coerce(node, Stage::Cipher)
+                    }
+                }
+
+                // cipher <> literal|cipher outputs literal|[cipher]
+                impl<L, T> $op<FheProgramNode<Indeterminate<L, T>, Stage>> for FheProgramNode<Cipher<T>>
+                where
+                    T: FheType + [<GraphCipherPlain $op>]<Left = T, Right = T> + [<GraphCipher $op>]<Left = T, Right = T>,
+                    L: FheLiteral,
+                {
+                    // A little bit of pick your poison here. However it is more likely that the
+                    // user is mutating an `fhe_var` than a normal ciphertext. Worst case, they call
+                    // `.into()` on the resulting node.
+                    type Output = FheProgramNode<Indeterminate<L, T>, Stage>;
+
+                    fn [<$op:lower>](self, rhs: FheProgramNode<Indeterminate<L, T>, Stage>) -> Self::Output {
+                        let node = match rhs.stage {
+                            Stage::Literal => {
+                                let lit_node = coerce(rhs, ());
+                                // N.B. we've already added this literal as a plaintext node
+                                T::[<graph_cipher_plain_ $op:lower>](self, lit_node)
+                            }
+                            Stage::Cipher => {
+                                let cipher_node = coerce(rhs, ());
+                                T::[<graph_cipher_ $op:lower>](self, cipher_node)
+                            }
+                        };
+                        // No matter what `rhs.stage` currently is, it is being added to a ciphertext, so its next
+                        // stage is cipher.
+                        coerce(node, Stage::Cipher)
+                    }
+                }
+            }
+        )+
+    };
+}
+
+impl_indeterminate_arithmetic_op! {Add, Sub, Mul, Div}

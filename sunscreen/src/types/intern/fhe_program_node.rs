@@ -1,5 +1,5 @@
 use crate::{
-    fhe::with_fhe_ctx,
+    fhe::{with_fhe_ctx, FheContextOps},
     types::{
         intern::FheLiteral, ops::*, Cipher, FheType, LaneCount, NumCiphertexts, SwapRows, Type,
         TypeName,
@@ -7,6 +7,7 @@ use crate::{
     INDEX_ARENA,
 };
 use petgraph::stable_graph::NodeIndex;
+use sunscreen_runtime::TypeNameInstance;
 
 use std::ops::{Add, Div, Mul, Neg, Shl, Shr, Sub};
 
@@ -42,13 +43,15 @@ use std::ops::{Add, Div, Mul, Neg, Shl, Shr, Sub};
  * Violating any of these conditions may result in memory corruption or
  * use-after-free.
  */
-pub struct FheProgramNode<T: NumCiphertexts> {
-    /**
-     * The ids on this node. The 'static lifetime on this slice is a lie. The sunscreen
-     * compiler must ensure that no FheProgramNode exists after FHE program construction.
-     */
+pub struct FheProgramNode<T: NumCiphertexts, S = ()> {
+    /// The ids on this node. The 'static lifetime on this slice is a lie. The sunscreen
+    /// compiler must ensure that no FheProgramNode exists after FHE program construction.
     pub ids: &'static [NodeIndex],
 
+    /// Typically unused, but can be added to store value-level information on the graph nodes.
+    stage: S,
+
+    /// Marks the type of the value that this graph node corresponds to.
     _phantom: std::marker::PhantomData<T>,
 }
 
@@ -73,6 +76,12 @@ impl<T: NumCiphertexts> FheProgramNode<T> {
      * result in use-after-free.
      */
     pub fn new(ids: &[NodeIndex]) -> Self {
+        Self::new_with_stage(ids, ())
+    }
+}
+
+impl<T: NumCiphertexts, S> FheProgramNode<T, S> {
+    fn new_with_stage(ids: &[NodeIndex], stage: S) -> Self {
         INDEX_ARENA.with(|allocator| {
             let allocator = allocator.borrow();
             let ids_dest = allocator.alloc_slice_copy(ids);
@@ -85,6 +94,7 @@ impl<T: NumCiphertexts> FheProgramNode<T> {
             // We invoke the dark transmutation ritual to turn a finite lifetime into a 'static.
             Self {
                 ids: unsafe { std::mem::transmute(ids_dest) },
+                stage,
                 _phantom: std::marker::PhantomData,
             }
         })
@@ -509,78 +519,125 @@ where
     }
 }
 
-/// Marker that indeterminate value is in stage literal
-pub struct StageLiteral;
-/// Marker that indeterminate value is in stage cipher
-pub struct StageCipher; // TODO or StageT ? do ppl lit + plain?
-
 /// This type comes in handy when constructing values that start off as literals but turn into
 /// ciphertexts; e.g. `let sum = 0; sum = sum + cipher`.
-// Notice `lit` is the only field; if this turns into a cipher text value, it won't actually be
-// held at the value level, but rather in the graph as a node. This will be denoted at the type
-// level via the stage `S`.
-pub struct Indeterminate<L: FheLiteral, T: FheType, S> {
-    lit: L,
-    _type: std::marker::PhantomData<T>,
-    _stage: std::marker::PhantomData<S>,
+///
+/// # Warning
+/// It is illegal to output an `FheProgramNode<Indeterminate, S>` with `S == Stage::Literal`.
+pub enum Stage {
+    /// Initial stage of indeterminate type: literal/plaintext
+    Literal,
+    /// Ciphertext stage: occurs after any operations with ciphertext
+    Cipher,
 }
 
-impl<L: FheLiteral, T: FheType> Indeterminate<L, T, StageLiteral> {
-    /// Create a new `Indeterminate` value. This _always_ starts off as a literal value.
-    pub fn new(lit: L) -> Self {
-        Self {
-            lit,
-            _type: std::marker::PhantomData,
-            _stage: std::marker::PhantomData,
-        }
+/// Used in tandem with `Stage`. Ultimately, the purpose is to allow a single type to span
+/// plaintexts and ciphertexts. The only requirement is that, upon output, the type must resolve to
+/// a ciphertext.
+pub struct Indeterminate<L: FheLiteral, T: FheType> {
+    _lit: std::marker::PhantomData<L>,
+    _type: std::marker::PhantomData<T>,
+}
+
+// TypeNameInstance + TryIntoPlaintext + TryFromPlaintext + FheProgramInputTrait + NumCiphertexts
+
+impl<L, T> TypeNameInstance for Indeterminate<L, T>
+where
+    L: FheLiteral,
+    T: FheType + TypeName,
+{
+    fn type_name_instance(&self) -> Type {
+        T::type_name()
     }
 }
 
-impl<L: FheLiteral, T: FheType> NumCiphertexts for Indeterminate<L, T, StageCipher> {
-    const NUM_CIPHERTEXTS: usize = <T as NumCiphertexts>::NUM_CIPHERTEXTS;
+impl<L, T> NumCiphertexts for Indeterminate<L, T>
+where
+    L: FheLiteral,
+    T: FheType + NumCiphertexts,
+{
+    const NUM_CIPHERTEXTS: usize = T::NUM_CIPHERTEXTS;
+}
+
+// TODO turn this into `fhe_var!` macro
+/// Create a new fhe program variable from any supported literal type.
+pub fn fhe_var<L, T>(lit: L) -> FheProgramNode<Indeterminate<L, T>, Stage>
+where
+    L: FheLiteral,
+    T: FheType + TryFrom<L>,
+    <T as TryFrom<L>>::Error: std::fmt::Debug,
+{
+    with_fhe_ctx(|ctx| {
+        // TODO We need a trait like FheLiteral to hold the logic for making plaintext node_ids in the
+        // graph context (the stuff that happens in graph_cipher_*); for now just restrict to types that
+        // have one ciphertext length; this WILL NOT WORK for rationals.
+        let lit = T::try_from(lit)
+            .unwrap()
+            .try_into_plaintext(&ctx.data)
+            .unwrap();
+        let lit = ctx.add_plaintext_literal(lit.inner);
+        FheProgramNode::new_with_stage(&[lit], Stage::Literal)
+    })
+}
+
+// TODO make this automatic somehow
+/// Output your fhe program variable as a ciphertext. This will fail (at fhe program compile time)
+/// if the variable is still a literal.
+pub fn fhe_out<L, T>(var: FheProgramNode<Indeterminate<L, T>, Stage>) -> FheProgramNode<Cipher<T>>
+where
+    L: FheLiteral,
+    T: FheType,
+{
+    match var.stage {
+        Stage::Literal => panic!("User created FHE variables must undergo arithmetic operations with ciphertexts before they are returned as output."),
+        Stage::Cipher => {
+    FheProgramNode {
+        ids: var.ids,
+        stage: (),
+        _phantom: std::marker::PhantomData,
+    }
+        }
+    }
 }
 
 // Below is kinda hacky, but it would be very tedious to add impls for GraphCipher* on each of the
 // FHE types.
 
-// [literal]|cipher + cipher outputs literal|[cipher]
-impl<L, T> Add<FheProgramNode<Cipher<T>>> for Indeterminate<L, T, StageLiteral>
+// literal|cipher + cipher outputs literal|[cipher]
+impl<L, T> Add<FheProgramNode<Cipher<T>>> for FheProgramNode<Indeterminate<L, T>, Stage>
 where
-    T: FheType + GraphCipherConstAdd<Left = T, Right = L>,
-    L: FheLiteral,
-{
-    type Output = FheProgramNode<Indeterminate<L, T, StageCipher>>;
-
-    fn add(self, rhs: FheProgramNode<Cipher<T>>) -> Self::Output {
-        // perform addition as usual
-        let node = T::graph_cipher_const_add(rhs, self.lit);
-        // but swap marker type
-        FheProgramNode {
-            ids: node.ids,
-            _phantom: std::marker::PhantomData,
-        }
-    }
-}
-// literal|[cipher] + cipher outputs literal|[cipher]
-impl<L, T> Add<FheProgramNode<Cipher<T>>> for FheProgramNode<Indeterminate<L, T, StageCipher>>
-where
-    T: FheType + GraphCipherAdd<Left = T, Right = T>,
+    T: FheType + GraphCipherPlainAdd<Left = T, Right = T> + GraphCipherAdd<Left = T, Right = T>,
     L: FheLiteral,
 {
     type Output = Self;
 
     fn add(self, rhs: FheProgramNode<Cipher<T>>) -> Self::Output {
-        // swap marker on the indeterminate; we know its in stage cipher
-        let cipher_node = FheProgramNode {
-            ids: self.ids,
-            _phantom: std::marker::PhantomData,
+        let node = match self.stage {
+            Stage::Literal => {
+                let lit_node = coerce(self, ());
+                // N.B. we've already added this literal as a plaintext node
+                T::graph_cipher_plain_add(rhs, lit_node)
+            }
+            Stage::Cipher => {
+                let cipher_node = coerce(self, ());
+                T::graph_cipher_add(rhs, cipher_node)
+            }
         };
-        // perform addition as usual
-        let out = T::graph_cipher_add(cipher_node, rhs);
-        // swap marker type back
-        FheProgramNode {
-            ids: out.ids,
-            _phantom: std::marker::PhantomData,
-        }
+        // No matter what `self.stage` currently is, it is being added to a ciphertext, so its next
+        // stage is cipher.
+        coerce(node, Stage::Cipher)
+    }
+}
+
+/// WARNING: This is an unsafe function. It allows casting graph nodes arbitrarily. Use with
+/// caution.
+fn coerce<B: NumCiphertexts, T, A: NumCiphertexts, S>(
+    a: FheProgramNode<A, S>,
+    t: T,
+) -> FheProgramNode<B, T> {
+    FheProgramNode {
+        ids: a.ids,
+        stage: t,
+        _phantom: std::marker::PhantomData,
     }
 }

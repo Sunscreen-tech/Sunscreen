@@ -314,6 +314,25 @@ impl GraphCipherPlainAdd for Rational {
     }
 }
 
+impl GraphCipherInsert for Rational {
+    type Lit = f64;
+    type Val = Self;
+
+    fn graph_cipher_insert(lit: Self::Lit) -> FheProgramNode<Self::Val> {
+        with_fhe_ctx(|ctx| {
+            let lit = Self::try_from(lit).unwrap();
+
+            let lit_num =
+                ctx.add_plaintext_literal(lit.num.try_into_plaintext(&ctx.data).unwrap().inner);
+
+            let lit_den =
+                ctx.add_plaintext_literal(lit.den.try_into_plaintext(&ctx.data).unwrap().inner);
+
+            FheProgramNode::new(&[lit_num, lit_den])
+        })
+    }
+}
+
 impl GraphCipherConstAdd for Rational {
     type Left = Self;
     type Right = f64;

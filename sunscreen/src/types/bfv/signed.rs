@@ -1,6 +1,7 @@
 use seal_fhe::Plaintext as SealPlaintext;
 
 use crate as sunscreen;
+use crate::types::ops::GraphCipherInsert;
 use crate::{
     fhe::{with_fhe_ctx, FheContextOps},
     types::{
@@ -273,6 +274,20 @@ impl GraphCipherPlainAdd for Signed {
             let n = ctx.add_addition_plaintext(a.ids[0], b.ids[0]);
 
             FheProgramNode::new(&[n])
+        })
+    }
+}
+
+impl GraphCipherInsert for Signed {
+    type Lit = i64;
+    type Val = Self;
+
+    fn graph_cipher_insert(lit: Self::Lit) -> FheProgramNode<Self::Val> {
+        with_fhe_ctx(|ctx| {
+            let lit = Self::from(lit).try_into_plaintext(&ctx.data).unwrap();
+            let lit = ctx.add_plaintext_literal(lit.inner);
+
+            FheProgramNode::new(&[lit])
         })
     }
 }

@@ -1,5 +1,5 @@
 use crate::{
-    fhe::{with_fhe_ctx, FheContextOps},
+    fhe::with_fhe_ctx,
     types::{
         intern::FheLiteral, ops::*, Cipher, FheType, LaneCount, NumCiphertexts, SwapRows, Type,
         TypeName,
@@ -564,20 +564,10 @@ where
 pub fn fhe_var<L, T>(lit: L) -> FheProgramNode<Indeterminate<L, T>, Stage>
 where
     L: FheLiteral,
-    T: FheType + TryFrom<L>,
-    <T as TryFrom<L>>::Error: std::fmt::Debug,
+    T: FheType + GraphCipherInsert<Lit = L, Val = T>,
 {
-    with_fhe_ctx(|ctx| {
-        // TODO We need a trait like FheLiteral to hold the logic for making plaintext node_ids in the
-        // graph context (the stuff that happens in graph_cipher_*); for now just restrict to types that
-        // have one ciphertext length; this WILL NOT WORK for rationals.
-        let lit = T::try_from(lit)
-            .unwrap()
-            .try_into_plaintext(&ctx.data)
-            .unwrap();
-        let lit = ctx.add_plaintext_literal(lit.inner);
-        FheProgramNode::new_with_stage(&[lit], Stage::Literal)
-    })
+    let node = T::graph_cipher_insert(lit);
+    coerce(node, Stage::Literal)
 }
 
 // TODO make this automatic somehow?
@@ -591,11 +581,11 @@ where
     match var.stage {
         Stage::Literal => panic!("User created FHE variables must undergo arithmetic operations with ciphertexts before they are returned as output."),
         Stage::Cipher => {
-    FheProgramNode {
-        ids: var.ids,
-        stage: (),
-        _phantom: std::marker::PhantomData,
-    }
+            FheProgramNode {
+                ids: var.ids,
+                stage: (),
+                _phantom: std::marker::PhantomData,
+            }
         }
     }
 }
@@ -609,9 +599,6 @@ where
         fhe_out(value)
     }
 }
-
-// Below is kinda hacky, but it would be very tedious to add impls for GraphCipher* on each of the
-// FHE types.
 
 // literal|cipher + cipher outputs literal|[cipher]
 impl<L, T> Add<FheProgramNode<Cipher<T>>> for FheProgramNode<Indeterminate<L, T>, Stage>

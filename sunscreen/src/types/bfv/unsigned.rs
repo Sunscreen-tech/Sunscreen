@@ -9,6 +9,7 @@ use sunscreen_runtime::{
 };
 
 use crate as sunscreen;
+use crate::types::ops::GraphCipherInsert;
 use crate::{
     fhe::{with_fhe_ctx, FheContextOps},
     types::{
@@ -276,6 +277,20 @@ impl_graph_cipher_op! {
     (Add, addition),
     (Sub, subtraction),
     (Mul, multiplication)
+}
+
+impl<const LIMBS: usize> GraphCipherInsert for Unsigned<LIMBS> {
+    type Lit = UInt<LIMBS>;
+    type Val = Self;
+
+    fn graph_cipher_insert(lit: Self::Lit) -> FheProgramNode<Self::Val> {
+        with_fhe_ctx(|ctx| {
+            let lit = Self::from(lit).try_into_plaintext(&ctx.data).unwrap();
+            let lit = ctx.add_plaintext_literal(lit.inner);
+
+            FheProgramNode::new(&[lit])
+        })
+    }
 }
 
 impl<const LIMBS: usize> GraphConstCipherSub for Unsigned<LIMBS> {

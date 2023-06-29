@@ -2,7 +2,7 @@ use std::vec;
 
 // use actix_web::{web, App, HttpServer};
 use backtrace::{Backtrace, BacktraceFrame};
-use radix_trie::{Trie};
+use radix_trie::Trie;
 
 mod groups;
 
@@ -96,6 +96,7 @@ async fn main() -> std::io::Result<()> {
 */
 
 fn main() {
+    /*
     let trace1 = Backtrace::new().frames().last().unwrap().clone();
     let trace2 = Backtrace::new().frames().last().unwrap().clone();
 
@@ -109,10 +110,15 @@ fn main() {
     println!("bruh");
     trie.insert(trace2_key, trace2);
     println!("{:?}", trie);
+    */
 
     let mut trie2: Trie<Vec<u64>, BacktraceFrame> = Trie::new();
-    let trace3 = Backtrace::new();
-    let key: Vec<u64> = vec![1, 2, 3, 4, 5, 6, 7, 8, 9];
+    let mut trace3 = Backtrace::new();
+
+    // keys should be vectors of instruction pointers
+    // values should be the frame information like filename, functionname, line number, etc
+    // maybe store this in a new struct
+    let key: Vec<u64> = vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
     trie2.add_stack_trace(key, trace3);
 
     println!("{:?}", trie2);

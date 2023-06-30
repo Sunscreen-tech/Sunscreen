@@ -110,6 +110,22 @@ pub fn pack_return_type(return_types: &[Type]) -> Type {
     }
 }
 
+/**
+ * Takes an array of return types, wraps each in an `impl Into<_>`, and packs them up like
+* `pack_return_type`.
+*/
+pub fn pack_return_into_type(return_types: &[Type]) -> Type {
+    match return_types {
+        [] => parse_quote! { () },
+        [ty] => parse_quote_spanned! { ty.span() =>
+            impl Into<#ty>
+        },
+        _ => parse_quote_spanned! { return_types[0].span() =>
+            ( #(impl Into<#return_types>),* )
+        },
+    }
+}
+
 pub fn emit_output_capture(return_types: &[Type]) -> TokenStream2 {
     match return_types {
         [ty] => quote_spanned! { ty.span() => {

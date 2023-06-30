@@ -111,6 +111,32 @@ pub fn fhe_program_impl(
 
     let fhe_program_return = pack_return_type(&fhe_program_returns);
 
+    // Tokens necessary for the `internal_internal` function, which returns any types that can
+    // `.into` the `fhe_program_return` types.
+    // E.g. (impl Into<Cipher<Signed>>, impl Into<Cipher<Signed>>)
+    let inner_return = pack_return_into_type(&fhe_program_returns);
+    // E.g. a, b
+    let inner_arg_values = unwrapped_inputs.iter().map(|(_, _, name)| *name);
+    // E.g. (_r1, _r2)
+    let inner_return_idents = fhe_program_returns
+        .iter()
+        .enumerate()
+        .map(|(i, t)| {
+            let id = Ident::new(&format!("__r_{}", i), Span::call_site());
+            quote_spanned!(t.span()=> #id)
+        })
+        .collect::<Vec<_>>();
+    // TODO generalize the pack function to do more than just types
+    let inner_return_values = match &inner_return_idents[..] {
+        [r1] => quote! { #r1 },
+        _ => quote! { ( #(#inner_return_idents),* ) },
+    };
+    // E.g. (_r1.into(), _r2.into())
+    let inner_return_into_values = match &inner_return_idents[..] {
+        [r1] => quote! { #r1.into() },
+        _ => quote! { ( #(#inner_return_idents.into()),* ) },
+    };
+
     let signature = emit_signature(&argument_types, &return_types);
 
     let var_decl = unwrapped_inputs.iter().enumerate().map(|(i, t)| {
@@ -153,9 +179,12 @@ pub fn fhe_program_impl(
                 CURRENT_FHE_CTX.with(|ctx| {
                     #[allow(clippy::type_complexity)]
                     #[forbid(unused_variables)]
-                    let internal = | #(#fhe_program_args)* | -> #fhe_program_return
-                        #body
-                    ;
+                    let internal = | #(#fhe_program_args)* | -> #fhe_program_return {
+                        fn internal_internal(#(#fhe_program_args)*) -> #inner_return #body
+
+                        let #inner_return_values = internal_internal( #(#inner_arg_values),* );
+                        #inner_return_into_values
+                    };
 
                     // Transmute away the lifetime to 'static. So long as we are careful with internal()
                     // panicing, this is safe because we set the context back to none before the funtion

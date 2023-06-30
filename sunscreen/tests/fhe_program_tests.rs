@@ -277,7 +277,7 @@ fn can_insert_literals() {
         for x in xs {
             sum = sum + x;
         }
-        sum.into()
+        sum
     }
 
     let arg_type_name = <[Cipher<Signed>; 2]>::type_name();

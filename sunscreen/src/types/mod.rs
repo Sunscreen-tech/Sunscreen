@@ -226,13 +226,13 @@ macro_rules! fhe_var {
 /// ```
 #[macro_export]
 macro_rules! zkp_var {
-    ($elem:literal) => (
+    ($elem:expr) => (
         $crate::types::zkp::zkp_node($elem)
     );
-    ($elem:literal; $n:expr) => (
+    ($elem:expr; $n:expr) => (
         [$crate::types::zkp::zkp_node($elem); $n]
     );
-    ($($elem:literal),+ $(,)?) => (
+    ($($elem:expr),+ $(,)?) => (
         [$($crate::types::zkp::zkp_node($elem)),+]
     );
 }

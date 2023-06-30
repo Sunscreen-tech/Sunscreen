@@ -127,11 +127,11 @@ pub fn suffix_into(is: &[Ident]) -> Vec<TokenStream2> {
         .collect()
 }
 
-pub fn emit_output_capture(return_types: &[Type]) -> TokenStream2 {
+pub fn emit_output_capture(var: &Ident, return_types: &[Type]) -> TokenStream2 {
     match return_types {
         [ty] => quote_spanned! { ty.span() => {
             struct _AssertOutput where FheProgramNode<#ty>: Output;
-            v.output();
+            #var.output();
         }},
         _ => return_types
             .iter()
@@ -141,7 +141,7 @@ pub fn emit_output_capture(return_types: &[Type]) -> TokenStream2 {
 
                 quote_spanned! {ty.span() => {
                     struct _AssertOutput where FheProgramNode<#ty>: Output;
-                    v.#index.output();
+                    #var.#index.output();
                 }}
             })
             .collect(),
@@ -438,12 +438,13 @@ mod test {
 
         let extracted = extract_return_types(&return_type).unwrap();
 
-        let actual = emit_output_capture(&extracted);
+        let var = format_ident!("__v");
+        let actual = emit_output_capture(&var, &extracted);
 
         let expected = quote! {
             {
                 struct _AssertOutput where FheProgramNode< Cipher < Signed > > : Output;
-                v.output();
+                __v.output();
             }
         };
 
@@ -460,16 +461,17 @@ mod test {
 
         let extracted = extract_return_types(&return_type).unwrap();
 
-        let actual = emit_output_capture(&extracted);
+        let var = format_ident!("__v");
+        let actual = emit_output_capture(&var, &extracted);
 
         let expected = quote! {
             {
                 struct _AssertOutput where FheProgramNode< Cipher < Signed > > : Output;
-                v.0.output();
+                __v.0.output();
             }
             {
                 struct _AssertOutput where FheProgramNode<[[Cipher<Signed>; 6]; 7]>: Output;
-                v.1.output();
+                __v.1.output();
             }
         };
 

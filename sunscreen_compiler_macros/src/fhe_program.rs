@@ -178,9 +178,9 @@ impl<'a> FheProgram<'a> {
         };
 
         let fhe_program_args = self.fhe_program_args();
-        let fhe_program_return = pack_into_tuple(&fhe_program_return_types);
+        let fhe_program_return = pack_into_tuple(fhe_program_return_types);
 
-        let inner_return = pack_into_tuple(&wrap_impl_into(&fhe_program_return_types));
+        let inner_return = pack_into_tuple(&wrap_impl_into(fhe_program_return_types));
         let inner_arg_values = unwrapped_inputs.iter().map(|(_, _, name)| *name);
         let inner_return_idents = self.inner_return_idents();
         let inner_return_values = pack_into_tuple(&inner_return_idents);
@@ -191,7 +191,8 @@ impl<'a> FheProgram<'a> {
 
         let fhe_arg_var_decl = self.fhe_arg_var_decl();
         let fhe_arg_vars = self.fhe_arg_vars();
-        let output_capture = emit_output_capture(&return_types);
+        let output_var = Ident::new("__v", Span::call_site());
+        let output_capture = emit_output_capture(&output_var, return_types);
 
         let fhe_program_struct_name =
             Ident::new(&format!("{}_struct", fhe_program_name), Span::call_site());
@@ -220,6 +221,8 @@ impl<'a> FheProgram<'a> {
                     let mut context = FheContext::new(params.clone());
 
                     CURRENT_FHE_CTX.with(|ctx| {
+                        #[allow(clippy::let_unit_value)]
+                        #[allow(clippy::unused_unit)]
                         #[allow(clippy::type_complexity)]
                         #[forbid(unused_variables)]
                         let internal = | #(#fhe_program_args)* | -> #fhe_program_return {
@@ -243,7 +246,7 @@ impl<'a> FheProgram<'a> {
                         // when panicing or not, we need to collect our indicies arena and
                         // unset the context reference.
                         match panic_res {
-                            Ok(v) => { #output_capture },
+                            Ok(#output_var) => { #output_capture },
                             Err(err) => {
                                 INDEX_ARENA.with(|allocator| {
                                     allocator.borrow_mut().reset()
@@ -263,6 +266,7 @@ impl<'a> FheProgram<'a> {
                 }
 
                 fn signature(&self) -> sunscreen::CallSignature {
+                    #[allow(unused_imports)]
                     use sunscreen::types::NumCiphertexts;
 
                     #signature

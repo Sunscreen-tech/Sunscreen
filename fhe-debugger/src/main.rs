@@ -7,6 +7,11 @@ use radix_trie::Trie;
 mod groups;
 
 use groups::StackFrames;
+use sunscreen::{
+    fhe_program,
+    types::{bfv::Signed, Cipher},
+    Compiler, Error, Runtime,
+};
 
 use crate::groups::StackFrameInfo;
 
@@ -97,7 +102,12 @@ async fn main() -> std::io::Result<()> {
 }
 */
 
-fn main() {
+#[fhe_program(scheme = "bfv")]
+fn simple_multiply(a: Cipher<Signed>, b: Cipher<Signed>) -> Cipher<Signed> {
+    a * b
+}
+
+fn main() -> Result<(), Error>{
     /*
     let trace1 = Backtrace::new().frames().last().unwrap().clone();
     let trace2 = Backtrace::new().frames().last().unwrap().clone();
@@ -112,7 +122,7 @@ fn main() {
     println!("bruh");
     trie.insert(trace2_key, trace2);
     println!("{:?}", trie);
-    */
+    
 
     let mut trie2: Trie<Vec<u64>, StackFrameInfo> = Trie::new();
     let trace3 = Backtrace::new();
@@ -132,4 +142,24 @@ fn main() {
     for f in test {
         println!("{:?}", f);
     }
+    */
+
+    let app = Compiler::new()
+    .fhe_program(simple_multiply)
+    .compile()?;
+
+    let runtime = Runtime::new(app.params())?;
+
+    let (public_key, private_key) = runtime.generate_keys()?;
+
+    let a = runtime.encrypt(Signed::from(15), &public_key)?;
+    let b = runtime.encrypt(Signed::from(5), &public_key)?;
+
+    //do i need a proc macro that puts in a backtrace into every fhe program function call?
+    //and how do i access/use the fheprogramnode group_id's?
+    let trace = Backtrace::new();
+    println!("{:?}", trace);
+
+    Ok(())
+
 }

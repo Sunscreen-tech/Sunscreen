@@ -30,10 +30,17 @@ pub struct StackFrameInfo {
 }
 
 impl StackFrameInfo {
+    /**
+     * Extracts relevant callee information from a `&BacktraceFrame`.
+     */
     fn new(frame: &BacktraceFrame) -> Self {
         let frame_symbols = frame.symbols();
+        let ip_as_bytes = (frame.ip() as usize).to_ne_bytes();
         StackFrameInfo {
-            callee_name: frame_symbols[0].name().unwrap_or(SymbolName::new(&frame.ip())).to_string(),
+            callee_name: frame_symbols[0]
+                .name()
+                .unwrap_or(SymbolName::new(&ip_as_bytes))
+                .to_string(),
             callee_file: frame_symbols[0]
                 .filename()
                 .unwrap_or(Path::new("No such file"))

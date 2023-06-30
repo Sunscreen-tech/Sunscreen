@@ -15,8 +15,8 @@ fn main() -> Result<(), Error> {
 
     let runtime = ZkpRuntime::new(&BulletproofsBackend::new())?;
 
-    let amount = BPField::from(64);
-    let threshold = BPField::from(232);
+    let amount = BPField::from(232);
+    let threshold = BPField::from(64);
 
     // Prove that amount > threshold
 

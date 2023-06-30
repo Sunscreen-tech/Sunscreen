@@ -48,7 +48,7 @@ pub fn create_fhe_program_node(var_name: &str, arg_type: &Type) -> TokenStream2 
     let var_name = format_ident!("{}", var_name);
 
     quote_spanned! {arg_type.span() =>
-
+        { struct _AssertInput where #mapped_type: Input; }
         let #var_name: #mapped_type = <#mapped_type as Input>::input();
     }
 }
@@ -297,6 +297,7 @@ mod test {
         let actual = create_fhe_program_node("horse", &type_name);
 
         let expected = quote! {
+            { struct _AssertInput where FheProgramNode<Cipher<Rational> >: Input; }
             let horse: FheProgramNode<Cipher<Rational> > = <FheProgramNode<Cipher<Rational> > as Input>::input();
         };
 
@@ -314,6 +315,7 @@ mod test {
         let actual = create_fhe_program_node("horse", &type_name);
 
         let expected = quote! {
+            { struct _AssertInput where [FheProgramNode<Cipher<Rational> >; 7]: Input; }
             let horse: [FheProgramNode<Cipher<Rational> >; 7] = <[FheProgramNode<Cipher<Rational> >; 7] as Input>::input();
         };
 
@@ -331,6 +333,7 @@ mod test {
         let actual = create_fhe_program_node("horse", &type_name);
 
         let expected = quote! {
+            { struct _AssertInput where [[FheProgramNode<Cipher<Rational> >; 7]; 6]: Input; }
             let horse: [[FheProgramNode<Cipher<Rational> >; 7]; 6] = <[[FheProgramNode<Cipher<Rational> >; 7]; 6] as Input>::input();
         };
 

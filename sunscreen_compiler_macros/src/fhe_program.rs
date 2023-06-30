@@ -35,9 +35,9 @@ pub fn fhe_program_impl(
         Ok(v) => {
             for arg in &v {
                 if !arg.0.is_empty() {
-                    return proc_macro::TokenStream::from(
-                        quote_spanned! { arg.1.span() => compile_error!("FHE program arguments do not support attributes.")},
-                    );
+                    return proc_macro::TokenStream::from(quote_spanned! { arg.0[0].span() =>
+                        compile_error!{"FHE program arguments do not support attributes."}
+                    });
                 }
             }
 

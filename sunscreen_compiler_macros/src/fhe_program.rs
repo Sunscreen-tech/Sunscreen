@@ -16,6 +16,7 @@ pub fn fhe_program_impl(
     let fhe_program_name = &input_fn.sig.ident;
     let vis = &input_fn.vis;
     let body = &input_fn.block;
+    let generics = &input_fn.sig.generics;
     let inputs = &input_fn.sig.inputs;
     let ret = &input_fn.sig.output;
 
@@ -30,6 +31,12 @@ pub fn fhe_program_impl(
     };
 
     let chain_count = attr_params.chain_count;
+
+    if !generics.params.is_empty() {
+        return proc_macro::TokenStream::from(
+            quote_spanned! { generics.params.span() => compile_error!{"FHE programs do not support generics."}},
+        );
+    }
 
     let unwrapped_inputs = match extract_fn_arguments(inputs) {
         Ok(v) => {

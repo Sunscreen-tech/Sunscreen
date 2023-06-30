@@ -189,15 +189,13 @@ where
 /// ```
 #[macro_export]
 macro_rules! fhe_var {
-    ($elem:literal) => (
+    ($elem:expr) => (
         $crate::types::intern::fhe_node($elem)
     );
-    ($elem:literal; $n:expr) => (
-        // TODO this will just copy the same node IDs. But that's ok, right? the graph nodes are
-        // immtuable anyway.
+    ($elem:expr; $n:expr) => (
         [$crate::types::intern::fhe_node($elem); $n]
     );
-    ($($elem:literal),+ $(,)?) => (
+    ($($elem:expr),+ $(,)?) => (
         [$($crate::types::intern::fhe_node($elem)),+]
     );
 }

@@ -9,8 +9,8 @@ pub enum MapFheTypeError {
 
 /**
  * Given an input type T, returns
- * * FheProgramInput<T> when T is a Path
- * * [map_input_type(T); N] when T is Array
+ * * FheProgramNode<T> when T is a Path
+ * * [FheProgramNode<T>; N] when T is Array
  */
 pub fn map_fhe_type(arg_type: &Type) -> Result<Type, MapFheTypeError> {
     let transformed_type = match arg_type {
@@ -44,20 +44,12 @@ pub fn create_fhe_program_node(var_name: &str, arg_type: &Type) -> TokenStream2 
             };
         }
     };
+
     let var_name = format_ident!("{}", var_name);
 
-    let type_annotation = match arg_type {
-        Type::Path(ty) => quote_spanned! { ty.span() => FheProgramNode },
-        Type::Array(a) => quote_spanned! { a.span() =>
-            <#mapped_type>
-        },
-        _ => quote! {
-            compile_error!("fhe_program arguments' name must be a simple identifier and type must be a plain path.");
-        },
-    };
-
     quote_spanned! {arg_type.span() =>
-        let #var_name: #mapped_type = #type_annotation::input();
+
+        let #var_name: #mapped_type = <#mapped_type as Input>::input();
     }
 }
 
@@ -305,7 +297,7 @@ mod test {
         let actual = create_fhe_program_node("horse", &type_name);
 
         let expected = quote! {
-            let horse: FheProgramNode<Cipher<Rational> > = FheProgramNode::input();
+            let horse: FheProgramNode<Cipher<Rational> > = <FheProgramNode<Cipher<Rational> > as Input>::input();
         };
 
         assert_syn_eq(&actual, &expected);
@@ -322,7 +314,7 @@ mod test {
         let actual = create_fhe_program_node("horse", &type_name);
 
         let expected = quote! {
-            let horse: [FheProgramNode<Cipher<Rational> >; 7] = <[FheProgramNode<Cipher<Rational> >; 7]>::input();
+            let horse: [FheProgramNode<Cipher<Rational> >; 7] = <[FheProgramNode<Cipher<Rational> >; 7] as Input>::input();
         };
 
         assert_syn_eq(&actual, &expected);
@@ -339,7 +331,7 @@ mod test {
         let actual = create_fhe_program_node("horse", &type_name);
 
         let expected = quote! {
-            let horse: [[FheProgramNode<Cipher<Rational> >; 7]; 6] = <[[FheProgramNode<Cipher<Rational> >; 7]; 6]>::input();
+            let horse: [[FheProgramNode<Cipher<Rational> >; 7]; 6] = <[[FheProgramNode<Cipher<Rational> >; 7]; 6] as Input>::input();
         };
 
         assert_syn_eq(&actual, &expected);

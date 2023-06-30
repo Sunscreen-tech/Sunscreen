@@ -200,7 +200,39 @@ macro_rules! fhe_var {
         [$crate::types::intern::fhe_node($elem); $n]
     );
     ($($elem:literal),+ $(,)?) => (
-        [$($crate::types::intern::fhe_node($x)),+]
+        [$($crate::types::intern::fhe_node($elem)),+]
     );
 }
-pub use fhe_var;
+
+/// Creates new ZKP variables from literals.
+/// ```
+/// #[zkp_program(backend = "bulletproofs")]
+/// fn equals_ten<F: BackendField>(a: NativeField<F>) {
+///     let ten = zkp_var!(10);
+///     a.constrain_eq(ten);
+/// }
+/// ```
+///
+/// You can also create arrays of variables:
+///
+/// ```
+/// #[zkp_program(backend = "bulletproofs")]
+/// fn equals_ten<F: BackendField>(a: NativeField<F>) {
+///     let tens = zkp_var![10, 10, 10];
+///     for ten in tens {
+///         a.constrain_eq(ten);
+///     }
+/// }
+/// ```
+#[macro_export]
+macro_rules! zkp_var {
+    ($elem:literal) => (
+        $crate::types::zkp::zkp_node($elem)
+    );
+    ($elem:literal; $n:expr) => (
+        [$crate::types::zkp::zkp_node($elem); $n]
+    );
+    ($($elem:literal),+ $(,)?) => (
+        [$($crate::types::zkp::zkp_node($elem)),+]
+    );
+}

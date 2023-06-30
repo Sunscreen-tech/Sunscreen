@@ -527,6 +527,7 @@ where
 ///
 /// # Warning
 /// It is illegal to output an `FheProgramNode<Indeterminate, S>` with `S == Stage::Literal`.
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum Stage {
     /// Initial stage of indeterminate type: literal/plaintext
     Literal,
@@ -537,6 +538,7 @@ pub enum Stage {
 /// Used in tandem with `Stage`. Ultimately, the purpose is to allow a single type to span
 /// plaintexts and ciphertexts. The only requirement is that, upon output, the type must resolve to
 /// a ciphertext.
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct Indeterminate<L: FheLiteral, T: FheType> {
     _lit: std::marker::PhantomData<L>,
     _type: std::marker::PhantomData<T>,
@@ -570,6 +572,9 @@ where
     coerce(node, Stage::Literal)
 }
 
+// TODO make this automatic (in #[fhe_program], define `internal` with generics from within a
+// function with the proper
+// return values, and call .into() on each output).
 /// Output your fhe program variable as a ciphertext. This will fail (at fhe program compile time)
 /// if the variable is still a literal. You can also use `.into()` to accomplish the same thing.
 pub fn fhe_out<L, T>(var: FheProgramNode<Indeterminate<L, T>, Stage>) -> FheProgramNode<Cipher<T>>

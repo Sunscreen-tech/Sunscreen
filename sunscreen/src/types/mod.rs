@@ -140,6 +140,7 @@ where
 /// arithmetic operations with ciphertexts:
 ///
 /// ```
+/// # use sunscreen::{fhe_program, types::{Cipher, bfv::Signed}};
 /// #[fhe_program(scheme = "bfv")]
 /// fn add_ten(a: Cipher<Signed>) -> Cipher<Signed> {
 ///     a + 10
@@ -150,11 +151,11 @@ where
 /// value, this won't work:
 ///
 /// ```compile_fail
+/// # use sunscreen::{fhe_program, types::{Cipher, bfv::Signed}};
 /// #[fhe_program(scheme = "bfv")]
 /// fn add_ten(a: Cipher<Signed>) -> Cipher<Signed> {
-///     let sum = 0;
-///     sum = sum + a
-///     sum = sum + 10
+///     let sum = 10;
+///     sum = sum + a;
 ///     sum
 /// }
 /// ```
@@ -163,11 +164,11 @@ where
 /// this macro:
 ///
 /// ```
+/// # use sunscreen::{fhe_var, fhe_program, types::{Cipher, bfv::Signed}};
 /// #[fhe_program(scheme = "bfv")]
 /// fn add_ten(a: Cipher<Signed>) -> Cipher<Signed> {
-///     let sum = fhe_var!(0);
-///     sum = sum + a
-///     sum = sum + 10
+///     let mut sum = fhe_var!(10);
+///     sum = sum + a;
 ///     sum
 /// }
 /// ```
@@ -175,18 +176,15 @@ where
 /// You can also create arrays of variables:
 ///
 /// ```
+/// # use sunscreen::{fhe_var, fhe_program, types::{Cipher, bfv::Signed}};
 /// #[fhe_program(scheme = "bfv")]
-/// fn add_ten(a: Cipher<Signed>) -> Cipher<Signed> {
-///     let mut sum = fhe_var(0);
-///     let arr = fhe_var![1, 2, 4];
-///     let ones = fhe_var![1; 3];
-///     for x in arr {
-///         sum = sum + x;
+/// fn add_ten(arrs: [[Cipher<Signed>; 10]; 10]) {
+///     let mut sum = fhe_var![0; 10];
+///     for i in 0..10 {
+///         for x in arrs[i] {
+///             sum[i] = sum[i] + x;
+///         }
 ///     }
-///     for y in ones {
-///         sum = sum + y;
-///     }
-///     sum + a
 /// }
 /// ```
 #[macro_export]
@@ -205,7 +203,9 @@ macro_rules! fhe_var {
 }
 
 /// Creates new ZKP variables from literals.
+///
 /// ```
+/// # use sunscreen::{zkp_var, zkp_program, BackendField, types::zkp::NativeField};
 /// #[zkp_program(backend = "bulletproofs")]
 /// fn equals_ten<F: BackendField>(a: NativeField<F>) {
 ///     let ten = zkp_var!(10);
@@ -216,6 +216,7 @@ macro_rules! fhe_var {
 /// You can also create arrays of variables:
 ///
 /// ```
+/// # use sunscreen::{zkp_var, zkp_program, BackendField, types::zkp::NativeField};
 /// #[zkp_program(backend = "bulletproofs")]
 /// fn equals_ten<F: BackendField>(a: NativeField<F>) {
 ///     let tens = zkp_var![10, 10, 10];

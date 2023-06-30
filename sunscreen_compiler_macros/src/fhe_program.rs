@@ -34,7 +34,7 @@ pub fn fhe_program_impl(
 
     if !generics.params.is_empty() {
         return proc_macro::TokenStream::from(
-            quote_spanned! { generics.params.span() => compile_error!{"FHE programs do not support generics."}},
+            quote_spanned!(generics.params.span()=> compile_error!{"FHE programs do not support generics."}),
         );
     }
 
@@ -42,7 +42,7 @@ pub fn fhe_program_impl(
         Ok(v) => {
             for arg in &v {
                 if !arg.0.is_empty() {
-                    return proc_macro::TokenStream::from(quote_spanned! { arg.0[0].span() =>
+                    return proc_macro::TokenStream::from(quote_spanned! {arg.0[0].span() =>
                         compile_error!{"FHE program arguments do not support attributes."}
                     });
                 }
@@ -53,16 +53,16 @@ pub fn fhe_program_impl(
         Err(e) => {
             return proc_macro::TokenStream::from(match e {
                 ExtractFnArgumentsError::ContainsSelf(s) => {
-                    quote_spanned! {s => compile_error! { "FHE programs must not contain `self`" } }
+                    quote_spanned!(s=> compile_error! { "FHE programs must not contain `self`" })
                 }
                 ExtractFnArgumentsError::ContainsMut(s) => {
-                    quote_spanned! {s => compile_error! { "FHE program arguments cannot be `mut`" } }
+                    quote_spanned!(s=> compile_error! { "FHE program arguments cannot be `mut`" })
                 }
-                ExtractFnArgumentsError::IllegalPat(s) => quote_spanned! {
-                    s => compile_error! { "Expected Identifier" }
+                ExtractFnArgumentsError::IllegalPat(s) => quote_spanned! {s=>
+                    compile_error! { "Expected Identifier" }
                 },
-                ExtractFnArgumentsError::IllegalType(s) => quote_spanned! {
-                    s => compile_error! { "FHE program arguments must be an array or named struct type" }
+                ExtractFnArgumentsError::IllegalType(s) => quote_spanned! {s=>
+                    compile_error! { "FHE program arguments must be an array or named struct type" }
                 },
             });
         }
@@ -88,9 +88,9 @@ pub fn fhe_program_impl(
     let return_types = match extract_return_types(ret) {
         Ok(v) => v,
         Err(ExtractReturnTypesError::IllegalType(s)) => {
-            return proc_macro::TokenStream::from(
-                quote_spanned! {s => compile_error! {"FHE programs may return a single value or a tuple of values. Each type must be an FHE type or array of such."}},
-            );
+            return proc_macro::TokenStream::from(quote_spanned! {s=>
+                compile_error! {"FHE programs may return a single value or a tuple of values. Each type must be an FHE type or array of such."}
+            });
         }
     };
 
@@ -103,9 +103,9 @@ pub fn fhe_program_impl(
     {
         Ok(v) => v,
         Err(MapFheTypeError::IllegalType(s)) => {
-            return proc_macro::TokenStream::from(
-                quote_spanned! {s => compile_error! {"Each return type for an FHE program must be either an array or named struct type."}},
-            );
+            return proc_macro::TokenStream::from(quote_spanned! {s=>
+                compile_error! {"Each return type for an FHE program must be either an array or named struct type."}
+            });
         }
     };
 
@@ -121,10 +121,7 @@ pub fn fhe_program_impl(
 
     let args = unwrapped_inputs.iter().enumerate().map(|(i, t)| {
         let id = Ident::new(&format!("c_{}", i), Span::call_site());
-
-        quote_spanned! {t.1.span() =>
-            #id
-        }
+        quote_spanned!(t.1.span()=> #id)
     });
 
     let fhe_program_struct_name =

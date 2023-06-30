@@ -6,7 +6,7 @@ use std::path::Path;
 /**
  * Stores information about individual stack frames.
  */
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct StackFrameInfo {
     /**
      * Name of the function called.
@@ -58,7 +58,7 @@ pub trait StackFrames {
     fn get_stack_trace(&self, key: Vec<u64>) -> Vec<StackFrameInfo>;
 }
 
-impl StackFrames for Trie<Vec<u64>, BacktraceFrame> {
+impl StackFrames for Trie<Vec<u64>, StackFrameInfo> {
     /**
      * Adds an entire Backtrace to the trie by storing each BacktraceFrame.
      * Keys are stored as lists for insertion.
@@ -70,32 +70,13 @@ impl StackFrames for Trie<Vec<u64>, BacktraceFrame> {
 
         for (index, frame) in key.iter().zip(frames) {
             temp_key.push(*index);
-            // Don't unwrap here, instead should emit a warning like "need to turn on debug=true"
-            // So if debug = false, we should just emit the instruction pointer
-            // Otherwise try to emit symbol information
-
-            // Rick's suggestion: make a helper function that attempts to write as much symbol info as possible
-            // If any of that info is captured, then display that
-            // Otherwise just show the instruction pointer
-            println!("{:?}", frame.symbols()[0].name());
-            // unwrap_or() will attempt to unwrap if it's a value, otherwise a default
-            // so use instructionpointer.tostring() or something as default value
-
-            // For these ones, just use unwrap_or_default() to get the empty string
-            println!("{:?}", frame.symbols()[0].filename());
-            println!("{:?}", frame.symbols()[0].lineno());
-            println!("{:?}", frame.symbols()[0].colno());
-            println!();
-            self.insert(temp_key.clone(), frame.clone());
+            let frame_info = StackFrameInfo::new(frame);
+            self.insert(temp_key.clone(), frame_info);
         }
     }
 
     /**
      * Returns a sequence of StackFrames given a node in the StackTrie.
-     *
-     * This needs to be implemented to just like concatenate strings/values together.
-     * Otherwise we run into lifetime issues
-     * You can't just append to a list and return the list
      */
     fn get_stack_trace(&self, key: Vec<u64>) -> Vec<StackFrameInfo> {
         let mut trace = Vec::<StackFrameInfo>::new();
@@ -103,10 +84,8 @@ impl StackFrames for Trie<Vec<u64>, BacktraceFrame> {
 
         for index in key {
             temp_key.push(index);
-
             let frame = self.get(&temp_key).unwrap();
-            let frame_info = StackFrameInfo::new(frame);
-            trace.push(frame_info);
+            trace.push(frame.clone());
         }
         trace
     }

@@ -8,6 +8,8 @@ mod groups;
 
 use groups::StackFrames;
 
+use crate::groups::StackFrameInfo;
+
 /*
 // Setup to build front-end with `cargo run`
 const INDEX_HTML: &str = include_str!(concat!(
@@ -112,7 +114,7 @@ fn main() {
     println!("{:?}", trie);
     */
 
-    let mut trie2: Trie<Vec<u64>, BacktraceFrame> = Trie::new();
+    let mut trie2: Trie<Vec<u64>, StackFrameInfo> = Trie::new();
     let trace3 = Backtrace::new();
 
     // keys should be vectors of instruction pointers

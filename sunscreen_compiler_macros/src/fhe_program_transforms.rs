@@ -1,6 +1,6 @@
 use proc_macro2::{Span, TokenStream as TokenStream2};
-use quote::{format_ident, quote, quote_spanned};
-use syn::{parse_quote, parse_quote_spanned, spanned::Spanned, Index, ReturnType, Type};
+use quote::{format_ident, quote, quote_spanned, ToTokens};
+use syn::{parse_quote, parse_quote_spanned, spanned::Spanned, Ident, Index, ReturnType, Type};
 
 #[derive(Debug)]
 pub enum MapFheTypeError {
@@ -97,33 +97,34 @@ pub fn extract_return_types(ret: &ReturnType) -> Result<Vec<Type>, ExtractReturn
 }
 
 /**
- * Takes an array of return types and packages them into a tuple
- * if needed.
+ * Takes an array of tokens and packages them into a tuple if needed.
  */
-pub fn pack_return_type(return_types: &[Type]) -> Type {
-    match return_types.len() {
-        0 => parse_quote! { () },
-        1 => return_types[0].clone(),
+pub fn pack_into_tuple<T: ToTokens>(ts: &[T]) -> TokenStream2 {
+    match ts {
+        [] => parse_quote! { () },
+        [t] => t.to_token_stream(),
         _ => {
-            parse_quote_spanned! {return_types[0].span() => ( #(#return_types),* ) }
+            quote_spanned! {ts[0].span()=> ( #(#ts),* ) }
         }
     }
 }
 
 /**
- * Takes an array of return types, wraps each in an `impl Into<_>`, and packs them up like
-* `pack_return_type`.
+ * Takes an array of types and wraps each in an `impl Into<_>`
 */
-pub fn pack_return_into_type(return_types: &[Type]) -> Type {
-    match return_types {
-        [] => parse_quote! { () },
-        [ty] => parse_quote_spanned! { ty.span() =>
-            impl Into<#ty>
-        },
-        _ => parse_quote_spanned! { return_types[0].span() =>
-            ( #(impl Into<#return_types>),* )
-        },
-    }
+pub fn wrap_impl_into(ts: &[Type]) -> Vec<Type> {
+    ts.iter()
+        .map(|t| parse_quote_spanned! {t.span()=> impl Into<#t>})
+        .collect()
+}
+
+/**
+ * Takes an array of idents and suffixes each with `.into()`
+*/
+pub fn suffix_into(is: &[Ident]) -> Vec<TokenStream2> {
+    is.iter()
+        .map(|i| quote_spanned! {i.span()=> #i.into()})
+        .collect()
 }
 
 pub fn emit_output_capture(return_types: &[Type]) -> TokenStream2 {

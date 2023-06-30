@@ -38,6 +38,12 @@ where
     _phantom: PhantomData<T>,
 }
 
+impl<T: ZkpType> std::fmt::Debug for ProgramNode<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("ProgramNode<elided>")
+    }
+}
+
 /// Convenience function to create a ZKP program node
 pub fn zkp_node<F: BackendField, L>(lit: L) -> ProgramNode<NativeField<F>>
 where

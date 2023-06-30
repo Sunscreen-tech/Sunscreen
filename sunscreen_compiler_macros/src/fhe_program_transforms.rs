@@ -429,7 +429,10 @@ mod test {
         let actual = emit_output_capture(&extracted);
 
         let expected = quote! {
-            v.output();
+            {
+                struct _AssertOutput where FheProgramNode< Cipher < Signed > > : Output;
+                v.output();
+            }
         };
 
         assert_syn_eq(&actual, &expected);
@@ -448,8 +451,14 @@ mod test {
         let actual = emit_output_capture(&extracted);
 
         let expected = quote! {
-            v.0.output();
-            v.1.output();
+            {
+                struct _AssertOutput where FheProgramNode< Cipher < Signed > > : Output;
+                v.0.output();
+            }
+            {
+                struct _AssertOutput where FheProgramNode<[[Cipher<Signed>; 6]; 7]>: Output;
+                v.1.output();
+            }
         };
 
         assert_syn_eq(&actual, &expected);

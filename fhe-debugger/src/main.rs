@@ -1,7 +1,7 @@
 use std::vec;
 
 // use actix_web::{web, App, HttpServer};
-use backtrace::{Backtrace, BacktraceFrame};
+use backtrace::Backtrace;
 use radix_trie::Trie;
 
 mod groups;
@@ -125,9 +125,9 @@ fn main() {
 
     println!("{:?}", trie2);
 
-    println!("");
+    println!();
 
-    let test = trie2.get_stack_trace(key.clone());
+    let test = trie2.get_stack_trace(key);
 
     for f in test {
         println!("{:?}", f);

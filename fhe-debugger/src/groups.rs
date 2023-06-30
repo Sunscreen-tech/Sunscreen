@@ -94,7 +94,7 @@ impl StackFrames for Trie<Vec<u64>, StackFrameInfo> {
 /**
  * Allows for lookup of call stack information given a ProgramNode's `group_id`.
  */
-struct StackFrameLookup {
+pub struct StackFrameLookup {
     dict: HashMap<u64, Vec<u64>>,
     frames: Trie<Vec<u64>, Backtrace>,
 }

@@ -140,6 +140,7 @@ pub fn fhe_program_impl(
         }
 
         impl sunscreen::FheProgramFn for #fhe_program_struct_name {
+            #[allow(unused_imports)]
             fn build(&self, params: &sunscreen::Params) -> sunscreen::Result<sunscreen::fhe::FheFrontendCompilation> {
                 use std::cell::RefCell;
                 use std::mem::transmute;

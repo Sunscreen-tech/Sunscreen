@@ -119,7 +119,16 @@ fn main() {
     // values should be the frame information like filename, functionname, line number, etc
     // maybe store this in a new struct
     let key: Vec<u64> = vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
-    trie2.add_stack_trace(key, trace3);
+    trie2.add_stack_trace(key.clone(), trace3);
 
     println!("{:?}", trie2);
+
+    println!("");
+
+    let test = trie2.get_stack_trace(key.clone());
+
+    for f in test {
+        println!("{:?}", f);
+    }
+
 }

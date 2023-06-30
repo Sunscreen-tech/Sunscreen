@@ -1,27 +1,26 @@
-use backtrace::{Backtrace, BacktraceFrame};
+use backtrace::{Backtrace, BacktraceFrame, SymbolName};
 use radix_trie::Trie;
 use std::collections::HashMap;
+use std::path::Path;
 
 // TODO: implement Debug for formatting purposes
 // TODO: write documentation/comments for fields
+#[derive(Debug)]
 pub struct StackFrameInfo {
     callee_name: String,
     callee_file: String,
-    caller_name: String,
-    caller_file: String,
-    caller_lineno: u64,
+    callee_lineno: u32,
+    callee_col: u32
 }
 
 impl StackFrameInfo {
     fn new(frame: &BacktraceFrame) -> Self {
         let frame_symbols = frame.symbols();
         StackFrameInfo {
-            // TODO: figure out how to store this information
             callee_name: frame_symbols[0].name().unwrap().to_string(),
-            callee_file: "".to_string(), //frame_symbols.filename().unwrap().to_string(),
-            caller_name: "".to_string(),
-            caller_file: "".to_string(),
-            caller_lineno: 0,
+            callee_file: frame_symbols[0].filename().unwrap_or(Path::new("No such file")).to_string_lossy().into_owned(),
+            callee_lineno: frame_symbols[0].lineno().unwrap_or(0),
+            callee_col: frame_symbols[0].lineno().unwrap_or(0),
         }
     }
 }
@@ -56,9 +55,9 @@ impl StackFrames for Trie<Vec<u64>, BacktraceFrame> {
             // so use instructionpointer.tostring() or something as default value
 
             // For these ones, just use unwrap_or_default() to get the empty string
-            println!("{:?}", frame.symbols()[0].filename().unwrap());
-            println!("{:?}", frame.symbols()[0].lineno().unwrap());
-            println!("{:?}", frame.symbols()[0].colno().unwrap());
+            println!("{:?}", frame.symbols()[0].filename());
+            println!("{:?}", frame.symbols()[0].lineno());
+            println!("{:?}", frame.symbols()[0].colno());
             println!();
             self.insert(temp_key.clone(), frame.clone());
         }
@@ -73,14 +72,16 @@ impl StackFrames for Trie<Vec<u64>, BacktraceFrame> {
      */
     fn get_stack_trace(&self, key: Vec<u64>) -> Vec<StackFrameInfo> {
         let mut trace = Vec::<StackFrameInfo>::new();
-        let mut temp_key = key;
-        while !temp_key.is_empty() {
+        let mut temp_key = Vec::<u64>::new();
+
+        for index in key {
+            temp_key.push(index);
+
             let frame = self.get(&temp_key).unwrap();
             let frame_info = StackFrameInfo::new(frame);
             trace.push(frame_info);
-            temp_key.pop();
         }
-        trace
+        trace 
     }
 }
 

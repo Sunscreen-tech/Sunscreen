@@ -19,9 +19,6 @@ pub fn fhe_program_impl(
     }
 }
 
-// TODO move validation errors into a `FheProgram::new() -> Result<Self>` function,
-// gather the useful fields onto the struct,
-// then call `FheProgram::new().and_then(|f|f.output())`.
 struct FheProgram<'a> {
     // The function passed to the proc macro
     item_fn: &'a ItemFn,
@@ -217,7 +214,6 @@ impl<'a> FheProgram<'a> {
                         return Err(Error::IncorrectScheme)
                     }
 
-                    // TODO: Other schemes.
                     let mut context = FheContext::new(params.clone());
 
                     CURRENT_FHE_CTX.with(|ctx| {

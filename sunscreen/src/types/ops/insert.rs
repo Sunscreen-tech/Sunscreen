@@ -18,7 +18,6 @@ pub trait GraphCipherInsert {
     /**
      * The type of the plaintext encoding
      */
-    // TODO if this is always Self, then remove it
     type Val: FheType;
 
     /**

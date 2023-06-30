@@ -572,12 +572,9 @@ where
     coerce(node, Stage::Literal)
 }
 
-// TODO make this automatic (in #[fhe_program], define `internal` with generics from within a
-// function with the proper
-// return values, and call .into() on each output).
-/// Output your fhe program variable as a ciphertext. This will fail (at fhe program compile time)
+/// Convert your fhe program variable to a proper ciphertext variable. This will fail (at fhe program compile time)
 /// if the variable is still a literal. You can also use `.into()` to accomplish the same thing.
-pub fn fhe_out<L, T>(var: FheProgramNode<Indeterminate<L, T>, Stage>) -> FheProgramNode<Cipher<T>>
+fn fhe_out<L, T>(var: FheProgramNode<Indeterminate<L, T>, Stage>) -> FheProgramNode<Cipher<T>>
 where
     L: FheLiteral,
     T: FheType,

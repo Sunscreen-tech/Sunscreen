@@ -560,9 +560,8 @@ where
     const NUM_CIPHERTEXTS: usize = T::NUM_CIPHERTEXTS;
 }
 
-// TODO turn this into `fhe_var!` macro
-/// Create a new fhe program variable from any supported literal type.
-pub fn fhe_var<L, T>(lit: L) -> FheProgramNode<Indeterminate<L, T>, Stage>
+/// Create a new fhe program node from any supported literal type.
+pub fn fhe_node<L, T>(lit: L) -> FheProgramNode<Indeterminate<L, T>, Stage>
 where
     L: FheLiteral,
     T: FheType + GraphCipherInsert<Lit = L, Val = T>,
@@ -571,7 +570,6 @@ where
     coerce(node, Stage::Literal)
 }
 
-// TODO make this automatic somehow?
 /// Output your fhe program variable as a ciphertext. This will fail (at fhe program compile time)
 /// if the variable is still a literal. You can also use `.into()` to accomplish the same thing.
 pub fn fhe_out<L, T>(var: FheProgramNode<Indeterminate<L, T>, Stage>) -> FheProgramNode<Cipher<T>>

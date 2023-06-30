@@ -135,3 +135,72 @@ where
         }
     }
 }
+
+/// Creates new FHE variables from literals. Note that literals can be used directly in
+/// arithmetic operations with ciphertexts:
+///
+/// ```
+/// #[fhe_program(scheme = "bfv")]
+/// fn add_ten(a: Cipher<Signed>) -> Cipher<Signed> {
+///     a + 10
+/// }
+/// ````
+///
+/// But if you want to define a variable that starts as a literal and later takes on a ciphertext
+/// value, this won't work:
+///
+/// ```compile_fail
+/// #[fhe_program(scheme = "bfv")]
+/// fn add_ten(a: Cipher<Signed>) -> Cipher<Signed> {
+///     let sum = 0;
+///     sum = sum + a
+///     sum = sum + 10
+///     sum
+/// }
+/// ```
+///
+/// This is because the literal `0` won't have the correct [`Cipher`] type. Instead, you can use
+/// this macro:
+///
+/// ```
+/// #[fhe_program(scheme = "bfv")]
+/// fn add_ten(a: Cipher<Signed>) -> Cipher<Signed> {
+///     let sum = fhe_var!(0);
+///     sum = sum + a
+///     sum = sum + 10
+///     sum
+/// }
+/// ```
+///
+/// You can also create arrays of variables:
+///
+/// ```
+/// #[fhe_program(scheme = "bfv")]
+/// fn add_ten(a: Cipher<Signed>) -> Cipher<Signed> {
+///     let mut sum = fhe_var(0);
+///     let arr = fhe_var![1, 2, 4];
+///     let ones = fhe_var![1; 3];
+///     for x in arr {
+///         sum = sum + x;
+///     }
+///     for y in ones {
+///         sum = sum + y;
+///     }
+///     sum + a
+/// }
+/// ```
+#[macro_export]
+macro_rules! fhe_var {
+    ($elem:literal) => (
+        $crate::types::intern::fhe_node($elem)
+    );
+    ($elem:literal; $n:expr) => (
+        // TODO this will just copy the same node IDs. But that's ok, right? the graph nodes are
+        // immtuable anyway.
+        [$crate::types::intern::fhe_node($elem); $n]
+    );
+    ($($elem:literal),+ $(,)?) => (
+        [$($crate::types::intern::fhe_node($x)),+]
+    );
+}
+pub use fhe_var;

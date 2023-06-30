@@ -130,5 +130,4 @@ fn main() {
     for f in test {
         println!("{:?}", f);
     }
-
 }

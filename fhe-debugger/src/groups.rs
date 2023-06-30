@@ -3,24 +3,44 @@ use radix_trie::Trie;
 use std::collections::HashMap;
 use std::path::Path;
 
-// TODO: implement Debug for formatting purposes
-// TODO: write documentation/comments for fields
+/**
+ * Stores information about individual stack frames.
+ */
 #[derive(Debug)]
 pub struct StackFrameInfo {
+    /**
+     * Name of the function called.
+     */
     callee_name: String,
+
+    /**
+     * Name of the file where the callee is defined.
+     */
     callee_file: String,
+
+    /**
+     * The line number in the file where the callee is defined.
+     */
     callee_lineno: u32,
-    callee_col: u32
+
+    /**
+     * The column index in the file where the callee is defined.
+     */
+    callee_col: u32,
 }
 
 impl StackFrameInfo {
     fn new(frame: &BacktraceFrame) -> Self {
         let frame_symbols = frame.symbols();
         StackFrameInfo {
-            callee_name: frame_symbols[0].name().unwrap().to_string(),
-            callee_file: frame_symbols[0].filename().unwrap_or(Path::new("No such file")).to_string_lossy().into_owned(),
+            callee_name: frame_symbols[0].name().unwrap_or(SymbolName::new(&frame.ip())).to_string(),
+            callee_file: frame_symbols[0]
+                .filename()
+                .unwrap_or(Path::new("No such file"))
+                .to_string_lossy()
+                .into_owned(),
             callee_lineno: frame_symbols[0].lineno().unwrap_or(0),
-            callee_col: frame_symbols[0].lineno().unwrap_or(0),
+            callee_col: frame_symbols[0].colno().unwrap_or(0),
         }
     }
 }
@@ -81,7 +101,7 @@ impl StackFrames for Trie<Vec<u64>, BacktraceFrame> {
             let frame_info = StackFrameInfo::new(frame);
             trace.push(frame_info);
         }
-        trace 
+        trace
     }
 }
 
@@ -95,10 +115,9 @@ struct StackFrameLookup {
 
 impl StackFrameLookup {
     fn new() -> Self {
-        StackFrameLookup { 
-            dict: HashMap::<u64, Vec<u64>>::new(), 
-            frames: Trie::<Vec<u64>, Backtrace>::new() 
+        StackFrameLookup {
+            dict: HashMap::<u64, Vec<u64>>::new(),
+            frames: Trie::<Vec<u64>, Backtrace>::new(),
         }
     }
-
 }

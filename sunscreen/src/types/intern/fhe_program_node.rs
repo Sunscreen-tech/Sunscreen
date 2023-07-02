@@ -569,41 +569,80 @@ where
     T: FheType + GraphCipherInsert<Lit = L, Val = T>,
 {
     let node = T::graph_cipher_insert(lit);
-    coerce(node, Stage::Literal)
+    unsafe_coerce(node, Stage::Literal)
 }
 
-/// Convert your fhe program variable to a proper ciphertext variable. This will fail (at fhe program compile time)
-/// if the variable is still a literal. You can also use `.into()` to accomplish the same thing.
-fn fhe_out<L, T>(var: FheProgramNode<Indeterminate<L, T>, Stage>) -> FheProgramNode<Cipher<T>>
+/// Used for converting between types of an [`FheProgramNode`]. Implementations of this trait
+/// define the legal conversions.
+// Note: this is more of an `Into::into` flavor, which typically has weaker inference than
+// `From::from`. However, the resulting type is specified explicitly by the `internal_inner`
+// function generated in the `#[fhe_program]` macro, so there shouldn't be any problems. If
+// necessary, we could adapt the macro to support a `From` style trait pretty easily.
+pub trait Coerce<T: NumCiphertexts> {
+    /// Coerce one `FheProgramNode` to another. The underlying value stays the same, but the types
+    /// change. This function is allowed to panic on invalid coercions, which will result in a
+    /// failed `Err` state when compiling the FHE program.
+    ///
+    /// An invalid coercion would be defining a variable with [`crate::fhe_var!`] and coercing
+    /// it as a `Cipher<T>` before assigning it to the result of an arithmetic operation with a
+    /// ciphertext.
+    fn coerce(self) -> T;
+}
+
+// Allow trivial conversion T -> T
+impl<T: NumCiphertexts> Coerce<FheProgramNode<T>> for FheProgramNode<T> {
+    fn coerce(self) -> Self {
+        self
+    }
+}
+
+// If T -> V is legal, then so is [T] -> [V]
+impl<T, V, const N: usize> Coerce<[V; N]> for [T; N]
+where
+    V: NumCiphertexts,
+    T: Coerce<V>,
+{
+    fn coerce(self) -> [V; N] {
+        self.map(Coerce::<V>::coerce)
+    }
+}
+
+// Allow `Indeterminate` -> `Cipher`, but panic if at `Stage::Literal`
+impl<L, T> Coerce<FheProgramNode<Cipher<T>>> for FheProgramNode<Indeterminate<L, T>, Stage>
 where
     L: FheLiteral,
     T: FheType,
 {
-    match var.stage {
-        Stage::Literal => panic!("User created FHE variables must undergo arithmetic operations with ciphertexts before they are returned as output."),
-        Stage::Cipher => {
-            FheProgramNode {
-                ids: var.ids,
-                stage: (),
-                _phantom: std::marker::PhantomData,
+    fn coerce(self) -> FheProgramNode<Cipher<T>> {
+        match self.stage {
+            Stage::Literal => panic!("User created FHE variables must undergo arithmetic operations with ciphertexts before they are returned as output."),
+            Stage::Cipher => {
+                FheProgramNode {
+                    ids: self.ids,
+                    stage: (),
+                    _phantom: std::marker::PhantomData,
+                }
             }
-        }
+    }
     }
 }
 
+// This is such a common one, let the user call `var.into()` in their programs.
+// We unfortunately can't make a very generic impl here, as it would conflict with the blanket
+// `From<T> for T`.
 impl<L, T> From<FheProgramNode<Indeterminate<L, T>, Stage>> for FheProgramNode<Cipher<T>>
 where
     L: FheLiteral,
     T: FheType,
 {
     fn from(value: FheProgramNode<Indeterminate<L, T>, Stage>) -> Self {
-        fhe_out(value)
+        value.coerce()
     }
 }
 
 /// WARNING: This is an unsafe function. It allows casting graph nodes arbitrarily. Use with
 /// caution.
-fn coerce<B: NumCiphertexts, T, A: NumCiphertexts, S>(
+fn unsafe_coerce<B: NumCiphertexts, T, A: NumCiphertexts, S>(
     a: FheProgramNode<A, S>,
     t: T,
 ) -> FheProgramNode<B, T> {
@@ -629,18 +668,18 @@ macro_rules! impl_indeterminate_arithmetic_op {
                     fn [<$op:lower>](self, rhs: FheProgramNode<Cipher<T>>) -> Self::Output {
                         let node = match self.stage {
                             Stage::Literal => {
-                                let lit_node = coerce(self, ());
+                                let lit_node = unsafe_coerce(self, ());
                                 // N.B. we've already added this literal as a plaintext node
                                 T::[<graph_cipher_plain_ $op:lower>](rhs, lit_node)
                             }
                             Stage::Cipher => {
-                                let cipher_node = coerce(self, ());
+                                let cipher_node = unsafe_coerce(self, ());
                                 T::[<graph_cipher_ $op:lower>](rhs, cipher_node)
                             }
                         };
                         // No matter what `self.stage` currently is, it is being operated on with a
                         // ciphertext, so its next stage is cipher.
-                        coerce(node, Stage::Cipher)
+                        unsafe_coerce(node, Stage::Cipher)
                     }
                 }
 
@@ -658,18 +697,18 @@ macro_rules! impl_indeterminate_arithmetic_op {
                     fn [<$op:lower>](self, rhs: FheProgramNode<Indeterminate<L, T>, Stage>) -> Self::Output {
                         let node = match rhs.stage {
                             Stage::Literal => {
-                                let lit_node = coerce(rhs, ());
+                                let lit_node = unsafe_coerce(rhs, ());
                                 // N.B. we've already added this literal as a plaintext node
                                 T::[<graph_cipher_plain_ $op:lower>](self, lit_node)
                             }
                             Stage::Cipher => {
-                                let cipher_node = coerce(rhs, ());
+                                let cipher_node = unsafe_coerce(rhs, ());
                                 T::[<graph_cipher_ $op:lower>](self, cipher_node)
                             }
                         };
                         // No matter what `rhs.stage` currently is, it is being added to a ciphertext, so its next
                         // stage is cipher.
-                        coerce(node, Stage::Cipher)
+                        unsafe_coerce(node, Stage::Cipher)
                     }
                 }
             }

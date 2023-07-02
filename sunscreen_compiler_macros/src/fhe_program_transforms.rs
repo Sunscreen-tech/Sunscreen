@@ -110,20 +110,20 @@ pub fn pack_into_tuple<T: ToTokens>(ts: &[T]) -> TokenStream2 {
 }
 
 /**
- * Takes an array of types and wraps each in an `impl Into<_>`
+ * Takes an array of types and wraps each in an `impl Coerce<_>`
 */
-pub fn wrap_impl_into(ts: &[Type]) -> Vec<Type> {
+pub fn wrap_impl_coerce(ts: &[Type]) -> Vec<Type> {
     ts.iter()
-        .map(|t| parse_quote_spanned! {t.span()=> impl Into<#t>})
+        .map(|t| parse_quote_spanned! {t.span()=> impl Coerce<#t>})
         .collect()
 }
 
 /**
- * Takes an array of idents and suffixes each with `.into()`
+ * Takes an array of idents and suffixes each with `.coerce()`
 */
-pub fn suffix_into(is: &[Ident]) -> Vec<TokenStream2> {
+pub fn suffix_coerce(is: &[Ident]) -> Vec<TokenStream2> {
     is.iter()
-        .map(|i| quote_spanned! {i.span()=> #i.into()})
+        .map(|i| quote_spanned! {i.span()=> #i.coerce()})
         .collect()
 }
 

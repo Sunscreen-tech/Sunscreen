@@ -453,3 +453,21 @@ fn can_collect_multiple_outputs() {
         serde_json::from_value::<FheFrontendCompilation>(expected).unwrap()
     );
 }
+
+#[test]
+fn coercion_supports_arbitrarily_nested_outputs() {
+    // This test just tests compilation is valid
+    #[fhe_program(scheme = "bfv")]
+    fn fhe_program_just_cipher(
+        a: Cipher<Signed>,
+    ) -> ([Cipher<Signed>; 2], [[Cipher<Signed>; 3]; 2]) {
+        ([a; 2], [[a; 3]; 2])
+    }
+
+    #[fhe_program(scheme = "bfv")]
+    fn fhe_program_var(a: Cipher<Signed>) -> ([Cipher<Signed>; 2], [[Cipher<Signed>; 3]; 2]) {
+        let mut sum = fhe_var!(0);
+        sum = sum + a;
+        ([sum; 2], [[sum; 3]; 2])
+    }
+}

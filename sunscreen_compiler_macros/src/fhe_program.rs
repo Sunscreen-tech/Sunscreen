@@ -177,12 +177,12 @@ impl<'a> FheProgram<'a> {
         let fhe_program_args = self.fhe_program_args();
         let fhe_program_return = pack_into_tuple(fhe_program_return_types);
 
-        let inner_return = pack_into_tuple(&wrap_impl_into(fhe_program_return_types));
+        let inner_return = pack_into_tuple(&wrap_impl_coerce(fhe_program_return_types));
         let inner_arg_values = unwrapped_inputs.iter().map(|(_, _, name)| *name);
         let inner_return_idents = self.inner_return_idents();
         let inner_return_values = pack_into_tuple(&inner_return_idents);
         // E.g. (_r1.into(), _r2.into())
-        let inner_return_into_values = pack_into_tuple(&suffix_into(&inner_return_idents));
+        let inner_return_into_values = pack_into_tuple(&suffix_coerce(&inner_return_idents));
 
         let signature = self.signature();
 
@@ -208,7 +208,7 @@ impl<'a> FheProgram<'a> {
                 fn build(&self, params: &sunscreen::Params) -> sunscreen::Result<sunscreen::fhe::FheFrontendCompilation> {
                     use std::cell::RefCell;
                     use std::mem::transmute;
-                    use sunscreen::{fhe::{CURRENT_FHE_CTX, FheContext}, Error, INDEX_ARENA, Result, Params, SchemeType, Value, types::{intern::{FheProgramNode, Input, Output}, NumCiphertexts, Type, TypeName, SwapRows, LaneCount, TypeNameInstance}};
+                    use sunscreen::{fhe::{CURRENT_FHE_CTX, FheContext}, Error, INDEX_ARENA, Result, Params, SchemeType, Value, types::{intern::{FheProgramNode, Input, Output, Coerce}, NumCiphertexts, Type, TypeName, SwapRows, LaneCount, TypeNameInstance}};
 
                     if SchemeType::Bfv != params.scheme_type {
                         return Err(Error::IncorrectScheme)

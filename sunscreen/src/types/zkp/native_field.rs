@@ -37,6 +37,12 @@ pub struct NativeField<F: BackendField> {
     _phantom: PhantomData<F>,
 }
 
+#[cfg(feature = "bulletproofs")]
+/// A convenient type alias for the `Field` of the bulletproofs backend.
+/// This is equivalent to `NativeField::<BulletproofsBackend as ZkpBackend>::Field`, or [`NativeField::<Scalar>`].
+pub type BulletproofsField =
+    NativeField<<sunscreen_zkp_backend::bulletproofs::BulletproofsBackend as sunscreen_zkp_backend::ZkpBackend>::Field>;
+
 // Can't #[derive()] due to PhantomData.
 impl<F: BackendField> Copy for NativeField<F> {}
 

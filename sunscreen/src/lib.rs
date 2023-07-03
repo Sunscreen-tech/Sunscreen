@@ -86,7 +86,7 @@ pub use sunscreen_runtime::{
     ZkpProgramInput, ZkpRuntime,
 };
 #[cfg(feature = "bulletproofs")]
-pub use sunscreen_zkp_backend::bulletproofs::{BulletproofsBackend, BulletproofsR1CSProof};
+pub use sunscreen_zkp_backend::bulletproofs;
 pub use sunscreen_zkp_backend::{BackendField, Error as ZkpError, Result as ZkpResult, ZkpBackend};
 pub use zkp::ZkpProgramFn;
 pub use zkp::{

@@ -1,9 +1,8 @@
 use sunscreen::{
-    types::zkp::NativeField, zkp_program, zkp_var, BackendField, BulletproofsBackend, Compiler,
-    Error, ZkpBackend, ZkpProgramInput, ZkpRuntime,
+    bulletproofs::BulletproofsBackend,
+    types::zkp::{BulletproofsField, NativeField},
+    zkp_program, zkp_var, BackendField, Compiler, Error, ZkpProgramInput, ZkpRuntime,
 };
-
-type BPField = NativeField<<BulletproofsBackend as ZkpBackend>::Field>;
 
 fn main() -> Result<(), Error> {
     let app = Compiler::new()
@@ -39,9 +38,9 @@ fn main() -> Result<(), Error> {
         [4, 3, 2, 5, 8, 6, 9, 7, 1],
     ];
 
-    let board: Vec<ZkpProgramInput> = vec![ex_sol.map(|a| a.map(BPField::from)).into()];
+    let board: Vec<ZkpProgramInput> = vec![ex_sol.map(|a| a.map(BulletproofsField::from)).into()];
 
-    let cons: Vec<ZkpProgramInput> = vec![ex_puzzle.map(|a| a.map(BPField::from)).into()];
+    let cons: Vec<ZkpProgramInput> = vec![ex_puzzle.map(|a| a.map(BulletproofsField::from)).into()];
 
     let proof = runtime.prove(prog, cons.clone(), vec![], board)?;
 
@@ -147,9 +146,11 @@ mod tests {
             [4, 3, 2, 5, 8, 6, 9, 7, 1],
         ];
 
-        let board: Vec<ZkpProgramInput> = vec![ex_sol.map(|a| a.map(BPField::from)).into()];
+        let board: Vec<ZkpProgramInput> =
+            vec![ex_sol.map(|a| a.map(BulletproofsField::from)).into()];
 
-        let cons: Vec<ZkpProgramInput> = vec![ex_puzzle.map(|a| a.map(BPField::from)).into()];
+        let cons: Vec<ZkpProgramInput> =
+            vec![ex_puzzle.map(|a| a.map(BulletproofsField::from)).into()];
 
         let proof = runtime.prove(prog, cons.clone(), vec![], board).unwrap();
 
@@ -194,9 +195,11 @@ mod tests {
             [4, 3, 2, 5, 8, 6, 9, 7, 1],
         ];
 
-        let board: Vec<ZkpProgramInput> = vec![ex_sol.map(|a| a.map(BPField::from)).into()];
+        let board: Vec<ZkpProgramInput> =
+            vec![ex_sol.map(|a| a.map(BulletproofsField::from)).into()];
 
-        let cons: Vec<ZkpProgramInput> = vec![ex_puzzle.map(|a| a.map(BPField::from)).into()];
+        let cons: Vec<ZkpProgramInput> =
+            vec![ex_puzzle.map(|a| a.map(BulletproofsField::from)).into()];
 
         let proof = runtime.prove(prog, cons, vec![], board);
 
@@ -229,9 +232,11 @@ mod tests {
             [4, 3, 2, 5, 8, 6, 9, 7, 1],
         ];
 
-        let board: Vec<ZkpProgramInput> = vec![ex_sol.map(|a| a.map(BPField::from)).into()];
+        let board: Vec<ZkpProgramInput> =
+            vec![ex_sol.map(|a| a.map(BulletproofsField::from)).into()];
 
-        let cons: Vec<ZkpProgramInput> = vec![ex_puzzle.map(|a| a.map(BPField::from)).into()];
+        let cons: Vec<ZkpProgramInput> =
+            vec![ex_puzzle.map(|a| a.map(BulletproofsField::from)).into()];
 
         let proof = runtime.prove(prog, cons, vec![], board);
 

@@ -1,14 +1,13 @@
 use sunscreen::{
-    types::zkp::{ConstrainCmp, NativeField},
-    zkp_program, BackendField, BulletproofsBackend, Compiler, Error, ZkpBackend, ZkpRuntime,
+    bulletproofs::BulletproofsBackend,
+    types::zkp::{BulletproofsField, ConstrainCmp, NativeField},
+    zkp_program, BackendField, Compiler, Error, ZkpRuntime,
 };
 
 #[zkp_program]
 fn greater_than<F: BackendField>(a: NativeField<F>, #[constant] b: NativeField<F>) {
     a.constrain_gt_bounded(b, 32)
 }
-
-type BPField = NativeField<<BulletproofsBackend as ZkpBackend>::Field>;
 
 fn main() -> Result<(), Error> {
     let app = Compiler::new()
@@ -20,8 +19,8 @@ fn main() -> Result<(), Error> {
 
     let runtime = ZkpRuntime::new(&BulletproofsBackend::new())?;
 
-    let amount = BPField::from(232);
-    let threshold = BPField::from(64);
+    let amount = BulletproofsField::from(232);
+    let threshold = BulletproofsField::from(64);
 
     // Prove that amount > threshold
 
@@ -36,7 +35,7 @@ fn main() -> Result<(), Error> {
 mod tests {
     use super::*;
 
-    fn run_test(amount: BPField, threshold: BPField, should_succeed: bool) {
+    fn run_test(amount: BulletproofsField, threshold: BulletproofsField, should_succeed: bool) {
         let app = Compiler::new()
             .zkp_backend::<BulletproofsBackend>()
             .zkp_program(greater_than)

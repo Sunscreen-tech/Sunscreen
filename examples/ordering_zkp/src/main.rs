@@ -3,6 +3,11 @@ use sunscreen::{
     zkp_program, BackendField, BulletproofsBackend, Compiler, Error, ZkpBackend, ZkpRuntime,
 };
 
+#[zkp_program]
+fn greater_than<F: BackendField>(a: NativeField<F>, #[constant] b: NativeField<F>) {
+    a.constrain_gt_bounded(b, 32)
+}
+
 type BPField = NativeField<<BulletproofsBackend as ZkpBackend>::Field>;
 
 fn main() -> Result<(), Error> {
@@ -25,11 +30,6 @@ fn main() -> Result<(), Error> {
     runtime.verify(greater_than_zkp, &proof, vec![threshold], vec![])?;
 
     Ok(())
-}
-
-#[zkp_program(backend = "bulletproofs")]
-fn greater_than<F: BackendField>(a: NativeField<F>, #[constant] b: NativeField<F>) {
-    a.constrain_gt_bounded(b, 32)
 }
 
 #[cfg(test)]

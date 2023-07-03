@@ -204,7 +204,7 @@ macro_rules! fhe_var {
 ///
 /// ```
 /// # use sunscreen::{zkp_var, zkp_program, BackendField, types::zkp::NativeField};
-/// #[zkp_program(backend = "bulletproofs")]
+/// #[zkp_program]
 /// fn equals_ten<F: BackendField>(a: NativeField<F>) {
 ///     let ten = zkp_var!(10);
 ///     a.constrain_eq(ten);
@@ -215,7 +215,7 @@ macro_rules! fhe_var {
 ///
 /// ```
 /// # use sunscreen::{zkp_var, zkp_program, BackendField, types::zkp::NativeField};
-/// #[zkp_program(backend = "bulletproofs")]
+/// #[zkp_program]
 /// fn equals_ten<F: BackendField>(a: NativeField<F>) {
 ///     let tens = zkp_var![10, 10, 10];
 ///     for ten in tens {

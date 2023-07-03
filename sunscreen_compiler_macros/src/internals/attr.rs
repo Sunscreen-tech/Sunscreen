@@ -221,48 +221,12 @@ impl Parse for FheProgramAttrs {
     }
 }
 
-pub enum BackendType {
-    Bulletproofs,
-}
-
-impl TryFrom<&AttrValue> for BackendType {
-    type Error = SynError;
-
-    fn try_from(value: &AttrValue) -> SynResult<Self> {
-        let as_str = value.as_str()?;
-
-        match as_str {
-            "bulletproofs" => Ok(BackendType::Bulletproofs),
-            _ => Err(SynError::new(
-                value.span(),
-                format!("Unknown backend `{}`", as_str.to_owned()),
-            )),
-        }
-    }
-}
-
+// Keeping this struct around in case we add other attributes.
 #[allow(unused)]
-pub struct ZkpProgramAttrs {
-    backend_type: BackendType,
-}
+pub struct ZkpProgramAttrs;
 
 impl Parse for ZkpProgramAttrs {
-    fn parse(input: ParseStream) -> SynResult<Self> {
-        let attrs = try_parse_dict(input)?;
-
-        const VALUE_KEYS: &[&str] = &["backend"];
-
-        for i in attrs.keys() {
-            if !VALUE_KEYS.iter().any(|x| x == i) {
-                return Err(SynError::new(input.span(), format!("Unknown key '{}'", i)));
-            }
-        }
-
-        let backend_type = attrs.get("backend").ok_or_else(|| {
-            SynError::new(input.span(), "required 'backend' is missing".to_owned())
-        })?;
-        let backend_type = BackendType::try_from(backend_type)?;
-
-        Ok(Self { backend_type })
+    fn parse(_input: ParseStream) -> SynResult<Self> {
+        Ok(Self)
     }
 }

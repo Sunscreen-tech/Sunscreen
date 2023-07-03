@@ -225,7 +225,7 @@ mod tests {
 
     #[test]
     fn modulus_gadget_works() {
-        #[zkp_program(backend = "bulletproofs")]
+        #[zkp_program]
         fn div_rem<F: BackendField>(
             x: NativeField<F>,
             m: NativeField<F>,

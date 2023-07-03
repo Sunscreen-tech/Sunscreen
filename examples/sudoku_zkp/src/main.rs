@@ -50,7 +50,7 @@ fn main() -> Result<(), Error> {
     Ok(())
 }
 
-#[zkp_program(backend = "bulletproofs")]
+#[zkp_program]
 fn sudoku_proof<F: BackendField>(
     #[constant] constraints: [[NativeField<F>; 9]; 9],
     board: [[NativeField<F>; 9]; 9],

@@ -159,11 +159,16 @@ mod tests {
         // Verifies the trie is constructed correctly
         let mut temp_key: Vec<u64> = vec![];
         for (i, val) in key.iter().enumerate() {
-            
+
             let temp_trie = trie.clone();
             let prev_frame = temp_trie.get(&temp_key);
             temp_key.push(*val);
             let ancestor = temp_trie.get_ancestor_value(&temp_key);
+
+
+            println!();
+            println!("prev frame: {:?}", prev_frame);
+            println!("ancestor frame: {:?}", trie.get_ancestor_value(&trace1_key));
 
             if i == 0 {
                 continue;

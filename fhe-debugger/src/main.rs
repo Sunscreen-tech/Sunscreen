@@ -107,7 +107,7 @@ fn simple_multiply(a: Cipher<Signed>, b: Cipher<Signed>) -> Cipher<Signed> {
     a * b
 }
 
-fn main() -> Result<(), Error>{
+fn main() -> Result<(), Error> {
     /*
     let trace1 = Backtrace::new().frames().last().unwrap().clone();
     let trace2 = Backtrace::new().frames().last().unwrap().clone();
@@ -122,7 +122,7 @@ fn main() -> Result<(), Error>{
     println!("bruh");
     trie.insert(trace2_key, trace2);
     println!("{:?}", trie);
-    
+
 
     let mut trie2: Trie<Vec<u64>, StackFrameInfo> = Trie::new();
     let trace3 = Backtrace::new();
@@ -144,9 +144,7 @@ fn main() -> Result<(), Error>{
     }
     */
 
-    let app = Compiler::new()
-    .fhe_program(simple_multiply)
-    .compile()?;
+    let app = Compiler::new().fhe_program(simple_multiply).compile()?;
 
     let runtime = Runtime::new(app.params())?;
 
@@ -161,5 +159,4 @@ fn main() -> Result<(), Error>{
     println!("{:?}", trace);
 
     Ok(())
-
 }

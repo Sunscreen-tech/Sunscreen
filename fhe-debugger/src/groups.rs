@@ -120,6 +120,7 @@ mod tests {
         let mut trace1_key: Vec<u64> = vec![];
         let mut trie: Trie<Vec<u64>, StackFrameInfo> = Trie::new();
 
+        // Verifies the trie is constructed correctly
         for (i, trace) in trace1.iter().enumerate() {
 
             // Grab previous and ancestor frames
@@ -146,7 +147,41 @@ mod tests {
     }
 
     #[test]
-    fn backtrace_insert() {
+    fn test_single_backtrace_insert() {
+        // Insertion
+        let b = Backtrace::new();
+        let b_frames = b.frames();
+        let mut trie: Trie<Vec<u64>, StackFrameInfo> = Trie::new();
+        let mut key: Vec<u64> = (1..b_frames.len() as u64).collect();
+    
+        trie.add_stack_trace(key.clone(), b.clone());
+    
+        // Verifies the trie is constructed correctly
+        let mut temp_key: Vec<u64> = vec![];
+        for (i, val) in key.iter().enumerate() {
+            
+            let temp_trie = trie.clone();
+            let prev_frame = temp_trie.get(&temp_key);
+            temp_key.push(*val);
+            let ancestor = temp_trie.get_ancestor_value(&temp_key);
+
+            if i == 0 {
+                continue;
+            }
+
+            assert_eq!(ancestor, prev_frame);
+        }
+    }
+    
+
+    #[test]
+
+    fn mult_frame_insert() {
+
+    }
+
+    #[test]
+    fn mult_backtrace_insert() { 
 
     }
 

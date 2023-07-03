@@ -6,7 +6,7 @@ use std::path::Path;
 /**
  * Stores information about individual stack frames.
  */
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct StackFrameInfo {
     /**
      * Name of the function called.
@@ -33,7 +33,7 @@ impl StackFrameInfo {
     /**
      * Extracts relevant callee information from a `&BacktraceFrame`.
      */
-    fn new(frame: &BacktraceFrame) -> Self {
+    pub fn new(frame: &BacktraceFrame) -> Self {
         let frame_symbols = frame.symbols();
         let ip_as_bytes = (frame.ip() as usize).to_ne_bytes();
         StackFrameInfo {
@@ -106,4 +106,50 @@ impl StackFrameLookup {
             frames: Trie::<Vec<u64>, Backtrace>::new(),
         }
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn single_frame_insert() {
+        let b1 = Backtrace::new();
+
+        let trace1 = b1.frames();
+        let mut trace1_key: Vec<u64> = vec![];
+        let mut trie: Trie<Vec<u64>, StackFrameInfo> = Trie::new();
+
+        for (i, trace) in trace1.iter().enumerate() {
+
+            // Grab previous and ancestor frames
+            let temp_trie = trie.clone();
+            let prev_frame = temp_trie.get(&trace1_key);
+            let ancestor = temp_trie.get_ancestor_value(&trace1_key);
+
+            // Insert next frame 
+            trace1_key.push(i as u64);
+            let t_info = StackFrameInfo::new(trace);
+            trie.insert(trace1_key.clone(), t_info);
+
+            // First insertion doesn't have a parent
+            if i == 0 {
+                continue;
+            }
+
+            println!();
+            println!("prev frame: {:?}", prev_frame);
+            println!("ancestor frame: {:?}", trie.get_ancestor_value(&trace1_key));
+
+            assert_eq!(ancestor, prev_frame);
+        }
+    }
+
+    #[test]
+    fn backtrace_insert() {
+
+    }
+
+    #[test]
+    fn test_retrieval() {}
 }

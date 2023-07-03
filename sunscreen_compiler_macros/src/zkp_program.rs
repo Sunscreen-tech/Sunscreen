@@ -117,10 +117,11 @@ fn parse_inner(_attr_params: ZkpProgramAttrs, input_fn: ItemFn) -> Result<TokenS
                         let ident = a.0[0].path().get_ident();
 
                         match ident.map(|x| x.to_string()).as_deref() {
+                            Some("private") => {},
                             Some("public") => arg_kind = ArgumentKind::Public,
                             Some("constant") => arg_kind = ArgumentKind::Constant,
                             _ => {
-                                return Err(Error::compile_error(a.0[0].path().span(), &format!("Expected #[public] or #[constant], found {}", a.0[0].path().to_token_stream())));
+                                return Err(Error::compile_error(a.0[0].path().span(), &format!("Expected #[private], #[public] or #[constant], found {}", a.0[0].path().to_token_stream())));
                             }
                         }
                     },

@@ -1,8 +1,7 @@
 #![deny(missing_docs)]
 #![deny(rustdoc::broken_intra_doc_links)]
 
-//! This crate contains the types and functions for executing a Sunscreen FHE program
-//! (i.e. an [`FheProgram`](sunscreen_fhe_program::FheProgram)).
+//! This crate contains the types and functions for executing a Sunscreen FHE or ZKP program.
 
 mod array;
 mod error;

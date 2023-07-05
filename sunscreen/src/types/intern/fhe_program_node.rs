@@ -506,14 +506,14 @@ where
     }
 }
 
-impl<T> NumCiphertexts for FheProgramNode<T>
+impl<T, S> NumCiphertexts for FheProgramNode<T, S>
 where
     T: NumCiphertexts,
 {
     const NUM_CIPHERTEXTS: usize = T::NUM_CIPHERTEXTS;
 }
 
-impl<T> TypeName for FheProgramNode<T>
+impl<T, S> TypeName for FheProgramNode<T, S>
 where
     T: TypeName + NumCiphertexts,
 {
@@ -569,7 +569,7 @@ where
     T: FheType + GraphCipherInsert<Lit = L, Val = T>,
 {
     let node = T::graph_cipher_insert(lit);
-    unsafe_coerce(node, Stage::Literal)
+    reinterpret_cast(node, Stage::Literal)
 }
 
 /// Used for converting between types of an [`FheProgramNode`]. Implementations of this trait
@@ -590,7 +590,7 @@ pub trait Coerce<T: NumCiphertexts> {
 }
 
 // Allow trivial conversion T -> T
-impl<T: NumCiphertexts> Coerce<FheProgramNode<T>> for FheProgramNode<T> {
+impl<T: NumCiphertexts, S> Coerce<FheProgramNode<T, S>> for FheProgramNode<T, S> {
     fn coerce(self) -> Self {
         self
     }
@@ -642,7 +642,7 @@ where
 
 /// WARNING: This is an unsafe function. It allows casting graph nodes arbitrarily. Use with
 /// caution.
-fn unsafe_coerce<B: NumCiphertexts, T, A: NumCiphertexts, S>(
+fn reinterpret_cast<B: NumCiphertexts, T, A: NumCiphertexts, S>(
     a: FheProgramNode<A, S>,
     t: T,
 ) -> FheProgramNode<B, T> {
@@ -668,18 +668,18 @@ macro_rules! impl_indeterminate_arithmetic_op {
                     fn [<$op:lower>](self, rhs: FheProgramNode<Cipher<T>>) -> Self::Output {
                         let node = match self.stage {
                             Stage::Literal => {
-                                let lit_node = unsafe_coerce(self, ());
+                                let lit_node = reinterpret_cast(self, ());
                                 // N.B. we've already added this literal as a plaintext node
                                 T::[<graph_cipher_plain_ $op:lower>](rhs, lit_node)
                             }
                             Stage::Cipher => {
-                                let cipher_node = unsafe_coerce(self, ());
+                                let cipher_node = reinterpret_cast(self, ());
                                 T::[<graph_cipher_ $op:lower>](rhs, cipher_node)
                             }
                         };
                         // No matter what `self.stage` currently is, it is being operated on with a
                         // ciphertext, so its next stage is cipher.
-                        unsafe_coerce(node, Stage::Cipher)
+                        reinterpret_cast(node, Stage::Cipher)
                     }
                 }
 
@@ -697,18 +697,18 @@ macro_rules! impl_indeterminate_arithmetic_op {
                     fn [<$op:lower>](self, rhs: FheProgramNode<Indeterminate<L, T>, Stage>) -> Self::Output {
                         let node = match rhs.stage {
                             Stage::Literal => {
-                                let lit_node = unsafe_coerce(rhs, ());
+                                let lit_node = reinterpret_cast(rhs, ());
                                 // N.B. we've already added this literal as a plaintext node
                                 T::[<graph_cipher_plain_ $op:lower>](self, lit_node)
                             }
                             Stage::Cipher => {
-                                let cipher_node = unsafe_coerce(rhs, ());
+                                let cipher_node = reinterpret_cast(rhs, ());
                                 T::[<graph_cipher_ $op:lower>](self, cipher_node)
                             }
                         };
                         // No matter what `rhs.stage` currently is, it is being added to a ciphertext, so its next
                         // stage is cipher.
-                        unsafe_coerce(node, Stage::Cipher)
+                        reinterpret_cast(node, Stage::Cipher)
                     }
                 }
             }

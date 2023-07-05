@@ -293,10 +293,6 @@ fn can_insert_literals() {
 
     let context = fhe_program_sum.build(&get_params()).unwrap();
 
-    // N.B. Can't match on json like the other tests because the operation to insert a literal
-    // plaintext ends up with a pointer handle in the json that
-    // changes on each run. This appears necessary (the underlying seal ptr gets bincode encoded to
-    // be tossed around).
     assert_eq!(context.node_count(), 6);
     assert_eq!(
         context[node_index(0)].operation,

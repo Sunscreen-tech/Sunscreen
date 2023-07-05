@@ -117,10 +117,11 @@ fn parse_inner(_attr_params: ZkpProgramAttrs, input_fn: ItemFn) -> Result<TokenS
                         let ident = a.0[0].path().get_ident();
 
                         match ident.map(|x| x.to_string()).as_deref() {
+                            Some("private") => {},
                             Some("public") => arg_kind = ArgumentKind::Public,
                             Some("constant") => arg_kind = ArgumentKind::Constant,
                             _ => {
-                                return Err(Error::compile_error(a.0[0].path().span(), &format!("Expected #[public] or #[constant], found {}", a.0[0].path().to_token_stream())));
+                                return Err(Error::compile_error(a.0[0].path().span(), &format!("Expected #[private], #[public] or #[constant], found {}", a.0[0].path().to_token_stream())));
                             }
                         }
                     },
@@ -132,7 +133,8 @@ fn parse_inner(_attr_params: ZkpProgramAttrs, input_fn: ItemFn) -> Result<TokenS
                 Ok((arg_kind, a.1, a.2))
             }).collect::<Result<Vec<(ArgumentKind, &Type, &Ident)>>>()?
         },
-        Err(ExtractFnArgumentsError::ContainsSelf(s)) => Err(Error::compile_error(s, "ZKP programs must not contain self"))?,
+        Err(ExtractFnArgumentsError::ContainsSelf(s)) => Err(Error::compile_error(s, "ZKP programs must not contain `self`"))?,
+        Err(ExtractFnArgumentsError::ContainsMut(s)) => Err(Error::compile_error(s, "ZKP program arguments cannot be `mut`"))?,
         Err(ExtractFnArgumentsError::IllegalPat(s)) => Err(Error::compile_error(s, "Expected Identifier"))?,
         Err(ExtractFnArgumentsError::IllegalType(s)) => Err(Error::compile_error(s, "ZKP program arguments must be an array or named struct type"))?,
     };

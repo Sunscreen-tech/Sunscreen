@@ -1,4 +1,5 @@
 use petgraph::stable_graph::NodeIndex;
+use sunscreen_zkp_backend::BackendField;
 
 use std::{
     marker::PhantomData,
@@ -11,7 +12,7 @@ use crate::{
     INDEX_ARENA,
 };
 
-use super::{ConstrainCmpVarVar, ConstrainEqVarVar};
+use super::{ConstrainCmpVarVar, ConstrainEqVarVar, NativeField};
 
 #[derive(Clone, Copy)]
 /**
@@ -35,6 +36,21 @@ where
      */
     pub ids: &'static [NodeIndex],
     _phantom: PhantomData<T>,
+}
+
+impl<T: ZkpType> std::fmt::Debug for ProgramNode<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("ProgramNode<elided>")
+    }
+}
+
+/// Convenience function to create a ZKP program node
+pub fn zkp_node<F: BackendField, L>(lit: L) -> ProgramNode<NativeField<F>>
+where
+    F: BackendField,
+    NativeField<F>: From<L>,
+{
+    NativeField::<F>::from(lit).into_program_node()
 }
 
 /**

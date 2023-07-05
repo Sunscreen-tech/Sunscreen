@@ -6,7 +6,7 @@ type BPField = NativeField<<BulletproofsBackend as ZkpBackend>::Field>;
 
 #[test]
 fn can_add_and_mul_native_fields() {
-    #[zkp_program(backend = "bulletproofs")]
+    #[zkp_program]
     fn add_mul<F: BackendField>(a: NativeField<F>, b: NativeField<F>, c: NativeField<F>) {
         let x = a * b + c;
 
@@ -42,7 +42,7 @@ fn get_input_mismatch_on_incorrect_args() {
     use sunscreen_runtime::Error;
     use sunscreen_zkp_backend::Error as ZkpError;
 
-    #[zkp_program(backend = "bulletproofs")]
+    #[zkp_program]
     fn add_mul<F: BackendField>(a: NativeField<F>, b: NativeField<F>) {
         let _ = a + b * a;
     }
@@ -67,7 +67,7 @@ fn get_input_mismatch_on_incorrect_args() {
 
 #[test]
 fn can_use_public_inputs() {
-    #[zkp_program(backend = "bulletproofs")]
+    #[zkp_program]
     fn add_mul<F: BackendField>(#[public] a: NativeField<F>, b: NativeField<F>, c: NativeField<F>) {
         let x = a * b + c;
 
@@ -100,7 +100,7 @@ fn can_use_public_inputs() {
 
 #[test]
 fn can_use_constant_inputs() {
-    #[zkp_program(backend = "bulletproofs")]
+    #[zkp_program]
     fn add_mul<F: BackendField>(
         #[constant] a: NativeField<F>,
         b: NativeField<F>,
@@ -137,7 +137,7 @@ fn can_use_constant_inputs() {
 
 #[test]
 fn can_declare_array_inputs() {
-    #[zkp_program(backend = "bulletproofs")]
+    #[zkp_program]
     fn in_range<F: BackendField>(a: [[NativeField<F>; 9]; 64]) {
         for (i, a_i) in a.iter().enumerate() {
             for (j, a_i_j) in a_i.iter().enumerate() {

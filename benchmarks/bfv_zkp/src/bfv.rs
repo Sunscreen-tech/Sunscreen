@@ -201,7 +201,7 @@ fn div_round_bigint<const N: usize>(a: BigInt<N>, b: BigInt<N>) -> BigInt<N> {
 
 type BfvPoly<F> = RnsRingPolynomial<F, POLY_DEGREE, 1>;
 
-#[zkp_program(backend = "bulletproofs")]
+#[zkp_program]
 fn prove_enc<F: BackendField>(
     m: BfvPoly<F>,
     e_1: BfvPoly<F>,

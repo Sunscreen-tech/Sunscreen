@@ -80,7 +80,7 @@ fn make_fractional_value(bits: &[i8]) -> [[BPField; 8]; 64] {
 /// the number of decimal places in the fractional amount. This is
 /// basically free, so we don't need to time it here.
 fn unshield_tx_fractional_range_proof(_c: &mut Criterion) {
-    #[zkp_program(backend = "bulletproofs")]
+    #[zkp_program]
     /**
      * Proves the 0 < a <= b and a == c
      */
@@ -153,7 +153,7 @@ fn unshield_tx_fractional_range_proof(_c: &mut Criterion) {
 /// in the SDLP, which reduces the number of circuit inputs. However, this proof is
 /// orders of magnitude faster than the SDLP so 🤷‍♀️.
 fn private_tx_fractional_range_proof(_c: &mut Criterion) {
-    #[zkp_program(backend = "bulletproofs")]
+    #[zkp_program]
     /**
      * Proves the 0 < a <= b and a == c
      */
@@ -228,7 +228,7 @@ fn private_tx_fractional_range_proof(_c: &mut Criterion) {
 /// * a is the submitted value under a given user's key.
 /// * b is the maximum value encrypted under the same user's key.
 fn mean_variance_fractional_range_proof(_c: &mut Criterion) {
-    #[zkp_program(backend = "bulletproofs")]
+    #[zkp_program]
     /**
      * Proves the 0 < a <= b and a == c
      */
@@ -291,7 +291,7 @@ fn mean_variance_fractional_range_proof(_c: &mut Criterion) {
 ///
 /// * a_0, a_1, a_2 are submitted value under a given user's key.
 fn chi_sq_fractional_range_proof(_c: &mut Criterion) {
-    #[zkp_program(backend = "bulletproofs")]
+    #[zkp_program]
     /**
      * Proves the 0 < a <= b and a == c
      */

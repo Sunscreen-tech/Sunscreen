@@ -201,7 +201,7 @@ mod tests {
 
     #[test]
     fn can_prove_added_polynomials() {
-        #[zkp_program(backend = "bulletproofs")]
+        #[zkp_program]
         fn add_poly<F: BackendField>(
             #[constant] a: RnsRingPolynomial<F, 8, 2>,
             #[constant] b: RnsRingPolynomial<F, 8, 2>,
@@ -258,7 +258,7 @@ mod tests {
 
     #[test]
     fn can_prove_multiply_polynomials() {
-        #[zkp_program(backend = "bulletproofs")]
+        #[zkp_program]
         fn add_poly<F: BackendField>(
             #[constant] a: RnsRingPolynomial<F, 8, 2>,
             #[constant] b: RnsRingPolynomial<F, 8, 2>,
@@ -311,7 +311,7 @@ mod tests {
 
     #[test]
     fn can_scale_polynomial() {
-        #[zkp_program(backend = "bulletproofs")]
+        #[zkp_program]
         fn scale_poly<F: BackendField>(
             #[constant] a: RnsRingPolynomial<F, 8, 2>,
             #[constant] b: NativeField<F>,

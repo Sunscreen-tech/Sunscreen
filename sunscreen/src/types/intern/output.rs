@@ -50,15 +50,6 @@ where
     type Output = [T::Output; N];
 
     fn output(&self) -> Self::Output {
-        let mut outputs = Vec::with_capacity(N);
-
-        for i in self {
-            outputs.push(i.output());
-        }
-
-        match outputs.try_into() {
-            Ok(v) => v,
-            _ => unreachable!("Internal error. Length mismatch"),
-        }
+        self.map(|i| i.output())
     }
 }

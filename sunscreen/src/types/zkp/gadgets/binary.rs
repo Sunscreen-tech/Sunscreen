@@ -166,7 +166,7 @@ mod tests {
     #[test]
     fn can_assert_binary() {
         // Prove we know the value that decomposes into 0b101010
-        #[zkp_program(backend = "bulletproofs")]
+        #[zkp_program]
         fn test<F: BackendField>(a: NativeField<F>) {
             invoke_gadget(AssertBinary, a.ids);
         }
@@ -206,7 +206,7 @@ mod tests {
     #[test]
     fn can_convert_to_binary() {
         // Prove we know the value that decomposes into 0b101010
-        #[zkp_program(backend = "bulletproofs")]
+        #[zkp_program]
         fn test<F: BackendField>(a: NativeField<F>) {
             let bits = a.to_unsigned::<6>();
 

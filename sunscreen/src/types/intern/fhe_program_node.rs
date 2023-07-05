@@ -6,7 +6,9 @@ use crate::{
     },
     INDEX_ARENA,
 };
+use paste::paste;
 use petgraph::stable_graph::NodeIndex;
+use sunscreen_runtime::TypeNameInstance;
 
 use std::ops::{Add, Div, Mul, Neg, Shl, Shr, Sub};
 
@@ -42,13 +44,15 @@ use std::ops::{Add, Div, Mul, Neg, Shl, Shr, Sub};
  * Violating any of these conditions may result in memory corruption or
  * use-after-free.
  */
-pub struct FheProgramNode<T: NumCiphertexts> {
-    /**
-     * The ids on this node. The 'static lifetime on this slice is a lie. The sunscreen
-     * compiler must ensure that no FheProgramNode exists after FHE program construction.
-     */
+pub struct FheProgramNode<T: NumCiphertexts, S = ()> {
+    /// The ids on this node. The 'static lifetime on this slice is a lie. The sunscreen
+    /// compiler must ensure that no FheProgramNode exists after FHE program construction.
     pub ids: &'static [NodeIndex],
 
+    /// Typically unused, but can be added to store value-level information on the graph nodes.
+    stage: S,
+
+    /// Marks the type of the value that this graph node corresponds to.
     _phantom: std::marker::PhantomData<T>,
 }
 
@@ -73,6 +77,12 @@ impl<T: NumCiphertexts> FheProgramNode<T> {
      * result in use-after-free.
      */
     pub fn new(ids: &[NodeIndex]) -> Self {
+        Self::new_with_stage(ids, ())
+    }
+}
+
+impl<T: NumCiphertexts, S> FheProgramNode<T, S> {
+    fn new_with_stage(ids: &[NodeIndex], stage: S) -> Self {
         INDEX_ARENA.with(|allocator| {
             let allocator = allocator.borrow();
             let ids_dest = allocator.alloc_slice_copy(ids);
@@ -85,6 +95,7 @@ impl<T: NumCiphertexts> FheProgramNode<T> {
             // We invoke the dark transmutation ritual to turn a finite lifetime into a 'static.
             Self {
                 ids: unsafe { std::mem::transmute(ids_dest) },
+                stage,
                 _phantom: std::marker::PhantomData,
             }
         })
@@ -146,6 +157,8 @@ where
         U::graph_cipher_const_add(self, rhs)
     }
 }
+
+// TODO can these literal impls be combined into `L: FheLiteral` ?
 
 // literal + cipher
 impl<T> Add<FheProgramNode<Cipher<T>>> for u64
@@ -493,14 +506,14 @@ where
     }
 }
 
-impl<T> NumCiphertexts for FheProgramNode<T>
+impl<T, S> NumCiphertexts for FheProgramNode<T, S>
 where
     T: NumCiphertexts,
 {
     const NUM_CIPHERTEXTS: usize = T::NUM_CIPHERTEXTS;
 }
 
-impl<T> TypeName for FheProgramNode<T>
+impl<T, S> TypeName for FheProgramNode<T, S>
 where
     T: TypeName + NumCiphertexts,
 {
@@ -508,3 +521,199 @@ where
         T::type_name()
     }
 }
+
+/// This type comes in handy when constructing values that start off as literals but turn into
+/// ciphertexts; e.g. `let sum = 0; sum = sum + cipher`.
+///
+/// # Warning
+/// It is illegal to output an `FheProgramNode<Indeterminate, S>` with `S == Stage::Literal`.
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum Stage {
+    /// Initial stage of indeterminate type: literal/plaintext
+    Literal,
+    /// Ciphertext stage: occurs after any operations with ciphertext
+    Cipher,
+}
+
+/// Used in tandem with `Stage`. Ultimately, the purpose is to allow a single type to span
+/// plaintexts and ciphertexts. The only requirement is that, upon output, the type must resolve to
+/// a ciphertext.
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub struct Indeterminate<L: FheLiteral, T: FheType> {
+    _lit: std::marker::PhantomData<L>,
+    _type: std::marker::PhantomData<T>,
+}
+
+impl<L, T> TypeNameInstance for Indeterminate<L, T>
+where
+    L: FheLiteral,
+    T: FheType + TypeName,
+{
+    fn type_name_instance(&self) -> Type {
+        T::type_name()
+    }
+}
+
+impl<L, T> NumCiphertexts for Indeterminate<L, T>
+where
+    L: FheLiteral,
+    T: FheType + NumCiphertexts,
+{
+    const NUM_CIPHERTEXTS: usize = T::NUM_CIPHERTEXTS;
+}
+
+/// Create a new fhe program node from any supported literal type.
+pub fn fhe_node<L, T>(lit: L) -> FheProgramNode<Indeterminate<L, T>, Stage>
+where
+    L: FheLiteral,
+    T: FheType + GraphCipherInsert<Lit = L, Val = T>,
+{
+    let node = T::graph_cipher_insert(lit);
+    reinterpret_cast(node, Stage::Literal)
+}
+
+/// Used for converting between types of an [`FheProgramNode`]. Implementations of this trait
+/// define the legal conversions.
+// Note: this is more of an `Into::into` flavor, which typically has weaker inference than
+// `From::from`. However, the resulting type is specified explicitly by the `internal_inner`
+// function generated in the `#[fhe_program]` macro, so there shouldn't be any problems. If
+// necessary, we could adapt the macro to support a `From` style trait pretty easily.
+pub trait Coerce<T: NumCiphertexts> {
+    /// Coerce one `FheProgramNode` to another. The underlying value stays the same, but the types
+    /// change. This function is allowed to panic on invalid coercions, which will result in a
+    /// failed `Err` state when compiling the FHE program.
+    ///
+    /// An invalid coercion would be defining a variable with [`crate::fhe_var!`] and coercing
+    /// it as a `Cipher<T>` before assigning it to the result of an arithmetic operation with a
+    /// ciphertext.
+    fn coerce(self) -> T;
+}
+
+// Allow trivial conversion T -> T
+impl<T: NumCiphertexts, S> Coerce<FheProgramNode<T, S>> for FheProgramNode<T, S> {
+    fn coerce(self) -> Self {
+        self
+    }
+}
+
+// If T -> V is legal, then so is [T] -> [V]
+impl<T, V, const N: usize> Coerce<[V; N]> for [T; N]
+where
+    V: NumCiphertexts,
+    T: Coerce<V>,
+{
+    fn coerce(self) -> [V; N] {
+        self.map(Coerce::<V>::coerce)
+    }
+}
+
+// Allow `Indeterminate` -> `Cipher`, but panic if at `Stage::Literal`
+impl<L, T> Coerce<FheProgramNode<Cipher<T>>> for FheProgramNode<Indeterminate<L, T>, Stage>
+where
+    L: FheLiteral,
+    T: FheType,
+{
+    fn coerce(self) -> FheProgramNode<Cipher<T>> {
+        match self.stage {
+            Stage::Literal => panic!("User created FHE variables must undergo arithmetic operations with ciphertexts before they are returned as output."),
+            Stage::Cipher => {
+                FheProgramNode {
+                    ids: self.ids,
+                    stage: (),
+                    _phantom: std::marker::PhantomData,
+                }
+            }
+    }
+    }
+}
+
+// This is such a common one, let the user call `var.into()` in their programs.
+// We unfortunately can't make a very generic impl here, as it would conflict with the blanket
+// `From<T> for T`.
+impl<L, T> From<FheProgramNode<Indeterminate<L, T>, Stage>> for FheProgramNode<Cipher<T>>
+where
+    L: FheLiteral,
+    T: FheType,
+{
+    fn from(value: FheProgramNode<Indeterminate<L, T>, Stage>) -> Self {
+        value.coerce()
+    }
+}
+
+/// WARNING: This is an unsafe function. It allows casting graph nodes arbitrarily. Use with
+/// caution.
+fn reinterpret_cast<B: NumCiphertexts, T, A: NumCiphertexts, S>(
+    a: FheProgramNode<A, S>,
+    t: T,
+) -> FheProgramNode<B, T> {
+    FheProgramNode {
+        ids: a.ids,
+        stage: t,
+        _phantom: std::marker::PhantomData,
+    }
+}
+
+macro_rules! impl_indeterminate_arithmetic_op {
+    ($($op:ident),+) => {
+        $(
+            paste! {
+                // literal|cipher <> cipher outputs literal|[cipher]
+                impl<L, T> $op<FheProgramNode<Cipher<T>>> for FheProgramNode<Indeterminate<L, T>, Stage>
+                where
+                    T: FheType + [<GraphCipherPlain $op>]<Left = T, Right = T> + [<GraphCipher $op>]<Left = T, Right = T>,
+                    L: FheLiteral,
+                {
+                    type Output = Self;
+
+                    fn [<$op:lower>](self, rhs: FheProgramNode<Cipher<T>>) -> Self::Output {
+                        let node = match self.stage {
+                            Stage::Literal => {
+                                let lit_node = reinterpret_cast(self, ());
+                                // N.B. we've already added this literal as a plaintext node
+                                T::[<graph_cipher_plain_ $op:lower>](rhs, lit_node)
+                            }
+                            Stage::Cipher => {
+                                let cipher_node = reinterpret_cast(self, ());
+                                T::[<graph_cipher_ $op:lower>](rhs, cipher_node)
+                            }
+                        };
+                        // No matter what `self.stage` currently is, it is being operated on with a
+                        // ciphertext, so its next stage is cipher.
+                        reinterpret_cast(node, Stage::Cipher)
+                    }
+                }
+
+                // cipher <> literal|cipher outputs literal|[cipher]
+                impl<L, T> $op<FheProgramNode<Indeterminate<L, T>, Stage>> for FheProgramNode<Cipher<T>>
+                where
+                    T: FheType + [<GraphCipherPlain $op>]<Left = T, Right = T> + [<GraphCipher $op>]<Left = T, Right = T>,
+                    L: FheLiteral,
+                {
+                    // A little bit of pick your poison here. However it is more likely that the
+                    // user is mutating an `fhe_var` than a normal ciphertext. Worst case, they call
+                    // `.into()` on the resulting node.
+                    type Output = FheProgramNode<Indeterminate<L, T>, Stage>;
+
+                    fn [<$op:lower>](self, rhs: FheProgramNode<Indeterminate<L, T>, Stage>) -> Self::Output {
+                        let node = match rhs.stage {
+                            Stage::Literal => {
+                                let lit_node = reinterpret_cast(rhs, ());
+                                // N.B. we've already added this literal as a plaintext node
+                                T::[<graph_cipher_plain_ $op:lower>](self, lit_node)
+                            }
+                            Stage::Cipher => {
+                                let cipher_node = reinterpret_cast(rhs, ());
+                                T::[<graph_cipher_ $op:lower>](self, cipher_node)
+                            }
+                        };
+                        // No matter what `rhs.stage` currently is, it is being added to a ciphertext, so its next
+                        // stage is cipher.
+                        reinterpret_cast(node, Stage::Cipher)
+                    }
+                }
+            }
+        )+
+    };
+}
+
+impl_indeterminate_arithmetic_op! {Add, Sub, Mul, Div}

@@ -5,9 +5,9 @@ use crate::{
     types::{
         ops::{
             GraphCipherAdd, GraphCipherConstAdd, GraphCipherConstDiv, GraphCipherConstMul,
-            GraphCipherConstSub, GraphCipherMul, GraphCipherNeg, GraphCipherPlainAdd,
-            GraphCipherPlainMul, GraphCipherPlainSub, GraphCipherSub, GraphConstCipherSub,
-            GraphPlainCipherSub,
+            GraphCipherConstSub, GraphCipherInsert, GraphCipherMul, GraphCipherNeg,
+            GraphCipherPlainAdd, GraphCipherPlainMul, GraphCipherPlainSub, GraphCipherSub,
+            GraphConstCipherSub, GraphPlainCipherSub,
         },
         Cipher,
     },
@@ -232,6 +232,20 @@ impl<const INT_BITS: usize> GraphCipherPlainAdd for Fractional<INT_BITS> {
             let n = ctx.add_addition_plaintext(a.ids[0], b.ids[0]);
 
             FheProgramNode::new(&[n])
+        })
+    }
+}
+
+impl<const INT_BITS: usize> GraphCipherInsert for Fractional<INT_BITS> {
+    type Lit = f64;
+    type Val = Self;
+
+    fn graph_cipher_insert(lit: Self::Lit) -> FheProgramNode<Self::Val> {
+        with_fhe_ctx(|ctx| {
+            let lit = Self::from(lit).try_into_plaintext(&ctx.data).unwrap();
+            let lit = ctx.add_plaintext_literal(lit.inner);
+
+            FheProgramNode::new(&[lit])
         })
     }
 }

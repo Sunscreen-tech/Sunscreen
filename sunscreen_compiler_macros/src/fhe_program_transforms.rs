@@ -1,6 +1,6 @@
 use proc_macro2::{Span, TokenStream as TokenStream2};
-use quote::{format_ident, quote, quote_spanned};
-use syn::{parse_quote, parse_quote_spanned, spanned::Spanned, Index, ReturnType, Type};
+use quote::{format_ident, quote, quote_spanned, ToTokens};
+use syn::{parse_quote, parse_quote_spanned, spanned::Spanned, Ident, Index, ReturnType, Type};
 
 #[derive(Debug)]
 pub enum MapFheTypeError {
@@ -9,8 +9,8 @@ pub enum MapFheTypeError {
 
 /**
  * Given an input type T, returns
- * * FheProgramInput<T> when T is a Path
- * * [map_input_type(T); N] when T is Array
+ * * FheProgramNode<T> when T is a Path
+ * * [FheProgramNode<T>; N] when T is Array
  */
 pub fn map_fhe_type(arg_type: &Type) -> Result<Type, MapFheTypeError> {
     let transformed_type = match arg_type {
@@ -44,20 +44,12 @@ pub fn create_fhe_program_node(var_name: &str, arg_type: &Type) -> TokenStream2 
             };
         }
     };
+
     let var_name = format_ident!("{}", var_name);
 
-    let type_annotation = match arg_type {
-        Type::Path(ty) => quote_spanned! { ty.span() => FheProgramNode },
-        Type::Array(a) => quote_spanned! { a.span() =>
-            <#mapped_type>
-        },
-        _ => quote! {
-            compile_error!("fhe_program arguments' name must be a simple identifier and type must be a plain path.");
-        },
-    };
-
     quote_spanned! {arg_type.span() =>
-        let #var_name: #mapped_type = #type_annotation::input();
+        { struct _AssertInput where #mapped_type: Input; }
+        let #var_name: #mapped_type = <#mapped_type as Input>::input();
     }
 }
 
@@ -105,31 +97,52 @@ pub fn extract_return_types(ret: &ReturnType) -> Result<Vec<Type>, ExtractReturn
 }
 
 /**
- * Takes an array of return types and packages them into a tuple
- * if needed.
+ * Takes an array of tokens and packages them into a tuple if needed.
  */
-pub fn pack_return_type(return_types: &[Type]) -> Type {
-    match return_types.len() {
-        0 => parse_quote! { () },
-        1 => return_types[0].clone(),
+pub fn pack_into_tuple<T: ToTokens>(ts: &[T]) -> TokenStream2 {
+    match ts {
+        [] => parse_quote! { () },
+        [t] => t.to_token_stream(),
         _ => {
-            parse_quote_spanned! {return_types[0].span() => ( #(#return_types),* ) }
+            quote_spanned! {ts[0].span()=> ( #(#ts),* ) }
         }
     }
 }
 
-pub fn emit_output_capture(return_types: &[Type]) -> TokenStream2 {
-    match return_types.len() {
-        1 => quote_spanned! { return_types[0].span() => v.output(); },
+/**
+ * Takes an array of types and wraps each in an `impl Coerce<_>`
+*/
+pub fn wrap_impl_coerce(ts: &[Type]) -> Vec<Type> {
+    ts.iter()
+        .map(|t| parse_quote_spanned! {t.span()=> impl Coerce<#t>})
+        .collect()
+}
+
+/**
+ * Takes an array of idents and suffixes each with `.coerce()`
+*/
+pub fn suffix_coerce(is: &[Ident]) -> Vec<TokenStream2> {
+    is.iter()
+        .map(|i| quote_spanned! {i.span()=> #i.coerce()})
+        .collect()
+}
+
+pub fn emit_output_capture(var: &Ident, return_types: &[Type]) -> TokenStream2 {
+    match return_types {
+        [ty] => quote_spanned! { ty.span() => {
+            struct _AssertOutput where FheProgramNode<#ty>: Output;
+            #var.output();
+        }},
         _ => return_types
             .iter()
             .enumerate()
-            .map(|(i, t)| {
+            .map(|(i, ty)| {
                 let index = Index::from(i);
 
-                quote_spanned! {t.span() =>
-                    v.#index.output();
-                }
+                quote_spanned! {ty.span() => {
+                    struct _AssertOutput where FheProgramNode<#ty>: Output;
+                    #var.#index.output();
+                }}
             })
             .collect(),
     }
@@ -301,7 +314,8 @@ mod test {
         let actual = create_fhe_program_node("horse", &type_name);
 
         let expected = quote! {
-            let horse: FheProgramNode<Cipher<Rational> > = FheProgramNode::input();
+            { struct _AssertInput where FheProgramNode<Cipher<Rational> >: Input; }
+            let horse: FheProgramNode<Cipher<Rational> > = <FheProgramNode<Cipher<Rational> > as Input>::input();
         };
 
         assert_syn_eq(&actual, &expected);
@@ -318,7 +332,8 @@ mod test {
         let actual = create_fhe_program_node("horse", &type_name);
 
         let expected = quote! {
-            let horse: [FheProgramNode<Cipher<Rational> >; 7] = <[FheProgramNode<Cipher<Rational> >; 7]>::input();
+            { struct _AssertInput where [FheProgramNode<Cipher<Rational> >; 7]: Input; }
+            let horse: [FheProgramNode<Cipher<Rational> >; 7] = <[FheProgramNode<Cipher<Rational> >; 7] as Input>::input();
         };
 
         assert_syn_eq(&actual, &expected);
@@ -335,7 +350,8 @@ mod test {
         let actual = create_fhe_program_node("horse", &type_name);
 
         let expected = quote! {
-            let horse: [[FheProgramNode<Cipher<Rational> >; 7]; 6] = <[[FheProgramNode<Cipher<Rational> >; 7]; 6]>::input();
+            { struct _AssertInput where [[FheProgramNode<Cipher<Rational> >; 7]; 6]: Input; }
+            let horse: [[FheProgramNode<Cipher<Rational> >; 7]; 6] = <[[FheProgramNode<Cipher<Rational> >; 7]; 6] as Input>::input();
         };
 
         assert_syn_eq(&actual, &expected);
@@ -422,10 +438,14 @@ mod test {
 
         let extracted = extract_return_types(&return_type).unwrap();
 
-        let actual = emit_output_capture(&extracted);
+        let var = format_ident!("__v");
+        let actual = emit_output_capture(&var, &extracted);
 
         let expected = quote! {
-            v.output();
+            {
+                struct _AssertOutput where FheProgramNode< Cipher < Signed > > : Output;
+                __v.output();
+            }
         };
 
         assert_syn_eq(&actual, &expected);
@@ -441,11 +461,18 @@ mod test {
 
         let extracted = extract_return_types(&return_type).unwrap();
 
-        let actual = emit_output_capture(&extracted);
+        let var = format_ident!("__v");
+        let actual = emit_output_capture(&var, &extracted);
 
         let expected = quote! {
-            v.0.output();
-            v.1.output();
+            {
+                struct _AssertOutput where FheProgramNode< Cipher < Signed > > : Output;
+                __v.0.output();
+            }
+            {
+                struct _AssertOutput where FheProgramNode<[[Cipher<Signed>; 6]; 7]>: Output;
+                __v.1.output();
+            }
         };
 
         assert_syn_eq(&actual, &expected);

@@ -554,6 +554,20 @@ impl<const LANES: usize> GraphCipherMul for Batched<LANES> {
     }
 }
 
+impl<const LANES: usize> GraphCipherInsert for Batched<LANES> {
+    type Lit = i64;
+    type Val = Self;
+
+    fn graph_cipher_insert(lit: Self::Lit) -> FheProgramNode<Self::Val> {
+        with_fhe_ctx(|ctx| {
+            let lit = Self::from(lit).try_into_plaintext(&ctx.data).unwrap();
+            let l = ctx.add_plaintext_literal(lit.inner);
+
+            FheProgramNode::new(&[l])
+        })
+    }
+}
+
 impl<const LANES: usize> GraphCipherConstMul for Batched<LANES> {
     type Left = Self;
     type Right = i64;

@@ -591,7 +591,7 @@ mod tests {
 
     #[test]
     fn fhe_zkp_program_yields_fhezkp_compiler() {
-        #[zkp_program(backend = "bulletproofs")]
+        #[zkp_program]
         fn kitty<F: BackendField>() {}
 
         #[fhe_program(scheme = "bfv")]
@@ -619,7 +619,7 @@ mod tests {
 
     #[test]
     fn compiling_zkp_program_yields_zkp_application() {
-        #[zkp_program(backend = "bulletproofs")]
+        #[zkp_program]
         fn kitty<F: BackendField>() {}
 
         let app = GenericCompiler::new()
@@ -633,7 +633,7 @@ mod tests {
 
     #[test]
     fn compiling_fhe_and_zkp_program_yields_fhezkp_application() {
-        #[zkp_program(backend = "bulletproofs")]
+        #[zkp_program]
         fn kitty<F: BackendField>(_a: NativeField<F>) {}
 
         #[fhe_program(scheme = "bfv")]

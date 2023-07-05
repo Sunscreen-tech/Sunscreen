@@ -428,7 +428,7 @@ mod tests {
 
     #[test]
     fn can_compare_le_bounded() {
-        #[zkp_program(backend = "bulletproofs")]
+        #[zkp_program]
         fn le<F: BackendField>(x: NativeField<F>, y: NativeField<F>) {
             x.constrain_le_bounded(y, 16);
         }
@@ -477,7 +477,7 @@ mod tests {
 
     #[test]
     fn can_compare_lt_bounded() {
-        #[zkp_program(backend = "bulletproofs")]
+        #[zkp_program]
         fn le<F: BackendField>(x: NativeField<F>, y: NativeField<F>) {
             x.constrain_lt_bounded(y, 16);
         }
@@ -526,7 +526,7 @@ mod tests {
 
     #[test]
     fn can_compare_ge_bounded() {
-        #[zkp_program(backend = "bulletproofs")]
+        #[zkp_program]
         fn le<F: BackendField>(x: NativeField<F>, y: NativeField<F>) {
             x.constrain_ge_bounded(y, 16);
         }
@@ -575,7 +575,7 @@ mod tests {
 
     #[test]
     fn can_compare_gt_bounded() {
-        #[zkp_program(backend = "bulletproofs")]
+        #[zkp_program]
         fn le<F: BackendField>(x: NativeField<F>, y: NativeField<F>) {
             x.constrain_gt_bounded(y, 16);
         }

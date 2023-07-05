@@ -147,7 +147,7 @@ mod tests {
     }
 
     #[test]
-    fn test_single_backtrace_insert() {
+    fn single_backtrace_insert() {
         // Insertion
         let b = Backtrace::new();
         let b_frames = b.frames();
@@ -179,16 +179,36 @@ mod tests {
     
 
     #[test]
-
     fn mult_frame_insert() {
 
     }
 
     #[test]
     fn mult_backtrace_insert() { 
+        let b1 = Backtrace::new();
+        let b2 = Backtrace::new();
+        let b1_frames = b1.frames();
+        let b2_frames = b2.frames();
+
+        let mut trie: Trie<Vec<u64>, StackFrameInfo> = Trie::new();
+
+        let k1: Vec<u64> = (1..b1_frames.len() as u64).collect();
+        let k2: Vec<u64> = (2..(b2_frames.len()+1) as u64).collect();
+
+        trie.add_stack_trace(k1, b1);
+        trie.add_stack_trace(k2, b2);
 
     }
 
     #[test]
-    fn test_retrieval() {}
+    fn test_retrieval() {
+        let b1 = Backtrace::new();
+
+
+    }
+
+    #[test]
+    fn test_empty_retrieval() {
+
+    }
 }

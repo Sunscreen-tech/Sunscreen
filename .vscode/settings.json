@@ -20,6 +20,7 @@
     ],
     "OpenCL.server.deviceID": 124252029,
     "rust-analyzer.linkedProjects": [
+        "./fhe-debugger/Cargo.toml",
         "./fhe-debugger/Cargo.toml"
     ]
 }

@@ -5,15 +5,15 @@ use backtrace::Backtrace;
 use radix_trie::Trie;
 
 mod groups;
+mod callstack;
 
-use groups::StackFrames;
 use sunscreen::{
     fhe_program,
     types::{bfv::Signed, Cipher},
     Compiler, Error, Runtime,
 };
 
-use crate::groups::StackFrameInfo;
+use crate::callstack::StackFrameInfo;
 
 /*
 // Setup to build front-end with `cargo run`

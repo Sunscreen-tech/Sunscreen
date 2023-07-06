@@ -1153,7 +1153,7 @@ mod tests {
 
         let b_values = [[1], [2]];
 
-        let c_values = [
+        let a_kron_b_values = [
             [1, 2, 3],
             [2, 4, 6],
             [4, 5, 6],
@@ -1162,12 +1162,25 @@ mod tests {
             [14, 16, 18],
         ];
 
-        let c_expected = Matrix::from(c_values.map(|row| row.map(Fp::from)));
+        let b_kron_a_values = [
+            [1, 2, 3],
+            [4, 5, 6],
+            [7, 8, 9],
+            [2, 4, 6],
+            [8, 10, 12],
+            [14, 16, 18],
+        ];
 
         let a = Matrix::from(a_values.map(|row| row.map(Fp::from)));
         let b = Matrix::from(b_values.map(|row| row.map(Fp::from)));
-        let c = kronecker_product(&a, &b);
 
-        assert_eq!(c, c_expected);
+        let a_kron_b_expected = Matrix::from(a_kron_b_values.map(|row| row.map(Fp::from)));
+        let b_kron_a_expected = Matrix::from(b_kron_a_values.map(|row| row.map(Fp::from)));
+
+        let a_kron_b = kronecker_product(&a, &b);
+        let b_kron_a = kronecker_product(&b, &a);
+
+        assert_eq!(a_kron_b, a_kron_b_expected);
+        assert_eq!(b_kron_a, b_kron_a_expected);
     }
 }

@@ -132,13 +132,6 @@ pub mod linear_relation {
         assert_eq!(lhs, t.evaluate(&alpha));
     }
 
-    fn replicate_as_matrix<T>(v: Vec<T>, k: usize) -> Matrix<T>
-    where
-        T: Zero + Copy,
-    {
-        Matrix::from((vec![v; k]).into_iter().flatten().collect::<Vec<T>>())
-    }
-
     /**
      * Asserts the first identity after equation 18 in the short discrete
      * log proof paper. I.e., multiply both sides by gamma transpose and

@@ -348,7 +348,7 @@ impl LogProof {
 
         if cfg!(debug_assertions) {
             linear_relation::assert_eval(pk, &r_1, &r_2, &alpha);
-            // Problematic
+
             linear_relation::assert_poly_expansion(
                 pk,
                 &s_serialized,

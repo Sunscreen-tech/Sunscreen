@@ -86,7 +86,9 @@ where
 
     println!("Generating data...");
 
-    let coeffs = (0..POLY_DEGREE).map(|x| x % 2).collect::<Vec<u64>>();
+    let coeffs = (0..POLY_DEGREE)
+        .map(|x| (x % 2) as i64)
+        .collect::<Vec<i64>>();
 
     // We set the bounds on the coefficients to either be zero if the
     // coefficient is zero or BIT_SIZE. Once could choose tighter bounds on
@@ -215,7 +217,7 @@ fn params_4096_1ct(_: &mut Criterion) {
     bfv_benchmark::<FqSeal128_4096, 4096, 1, 2>();
 }
 
-fn print_results(_: &mut Criterion) {
+fn printout(_: &mut Criterion) {
     println!("Printing out results as a csv table\n");
     println!("{}", *RESULTS.lock().unwrap());
 }
@@ -231,7 +233,7 @@ criterion_group!(
     params_4096_1ct,
     params_4096_2ct,
     params_4096_3ct,
-    print_results
+    printout
 );
 
 criterion_main!(benches);

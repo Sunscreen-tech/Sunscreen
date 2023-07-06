@@ -279,10 +279,20 @@ pub fn print_polynomial<F: Field>(p: &DensePolynomial<F>) {
 
 #[allow(unused)]
 /**
- * For debugging. Makes a polynomial with the given u64 coefficients in converted to field Fp.
+ * For debugging. Makes a polynomial with the given i64 coefficients in converted to field Fp.
  */
-pub fn make_poly<F: Field + From<u64>>(coeffs: &[u64]) -> DensePolynomial<F> {
-    let coeffs = coeffs.iter().map(|x| F::from(*x)).collect();
+pub fn make_poly<F: Field + From<u64>>(coeffs: &[i64]) -> DensePolynomial<F> {
+    let zero = F::zero();
+    let coeffs = coeffs
+        .iter()
+        .map(|x| {
+            if *x >= 0 {
+                F::from(*x as u64)
+            } else {
+                zero - F::from(-*x as u64)
+            }
+        })
+        .collect();
 
     DensePolynomial { coeffs }
 }

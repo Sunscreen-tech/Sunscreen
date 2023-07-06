@@ -1138,9 +1138,9 @@ mod test {
         ]);
 
         let s_coeff = vec![
-            vec![vec![1u64, 2, 3, 4, 5, 6, 7, 8]; k],
-            vec![vec![1, 0, 1, 0, 1, 0, 1]; k],
-            vec![vec![0, 1, 0, 1, 1, 0, 1]; k],
+            vec![vec![1i64, 2, 3, 4, 5, 6, 7, 8]; k],
+            vec![vec![-1, 0, 1, 0, -1, 0, -1]; k],
+            vec![vec![0, -1, 0, 1, -1, 0, 1]; k],
         ];
 
         let s_poly = s_coeff
@@ -1177,7 +1177,7 @@ mod test {
                                     if x == 0 {
                                         0
                                     } else {
-                                        next_higher_power_of_two(x)
+                                        next_higher_power_of_two(x.abs() as u64)
                                     }
                                 })
                                 .collect::<Vec<u64>>()

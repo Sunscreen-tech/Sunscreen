@@ -137,7 +137,7 @@ where
 
     let mut transcript = Transcript::new(b"test");
 
-    let pk = LogProofProverKnowledge::new(&a, &s, &t, b, &f);
+    let pk = LogProofProverKnowledge::new(&a, &s, &t, &b, &f);
 
     let now = Instant::now();
     let gens = LogProofGenerators::new(pk.vk.l() as usize);

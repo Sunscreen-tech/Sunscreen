@@ -284,14 +284,14 @@ where
         a: &MatrixPoly<Q>,
         s: &MatrixPoly<Q>,
         t: &MatrixPoly<Q>,
-        bounds: Matrix<Bounds>,
+        bounds: &Matrix<Bounds>,
         f: &DensePolynomial<Q>,
     ) -> Self {
         assert_eq!(a.cols, s.rows);
         assert_eq!(a.rows, t.rows);
         assert_eq!(s.cols, t.cols);
 
-        let vk = VerifierKnowledge::new(a.clone(), t.clone(), f.clone(), bounds);
+        let vk = VerifierKnowledge::new(a.clone(), t.clone(), f.clone(), bounds.clone());
 
         Self { s: s.clone(), vk }
     }
@@ -1177,7 +1177,7 @@ mod test {
                                     if x == 0 {
                                         0
                                     } else {
-                                        next_higher_power_of_two(x.abs() as u64)
+                                        next_higher_power_of_two(x.unsigned_abs())
                                     }
                                 })
                                 .collect::<Vec<u64>>()
@@ -1341,7 +1341,7 @@ mod test {
 
         let LatticeProblem { a, s, t, f, b } = test_lattice::<Fq>(k);
 
-        let pk = ProverKnowledge::new(&a, &s, &t, b, &f);
+        let pk = ProverKnowledge::new(&a, &s, &t, &b, &f);
 
         let mut transcript = Transcript::new(b"test");
         let mut verify_transcript = transcript.clone();

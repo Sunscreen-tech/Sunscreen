@@ -289,7 +289,7 @@ pub fn make_poly<F: Field + From<u64>>(coeffs: &[i64]) -> DensePolynomial<F> {
             if *x >= 0 {
                 F::from(*x as u64)
             } else {
-                zero - F::from(-*x as u64)
+                zero - F::from(x.unsigned_abs())
             }
         })
         .collect();

@@ -16,8 +16,6 @@ use crate::{
 
 #[allow(unused)]
 pub mod linear_relation {
-    use std::ops::Mul;
-
     use super::*;
 
     /**

@@ -1,4 +1,5 @@
 use crate::callstack::StackFrameInfo;
+use backtrace::{Backtrace, BacktraceFrame, SymbolName};
 /**
  * Represents a group of `ProgramNodes` associated with an operation.
  * 
@@ -8,6 +9,15 @@ use crate::callstack::StackFrameInfo;
 pub struct ProgramGroup {
     operation: StackFrameInfo,
     grouped_nodes: Vec<u64>, // maybe make this a hashset for fast lookup
+}
+
+impl ProgramGroup {
+    pub fn new(frame: &BacktraceFrame) -> Self {
+        ProgramGroup {
+            operation: StackFrameInfo::new(frame),
+            grouped_nodes: Vec::new()
+        }
+    }
 }
 
 pub struct ProgramContext {
@@ -22,6 +32,7 @@ impl ProgramContext {
     }
 
     pub fn push(&mut self, group: ProgramGroup) {
+        // TODO: Update `group_counter` for `Context` struct in sunscreen_compiler_common
         self.group_stack.push(group);
     } 
 

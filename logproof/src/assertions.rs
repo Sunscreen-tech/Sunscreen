@@ -7,7 +7,8 @@ use crate::{
     crypto::CryptoHash,
     fields::{FieldFrom, FieldInto, FpRistretto},
     linear_algebra::{
-        HadamardProduct, Identity, InnerProduct, Matrix, PolynomialMatrix, ScalarMul,
+        kronecker_product, HadamardProduct, Identity, InnerProduct, Matrix, PolynomialMatrix,
+        ScalarMul,
     },
     linear_relation::ProverKnowledge,
     math::{FieldModulus, ModSwitch, One, Powers, Tensor, TwosComplementCoeffs, Zero},
@@ -119,12 +120,12 @@ pub mod linear_relation {
 
         let i = Matrix::<FpRistretto>::identity(k);
 
-        let a_eval = a.evaluate(&alpha);
+        let a_eval: Matrix<FpRistretto> = a.evaluate(&alpha);
         let f_eval = f.evaluate(&alpha);
 
-        let lhs = a_eval * s * Matrix::from((&i).tensor(alpha_d))
-            + r_1.scalar_mul(q) * Matrix::from((&i).tensor(alpha_2d_min_1))
-            + r_2.scalar_mul(f_eval) * Matrix::from((&i).tensor(alpha_d_min_1));
+        let lhs = a_eval * s * kronecker_product(&i, &Matrix::from(alpha_d))
+            + r_1.scalar_mul(q) * kronecker_product(&i, &Matrix::from(alpha_2d_min_1))
+            + r_2.scalar_mul(f_eval) * kronecker_product(&i, &Matrix::from(alpha_d_min_1));
 
         assert_eq!(lhs, t.evaluate(&alpha));
     }

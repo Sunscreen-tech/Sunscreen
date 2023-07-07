@@ -348,6 +348,7 @@ impl LogProof {
 
         if cfg!(debug_assertions) {
             linear_relation::assert_eval(pk, &r_1, &r_2, &alpha);
+
             linear_relation::assert_poly_expansion(
                 pk,
                 &s_serialized,
@@ -355,6 +356,7 @@ impl LogProof {
                 &r_2_serialized,
                 &alpha,
             );
+
             linear_relation::assert_scaled_poly_expansion(
                 pk,
                 &s_serialized,
@@ -364,6 +366,7 @@ impl LogProof {
                 &beta,
                 &gamma,
             );
+
             linear_relation::assert_inner_product_form(
                 pk,
                 &s_serialized,
@@ -953,7 +956,9 @@ mod test {
 
     use super::*;
 
-    fn test_lattice<Q>() -> (
+    fn test_lattice<Q>(
+        k: usize,
+    ) -> (
         MatrixPoly<Q>,
         MatrixPoly<Q>,
         MatrixPoly<Q>,
@@ -975,11 +980,22 @@ mod test {
             ],
         ]);
 
-        let s = MatrixPoly::from([
-            [make_poly::<Q>(&[1, 2, 3, 4, 5, 6, 7, 8])],
-            [make_poly::<Q>(&[1, 0, 1, 0, 1, 0, 1])],
-            [make_poly::<Q>(&[0, 1, 0, 1, 1, 0, 1])],
-        ]);
+        let s_coeff = vec![
+            vec![vec![1u64, 2, 3, 4, 5, 6, 7, 8]; k],
+            vec![vec![1, 0, 1, 0, 1, 0, 1]; k],
+            vec![vec![0, 1, 0, 1, 1, 0, 1]; k],
+        ];
+
+        let s_poly = s_coeff
+            .iter()
+            .map(|x| {
+                x.iter()
+                    .map(|y| make_poly::<Q>(y))
+                    .collect::<Vec<DensePolynomial<Q>>>()
+            })
+            .collect::<Vec<Vec<DensePolynomial<Q>>>>();
+
+        let s = MatrixPoly::from(s_poly);
 
         // x^8 + 1
         let f = make_poly::<Q>(&[1, 0, 0, 0, 0, 0, 0, 0, 1]);
@@ -995,7 +1011,7 @@ mod test {
     fn can_compute_residues() {
         type Q = FqSeal128_8192;
 
-        let (a, s, t_mod_f, f) = test_lattice::<Q>();
+        let (a, s, t_mod_f, f) = test_lattice::<Q>(1);
 
         let (r_2, r_1) = LogProof::compute_factors(&a, &s, &t_mod_f, &f);
 
@@ -1125,11 +1141,10 @@ mod test {
         assert_eq!(i + i, i);
     }
 
-    #[test]
-    fn transcripts_match() {
+    fn transcripts_match(k: usize) {
         type Fq = FqSeal128_8192;
 
-        let (a, s, t, f) = test_lattice::<Fq>();
+        let (a, s, t, f) = test_lattice::<Fq>(k);
 
         let pk = ProverKnowledge::new(&a, &s, &t, 16, &f);
 
@@ -1149,5 +1164,15 @@ mod test {
         let r = verify_transcript.challenge_scalar(b"verify");
 
         assert_eq!(l, r);
+    }
+
+    #[test]
+    fn transcripts_match_k_1() {
+        transcripts_match(1);
+    }
+
+    #[test]
+    fn transcripts_match_k_2() {
+        transcripts_match(2);
     }
 }

@@ -317,6 +317,26 @@ where
     }
 }
 
+impl<F> From<Vec<Vec<F>>> for Matrix<F>
+where
+    F: Zero + Clone,
+{
+    fn from(vec_matrix: Vec<Vec<F>>) -> Self {
+        let rows = vec_matrix.len();
+        assert!(rows != 0);
+
+        let cols = vec_matrix[0].len();
+
+        for row in &vec_matrix {
+            assert_eq!(cols, row.len());
+        }
+
+        let data: Vec<F> = vec_matrix.into_iter().flatten().collect();
+
+        Self { rows, cols, data }
+    }
+}
+
 impl<F> From<&[F]> for Matrix<F>
 where
     F: Zero + Clone,
@@ -613,6 +633,29 @@ where
             .collect::<Vec<_>>()
             .concat()
     }
+}
+
+/**
+ * Computes the kronkecker product between two matrices. This is also the
+ * tensor product between two matrices.
+ */
+pub fn kronecker_product<F>(m: &Matrix<F>, n: &Matrix<F>) -> Matrix<F>
+where
+    F: Zero + Copy + Mul<F, Output = F>,
+{
+    let mut result = Matrix::zero(m.rows * n.rows, m.cols * n.cols);
+
+    for i in 0..m.rows {
+        for k in 0..n.rows {
+            for j in 0..m.cols {
+                for l in 0..n.cols {
+                    result[(i * n.rows + k, j * n.cols + l)] = m[(i, j)] * n[(k, l)];
+                }
+            }
+        }
+    }
+
+    result
 }
 
 impl<T, U> FieldFrom<Matrix<U>> for Matrix<T>
@@ -1100,5 +1143,44 @@ mod tests {
         let b = vec![Fp::from(1), Fp::from(2), Fp::from(3), Fp::from(4)];
 
         assert_eq!(a.as_bitslice().inner_product(b.as_slice()), Fp::from(6));
+    }
+
+    #[test]
+    fn test_kronecker_product() {
+        type Fp = FpRistretto;
+
+        let a_values = [[1, 2, 3], [4, 5, 6], [7, 8, 9]];
+
+        let b_values = [[1], [2]];
+
+        let a_kron_b_values = [
+            [1, 2, 3],
+            [2, 4, 6],
+            [4, 5, 6],
+            [8, 10, 12],
+            [7, 8, 9],
+            [14, 16, 18],
+        ];
+
+        let b_kron_a_values = [
+            [1, 2, 3],
+            [4, 5, 6],
+            [7, 8, 9],
+            [2, 4, 6],
+            [8, 10, 12],
+            [14, 16, 18],
+        ];
+
+        let a = Matrix::from(a_values.map(|row| row.map(Fp::from)));
+        let b = Matrix::from(b_values.map(|row| row.map(Fp::from)));
+
+        let a_kron_b_expected = Matrix::from(a_kron_b_values.map(|row| row.map(Fp::from)));
+        let b_kron_a_expected = Matrix::from(b_kron_a_values.map(|row| row.map(Fp::from)));
+
+        let a_kron_b = kronecker_product(&a, &b);
+        let b_kron_a = kronecker_product(&b, &a);
+
+        assert_eq!(a_kron_b, a_kron_b_expected);
+        assert_eq!(b_kron_a, b_kron_a_expected);
     }
 }

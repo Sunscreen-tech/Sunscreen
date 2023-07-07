@@ -1,0 +1,79 @@
+\documentclass{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{color}
+\usepackage{hyperref}
+\usepackage[
+    n,
+    operators,
+    advantage,
+    sets,
+    adversary,
+    landau,
+    probability,
+    notions,    
+    logic,
+    ff,
+    mm,
+    primitives,
+    events,
+    complexity,
+    asymptotics,
+    keys]{cryptocode}
+\title{Short Discrete Log Proof Changes for bounds on each coefficient}
+\date{July 7th 2023}
+
+\begin{document}
+
+\maketitle
+
+The original \href{https://eprint.iacr.org/2019/057}{short discrete log proof paper} used a fixed size for the bounds of each coefficient in the matrix that we are attempting to show knowledge of (the matrix $\mathbf{S}$ in the linear equation $\mathbf{AS} = \mathbf{T}$). It is possible to modify the algorithm such that a bound is specified on coefficients are different. This is useful in a few different ways; the two parties can easily agree on pieces of the polynomials that are not used (by defining the bound of zero), and additionally the bounds can be significantly lowered for a small performance increase on terms that are related to small random elements in encryption schemes.
+
+Below is the algorithm as specified. It is mostly the same as the prior case, but any text in red has changed from the original paper. 
+
+\begin{figure}
+\centering
+
+\pseudocodeblock{
+  \textbf{Prover P} \< \< \textbf{Verifier V} \\[0.1\baselineskip][\hline]
+   \< \< \\[-0.5\baselineskip]
+  \text{Inputs:} \< \< \\
+  \mathbf{A} \in \mathcal{R}_q^{n \times m}, \mathbf{S} \in \mathcal{S}_{\mathbf{B}}^{m \times k}, {\color{red} \mathbf{B} \in (\mathbb{N}^d)^{m \times k}} \< \< \mathbf{A}, \mathbf{T}, {\color{red} \mathbf{B}'}, b_1, b_2, l, \vec{g}, \vec{h}, u\\
+  \mathbf{T} = \mathbf{A}\mathbf{S} \in \mathcal{R}_q^{n \times k} \< \< \\
+  {\color{red} \mathbf{B}'_{mkd} = \lceil \log(\mathbf{B}_{mkd}) \rceil + 1 \text{ if } \mathbf{B}_{mkd} \neq 0 \text{ else } 0}\< \< \\
+  {\color{red} b_1 = \max_k\left(\left\lceil \log \left(\sum_{m,d} \mathbf{B}_{mdk} + d ||f||_{\infty}\right) \right\rceil \right)} \< \< \\
+  b_2 = \lceil \log(q) \rceil \< \< \\
+  l = \sum {\color{red} \mathbf{B}'} + nk(2d - 1)b_1 + nk(d-1)b_2 \< \< \\
+  \vec{g}, \vec{h} \in G^l, u \in G \< \< 
+  \\[0.1\baselineskip][\hline]
+   \< \< \\[-0.5\baselineskip]
+   \mathbf{R}_2 = (\mathbf{T} - \mathbf{AS})/\mathbf{f} \text{ over } \mathbb{Z}_q[X] \< \< \\
+   \mathbf{R}_1 = (\mathbf{T - AS - fR}_2)/q \text{ over } \mathbb{Z}[X] \\
+   \vec{s} = \mathrm{Serialize}(\mathbf{S}) \in \mathbb{Z}^{mkd} \< \< \\
+   \vec{r}_1 = \mathrm{Serialize}(\mathbf{R}_1) \in \mathbb{Z}^{nk(2d - 1)} \< \< \\
+   \vec{r}_2 = \mathrm{Serialize}(\mathbf{R}_2) \in \mathbb{Z}^{nk(d-1)} \< \< \\
+   {\color{red} \vec{b} = \mathrm{Serialize}(\mathbf{B'}) \in \mathbb{Z}^{mkd}} \< \< \\
+   \vec{s}_1 = {\color{red} \mathrm{Binary}_{\vec{b}}(\vec{s})} \ || \ \mathrm{Binary}_{b_1}(\vec{r}_1) \ || \ \mathrm{Binary}_{b_2}(\vec{r}_2) \< \< \\
+   \rho \sample \mathbb{Z}_p \< \< \\
+   \vec{s}_2 = \vec{s}_1 + \vec{1} \in \mathbb{Z}_2^l \text{ (XOR)} \< \< \\
+   w = \vec{g}^{\vec{s}_2}\vec{h}^{\vec{s}_1}u^{\rho} \< \sendmessageright*{w} \< \\
+   \< \< \alpha \sample \mathbb{Z}_p^{\times}, \vec{\beta} \sample (\mathbb{Z}_p^{\times})^k, \vec{\gamma} \sample (\mathbb{Z}_p^{\times})^n \\
+   \< \sendmessageleft*{\alpha, \vec{\beta}, \vec{\gamma}, \vec{\varphi}, \psi} \< \vec{\varphi} \sample (\mathbb{Z}_p^{\times})^l, \phi \sample \mathbb{Z}_p^{\times} \\
+   \vec{g}' = \vec{g}^{\vec{\varphi}^{-1}} \< \< \vec{g}' = \vec{g}^{\vec{\varphi}^{-1}} \\
+   \vec{v} = {\color{red} \mathrm{Serialize}(\mathrm{diag}(\mathbf{A}(\alpha)^T\vec{\gamma} \otimes \vec{\beta} \otimes \vec{\alpha}_d) \vec{2}_{\vec{b}})} \< \< \vec{v} = {\color{red} \mathrm{Serialize}(\mathrm{diag}(\mathbf{A}(\alpha)^T\vec{\gamma} \otimes \vec{\beta} \otimes \vec{\alpha}_d) \vec{2}_{\vec{b}})} \\
+   \ \ \ \ \ \ || \ q \vec{\gamma} \otimes \vec{\beta} \otimes \vec{\alpha}_{2d - 1} \otimes \vec{2}_{b_1} \< \< \ \ \ \ \ \ || \ q \vec{\gamma} \otimes \vec{\beta} \otimes \vec{\alpha}_{2d - 1} \otimes \vec{2}_{b_1}  \\
+   \ \ \ \ \ \ || \ \mathbf{f}(\alpha)\vec{\gamma} \otimes \vec{\beta} \otimes \vec{\alpha}_{d - 1} \otimes \vec{2}_{b_2} \< \< \ \ \ \ \ \ || \ \mathbf{f}(\alpha)\vec{\gamma} \otimes \vec{\beta} \otimes \vec{\alpha}_{d - 1} \otimes \vec{2}_{b_2} \\
+   t = w(\vec{g})^{\vec{v} + \psi \vec{\varphi}}\vec{h}^{\psi} \< \< t = w(\vec{g})^{\vec{v} + \psi \vec{\varphi}}\vec{h}^{\psi} \\
+   \vec{v}_1 = \vec{v} + \vec{\psi} \circ \vec{s}_2 ++ \varphi \vec{\psi} \< \< \\
+   \vec{v}_2 = \vec{s}_1 + \varphi \vec{1} \< \< \\
+   x = \langle \vec{v}_1, \vec{v}_2 \rangle \< \< x = \vec{\gamma}^T\mathbf{T}(\alpha)\vec{\beta} + \varphi \langle \vec{v}, \vec{1} \rangle + (\varphi + \varphi^2)\langle \vec{\psi}, \vec{1} \rangle \in \mathbb{Z}_p\\
+  \\[0.1\baselineskip][\hline]
+   \< \< \\[-0.5\baselineskip]
+}
+The parties run the zero-knowledge inner product proof $\vartriangleright\!\Pi_{\langle \cdot , \cdot \rangle}(\vec{g}', \vec{h}, u, t, x; \vec{v}_1, \vec{v}_2, \rho)$ and the verifier V accepts if they accept in $\vartriangleright\!\Pi_{\langle \cdot , \cdot \rangle}(.; .)$.
+
+$\mathrm{Binary}_{\vec{z}}(\vec{y})$ does a binary expansion of each $y \in \vec{y}$ by the size $z \in \vec{z}$. $\vec{2}_{\vec{b}}$ is a jagged matrix of the power of 2 expansion for every $b \in \vec{b}$ (including expanding to an empty vector if $b = 0$); hence the line $\vec{v} = \ldots$ scales each vector in $\vec{2}_{b_i}$ by $(\mathbf{A}(\alpha)^T\vec{\gamma} \otimes \vec{\beta} \otimes \vec{\alpha}_d)_i$ and serializes the result.
+\label{fig:sdlp_changes}
+\end{figure}
+
+\end{document}
+

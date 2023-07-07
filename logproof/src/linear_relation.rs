@@ -1,3 +1,17 @@
+/**
+* Implementation for the short discrete log proof, with some additional
+* optimizations/features added.
+*
+* If any updates are made to this method, please update the `sdlp-changes.tex`
+* file to reflect the alterations from the paper, and list them here.
+*
+* Features
+* --------
+*
+* - Bounds are specified on each coefficient instead of using one global bound.
+*   See [PR #276](https://github.com/Sunscreen-tech/Sunscreen/pull/276/files)
+*   from July 2023
+*/
 use std::{cmp::max, iter::zip, ops::Mul, time::Instant};
 
 use ark_ff::{BigInt, BigInteger, FftField, Field, Fp, FpConfig, MontBackend, MontConfig};

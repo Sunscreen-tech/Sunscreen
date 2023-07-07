@@ -217,7 +217,7 @@ fn params_4096_1ct(_: &mut Criterion) {
     bfv_benchmark::<FqSeal128_4096, 4096, 1, 2>();
 }
 
-fn printout(_: &mut Criterion) {
+fn print_results(_: &mut Criterion) {
     println!("Printing out results as a csv table\n");
     println!("{}", *RESULTS.lock().unwrap());
 }
@@ -233,7 +233,7 @@ criterion_group!(
     params_4096_1ct,
     params_4096_2ct,
     params_4096_3ct,
-    printout
+    print_results
 );
 
 criterion_main!(benches);

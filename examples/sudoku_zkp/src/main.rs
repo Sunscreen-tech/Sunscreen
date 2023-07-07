@@ -1,13 +1,13 @@
 use sunscreen::{
     bulletproofs::BulletproofsBackend,
     types::zkp::{BulletproofsField, NativeField},
-    zkp_program, zkp_var, BackendField, Compiler, Error, ZkpProgramInput, ZkpRuntime,
+    zkp_program, zkp_var, BackendField, Compiler, Error, ZkpRuntime,
 };
 
 #[zkp_program]
 fn sudoku_proof<F: BackendField>(
-    #[public] constraints: [[NativeField<F>; 9]; 9],
-    board: [[NativeField<F>; 9]; 9],
+    #[public] board: [[NativeField<F>; 9]; 9],
+    solution: [[NativeField<F>; 9]; 9],
 ) {
     let zero = zkp_var!(0);
 
@@ -21,31 +21,21 @@ fn sudoku_proof<F: BackendField>(
         }
     };
 
-    // Proves that the board matches up with the puzzle where applicable
-
-    for i in 0..9 {
-        for j in 0..9 {
-            let square = board[i][j];
-            let constraint = constraints[i][j];
-            (constraint * (constraint - square)).constrain_eq(zero);
-        }
-    }
-
     // Checks rows contain every number from 1 to 9
-    for row in board {
+    for row in solution {
         assert_unique_numbers(row);
     }
 
     // Checks columns contain each number from 1 to 9
     for col in 0..9 {
-        let column = board.map(|r| r[col]);
+        let column = solution.map(|r| r[col]);
         assert_unique_numbers(column);
     }
 
     // Checks squares contain each number from 1 to 9
     for i in 0..3 {
         for j in 0..3 {
-            let rows = &board[(i * 3)..(i * 3 + 3)];
+            let rows = &solution[(i * 3)..(i * 3 + 3)];
 
             let square = rows.iter().map(|s| &s[(j * 3)..(j * 3 + 3)]);
 
@@ -57,6 +47,15 @@ fn sudoku_proof<F: BackendField>(
                 .unwrap_or([zero; 9]);
 
             assert_unique_numbers(flattened_sq);
+        }
+    }
+
+    // Proves that the solution matches up with the puzzle where applicable
+    for i in 0..9 {
+        for j in 0..9 {
+            let square = solution[i][j];
+            let constraint = board[i][j];
+            (constraint * (constraint - square)).constrain_eq(zero);
         }
     }
 }
@@ -71,7 +70,7 @@ fn main() -> Result<(), Error> {
 
     let runtime = ZkpRuntime::new(&BulletproofsBackend::new())?;
 
-    let ex_puzzle = [
+    let ex_board = [
         [0, 7, 0, 0, 2, 0, 0, 4, 6],
         [0, 6, 0, 0, 0, 0, 8, 9, 0],
         [2, 0, 0, 8, 0, 0, 7, 1, 5],
@@ -95,13 +94,13 @@ fn main() -> Result<(), Error> {
         [4, 3, 2, 5, 8, 6, 9, 7, 1],
     ];
 
-    let board: Vec<ZkpProgramInput> = vec![ex_sol.map(|a| a.map(BulletproofsField::from)).into()];
+    let solution = ex_sol.map(|a| a.map(BulletproofsField::from));
 
-    let pubs: Vec<ZkpProgramInput> = vec![ex_puzzle.map(|a| a.map(BulletproofsField::from)).into()];
+    let board = ex_board.map(|a| a.map(BulletproofsField::from));
 
-    let proof = runtime.prove(prog, vec![], pubs.clone(), board)?;
+    let proof = runtime.prove(prog, vec![], vec![board], vec![solution])?;
 
-    runtime.verify(prog, &proof, vec![], pubs)?;
+    runtime.verify(prog, &proof, vec![], vec![board])?;
 
     Ok(())
 }
@@ -122,7 +121,7 @@ mod tests {
 
         let runtime = ZkpRuntime::new(&BulletproofsBackend::new()).unwrap();
 
-        let ex_puzzle = [
+        let ex_board = [
             [0, 7, 0, 0, 2, 0, 0, 4, 6],
             [0, 6, 0, 0, 0, 0, 8, 9, 0],
             [2, 0, 0, 8, 0, 0, 7, 1, 5],
@@ -146,15 +145,14 @@ mod tests {
             [4, 3, 2, 5, 8, 6, 9, 7, 1],
         ];
 
-        let board: Vec<ZkpProgramInput> =
-            vec![ex_sol.map(|a| a.map(BulletproofsField::from)).into()];
+        let solution = ex_sol.map(|a| a.map(BulletproofsField::from));
+        let board = ex_board.map(|a| a.map(BulletproofsField::from));
 
-        let pubs: Vec<ZkpProgramInput> =
-            vec![ex_puzzle.map(|a| a.map(BulletproofsField::from)).into()];
+        let proof = runtime
+            .prove(prog, vec![], vec![board], vec![solution])
+            .unwrap();
 
-        let proof = runtime.prove(prog, vec![], pubs, board).unwrap();
-
-        let verify = runtime.verify(prog, &proof, vec![], pubs);
+        let verify = runtime.verify(prog, &proof, vec![], vec![board]);
 
         assert!(verify.is_ok());
     }
@@ -171,7 +169,7 @@ mod tests {
 
         let runtime = ZkpRuntime::new(&BulletproofsBackend::new()).unwrap();
 
-        let ex_puzzle = [
+        let ex_board = [
             [0, 7, 0, 0, 2, 0, 0, 4, 6],
             [0, 6, 0, 0, 0, 0, 8, 9, 0],
             [2, 0, 0, 8, 0, 0, 7, 1, 5],
@@ -195,13 +193,11 @@ mod tests {
             [4, 3, 2, 5, 8, 6, 9, 7, 1],
         ];
 
-        let board: Vec<ZkpProgramInput> =
-            vec![ex_sol.map(|a| a.map(BulletproofsField::from)).into()];
+        let solution = ex_sol.map(|a| a.map(BulletproofsField::from));
 
-        let pubs: Vec<ZkpProgramInput> =
-            vec![ex_puzzle.map(|a| a.map(BulletproofsField::from)).into()];
+        let board = ex_board.map(|a| a.map(BulletproofsField::from));
 
-        let proof = runtime.prove(prog, vec![], pubs, board);
+        let proof = runtime.prove(prog, vec![], vec![board], vec![solution]);
 
         assert!(proof.is_err());
     }
@@ -218,7 +214,7 @@ mod tests {
 
         let runtime = ZkpRuntime::new(&BulletproofsBackend::new()).unwrap();
 
-        let ex_puzzle = [[0; 9]; 9];
+        let ex_board = [[0; 9]; 9];
 
         let ex_sol = [
             [8, 7, 5, 9, 2, 1, 3, 4, 10],
@@ -232,13 +228,11 @@ mod tests {
             [4, 3, 2, 5, 8, 6, 9, 7, 1],
         ];
 
-        let board: Vec<ZkpProgramInput> =
-            vec![ex_sol.map(|a| a.map(BulletproofsField::from)).into()];
+        let solution = ex_sol.map(|a| a.map(BulletproofsField::from));
 
-        let pubs: Vec<ZkpProgramInput> =
-            vec![ex_puzzle.map(|a| a.map(BulletproofsField::from)).into()];
+        let board = ex_board.map(|a| a.map(BulletproofsField::from));
 
-        let proof = runtime.prove(prog, vec![], pubs, board);
+        let proof = runtime.prove(prog, vec![], vec![board], vec![solution]);
 
         assert!(proof.is_err());
     }

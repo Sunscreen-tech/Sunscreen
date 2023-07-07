@@ -20,6 +20,21 @@ pub fn rand256() -> [u8; 32] {
 }
 
 /**
+ * Finds the next highest power of two. If the value is a power of two, then this function will return the following power of two. For example:
+ *
+ * input `is_power_of_two` `next_power_of_two` `next_higher_power_of_two`
+ *     0        no                  1                      1
+ *     1     yes (2^0)              1                      2
+ *     2     yes (2^1)              2                      4
+ *     3        no                  4                      4
+ */
+pub fn next_higher_power_of_two(x: u64) -> u64 {
+    let offset = if x.is_power_of_two() { 1 } else { 0 };
+
+    (x + offset).next_power_of_two()
+}
+
+/**
  * A wrapper trait for getting the zero element of a field.
  */
 pub trait Zero {
@@ -264,10 +279,20 @@ pub fn print_polynomial<F: Field>(p: &DensePolynomial<F>) {
 
 #[allow(unused)]
 /**
- * For debugging. Makes a polynomial with the given u64 coefficients in converted to field Fp.
+ * For debugging. Makes a polynomial with the given i64 coefficients in converted to field Fp.
  */
-pub fn make_poly<F: Field + From<u64>>(coeffs: &[u64]) -> DensePolynomial<F> {
-    let coeffs = coeffs.iter().map(|x| F::from(*x)).collect();
+pub fn make_poly<F: Field + From<u64>>(coeffs: &[i64]) -> DensePolynomial<F> {
+    let zero = F::zero();
+    let coeffs = coeffs
+        .iter()
+        .map(|x| {
+            if *x >= 0 {
+                F::from(*x as u64)
+            } else {
+                zero - F::from(x.unsigned_abs())
+            }
+        })
+        .collect();
 
     DensePolynomial { coeffs }
 }
@@ -556,7 +581,8 @@ where
     Self: Sized,
 {
     /**
-     * Decompose the coefficients into binary 2's complement values.
+     * Decompose the coefficients into binary 2's complement values. If the
+     * input is zero, then an empty vector is returned.
      *
      */
     fn twos_complement_coeffs(b: usize) -> Vec<Self>;
@@ -564,6 +590,10 @@ where
 
 impl TwosComplementCoeffs for Scalar {
     fn twos_complement_coeffs(b: usize) -> Vec<Self> {
+        if b == 0 {
+            return Vec::new();
+        }
+
         let mut results = Vec::with_capacity(b);
 
         let mut cur_power = Scalar::one();
@@ -601,11 +631,11 @@ where
     F: MontConfig<N>,
 {
     fn twos_complement_coeffs(b: usize) -> Vec<Self> {
-        let mut results = vec![];
-
         if b == 0 {
-            return results;
+            return Vec::new();
         }
+
+        let mut results = Vec::with_capacity(b);
 
         let mut cur_power = Self::one();
         let two = Self::from(2);
@@ -866,5 +896,14 @@ mod test {
 
             assert_eq!(calculated, expected);
         }
+    }
+
+    #[test]
+    fn test_next_higher_power_of_two() {
+        assert_eq!(next_higher_power_of_two(0), 1);
+        assert_eq!(next_higher_power_of_two(1), 2);
+        assert_eq!(next_higher_power_of_two(2), 4);
+        assert_eq!(next_higher_power_of_two(3), 4);
+        assert_eq!(next_higher_power_of_two(4), 8);
     }
 }

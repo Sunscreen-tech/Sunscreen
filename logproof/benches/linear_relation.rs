@@ -86,7 +86,22 @@ where
 
     println!("Generating data...");
 
-    let coeffs = (0..POLY_DEGREE).map(|x| x % 2).collect::<Vec<u64>>();
+    let coeffs = (0..POLY_DEGREE)
+        .map(|x| (x % 2) as i64)
+        .collect::<Vec<i64>>();
+
+    // We set the bounds on the coefficients to either be zero if the
+    // coefficient is zero or BIT_SIZE. Once could choose tighter bounds on
+    // coefficients but performance gains are not seen until the sum of the
+    // bounds drops by orders of magnitude. At 1024 with 1 ciphertext the
+    // verifier performance increase is approximately 75%, but 4096 with 3
+    // ciphertexts has a verifier performance increase of only about 10% when
+    // the bound is set to 2 for non-zero coefficients.
+    let coeff_bounds = coeffs
+        .clone()
+        .into_iter()
+        .map(|x| if x == 0 { 0 } else { BIT_SIZE })
+        .collect::<Vec<u64>>();
 
     let delta = make_poly::<Q>(&[1234]);
     let p_0 = make_poly::<Q>(&coeffs);
@@ -118,9 +133,11 @@ where
     let t = &a * &s;
     let t = t.scalar_rem(&f);
 
+    let b = Matrix::from(vec![coeff_bounds; a.cols]);
+
     let mut transcript = Transcript::new(b"test");
 
-    let pk = LogProofProverKnowledge::new(&a, &s, &t, BIT_SIZE, &f);
+    let pk = LogProofProverKnowledge::new(&a, &s, &t, &b, &f);
 
     let now = Instant::now();
     let gens = LogProofGenerators::new(pk.vk.l() as usize);

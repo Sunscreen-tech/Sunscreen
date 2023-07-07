@@ -1,4 +1,4 @@
-use std::{iter::zip, ops::Mul, time::Instant};
+use std::{cmp::max, iter::zip, ops::Mul, time::Instant};
 
 use ark_ff::{BigInt, BigInteger, FftField, Field, Fp, FpConfig, MontBackend, MontConfig};
 use ark_poly::{univariate::DensePolynomial, Polynomial};
@@ -188,14 +188,18 @@ where
     }
 
     /**
-     * Sum of the bounds in for s.
+     * Maximum column bound for the columns in S.
      */
-    pub fn bounds_sum(&self) -> u64 {
-        self.bounds
-            .as_slice()
-            .iter()
-            .map(|v| v.iter().sum::<u64>())
-            .sum()
+    pub fn max_bounds_column_sum(&self) -> u64 {
+        (0..self.bounds.cols)
+            .map(|c| {
+                let mut column_bound_sum: u64 = 0;
+                for r in 0..self.bounds.rows {
+                    column_bound_sum += self.bounds[(r, c)].iter().sum::<u64>();
+                }
+                column_bound_sum
+            })
+            .fold(0, max)
     }
 
     /**
@@ -203,11 +207,11 @@ where
      */
     pub fn b_1(&self) -> u64 {
         let d_big = FpRistretto::from(self.d());
-        let bounds_sum = FpRistretto::from(self.bounds_sum());
+        let max_bounds_column_sum = FpRistretto::from(self.max_bounds_column_sum());
 
         let inf_norm_f: FpRistretto = self.f.infinity_norm().mod_switch_signed();
 
-        let b1 = bounds_sum + d_big * inf_norm_f;
+        let b1 = max_bounds_column_sum + d_big * inf_norm_f;
         let b1 = MontBackend::into_bigint(b1);
 
         Log2::ceil_log2(&b1)
@@ -1137,8 +1141,19 @@ mod test {
             ],
         ]);
 
+        // Different messages scaled by the column index to ensure that mixed
+        // bounds with different bound sums over each column works properly. We
+        // use 16 to promote different b_1 values after taking the log of the
+        // column bound sum.
         let s_coeff = vec![
-            vec![vec![1i64, 2, 3, 4, 5, 6, 7, 8]; k],
+            (0..(k))
+                .map(|x| {
+                    [1i64, 2, 3, 4, 5, 6, 7, 8]
+                        .into_iter()
+                        .map(|y| ((x * 16 + 1) as i64) * y)
+                        .collect::<Vec<i64>>()
+                })
+                .collect::<Vec<Vec<i64>>>(),
             vec![vec![-1, 0, 1, 0, -1, 0, -1]; k],
             vec![vec![0, -1, 0, 1, -1, 0, 1]; k],
         ];
@@ -1369,5 +1384,10 @@ mod test {
     #[test]
     fn transcripts_match_k_2() {
         transcripts_match(2);
+    }
+
+    #[test]
+    fn transcripts_match_k_4() {
+        transcripts_match(4);
     }
 }

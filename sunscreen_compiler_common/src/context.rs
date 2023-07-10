@@ -14,7 +14,7 @@ use radix_trie::Trie;
  * Stores information about the nodes associated with a certain operation.
  */
 #[cfg(feature = "debugger")]
-#[derive(Clone, Deserialize, Serialize)]
+#[derive(Clone, Deserialize, Serialize, Debug)]
 pub struct Group {
     /**
      * The name of the `Group`, representing the name of the operation/gadget.
@@ -49,7 +49,7 @@ impl Group {
  * Stores debug information about groups and stack traces.
  */
 #[cfg(feature = "debugger")]
-#[derive(Clone, Deserialize, Serialize)]
+#[derive(Clone, Deserialize, Serialize, Debug)]
 pub struct DebugData {
     //pub stack_trace: Trie<Vec<u64>, u64>,
 }
@@ -353,8 +353,9 @@ where
         Self {
             graph: CompilationResult::<O>::new(),
             data,
-            //Increment this as id's are assigned to nodes
-            #[cfg(feature = "debugger")]
+            #[cfg(feature = "debugger")] 
+            group_stack: Vec::new(),
+            #[cfg(feature = "debugger")] 
             group_counter: 0,
         }
     }

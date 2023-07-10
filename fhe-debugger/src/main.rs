@@ -75,7 +75,6 @@ async fn rand_function(functions: web::Data<Vec<String>>) -> impl Responder {
 }
 */
 
-/*
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     std::env::set_var("RUST_LOG", "actix_web=debug");
@@ -98,12 +97,4 @@ async fn main() -> std::io::Result<()> {
     .bind(("127.0.0.1", 8080))?
     .run()
     .await
-}
-*/
-
-fn main() {
-    let stack_lookup = StackFrameLookup::new();
-    let stack_dict = stack_lookup.dict;
-    let stack_trie = stack_lookup.frames;
-    let prog_context = ProgramContext::new();
 }

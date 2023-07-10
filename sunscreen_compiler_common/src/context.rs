@@ -7,8 +7,8 @@ use petgraph::visit::{EdgeRef, IntoEdgeReferences, IntoNodeReferences};
 use petgraph::Graph;
 use serde::{Deserialize, Serialize};
 
-use radix_trie::Trie;
 use crate::{Operation, Render};
+use radix_trie::Trie;
 
 /**
  * Stores information about the nodes associated with a certain operation.
@@ -19,12 +19,12 @@ pub struct Group {
     /**
      * The name of the `Group`, representing the name of the operation/gadget.
      */
-    pub label: String, 
+    pub label: String,
 
     /**
      * A list of ID's for the nodes contained in the operation.
      */
-    pub node_ids: Vec<u64>
+    pub node_ids: Vec<u64>,
 }
 #[cfg(feature = "debugger")]
 impl Group {
@@ -34,7 +34,7 @@ impl Group {
     pub fn new(name: String) -> Self {
         Group {
             label: name.to_string(),
-            node_ids: Vec::new()
+            node_ids: Vec::new(),
         }
     }
 
@@ -51,7 +51,6 @@ impl Group {
 #[cfg(feature = "debugger")]
 #[derive(Clone, Deserialize, Serialize)]
 pub struct DebugData {
-
     //pub stack_trace: Trie<Vec<u64>, u64>,
 }
 
@@ -92,21 +91,13 @@ where
     O: Operation,
 {
     /**
-     * Creates a new [`NodeInfo`] without debug information.
+     * Creates a new [`NodeInfo`].
      */
-    #[cfg(not(feature = "debugger"))]
-    pub fn new(operation: O) -> Self {
-        Self { operation }
-    }
-
-    /**
-     * Creates a new [`NodeInfo`] with debug information.
-     */
-    #[cfg(feature = "debugger")]
-    pub fn new(operation: O, group_id: u64) -> Self {
+    pub fn new(operation: O, #[cfg(feature = "debugger")] id: u64) -> Self {
         Self {
-            operation,
-            group_id,
+            operation: operation,
+            #[cfg(feature = "debugger")]
+            group_id: id,
         }
     }
 }
@@ -192,25 +183,25 @@ impl Render for EdgeInfo {
 #[derive(Clone, Deserialize, Serialize)]
 /**
  * The result of a frontend compiler.
- * 
+ *
  * Need to modify this to also include DebugMetadata which contains info like the tries associated with groups/stack
- * The thing containing the CompilationResult (which is the Context). 
- * 
- * Also need to have a group stack 
+ * The thing containing the CompilationResult (which is the Context).
+ *
+ * Also need to have a group stack
  *  I don't need to figure out how to group things on my own
  *  Just determine groups based off of what is currently on the group stack
- *      Make a new type called `Group` which contains group name 
+ *      Make a new type called `Group` which contains group name
  *      Nodes in the `CompilationResult` are actually called `NodeIndex`
- * 
+ *
  *  Given a function call, we want like a `get_group_id` and `get_groups` that'll return you the group ID and also the group associated
  *      Occassionalyl may need to mutate the trie with getting if the id isn't in there and then return the ID associated with it
  *  with that function
  *   
  * `nodes_for_group` gives you a Vec of NodeIndex that'll, given a group id, return you a vector of nodeindex
- * 
+ *
  * And need to have a stack trace trie
- * 
- * Group stack goes on the level of the Context struct 
+ *
+ * Group stack goes on the level of the Context struct
  */
 pub struct CompilationResult<O>
 where
@@ -225,7 +216,7 @@ where
      * Stores group data and stack traces.
      */
     #[cfg(feature = "debugger")]
-    pub metadata: DebugData
+    pub metadata: DebugData,
 }
 
 impl<O> Deref for CompilationResult<O>
@@ -299,17 +290,10 @@ where
      */
     pub fn new() -> Self {
 
-        #[cfg(not(feature = "debugger"))] {
-            Self {
-                graph: StableGraph::new(),
-            }
-        }
-
-        #[cfg(feature = "debugger")] {
-            Self {
-                graph: StableGraph::new(),
-                metadata: DebugData::new()
-            }
+        Self {
+            graph: StableGraph::new(),
+            #[cfg(feature = "debugger")]
+            metadata: DebugData::new()
         }
     }
 }
@@ -352,9 +336,9 @@ where
 
     #[cfg(feature = "debugger")]
     /**
-     * Tracks 
+     * Tracks
      */
-    pub group_stack: Vec<Group>
+    pub group_stack: Vec<Group>,
 }
 
 // TODO: add modified support for `group_stack` with feature flag
@@ -366,21 +350,12 @@ where
      * Create a new [`Context`].
      */
     pub fn new(data: D) -> Self {
-        #[cfg(not(feature = "debugger"))]
-        {
-            Self {
-                graph: CompilationResult::<O>::new(),
-                data,
-            }
-        }
-        #[cfg(feature = "debugger")]
-        {
-            Self {
-                graph: CompilationResult::<O>::new(),
-                data,
-                //Increment this as id's are assigned to nodes
-                group_counter: 0,
-            }
+        Self {
+            graph: CompilationResult::<O>::new(),
+            data,
+            //Increment this as id's are assigned to nodes
+            #[cfg(feature = "debugger")]
+            group_counter: 0,
         }
     }
 
@@ -389,17 +364,14 @@ where
      */
     pub fn add_node(&mut self, operation: O) -> NodeIndex {
         #[cfg(feature = "debugger")]
-        {
-            // Need to also capture backtraces
-            let group_id = self.group_counter;
-            self.graph.add_node(NodeInfo {
-                operation,
-                group_id,
-            })
-        }
+        let group_id = self.group_counter;
 
-        #[cfg(not(feature = "debugger"))]
-        self.graph.add_node(NodeInfo { operation })
+        self.graph.add_node(NodeInfo {
+            operation,
+            #[cfg(feature = "debugger")]
+            group_id
+        })
+
     }
 
     /**

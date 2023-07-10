@@ -429,7 +429,7 @@ pub(crate) fn compile(program: &ZkpFrontendCompilation) -> CompiledZkpProgram {
     CompilationResult {
         graph: jit,
         #[cfg(feature = "debugger")]
-        node_ids: Vec::new()
+        node_ids: Vec::new(),
     }
 }
 

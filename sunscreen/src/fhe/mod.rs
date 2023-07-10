@@ -455,7 +455,7 @@ impl FheCompile for FheFrontendCompilation {
         fhe_program.graph = CompilationResult {
             graph: mapped_graph,
             #[cfg(feature = "debugger")]
-            node_ids: Vec::new()
+            node_ids: Vec::new(),
         };
 
         compile_inplace(fhe_program)

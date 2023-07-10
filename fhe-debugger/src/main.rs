@@ -3,9 +3,8 @@ use std::vec;
 // use actix_web::{web, App, HttpServer};
 use backtrace::Backtrace;
 
-
-mod groups;
 mod callstack;
+mod groups;
 
 use callstack::StackFrameLookup;
 use groups::ProgramContext;
@@ -14,8 +13,6 @@ use sunscreen::{
     types::{bfv::Signed, Cipher},
     Compiler, Error, Runtime,
 };
-
-
 
 /*
 // Setup to build front-end with `cargo run`
@@ -109,7 +106,4 @@ fn main() {
     let stack_dict = stack_lookup.dict;
     let stack_trie = stack_lookup.frames;
     let prog_context = ProgramContext::new();
-   
-
 }
-

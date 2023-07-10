@@ -386,7 +386,7 @@ impl FheProgramTrait for FheProgram {
             graph: CompilationResult {
                 graph: StableGraph::from(pruned),
                 #[cfg(feature = "debugger")]
-                node_ids: Vec::new()
+                node_ids: Vec::new(),
             },
             #[cfg(feature = "debugger")]
             group_counter: self.group_counter,

@@ -115,7 +115,6 @@ impl StackFrameLookup {
     // TODO: make this functional
     pub fn get() -> Backtrace {
         Backtrace::new()
-
     }
 }
 
@@ -133,13 +132,12 @@ mod tests {
 
         // Verifies the trie is constructed correctly
         for (i, trace) in trace1.iter().enumerate() {
-
             // Grab previous and ancestor frames
             let temp_trie = trie.clone();
             let prev_frame = temp_trie.get(&trace1_key);
             let ancestor = temp_trie.get_ancestor_value(&trace1_key);
 
-            // Insert next frame 
+            // Insert next frame
             trace1_key.push(i as u64);
             let t_info = StackFrameInfo::new(trace);
             trie.insert(trace1_key.clone(), t_info);
@@ -164,13 +162,12 @@ mod tests {
         let b_frames = b.frames();
         let mut trie: Trie<Vec<u64>, StackFrameInfo> = Trie::new();
         let key: Vec<u64> = (1..b_frames.len() as u64).collect();
-    
+
         trie.add_stack_trace(key.clone(), b.clone());
-    
+
         // Verifies the trie is constructed correctly
         let mut temp_key: Vec<u64> = vec![];
         for (i, val) in key.iter().enumerate() {
-
             let ancestor = trie.get_ancestor_value(&temp_key);
             let prev_frame = trie.get(&temp_key);
             temp_key.push(*val);
@@ -187,15 +184,12 @@ mod tests {
             assert_eq!(ancestor, prev_frame);
         }
     }
-    
 
     #[test]
-    fn mult_frame_insert() {
-
-    }
+    fn mult_frame_insert() {}
 
     #[test]
-    fn mult_backtrace_insert() { 
+    fn mult_backtrace_insert() {
         let b1 = Backtrace::new();
         let b2 = Backtrace::new();
         let b1_frames = b1.frames();
@@ -204,22 +198,17 @@ mod tests {
         let mut trie: Trie<Vec<u64>, StackFrameInfo> = Trie::new();
 
         let k1: Vec<u64> = (1..b1_frames.len() as u64).collect();
-        let k2: Vec<u64> = (2..(b2_frames.len()+1) as u64).collect();
+        let k2: Vec<u64> = (2..(b2_frames.len() + 1) as u64).collect();
 
         trie.add_stack_trace(k1, b1);
         trie.add_stack_trace(k2, b2);
-
     }
 
     #[test]
     fn test_retrieval() {
         let _b1 = Backtrace::new();
-
-
     }
 
     #[test]
-    fn test_empty_retrieval() {
-
-    }
+    fn test_empty_retrieval() {}
 }

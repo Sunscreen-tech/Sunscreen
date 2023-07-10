@@ -576,10 +576,9 @@ impl<const LANES: usize> GraphCipherConstMul for Batched<LANES> {
         a: FheProgramNode<Cipher<Self::Left>>,
         b: Self::Right,
     ) -> FheProgramNode<Cipher<Self::Left>> {
+        let l = Self::graph_cipher_insert(b);
         with_fhe_ctx(|ctx| {
-            let b = Self::from(b).try_into_plaintext(&ctx.data).unwrap();
-            let l = ctx.add_plaintext_literal(b.inner);
-            let n = ctx.add_multiplication_plaintext(a.ids[0], l);
+            let n = ctx.add_multiplication_plaintext(a.ids[0], l.ids[0]);
 
             FheProgramNode::new(&[n])
         })

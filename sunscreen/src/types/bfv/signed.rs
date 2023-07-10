@@ -300,11 +300,9 @@ impl GraphCipherConstAdd for Signed {
         a: FheProgramNode<Cipher<Self::Left>>,
         b: i64,
     ) -> FheProgramNode<Cipher<Self::Left>> {
+        let lit = Self::graph_cipher_insert(b);
         with_fhe_ctx(|ctx| {
-            let b = Self::from(b).try_into_plaintext(&ctx.data).unwrap();
-
-            let lit = ctx.add_plaintext_literal(b.inner);
-            let add = ctx.add_addition_plaintext(a.ids[0], lit);
+            let add = ctx.add_addition_plaintext(a.ids[0], lit.ids[0]);
 
             FheProgramNode::new(&[add])
         })
@@ -368,12 +366,9 @@ impl GraphCipherConstSub for Signed {
         a: FheProgramNode<Cipher<Self::Left>>,
         b: Self::Right,
     ) -> FheProgramNode<Cipher<Self::Left>> {
+        let lit = Self::graph_cipher_insert(b);
         with_fhe_ctx(|ctx| {
-            let b = Self::from(b).try_into_plaintext(&ctx.data).unwrap();
-
-            let lit = ctx.add_plaintext_literal(b.inner);
-            let n = ctx.add_subtraction_plaintext(a.ids[0], lit);
-
+            let n = ctx.add_subtraction_plaintext(a.ids[0], lit.ids[0]);
             FheProgramNode::new(&[n])
         })
     }
@@ -387,11 +382,9 @@ impl GraphConstCipherSub for Signed {
         a: i64,
         b: FheProgramNode<Cipher<Self::Right>>,
     ) -> FheProgramNode<Cipher<Self::Right>> {
+        let lit = Self::graph_cipher_insert(a);
         with_fhe_ctx(|ctx| {
-            let a = Self::from(a).try_into_plaintext(&ctx.data).unwrap();
-
-            let lit = ctx.add_plaintext_literal(a.inner);
-            let n = ctx.add_subtraction_plaintext(b.ids[0], lit);
+            let n = ctx.add_subtraction_plaintext(b.ids[0], lit.ids[0]);
             let n = ctx.add_negate(n);
 
             FheProgramNode::new(&[n])
@@ -435,12 +428,9 @@ impl GraphCipherConstMul for Signed {
         a: FheProgramNode<Cipher<Self::Left>>,
         b: i64,
     ) -> FheProgramNode<Cipher<Self::Left>> {
+        let lit = Self::graph_cipher_insert(b);
         with_fhe_ctx(|ctx| {
-            let b = Self::from(b).try_into_plaintext(&ctx.data).unwrap();
-
-            let lit = ctx.add_plaintext_literal(b.inner);
-            let add = ctx.add_multiplication_plaintext(a.ids[0], lit);
-
+            let add = ctx.add_multiplication_plaintext(a.ids[0], lit.ids[0]);
             FheProgramNode::new(&[add])
         })
     }

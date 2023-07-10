@@ -3206,6 +3206,7 @@ dependencies = [
  "petgraph",
  "proc-macro2",
  "quote",
+ "radix_trie",
  "semver",
  "serde",
  "static_assertions",

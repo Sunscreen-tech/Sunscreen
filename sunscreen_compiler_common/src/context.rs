@@ -7,7 +7,55 @@ use petgraph::visit::{EdgeRef, IntoEdgeReferences, IntoNodeReferences};
 use petgraph::Graph;
 use serde::{Deserialize, Serialize};
 
+use radix_trie::Trie;
 use crate::{Operation, Render};
+
+/**
+ * Stores information about the nodes associated with a certain operation.
+ */
+#[derive(Clone, Deserialize, Serialize)]
+pub struct Group {
+    /**
+     * The name of the `Group`, representing the name of the operation/gadget.
+     */
+    pub label: String, 
+
+    /**
+     * A list of ID's for the nodes contained in the operation.
+     */
+    pub node_ids: Vec<u64>
+}
+
+impl Group {
+    /**
+     * Creates a new `Group` instance.
+     */
+    pub fn new() -> Self {
+        Group {
+            label: "".to_string(),
+            node_ids: vec![0]
+        }
+    }
+}
+/**
+ * Stores debug information about groups and stack traces.
+ */
+#[derive(Clone, Deserialize, Serialize)]
+pub struct DebugData {
+
+    //pub stack_trace: Trie<Vec<u64>, u64>,
+}
+
+impl DebugData {
+    /**
+     * Creates a new `DebugData` instance.
+     */
+    pub fn new() -> Self {
+        DebugData {
+            //group_stack: vec![Group::new()]
+        }
+    }
+}
 
 #[derive(Clone, Deserialize, Serialize, Debug, PartialEq, Eq)]
 /**
@@ -134,10 +182,35 @@ impl Render for EdgeInfo {
 #[derive(Clone, Deserialize, Serialize)]
 /**
  * The result of a frontend compiler.
+ * 
+ * Need to modify this to also include DebugMetadata which contains info like the tries associated with groups/stack
+ * The thing containing the CompilationResult (which is the Context). 
+ * 
+ * Also need to have a group stack 
+ *  I don't need to figure out how to group things on my own
+ *  Just determine groups based off of what is currently on the group stack
+ *      Make a new type called `Group` which contains group name 
+ *      Nodes in the `CompilationResult` are actually called `NodeIndex`
+ * 
+ *  Given a function call, we want like a `get_group_id` and `get_groups` that'll return you the group ID and also the group associated
+ *      Occassionalyl may need to mutate the trie with getting if the id isn't in there and then return the ID associated with it
+ *  with that function
+ *   
+ * `nodes_for_group` gives you a Vec of NodeIndex that'll, given a group id, return you a vector of nodeindex
+ * 
+ * And need to have a stack trace trie
+ * 
+ * Group stack goes on the level of the Context struct 
  */
-pub struct CompilationResult<O>(pub StableGraph<NodeInfo<O>, EdgeInfo>)
+pub struct CompilationResult<O>
 where
-    O: Operation;
+    O: Operation,
+{
+    pub graph: StableGraph<NodeInfo<O>, EdgeInfo>,
+
+    #[cfg(feature = "debugger")]
+    pub metadata: DebugData
+}
 
 impl<O> Deref for CompilationResult<O>
 where
@@ -145,8 +218,9 @@ where
 {
     type Target = StableGraph<NodeInfo<O>, EdgeInfo>;
 
+    //TODO: support for debugger feature
     fn deref(&self) -> &Self::Target {
-        &self.0
+        &self.graph
     }
 }
 
@@ -158,8 +232,8 @@ where
     /// Graph isomorphism is an NP-Complete problem!
     fn eq(&self, b: &Self) -> bool {
         is_isomorphic_matching(
-            &Graph::from(self.0.clone()),
-            &Graph::from(b.0.clone()),
+            &Graph::from(self.graph.clone()),
+            &Graph::from(b.graph.clone()),
             |n1, n2| n1 == n2,
             |e1, e2| e1 == e2,
         )
@@ -170,6 +244,7 @@ impl<O> Debug for CompilationResult<O>
 where
     O: Operation,
 {
+    //TODO: support for debugger feature
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "Nodes = [")?;
 
@@ -193,8 +268,9 @@ impl<O> DerefMut for CompilationResult<O>
 where
     O: Operation,
 {
+    //TODO: support for debugger feature
     fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
+        &mut self.graph
     }
 }
 
@@ -206,7 +282,19 @@ where
      * Create a new [`CompilationResult`]
      */
     pub fn new() -> Self {
-        Self(StableGraph::new())
+
+        #[cfg(not(feature = "debugger"))] {
+            Self {
+                graph: StableGraph::new(),
+            }
+        }
+
+        #[cfg(feature = "debugger")] {
+            Self {
+                graph: StableGraph::new(),
+                metadata: DebugData::new()
+            }
+        }
     }
 }
 
@@ -214,6 +302,7 @@ impl<O> Default for CompilationResult<O>
 where
     O: Operation,
 {
+    // TODO: support for debugger feature
     fn default() -> Self {
         Self::new()
     }
@@ -244,8 +333,15 @@ where
      * Updated whenever a group-set ID is assigned so that ProgramNodes are sequentially identified.
      */
     pub group_counter: u64,
+
+    #[cfg(feature = "debugger")]
+    /**
+     * Tracks 
+     */
+    pub group_stack: Vec<Group>
 }
 
+// TODO: add modified support for `group_stack` with feature flag
 impl<O, D> Context<O, D>
 where
     O: Operation,
@@ -278,6 +374,7 @@ where
     pub fn add_node(&mut self, operation: O) -> NodeIndex {
         #[cfg(feature = "debugger")]
         {
+            // Need to also capture backtraces
             let group_id = self.group_counter;
             self.graph.add_node(NodeInfo {
                 operation,
@@ -326,3 +423,4 @@ where
         self.graph.add_edge(from, to, edge);
     }
 }
+

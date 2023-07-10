@@ -1,11 +1,13 @@
 use crate::callstack::StackFrameInfo;
-use backtrace::{Backtrace, BacktraceFrame, SymbolName};
+use backtrace::{BacktraceFrame};
 /**
  * Represents a group of `ProgramNodes` associated with an operation.
  * 
  * Each program node stores a unique group ID, so we can store the nodes associated with an operation
  * by checking if the ID is contained in `grouped_nodes`.
  */
+
+#[derive(Clone)]
 pub struct ProgramGroup {
     operation: StackFrameInfo,
     grouped_nodes: Vec<u64>, // maybe make this a hashset for fast lookup
@@ -32,7 +34,6 @@ impl ProgramContext {
     }
 
     pub fn push(&mut self, group: ProgramGroup) {
-        // TODO: Update `group_counter` for `Context` struct in sunscreen_compiler_common
         self.group_stack.push(group);
     } 
 

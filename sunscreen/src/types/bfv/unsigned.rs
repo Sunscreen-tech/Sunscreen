@@ -258,11 +258,9 @@ macro_rules! impl_graph_cipher_op {
                         a: FheProgramNode<Cipher<Self::Left>>,
                         b: UInt<LIMBS>,
                     ) -> FheProgramNode<Cipher<Self::Left>> {
+                        let lit = Self::graph_cipher_insert(b);
                         with_fhe_ctx(|ctx| {
-                            let b = Self::from(b).try_into_plaintext(&ctx.data).unwrap();
-
-                            let lit = ctx.add_plaintext_literal(b.inner);
-                            let [<$op:lower>] = ctx.[<add_ $op_noun _plaintext>](a.ids[0], lit);
+                            let [<$op:lower>] = ctx.[<add_ $op_noun _plaintext>](a.ids[0], lit.ids[0]);
 
                             FheProgramNode::new(&[[<$op:lower>]])
                         })
@@ -301,11 +299,9 @@ impl<const LIMBS: usize> GraphConstCipherSub for Unsigned<LIMBS> {
         a: UInt<LIMBS>,
         b: FheProgramNode<Cipher<Self::Right>>,
     ) -> FheProgramNode<Cipher<Self::Right>> {
+        let lit = Self::graph_cipher_insert(a);
         with_fhe_ctx(|ctx| {
-            let a = Self::from(a).try_into_plaintext(&ctx.data).unwrap();
-
-            let lit = ctx.add_plaintext_literal(a.inner);
-            let n = ctx.add_subtraction_plaintext(b.ids[0], lit);
+            let n = ctx.add_subtraction_plaintext(b.ids[0], lit.ids[0]);
             let n = ctx.add_negate(n);
 
             FheProgramNode::new(&[n])

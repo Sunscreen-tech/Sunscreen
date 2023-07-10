@@ -4,10 +4,14 @@ mod program_node;
 mod rns_polynomial;
 
 pub use native_field::*;
-use petgraph::stable_graph::NodeIndex;
+// N.B. `NodeIndex` is actually common to both FHE and ZKP, but it's really only leaked as an
+// implementation detail on the ZKP side (via gadgets). So I think it makes sense to export under
+// sunscreen::types::zkp.
+pub use petgraph::stable_graph::NodeIndex;
 pub use program_node::*;
 pub use rns_polynomial::*;
 use sunscreen_compiler_common::TypeName;
+pub use sunscreen_zkp_backend::{BigInt, Gadget};
 
 pub use sunscreen_runtime::{ToNativeFields, ZkpProgramInputTrait};
 

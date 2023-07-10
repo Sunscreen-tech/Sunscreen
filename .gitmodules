@@ -1,8 +1,8 @@
 [submodule "seal_fhe/SEAL"]
 	path = seal_fhe/SEAL
-	url = https://github.com/rickwebiii/SEAL.git
-	branch = wasm
-  fetchRecurseSubmodules = true
+	url = https://github.com/Sunscreen-tech/SEAL.git
+	branch = sunscreen
+        fetchRecurseSubmodules = true
 [submodule "emsdk/emsdk"]
 	path = emsdk/emsdk
 	url = https://github.com/emscripten-core/emsdk.git

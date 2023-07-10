@@ -344,13 +344,13 @@ mod tests {
         let mut fe = get_graph();
         let expected = get_expected();
 
-        common_subexpression_elimination(&mut fe.0);
+        common_subexpression_elimination(&mut fe.graph);
 
         // We can't check for edge equality, since left and right
         // operands can get permuted for commutative operations.
         let equals = is_isomorphic_matching(
-            &Graph::from(fe.0),
-            &Graph::from(expected.0),
+            &Graph::from(fe.graph),
+            &Graph::from(expected.graph),
             |x, y| x == y,
             |x, y| x == y,
         );

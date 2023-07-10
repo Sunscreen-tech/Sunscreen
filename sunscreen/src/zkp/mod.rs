@@ -398,7 +398,7 @@ where
  * run.
  */
 pub(crate) fn compile(program: &ZkpFrontendCompilation) -> CompiledZkpProgram {
-    let jit = program.0.map(
+    let jit = program.graph.map(
         |_, n| {
             let operation = match n.operation {
                 Operation::PrivateInput(x) => JitOperation::PrivateInput(x),
@@ -426,7 +426,11 @@ pub(crate) fn compile(program: &ZkpFrontendCompilation) -> CompiledZkpProgram {
     // Convert in and out of Graph to compact all the node indices.
     let jit = Graph::from(jit).into();
 
-    CompilationResult(jit)
+    CompilationResult {
+        graph: jit,
+        #[cfg(feature = "debugger")]
+        node_ids: Vec::new()
+    }
 }
 
 /**

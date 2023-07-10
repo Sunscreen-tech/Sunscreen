@@ -762,7 +762,7 @@ mod tests {
 
                 let ret = transforms.clone();
 
-                transforms.apply(&mut create_simple_dag().graph.0);
+                transforms.apply(&mut create_simple_dag().graph.graph);
 
                 Ok::<_, Infallible>(ret)
             } else {

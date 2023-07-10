@@ -543,7 +543,13 @@ where
     // Convert in and out of Graph to compact all the node indices.
     let executable_graph = Graph::from(executable_graph).into();
 
-    Ok(CompilationResult(executable_graph))
+    Ok(
+        CompilationResult {
+            graph: executable_graph, 
+            #[cfg(feature = "debugger")]
+            node_ids: Vec::new()
+        }
+    )
 }
 
 fn verify_constant_inputs<U>(prog: &CompiledZkpProgram, constant_inputs: &[U]) -> Result<()> {

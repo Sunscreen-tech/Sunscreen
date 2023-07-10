@@ -351,7 +351,7 @@ impl FheCompile for FheFrontendCompilation {
     fn compile(&self) -> FheProgram {
         let mut fhe_program = FheProgram::new(SchemeType::Bfv);
 
-        let mapped_graph = self.0.map(
+        let mapped_graph = self.graph.map(
             |id, n| match &n.operation {
                 FheOperation::Add => NodeInfo::new(
                     FheProgramOperation::Add,
@@ -452,7 +452,11 @@ impl FheCompile for FheFrontendCompilation {
             },
         );
 
-        fhe_program.graph = CompilationResult(mapped_graph);
+        fhe_program.graph = CompilationResult {
+            graph: mapped_graph,
+            #[cfg(feature = "debugger")]
+            node_ids: Vec::new()
+        };
 
         compile_inplace(fhe_program)
     }

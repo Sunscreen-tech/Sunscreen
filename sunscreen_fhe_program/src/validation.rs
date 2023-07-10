@@ -15,7 +15,7 @@ pub(crate) fn validate_ir(ir: &FheProgram) -> Vec<IRError> {
 pub(crate) fn ir_has_no_cycle(ir: &FheProgram) -> Vec<IRError> {
     let mut errors = vec![];
 
-    if greedy_feedback_arc_set(&ir.graph.0).next().is_some() {
+    if greedy_feedback_arc_set(&ir.graph.graph).next().is_some() {
         errors.push(IRError::IRHasCycles);
     }
 

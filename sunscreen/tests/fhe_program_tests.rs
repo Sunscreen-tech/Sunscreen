@@ -102,7 +102,7 @@ fn capture_fhe_program_input_args() {
 
     let context = fhe_program_with_args.build(&get_params()).unwrap();
 
-    assert_eq!(context.0.node_count(), 4);
+    assert_eq!(context.graph.node_count(), 4);
 }
 
 #[test]

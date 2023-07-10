@@ -334,7 +334,7 @@ impl FheProgramTrait for FheProgram {
     }
 
     fn prune(&self, nodes: &[NodeIndex]) -> FheProgram {
-        let mut compact_graph = Graph::from(self.graph.0.clone());
+        let mut compact_graph = Graph::from(self.graph.graph.clone());
         compact_graph.reverse();
 
         let topo = toposort(&compact_graph, None).unwrap();
@@ -383,7 +383,11 @@ impl FheProgramTrait for FheProgram {
 
         Self {
             data: self.data,
-            graph: CompilationResult(StableGraph::from(pruned)),
+            graph: CompilationResult {
+                graph: StableGraph::from(pruned),
+                #[cfg(feature = "debugger")]
+                node_ids: Vec::new()
+            },
             #[cfg(feature = "debugger")]
             group_counter: self.group_counter,
         }
@@ -415,6 +419,7 @@ impl FheProgramTrait for FheProgram {
     }
 }
 
+// TODO: change name of `graph` field to something like `compilation_result` to avoid `graph.graph`
 #[cfg(test)]
 mod tests {
     use petgraph::algo::is_isomorphic_matching;
@@ -423,8 +428,8 @@ mod tests {
 
     fn eq(a: &FheProgram, b: &FheProgram) -> bool {
         is_isomorphic_matching(
-            &Graph::from(a.graph.0.clone()),
-            &Graph::from(b.graph.0.clone()),
+            &Graph::from(a.graph.graph.clone()),
+            &Graph::from(b.graph.graph.clone()),
             |n1, n2| n1 == n2,
             |e1, e2| e1 == e2,
         )
@@ -456,17 +461,17 @@ mod tests {
 
         let ct = ir.add_input_ciphertext(0);
         let rem = ir.add_input_ciphertext(1);
-        ir.graph.0.remove_node(rem);
+        ir.graph.graph.remove_node(rem);
         let l1 = ir.add_input_literal(Literal::from(7u64));
         let rem = ir.add_input_ciphertext(1);
-        ir.graph.0.remove_node(rem);
+        ir.graph.graph.remove_node(rem);
         let add = ir.add_add(ct, l1);
         let rem = ir.add_input_ciphertext(1);
-        ir.graph.0.remove_node(rem);
+        ir.graph.graph.remove_node(rem);
         let l2 = ir.add_input_literal(Literal::from(5u64));
         ir.add_multiply(add, l2);
         let rem = ir.add_input_ciphertext(1);
-        ir.graph.0.remove_node(rem);
+        ir.graph.graph.remove_node(rem);
 
         let pruned = ir.prune(&[add]);
 

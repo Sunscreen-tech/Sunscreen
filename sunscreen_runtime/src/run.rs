@@ -161,7 +161,7 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
         ir,
         |index| {
             let node = &ir.graph[index];
-            let query = GraphQuery::new(&ir.graph.0);
+            let query = GraphQuery::new(&ir.graph.graph);
 
             match &node.operation {
                 InputCiphertext(id) => {

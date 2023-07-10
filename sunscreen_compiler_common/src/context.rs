@@ -13,6 +13,7 @@ use crate::{Operation, Render};
 /**
  * Stores information about the nodes associated with a certain operation.
  */
+#[cfg(feature = "debugger")]
 #[derive(Clone, Deserialize, Serialize)]
 pub struct Group {
     /**
@@ -25,27 +26,36 @@ pub struct Group {
      */
     pub node_ids: Vec<u64>
 }
-
+#[cfg(feature = "debugger")]
 impl Group {
     /**
      * Creates a new `Group` instance.
      */
-    pub fn new() -> Self {
+    pub fn new(name: String) -> Self {
         Group {
-            label: "".to_string(),
-            node_ids: vec![0]
+            label: name.to_string(),
+            node_ids: Vec::new()
         }
+    }
+
+    /**
+     * Adds a node ID to the group.
+     */
+    pub fn add_node<O: Operation>(mut self, node: NodeInfo<O>) {
+        self.node_ids.push(node.group_id);
     }
 }
 /**
  * Stores debug information about groups and stack traces.
  */
+#[cfg(feature = "debugger")]
 #[derive(Clone, Deserialize, Serialize)]
 pub struct DebugData {
 
     //pub stack_trace: Trie<Vec<u64>, u64>,
 }
 
+#[cfg(feature = "debugger")]
 impl DebugData {
     /**
      * Creates a new `DebugData` instance.
@@ -206,8 +216,14 @@ pub struct CompilationResult<O>
 where
     O: Operation,
 {
+    /**
+     * The compilation graph.
+     */
     pub graph: StableGraph<NodeInfo<O>, EdgeInfo>,
 
+    /**
+     * Stores group data and stack traces.
+     */
     #[cfg(feature = "debugger")]
     pub metadata: DebugData
 }
@@ -423,4 +439,3 @@ where
         self.graph.add_edge(from, to, edge);
     }
 }
-

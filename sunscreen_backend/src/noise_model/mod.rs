@@ -57,7 +57,7 @@ pub fn predict_noise(model: &(dyn NoiseModel + Sync), fhe_program: &FheProgram) 
         fhe_program,
         |node_id| {
             let node = &fhe_program.graph[node_id];
-            let query = GraphQuery::new(&fhe_program.graph.0);
+            let query = GraphQuery::new(&fhe_program.graph.graph);
 
             let noise = match &node.operation {
                 InputCiphertext(_) => model.encrypt(),

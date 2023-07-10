@@ -157,7 +157,7 @@ impl BulletproofsCircuit {
             .collect::<Vec<usize>>();
 
         // The graph won't actually be mutated.
-        forward_traverse(&graph.0, |query, idx| {
+        forward_traverse(&graph.graph, |query, idx| {
             let node = query.get_node(idx).unwrap();
 
             // Each linear combination object in Bulletproofs has a Vec

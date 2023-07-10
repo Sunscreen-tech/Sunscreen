@@ -2,18 +2,20 @@ use std::vec;
 
 // use actix_web::{web, App, HttpServer};
 use backtrace::Backtrace;
-use radix_trie::Trie;
+
 
 mod groups;
 mod callstack;
 
+use callstack::StackFrameLookup;
+use groups::ProgramContext;
 use sunscreen::{
     fhe_program,
     types::{bfv::Signed, Cipher},
     Compiler, Error, Runtime,
 };
 
-use crate::callstack::StackFrameInfo;
+
 
 /*
 // Setup to build front-end with `cargo run`
@@ -102,61 +104,12 @@ async fn main() -> std::io::Result<()> {
 }
 */
 
-#[fhe_program(scheme = "bfv")]
-fn simple_multiply(a: Cipher<Signed>, b: Cipher<Signed>) -> Cipher<Signed> {
-    a * b
+fn main() {
+    let stack_lookup = StackFrameLookup::new();
+    let stack_dict = stack_lookup.dict;
+    let stack_trie = stack_lookup.frames;
+    let prog_context = ProgramContext::new();
+   
+
 }
 
-fn main() -> Result<(), Error> {
-    /*
-    let trace1 = Backtrace::new().frames().last().unwrap().clone();
-    let trace2 = Backtrace::new().frames().last().unwrap().clone();
-
-    let trace1_key: Vec<u64> = vec![1, 2, 3];
-    let trace2_key: Vec<u64> = vec![1, 2, 3, 4, 5]; //try experimenting with this to turn it into 1, 2, 3, 4 or whatnot
-    let mut trie: Trie<Vec<u64>, BacktraceFrame> = Trie::new();
-
-    trie.insert(trace1_key, trace1);
-    println!("{:?}", trie);
-
-    println!("bruh");
-    trie.insert(trace2_key, trace2);
-    println!("{:?}", trie);
-
-
-    let mut trie2: Trie<Vec<u64>, StackFrameInfo> = Trie::new();
-    let trace3 = Backtrace::new();
-
-    // keys should be vectors of instruction pointers
-    // values should be the frame information like filename, functionname, line number, etc
-    // maybe store this in a new struct
-    let key: Vec<u64> = vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
-    trie2.add_stack_trace(key.clone(), trace3);
-
-    println!("{:?}", trie2);
-
-    println!();
-
-    let test = trie2.get_stack_trace(key);
-
-    for f in test {
-        println!("{:?}", f);
-    }
-    */
-
-    let app = Compiler::new().fhe_program(simple_multiply).compile()?;
-
-    let runtime = Runtime::new(app.params())?;
-
-    let (public_key, private_key) = runtime.generate_keys()?;
-
-    let a = runtime.encrypt(Signed::from(15), &public_key)?;
-    let b = runtime.encrypt(Signed::from(5), &public_key)?;
-
-    //do i need a proc macro that puts in a backtrace into every fhe program function call?
-    //and how do i access/use the fheprogramnode group_id's?
-    let trace = Backtrace::new();
-    println!("{:?}", trace);
-
-    Ok(())
-}

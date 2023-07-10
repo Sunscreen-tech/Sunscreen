@@ -95,16 +95,27 @@ impl StackFrames for Trie<Vec<u64>, StackFrameInfo> {
  * Allows for lookup of call stack information given a ProgramNode's `group_id`.
  */
 pub struct StackFrameLookup {
-    dict: HashMap<u64, Vec<u64>>,
-    frames: Trie<Vec<u64>, Backtrace>,
+    /**
+     * Given a ProgramNode's `group_id`, return the key used in the `frames` trie for retrieval.
+     */
+    pub dict: HashMap<u64, Vec<u64>>,
+    /**
+     * Retrieves `Backtrace` objects representing stack frames, given values from `dict`.
+     */
+    pub frames: Trie<Vec<u64>, Backtrace>,
 }
 
 impl StackFrameLookup {
-    fn new() -> Self {
+    pub fn new() -> Self {
         StackFrameLookup {
             dict: HashMap::<u64, Vec<u64>>::new(),
             frames: Trie::<Vec<u64>, Backtrace>::new(),
         }
+    }
+    // TODO: make this functional
+    pub fn get() -> Backtrace {
+        Backtrace::new()
+
     }
 }
 
@@ -152,7 +163,7 @@ mod tests {
         let b = Backtrace::new();
         let b_frames = b.frames();
         let mut trie: Trie<Vec<u64>, StackFrameInfo> = Trie::new();
-        let mut key: Vec<u64> = (1..b_frames.len() as u64).collect();
+        let key: Vec<u64> = (1..b_frames.len() as u64).collect();
     
         trie.add_stack_trace(key.clone(), b.clone());
     
@@ -202,7 +213,7 @@ mod tests {
 
     #[test]
     fn test_retrieval() {
-        let b1 = Backtrace::new();
+        let _b1 = Backtrace::new();
 
 
     }

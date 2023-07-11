@@ -12,12 +12,15 @@ actix-cors = "0.6.4"
 serde = {version = "1.0.163", features = ["derive"]}
 serde_json = "1.0.96"
 rand = "0.8.5"
-sunscreen = "*"
+sunscreen = {path = "../sunscreen"}
 mime = "0.3.17"
 env_logger = "0.10.0"
 radix_trie = "0.2.1"
 backtrace = "0.3"
-
+futures = "0.3.28"
+petgraph = "0.6.3"
+sunscreen_compiler_common = {path = "../sunscreen_compiler_common"}
+sunscreen_fhe_program = {path = "../sunscreen_fhe_program"}
 
 [build-dependencies]
 copy_dir = "0.1.2"

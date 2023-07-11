@@ -265,7 +265,7 @@ dependencies = [
 name = "amm"
 version = "0.1.0"
 dependencies = [
- "sunscreen 0.7.0",
+ "sunscreen",
 ]
 
 [[package]]
@@ -444,7 +444,7 @@ dependencies = [
  "env_logger 0.10.0",
  "rand",
  "rand_distr",
- "sunscreen 0.7.0",
+ "sunscreen",
  "sunscreen_zkp_backend",
 ]
 
@@ -453,7 +453,7 @@ name = "bigint"
 version = "0.1.0"
 dependencies = [
  "crypto-bigint",
- "sunscreen 0.7.0",
+ "sunscreen",
 ]
 
 [[package]]
@@ -463,29 +463,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b1f45e9417d87227c7a56d22e471c6206462cba514c7590c09aff4cf6d1ddcad"
 dependencies = [
  "serde",
-]
-
-[[package]]
-name = "bindgen"
-version = "0.60.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "062dddbc1ba4aca46de6338e2bf87771414c335f7b2f2036e8f3e9befebf88e6"
-dependencies = [
- "bitflags",
- "cexpr",
- "clang-sys",
- "clap 3.2.25",
- "env_logger 0.9.3",
- "lazy_static",
- "lazycell",
- "log",
- "peeking_take_while",
- "proc-macro2",
- "quote",
- "regex",
- "rustc-hash",
- "shlex",
- "which",
 ]
 
 [[package]]
@@ -632,14 +609,14 @@ dependencies = [
 name = "calculator_fractional"
 version = "0.1.0"
 dependencies = [
- "sunscreen 0.7.0",
+ "sunscreen",
 ]
 
 [[package]]
 name = "calculator_rational"
 version = "0.1.0"
 dependencies = [
- "sunscreen 0.7.0",
+ "sunscreen",
 ]
 
 [[package]]
@@ -649,10 +626,10 @@ dependencies = [
  "env_logger 0.9.3",
  "log",
  "rayon",
- "seal_fhe 0.7.0",
- "sunscreen_backend 0.7.0",
- "sunscreen_fhe_program 0.7.0",
- "sunscreen_runtime 0.7.0",
+ "seal_fhe",
+ "sunscreen_backend",
+ "sunscreen_fhe_program",
+ "sunscreen_runtime",
 ]
 
 [[package]]
@@ -690,7 +667,7 @@ name = "chi_sq"
 version = "0.1.0"
 dependencies = [
  "env_logger 0.9.3",
- "sunscreen 0.7.0",
+ "sunscreen",
 ]
 
 [[package]]
@@ -757,12 +734,9 @@ version = "3.2.25"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4ea181bf566f71cb9a5d17a59e1871af638180a18fb0035c92ae62b705207123"
 dependencies = [
- "atty",
  "bitflags",
  "clap_lex",
  "indexmap",
- "strsim",
- "termcolor",
  "textwrap 0.16.0",
 ]
 
@@ -1165,7 +1139,7 @@ dependencies = [
 name = "dot_prod"
 version = "0.1.0"
 dependencies = [
- "sunscreen 0.7.0",
+ "sunscreen",
 ]
 
 [[package]]
@@ -1177,16 +1151,6 @@ checksum = "7fcaabb2fef8c910e7f4c7ce9f67a1283a1715879a7c230ca9d6d1ae31f16d91"
 [[package]]
 name = "emsdk"
 version = "0.1.1"
-dependencies = [
- "fs_extra",
- "reqwest",
-]
-
-[[package]]
-name = "emsdk"
-version = "0.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a1ec24add814ec7d7580e7ecc615ca7ead316fa65cf119c41fb6d04830dcb8a9"
 dependencies = [
  "fs_extra",
  "reqwest",
@@ -1282,12 +1246,16 @@ dependencies = [
  "backtrace",
  "copy_dir",
  "env_logger 0.10.0",
+ "futures 0.3.28",
  "mime",
+ "petgraph",
  "radix_trie",
  "rand",
  "serde",
  "serde_json",
- "sunscreen 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sunscreen",
+ "sunscreen_compiler_common",
+ "sunscreen_fhe_program",
 ]
 
 [[package]]
@@ -1999,7 +1967,7 @@ name = "mean_variance"
 version = "0.1.0"
 dependencies = [
  "bincode",
- "sunscreen 0.7.0",
+ "sunscreen",
 ]
 
 [[package]]
@@ -2464,7 +2432,7 @@ checksum = "8b870d8c151b6f2fb93e84a13146138f05d02ed11c7e7c54f8826aaaf7c9f184"
 name = "pir"
 version = "0.1.0"
 dependencies = [
- "sunscreen 0.7.0",
+ "sunscreen",
 ]
 
 [[package]]
@@ -2847,27 +2815,14 @@ checksum = "d29ab0c6d3fc0ee92fe66e2d99f700eab17a8d57d1c1d3b748380fb20baa78cd"
 name = "seal_fhe"
 version = "0.7.0"
 dependencies = [
- "bindgen 0.61.0",
+ "bindgen",
  "cmake",
- "emsdk 0.1.1",
+ "emsdk",
  "link-cplusplus",
  "serde",
  "serde_json",
  "static_assertions",
  "thiserror",
-]
-
-[[package]]
-name = "seal_fhe"
-version = "0.7.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d572b6102ca6ca3871bf6f45c9a9c4e72960e8137863d94f8c84909b9a173a38"
-dependencies = [
- "bindgen 0.60.1",
- "cmake",
- "emsdk 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "link-cplusplus",
- "serde",
 ]
 
 [[package]]
@@ -3017,7 +2972,7 @@ dependencies = [
 name = "simple_multiply"
 version = "0.1.0"
 dependencies = [
- "sunscreen 0.7.0",
+ "sunscreen",
 ]
 
 [[package]]
@@ -3071,12 +3026,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
 
 [[package]]
-name = "strsim"
-version = "0.10.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "73473c0e59e6d5812c5dfe2a064a6444949f089e20eec9a2e5506596494e4623"
-
-[[package]]
 name = "subtle"
 version = "2.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3092,7 +3041,7 @@ checksum = "734676eb262c623cec13c3155096e08d1f8f29adce39ba17948b18dad1e54142"
 name = "sudoku_zkp"
 version = "0.1.0"
 dependencies = [
- "sunscreen 0.7.0",
+ "sunscreen",
  "sunscreen_zkp_backend",
 ]
 
@@ -3112,41 +3061,23 @@ dependencies = [
  "paste",
  "petgraph",
  "proptest",
- "seal_fhe 0.7.0",
+ "seal_fhe",
  "serde",
  "serde_json",
  "static_assertions",
  "subtle",
- "sunscreen_backend 0.7.0",
+ "sunscreen_backend",
  "sunscreen_bulletproofs",
  "sunscreen_compiler_common",
- "sunscreen_compiler_macros 0.7.0",
+ "sunscreen_compiler_macros",
  "sunscreen_curve25519",
- "sunscreen_fhe_program 0.7.0",
- "sunscreen_runtime 0.7.0",
+ "sunscreen_fhe_program",
+ "sunscreen_runtime",
  "sunscreen_zkp_backend",
  "thiserror",
 ]
 
 [[package]]
-name = "sunscreen"
-version = "0.7.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9225706811c1a3b12cf0dd27899a87f6a984982c602966024e86f3ff2832be1e"
-dependencies = [
- "bumpalo",
- "log",
- "num",
- "petgraph",
- "seal_fhe 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde",
- "sunscreen_backend 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "sunscreen_compiler_macros 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "sunscreen_fhe_program 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "sunscreen_runtime 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
 name = "sunscreen_backend"
 version = "0.7.0"
 dependencies = [
@@ -3155,26 +3086,10 @@ dependencies = [
  "log",
  "num",
  "petgraph",
- "seal_fhe 0.7.0",
+ "seal_fhe",
  "sunscreen_compiler_common",
- "sunscreen_fhe_program 0.7.0",
- "sunscreen_runtime 0.7.0",
-]
-
-[[package]]
-name = "sunscreen_backend"
-version = "0.7.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6a2c42dafab41ff52c6cfeb02459ca291c10c2c555a9bd1fc9cdaf9ba5453aff"
-dependencies = [
- "crossbeam",
- "env_logger 0.9.3",
- "log",
- "num",
- "petgraph",
- "seal_fhe 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "sunscreen_fhe_program 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "sunscreen_runtime 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sunscreen_fhe_program",
+ "sunscreen_runtime",
 ]
 
 [[package]]
@@ -3227,17 +3142,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "sunscreen_compiler_macros"
-version = "0.7.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "78c5545621b37677b152e207dd806d6b485ebcc5cbe1ea33131d6a5c3d9c7390"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 1.0.109",
-]
-
-[[package]]
 name = "sunscreen_curve25519"
 version = "4.1.1"
 dependencies = [
@@ -3259,23 +3163,12 @@ name = "sunscreen_fhe_program"
 version = "0.7.0"
 dependencies = [
  "petgraph",
- "seal_fhe 0.7.0",
+ "seal_fhe",
  "serde",
  "serde_json",
  "static_assertions",
  "sunscreen_compiler_common",
  "thiserror",
-]
-
-[[package]]
-name = "sunscreen_fhe_program"
-version = "0.7.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5f9fcbc412989ab0a8177fa2889315d28ef75e0f3a15a2e50af2cc0fd376e6da"
-dependencies = [
- "petgraph",
- "seal_fhe 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde",
 ]
 
 [[package]]
@@ -3310,34 +3203,15 @@ dependencies = [
  "petgraph",
  "rayon",
  "rlp",
- "seal_fhe 0.7.0",
+ "seal_fhe",
  "semver",
  "serde",
  "serde_json",
  "static_assertions",
  "sunscreen_compiler_common",
- "sunscreen_fhe_program 0.7.0",
+ "sunscreen_fhe_program",
  "sunscreen_zkp_backend",
  "thiserror",
-]
-
-[[package]]
-name = "sunscreen_runtime"
-version = "0.7.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b2f9a2a697e4613c318f112646d13967d38e3f0a30810a0b2260db84f8b5c774"
-dependencies = [
- "bincode",
- "crossbeam",
- "log",
- "num_cpus",
- "petgraph",
- "rayon",
- "rlp",
- "seal_fhe 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "semver",
- "serde",
- "sunscreen_fhe_program 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]

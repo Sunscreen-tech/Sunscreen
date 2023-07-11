@@ -1,98 +1,117 @@
-use std::vec;
-
-// use actix_web::{web, App, HttpServer};
-use backtrace::Backtrace;
-
-mod callstack;
-mod groups;
-
-use callstack::StackFrameLookup;
-use groups::ProgramContext;
+use actix_web::{get, App, HttpResponse, Responder, HttpServer};
 use sunscreen::{
     fhe_program,
     types::{bfv::Signed, Cipher},
-    Compiler, Error, Runtime,
+    Compiler, Error, Runtime, 
 };
+use petgraph::{
+    dot::Dot,
+    stable_graph::{EdgeReference, Edges, Neighbors, NodeIndex, StableGraph},
+    visit::{EdgeRef, IntoNodeIdentifiers},
+    Directed, Direction,
+};
+use sunscreen_compiler_common::{CompilationResult, NodeInfo, EdgeInfo, Render, Operation, Context};
+use sunscreen_fhe_program::{FheProgram};
 
-/*
-// Setup to build front-end with `cargo run`
-const INDEX_HTML: &str = include_str!(concat!(
-    env!("OUT_DIR"),
-    "/fhe-debugger-frontend/build/index.html"
-));
 
-const MAIN_JS: &str = include_str!(concat!(
-    env!("OUT_DIR"),
-    "/fhe-debugger-frontend/build/static/js/main.76a9174c.js"
-));
-
-const MAIN_CSS: &str = include_str!(concat!(
-    env!("OUT_DIR"),
-    "/fhe-debugger-frontend/build/static/css/main.9aa52071.css"
-));
-
-const MANIFEST_JSON: &str = include_str!(concat!(
-    env!("OUT_DIR"),
-    "/fhe-debugger-frontend/build/manifest.json"
-));
-
-#[get("/")]
-async fn index() -> impl Responder {
-    HttpResponse::Ok()
-        .append_header(header::ContentType(mime::TEXT_HTML))
-        .body(INDEX_HTML)
+#[fhe_program(scheme = "bfv")]
+fn simple_multiply(a: Cipher<Signed>, b: Cipher<Signed>) -> Cipher<Signed> {
+    a * b
 }
 
-#[get("/static/js/main.76a9174c.js")]
-async fn main_js() -> impl Responder {
-    HttpResponse::Ok()
-        .append_header(header::ContentType(mime::APPLICATION_JAVASCRIPT))
-        .body(MAIN_JS)
+#[fhe_program(scheme = "bfv")]
+fn simple_add(a: Cipher<Signed>, b: Cipher<Signed>) -> Cipher<Signed> {
+    a + b
 }
 
-#[get("/static/css/main.9aa52071.css")]
-async fn main_css() -> impl Responder {
-    HttpResponse::Ok()
-        .append_header(header::ContentType(mime::TEXT_CSS))
-        .body(MAIN_CSS)
+#[get("/multiply")]
+async fn multiply_handler() -> impl Responder {
+    match process_multiply().await {
+        Ok(result) => HttpResponse::Ok().body(format!("Result: {:?}", result)),
+        Err(err) => {
+            eprintln!("Error: {:?}", err);
+            HttpResponse::InternalServerError().finish()
+        }
+    }
 }
 
-#[get("/manifest.json")]
-async fn manifest_json() -> impl Responder {
-    HttpResponse::Ok()
-        .append_header(header::ContentType(mime::APPLICATION_JSON))
-        .body(MANIFEST_JSON)
+#[get("/add")]
+async fn add_handler() -> impl Responder {
+    match process_add().await {
+        Ok(result) => HttpResponse::Ok().body(format!("Result: {:?}", result)),
+        Err(err) => {
+            eprintln!("Error: {:?}", err);
+            HttpResponse::InternalServerError().finish()
+        }
+    }
 }
 
-#[get("/random")]
-async fn rand_function(functions: web::Data<Vec<String>>) -> impl Responder {
-    // Grab a function at random
-    let mut rng = rand::thread_rng();
-    let ind = rng.gen_range(0..functions.len());
-    let rand_function = String::from(&functions[ind]);
-
-    HttpResponse::Ok().body(rand_function)
+#[get("/fhe")]
+async fn fhe_handler() -> impl Responder {
+    match process_fhe().await {
+        Ok(result) => HttpResponse::Ok().body(format!("Result: {:?}", result)),
+        Err(err) => {
+            eprintln!("Error: {:?}", err);
+            HttpResponse::InternalServerError().finish()
+        }
+    }
 }
-*/
+
+async fn process_add() -> Result<Signed, Error> {
+    let app = Compiler::new()
+    .fhe_program(simple_add)
+    .compile()?;
+
+    let runtime = Runtime::new(app.params())?;
+
+    let (public_key, private_key) = runtime.generate_keys()?;
+
+    let a = runtime.encrypt(Signed::from(15), &public_key)?;
+    let b = runtime.encrypt(Signed::from(5), &public_key)?;
+
+    let results = runtime.run(app.get_program(simple_add).unwrap(), vec![a.clone(), b.clone()], &public_key)?;
+    let c: Signed = runtime.decrypt(&results[0], &private_key)?;
+
+    Ok(c)
+}
+
+
+async fn process_multiply() -> Result<Signed, Error> {
+    let app = Compiler::new()
+        .fhe_program(simple_multiply)
+        .compile()?;
+
+    let runtime = Runtime::new(app.params())?;
+
+    let (public_key, private_key) = runtime.generate_keys()?;
+
+    let a = runtime.encrypt(Signed::from(15), &public_key)?;
+    let b = runtime.encrypt(Signed::from(5), &public_key)?;
+
+    let results = runtime.run(app.get_program(simple_multiply).unwrap(), vec![a.clone(), b.clone()], &public_key)?;
+    let c: Signed = runtime.decrypt(&results[0], &private_key)?;
+
+    Ok(c)
+}
+
+async fn process_fhe() -> Result<FheProgram, Error> {
+    let app = Compiler::new()
+        .fhe_program(simple_multiply)
+        .compile()?;
+
+    let test = app.get_fhe_programs().next().unwrap().1.clone();
+    let test2 = test.fhe_program_fn;
+
+    Ok(test2)
+    
+}
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    std::env::set_var("RUST_LOG", "actix_web=debug");
-
-    //List of random function bodies
-    let lst = web::Data::new(vec!["test1".to_string(), "test2".to_string()]);
-
-    env_logger::init();
-
-    HttpServer::new(move || {
-        App::new().app_data(lst.clone())
-        /*
-        .service(index)
-        .service(main_js)
-        .service(main_css)
-        .service(manifest_json)
-        .service(rand_function)
-        */
+    HttpServer::new(|| {
+        App::new().service(multiply_handler)
+        .service(add_handler)
+        .service(fhe_handler)
     })
     .bind(("127.0.0.1", 8080))?
     .run()

@@ -40,6 +40,7 @@ fn complex_rational(a: Cipher<Rational>, b: Cipher<Rational>, c: Cipher<Rational
     (a + b) * c
 }
 
+#[get("/rationaladd")]
 async fn rational_add_handler() -> impl Responder {
     match process_rational_add().await {
         Ok(result) => HttpResponse::Ok().body(format!("Result: {:?}", result)),
@@ -50,6 +51,7 @@ async fn rational_add_handler() -> impl Responder {
     }
 }
 
+#[get("/rationalmul")]
 async fn rational_mul_handler() -> impl Responder {
     match process_rational_mul().await {
         Ok(result) => HttpResponse::Ok().body(format!("Result: {:?}", result)),
@@ -60,6 +62,7 @@ async fn rational_mul_handler() -> impl Responder {
     }
 }
 
+#[get("/rationalcomplex")]
 async fn rational_complex_handler() -> impl Responder {
     match process_rational_complex().await {
         Ok(result) => HttpResponse::Ok().body(format!("Result: {:?}", result)),
@@ -190,11 +193,9 @@ async fn main() -> std::io::Result<()> {
             .service(multiply_handler)
             .service(add_handler)
             .service(fhe_handler)
-            /* 
             .service(rational_complex_handler)
             .service(rational_add_handler)
             .service(rational_mul_handler)
-            */
     })
     .bind(("127.0.0.1", 8080))?
     .run()

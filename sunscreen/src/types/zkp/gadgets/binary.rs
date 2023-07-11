@@ -26,7 +26,7 @@ impl ToUInt {
 }
 
 impl Gadget for ToUInt {
-    fn compute_inputs(&self, gadget_inputs: &[BigInt]) -> ZkpResult<Vec<BigInt>> {
+    fn compute_hidden_inputs(&self, gadget_inputs: &[BigInt]) -> ZkpResult<Vec<BigInt>> {
         let val = gadget_inputs[0];
 
         if self.n == 0 {
@@ -112,7 +112,7 @@ impl Gadget for ToUInt {
 pub struct AssertBinary;
 
 impl Gadget for AssertBinary {
-    fn compute_inputs(&self, gadget_inputs: &[BigInt]) -> ZkpResult<Vec<BigInt>> {
+    fn compute_hidden_inputs(&self, gadget_inputs: &[BigInt]) -> ZkpResult<Vec<BigInt>> {
         let val = gadget_inputs[0];
 
         if val != BigInt::ONE && val != BigInt::ZERO {

@@ -619,7 +619,7 @@ mod tests {
 
         let degree = 8192;
 
-        let (_keygen, context, _public_key, _private_key, encryptor, decryptor, evaluator) =
+        let (_keygen, context, _public_key, private_key, encryptor, decryptor, evaluator) =
             setup_scheme(degree);
 
         let encoder = BFVEncoder::new(&context).unwrap();
@@ -634,7 +634,7 @@ mod tests {
         let ct_1 = encryptor.encrypt(&pt_1).unwrap();
 
         let output = unsafe {
-            run_program_unchecked(&ir, &[ct_0.into(), ct_1.into()], &evaluator, &None, &None)
+            run_program_unchecked(&ir, &[ct_0.into(), ct_1.into()], &evaluator, &None, &None, Some(&private_key))
                 .unwrap()
         };
 
@@ -659,7 +659,7 @@ mod tests {
 
         let degree = 8192;
 
-        let (keygen, context, _public_key, _private_key, encryptor, decryptor, evaluator) =
+        let (keygen, context, _public_key, private_key, encryptor, decryptor, evaluator) =
             setup_scheme(degree);
 
         let encoder = BFVEncoder::new(&context).unwrap();
@@ -681,6 +681,7 @@ mod tests {
                 &evaluator,
                 &Some(&relin_keys),
                 &None,
+                Some(&private_key),
             )
             .unwrap()
         };
@@ -707,7 +708,7 @@ mod tests {
 
         let degree = 8192;
 
-        let (keygen, context, _public_key, _private_key, encryptor, decryptor, evaluator) =
+        let (keygen, context, _public_key, private_key, encryptor, decryptor, evaluator) =
             setup_scheme(degree);
 
         let encoder = BFVEncoder::new(&context).unwrap();
@@ -729,6 +730,7 @@ mod tests {
                 &evaluator,
                 &Some(&relin_keys),
                 &None,
+                Some(&private_key)
             )
             .unwrap()
         };
@@ -770,7 +772,7 @@ mod tests {
 
         let degree = 8192;
 
-        let (keygen, context, _public_key, _private_key, encryptor, decryptor, evaluator) =
+        let (keygen, context, _public_key, private_key, encryptor, decryptor, evaluator) =
             setup_scheme(degree);
 
         let encoder = BFVEncoder::new(&context).unwrap();
@@ -792,6 +794,7 @@ mod tests {
                 &evaluator,
                 &Some(&relin_keys),
                 &None,
+                Some(&private_key)
             )
             .unwrap()
         };
@@ -819,7 +822,7 @@ mod tests {
 
         let degree = 4096;
 
-        let (keygen, context, _public_key, _private_key, encryptor, decryptor, evaluator) =
+        let (keygen, context, _public_key, private_key, encryptor, decryptor, evaluator) =
             setup_scheme(degree);
 
         let encoder = BFVEncoder::new(&context).unwrap();
@@ -832,7 +835,7 @@ mod tests {
         let ct_0 = encryptor.encrypt(&pt_0).unwrap();
 
         let output = unsafe {
-            run_program_unchecked(&ir, &[ct_0.into()], &evaluator, &None, &Some(&galois_keys))
+            run_program_unchecked(&ir, &[ct_0.into()], &evaluator, &None, &Some(&galois_keys), Some(&private_key))
                 .unwrap()
         };
 
@@ -864,7 +867,7 @@ mod tests {
 
         let degree = 4096;
 
-        let (keygen, context, _public_key, _private_key, encryptor, decryptor, evaluator) =
+        let (keygen, context, _public_key, private_key, encryptor, decryptor, evaluator) =
             setup_scheme(degree);
 
         let encoder = BFVEncoder::new(&context).unwrap();
@@ -877,7 +880,7 @@ mod tests {
         let ct_0 = encryptor.encrypt(&pt_0).unwrap();
 
         let output = unsafe {
-            run_program_unchecked(&ir, &[ct_0.into()], &evaluator, &None, &Some(&galois_keys))
+            run_program_unchecked(&ir, &[ct_0.into()], &evaluator, &None, &Some(&galois_keys), Some(&private_key))
                 .unwrap()
         };
 

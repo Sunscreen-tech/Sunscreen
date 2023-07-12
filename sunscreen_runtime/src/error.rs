@@ -121,6 +121,12 @@ pub enum Error {
      */
     #[error("ZKP error: {0}")]
     ZkpError(#[from] ZkpError),
+
+    /**
+     * An error occurred when building a proof or verification
+     */
+    #[error("ZKP builder error: {0}")]
+    ZkpBuilderError(Box<String>),
 }
 
 const_assert!(std::mem::size_of::<Error>() <= 24);
@@ -145,6 +151,13 @@ impl Error {
      */
     pub fn fhe_type_error(msg: &str) -> Self {
         Self::FheTypeError(Box::new(msg.to_owned()))
+    }
+
+    /**
+     * Create an [`Error::ZkpBuilderError`].
+     */
+    pub fn zkp_builder_error(msg: &str) -> Self {
+        Self::ZkpBuilderError(Box::new(msg.to_owned()))
     }
 
     fn unwrap_argument_mismatch_data(&self) -> &(Vec<Type>, Vec<Type>) {

@@ -166,3 +166,51 @@ fn can_declare_array_inputs() {
         .verify(program, &proof, Vec::<ZkpProgramInput>::new(), vec![])
         .unwrap();
 }
+
+#[test]
+fn builder_methods_work() {
+    #[zkp_program]
+    fn arbitrary<F: BackendField>(
+        x: NativeField<F>,
+        ys: [NativeField<F>; 9],
+        #[constant] zss: [[NativeField<F>; 9]; 64],
+    ) {
+        for y in ys {
+            x.constrain_eq(y);
+        }
+        for zs in zss {
+            for (y, z) in ys.iter().zip(zs) {
+                y.constrain_eq(z);
+            }
+        }
+    }
+
+    let app = Compiler::new()
+        .zkp_backend::<BulletproofsBackend>()
+        .zkp_program(arbitrary)
+        .compile()
+        .unwrap();
+
+    let runtime = Runtime::new_zkp(&BulletproofsBackend::new()).unwrap();
+
+    let program = app.get_zkp_program(arbitrary).unwrap();
+
+    let x = BPField::from(0);
+    let ys = [BPField::from(0); 9];
+    let zss = [[BPField::from(0); 9]; 64];
+
+    let proof = runtime
+        .proof_builder(&program)
+        .constant_input(zss)
+        .private_input(x)
+        .private_input(ys)
+        .prove()
+        .unwrap();
+
+    runtime
+        .verification_builder(&program)
+        .proof(&proof)
+        .constant_input(zss)
+        .verify()
+        .unwrap();
+}

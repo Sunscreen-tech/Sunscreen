@@ -477,6 +477,28 @@ where
         Ok(backend.prove(&prog, &inputs)?)
     }
 
+    /// Create a proof builder.
+    ///
+    /// This provides a wrapper around calling [`Self::prove`], and can be convenient when you
+    /// have ZKP program arguments of different types. Instead of casting them all to
+    /// `ZkpProgramInput`, you can add them one by one:
+    ///
+    /// ```rust,ignore
+    /// let runtime = ZkpRuntime::new(&backend)?;
+    /// let x = NativeField::from(1);
+    /// let ys = [NativeField::from(2), NativeField::from(3)];
+    /// let proof = runtime.proof_builder(&program)
+    ///     .private_input(x)
+    ///     .private_input(ys)
+    ///     .prove()?;
+    /// ```
+    pub fn proof_builder<'r, 'p>(
+        &'r self,
+        program: &'p CompiledZkpProgram,
+    ) -> ProofBuilder<'r, 'p, T, B> {
+        ProofBuilder::new(&self, program)
+    }
+
     /**
      * Verify that the given `proof` satisfies the given `program`.
      */
@@ -511,6 +533,29 @@ where
         trace!("Starting backend verify...");
 
         Ok(backend.verify(&prog, proof)?)
+    }
+
+    /// Create a verification builder.
+    ///
+    /// This provides a wrapper around calling [`Self::verify`], and can be convenient when you
+    /// have ZKP program arguments of different types. Instead of casting them all to
+    /// `ZkpProgramInput`, you can add them one by one:
+    ///
+    /// ```rust,ignore
+    /// let runtime = ZkpRuntime::new(&backend)?;
+    /// let x = NativeField::from(1);
+    /// let ys = [NativeField::from(2), NativeField::from(3)];
+    /// runtime.verification_builder(&program)
+    ///     .proof(&proof)
+    ///     .constant_input(x)
+    ///     .public_input(ys)
+    ///     .verify()?;
+    /// ```
+    pub fn verification_builder<'r, 'p>(
+        &'r self,
+        program: &'p CompiledZkpProgram,
+    ) -> VerificationBuilder<'r, 'p, '_, T, B> {
+        VerificationBuilder::new(&self, program)
     }
 }
 
@@ -660,3 +705,186 @@ impl<B> ZkpRuntime<B> {
  *   can do both.
  */
 pub type Runtime = GenericRuntime<(), ()>;
+
+/// A builder for creating a proof.
+///
+/// This is offered as a convenience for building the arguments necessary for the
+/// [`prove`][GenericRuntime::prove] function.
+pub struct ProofBuilder<'r, 'p, T: marker::Zkp, B: ZkpBackend> {
+    runtime: &'r GenericRuntime<T, B>,
+    program: &'p CompiledZkpProgram,
+    constant_inputs: Vec<ZkpProgramInput>,
+    public_inputs: Vec<ZkpProgramInput>,
+    private_inputs: Vec<ZkpProgramInput>,
+}
+
+impl<'r, 'p, T: marker::Zkp, B: ZkpBackend> ProofBuilder<'r, 'p, T, B> {
+    /// Create a new `ProofBuilder`. It's typically more convenient to create a proof builder
+    /// via [`runtime.proof_builder()`][GenericRuntime::proof_builder].
+    pub fn new(runtime: &'r GenericRuntime<T, B>, program: &'p CompiledZkpProgram) -> Self
+    where
+        T: marker::Zkp,
+        B: ZkpBackend,
+    {
+        Self {
+            runtime,
+            program,
+            constant_inputs: vec![],
+            public_inputs: vec![],
+            private_inputs: vec![],
+        }
+    }
+
+    /// Add a constant input to the proof builder.
+    pub fn constant_input(mut self, input: impl Into<ZkpProgramInput>) -> Self {
+        self.constant_inputs.push(input.into());
+        self
+    }
+
+    /// Add multiple constant inputs to the proof builder.
+    pub fn constant_inputs<I>(mut self, inputs: I) -> Self
+    where
+        I: IntoIterator<Item = T>,
+        ZkpProgramInput: From<T>,
+    {
+        self.constant_inputs
+            .extend(inputs.into_iter().map(ZkpProgramInput::from));
+        self
+    }
+
+    /// Add a public input to the proof builder.
+    pub fn public_input(mut self, input: impl Into<ZkpProgramInput>) -> Self {
+        self.public_inputs.push(input.into());
+        self
+    }
+
+    /// Add multiple public inputs to the proof builder.
+    pub fn public_inputs<I>(mut self, inputs: I) -> Self
+    where
+        I: IntoIterator<Item = T>,
+        ZkpProgramInput: From<T>,
+    {
+        self.public_inputs
+            .extend(inputs.into_iter().map(ZkpProgramInput::from));
+        self
+    }
+
+    /// Add a private input to the proof builder.
+    pub fn private_input(mut self, input: impl Into<ZkpProgramInput>) -> Self {
+        self.private_inputs.push(input.into());
+        self
+    }
+
+    /// Add multiple private inputs to the proof builder.
+    pub fn private_inputs<I>(mut self, inputs: I) -> Self
+    where
+        I: IntoIterator<Item = T>,
+        ZkpProgramInput: From<T>,
+    {
+        self.private_inputs
+            .extend(inputs.into_iter().map(ZkpProgramInput::from));
+        self
+    }
+
+    /// Generate a proof; see [`runtime.prove()`][GenericRuntime::prove].
+    pub fn prove(self) -> Result<Proof> {
+        self.runtime.prove(
+            self.program,
+            self.constant_inputs,
+            self.public_inputs,
+            self.private_inputs,
+        )
+    }
+}
+
+/// A builder for verifying a proof.
+///
+/// This is offered as a convenience for building the arguments necessary for the
+/// [`verify`][GenericRuntime::verify] function.
+pub struct VerificationBuilder<'r, 'p, 'a, T: marker::Zkp, B: ZkpBackend> {
+    runtime: &'r GenericRuntime<T, B>,
+    program: &'p CompiledZkpProgram,
+    proof: Option<&'a Proof>,
+    constant_inputs: Vec<ZkpProgramInput>,
+    public_inputs: Vec<ZkpProgramInput>,
+}
+
+impl<'r, 'p, 'a, T: marker::Zkp, B: ZkpBackend> VerificationBuilder<'r, 'p, 'a, T, B> {
+    /// Create a new `VerificationBuilder`. It's typically more convenient to create a
+    /// verification builder via
+    /// [`runtime.verification_builder()`][GenericRuntime::verification_builder].
+    pub fn new(runtime: &'r GenericRuntime<T, B>, program: &'p CompiledZkpProgram) -> Self
+    where
+        T: marker::Zkp,
+        B: ZkpBackend,
+    {
+        Self {
+            runtime,
+            program,
+            proof: None,
+            constant_inputs: vec![],
+            public_inputs: vec![],
+        }
+    }
+
+    /// Add the proof to verify.
+    pub fn proof(mut self, proof: &'a Proof) -> Self {
+        self.proof = Some(proof);
+        self
+    }
+
+    /// Add a constant input to the verification builder.
+    pub fn constant_input(mut self, input: impl Into<ZkpProgramInput>) -> Self {
+        self.constant_inputs.push(input.into());
+        self
+    }
+
+    /// Add multiple constant inputs to the verification builder.
+    pub fn constant_inputs<I>(mut self, inputs: I) -> Self
+    where
+        I: IntoIterator<Item = T>,
+        ZkpProgramInput: From<T>,
+    {
+        self.constant_inputs
+            .extend(inputs.into_iter().map(ZkpProgramInput::from));
+        self
+    }
+
+    /// Add a public input to the verification builder.
+    pub fn public_input(mut self, input: impl Into<ZkpProgramInput>) -> Self {
+        self.public_inputs.push(input.into());
+        self
+    }
+
+    /// Add multiple public inputs to the verification builder.
+    pub fn public_inputs<I>(mut self, inputs: I) -> Self
+    where
+        I: IntoIterator<Item = T>,
+        ZkpProgramInput: From<T>,
+    {
+        self.public_inputs
+            .extend(inputs.into_iter().map(ZkpProgramInput::from));
+        self
+    }
+
+    /// Verify that `self.proof` satisfies `self.program`; see
+    /// [`runtime.verify()`][GenericRuntime::verify].
+    ///
+    /// # Remarks
+    /// Will error if the underlying `verify` call errors, or if a proof has not yet been
+    /// supplied to the builder. That is, you must call [`Self::proof`] before calling this
+    /// function.
+    pub fn verify(self) -> Result<()> {
+        let proof = self.proof.ok_or_else(|| {
+            Error::zkp_builder_error(
+                "You must supply a proof to the verification builder before calling `verify`",
+            )
+        })?;
+        self.runtime.verify(
+            self.program,
+            proof,
+            self.constant_inputs,
+            self.public_inputs,
+        )
+    }
+}

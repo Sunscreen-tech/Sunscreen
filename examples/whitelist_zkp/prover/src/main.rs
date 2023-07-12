@@ -2,8 +2,7 @@ use std::io;
 
 use anyhow::Result;
 use sunscreen::{
-    bulletproofs::BulletproofsBackend, types::zkp::BulletproofsField, Compiler, ZkpProgramInput,
-    ZkpRuntime,
+    bulletproofs::BulletproofsBackend, types::zkp::BulletproofsField, Compiler, ZkpRuntime,
 };
 
 use zkp::{default_list, whitelist};
@@ -19,8 +18,11 @@ fn main() -> Result<()> {
     let entry: BulletproofsField = get_first_arg()?.unwrap_or(101).into();
     let list: [BulletproofsField; 100] = default_list();
 
-    let proof =
-        runtime.prove::<ZkpProgramInput>(prog, vec![], vec![list.into()], vec![entry.into()])?;
+    let proof = runtime
+        .proof_builder(prog)
+        .public_input(list)
+        .private_input(entry)
+        .prove()?;
 
     bincode::serialize_into(io::stdout(), &proof)?;
     Ok(())

@@ -82,12 +82,18 @@ impl From<SealError> for FheProgramRunFailure {
 }
 
 /**
- * 
+ * Stores a `SecretKey` for decryption for a given debugger session.
  */
 pub struct DebugInfo<'a> {
-    secret_key: &'a SecretKey,
+    /**
+     * The secret key associated with the debugger session. Used for decryption for visualization.
+     */
+    pub secret_key: &'a SecretKey,
 
-
+    /**
+     * The name of the debugger session.
+     */
+    pub session_name: String 
 }
 
 /**
@@ -112,7 +118,7 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
     evaluator: &E,
     relin_keys: &Option<&RelinearizationKeys>,
     galois_keys: &Option<&GaloisKeys>,
-    //debug_info: Option<&SecretKey>,
+    secret_key: Option<&SecretKey>,
 ) -> Result<Vec<Ciphertext>, FheProgramRunFailure> {
     fn get_data(
         data: &[AtomicCell<Option<Arc<SealData>>>],

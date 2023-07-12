@@ -1,6 +1,7 @@
 use std::marker::PhantomData;
 use std::time::Instant;
 
+use crate::DebugInfo;
 use crate::error::*;
 use crate::metadata::*;
 use crate::ZkpProgramInput;
@@ -11,6 +12,7 @@ use crate::{
 };
 
 use log::trace;
+use seal_fhe::SecretKey;
 use sunscreen_fhe_program::FheProgramTrait;
 use sunscreen_fhe_program::SchemeType;
 
@@ -258,11 +260,12 @@ where
      * Validates and runs the given FHE program. Unless you can guarantee your FHE program is valid,
      * you should use this method rather than [`run_program_unchecked`].
      */
-    pub fn run<I>(
+    pub fn run_impl<I>(
         &self,
         fhe_program: &CompiledFheProgram,
         mut arguments: Vec<I>,
         public_key: &PublicKey,
+        dbg_info: Option<DebugInfo>
     ) -> Result<Vec<Ciphertext>>
     where
         I: Into<FheProgramInput>,
@@ -346,6 +349,10 @@ where
 
                 let relin_key = public_key.relin_key.as_ref().map(|p| &p.data);
                 let galois_key = public_key.galois_key.as_ref().map(|p| &p.data);
+                let sec_key: Option<&SecretKey> = match dbg_info {
+                    Some(dbg_info) => Some(dbg_info.secret_key),
+                    None => None 
+                };
 
                 let mut raw_ciphertexts = unsafe {
                     run_program_unchecked(
@@ -354,6 +361,7 @@ where
                         &evaluator,
                         &relin_key,
                         &galois_key,
+                        sec_key,
                     )
                 }?;
 
@@ -383,6 +391,37 @@ where
                 Ok(packed_ciphertexts)
             }
         }
+    }
+
+    /**
+     * Used for non-debugging purposes. Calls [`run_impl`] without a secret key.
+     */
+    pub fn run<I>(
+        &self,
+        fhe_program: &CompiledFheProgram,
+        mut arguments: Vec<I>,
+        public_key: &PublicKey,
+    ) -> Result<Vec<Ciphertext>>
+    where
+        I: Into<FheProgramInput>,
+    {
+        self.run_impl(fhe_program, arguments, public_key, None)
+    }
+
+    /**
+     * Used for debugging. Calls [`run_impl`] with a secret key.
+     */
+    pub fn debug_fhe_program<I>(
+        &self,
+        fhe_program: &CompiledFheProgram,
+        mut arguments: Vec<I>,
+        public_key: &PublicKey,
+        dbg_info: Option<DebugInfo>
+    ) -> Result<Vec<Ciphertext>>
+    where 
+        I: Into<FheProgramInput>,
+    {
+        self.run_impl(fhe_program, arguments, public_key, dbg_info)
     }
 
     /**

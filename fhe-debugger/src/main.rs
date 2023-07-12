@@ -5,17 +5,17 @@ use petgraph::{
     visit::{EdgeRef, IntoNodeIdentifiers},
     Directed, Direction,
 };
+use serde::{Deserialize, Serialize};
+use serde_json::{json, Deserializer, Serializer};
 use sunscreen::{
     fhe_program,
-    types::{bfv::Signed, bfv::Rational, Cipher},
+    types::{bfv::Rational, bfv::Signed, Cipher},
     Compiler, Error, Runtime,
 };
 use sunscreen_compiler_common::{
     CompilationResult, Context, EdgeInfo, NodeInfo, Operation, Render,
 };
 use sunscreen_fhe_program::FheProgram;
-use serde::{Serialize, Deserialize};
-use serde_json::{Serializer, Deserializer, json};
 
 #[fhe_program(scheme = "bfv")]
 fn simple_multiply(a: Cipher<Signed>, b: Cipher<Signed>) -> Cipher<Signed> {
@@ -38,7 +38,11 @@ fn rational_multiply(a: Cipher<Rational>, b: Cipher<Rational>) -> Cipher<Rationa
 }
 
 #[fhe_program(scheme = "bfv")]
-fn complex_rational(a: Cipher<Rational>, b: Cipher<Rational>, c: Cipher<Rational>) -> Cipher<Rational> {
+fn complex_rational(
+    a: Cipher<Rational>,
+    b: Cipher<Rational>,
+    c: Cipher<Rational>,
+) -> Cipher<Rational> {
     (a + b) * c
 }
 
@@ -73,7 +77,6 @@ async fn rational_complex_handler() -> impl Responder {
             HttpResponse::InternalServerError().finish()
         }
     }
-
 }
 
 #[get("/multiply")]
@@ -98,7 +101,6 @@ async fn add_handler() -> impl Responder {
     }
 }
 
-
 async fn process_add() -> Result<String, Error> {
     let app = Compiler::new().fhe_program(simple_add).compile()?;
 
@@ -121,7 +123,6 @@ async fn process_multiply() -> Result<String, Error> {
     Ok(graph_string)
 }
 
-
 async fn process_rational_add() -> Result<String, Error> {
     let app = Compiler::new().fhe_program(rational_add).compile()?;
 
@@ -131,7 +132,6 @@ async fn process_rational_add() -> Result<String, Error> {
     let graph_string = serde_json::to_string_pretty(&prog_context).unwrap();
 
     Ok(graph_string)
-
 }
 
 async fn process_rational_mul() -> Result<String, Error> {
@@ -143,7 +143,6 @@ async fn process_rational_mul() -> Result<String, Error> {
     let graph_string = serde_json::to_string_pretty(&prog_context).unwrap();
 
     Ok(graph_string)
-
 }
 
 async fn process_rational_complex() -> Result<String, Error> {
@@ -155,7 +154,6 @@ async fn process_rational_complex() -> Result<String, Error> {
     let graph_string = serde_json::to_string_pretty(&prog_context).unwrap();
 
     Ok(graph_string)
-
 }
 
 #[actix_web::main]

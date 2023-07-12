@@ -394,7 +394,7 @@ where
     }
 
     /**
-     * Used for non-debugging purposes. Calls [`run_impl`] without a secret key.
+     * Used for non-debugging purposes. Calls `run_impl` without a secret key.
      */
     pub fn run<I>(
         &self,
@@ -409,7 +409,7 @@ where
     }
 
     /**
-     * Used for debugging. Calls [`run_impl`] with a secret key.
+     * Used for debugging. Calls `run_impl` with a secret key.
      */
     pub fn debug_fhe_program<I>(
         &self,

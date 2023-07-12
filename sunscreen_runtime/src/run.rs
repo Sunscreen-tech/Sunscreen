@@ -14,7 +14,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 
 use seal_fhe::{
-    Ciphertext, Error as SealError, Evaluator, GaloisKeys, Plaintext, RelinearizationKeys,
+    Ciphertext, Error as SealError, Evaluator, GaloisKeys, Plaintext, RelinearizationKeys, SecretKey,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, thiserror::Error)]
@@ -82,6 +82,15 @@ impl From<SealError> for FheProgramRunFailure {
 }
 
 /**
+ * 
+ */
+pub struct DebugInfo<'a> {
+    secret_key: &'a SecretKey,
+
+
+}
+
+/**
  * You probably should instead use [`Runtime::run()`](crate::Runtime::run).
  *
  * Run the given [`FheProgram`] to completion with the given inputs. This
@@ -103,6 +112,7 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
     evaluator: &E,
     relin_keys: &Option<&RelinearizationKeys>,
     galois_keys: &Option<&GaloisKeys>,
+    //debug_info: Option<&SecretKey>,
 ) -> Result<Vec<Ciphertext>, FheProgramRunFailure> {
     fn get_data(
         data: &[AtomicCell<Option<Arc<SealData>>>],

@@ -24,3 +24,6 @@ sunscreen_fhe_program = {path = "../sunscreen_fhe_program"}
 
 [build-dependencies]
 copy_dir = "0.1.2"
+
+[features]
+debugger = []

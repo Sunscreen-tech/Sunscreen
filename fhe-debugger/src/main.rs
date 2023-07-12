@@ -14,6 +14,8 @@ use sunscreen_compiler_common::{
     CompilationResult, Context, EdgeInfo, NodeInfo, Operation, Render,
 };
 use sunscreen_fhe_program::FheProgram;
+use serde::{Serialize, Deserialize};
+use serde_json::{Serializer, Deserializer, json};
 
 #[fhe_program(scheme = "bfv")]
 fn simple_multiply(a: Cipher<Signed>, b: Cipher<Signed>) -> Cipher<Signed> {
@@ -43,7 +45,7 @@ fn complex_rational(a: Cipher<Rational>, b: Cipher<Rational>, c: Cipher<Rational
 #[get("/rationaladd")]
 async fn rational_add_handler() -> impl Responder {
     match process_rational_add().await {
-        Ok(result) => HttpResponse::Ok().body(format!("Result: {:?}", result)),
+        Ok(result) => HttpResponse::Ok().body(format!("{}", result)),
         Err(err) => {
             eprintln!("Error: {:?}", err);
             HttpResponse::InternalServerError().finish()
@@ -54,7 +56,7 @@ async fn rational_add_handler() -> impl Responder {
 #[get("/rationalmul")]
 async fn rational_mul_handler() -> impl Responder {
     match process_rational_mul().await {
-        Ok(result) => HttpResponse::Ok().body(format!("Result: {:?}", result)),
+        Ok(result) => HttpResponse::Ok().body(format!("{}", result)),
         Err(err) => {
             eprintln!("Error: {:?}", err);
             HttpResponse::InternalServerError().finish()
@@ -65,7 +67,7 @@ async fn rational_mul_handler() -> impl Responder {
 #[get("/rationalcomplex")]
 async fn rational_complex_handler() -> impl Responder {
     match process_rational_complex().await {
-        Ok(result) => HttpResponse::Ok().body(format!("Result: {:?}", result)),
+        Ok(result) => HttpResponse::Ok().body(format!("{}", result)),
         Err(err) => {
             eprintln!("Error: {:?}", err);
             HttpResponse::InternalServerError().finish()
@@ -77,7 +79,7 @@ async fn rational_complex_handler() -> impl Responder {
 #[get("/multiply")]
 async fn multiply_handler() -> impl Responder {
     match process_multiply().await {
-        Ok(result) => HttpResponse::Ok().body(format!("Result: {:?}", result)),
+        Ok(result) => HttpResponse::Ok().body(format!("{}", result)),
         Err(err) => {
             eprintln!("Error: {:?}", err);
             HttpResponse::InternalServerError().finish()
@@ -88,7 +90,7 @@ async fn multiply_handler() -> impl Responder {
 #[get("/add")]
 async fn add_handler() -> impl Responder {
     match process_add().await {
-        Ok(result) => HttpResponse::Ok().body(format!("Result: {:?}", result)),
+        Ok(result) => HttpResponse::Ok().body(format!("{}", result)),
         Err(err) => {
             eprintln!("Error: {:?}", err);
             HttpResponse::InternalServerError().finish()
@@ -96,93 +98,63 @@ async fn add_handler() -> impl Responder {
     }
 }
 
-#[get("/fhe")]
-async fn fhe_handler() -> impl Responder {
-    match process_fhe().await {
-        Ok(result) => HttpResponse::Ok().body(format!("Result: {:?}", result)),
-        Err(err) => {
-            eprintln!("Error: {:?}", err);
-            HttpResponse::InternalServerError().finish()
-        }
-    }
-}
 
-async fn process_add() -> Result<Signed, Error> {
+async fn process_add() -> Result<String, Error> {
     let app = Compiler::new().fhe_program(simple_add).compile()?;
 
-    let runtime = Runtime::new_fhe(app.params())?;
+    let comp_program = app.get_fhe_program(simple_add).unwrap().clone();
+    let prog_context = comp_program.fhe_program_fn;
 
-    let (public_key, private_key) = runtime.generate_keys()?;
+    let graph_string = serde_json::to_string_pretty(&prog_context).unwrap();
 
-    let a = runtime.encrypt(Signed::from(15), &public_key)?;
-    let b = runtime.encrypt(Signed::from(5), &public_key)?;
-
-    let results = runtime.run(
-        app.get_fhe_program(simple_add).unwrap(),
-        vec![a.clone(), b.clone()],
-        &public_key,
-    )?;
-    let c: Signed = runtime.decrypt(&results[0], &private_key)?;
-
-    Ok(c)
+    Ok(graph_string)
 }
 
-async fn process_multiply() -> Result<Signed, Error> {
+async fn process_multiply() -> Result<String, Error> {
     let app = Compiler::new().fhe_program(simple_multiply).compile()?;
 
-    let runtime = Runtime::new_fhe(app.params())?;
+    let comp_program = app.get_fhe_program(simple_multiply).unwrap().clone();
+    let prog_context = comp_program.fhe_program_fn;
 
-    let (public_key, private_key) = runtime.generate_keys()?;
+    let graph_string = serde_json::to_string_pretty(&prog_context).unwrap();
 
-    let a = runtime.encrypt(Signed::from(15), &public_key)?;
-    let b = runtime.encrypt(Signed::from(5), &public_key)?;
-
-    let results = runtime.run(
-        app.get_fhe_program(simple_multiply).unwrap(),
-        vec![a.clone(), b.clone()],
-        &public_key,
-    )?;
-    let c: Signed = runtime.decrypt(&results[0], &private_key)?;
-
-    Ok(c)
+    Ok(graph_string)
 }
 
-async fn process_fhe() -> Result<FheProgram, Error> {
-    let app = Compiler::new().fhe_program(simple_add).compile()?;
 
-    let test = app.get_fhe_program(simple_add).unwrap().clone();
-    let test2 = test.fhe_program_fn;
-
-    Ok(test2)
-}
-
-async fn process_rational_add() -> Result<FheProgram, Error> {
+async fn process_rational_add() -> Result<String, Error> {
     let app = Compiler::new().fhe_program(rational_add).compile()?;
 
-    let test = app.get_fhe_program(rational_add).unwrap().clone();
-    let test2 = test.fhe_program_fn;
+    let comp_program = app.get_fhe_program(rational_add).unwrap().clone();
+    let prog_context = comp_program.fhe_program_fn;
 
-    Ok(test2)
+    let graph_string = serde_json::to_string_pretty(&prog_context).unwrap();
+
+    Ok(graph_string)
 
 }
 
-async fn process_rational_mul() -> Result<FheProgram, Error> {
+async fn process_rational_mul() -> Result<String, Error> {
     let app = Compiler::new().fhe_program(rational_multiply).compile()?;
 
-    let test = app.get_fhe_program(rational_multiply).unwrap().clone();
-    let test2 = test.fhe_program_fn;
+    let comp_program = app.get_fhe_program(rational_multiply).unwrap().clone();
+    let prog_context = comp_program.fhe_program_fn;
 
-    Ok(test2)
+    let graph_string = serde_json::to_string_pretty(&prog_context).unwrap();
+
+    Ok(graph_string)
 
 }
 
-async fn process_rational_complex() -> Result<FheProgram, Error> {
+async fn process_rational_complex() -> Result<String, Error> {
     let app = Compiler::new().fhe_program(complex_rational).compile()?;
 
-    let test = app.get_fhe_program(complex_rational).unwrap().clone();
-    let test2 = test.fhe_program_fn;
+    let comp_program = app.get_fhe_program(complex_rational).unwrap().clone();
+    let prog_context = comp_program.fhe_program_fn;
 
-    Ok(test2)
+    let graph_string = serde_json::to_string_pretty(&prog_context).unwrap();
+
+    Ok(graph_string)
 
 }
 
@@ -192,7 +164,6 @@ async fn main() -> std::io::Result<()> {
         App::new()
             .service(multiply_handler)
             .service(add_handler)
-            .service(fhe_handler)
             .service(rational_complex_handler)
             .service(rational_add_handler)
             .service(rational_mul_handler)

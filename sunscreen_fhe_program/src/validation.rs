@@ -211,7 +211,8 @@ mod tests {
         let ir_str = serde_json::json!({
           "data": "Bfv",
           "graph": {
-            "nodes": [
+            "graph": {
+              "nodes": [
               {
                 "operation": {
                   "InputCiphertext": 0
@@ -245,6 +246,7 @@ mod tests {
                 "Right"
               ]
             ]
+            }
           }
         });
 
@@ -261,7 +263,8 @@ mod tests {
         let ir_str = serde_json::json!({
           "data": "Bfv",
           "graph": {
-            "nodes": [
+            "graph": {
+              "nodes": [
               {
                 "operation": {
                   "InputCiphertext": 0
@@ -290,6 +293,7 @@ mod tests {
                 "Left"
               ],
             ]
+            }
           }
         });
 
@@ -313,7 +317,8 @@ mod tests {
         let ir_str = serde_json::json!({
           "data": "Bfv",
           "graph": {
-            "nodes": [
+            "graph": {
+              "nodes": [
               {
                 "operation": {
                   "InputCiphertext": 0
@@ -337,6 +342,7 @@ mod tests {
                 "Left"
               ],
             ]
+            }
           }
         });
 
@@ -360,7 +366,8 @@ mod tests {
         let ir_str = serde_json::json!({
           "data": "Bfv",
           "graph": {
-            "nodes": [
+            "graph": {
+              "nodes": [
               {
                 "operation": {
                   "InputCiphertext": 0
@@ -394,6 +401,7 @@ mod tests {
                 "Left"
               ],
             ]
+            }
           }
         });
 

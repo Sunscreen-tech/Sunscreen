@@ -22,7 +22,7 @@ fn get_params() -> Params {
     Need to add support for having `debugger` feature on, which means that metadata can't be an empty field.
     Will just do this by doing something like:
     #[cfg(feature = "debugger")]
-    let expected = ... 
+    let expected = ...
         where this includes the metadata field
 */
 #[test]

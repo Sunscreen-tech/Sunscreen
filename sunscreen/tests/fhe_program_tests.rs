@@ -17,6 +17,14 @@ fn get_params() -> Params {
     }
 }
 
+/*
+    TODO: these tests will all fail when we actually try to pass in metadata when constructing programs
+    Need to add support for having `debugger` feature on, which means that metadata can't be an empty field.
+    Will just do this by doing something like:
+    #[cfg(feature = "debugger")]
+    let expected = ... 
+        where this includes the metadata field
+*/
 #[test]
 fn fhe_program_gets_called() {
     static mut FOO: u32 = 0;
@@ -125,37 +133,39 @@ fn can_add() {
     let context = fhe_program_with_args.build(&get_params()).unwrap();
 
     let expected = json!({
-        "nodes": [
-            { "operation": "InputCiphertext" },
-            { "operation": "InputCiphertext" },
-            { "operation": "InputCiphertext" },
-            { "operation": "Add" },
-            { "operation": "Add" }
-        ],
-        "node_holes": [],
-        "edge_property": "directed",
-        "edges": [
-            [
-                0,
-                3,
-                "Left"
+        "graph": {
+            "nodes": [
+                { "operation": "InputCiphertext" },
+                { "operation": "InputCiphertext" },
+                { "operation": "InputCiphertext" },
+                { "operation": "Add" },
+                { "operation": "Add" }
             ],
-            [
-                1,
-                3,
-                "Right"
-            ],
-            [
-                3,
-                4,
-                "Left"
-            ],
-            [
-                2,
-                4,
-                "Right"
+            "node_holes": [],
+            "edge_property": "directed",
+            "edges": [
+                [
+                    0,
+                    3,
+                    "Left"
+                ],
+                [
+                    1,
+                    3,
+                    "Right"
+                ],
+                [
+                    3,
+                    4,
+                    "Left"
+                ],
+                [
+                    2,
+                    4,
+                    "Right"
+                ]
             ]
-        ]
+        },
     });
 
     assert_eq!(
@@ -182,25 +192,27 @@ fn can_add_plaintext() {
     let context = fhe_program_with_args.build(&get_params()).unwrap();
 
     let expected = json!({
-        "nodes": [
-            { "operation": "InputCiphertext" },
-            { "operation": "InputPlaintext" },
-            { "operation": "AddPlaintext" },
-        ],
-        "node_holes": [],
-        "edge_property": "directed",
-        "edges": [
-            [
-                0,
-                2,
-                "Left"
+        "graph": {
+            "nodes": [
+                { "operation": "InputCiphertext" },
+                { "operation": "InputPlaintext" },
+                { "operation": "AddPlaintext" },
             ],
-            [
-                1,
-                2,
-                "Right"
-            ],
-        ]
+            "node_holes": [],
+            "edge_property": "directed",
+            "edges": [
+                [
+                    0,
+                    2,
+                    "Left"
+                ],
+                [
+                    1,
+                    2,
+                    "Right"
+                ],
+            ]
+        }
     });
 
     assert_eq!(
@@ -229,37 +241,39 @@ fn can_mul() {
     let context = fhe_program_with_args.build(&get_params()).unwrap();
 
     let expected = json!({
-        "nodes": [
-            { "operation": "InputCiphertext" },
-            { "operation": "InputCiphertext" },
-            { "operation": "InputCiphertext" },
-            { "operation": "Multiply" },
-            { "operation": "Multiply" }
-        ],
-        "node_holes": [],
-        "edge_property": "directed",
-        "edges": [
-            [
-                0,
-                3,
-                "Left"
+        "graph": {
+            "nodes": [
+                { "operation": "InputCiphertext" },
+                { "operation": "InputCiphertext" },
+                { "operation": "InputCiphertext" },
+                { "operation": "Multiply" },
+                { "operation": "Multiply" }
             ],
-            [
-                1,
-                3,
-                "Right"
-            ],
-            [
-                3,
-                4,
-                "Left"
-            ],
-            [
-                2,
-                4,
-                "Right"
+            "node_holes": [],
+            "edge_property": "directed",
+            "edges": [
+                [
+                    0,
+                    3,
+                    "Left"
+                ],
+                [
+                    1,
+                    3,
+                    "Right"
+                ],
+                [
+                    3,
+                    4,
+                    "Left"
+                ],
+                [
+                    2,
+                    4,
+                    "Right"
+                ]
             ]
-        ]
+        }
     });
 
     assert_eq!(
@@ -288,42 +302,44 @@ fn can_collect_output() {
     let context = fhe_program_with_args.build(&get_params()).unwrap();
 
     let expected = json!({
-        "nodes": [
-          { "operation": "InputCiphertext" },
-          { "operation": "InputCiphertext" },
-          { "operation": "Multiply" },
-          { "operation": "Add" },
-          { "operation": "Output" },
-        ],
-        "node_holes": [],
-        "edge_property": "directed",
-        "edges": [
-          [
-            1,
-            2,
-            "Left"
-          ],
-          [
-            0,
-            2,
-            "Right"
-          ],
-          [
-            0,
-            3,
-            "Left"
-          ],
-          [
-            2,
-            3,
-            "Right"
-          ],
-          [
-            3,
-            4,
-            "Unary"
-          ]
-        ]
+        "graph": {
+            "nodes": [
+                { "operation": "InputCiphertext" },
+                { "operation": "InputCiphertext" },
+                { "operation": "Multiply" },
+                { "operation": "Add" },
+                { "operation": "Output" },
+              ],
+              "node_holes": [],
+              "edge_property": "directed",
+              "edges": [
+                [
+                  1,
+                  2,
+                  "Left"
+                ],
+                [
+                  0,
+                  2,
+                  "Right"
+                ],
+                [
+                  0,
+                  3,
+                  "Left"
+                ],
+                [
+                  2,
+                  3,
+                  "Right"
+                ],
+                [
+                  3,
+                  4,
+                  "Unary"
+                ]
+              ]
+        }
     });
 
     dbg!(serde_json::to_string(&context).unwrap());
@@ -357,7 +373,8 @@ fn can_collect_multiple_outputs() {
     let context = fhe_program_with_args.build(&get_params()).unwrap();
 
     let expected = json!({
-          "nodes": [
+        "graph": {
+            "nodes": [
             { "operation": "InputCiphertext" },
             { "operation": "InputCiphertext"    },
             { "operation": "Multiply" },
@@ -399,6 +416,7 @@ fn can_collect_multiple_outputs() {
               "Unary"
             ]
           ]
+        }
     });
 
     assert_eq!(

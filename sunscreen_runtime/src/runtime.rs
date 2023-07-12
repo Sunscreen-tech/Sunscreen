@@ -1,9 +1,9 @@
 use std::marker::PhantomData;
 use std::time::Instant;
 
-use crate::DebugInfo;
 use crate::error::*;
 use crate::metadata::*;
+use crate::DebugInfo;
 use crate::ZkpProgramInput;
 use crate::{
     run_program_unchecked, serialization::WithContext, Ciphertext, FheProgramInput,
@@ -265,7 +265,7 @@ where
         fhe_program: &CompiledFheProgram,
         mut arguments: Vec<I>,
         public_key: &PublicKey,
-        dbg_info: Option<DebugInfo>
+        dbg_info: Option<DebugInfo>,
     ) -> Result<Vec<Ciphertext>>
     where
         I: Into<FheProgramInput>,
@@ -351,7 +351,7 @@ where
                 let galois_key = public_key.galois_key.as_ref().map(|p| &p.data);
                 let sec_key: Option<&SecretKey> = match dbg_info {
                     Some(dbg_info) => Some(dbg_info.secret_key),
-                    None => None 
+                    None => None,
                 };
 
                 let mut raw_ciphertexts = unsafe {
@@ -399,7 +399,7 @@ where
     pub fn run<I>(
         &self,
         fhe_program: &CompiledFheProgram,
-        mut arguments: Vec<I>,
+        arguments: Vec<I>,
         public_key: &PublicKey,
     ) -> Result<Vec<Ciphertext>>
     where
@@ -414,11 +414,11 @@ where
     pub fn debug_fhe_program<I>(
         &self,
         fhe_program: &CompiledFheProgram,
-        mut arguments: Vec<I>,
+        arguments: Vec<I>,
         public_key: &PublicKey,
-        dbg_info: Option<DebugInfo>
+        dbg_info: Option<DebugInfo>,
     ) -> Result<Vec<Ciphertext>>
-    where 
+    where
         I: Into<FheProgramInput>,
     {
         self.run_impl(fhe_program, arguments, public_key, dbg_info)

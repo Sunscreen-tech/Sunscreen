@@ -1,21 +1,10 @@
 use actix_web::{get, App, HttpResponse, HttpServer, Responder};
-use petgraph::{
-    dot::Dot,
-    stable_graph::{EdgeReference, Edges, Neighbors, NodeIndex, StableGraph},
-    visit::{EdgeRef, IntoNodeIdentifiers},
-    Directed, Direction,
-};
-use serde::{Deserialize, Serialize};
-use serde_json::{json, Deserializer, Serializer};
+
 use sunscreen::{
     fhe_program,
     types::{bfv::Rational, bfv::Signed, Cipher},
-    Compiler, Error, Runtime,
+    Compiler, Error,
 };
-use sunscreen_compiler_common::{
-    CompilationResult, Context, EdgeInfo, NodeInfo, Operation, Render,
-};
-use sunscreen_fhe_program::FheProgram;
 
 #[fhe_program(scheme = "bfv")]
 fn simple_multiply(a: Cipher<Signed>, b: Cipher<Signed>) -> Cipher<Signed> {
@@ -49,7 +38,7 @@ fn complex_rational(
 #[get("/rationaladd")]
 async fn rational_add_handler() -> impl Responder {
     match process_rational_add().await {
-        Ok(result) => HttpResponse::Ok().body(format!("{}", result)),
+        Ok(result) => HttpResponse::Ok().body(result),
         Err(err) => {
             eprintln!("Error: {:?}", err);
             HttpResponse::InternalServerError().finish()
@@ -60,7 +49,7 @@ async fn rational_add_handler() -> impl Responder {
 #[get("/rationalmul")]
 async fn rational_mul_handler() -> impl Responder {
     match process_rational_mul().await {
-        Ok(result) => HttpResponse::Ok().body(format!("{}", result)),
+        Ok(result) => HttpResponse::Ok().body(result),
         Err(err) => {
             eprintln!("Error: {:?}", err);
             HttpResponse::InternalServerError().finish()
@@ -71,7 +60,7 @@ async fn rational_mul_handler() -> impl Responder {
 #[get("/rationalcomplex")]
 async fn rational_complex_handler() -> impl Responder {
     match process_rational_complex().await {
-        Ok(result) => HttpResponse::Ok().body(format!("{}", result)),
+        Ok(result) => HttpResponse::Ok().body(result),
         Err(err) => {
             eprintln!("Error: {:?}", err);
             HttpResponse::InternalServerError().finish()
@@ -82,7 +71,7 @@ async fn rational_complex_handler() -> impl Responder {
 #[get("/multiply")]
 async fn multiply_handler() -> impl Responder {
     match process_multiply().await {
-        Ok(result) => HttpResponse::Ok().body(format!("{}", result)),
+        Ok(result) => HttpResponse::Ok().body(result),
         Err(err) => {
             eprintln!("Error: {:?}", err);
             HttpResponse::InternalServerError().finish()
@@ -93,7 +82,7 @@ async fn multiply_handler() -> impl Responder {
 #[get("/add")]
 async fn add_handler() -> impl Responder {
     match process_add().await {
-        Ok(result) => HttpResponse::Ok().body(format!("{}", result)),
+        Ok(result) => HttpResponse::Ok().body(result),
         Err(err) => {
             eprintln!("Error: {:?}", err);
             HttpResponse::InternalServerError().finish()

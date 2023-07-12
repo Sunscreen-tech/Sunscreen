@@ -8,7 +8,6 @@ use petgraph::Graph;
 use serde::{Deserialize, Serialize};
 
 use crate::{Operation, Render};
-use radix_trie::Trie;
 
 /**
  * Stores information about the nodes associated with a certain operation.
@@ -95,7 +94,7 @@ where
      */
     pub fn new(operation: O, #[cfg(feature = "debugger")] id: u64) -> Self {
         Self {
-            operation: operation,
+            operation,
             #[cfg(feature = "debugger")]
             group_id: id,
         }
@@ -289,11 +288,10 @@ where
      * Create a new [`CompilationResult`]
      */
     pub fn new() -> Self {
-
         Self {
             graph: StableGraph::new(),
             #[cfg(feature = "debugger")]
-            metadata: DebugData::new()
+            metadata: DebugData::new(),
         }
     }
 }
@@ -353,9 +351,9 @@ where
         Self {
             graph: CompilationResult::<O>::new(),
             data,
-            #[cfg(feature = "debugger")] 
+            #[cfg(feature = "debugger")]
             group_stack: Vec::new(),
-            #[cfg(feature = "debugger")] 
+            #[cfg(feature = "debugger")]
             group_counter: 0,
         }
     }
@@ -370,9 +368,8 @@ where
         self.graph.add_node(NodeInfo {
             operation,
             #[cfg(feature = "debugger")]
-            group_id
+            group_id,
         })
-
     }
 
     /**

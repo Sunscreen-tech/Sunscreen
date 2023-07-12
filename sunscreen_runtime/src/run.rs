@@ -14,7 +14,8 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 
 use seal_fhe::{
-    Ciphertext, Error as SealError, Evaluator, GaloisKeys, Plaintext, RelinearizationKeys, SecretKey,
+    Ciphertext, Error as SealError, Evaluator, GaloisKeys, Plaintext, RelinearizationKeys,
+    SecretKey,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, thiserror::Error)]
@@ -93,7 +94,7 @@ pub struct DebugInfo<'a> {
     /**
      * The name of the debugger session.
      */
-    pub session_name: String 
+    pub session_name: String,
 }
 
 /**
@@ -118,7 +119,7 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
     evaluator: &E,
     relin_keys: &Option<&RelinearizationKeys>,
     galois_keys: &Option<&GaloisKeys>,
-    secret_key: Option<&SecretKey>,
+    _secret_key: Option<&SecretKey>,
 ) -> Result<Vec<Ciphertext>, FheProgramRunFailure> {
     fn get_data(
         data: &[AtomicCell<Option<Arc<SealData>>>],
@@ -634,8 +635,15 @@ mod tests {
         let ct_1 = encryptor.encrypt(&pt_1).unwrap();
 
         let output = unsafe {
-            run_program_unchecked(&ir, &[ct_0.into(), ct_1.into()], &evaluator, &None, &None, Some(&private_key))
-                .unwrap()
+            run_program_unchecked(
+                &ir,
+                &[ct_0.into(), ct_1.into()],
+                &evaluator,
+                &None,
+                &None,
+                Some(&private_key),
+            )
+            .unwrap()
         };
 
         assert_eq!(output.len(), 1);
@@ -730,7 +738,7 @@ mod tests {
                 &evaluator,
                 &Some(&relin_keys),
                 &None,
-                Some(&private_key)
+                Some(&private_key),
             )
             .unwrap()
         };
@@ -794,7 +802,7 @@ mod tests {
                 &evaluator,
                 &Some(&relin_keys),
                 &None,
-                Some(&private_key)
+                Some(&private_key),
             )
             .unwrap()
         };
@@ -835,8 +843,15 @@ mod tests {
         let ct_0 = encryptor.encrypt(&pt_0).unwrap();
 
         let output = unsafe {
-            run_program_unchecked(&ir, &[ct_0.into()], &evaluator, &None, &Some(&galois_keys), Some(&private_key))
-                .unwrap()
+            run_program_unchecked(
+                &ir,
+                &[ct_0.into()],
+                &evaluator,
+                &None,
+                &Some(&galois_keys),
+                Some(&private_key),
+            )
+            .unwrap()
         };
 
         assert_eq!(output.len(), 1);
@@ -880,8 +895,15 @@ mod tests {
         let ct_0 = encryptor.encrypt(&pt_0).unwrap();
 
         let output = unsafe {
-            run_program_unchecked(&ir, &[ct_0.into()], &evaluator, &None, &Some(&galois_keys), Some(&private_key))
-                .unwrap()
+            run_program_unchecked(
+                &ir,
+                &[ct_0.into()],
+                &evaluator,
+                &None,
+                &Some(&galois_keys),
+                Some(&private_key),
+            )
+            .unwrap()
         };
 
         assert_eq!(output.len(), 1);

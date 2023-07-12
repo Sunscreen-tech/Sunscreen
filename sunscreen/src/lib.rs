@@ -82,8 +82,8 @@ pub use sunscreen_fhe_program::{SchemeType, SecurityLevel};
 pub use sunscreen_runtime::{
     CallSignature, Ciphertext, CompiledFheProgram, Error as RuntimeError, FheProgramInput,
     FheProgramInputTrait, FheProgramMetadata, FheRuntime, FheZkpRuntime, InnerCiphertext,
-    InnerPlaintext, Params, Plaintext, PrivateKey, PublicKey, RequiredKeys, Runtime, WithContext,
-    ZkpProgramInput, ZkpRuntime,
+    InnerPlaintext, Params, Plaintext, PrivateKey, ProofBuilder, PublicKey, RequiredKeys, Runtime,
+    VerificationBuilder, WithContext, ZkpProgramInput, ZkpRuntime,
 };
 #[cfg(feature = "bulletproofs")]
 pub use sunscreen_zkp_backend::bulletproofs;

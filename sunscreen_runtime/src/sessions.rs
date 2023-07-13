@@ -1,12 +1,11 @@
-use std::collections::HashMap;
 use std::sync::{Mutex, OnceLock};
+use std::collections::HashMap;
 
-use sunscreen_runtime::SealData;
+use crate::SealData;
 
 use sunscreen_compiler_common::{CompilationResult, Operation};
 
 use seal_fhe::SecretKey;
-
 // Global data structure storing session information
 pub static SESSIONS: OnceLock<Mutex<HashMap<String, DebugType>>> = OnceLock::new();
 
@@ -15,15 +14,14 @@ pub static SESSIONS: OnceLock<Mutex<HashMap<String, DebugType>>> = OnceLock::new
  */
 pub enum DebugType {
     FheDebugInfo,
-    ZkpDebugInfo,
+    ZkpDebugInfo
 }
 
 /**
  * Stores the relevant information for debugging an FHE program.
  */
 pub struct FheDebugInfo<'a, O>
-where
-    O: Operation,
+where O: Operation
 {
     /**
      * The compilation graph used to execute the program.
@@ -36,20 +34,19 @@ where
     /**
      * Used for decryption of ciphertexts for visualization.
      */
-    pub secret_key: Option<&'a SecretKey>,
+    pub secret_key: Option<&'a SecretKey>
 }
-impl<'a, O> FheDebugInfo<'a, O>
-where
-    O: Operation,
+impl <'a, O> FheDebugInfo<'a, O> 
+where O: Operation 
 {
     /**
      * Constructs a new `FheDebugInfo`.
      */
     pub fn new(graph: CompilationResult<O>, secret_key: Option<&'a SecretKey>) -> Self {
         FheDebugInfo {
-            graph,
-            program_data: Vec::new(),
-            secret_key,
+            graph, 
+            program_data: Vec::new(), 
+            secret_key
         }
     }
 }
@@ -58,4 +55,6 @@ where
 /**
  * Stores the relevant information for debugging a ZKP program.
  */
-pub struct ZkpDebugInfo {}
+pub struct ZkpDebugInfo {
+
+}

@@ -6,6 +6,9 @@ use sunscreen_fhe_program::{FheProgram, FheProgramTrait, Literal, Operation::*};
 use crossbeam::atomic::AtomicCell;
 use petgraph::{stable_graph::NodeIndex, Direction};
 
+#[cfg(feature = "debugger")]
+mod sessions;
+
 use std::borrow::Cow;
 #[cfg(target_arch = "wasm32")]
 use std::collections::VecDeque;
@@ -136,6 +139,19 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
             Some(v) => Ok(v),
             None => Err(FheProgramRunFailure::MissingData),
         }
+    }
+
+    //#[cfg(feature = "debugger")]
+    fn set_data(
+        data: &[AtomicCell<Option<Arc<SealData>>>],
+        index: usize,
+        session: String
+    ) {
+        data[index.index()].store(Some(Arc::new(c.into())));
+        match SESSIONS[session] {
+            FheDebugInfo
+        }
+
     }
 
     fn get_ciphertext(

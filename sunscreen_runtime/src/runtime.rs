@@ -496,7 +496,7 @@ where
         &'r self,
         program: &'p CompiledZkpProgram,
     ) -> ProofBuilder<'r, 'p, T, B> {
-        ProofBuilder::new(&self, program)
+        ProofBuilder::new(self, program)
     }
 
     /**
@@ -555,7 +555,7 @@ where
         &'r self,
         program: &'p CompiledZkpProgram,
     ) -> VerificationBuilder<'r, 'p, '_, T, B> {
-        VerificationBuilder::new(&self, program)
+        VerificationBuilder::new(self, program)
     }
 }
 

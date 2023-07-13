@@ -200,7 +200,7 @@ fn builder_methods_work() {
     let zss = [[BPField::from(0); 9]; 64];
 
     let proof = runtime
-        .proof_builder(&program)
+        .proof_builder(program)
         .constant_input(zss)
         .private_input(x)
         .private_input(ys)
@@ -208,7 +208,7 @@ fn builder_methods_work() {
         .unwrap();
 
     runtime
-        .verification_builder(&program)
+        .verification_builder(program)
         .proof(&proof)
         .constant_input(zss)
         .verify()

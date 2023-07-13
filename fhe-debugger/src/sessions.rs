@@ -1,15 +1,9 @@
 use std::sync::{Mutex, OnceLock};
 use std::collections::HashMap;
 
-use crate::error::*;
-use crate::metadata::*;
-use crate::DebugInfo;
-use crate::ZkpProgramInput;
-use crate::{
-    run_program_unchecked, serialization::WithContext, Ciphertext, FheProgramInput,
-    InnerCiphertext, InnerPlaintext, Plaintext, PrivateKey, PublicKey, SealCiphertext, SealData,
-    SealPlaintext, TryFromPlaintext, TryIntoPlaintext, TypeNameInstance,
-};
+use sunscreen_runtime::{SealData};
+
+use sunscreen_compiler_common::{CompilationResult, Operation};
 
 use log::trace;
 use seal_fhe::SecretKey;
@@ -35,11 +29,13 @@ pub enum DebugType {
 /**
  * Stores the relevant information for debugging an FHE program.
  */
-pub struct FheDebugInfo {
+pub struct FheDebugInfo<'a, O>
+where O: Operation
+{
     /**
      * The compilation graph used to execute the program.
      */
-    pub graph: CompilationResult,
+    pub graph: CompilationResult<O>,
     /**
      * The values of operands in the compilation graph.
      */
@@ -47,7 +43,21 @@ pub struct FheDebugInfo {
     /**
      * Used for decryption of ciphertexts for visualization.
      */
-    pub secret_key: Option<&SecretKey>
+    pub secret_key: Option<&'a SecretKey>
+}
+impl <'a, O> FheDebugInfo<'a, O> 
+where O: Operation 
+{
+    /**
+     * Constructs a new `FheDebugInfo`.
+     */
+    pub fn new(graph: CompilationResult<O>, secret_key: Option<&'a SecretKey>) -> Self {
+        FheDebugInfo {
+            graph, 
+            program_data: Vec::new(), 
+            secret_key
+        }
+    }
 }
 
 // TODO: implement this

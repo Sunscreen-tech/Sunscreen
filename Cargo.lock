@@ -1247,15 +1247,19 @@ dependencies = [
  "copy_dir",
  "env_logger 0.10.0",
  "futures 0.3.28",
+ "log",
  "mime",
  "petgraph",
  "radix_trie",
  "rand",
+ "seal_fhe",
  "serde",
  "serde_json",
  "sunscreen",
  "sunscreen_compiler_common",
  "sunscreen_fhe_program",
+ "sunscreen_runtime",
+ "sunscreen_zkp_backend",
 ]
 
 [[package]]

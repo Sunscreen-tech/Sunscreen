@@ -19,8 +19,12 @@ radix_trie = "0.2.1"
 backtrace = "0.3"
 futures = "0.3.28"
 petgraph = "0.6.3"
+log = "0.4.14"
+seal_fhe = { version = "0.7", path = "../seal_fhe" }
 sunscreen_compiler_common = {path = "../sunscreen_compiler_common"}
 sunscreen_fhe_program = {path = "../sunscreen_fhe_program"}
+sunscreen_zkp_backend = { path = "../sunscreen_zkp_backend" }
+sunscreen_runtime = { path = "../sunscreen_runtime"}
 
 [build-dependencies]
 copy_dir = "0.1.2"

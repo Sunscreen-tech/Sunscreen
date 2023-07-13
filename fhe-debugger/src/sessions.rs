@@ -21,30 +21,39 @@ use seal_fhe::{
     KeyGenerator, Modulus,
 };
 
+// Global data structure storing session information
 pub static SESSIONS: OnceLock<Mutex<HashMap<String, DebugType>>> = OnceLock::new();
 
+/**
+ * Determines if the session being debugged is for an FHE or ZKP program.
+ */
 pub enum DebugType {
     FheDebugInfo,
     ZkpDebugInfo
 }
 
+/**
+ * Stores the relevant information for debugging an FHE program.
+ */
 pub struct FheDebugInfo {
+    /**
+     * The compilation graph used to execute the program.
+     */
     pub graph: CompilationResult,
+    /**
+     * The values of operands in the compilation graph.
+     */
     pub program_data: Vec<Option<SealData>>,
-    pub secret_key: Option<SecretKey>
+    /**
+     * Used for decryption of ciphertexts for visualization.
+     */
+    pub secret_key: Option<&SecretKey>
 }
 
 // TODO: implement this
+/**
+ * Stores the relevant information for debugging a ZKP program.
+ */
 pub struct ZkpDebugInfo {
 
-}
-
-fn main() {
-    let mut lock = HORSE.get_or_init(|| {
-        Mutex::new(HashMap::new())
-    }).lock().unwrap();
-     
-    lock.insert(5, 3);
-    
-    dbg!(lock);
 }

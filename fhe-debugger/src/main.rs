@@ -6,7 +6,7 @@ use sunscreen::{
     Compiler, Error,
 };
 
-mod sessions; 
+mod sessions;
 
 #[fhe_program(scheme = "bfv")]
 fn simple_multiply(a: Cipher<Signed>, b: Cipher<Signed>) -> Cipher<Signed> {

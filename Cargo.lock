@@ -2805,11 +2805,13 @@ dependencies = [
 name = "sunscreen_runtime"
 version = "0.7.0"
 dependencies = [
+ "backtrace",
  "bincode",
  "crossbeam",
  "log",
  "num_cpus",
  "petgraph",
+ "radix_trie",
  "rayon",
  "rlp",
  "seal_fhe",

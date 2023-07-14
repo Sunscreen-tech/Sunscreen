@@ -3,7 +3,7 @@ use static_assertions::const_assert;
 use sunscreen_compiler_common::{GraphQuery, GraphQueryError};
 use sunscreen_fhe_program::{FheProgram, FheProgramTrait, Literal, Operation::*};
 
-//use debugger::sessions::{get_sessions, Session, BfvSession};
+use crate::debugger::{sessions};
 
 use std::collections::HashMap;
 use crossbeam::atomic::AtomicCell;

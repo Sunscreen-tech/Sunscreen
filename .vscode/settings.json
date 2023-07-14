@@ -25,6 +25,9 @@
         "./sunscreen_compiler_common/Cargo.toml",
         "./sunscreen_compiler_common/Cargo.toml",
         "./fhe-debugger/Cargo.toml",
+        "./sunscreen_runtime/Cargo.toml",
+        "./sunscreen_runtime/Cargo.toml",
         "./sunscreen_runtime/Cargo.toml"
-    ]
+    ],
+    "rust-analyzer.showUnlinkedFileNotification": false
 }

@@ -144,7 +144,7 @@ where
      * These parameters were chosen during compilation.
      *
      * # Remarks
-     * If no [`fhe_program`] was specified, this function returns [`None`].
+     * If no [`fhe_program`] was specified, this function panics.
      */
     pub fn params(&self) -> &Params {
         &self.fhe_programs.values().next().unwrap().metadata.params
@@ -187,6 +187,18 @@ where
      */
     pub fn get_fhe_programs(&self) -> impl Iterator<Item = (&String, &CompiledFheProgram)> {
         self.fhe_programs.iter()
+    }
+
+    /// Take ownership of a compiled program with the given name, removing it from this
+    /// `Application`.
+    ///
+    /// You probably don't need this function, since runtimes can operate on borrowed
+    /// programs. See [`Self::get_fhe_program`] instead.
+    fn take_fhe_program<N>(&mut self, name: N) -> Option<CompiledFheProgram>
+    where
+        N: AsRef<str>,
+    {
+        self.fhe_programs.remove(name.as_ref())
     }
 }
 

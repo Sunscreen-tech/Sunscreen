@@ -7,7 +7,7 @@ use crate::{
 use std::collections::{HashMap, HashSet};
 use std::marker::PhantomData;
 use sunscreen_fhe_program::FheProgramTrait;
-use sunscreen_runtime::{marker, CompiledFheProgram, Fhe, FheZkp, Zkp};
+use sunscreen_runtime::{marker, CompiledFheProgram, Fhe, FheRuntime, FheZkp, Zkp};
 use sunscreen_zkp_backend::{BackendField, CompiledZkpProgram, ZkpBackend};
 
 #[derive(Debug, Clone)]
@@ -26,7 +26,9 @@ pub trait FheProgramFn {
     fn signature(&self) -> CallSignature;
 
     /**
-     * Compile the `#[fhe_program]`.
+     * Build the `#[fhe_program]` into a compiled frontend.
+     *
+     * You should not have to call this function directly.
      */
     fn build(&self, params: &Params) -> Result<FheFrontendCompilation>;
 
@@ -44,6 +46,82 @@ pub trait FheProgramFn {
      * The number of times to chain this FHE program.
      */
     fn chain_count(&self) -> usize;
+
+    /// Compile the `#[fhe_program]` into a [runnable][sunscreen_runtime::GenericRuntime::run]
+    /// [`CompiledFheProgram`].
+    ///
+    /// This is a convenient way to compile just a single FHE program.
+    /// ```rust
+    /// use sunscreen::{fhe_program, types::{bfv::Signed, Cipher}, FheProgramFn};
+    /// #[fhe_program(scheme = "bfv")]
+    /// fn multiply(a: Cipher<Signed>, b: Cipher<Signed>) -> Cipher<Signed> {
+    ///     a * b
+    /// }
+    /// # fn main() -> Result<(), sunscreen::Error> {
+    /// let multiply_prog = multiply.compile()?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    ///
+    /// It is shorthand for:
+    /// ```rust
+    /// use sunscreen::{fhe_program, types::{bfv::Signed, Cipher}, Compiler};
+    /// #[fhe_program(scheme = "bfv")]
+    /// fn multiply(a: Cipher<Signed>, b: Cipher<Signed>) -> Cipher<Signed> {
+    ///     a * b
+    /// }
+    /// # fn main() -> Result<(), sunscreen::Error> {
+    /// let app = Compiler::new().fhe_program(multiply).compile()?;
+    /// let multiply_prog = app.get_fhe_program(multiply).unwrap();
+    /// # Ok(())
+    /// # }
+    /// ```
+    fn compile(&self) -> Result<CompiledFheProgram>
+    where
+        Self: AsRef<str> + Sized + Clone + 'static,
+    {
+        Ok(Compiler::new()
+            .fhe_program(self.clone())
+            .compile()?
+            .take_fhe_program(self)
+            .unwrap())
+    }
+
+    /// Make a new [`FheRuntime`] with parameters suitable to run this `#[fhe_program]`.
+    ///
+    /// This is a convenient way to run a single FHE program.
+    /// ```rust
+    /// use sunscreen::{fhe_program, types::{bfv::Signed, Cipher}, FheProgramFn};
+    /// #[fhe_program(scheme = "bfv")]
+    /// fn multiply(a: Cipher<Signed>, b: Cipher<Signed>) -> Cipher<Signed> {
+    ///     a * b
+    /// }
+    /// # fn main() -> Result<(), sunscreen::Error> {
+    /// let runtime = multiply.runtime()?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    ///
+    /// It is shorthand for:
+    /// ```rust
+    /// use sunscreen::{fhe_program, types::{bfv::Signed, Cipher}, Compiler, FheRuntime};
+    /// #[fhe_program(scheme = "bfv")]
+    /// fn multiply(a: Cipher<Signed>, b: Cipher<Signed>) -> Cipher<Signed> {
+    ///     a * b
+    /// }
+    /// # fn main() -> Result<(), sunscreen::Error> {
+    /// let app = Compiler::new().fhe_program(multiply).compile()?;
+    /// let runtime = FheRuntime::new(app.params());
+    /// # Ok(())
+    /// # }
+    /// ```
+    fn runtime(&self) -> Result<FheRuntime>
+    where
+        Self: AsRef<str> + Sized + Clone + 'static,
+    {
+        let app = Compiler::new().fhe_program(self.clone()).compile()?;
+        Ok(FheRuntime::new(app.params())?)
+    }
 }
 
 struct FheCompilerData {

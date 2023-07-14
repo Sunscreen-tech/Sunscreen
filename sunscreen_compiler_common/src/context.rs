@@ -90,12 +90,22 @@ where
     O: Operation,
 {
     /**
-     * Creates a new [`NodeInfo`].
+     * Creates a new [`NodeInfo`] without debug information.
      */
-    pub fn new(operation: O, #[cfg(feature = "debugger")] id: u64) -> Self {
+    #[cfg(not(feature = "debugger"))]
+    pub fn new(operation: O) -> Self {
         Self {
             operation,
-            #[cfg(feature = "debugger")]
+        }
+    }
+
+    /**
+     * Creates a new [`NodeInfo`] with debug information.
+     */
+    #[cfg(feature = "debugger")]
+    pub fn new(operation: O, id: u64) -> Self {
+        Self {
+            operation,
             group_id: id,
         }
     }

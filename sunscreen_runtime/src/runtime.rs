@@ -409,7 +409,7 @@ where
     /**
      * Used for debugging. Calls `run_impl` with a secret key.
      */
-    pub fn debug_fhe_program<I>(
+    pub async fn debug_fhe_program<I>(
         &self,
         fhe_program: &CompiledFheProgram,
         arguments: Vec<I>,
@@ -423,7 +423,7 @@ where
 
         let session_name = format!("{}_{}", fhe_program.metadata.name, SESSION_NUM.fetch_add(1, std::sync::atomic::Ordering::Relaxed));
 
-        start_web_server();
+        start_web_server().await;
 
         self.run_impl(fhe_program, arguments, public_key, Some(DebugInfo {
             secret_key,

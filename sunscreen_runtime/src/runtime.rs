@@ -1,4 +1,5 @@
 use std::marker::PhantomData;
+use std::sync::atomic::AtomicUsize;
 use std::time::Instant;
 
 use crate::error::*;
@@ -260,7 +261,7 @@ where
      * Validates and runs the given FHE program. Unless you can guarantee your FHE program is valid,
      * you should use this method rather than [`run_program_unchecked`].
      */
-    pub fn run_impl<I>(
+    fn run_impl<I>(
         &self,
         fhe_program: &CompiledFheProgram,
         mut arguments: Vec<I>,
@@ -349,10 +350,6 @@ where
 
                 let relin_key = public_key.relin_key.as_ref().map(|p| &p.data);
                 let galois_key = public_key.galois_key.as_ref().map(|p| &p.data);
-                let sec_key: Option<&SecretKey> = match dbg_info {
-                    Some(dbg_info) => Some(dbg_info.secret_key),
-                    None => None,
-                };
 
                 let mut raw_ciphertexts = unsafe {
                     run_program_unchecked(
@@ -361,7 +358,7 @@ where
                         &evaluator,
                         &relin_key,
                         &galois_key,
-                        sec_key,
+                        dbg_info,
                     )
                 }?;
 
@@ -416,12 +413,21 @@ where
         fhe_program: &CompiledFheProgram,
         arguments: Vec<I>,
         public_key: &PublicKey,
-        dbg_info: Option<DebugInfo>,
+        secret_key: &SecretKey,
     ) -> Result<Vec<Ciphertext>>
     where
         I: Into<FheProgramInput>,
     {
-        self.run_impl(fhe_program, arguments, public_key, dbg_info)
+        static SESSION_NUM: AtomicUsize = AtomicUsize::new(0);
+
+        let session_name = format!("{}_{}", fhe_program.metadata.name, SESSION_NUM.fetch_add(1, std::sync::atomic::Ordering::Relaxed));
+
+        start_web_server();
+
+        self.run_impl(fhe_program, arguments, public_key, Some(DebugInfo {
+            secret_key,
+            session_name
+        }))
     }
 
     /**

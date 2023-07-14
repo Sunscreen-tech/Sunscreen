@@ -3,18 +3,19 @@ use static_assertions::const_assert;
 use sunscreen_compiler_common::{GraphQuery, GraphQueryError};
 use sunscreen_fhe_program::{FheProgram, FheProgramTrait, Literal, Operation::*};
 
+//#[cfg(feature = "debugger")]
+use crate::sessions::{get_sessions, Session, BfvSession};
+
+use std::collections::HashMap;
 use crossbeam::atomic::AtomicCell;
 use petgraph::{stable_graph::NodeIndex, Direction};
-
-#[cfg(feature = "debugger")]
-mod sessions;
 
 use std::borrow::Cow;
 #[cfg(target_arch = "wasm32")]
 use std::collections::VecDeque;
 #[cfg(not(target_arch = "wasm32"))]
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use seal_fhe::{
     Ciphertext, Error as SealError, Evaluator, GaloisKeys, Plaintext, RelinearizationKeys,
@@ -122,7 +123,7 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
     evaluator: &E,
     relin_keys: &Option<&RelinearizationKeys>,
     galois_keys: &Option<&GaloisKeys>,
-    _secret_key: Option<&SecretKey>,
+    debug_info: Option<DebugInfo>
 ) -> Result<Vec<Ciphertext>, FheProgramRunFailure> {
     fn get_data(
         data: &[AtomicCell<Option<Arc<SealData>>>],
@@ -141,18 +142,6 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
         }
     }
 
-    //#[cfg(feature = "debugger")]
-    fn set_data(
-        data: &[AtomicCell<Option<Arc<SealData>>>],
-        index: usize,
-        session: String
-    ) {
-        data[index.index()].store(Some(Arc::new(c.into())));
-        match SESSIONS[session] {
-            FheDebugInfo
-        }
-
-    }
 
     fn get_ciphertext(
         data: &[AtomicCell<Option<Arc<SealData>>>],
@@ -190,6 +179,58 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
         data.push(AtomicCell::new(None));
     }
 
+    match debug_info {
+        Some(ref v) => {
+            let mut guard = get_sessions().lock().unwrap();
+
+            assert!(!guard.contains_key(&v.session_name));
+
+            let session = BfvSession::new(&ir.graph, v.secret_key);
+
+            guard.insert(v.session_name.clone(), session.into());
+        },
+        None => {}
+    }
+
+    // #[cfg(feature = "debugger")]
+    // this function won't actually straight up decrypt stuff, it'll just insert ciphertexts correpsonding to nodeindex
+    // into sessions, and then we can decrypt those values on the backend before sending to the frontend
+    fn set_data(data: &Vec<AtomicCell<Option<Arc<SealData>>>>, 
+        node_index: NodeIndex, 
+        value: &Arc<SealData>, 
+        session: &Option<String>) -> Result<(), FheProgramRunFailure> {
+            // set on `data`
+            data[node_index.index()].store(Some(value.clone()));
+
+            #[cfg(feature = "debugger")]
+            if let Some(session_name) = session {
+                let mut guard = get_sessions().lock().unwrap();
+    
+                let session = guard.get_mut(&session_name).unwrap().unwrap_bfv_session();
+
+                // this should not happen
+                if lock.contains_key(&session) {
+                    let program_info = lock.get(&session).unwrap();
+                    // you don't need to match on results if you just want error propagation
+                    let node_val = get_data(&data, node_index.index())?;
+    
+    
+                    program_info.program_data.insert(node_index.index(), )
+                }        
+    
+                // Insert for new session 
+                else {
+                    let program_info = BfvSession::new(ir.graph, dbg_info.secret_key);
+
+    
+                }
+            }
+
+            Ok(())
+    }
+
+    let session_name = debug_info.map(|v| v.session_name);
+
     traverse(
         ir,
         |index| {
@@ -198,6 +239,7 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
 
             match &node.operation {
                 InputCiphertext(id) => {
+                    set_data(&data, index, &inputs[*id], &session_name);
                     data[index.index()].store(Some(inputs[*id].clone()));
                 }
                 InputPlaintext(id) => {

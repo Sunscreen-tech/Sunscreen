@@ -1093,6 +1093,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "debugger"
+version = "0.1.0"
+dependencies = [
+ "sunscreen",
+]
+
+[[package]]
 name = "derivative"
 version = "2.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"

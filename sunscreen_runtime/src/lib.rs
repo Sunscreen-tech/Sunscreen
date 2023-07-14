@@ -5,12 +5,15 @@
 //! (i.e. an [`FheProgram`](sunscreen_fhe_program::FheProgram)).
 
 mod array;
+#[cfg(feature = "debugger")]
+mod debugger;
 mod error;
 mod keys;
 mod metadata;
 mod run;
 mod runtime;
 mod serialization;
+mod sessions;
 
 use std::sync::Arc;
 

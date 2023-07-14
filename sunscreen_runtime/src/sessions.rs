@@ -1,32 +1,55 @@
-use std::sync::{Mutex, OnceLock};
+use std::sync::{Mutex, OnceLock, MutexGuard};
 use std::collections::HashMap;
 
-use crate::SealData;
+use crate::{SealData, DebugInfo};
 
-use sunscreen_compiler_common::{CompilationResult, Operation};
+use sunscreen_compiler_common::{CompilationResult};
+use sunscreen_fhe_program::{Operation};
 
 use seal_fhe::SecretKey;
+use sunscreen_zkp_backend::CompiledZkpProgram;
 // Global data structure storing session information
-pub static SESSIONS: OnceLock<Mutex<HashMap<String, DebugType>>> = OnceLock::new();
+
+static SESSIONS: OnceLock<Mutex<HashMap<String,Session>>> = OnceLock::new();
+
+pub fn get_sessions() -> &'static Mutex<HashMap<String,Session>> {
+    SESSIONS.get_or_init(|| {
+        Mutex::new(HashMap::new())
+    })
+} 
 
 /**
  * Determines if the session being debugged is for an FHE or ZKP program.
  */
-pub enum DebugType {
-    FheDebugInfo,
-    ZkpDebugInfo
+pub enum Session
+{
+    BfvSession(BfvSession),
+}
+
+impl From<BfvSession> for Session {
+    fn from(value: BfvSession) -> Self {
+        Self::BfvSession(value)
+    }
+}
+
+impl Session {
+    pub fn unwrap_bfv_session(&self) -> &BfvSession {
+        match self {
+            Self::BfvSession(s) => s,
+            _ => panic!("Expected BfvSession")
+        }
+    }
 }
 
 /**
  * Stores the relevant information for debugging an FHE program.
  */
-pub struct FheDebugInfo<'a, O>
-where O: Operation
+pub struct BfvSession
 {
     /**
      * The compilation graph used to execute the program.
      */
-    pub graph: CompilationResult<O>,
+    pub graph: CompilationResult<Operation>,
     /**
      * The values of operands in the compilation graph.
      */
@@ -34,27 +57,21 @@ where O: Operation
     /**
      * Used for decryption of ciphertexts for visualization.
      */
-    pub secret_key: Option<&'a SecretKey>
+    pub secret_key: SecretKey
 }
-impl <'a, O> FheDebugInfo<'a, O> 
-where O: Operation 
+impl BfvSession
 {
     /**
      * Constructs a new `FheDebugInfo`.
      */
-    pub fn new(graph: CompilationResult<O>, secret_key: Option<&'a SecretKey>) -> Self {
-        FheDebugInfo {
-            graph, 
-            program_data: Vec::new(), 
-            secret_key
+    pub fn new(graph: &CompilationResult<Operation>, secret_key: &SecretKey) -> Self {
+        Self {
+            graph: graph.clone(), 
+            // don't need a hashmap; if you don't encounter in the right order, it's all initialize das None so you 
+            // can go back later and fill it in 
+            program_data: vec![None; graph.node_count()],
+
+            secret_key: secret_key.clone()
         }
     }
-}
-
-// TODO: implement this
-/**
- * Stores the relevant information for debugging a ZKP program.
- */
-pub struct ZkpDebugInfo {
-
 }

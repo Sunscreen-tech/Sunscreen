@@ -721,6 +721,8 @@ mod tests {
                     secret_key: &private_key,
     
                     // TODO: figure out where the program name is actually stored by the compiler
+                    // CompiledFheProgram -> Metadata -> name is a change that Rick made
+                    // but where do we find where we can get that name in the first place?
                     session_name: "".to_string()
                 })
             )
@@ -763,6 +765,7 @@ mod tests {
         let ct_0 = encryptor.encrypt(&pt_0).unwrap();
         let ct_1 = encryptor.encrypt(&pt_1).unwrap();
 
+        #[cfg(not(feature = "debugger"))]
         let output = unsafe {
             run_program_unchecked(
                 &ir,
@@ -770,7 +773,24 @@ mod tests {
                 &evaluator,
                 &Some(&relin_keys),
                 &None,
-                Some(&private_key),
+                None
+            )
+            .unwrap()
+        };
+
+        #[cfg(feature = "debugger")]
+        let output = unsafe {
+            run_program_unchecked(
+                &ir,
+                &[ct_0.into(), ct_1.into()],
+                &evaluator,
+                &Some(&relin_keys),
+                &None,
+                // TODO: figure out how to extract the session/program name
+                DebugInfo {
+                    secret_key: &private_key,
+                    session_name: "".to_string()
+                }
             )
             .unwrap()
         };
@@ -812,6 +832,7 @@ mod tests {
         let ct_0 = encryptor.encrypt(&pt_0).unwrap();
         let ct_1 = encryptor.encrypt(&pt_1).unwrap();
 
+        #[cfg(not(feature = "debugger"))]
         let output = unsafe {
             run_program_unchecked(
                 &ir,
@@ -819,7 +840,10 @@ mod tests {
                 &evaluator,
                 &Some(&relin_keys),
                 &None,
-                Some(&private_key),
+                Some(DebugInfo {
+                        secret_key: &private_key,
+                        session_name: "".to_string()
+                    })
             )
             .unwrap()
         };

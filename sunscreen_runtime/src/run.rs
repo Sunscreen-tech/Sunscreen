@@ -695,6 +695,7 @@ mod tests {
         let ct_0 = encryptor.encrypt(&pt_0).unwrap();
         let ct_1 = encryptor.encrypt(&pt_1).unwrap();
 
+        #[cfg(not(feature = "debugger"))]
         let output = unsafe {
             run_program_unchecked(
                 &ir,
@@ -702,7 +703,26 @@ mod tests {
                 &evaluator,
                 &None,
                 &None,
-                Some(&private_key),
+                // TODO: i'm pretty sure it should be fine to pass in a None here? but doublecheck
+                None
+            )
+            .unwrap()
+        };
+
+        #[cfg(feature = "debugger")]
+        let output = unsafe {
+            run_program_unchecked(
+                &ir,
+                &[ct_0.into(), ct_1.into()],
+                &evaluator,
+                &None,
+                &None,
+                Some(DebugInfo {
+                    secret_key: &private_key,
+    
+                    // TODO: figure out where the program name is actually stored by the compiler
+                    session_name: "".to_string()
+                })
             )
             .unwrap()
         };

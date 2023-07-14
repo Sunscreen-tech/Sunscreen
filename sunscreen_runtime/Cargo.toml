@@ -34,6 +34,9 @@ static_assertions = "1.1.0"
 thiserror = "1.0.37"
 radix_trie = "0.2.1"
 backtrace = "0.3.67"
+actix-web = "4.3.1"
+reqwest = "0.11"
+
 
 [dev-dependencies]
 serde_json = "1.0.74"

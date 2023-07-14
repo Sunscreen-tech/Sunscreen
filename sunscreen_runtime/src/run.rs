@@ -205,25 +205,30 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
             #[cfg(feature = "debugger")]
             if let Some(session_name) = session {
                 let mut guard = get_sessions().lock().unwrap();
-    
                 let session = guard.get_mut(&session_name).unwrap().unwrap_bfv_session();
+                let node_val = get_data(&data, node_index.index());
+                session.program_data[node_index.index()] = node_val;
 
+                // pretty sure this code is not necessary: the point of this is that
+                // the program_infos are already created, so now it's just about
+                // storing the data into that struct
+                /* 
                 // this should not happen
                 if lock.contains_key(&session) {
                     let program_info = lock.get(&session).unwrap();
                     // you don't need to match on results if you just want error propagation
                     let node_val = get_data(&data, node_index.index())?;
-    
-    
                     program_info.program_data.insert(node_index.index(), )
                 }        
     
                 // Insert for new session 
                 else {
                     let program_info = BfvSession::new(ir.graph, dbg_info.secret_key);
-
-    
+                    let node_val = get_data(&data, node_index.index())?;
+                    program_info.program_data[node_index.index()] = node_val;
+                    guard.insert(session, program_info);
                 }
+                */
             }
 
             Ok(())
@@ -240,10 +245,9 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
             match &node.operation {
                 InputCiphertext(id) => {
                     set_data(&data, index, &inputs[*id], &session_name);
-                    data[index.index()].store(Some(inputs[*id].clone()));
                 }
                 InputPlaintext(id) => {
-                    data[index.index()].store(Some(inputs[*id].clone()));
+                    set_data(&data, index, &inputs[*id], &session_name);
                 }
                 ShiftLeft => {
                     let (left, right) = query.get_binary_operands(index)?;
@@ -264,8 +268,7 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
                             .as_ref()
                             .ok_or(FheProgramRunFailure::MissingGaloisKeys)?,
                     )?;
-
-                    data[index.index()].store(Some(Arc::new(c.into())));
+                    set_data(&data, index, &Arc::new(c.into()), &session_name);
                 }
                 ShiftRight => {
                     let (left, right) = query.get_binary_operands(index)?;
@@ -286,8 +289,8 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
                             .as_ref()
                             .ok_or(FheProgramRunFailure::MissingGaloisKeys)?,
                     )?;
+                    set_data(&data, index, &Arc::new(c.into()), &session_name);
 
-                    data[index.index()].store(Some(Arc::new(c.into())));
                 }
                 Add => {
                     let (left, right) = query.get_binary_operands(index)?;
@@ -297,7 +300,7 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
 
                     let c = evaluator.add(a, b)?;
 
-                    data[index.index()].store(Some(Arc::new(c.into())));
+                    set_data(&data, index, &Arc::new(c.into()), &session_name);
                 }
                 AddPlaintext => {
                     let (left, right) = query.get_binary_operands(index)?;
@@ -307,7 +310,7 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
 
                     let c = evaluator.add_plain(a, b)?;
 
-                    data[index.index()].store(Some(Arc::new(c.into())));
+                    set_data(&data, index, &Arc::new(c.into()), &session_name);
                 }
                 Multiply => {
                     let (left, right) = query.get_binary_operands(index)?;
@@ -317,7 +320,7 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
 
                     let c = evaluator.multiply(a, b)?;
 
-                    data[index.index()].store(Some(Arc::new(c.into())));
+                    set_data(&data, index, &Arc::new(c.into()), &session_name);
                 }
                 MultiplyPlaintext => {
                     let (left, right) = query.get_binary_operands(index)?;
@@ -327,7 +330,7 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
 
                     let c = evaluator.multiply_plain(a, b)?;
 
-                    data[index.index()].store(Some(Arc::new(c.into())));
+                    set_data(&data, index, &Arc::new(c.into()), &session_name);
                 }
                 SwapRows => {
                     let galois_keys = galois_keys
@@ -340,7 +343,7 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
 
                     let y = evaluator.rotate_columns(x, galois_keys)?;
 
-                    data[index.index()].store(Some(Arc::new(y.into())));
+                    set_data(&data, index, &Arc::new(y.into()), &session_name);
                 }
                 Relinearize => {
                     let relin_keys = relin_keys
@@ -353,7 +356,7 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
 
                     let c = evaluator.relinearize(a, relin_keys)?;
 
-                    data[index.index()].store(Some(Arc::new(c.into())));
+                    set_data(&data, index, &Arc::new(c.into()), &session_name);
                 }
                 Negate => {
                     let x_id = query.get_unary_operand(index)?;
@@ -362,7 +365,7 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
 
                     let y = evaluator.negate(x)?;
 
-                    data[index.index()].store(Some(Arc::new(y.into())));
+                    set_data(&data, index, &Arc::new(y.into()), &session_name);
                 }
                 Sub => {
                     let (left, right) = query.get_binary_operands(index)?;
@@ -372,7 +375,7 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
 
                     let c = evaluator.sub(a, b)?;
 
-                    data[index.index()].store(Some(Arc::new(c.into())));
+                    set_data(&data, index, &Arc::new(c.into()), &session_name);
                 }
                 SubPlaintext => {
                     let (left, right) = query.get_binary_operands(index)?;
@@ -382,7 +385,7 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
 
                     let c = evaluator.sub_plain(a, b)?;
 
-                    data[index.index()].store(Some(Arc::new(c.into())));
+                    set_data(&data, index, &Arc::new(c.into()), &session_name);
                 }
                 Literal(x) => {
                     if let Literal::Plaintext(p) = x {
@@ -396,7 +399,7 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
                                     return Err(FheProgramRunFailure::MalformedPlaintext);
                                 }
 
-                                data[index.index()].store(Some(Arc::new(p[0].data.clone().into())))
+                                set_data(&data, index, &Arc::new(p[0].data.clone().into()), &session_name);
                             }
                         };
                     }
@@ -406,7 +409,7 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
 
                     let a = get_data(&data, input.index())?;
 
-                    data[index.index()].store(Some(a.clone()));
+                    set_data(&data, index, &a.clone(), &session_name);
                 }
             };
 

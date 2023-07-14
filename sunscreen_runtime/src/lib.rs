@@ -7,13 +7,13 @@
 mod array;
 #[cfg(feature = "debugger")]
 mod debugger;
+// use crate::debugger::{stuff} to actually use these
 mod error;
 mod keys;
 mod metadata;
 mod run;
 mod runtime;
 mod serialization;
-mod sessions;
 
 use std::sync::Arc;
 

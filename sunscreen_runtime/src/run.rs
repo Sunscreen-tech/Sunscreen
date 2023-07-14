@@ -3,8 +3,7 @@ use static_assertions::const_assert;
 use sunscreen_compiler_common::{GraphQuery, GraphQueryError};
 use sunscreen_fhe_program::{FheProgram, FheProgramTrait, Literal, Operation::*};
 
-//#[cfg(feature = "debugger")]
-use crate::sessions::{get_sessions, Session, BfvSession};
+//use debugger::sessions::{get_sessions, Session, BfvSession};
 
 use std::collections::HashMap;
 use crossbeam::atomic::AtomicCell;
@@ -721,9 +720,11 @@ mod tests {
                     secret_key: &private_key,
     
                     // TODO: figure out where the program name is actually stored by the compiler
+                        // when you have a compiled program `CompiledFheProgramFn` or something, use `.name()`
                     // CompiledFheProgram -> Metadata -> name is a change that Rick made
                     // but where do we find where we can get that name in the first place?
-                    session_name: "".to_string()
+                    // see what structs implement the `FheProgramFn` trait, because they have a .name() method that returns the name
+                    session_name: "simple_add".to_owned()
                 })
             )
             .unwrap()
@@ -786,10 +787,9 @@ mod tests {
                 &evaluator,
                 &Some(&relin_keys),
                 &None,
-                // TODO: figure out how to extract the session/program name
                 DebugInfo {
                     secret_key: &private_key,
-                    session_name: "".to_string()
+                    session_name: "simple_mul".to_owned()
                 }
             )
             .unwrap()
@@ -840,9 +840,22 @@ mod tests {
                 &evaluator,
                 &Some(&relin_keys),
                 &None,
+                None
+            )
+            .unwrap()
+        };
+
+        #[cfg(feature = "debugger")]
+        let output = unsafe {
+            run_program_unchecked(
+                &ir,
+                &[ct_0.into(), ct_1.into()],
+                &evaluator,
+                &Some(&relin_keys),
+                &None,
                 Some(DebugInfo {
                         secret_key: &private_key,
-                        session_name: "".to_string()
+                        session_name: "can_mul_and_relinearize".to_owned()
                     })
             )
             .unwrap()
@@ -900,6 +913,7 @@ mod tests {
         let ct_0 = encryptor.encrypt(&pt_0).unwrap();
         let ct_1 = encryptor.encrypt(&pt_1).unwrap();
 
+        #[cfg(not(feature = "debugger"))]
         let output = unsafe {
             run_program_unchecked(
                 &ir,
@@ -907,7 +921,23 @@ mod tests {
                 &evaluator,
                 &Some(&relin_keys),
                 &None,
-                Some(&private_key),
+                None 
+            )
+            .unwrap()
+        };
+
+        #[cfg(feature = "debugger")]
+        let output = unsafe {
+            run_program_unchecked(
+                &ir,
+                &[ct_0.into(), ct_1.into()],
+                &evaluator,
+                &Some(&relin_keys),
+                &None,
+                DebugInfo {
+                    private_key: &private_key,
+                    session_name: "add_reduction".to_owned()
+                }
             )
             .unwrap()
         };
@@ -947,6 +977,7 @@ mod tests {
 
         let ct_0 = encryptor.encrypt(&pt_0).unwrap();
 
+        #[cfg(not(feature = "debugger"))]
         let output = unsafe {
             run_program_unchecked(
                 &ir,
@@ -954,7 +985,22 @@ mod tests {
                 &evaluator,
                 &None,
                 &Some(&galois_keys),
-                Some(&private_key),
+                None
+            )
+            .unwrap()
+        };
+        #[cfg(feature = "debugger")]
+        let output = unsafe {
+            run_program_unchecked(
+                &ir,
+                &[ct_0.into()],
+                &evaluator,
+                &None,
+                &Some(&galois_keys),
+                DebugInfo {
+                    private_key: &private_key, 
+                    session_name: "rotate_left".to_owned()
+                }
             )
             .unwrap()
         };
@@ -999,6 +1045,7 @@ mod tests {
 
         let ct_0 = encryptor.encrypt(&pt_0).unwrap();
 
+        #[cfg(not(feature = "debugger"))]
         let output = unsafe {
             run_program_unchecked(
                 &ir,
@@ -1006,7 +1053,22 @@ mod tests {
                 &evaluator,
                 &None,
                 &Some(&galois_keys),
-                Some(&private_key),
+                None
+            )
+            .unwrap()
+        };
+        #[cfg(feature = "debugger")]
+        let output = unsafe {
+            run_program_unchecked(
+                &ir,
+                &[ct_0.into()],
+                &evaluator,
+                &None,
+                &Some(&galois_keys),
+                DebugInfo {
+                    private_key: &private_key, 
+                    session_name: "rotate_right".to_owned()
+                }
             )
             .unwrap()
         };

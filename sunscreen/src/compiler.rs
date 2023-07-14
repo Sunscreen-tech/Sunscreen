@@ -53,6 +53,7 @@ pub trait FheProgramFn {
     /// This is a convenient way to compile just a single FHE program.
     /// ```rust
     /// use sunscreen::{fhe_program, types::{bfv::Signed, Cipher}, FheProgramFn};
+    ///
     /// #[fhe_program(scheme = "bfv")]
     /// fn multiply(a: Cipher<Signed>, b: Cipher<Signed>) -> Cipher<Signed> {
     ///     a * b
@@ -66,6 +67,7 @@ pub trait FheProgramFn {
     /// It is shorthand for:
     /// ```rust
     /// use sunscreen::{fhe_program, types::{bfv::Signed, Cipher}, Compiler};
+    ///
     /// #[fhe_program(scheme = "bfv")]
     /// fn multiply(a: Cipher<Signed>, b: Cipher<Signed>) -> Cipher<Signed> {
     ///     a * b
@@ -92,6 +94,7 @@ pub trait FheProgramFn {
     /// This is a convenient way to run a single FHE program.
     /// ```rust
     /// use sunscreen::{fhe_program, types::{bfv::Signed, Cipher}, FheProgramFn};
+    ///
     /// #[fhe_program(scheme = "bfv")]
     /// fn multiply(a: Cipher<Signed>, b: Cipher<Signed>) -> Cipher<Signed> {
     ///     a * b
@@ -105,6 +108,7 @@ pub trait FheProgramFn {
     /// It is shorthand for:
     /// ```rust
     /// use sunscreen::{fhe_program, types::{bfv::Signed, Cipher}, Compiler, FheRuntime};
+    ///
     /// #[fhe_program(scheme = "bfv")]
     /// fn multiply(a: Cipher<Signed>, b: Cipher<Signed>) -> Cipher<Signed> {
     ///     a * b

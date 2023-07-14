@@ -24,4 +24,4 @@ bulletproofs = [
     "dep:bulletproofs",
     "dep:merlin"
 ]
-debugger = []
+debugger = ["sunscreen_compiler_common/debugger"]

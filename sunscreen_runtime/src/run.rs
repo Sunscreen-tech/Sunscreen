@@ -791,10 +791,10 @@ mod tests {
                 &evaluator,
                 &Some(&relin_keys),
                 &None,
-                DebugInfo {
+                Some(DebugInfo {
                     secret_key: &private_key,
                     session_name: "simple_mul".to_owned()
-                }
+                })
             )
             .unwrap()
         };
@@ -939,7 +939,7 @@ mod tests {
                 &Some(&relin_keys),
                 &None,
                 DebugInfo {
-                    private_key: &private_key,
+                    secret_key: &private_key,
                     session_name: "add_reduction".to_owned()
                 }
             )

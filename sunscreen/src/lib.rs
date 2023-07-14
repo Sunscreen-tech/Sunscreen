@@ -7,33 +7,31 @@
 //! # Examples
 //! This example is further annotated in `examples/simple_multiply`.
 //! ```
-//! # use sunscreen::{fhe_program, Compiler, types::{bfv::Signed, Cipher}, PlainModulusConstraint, Params, FheRuntime};
-//!
+//! # use sunscreen::{fhe_program, types::{bfv::Signed, Cipher}, FheProgramFn, Result};
 //! #[fhe_program(scheme = "bfv")]
 //! fn simple_multiply(a: Cipher<Signed>, b: Cipher<Signed>) -> Cipher<Signed> {
 //!     a * b
 //! }
 //!
-//! fn main() {
-//!   let app = Compiler::new()
-//!       .fhe_program(simple_multiply)
-//!       .plain_modulus_constraint(PlainModulusConstraint::Raw(600))
-//!       .additional_noise_budget(5)
-//!       .compile()
-//!       .unwrap();
+//! fn main() -> Result<()> {
+//!     let multiply_program = simple_multiply.compile()?;
+//!     let runtime = simple_multiply.runtime()?;
 //!
-//!   let runtime = FheRuntime::new(app.params()).unwrap();
+//!     let (public_key, private_key) = runtime.generate_keys()?;
 //!
-//!   let (public_key, private_key) = runtime.generate_keys().unwrap();
+//!     let a = runtime.encrypt(Signed::from(15), &public_key)?;
+//!     let b = runtime.encrypt(Signed::from(5), &public_key)?;
 //!
-//!   let a = runtime.encrypt(Signed::from(15), &public_key).unwrap();
-//!   let b = runtime.encrypt(Signed::from(5), &public_key).unwrap();
+//!     let results = runtime.run(
+//!         &multiply_program,
+//!         vec![a, b],
+//!         &public_key
+//!     )?;
 //!
-//!   let results = runtime.run(app.get_fhe_program(simple_multiply).unwrap(), vec![a, b], &public_key).unwrap();
+//!     let c: Signed = runtime.decrypt(&results[0], &private_key)?;
 //!
-//!   let c: Signed = runtime.decrypt(&results[0], &private_key).unwrap();
-//!
-//!   assert_eq!(c, 75.into());
+//!     assert_eq!(c, 75.into());
+//!     Ok(())
 //! }
 //! ```
 //!

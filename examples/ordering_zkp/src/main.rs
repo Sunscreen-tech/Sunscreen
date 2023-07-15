@@ -5,7 +5,7 @@ use sunscreen::{
 };
 
 #[zkp_program]
-fn greater_than<F: BackendField>(a: NativeField<F>, #[constant] b: NativeField<F>) {
+fn greater_than<F: BackendField>(#[constant] b: NativeField<F>, a: NativeField<F>) {
     a.constrain_gt_bounded(b, 32)
 }
 

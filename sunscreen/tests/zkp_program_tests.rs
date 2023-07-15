@@ -171,9 +171,9 @@ fn can_declare_array_inputs() {
 fn builder_methods_work() {
     #[zkp_program]
     fn arbitrary<F: BackendField>(
+        #[constant] zss: [[NativeField<F>; 9]; 64],
         x: NativeField<F>,
         ys: [NativeField<F>; 9],
-        #[constant] zss: [[NativeField<F>; 9]; 64],
     ) {
         for y in ys {
             x.constrain_eq(y);

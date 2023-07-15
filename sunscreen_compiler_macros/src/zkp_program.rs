@@ -106,27 +106,51 @@ fn parse_inner(_attr_params: ZkpProgramAttrs, input_fn: ItemFn) -> Result<TokenS
         }
     };
 
+    let mut private_seen = false;
+    let mut public_seen = false;
     let unwrapped_inputs = match extract_fn_arguments(inputs) {
         Ok(args) => {
             args.iter().map(|a| {
                 let mut arg_kind = ArgumentKind::Private;
 
-                match a.0.len() {
-                    0 => {},
-                    1 => {
-                        let ident = a.0[0].path().get_ident();
+                match &a.0[..] {
+                    [] => {
+                        private_seen = true;
+                    },
+                    [attr] => {
+                        let ident = attr.path().get_ident();
 
                         match ident.map(|x| x.to_string()).as_deref() {
-                            Some("private") => {},
-                            Some("public") => arg_kind = ArgumentKind::Public,
-                            Some("constant") => arg_kind = ArgumentKind::Constant,
+                            Some("private") => {
+                                private_seen = true;
+                            },
+                            Some("public") => {
+                                if private_seen {
+                                    return Err(Error::compile_error(attr.path().span(), 
+                                        "#[public] arguments must be specified before #[private] arguments "
+                                    ));
+                                }
+                                arg_kind = ArgumentKind::Public;
+                                public_seen = true;
+                            },
+                            Some("constant") => {
+                                if public_seen || private_seen {
+                                    return Err(Error::compile_error(attr.path().span(),
+                                        "#[constant] arguments must be specified before #[public] and #[private] arguments"
+                                    ));
+                                }
+                                arg_kind = ArgumentKind::Constant;
+                            },
                             _ => {
-                                return Err(Error::compile_error(a.0[0].path().span(), &format!("Expected #[private], #[public] or #[constant], found {}", a.0[0].path().to_token_stream())));
+                                return Err(Error::compile_error(attr.path().span(), &format!(
+                                    "Expected #[private], #[public] or #[constant], found {}",
+                                    attr.path().to_token_stream()
+                                )));
                             }
                         }
                     },
-                    _ => {
-                        return Err(Error::compile_error(a.0[1].span(), "ZKP program arguments may only have one attribute (#[private], #[public] or #[constant])."));
+                    [_, attr, ..] => {
+                        return Err(Error::compile_error(attr.span(), "ZKP program arguments may only have one attribute (#[private], #[public] or #[constant])."));
                     }
                 };
 

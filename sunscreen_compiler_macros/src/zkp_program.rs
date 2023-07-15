@@ -224,6 +224,8 @@ fn parse_inner(_attr_params: ZkpProgramAttrs, input_fn: ItemFn) -> Result<TokenS
             }
         }
 
+        impl sunscreen::ZkpProgramFnExt for #zkp_program_struct_name {}
+
         #[allow(non_upper_case_globals)]
         #vis const #zkp_program_name: #zkp_program_struct_name = #zkp_program_struct_name;
     })

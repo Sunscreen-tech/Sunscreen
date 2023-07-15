@@ -1,10 +1,10 @@
 use petgraph::Graph;
-use sunscreen_runtime::CallSignature;
+use sunscreen_runtime::{CallSignature, ZkpRuntime};
 use sunscreen_zkp_backend::{
-    BackendField, BigInt, CompiledZkpProgram, Gadget, Operation as JitOperation,
+    BackendField, BigInt, CompiledZkpProgram, Gadget, Operation as JitOperation, ZkpBackend,
 };
 
-use crate::Result;
+use crate::{Compiler, Result};
 
 use std::collections::HashMap;
 use std::hash::Hash;
@@ -30,6 +30,105 @@ pub trait ZkpProgramFn<F: BackendField> {
      * Gets the name of this program.
      */
     fn name(&self) -> &str;
+}
+
+/// An extension of [`ZkpProgramFn`], providing helpers and convenience methods.
+pub trait ZkpProgramFnExt {
+    /// Compile this `#[zkp_program]`.
+    ///
+    /// This is a convenient way to compile just a single ZKP program.
+    /// ```rust
+    /// use sunscreen::{
+    ///     bulletproofs::BulletproofsBackend,
+    ///     zkp_program, types::zkp::{BulletproofsField, NativeField},
+    ///     BackendField, ZkpRuntime, ZkpProgramFnExt
+    /// };
+    ///
+    /// #[zkp_program]
+    /// fn is_eq<F: BackendField>(a: NativeField<F>, b: NativeField<F>) {
+    ///     a.constrain_eq(b)
+    /// }
+    /// # fn main() -> Result<(), sunscreen::Error> {
+    /// let is_eq_prog = is_eq.compile::<BulletproofsBackend>()?;
+    /// let a = BulletproofsField::from(64);
+    /// let b = BulletproofsField::from(64);
+    /// let runtime = ZkpRuntime::new(&BulletproofsBackend::new())?;
+    /// runtime.prove(&is_eq_prog, vec![], vec![], vec![a, b])?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    ///
+    /// It is shorthand for:
+    /// ```rust
+    /// use sunscreen::{
+    ///     bulletproofs::BulletproofsBackend,
+    ///     types::zkp::{BulletproofsField, NativeField},
+    ///     zkp_program, zkp_var, BackendField, Compiler, Error, ZkpRuntime,
+    /// };
+    ///
+    /// #[zkp_program]
+    /// fn is_eq<F: BackendField>(a: NativeField<F>, b: NativeField<F>) {
+    ///     a.constrain_eq(b)
+    /// }
+    /// # fn main() -> Result<(), sunscreen::Error> {
+    /// let app = Compiler::new()
+    ///     .zkp_backend::<BulletproofsBackend>()
+    ///     .zkp_program(is_eq)
+    ///     .compile()?;
+    /// let is_eq_prog = app.get_zkp_program(is_eq).unwrap();
+    /// let a = BulletproofsField::from(64);
+    /// let b = BulletproofsField::from(64);
+    /// let runtime = ZkpRuntime::new(&BulletproofsBackend::new())?;
+    /// runtime.prove(&is_eq_prog, vec![], vec![], vec![a, b])?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    fn compile<B: ZkpBackend>(&self) -> Result<CompiledZkpProgram>
+    where
+        Self: ZkpProgramFn<B::Field>,
+        Self: Sized + Clone + AsRef<str> + 'static,
+    {
+        Ok(Compiler::new()
+            .zkp_backend::<B>()
+            .zkp_program(self.clone())
+            .compile()?
+            .take_zkp_program(self)
+            .unwrap())
+    }
+
+    /// Create a new `ZkpRuntime`.
+    ///
+    /// This is identical to [`ZkpRuntime::new`], but is offered in this extension trait for
+    /// convenience.
+    ///
+    /// ```rust
+    /// use sunscreen::{
+    ///     bulletproofs::BulletproofsBackend,
+    ///     zkp_program, types::zkp::{BulletproofsField, NativeField},
+    ///     BackendField, ZkpProgramFnExt
+    /// };
+    ///
+    /// #[zkp_program]
+    /// fn is_eq<F: BackendField>(a: NativeField<F>, b: NativeField<F>) {
+    ///     a.constrain_eq(b)
+    /// }
+    /// # fn main() -> Result<(), sunscreen::Error> {
+    /// let is_eq_prog = is_eq.compile::<BulletproofsBackend>()?;
+    /// let runtime = is_eq.runtime(&BulletproofsBackend::new())?;
+    /// let a = BulletproofsField::from(64);
+    /// let b = BulletproofsField::from(64);
+    /// runtime.prove(&is_eq_prog, vec![], vec![], vec![a, b])?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    fn runtime<B: ZkpBackend>(&self, backend: &B) -> Result<ZkpRuntime<B>>
+    where
+        B: Clone + 'static,
+        Self: ZkpProgramFn<B::Field>,
+        Self: Sized + Clone + AsRef<str> + 'static,
+    {
+        Ok(ZkpRuntime::new(backend)?)
+    }
 }
 
 use std::fmt::Debug;

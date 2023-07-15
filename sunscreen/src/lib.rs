@@ -88,11 +88,11 @@ pub use sunscreen_zkp_backend::bulletproofs;
 pub use sunscreen_zkp_backend::{
     BackendField, Error as ZkpError, Proof, Result as ZkpResult, ZkpBackend,
 };
-pub use zkp::ZkpProgramFn;
 pub use zkp::{
     invoke_gadget, with_zkp_ctx, ZkpContext, ZkpContextOps, ZkpData, ZkpFrontendCompilation,
     CURRENT_ZKP_CTX,
 };
+pub use zkp::{ZkpProgramFn, ZkpProgramFnExt};
 
 #[derive(Clone)]
 /**
@@ -220,6 +220,18 @@ where
      */
     pub fn get_zkp_programs(&self) -> impl Iterator<Item = (&String, &CompiledZkpProgram)> {
         self.zkp_programs.iter()
+    }
+
+    /// Take ownership of a compiled program with the given name, removing it from this
+    /// `Application`.
+    ///
+    /// You probably don't need this function, since runtimes can operate on borrowed
+    /// programs. See [`Self::get_zkp_program`] instead.
+    fn take_zkp_program<N>(&mut self, name: N) -> Option<CompiledZkpProgram>
+    where
+        N: AsRef<str>,
+    {
+        self.zkp_programs.remove(name.as_ref())
     }
 }
 

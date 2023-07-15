@@ -46,13 +46,16 @@ pub trait FheProgramFn {
      * The number of times to chain this FHE program.
      */
     fn chain_count(&self) -> usize;
+}
 
+/// An extension of [`FheProgramFn`], providing helpers and convenience methods.
+pub trait FheProgramFnExt: FheProgramFn {
     /// Compile the `#[fhe_program]` into a [runnable][sunscreen_runtime::GenericRuntime::run]
     /// [`CompiledFheProgram`].
     ///
     /// This is a convenient way to compile just a single FHE program.
     /// ```rust
-    /// use sunscreen::{fhe_program, types::{bfv::Signed, Cipher}, FheProgramFn};
+    /// use sunscreen::{fhe_program, types::{bfv::Signed, Cipher}, FheProgramFnExt};
     ///
     /// #[fhe_program(scheme = "bfv")]
     /// fn multiply(a: Cipher<Signed>, b: Cipher<Signed>) -> Cipher<Signed> {
@@ -93,7 +96,7 @@ pub trait FheProgramFn {
     ///
     /// This is a convenient way to run a single FHE program.
     /// ```rust
-    /// use sunscreen::{fhe_program, types::{bfv::Signed, Cipher}, FheProgramFn};
+    /// use sunscreen::{fhe_program, types::{bfv::Signed, Cipher}, FheProgramFnExt};
     ///
     /// #[fhe_program(scheme = "bfv")]
     /// fn multiply(a: Cipher<Signed>, b: Cipher<Signed>) -> Cipher<Signed> {
@@ -127,6 +130,8 @@ pub trait FheProgramFn {
         Ok(FheRuntime::new(app.params())?)
     }
 }
+
+impl<T: ?Sized> FheProgramFnExt for T where T: FheProgramFn {}
 
 struct FheCompilerData {
     fhe_program_fns: Vec<Box<dyn FheProgramFn>>,

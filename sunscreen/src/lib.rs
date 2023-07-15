@@ -7,7 +7,7 @@
 //! # Examples
 //! This example is further annotated in `examples/simple_multiply`.
 //! ```
-//! # use sunscreen::{fhe_program, types::{bfv::Signed, Cipher}, FheProgramFn, Result};
+//! # use sunscreen::{fhe_program, types::{bfv::Signed, Cipher}, FheProgramFnExt, Result};
 //! #[fhe_program(scheme = "bfv")]
 //! fn simple_multiply(a: Cipher<Signed>, b: Cipher<Signed>) -> Cipher<Signed> {
 //!     a * b
@@ -71,7 +71,7 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::marker::PhantomData;
 
-pub use compiler::{Compiler, FheProgramFn, GenericCompiler};
+pub use compiler::{Compiler, FheProgramFn, FheProgramFnExt, GenericCompiler};
 pub use error::{Error, Result};
 pub use params::PlainModulusConstraint;
 pub use seal_fhe::Plaintext as SealPlaintext;

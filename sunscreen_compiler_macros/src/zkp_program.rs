@@ -126,7 +126,7 @@ fn parse_inner(_attr_params: ZkpProgramAttrs, input_fn: ItemFn) -> Result<TokenS
                         }
                     },
                     _ => {
-                        return Err(Error::compile_error(a.1.span(), "ZKP program arguments may only have one attribute (#[public] or #[constant])."));
+                        return Err(Error::compile_error(a.0[1].span(), "ZKP program arguments may only have one attribute (#[private], #[public] or #[constant])."));
                     }
                 };
 

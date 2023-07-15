@@ -13,7 +13,7 @@ fn main() -> Result<()> {
         .zkp_program(whitelist)
         .compile()?;
     let prog = app.get_zkp_program(whitelist).unwrap();
-    let runtime = ZkpRuntime::new(&BulletproofsBackend::new())?;
+    let runtime = ZkpRuntime::new(BulletproofsBackend::new())?;
 
     let entry: BulletproofsField = get_first_arg()?.unwrap_or(101).into();
     let list: [BulletproofsField; 100] = default_list();

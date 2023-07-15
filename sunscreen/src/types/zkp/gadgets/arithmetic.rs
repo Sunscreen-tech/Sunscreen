@@ -250,7 +250,7 @@ mod tests {
             .compile()
             .unwrap();
 
-        let runtime = Runtime::new_zkp(&BulletproofsBackend::new()).unwrap();
+        let runtime = Runtime::new_zkp(BulletproofsBackend::new()).unwrap();
 
         let prog = app.get_zkp_program(div_rem).unwrap();
 

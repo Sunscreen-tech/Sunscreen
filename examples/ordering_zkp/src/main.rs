@@ -17,7 +17,7 @@ fn main() -> Result<(), Error> {
 
     let greater_than_zkp = app.get_zkp_program(greater_than).unwrap();
 
-    let runtime = ZkpRuntime::new(&BulletproofsBackend::new())?;
+    let runtime = ZkpRuntime::new(BulletproofsBackend::new())?;
 
     let amount = BulletproofsField::from(232);
     let threshold = BulletproofsField::from(64);
@@ -42,7 +42,7 @@ mod tests {
             .compile()
             .unwrap();
         let gt_zkp = app.get_zkp_program(greater_than).unwrap();
-        let runtime = ZkpRuntime::new(&BulletproofsBackend::new()).unwrap();
+        let runtime = ZkpRuntime::new(BulletproofsBackend::new()).unwrap();
         let proof = runtime.prove(gt_zkp, vec![threshold], vec![], vec![amount]);
         if !should_succeed {
             assert!(proof.is_err());

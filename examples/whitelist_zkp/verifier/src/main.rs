@@ -13,7 +13,7 @@ fn main() -> Result<()> {
         .zkp_program(whitelist)
         .compile()?;
     let prog = app.get_zkp_program(whitelist).unwrap();
-    let runtime = ZkpRuntime::new(&BulletproofsBackend::new())?;
+    let runtime = ZkpRuntime::new(BulletproofsBackend::new())?;
 
     let proof: Proof = bincode::deserialize_from(io::stdin())?;
 

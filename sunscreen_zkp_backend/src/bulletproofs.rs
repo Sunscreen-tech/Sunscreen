@@ -314,7 +314,7 @@ impl BulletproofsCircuit {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 /**
  * A Bulletproofs backend.
  */

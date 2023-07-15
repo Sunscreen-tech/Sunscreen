@@ -19,7 +19,7 @@ fn can_add_and_mul_native_fields() {
         .compile()
         .unwrap();
 
-    let runtime = Runtime::new_zkp(&BulletproofsBackend::new()).unwrap();
+    let runtime = Runtime::new_zkp(BulletproofsBackend::new()).unwrap();
 
     let program = app.get_zkp_program(add_mul).unwrap();
 
@@ -53,7 +53,7 @@ fn get_input_mismatch_on_incorrect_args() {
         .compile()
         .unwrap();
 
-    let runtime = Runtime::new_zkp(&BulletproofsBackend::new()).unwrap();
+    let runtime = Runtime::new_zkp(BulletproofsBackend::new()).unwrap();
 
     let program = app.get_zkp_program(add_mul).unwrap();
 
@@ -80,7 +80,7 @@ fn can_use_public_inputs() {
         .compile()
         .unwrap();
 
-    let runtime = Runtime::new_zkp(&BulletproofsBackend::new()).unwrap();
+    let runtime = Runtime::new_zkp(BulletproofsBackend::new()).unwrap();
 
     let program = app.get_zkp_program(add_mul).unwrap();
 
@@ -117,7 +117,7 @@ fn can_use_constant_inputs() {
         .compile()
         .unwrap();
 
-    let runtime = Runtime::new_zkp(&BulletproofsBackend::new()).unwrap();
+    let runtime = Runtime::new_zkp(BulletproofsBackend::new()).unwrap();
 
     let program = app.get_zkp_program(add_mul).unwrap();
 
@@ -152,7 +152,7 @@ fn can_declare_array_inputs() {
         .compile()
         .unwrap();
 
-    let runtime = Runtime::new_zkp(&BulletproofsBackend::new()).unwrap();
+    let runtime = Runtime::new_zkp(BulletproofsBackend::new()).unwrap();
 
     let program = app.get_zkp_program(in_range).unwrap();
 
@@ -191,7 +191,7 @@ fn builder_methods_work() {
         .compile()
         .unwrap();
 
-    let runtime = Runtime::new_zkp(&BulletproofsBackend::new()).unwrap();
+    let runtime = Runtime::new_zkp(BulletproofsBackend::new()).unwrap();
 
     let program = app.get_zkp_program(arbitrary).unwrap();
 

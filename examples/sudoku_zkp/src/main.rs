@@ -68,7 +68,7 @@ fn main() -> Result<(), Error> {
 
     let prog = app.get_zkp_program(sudoku_proof).unwrap();
 
-    let runtime = ZkpRuntime::new(&BulletproofsBackend::new())?;
+    let runtime = ZkpRuntime::new(BulletproofsBackend::new())?;
 
     let ex_board = [
         [0, 7, 0, 0, 2, 0, 0, 4, 6],
@@ -119,7 +119,7 @@ mod tests {
 
         let prog = app.get_zkp_program(sudoku_proof).unwrap();
 
-        let runtime = ZkpRuntime::new(&BulletproofsBackend::new()).unwrap();
+        let runtime = ZkpRuntime::new(BulletproofsBackend::new()).unwrap();
 
         let ex_board = [
             [0, 7, 0, 0, 2, 0, 0, 4, 6],
@@ -167,7 +167,7 @@ mod tests {
 
         let prog = app.get_zkp_program(sudoku_proof).unwrap();
 
-        let runtime = ZkpRuntime::new(&BulletproofsBackend::new()).unwrap();
+        let runtime = ZkpRuntime::new(BulletproofsBackend::new()).unwrap();
 
         let ex_board = [
             [0, 7, 0, 0, 2, 0, 0, 4, 6],
@@ -212,7 +212,7 @@ mod tests {
 
         let prog = app.get_zkp_program(sudoku_proof).unwrap();
 
-        let runtime = ZkpRuntime::new(&BulletproofsBackend::new()).unwrap();
+        let runtime = ZkpRuntime::new(BulletproofsBackend::new()).unwrap();
 
         let ex_board = [[0; 9]; 9];
 

@@ -110,7 +110,7 @@ fn unshield_tx_fractional_range_proof(_c: &mut Criterion) {
     // 3 * 1 + 2 * 2 = 7
     let balance = make_fractional_value(&[3, 2]);
 
-    let runtime = Runtime::new_zkp(&BulletproofsBackend::new()).unwrap();
+    let runtime = Runtime::new_zkp(BulletproofsBackend::new()).unwrap();
 
     let prover_time = Instant::now();
 
@@ -198,7 +198,7 @@ fn private_tx_fractional_range_proof(_c: &mut Criterion) {
     // 1 * 1 + 1 * 2 + 1 * 4  = 7
     let c = make_fractional_value(&[1, 1, 1]);
 
-    let runtime = Runtime::new_zkp(&BulletproofsBackend::new()).unwrap();
+    let runtime = Runtime::new_zkp(BulletproofsBackend::new()).unwrap();
 
     let prover_time = Instant::now();
 
@@ -261,7 +261,7 @@ fn mean_variance_fractional_range_proof(_c: &mut Criterion) {
     // 4 * 1 + 16 * 2 = 36
     let b = make_fractional_value(&[4, 16]);
 
-    let runtime = Runtime::new_zkp(&BulletproofsBackend::new()).unwrap();
+    let runtime = Runtime::new_zkp(BulletproofsBackend::new()).unwrap();
 
     let prover_time = Instant::now();
 
@@ -338,7 +338,7 @@ fn chi_sq_fractional_range_proof(_c: &mut Criterion) {
     let priv_inputs: Vec<ZkpProgramInput> = vec![a_0.into(), a_1.into(), a_2.into()];
     let const_inputs: Vec<ZkpProgramInput> = vec![n.into()];
 
-    let runtime = Runtime::new_zkp(&BulletproofsBackend::new()).unwrap();
+    let runtime = Runtime::new_zkp(BulletproofsBackend::new()).unwrap();
 
     let prover_time = Instant::now();
 

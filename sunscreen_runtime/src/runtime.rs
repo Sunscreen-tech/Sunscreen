@@ -614,14 +614,14 @@ impl GenericRuntime<(), ()> {
     /**
      * Creates a new Runtime supporting only ZKP operations
      */
-    pub fn new_zkp<B>(backend: &B) -> Result<ZkpRuntime<B>>
+    pub fn new_zkp<B>(backend: B) -> Result<ZkpRuntime<B>>
     where
-        B: ZkpBackend + Clone + 'static,
+        B: ZkpBackend + 'static,
     {
         Ok(GenericRuntime {
             runtime_data: RuntimeData::Zkp(Self::make_zkp_runtime_data()),
             _phantom_t: PhantomData,
-            zkp_backend: backend.clone(),
+            zkp_backend: backend,
         })
     }
 
@@ -685,9 +685,9 @@ impl<B> ZkpRuntime<B> {
     /**
      * Create a new [`ZkpRuntime`].
      */
-    pub fn new(backend: &B) -> Result<Self>
+    pub fn new(backend: B) -> Result<Self>
     where
-        B: ZkpBackend + Clone + 'static,
+        B: ZkpBackend + 'static,
     {
         Runtime::new_zkp(backend)
     }

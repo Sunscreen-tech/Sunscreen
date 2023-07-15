@@ -52,7 +52,7 @@ pub trait ZkpProgramFnExt {
     /// let is_eq_prog = is_eq.compile::<BulletproofsBackend>()?;
     /// let a = BulletproofsField::from(64);
     /// let b = BulletproofsField::from(64);
-    /// let runtime = ZkpRuntime::new(&BulletproofsBackend::new())?;
+    /// let runtime = ZkpRuntime::new(BulletproofsBackend::new())?;
     /// runtime.prove(&is_eq_prog, vec![], vec![], vec![a, b])?;
     /// # Ok(())
     /// # }
@@ -78,7 +78,7 @@ pub trait ZkpProgramFnExt {
     /// let is_eq_prog = app.get_zkp_program(is_eq).unwrap();
     /// let a = BulletproofsField::from(64);
     /// let b = BulletproofsField::from(64);
-    /// let runtime = ZkpRuntime::new(&BulletproofsBackend::new())?;
+    /// let runtime = ZkpRuntime::new(BulletproofsBackend::new())?;
     /// runtime.prove(&is_eq_prog, vec![], vec![], vec![a, b])?;
     /// # Ok(())
     /// # }
@@ -114,16 +114,16 @@ pub trait ZkpProgramFnExt {
     /// }
     /// # fn main() -> Result<(), sunscreen::Error> {
     /// let is_eq_prog = is_eq.compile::<BulletproofsBackend>()?;
-    /// let runtime = is_eq.runtime(&BulletproofsBackend::new())?;
+    /// let runtime = is_eq.runtime(BulletproofsBackend::new())?;
     /// let a = BulletproofsField::from(64);
     /// let b = BulletproofsField::from(64);
     /// runtime.prove(&is_eq_prog, vec![], vec![], vec![a, b])?;
     /// # Ok(())
     /// # }
     /// ```
-    fn runtime<B: ZkpBackend>(&self, backend: &B) -> Result<ZkpRuntime<B>>
+    fn runtime<B: ZkpBackend>(&self, backend: B) -> Result<ZkpRuntime<B>>
     where
-        B: Clone + 'static,
+        B: 'static,
         Self: ZkpProgramFn<B::Field>,
         Self: Sized + Clone + AsRef<str> + 'static,
     {

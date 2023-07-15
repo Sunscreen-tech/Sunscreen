@@ -358,7 +358,7 @@ pub fn prove_public_encryption(
     encryption_data: &(Ciphertext, Noise, Poly),
     public_key: &PublicKey,
 ) -> Proof {
-    let runtime = Runtime::new_zkp(&BulletproofsBackend::new()).unwrap();
+    let runtime = Runtime::new_zkp(BulletproofsBackend::new()).unwrap();
 
     let prog = app.get_zkp_program(prove_enc).unwrap();
 
@@ -387,7 +387,7 @@ pub fn verify_public_encryption(
     ciphertext: &Ciphertext,
     public_key: &PublicKey,
 ) {
-    let runtime = Runtime::new_zkp(&BulletproofsBackend::new()).unwrap();
+    let runtime = Runtime::new_zkp(BulletproofsBackend::new()).unwrap();
 
     let const_args = public_bfv_proof_params(ciphertext, public_key);
 

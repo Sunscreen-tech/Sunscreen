@@ -1,7 +1,7 @@
 use sunscreen::{
     bulletproofs::BulletproofsBackend,
     types::zkp::{BulletproofsField, NativeField},
-    zkp_program, zkp_var, BackendField, Compiler, Error, ZkpProgramFnExt, ZkpRuntime,
+    zkp_program, zkp_var, BackendField, Error, ZkpProgramFnExt,
 };
 
 #[zkp_program]
@@ -61,14 +61,8 @@ fn sudoku_proof<F: BackendField>(
 }
 
 fn main() -> Result<(), Error> {
-    let app = Compiler::new()
-        .zkp_backend::<BulletproofsBackend>()
-        .zkp_program(sudoku_proof)
-        .compile()?;
-
-    let prog = app.get_zkp_program(sudoku_proof).unwrap();
-
-    let runtime = ZkpRuntime::new(BulletproofsBackend::new())?;
+    let prog = sudoku_proof.compile::<BulletproofsBackend>()?;
+    let runtime = sudoku_proof.runtime(BulletproofsBackend::new())?;
 
     let ex_board = [
         [0, 7, 0, 0, 2, 0, 0, 4, 6],
@@ -98,9 +92,9 @@ fn main() -> Result<(), Error> {
 
     let board = ex_board.map(|a| a.map(BulletproofsField::from));
 
-    let proof = runtime.prove(prog, vec![], vec![board], vec![solution])?;
+    let proof = runtime.prove(&prog, vec![], vec![board], vec![solution])?;
 
-    runtime.verify(prog, &proof, vec![], vec![board])?;
+    runtime.verify(&prog, &proof, vec![], vec![board])?;
 
     Ok(())
 }
@@ -108,6 +102,7 @@ fn main() -> Result<(), Error> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use sunscreen::{Compiler, ZkpRuntime};
 
     #[test]
     fn valid_example() {

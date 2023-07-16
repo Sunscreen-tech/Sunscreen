@@ -24,7 +24,7 @@ fn main() -> Result<(), Error> {
 
     // Prove that amount > threshold
 
-    let proof = runtime.prove(greater_than_zkp, vec![amount], vec![], vec![threshold])?;
+    let proof = runtime.prove(greater_than_zkp, vec![amount], vec![threshold], vec![])?;
 
     runtime.verify(greater_than_zkp, &proof, vec![threshold], vec![])?;
 

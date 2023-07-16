@@ -53,7 +53,7 @@ pub trait ZkpProgramFnExt {
     /// let a = BulletproofsField::from(64);
     /// let b = BulletproofsField::from(64);
     /// let runtime = ZkpRuntime::new(BulletproofsBackend::new())?;
-    /// runtime.prove(&is_eq_prog, vec![], vec![], vec![a, b])?;
+    /// runtime.prove(&is_eq_prog, vec![a, b], vec![], vec![])?;
     /// # Ok(())
     /// # }
     /// ```
@@ -79,7 +79,7 @@ pub trait ZkpProgramFnExt {
     /// let a = BulletproofsField::from(64);
     /// let b = BulletproofsField::from(64);
     /// let runtime = ZkpRuntime::new(BulletproofsBackend::new())?;
-    /// runtime.prove(&is_eq_prog, vec![], vec![], vec![a, b])?;
+    /// runtime.prove(&is_eq_prog, vec![a, b], vec![], vec![])?;
     /// # Ok(())
     /// # }
     /// ```
@@ -117,7 +117,7 @@ pub trait ZkpProgramFnExt {
     /// let runtime = is_eq.runtime(BulletproofsBackend::new())?;
     /// let a = BulletproofsField::from(64);
     /// let b = BulletproofsField::from(64);
-    /// runtime.prove(&is_eq_prog, vec![], vec![], vec![a, b])?;
+    /// runtime.prove(&is_eq_prog, vec![a, b], vec![], vec![])?;
     /// # Ok(())
     /// # }
     /// ```

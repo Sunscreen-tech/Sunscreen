@@ -454,9 +454,9 @@ mod tests {
 
             let result = runtime.prove(
                 program,
-                vec![],
-                vec![],
                 vec![BpField::from(x), BpField::from(y)],
+                vec![],
+                vec![],
             );
 
             let proof = if expect_pass {
@@ -503,9 +503,9 @@ mod tests {
 
             let result = runtime.prove(
                 program,
-                vec![],
-                vec![],
                 vec![BpField::from(x), BpField::from(y)],
+                vec![],
+                vec![],
             );
 
             let proof = if expect_pass {
@@ -552,9 +552,9 @@ mod tests {
 
             let result = runtime.prove(
                 program,
-                vec![],
-                vec![],
                 vec![BpField::from(x), BpField::from(y)],
+                vec![],
+                vec![],
             );
 
             let proof = if expect_pass {
@@ -601,9 +601,9 @@ mod tests {
 
             let result = runtime.prove(
                 program,
-                vec![],
-                vec![],
                 vec![BpField::from(x), BpField::from(y)],
+                vec![],
+                vec![],
             );
 
             let proof = if expect_pass {

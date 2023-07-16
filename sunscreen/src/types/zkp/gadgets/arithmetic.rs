@@ -259,14 +259,14 @@ mod tests {
         let test_case = |x: i64, m: i64, expected_q: i64, expected_r: i64, expect_success: bool| {
             let result = runtime.prove(
                 prog,
-                vec![],
-                vec![],
                 vec![
                     BpField::from(x),
                     BpField::from(m),
                     BpField::from(expected_q),
                     BpField::from(expected_r),
                 ],
+                vec![],
+                vec![],
             );
 
             let proof = if expect_success {

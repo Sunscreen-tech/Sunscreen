@@ -184,7 +184,7 @@ mod tests {
         type BPField = NativeField<<BulletproofsBackend as ZkpBackend>::Field>;
 
         let test_proof = |x: u8, expect_pass: bool| {
-            let result = runtime.prove(prog, vec![], vec![], vec![BPField::from(x)]);
+            let result = runtime.prove(prog, vec![BPField::from(x)], vec![], vec![]);
 
             let proof = if expect_pass {
                 result.unwrap()
@@ -228,7 +228,7 @@ mod tests {
         type BPField = NativeField<<BulletproofsBackend as ZkpBackend>::Field>;
 
         let proof = runtime
-            .prove(prog, vec![], vec![], vec![BPField::from(42u8)])
+            .prove(prog, vec![BPField::from(42u8)], vec![], vec![])
             .unwrap();
 
         runtime

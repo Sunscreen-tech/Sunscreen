@@ -26,9 +26,9 @@ fn can_add_and_mul_native_fields() {
     let proof = runtime
         .prove(
             program,
-            vec![],
-            vec![],
             vec![BPField::from(10u8), BPField::from(4u8), BPField::from(2u8)],
+            vec![],
+            vec![],
         )
         .unwrap();
 
@@ -57,7 +57,7 @@ fn get_input_mismatch_on_incorrect_args() {
 
     let program = app.get_zkp_program(add_mul).unwrap();
 
-    let result = runtime.prove(program, vec![], vec![], vec![BPField::from(0u8)]);
+    let result = runtime.prove(program, vec![BPField::from(0u8)], vec![], vec![]);
 
     assert!(matches!(
         result,
@@ -68,7 +68,7 @@ fn get_input_mismatch_on_incorrect_args() {
 #[test]
 fn can_use_public_inputs() {
     #[zkp_program]
-    fn add_mul<F: BackendField>(#[public] a: NativeField<F>, b: NativeField<F>, c: NativeField<F>) {
+    fn add_mul<F: BackendField>(b: NativeField<F>, c: NativeField<F>, #[public] a: NativeField<F>) {
         let x = a * b + c;
 
         x.constrain_eq(NativeField::from(42u32))
@@ -87,14 +87,14 @@ fn can_use_public_inputs() {
     let proof = runtime
         .prove(
             program,
-            vec![],
-            vec![BPField::from(10u8)],
             vec![BPField::from(4u8), BPField::from(2u8)],
+            vec![BPField::from(10u8)],
+            vec![],
         )
         .unwrap();
 
     runtime
-        .verify(program, &proof, vec![], vec![BPField::from(10u8)])
+        .verify(program, &proof, vec![BPField::from(10u8)], vec![])
         .unwrap();
 }
 
@@ -102,9 +102,9 @@ fn can_use_public_inputs() {
 fn can_use_constant_inputs() {
     #[zkp_program]
     fn add_mul<F: BackendField>(
-        #[constant] a: NativeField<F>,
         b: NativeField<F>,
         c: NativeField<F>,
+        #[constant] a: NativeField<F>,
     ) {
         let x = a * b + c;
 
@@ -124,14 +124,14 @@ fn can_use_constant_inputs() {
     let proof = runtime
         .prove(
             program,
-            vec![BPField::from(10u8)],
-            vec![],
             vec![BPField::from(4u8), BPField::from(2u8)],
+            vec![],
+            vec![BPField::from(10u8)],
         )
         .unwrap();
 
     runtime
-        .verify(program, &proof, vec![BPField::from(10u8)], vec![])
+        .verify(program, &proof, vec![], vec![BPField::from(10u8)])
         .unwrap();
 }
 
@@ -160,7 +160,7 @@ fn can_declare_array_inputs() {
         .flat_map(|i| (0..9u64).map(|j| BPField::from(i + j)).collect::<Vec<_>>())
         .collect::<Vec<_>>();
 
-    let proof = runtime.prove(program, vec![], vec![], inputs).unwrap();
+    let proof = runtime.prove(program, inputs, vec![], vec![]).unwrap();
 
     runtime
         .verify(program, &proof, Vec::<ZkpProgramInput>::new(), vec![])
@@ -171,9 +171,9 @@ fn can_declare_array_inputs() {
 fn builder_methods_work() {
     #[zkp_program]
     fn arbitrary<F: BackendField>(
-        #[constant] zss: [[NativeField<F>; 9]; 64],
         x: NativeField<F>,
         ys: [NativeField<F>; 9],
+        #[constant] zss: [[NativeField<F>; 9]; 64],
     ) {
         for y in ys {
             x.constrain_eq(y);

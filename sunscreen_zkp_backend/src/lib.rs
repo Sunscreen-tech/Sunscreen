@@ -393,9 +393,9 @@ pub trait ZkpBackend {
     fn jit_prover(
         &self,
         prog: &CompiledZkpProgram,
-        constant_inputs: &[BigInt],
-        public_inputs: &[BigInt],
         private_inputs: &[BigInt],
+        public_inputs: &[BigInt],
+        constant_inputs: &[BigInt],
     ) -> Result<ExecutableZkpProgram>;
 
     /**
@@ -410,8 +410,8 @@ pub trait ZkpBackend {
     fn jit_verifier(
         &self,
         prog: &CompiledZkpProgram,
-        constant_inputs: &[BigInt],
         public_inputs: &[BigInt],
+        constant_inputs: &[BigInt],
     ) -> Result<ExecutableZkpProgram>;
 }
 

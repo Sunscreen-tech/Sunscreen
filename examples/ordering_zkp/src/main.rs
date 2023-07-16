@@ -5,7 +5,7 @@ use sunscreen::{
 };
 
 #[zkp_program]
-fn greater_than<F: BackendField>(#[constant] b: NativeField<F>, a: NativeField<F>) {
+fn greater_than<F: BackendField>(a: NativeField<F>, #[public] b: NativeField<F>) {
     a.constrain_gt_bounded(b, 32)
 }
 
@@ -24,7 +24,7 @@ fn main() -> Result<(), Error> {
 
     // Prove that amount > threshold
 
-    let proof = runtime.prove(greater_than_zkp, vec![threshold], vec![], vec![amount])?;
+    let proof = runtime.prove(greater_than_zkp, vec![amount], vec![], vec![threshold])?;
 
     runtime.verify(greater_than_zkp, &proof, vec![threshold], vec![])?;
 
@@ -43,7 +43,7 @@ mod tests {
             .unwrap();
         let gt_zkp = app.get_zkp_program(greater_than).unwrap();
         let runtime = ZkpRuntime::new(BulletproofsBackend::new()).unwrap();
-        let proof = runtime.prove(gt_zkp, vec![threshold], vec![], vec![amount]);
+        let proof = runtime.prove(gt_zkp, vec![amount], vec![threshold], vec![]);
         if !should_succeed {
             assert!(proof.is_err());
         } else {

@@ -106,8 +106,8 @@ fn parse_inner(_attr_params: ZkpProgramAttrs, input_fn: ItemFn) -> Result<TokenS
         }
     };
 
-    let mut private_seen = false;
     let mut public_seen = false;
+    let mut constant_seen = false;
     let unwrapped_inputs = match extract_fn_arguments(inputs) {
         Ok(args) => {
             args.iter().map(|a| {
@@ -115,31 +115,35 @@ fn parse_inner(_attr_params: ZkpProgramAttrs, input_fn: ItemFn) -> Result<TokenS
 
                 match &a.0[..] {
                     [] => {
-                        private_seen = true;
+                        if public_seen || constant_seen {
+                            return Err(Error::compile_error(a.2.span(),
+                                "private arguments must be specified before #[public] and #[constant] arguments"
+                            ));
+                        }
                     },
                     [attr] => {
                         let ident = attr.path().get_ident();
 
                         match ident.map(|x| x.to_string()).as_deref() {
                             Some("private") => {
-                                private_seen = true;
+                                if public_seen || constant_seen {
+                                    return Err(Error::compile_error(attr.path().span(),
+                                        "#[private] arguments must be specified before #[public] and #[constant] arguments"
+                                    ));
+                                }
                             },
                             Some("public") => {
-                                if private_seen {
+                                if constant_seen {
                                     return Err(Error::compile_error(attr.path().span(), 
-                                        "#[public] arguments must be specified before #[private] arguments "
+                                        "#[public] arguments must be specified before #[constant] arguments "
                                     ));
                                 }
                                 arg_kind = ArgumentKind::Public;
                                 public_seen = true;
                             },
                             Some("constant") => {
-                                if public_seen || private_seen {
-                                    return Err(Error::compile_error(attr.path().span(),
-                                        "#[constant] arguments must be specified before #[public] and #[private] arguments"
-                                    ));
-                                }
                                 arg_kind = ArgumentKind::Constant;
+                                constant_seen = true;
                             },
                             _ => {
                                 return Err(Error::compile_error(attr.path().span(), &format!(

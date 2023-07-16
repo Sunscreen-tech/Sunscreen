@@ -6,8 +6,8 @@ use sunscreen::{
 
 #[zkp_program]
 fn sudoku_proof<F: BackendField>(
-    #[public] board: [[NativeField<F>; 9]; 9],
     solution: [[NativeField<F>; 9]; 9],
+    #[public] board: [[NativeField<F>; 9]; 9],
 ) {
     let zero = zkp_var!(0);
 
@@ -92,9 +92,9 @@ fn main() -> Result<(), Error> {
 
     let board = ex_board.map(|a| a.map(BulletproofsField::from));
 
-    let proof = runtime.prove(&prog, vec![], vec![board], vec![solution])?;
+    let proof = runtime.prove(&prog, vec![solution], vec![board], vec![])?;
 
-    runtime.verify(&prog, &proof, vec![], vec![board])?;
+    runtime.verify(&prog, &proof, vec![board], vec![])?;
 
     Ok(())
 }
@@ -102,19 +102,11 @@ fn main() -> Result<(), Error> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use sunscreen::{Compiler, ZkpRuntime};
 
     #[test]
     fn valid_example() {
-        let app = Compiler::new()
-            .zkp_backend::<BulletproofsBackend>()
-            .zkp_program(sudoku_proof)
-            .compile()
-            .unwrap();
-
-        let prog = app.get_zkp_program(sudoku_proof).unwrap();
-
-        let runtime = ZkpRuntime::new(BulletproofsBackend::new()).unwrap();
+        let prog = sudoku_proof.compile::<BulletproofsBackend>().unwrap();
+        let runtime = sudoku_proof.runtime(BulletproofsBackend::new()).unwrap();
 
         let ex_board = [
             [0, 7, 0, 0, 2, 0, 0, 4, 6],
@@ -144,25 +136,18 @@ mod tests {
         let board = ex_board.map(|a| a.map(BulletproofsField::from));
 
         let proof = runtime
-            .prove(prog, vec![], vec![board], vec![solution])
+            .prove(&prog, vec![solution], vec![board], vec![])
             .unwrap();
 
-        let verify = runtime.verify(prog, &proof, vec![], vec![board]);
+        let verify = runtime.verify(&prog, &proof, vec![board], vec![]);
 
         assert!(verify.is_ok());
     }
 
     #[test]
     fn bad_solution() {
-        let app = Compiler::new()
-            .zkp_backend::<BulletproofsBackend>()
-            .zkp_program(sudoku_proof)
-            .compile()
-            .unwrap();
-
-        let prog = app.get_zkp_program(sudoku_proof).unwrap();
-
-        let runtime = ZkpRuntime::new(BulletproofsBackend::new()).unwrap();
+        let prog = sudoku_proof.compile::<BulletproofsBackend>().unwrap();
+        let runtime = sudoku_proof.runtime(BulletproofsBackend::new()).unwrap();
 
         let ex_board = [
             [0, 7, 0, 0, 2, 0, 0, 4, 6],
@@ -192,22 +177,15 @@ mod tests {
 
         let board = ex_board.map(|a| a.map(BulletproofsField::from));
 
-        let proof = runtime.prove(prog, vec![], vec![board], vec![solution]);
+        let proof = runtime.prove(&prog, vec![solution], vec![board], vec![]);
 
         assert!(proof.is_err());
     }
 
     #[test]
     fn out_of_bounds_input() {
-        let app = Compiler::new()
-            .zkp_backend::<BulletproofsBackend>()
-            .zkp_program(sudoku_proof)
-            .compile()
-            .unwrap();
-
-        let prog = app.get_zkp_program(sudoku_proof).unwrap();
-
-        let runtime = ZkpRuntime::new(BulletproofsBackend::new()).unwrap();
+        let prog = sudoku_proof.compile::<BulletproofsBackend>().unwrap();
+        let runtime = sudoku_proof.runtime(BulletproofsBackend::new()).unwrap();
 
         let ex_board = [[0; 9]; 9];
 
@@ -227,7 +205,7 @@ mod tests {
 
         let board = ex_board.map(|a| a.map(BulletproofsField::from));
 
-        let proof = runtime.prove(prog, vec![], vec![board], vec![solution]);
+        let proof = runtime.prove(&prog, vec![solution], vec![board], vec![]);
 
         assert!(proof.is_err());
     }

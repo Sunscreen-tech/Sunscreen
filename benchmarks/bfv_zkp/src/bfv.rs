@@ -203,15 +203,15 @@ type BfvPoly<F> = RnsRingPolynomial<F, POLY_DEGREE, 1>;
 
 #[zkp_program]
 fn prove_enc<F: BackendField>(
+    m: BfvPoly<F>,
+    e_1: BfvPoly<F>,
+    e_2: BfvPoly<F>,
+    u: BfvPoly<F>,
     #[constant] expected_c_0: BfvPoly<F>,
     #[constant] expected_c_1: BfvPoly<F>,
     #[constant] p_0: BfvPoly<F>,
     #[constant] p_1: BfvPoly<F>,
     #[constant] delta: NativeField<F>,
-    m: BfvPoly<F>,
-    e_1: BfvPoly<F>,
-    e_2: BfvPoly<F>,
-    u: BfvPoly<F>,
 ) {
     let q = NativeField::<F>::from(CIPHER_MODULUS).into_program_node();
 
@@ -377,7 +377,7 @@ pub fn prove_public_encryption(
     let const_args = public_bfv_proof_params(&ciphertext, public_key);
 
     runtime
-        .prove(prog, const_args, vec![], private_args)
+        .prove(prog, private_args, vec![], const_args)
         .unwrap()
 }
 
@@ -393,7 +393,7 @@ pub fn verify_public_encryption(
 
     let program = app.get_zkp_program(prove_enc).unwrap();
 
-    runtime.verify(program, proof, const_args, vec![]).unwrap();
+    runtime.verify(program, proof, vec![], const_args).unwrap();
 }
 
 #[test]

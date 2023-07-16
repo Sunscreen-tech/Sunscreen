@@ -241,11 +241,11 @@ mod tests {
         ]);
 
         let proof = runtime
-            .prove(program, vec![a.clone(), a.clone()], vec![], vec![])
+            .prove(program, vec![], vec![], vec![a.clone(), a.clone()])
             .unwrap();
 
         runtime
-            .verify(program, &proof, vec![a.clone(), a.clone()], vec![])
+            .verify(program, &proof, vec![], vec![a.clone(), a.clone()])
             .unwrap();
 
         let b =
@@ -295,11 +295,11 @@ mod tests {
         let a = BpPoly::from([[1u8, 2, 3, 4, 5, 6, 7, 8], [9, 10, 11, 12, 13, 14, 15, 16]]);
 
         let proof = runtime
-            .prove(program, vec![a.clone(), a.clone()], vec![], vec![])
+            .prove(program, vec![], vec![], vec![a.clone(), a.clone()])
             .unwrap();
 
         runtime
-            .verify(program, &proof, vec![a.clone(), a.clone()], vec![])
+            .verify(program, &proof, vec![], vec![a.clone(), a.clone()])
             .unwrap();
 
         let b = BpPoly::from([[0u8, 2, 3, 4, 5, 6, 7, 8], [9, 10, 11, 12, 13, 14, 15, 16]]);
@@ -357,9 +357,9 @@ mod tests {
         let const_args: Vec<ZkpProgramInput> = vec![a.into(), b.into()];
 
         let proof = runtime
-            .prove(program, const_args.clone(), vec![], vec![])
+            .prove(program, vec![], vec![], const_args.clone())
             .unwrap();
 
-        runtime.verify(program, &proof, const_args, vec![]).unwrap();
+        runtime.verify(program, &proof, vec![], const_args).unwrap();
     }
 }

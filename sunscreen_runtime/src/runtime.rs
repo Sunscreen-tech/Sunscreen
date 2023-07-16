@@ -439,14 +439,14 @@ where
     pub fn prove<I>(
         &self,
         program: &CompiledZkpProgram,
-        constant_inputs: Vec<I>,
-        public_inputs: Vec<I>,
         private_inputs: Vec<I>,
+        public_inputs: Vec<I>,
+        constant_inputs: Vec<I>,
     ) -> Result<Proof>
     where
         I: Into<ZkpProgramInput>,
     {
-        let constant_inputs = constant_inputs
+        let private_inputs = private_inputs
             .into_iter()
             .flat_map(|x| I::into(x).0.to_native_fields())
             .collect::<Vec<BigInt>>();
@@ -454,7 +454,7 @@ where
             .into_iter()
             .flat_map(|x| I::into(x).0.to_native_fields())
             .collect::<Vec<BigInt>>();
-        let private_inputs = private_inputs
+        let constant_inputs = constant_inputs
             .into_iter()
             .flat_map(|x| I::into(x).0.to_native_fields())
             .collect::<Vec<BigInt>>();
@@ -506,8 +506,8 @@ where
         &self,
         program: &CompiledZkpProgram,
         proof: &Proof,
-        constant_inputs: Vec<I>,
         public_inputs: Vec<I>,
+        constant_inputs: Vec<I>,
     ) -> Result<()>
     where
         I: Into<ZkpProgramInput>,
@@ -790,9 +790,9 @@ impl<'r, 'p, T: marker::Zkp, B: ZkpBackend> ProofBuilder<'r, 'p, T, B> {
     pub fn prove(self) -> Result<Proof> {
         self.runtime.prove(
             self.program,
-            self.constant_inputs,
-            self.public_inputs,
             self.private_inputs,
+            self.public_inputs,
+            self.constant_inputs,
         )
     }
 }
@@ -822,8 +822,8 @@ impl<'r, 'p, 'a, T: marker::Zkp, B: ZkpBackend> VerificationBuilder<'r, 'p, 'a, 
             runtime,
             program,
             proof: None,
-            constant_inputs: vec![],
             public_inputs: vec![],
+            constant_inputs: vec![],
         }
     }
 
@@ -883,8 +883,8 @@ impl<'r, 'p, 'a, T: marker::Zkp, B: ZkpBackend> VerificationBuilder<'r, 'p, 'a, 
         self.runtime.verify(
             self.program,
             proof,
-            self.constant_inputs,
             self.public_inputs,
+            self.constant_inputs,
         )
     }
 }

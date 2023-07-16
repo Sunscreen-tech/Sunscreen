@@ -4,7 +4,7 @@ use sunscreen_compiler_common::{GraphQuery, GraphQueryError};
 use sunscreen_fhe_program::{FheProgram, FheProgramTrait, Literal, Operation::*};
 
 #[cfg(feature = "debugger")]
-use crate::debugger::sessions::{get_sessions};
+use crate::debugger::sessions::{get_sessions, BfvSession};
 
 use std::collections::HashMap;
 use crossbeam::atomic::AtomicCell;
@@ -208,9 +208,9 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
             #[cfg(feature = "debugger")]
             if let Some(session_name) = session {
                 let mut guard = get_sessions().lock().unwrap();
-                let session = guard.get_mut(&session_name).unwrap().unwrap_bfv_session();
+                let mut session: &mut BfvSession = guard.get_mut(session_name).unwrap().unwrap_bfv_session_mut();
                 let node_val = get_data(&data, node_index.index());
-                session.program_data[node_index.index()] = node_val;
+                session.program_data[node_index.index()] = Arc::into_inner(node_val.unwrap().clone());
 
                 // pretty sure this code is not necessary: the point of this is that
                 // the program_infos are already created, so now it's just about
@@ -1001,10 +1001,10 @@ mod tests {
                 &evaluator,
                 &None,
                 &Some(&galois_keys),
-                DebugInfo {
-                    private_key: &private_key, 
+                Some(DebugInfo {
+                    secret_key: &private_key, 
                     session_name: "rotate_left".to_owned()
-                }
+                })
             )
             .unwrap()
         };
@@ -1069,10 +1069,10 @@ mod tests {
                 &evaluator,
                 &None,
                 &Some(&galois_keys),
-                DebugInfo {
-                    private_key: &private_key, 
+                Some(DebugInfo {
+                    secret_key: &private_key, 
                     session_name: "rotate_right".to_owned()
-                }
+                })
             )
             .unwrap()
         };

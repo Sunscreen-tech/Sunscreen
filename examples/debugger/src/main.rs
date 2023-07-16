@@ -1,4 +1,4 @@
-use sunscreen::*;
+use sunscreen::{*, types::{Cipher, bfv::Signed}};
 
 fn main() {
     #[fhe_program(scheme = "bfv")]

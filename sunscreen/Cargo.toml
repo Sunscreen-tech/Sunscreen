@@ -54,7 +54,7 @@ serde_json = "1.0.74"
 [features]
 bulletproofs = ["sunscreen_zkp_backend/bulletproofs"]
 hexl = ["seal_fhe/hexl"]
-debugger = ["sunscreen_runtime/debugger", "sunscreen_fhe_program/debugger"]
+debugger = ["sunscreen_runtime/debugger", "sunscreen_fhe_program/debugger", "sunscreen_backend/debugger"]
 
 [[bench]]
 name = "fractional_range_proof"

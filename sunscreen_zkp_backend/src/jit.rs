@@ -8,7 +8,7 @@ use petgraph::{stable_graph::NodeIndex, visit::EdgeRef, Direction, Graph};
 use sunscreen_compiler_common::{
     forward_traverse, forward_traverse_mut,
     transforms::{GraphTransforms, Transform},
-    CompilationResult, EdgeInfo, GraphQueryError, NodeInfo, Operation as OperationTrait,
+    CompilationResult, EdgeInfo, GraphQueryError, NodeInfo, DebugData, Operation as OperationTrait,
 };
 
 #[derive(Clone)]
@@ -546,7 +546,7 @@ where
     Ok(CompilationResult {
         graph: executable_graph,
         #[cfg(feature = "debugger")]
-        node_ids: Vec::new(),
+        metadata: DebugData::new(),
     })
 }
 

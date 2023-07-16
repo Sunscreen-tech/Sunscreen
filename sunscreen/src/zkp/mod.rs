@@ -3,6 +3,7 @@ use sunscreen_runtime::CallSignature;
 use sunscreen_zkp_backend::{
     BackendField, BigInt, CompiledZkpProgram, Gadget, Operation as JitOperation,
 };
+use sunscreen_compiler_common::DebugData;
 
 use crate::Result;
 
@@ -429,7 +430,7 @@ pub(crate) fn compile(program: &ZkpFrontendCompilation) -> CompiledZkpProgram {
     CompilationResult {
         graph: jit,
         #[cfg(feature = "debugger")]
-        node_ids: Vec::new(),
+        metadata: DebugData::new(),
     }
 }
 

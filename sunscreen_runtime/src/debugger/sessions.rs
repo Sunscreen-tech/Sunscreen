@@ -41,6 +41,13 @@ impl Session {
             _ => panic!("Expected BfvSession")
         }
     }
+
+    pub fn unwrap_bfv_session_mut(&mut self) -> &mut BfvSession {
+        match self {
+            Self::BfvSession(s) => s,
+            _ => panic!("Expected BfvSession")
+        }
+    }
 }
 
 /**

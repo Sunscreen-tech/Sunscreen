@@ -6,6 +6,8 @@ use petgraph::stable_graph::{NodeIndex, StableGraph};
 use petgraph::visit::{EdgeRef, IntoEdgeReferences, IntoNodeReferences};
 use petgraph::Graph;
 use serde::{Deserialize, Serialize};
+use radix_trie::Trie;
+
 
 use crate::{Operation, Render};
 
@@ -48,9 +50,14 @@ impl Group {
  * Stores debug information about groups and stack traces.
  */
 #[cfg(feature = "debugger")]
-#[derive(Clone, Deserialize, Serialize, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct DebugData {
-    //pub stack_trace: Trie<Vec<u64>, u64>,
+    // TODO: Trie doesn't implement serialize/deserialize
+    // pub stack_trace: Trie<Vec<u64>, u64>,
+    /**
+     * Represents the program context, where groups of nodes can be pushed/popped.
+     */
+    pub group_stack: Vec<Group>,
 }
 
 #[cfg(feature = "debugger")]
@@ -60,7 +67,8 @@ impl DebugData {
      */
     pub fn new() -> Self {
         DebugData {
-            //group_stack: vec![Group::new()]
+            //stack_trace: Trie::new(),
+            group_stack: Vec::new(),
         }
     }
 }

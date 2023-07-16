@@ -409,6 +409,8 @@ where
     /**
      * Used for debugging. Calls `run_impl` with a secret key.
      */
+
+    // TODO: maybe SecretKey needs to be changed to PrivateKey?
     pub async fn debug_fhe_program<I>(
         &self,
         fhe_program: &CompiledFheProgram,

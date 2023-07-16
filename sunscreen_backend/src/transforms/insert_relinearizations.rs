@@ -18,7 +18,7 @@ pub fn apply_insert_relinearizations(ir: &mut FheProgram) {
     let insert_relin = |id: NodeIndex, query: FheGraphQuery| {
         let mut transforms = GraphTransforms::new();
 
-        let _node = query.get_node(id).unwrap();
+        let node = query.get_node(id).unwrap();
 
         let relin_node = transforms.push(Transform::AddNode(NodeInfo {
             operation: Operation::Relinearize,

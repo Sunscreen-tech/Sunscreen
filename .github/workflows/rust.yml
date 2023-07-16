@@ -62,6 +62,9 @@ jobs:
       run: cargo run --release --bin simple_multiply
     - name: Verify examples (sudoku_zkp)
       run: cargo run --release --bin sudoku_zkp
+    - name: Verify examples (whitelist_zkp)
+      run: cargo test --all
+      working-directory: ./examples/whitelist_zkp
     - name: Build sunscreen and bincode
       run: cargo build --release --package sunscreen --package bincode
     - name: Build mdBook

@@ -134,7 +134,7 @@ fn parse_inner(_attr_params: ZkpProgramAttrs, input_fn: ItemFn) -> Result<TokenS
                             },
                             Some("public") => {
                                 if constant_seen {
-                                    return Err(Error::compile_error(attr.path().span(), 
+                                    return Err(Error::compile_error(attr.path().span(),
                                         "#[public] arguments must be specified before #[constant] arguments "
                                     ));
                                 }

@@ -22,5 +22,5 @@ fn main() {
         c.into()
     ];
 
-    runtime.debug_fhe_program(mad, args, &public, &private);
+    runtime.debug_fhe_program(mad, args, &public, &private.0);
 }

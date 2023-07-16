@@ -50,7 +50,7 @@ pub struct PublicKey {
 /**
  * The private key used to decrypt ciphertexts.
  */
-pub struct PrivateKey(pub(crate) WithContext<SealSecretKey>);
+pub struct PrivateKey(pub/*(crate)*/ WithContext<SealSecretKey>);
 
 #[cfg(test)]
 mod tests {

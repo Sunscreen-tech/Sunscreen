@@ -2,7 +2,7 @@ use std::marker::PhantomData;
 use std::sync::atomic::AtomicUsize;
 use std::time::Instant;
 
-use crate::debugger::sessions::start_web_server;
+use crate::debugger::server::start_web_server;
 use crate::error::*;
 use crate::metadata::*;
 use crate::DebugInfo;

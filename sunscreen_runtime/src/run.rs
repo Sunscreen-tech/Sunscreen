@@ -1146,6 +1146,6 @@ mod tests {
         };
 
         let session = get_sessions().lock().unwrap();
-        assert_eq!(["rotate_left_0"], session.keys());
+        assert_eq!("rotate_left_0", session.keys().next().unwrap());
     }
 }

@@ -17,8 +17,8 @@ async fn main() {
     }
 
     let app = Compiler::new()
-        .fhe_program(mad)
         .fhe_program(add_squares)
+        .fhe_program(mad)
         .compile()
         .unwrap();
 

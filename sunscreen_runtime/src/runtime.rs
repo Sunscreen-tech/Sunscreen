@@ -438,6 +438,7 @@ where
             fhe_program.metadata.name,
             SESSION_NUM.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
         );
+        println!("session name: {:?}", session_name);
 
         self.run_impl(
             fhe_program,

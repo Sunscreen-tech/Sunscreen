@@ -60,6 +60,8 @@ pub struct BfvSession {
     /**
      * The values of operands in the compilation graph.
      */
+    
+    // TODO: maybe this shouldn't be a Vec of SealData ...
     pub program_data: Vec<Option<SealData>>,
     /**
      * Used for decryption of ciphertexts for visualization.

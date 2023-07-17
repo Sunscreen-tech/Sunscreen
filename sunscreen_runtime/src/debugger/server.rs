@@ -82,6 +82,38 @@ async fn get_code(session: web::Path<String>) -> impl Responder {
     }
 }
 
+/**
+ * Gets the info of a node in the debugging graph for an FHE program.
+ */
+#[get("graphs/{session}/{nodeid}")]
+pub async fn get_fhe_node_data(
+    path_info: web::Path<(String, usize)>
+    ) -> Result<HttpResponse, actix_web::Error> {
+    
+    let (session, nodeid) = path_info.into_inner();
+    let sessions = get_sessions().lock().unwrap();
+
+    if sessions.contains_key(&session) {
+        let curr_session = sessions.get(&session).unwrap().unwrap_bfv_session();
+
+        let data = curr_session
+            .program_data
+            .get(nodeid)
+            .unwrap();
+
+        let data_json = serde_json::to_string(data).map_err(|e| {
+            actix_web::error::ErrorInternalServerError(format!(
+                "Failed to serialize node data to JSON: {}",
+                e
+            ))
+        })?;
+        Ok(HttpResponse::Ok().body(data_json))
+    } else {
+        Ok(HttpResponse::NotFound().body("Node {:?} not found", nodeid))
+    }
+}
+
+
 /*
 /**
  * Gets node data in the compilation graph.

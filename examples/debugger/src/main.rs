@@ -1,4 +1,4 @@
-use actix_web::main;
+
 use sunscreen::{
     types::{bfv::Signed, Cipher},
     *,
@@ -30,7 +30,7 @@ async fn main() {
     let b = Signed::from(13);
     let c = a.clone();
 
-    let args1: Vec<FheProgramInput> = vec![a.clone().into(), b.clone().into(), c.clone().into()];
+    let args1: Vec<FheProgramInput> = vec![a.clone().into(), b.into(), c.clone().into()];
 
     runtime
         .debug_fhe_program(
@@ -38,14 +38,14 @@ async fn main() {
             args1,
             &public,
             &private.0,
-            &mad.source(),
+            mad.source(),
         )
         .await;
 
     // TODO: figure out how to set it up so that we can have multiple running at the same time
     // maybe set up a server once at the start of the main method, then just have endpoints like
     // /programs/{function name} to be able to see
-    let args2: Vec<FheProgramInput> = vec![a.clone().into(), b.clone().into()];
+    let args2: Vec<FheProgramInput> = vec![a.clone().into(), b.into()];
 
     runtime
         .debug_fhe_program(
@@ -53,7 +53,7 @@ async fn main() {
             args2,
             &public,
             &private.0,
-            &add_squares.source(),
+            add_squares.source(),
         )
         .await;
 }

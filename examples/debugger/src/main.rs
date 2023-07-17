@@ -16,6 +16,8 @@ async fn main() {
         a*a + b*b
     }
 
+    println!("{}", add_squares.source());
+
     let app = Compiler::new().fhe_program(mad).fhe_program(add_squares).compile().unwrap();
 
     let runtime = Runtime::new_fhe(app.params()).unwrap();

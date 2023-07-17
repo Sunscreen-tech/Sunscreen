@@ -11,6 +11,8 @@ pub fn fhe_program_impl(
     metadata: proc_macro::TokenStream,
     input: proc_macro::TokenStream,
 ) -> proc_macro::TokenStream {
+    let raw_fn = input.clone().to_string();
+
     let input_fn = parse_macro_input!(input as ItemFn);
 
     let fhe_program_name = &input_fn.sig.ident;
@@ -198,6 +200,10 @@ pub fn fhe_program_impl(
 
             fn chain_count(&self) -> usize {
                 self.chain_count
+            }
+
+            fn source(&self) -> &'static str {
+                #raw_fn
             }
         }
 

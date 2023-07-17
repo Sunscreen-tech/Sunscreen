@@ -44,6 +44,11 @@ pub trait FheProgramFn {
      * The number of times to chain this FHE program.
      */
     fn chain_count(&self) -> usize;
+
+    /**
+     * Returns the source code of this FHE program as a &str.
+     */
+    fn source(&self) -> &'static str;
 }
 
 struct FheCompilerData {

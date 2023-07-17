@@ -34,6 +34,7 @@ pub async fn start_web_server() -> std::io::Result<()> {
                 App::new()
                     .wrap(cors)
                     .service(get_graph_data) 
+                    .service(get_code)
             })
                 .bind(("127.0.0.1", 8080))?
                 .run()
@@ -45,7 +46,7 @@ pub async fn start_web_server() -> std::io::Result<()> {
 /**
  * Gets the graph data of a function.
  */
-#[get("/{session}")]
+#[get("/graphs/{session}")]
 async fn get_graph_data(session: web::Path<String>) -> impl Responder {
     let sessions = get_sessions().lock().unwrap();
     println!("get_graph_data session keys: {:?}", sessions.keys());
@@ -54,10 +55,28 @@ async fn get_graph_data(session: web::Path<String>) -> impl Responder {
         let curr_session = sessions.get(session.as_str()).unwrap().unwrap_bfv_session();
         let graph_string = serde_json::to_string_pretty(&curr_session.graph.graph);
 
-        let frontend_graph = process_graph_json(&graph_string.unwrap());
-        HttpResponse::Ok().body(frontend_graph.unwrap().to_owned())
+        //let frontend_graph = process_graph_json(&graph_string.unwrap());
+        //HttpResponse::Ok().body(frontend_graph.unwrap().to_owned())
 
-        //HttpResponse::Ok().body(graph_string.unwrap().to_owned())
+        HttpResponse::Ok().body(graph_string.unwrap().to_owned())
+    } else {
+        HttpResponse::NotFound().body("Session not found.".to_owned())
+    }
+}
+
+/**
+ * Gets the Rust code of a function.
+ */
+#[get("programs/{session}")]
+async fn get_code(session: web::Path<String>) -> impl Responder {
+    let sessions = get_sessions().lock().unwrap();
+    println!("get_code session keys: {:?}", sessions.keys());
+
+    if sessions.contains_key(session.as_str()) {
+        let curr_session = sessions.get(session.as_str()).unwrap().unwrap_bfv_session();
+        let code_string = serde_json::to_string_pretty(&curr_session.graph.graph);
+
+        HttpResponse::Ok().body(code_string.unwrap().to_owned())
     } else {
         HttpResponse::NotFound().body("Session not found.".to_owned())
     }
@@ -89,7 +108,7 @@ fn process_graph_json(json_str: &str) -> Result<String, serde_json::Error> {
     if let Some(nodes) = input_json.get("nodes") {
         for (index, _) in nodes.as_array().unwrap().iter().enumerate() {
             new_nodes.push(json!({
-                "type": "Type",
+                "type": "empty",
                 "title": "blank",
                 "id": index, 
             }));

@@ -190,7 +190,10 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
             let session = BfvSession::new(&ir.graph, v.secret_key);
 
             guard.insert(v.session_name.clone(), session.into());
-            println!("run_program_unchecked matched Some, session keys {:?}", guard.keys());
+            println!(
+                "run_program_unchecked matched Some, session keys {:?}",
+                guard.keys()
+            );
         }
         None => {}
     }

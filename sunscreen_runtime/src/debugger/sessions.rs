@@ -1,4 +1,4 @@
-use actix_web::{get, web, App, HttpResponse, HttpServer, Responder};
+use actix_web::{get, web, App, HttpResponse, HttpServer, Responder, Handler};
 use reqwest;
 use serde::{Deserialize, Serialize};
 use serde_json::{to_string, to_string_pretty};
@@ -86,12 +86,15 @@ impl BfvSession {
  * Lazily starts a webserver at `127.0.0.1:8080/`.
  */
 pub async fn start_web_server() -> std::io::Result<()> {
-    let url = "127.0.0.1:8080/";
+    let url = "http://127.0.0.1:8080/";
     println!("{:?}", "start_web_server".to_owned());
     match reqwest::get(url).await {
         Ok(_response) => Ok(()),
         Err(_e) => {
-            HttpServer::new(move || App::new().app_data("mad_0").service(get_graph_data))
+            HttpServer::new(|| {
+                App::new()
+                    .service(get_graph_data) // Here's where you add your function as a service
+            })
                 .bind(("127.0.0.1", 8080))?
                 .run()
                 .await
@@ -102,14 +105,18 @@ pub async fn start_web_server() -> std::io::Result<()> {
 /**
  * Gets the graph data of a function.
  */
-#[get("/")]
-async fn get_graph_data(session: String) -> impl Responder {
-    // TODO: add error catching
+#[get("/{session}")]
+async fn get_graph_data(session: web::Path<String>) -> impl Responder {
     let sessions = get_sessions().lock().unwrap();
     println!("get_graph_data session keys: {:?}", sessions.keys());
-    let curr_session = sessions.get(&session).unwrap().unwrap_bfv_session();
-    let graph_string = serde_json::to_string_pretty(&curr_session.graph.graph);
-    HttpResponse::Ok().body(graph_string.unwrap())
+
+    if sessions.contains_key(session.as_str()) {
+        let curr_session = sessions.get(session.as_str()).unwrap().unwrap_bfv_session();
+        let graph_string = serde_json::to_string_pretty(&curr_session.graph.graph);
+        HttpResponse::Ok().body(graph_string.unwrap().to_owned())
+    } else {
+        HttpResponse::NotFound().body("Session not found.".to_owned())
+    }
 }
 
 /*

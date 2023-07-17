@@ -420,8 +420,7 @@ where
         arguments: Vec<I>,
         public_key: &PublicKey,
         secret_key: &SecretKey,
-    ) 
-    where
+    ) where
         I: Into<FheProgramInput>,
     {
         static SESSION_NUM: AtomicUsize = AtomicUsize::new(0);
@@ -431,7 +430,6 @@ where
             fhe_program.metadata.name,
             SESSION_NUM.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
         );
-
 
         self.run_impl(
             fhe_program,

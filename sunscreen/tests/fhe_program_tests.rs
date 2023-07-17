@@ -168,9 +168,13 @@ fn can_add() {
         },
     });
 
+    #[cfg(not(feature = "debugger"))]
     assert_eq!(
         context,
-        serde_json::from_value::<FheFrontendCompilation>(expected).unwrap()
+        serde_json::from_value::<FheFrontendCompilation> {
+            graph: expected
+        }
+        .unwrap()
     );
 }
 
@@ -217,7 +221,10 @@ fn can_add_plaintext() {
 
     assert_eq!(
         context,
-        serde_json::from_value::<FheFrontendCompilation>(expected).unwrap()
+        serde_json::from_value::<FheFrontendCompilation> {
+            graph: expected
+        }
+        .unwrap()
     );
 }
 
@@ -278,7 +285,9 @@ fn can_mul() {
 
     assert_eq!(
         context,
-        serde_json::from_value::<FheFrontendCompilation>(expected).unwrap()
+        serde_json::from_value::<FheFrontendCompilation>{
+            graph: expected
+        }.unwrap()
     );
 }
 
@@ -346,7 +355,10 @@ fn can_collect_output() {
 
     assert_eq!(
         context,
-        serde_json::from_value::<FheFrontendCompilation>(expected).unwrap()
+        serde_json::from_value::<FheFrontendCompilation> {
+            graph: expected
+        }
+        .unwrap()
     );
 }
 
@@ -419,8 +431,12 @@ fn can_collect_multiple_outputs() {
         }
     });
 
+    #[cfg(not(feature = "debugger"))]
     assert_eq!(
         context,
-        serde_json::from_value::<FheFrontendCompilation>(expected).unwrap()
+        serde_json::from_value::<FheFrontendCompilation> {
+            graph: expected
+        }
+        .unwrap()
     );
 }

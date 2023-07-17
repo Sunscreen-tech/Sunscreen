@@ -62,7 +62,7 @@ fn sudoku_proof<F: BackendField>(
 
 fn main() -> Result<(), Error> {
     let prog = sudoku_proof.compile::<BulletproofsBackend>()?;
-    let runtime = sudoku_proof.runtime(BulletproofsBackend::new())?;
+    let runtime = sudoku_proof.runtime::<BulletproofsBackend>()?;
 
     let ex_board = [
         [0, 7, 0, 0, 2, 0, 0, 4, 6],
@@ -106,7 +106,7 @@ mod tests {
     #[test]
     fn valid_example() {
         let prog = sudoku_proof.compile::<BulletproofsBackend>().unwrap();
-        let runtime = sudoku_proof.runtime(BulletproofsBackend::new()).unwrap();
+        let runtime = sudoku_proof.runtime::<BulletproofsBackend>().unwrap();
 
         let ex_board = [
             [0, 7, 0, 0, 2, 0, 0, 4, 6],
@@ -147,7 +147,7 @@ mod tests {
     #[test]
     fn bad_solution() {
         let prog = sudoku_proof.compile::<BulletproofsBackend>().unwrap();
-        let runtime = sudoku_proof.runtime(BulletproofsBackend::new()).unwrap();
+        let runtime = sudoku_proof.runtime::<BulletproofsBackend>().unwrap();
 
         let ex_board = [
             [0, 7, 0, 0, 2, 0, 0, 4, 6],
@@ -185,7 +185,7 @@ mod tests {
     #[test]
     fn out_of_bounds_input() {
         let prog = sudoku_proof.compile::<BulletproofsBackend>().unwrap();
-        let runtime = sudoku_proof.runtime(BulletproofsBackend::new()).unwrap();
+        let runtime = sudoku_proof.runtime::<BulletproofsBackend>().unwrap();
 
         let ex_board = [[0; 9]; 9];
 

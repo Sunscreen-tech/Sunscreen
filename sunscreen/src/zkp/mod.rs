@@ -96,7 +96,7 @@ pub trait ZkpProgramFnExt {
             .unwrap())
     }
 
-    /// Create a new `ZkpRuntime`.
+    /// Create a new `ZkpRuntime` with the given backend.
     ///
     /// This is identical to [`ZkpRuntime::new`], but is offered in this extension trait for
     /// convenience.
@@ -114,20 +114,54 @@ pub trait ZkpProgramFnExt {
     /// }
     /// # fn main() -> Result<(), sunscreen::Error> {
     /// let is_eq_prog = is_eq.compile::<BulletproofsBackend>()?;
-    /// let runtime = is_eq.runtime(BulletproofsBackend::new())?;
+    /// let runtime = is_eq.runtime_with(BulletproofsBackend::new())?;
     /// let a = BulletproofsField::from(64);
     /// let b = BulletproofsField::from(64);
     /// runtime.prove(&is_eq_prog, vec![a, b], vec![], vec![])?;
     /// # Ok(())
     /// # }
     /// ```
-    fn runtime<B: ZkpBackend>(&self, backend: B) -> Result<ZkpRuntime<B>>
+    fn runtime_with<B: ZkpBackend>(&self, backend: B) -> Result<ZkpRuntime<B>>
     where
         B: 'static,
         Self: ZkpProgramFn<B::Field>,
         Self: Sized + Clone + AsRef<str> + 'static,
     {
         Ok(ZkpRuntime::new(backend)?)
+    }
+
+    /// Create a new `ZkpRuntime`, with backend specified by type.
+    ///
+    /// This is similar to [`ZkpRuntime::new`], but always creates the backend value
+    /// via the [`Default`] impl.
+    ///
+    /// ```rust
+    /// use sunscreen::{
+    ///     bulletproofs::BulletproofsBackend,
+    ///     zkp_program, types::zkp::{BulletproofsField, NativeField},
+    ///     BackendField, ZkpProgramFnExt
+    /// };
+    ///
+    /// #[zkp_program]
+    /// fn is_eq<F: BackendField>(a: NativeField<F>, b: NativeField<F>) {
+    ///     a.constrain_eq(b)
+    /// }
+    /// # fn main() -> Result<(), sunscreen::Error> {
+    /// let is_eq_prog = is_eq.compile::<BulletproofsBackend>()?;
+    /// let runtime = is_eq.runtime::<BulletproofsBackend>()?;
+    /// let a = BulletproofsField::from(64);
+    /// let b = BulletproofsField::from(64);
+    /// runtime.prove(&is_eq_prog, vec![a, b], vec![], vec![])?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    fn runtime<B: ZkpBackend + Default>(&self) -> Result<ZkpRuntime<B>>
+    where
+        B: 'static,
+        Self: ZkpProgramFn<B::Field>,
+        Self: Sized + Clone + AsRef<str> + 'static,
+    {
+        self.runtime_with(B::default())
     }
 }
 

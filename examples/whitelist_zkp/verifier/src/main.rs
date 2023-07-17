@@ -9,7 +9,7 @@ use zkp::{default_list, whitelist};
 
 fn main() -> Result<()> {
     let prog = whitelist.compile::<BulletproofsBackend>()?;
-    let runtime = whitelist.runtime(BulletproofsBackend::new())?;
+    let runtime = whitelist.runtime::<BulletproofsBackend>()?;
 
     let proof: Proof = bincode::deserialize_from(io::stdin())?;
 

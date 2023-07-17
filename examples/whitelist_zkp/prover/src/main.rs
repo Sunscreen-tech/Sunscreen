@@ -9,7 +9,7 @@ use zkp::{default_list, whitelist};
 
 fn main() -> Result<()> {
     let prog = whitelist.compile::<BulletproofsBackend>()?;
-    let runtime = whitelist.runtime(BulletproofsBackend::new())?;
+    let runtime = whitelist.runtime::<BulletproofsBackend>()?;
 
     let entry: BulletproofsField = get_first_arg()?.unwrap_or(101).into();
     let list: [BulletproofsField; 100] = default_list();

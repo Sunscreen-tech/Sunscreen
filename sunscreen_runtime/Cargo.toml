@@ -37,6 +37,7 @@ radix_trie = "0.2.1"
 backtrace = "0.3.67"
 actix-web = "4.3.1"
 reqwest = "0.11"
+actix-cors = "0.6.4"
 
 
 [dev-dependencies]

@@ -1099,4 +1099,50 @@ mod tests {
 
         assert_eq!(encoder.decode_unsigned(&o_p).unwrap(), expected);
     }
+
+    #[cfg(feature = "debugger")]
+    #[test]
+    fn create_session() {
+        let mut ir = FheProgram::new(SchemeType::Bfv);
+
+        let a = ir.add_input_ciphertext(0);
+        let l = ir.add_input_literal(Literal::U64(3));
+
+        let res = ir.add_rotate_left(a, l);
+
+        ir.add_output_ciphertext(res);
+
+        let degree = 4096;
+
+        let (keygen, context, _public_key, private_key, encryptor, decryptor, evaluator) =
+            setup_scheme(degree);
+
+        let encoder = BFVEncoder::new(&context).unwrap();
+        let galois_keys = keygen.create_galois_keys().unwrap();
+
+        let a: Vec<u64> = (0..degree).collect();
+
+        let pt_0 = encoder.encode_unsigned(&a).unwrap();
+
+        let ct_0 = encryptor.encrypt(&pt_0).unwrap();
+
+        let output = unsafe {
+            run_program_unchecked(
+                &ir,
+                &[ct_0.into()],
+                &evaluator,
+                &None,
+                &Some(&galois_keys),
+                Some(DebugInfo {
+                    secret_key: &private_key,
+                    session_name: "rotate_left".to_owned(),
+                }),
+            )
+            .unwrap()
+        };
+
+        let session = get_sessions().lock().unwrap();
+        assert!(!session.is_empty());
+
+    }
 }

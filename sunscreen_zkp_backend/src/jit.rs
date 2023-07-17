@@ -8,8 +8,11 @@ use petgraph::{stable_graph::NodeIndex, visit::EdgeRef, Direction, Graph};
 use sunscreen_compiler_common::{
     forward_traverse, forward_traverse_mut,
     transforms::{GraphTransforms, Transform},
-    CompilationResult, DebugData, EdgeInfo, GraphQueryError, NodeInfo, Operation as OperationTrait,
+    CompilationResult, EdgeInfo, GraphQueryError, NodeInfo, Operation as OperationTrait,
 };
+
+#[cfg(feature = "debugger")]
+use sunscreen_compiler_common::DebugData;
 
 #[derive(Clone)]
 /**

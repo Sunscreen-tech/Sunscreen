@@ -1,6 +1,11 @@
-use sunscreen::{*, types::{Cipher, bfv::Signed}};
+use actix_web::main;
+use sunscreen::{
+    types::{bfv::Signed, Cipher},
+    *,
+};
 
-fn main() {
+#[actix_web::main]
+async fn main() {
     #[fhe_program(scheme = "bfv")]
     fn mad(a: Cipher<Signed>, b: Signed, c: Cipher<Signed>) -> Cipher<Signed> {
         a * b + c
@@ -16,11 +21,13 @@ fn main() {
     let b = Signed::from(13);
     let c = a.clone();
 
-    let args: Vec<FheProgramInput> = vec![
-        a.into(),
-        b.into(),
-        c.into()
-    ];
-
-    runtime.debug_fhe_program(mad, args, &public, &private.0);
+    let args: Vec<FheProgramInput> = vec![a.into(), b.into(), c.into()];
+    runtime
+        .debug_fhe_program(
+            app.get_fhe_program("mad").unwrap(),
+            args,
+            &public,
+            &private.0,
+        )
+        .await;
 }

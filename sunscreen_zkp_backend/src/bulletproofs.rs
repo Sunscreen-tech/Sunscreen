@@ -650,11 +650,13 @@ mod tests {
 
         let mut add_node = |op: BackendOperation, edges: &[(NodeIndex, EdgeInfo)]| {
             #[cfg(feature = "debugger")]
-            let n = graph.add_node(NodeInfo { operation: op, group_id: 0 });
+            let n = graph.add_node(NodeInfo {
+                operation: op,
+                group_id: 0,
+            });
 
             #[cfg(not(feature = "debugger"))]
             let n = graph.add_node(NodeInfo { operation: op });
-
 
             for (source, edge) in edges {
                 graph.add_edge(*source, n, *edge);

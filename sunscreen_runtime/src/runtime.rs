@@ -2,6 +2,7 @@ use std::marker::PhantomData;
 use std::sync::atomic::AtomicUsize;
 use std::time::Instant;
 
+use crate::debugger::sessions::start_web_server;
 use crate::error::*;
 use crate::metadata::*;
 use crate::DebugInfo;
@@ -11,7 +12,6 @@ use crate::{
     InnerCiphertext, InnerPlaintext, Plaintext, PrivateKey, PublicKey, SealCiphertext, SealData,
     SealPlaintext, TryFromPlaintext, TryIntoPlaintext, TypeNameInstance,
 };
-use crate::debugger::sessions::{start_web_server};
 
 use log::trace;
 use seal_fhe::SecretKey;
@@ -423,14 +423,23 @@ where
     {
         static SESSION_NUM: AtomicUsize = AtomicUsize::new(0);
 
-        let session_name = format!("{}_{}", fhe_program.metadata.name, SESSION_NUM.fetch_add(1, std::sync::atomic::Ordering::Relaxed));
+        let session_name = format!(
+            "{}_{}",
+            fhe_program.metadata.name,
+            SESSION_NUM.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
+        );
 
         start_web_server().await;
 
-        self.run_impl(fhe_program, arguments, public_key, Some(DebugInfo {
-            secret_key,
-            session_name
-        }))
+        self.run_impl(
+            fhe_program,
+            arguments,
+            public_key,
+            Some(DebugInfo {
+                secret_key,
+                session_name,
+            }),
+        )
     }
 
     /**

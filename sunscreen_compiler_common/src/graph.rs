@@ -752,7 +752,8 @@ mod tests {
                     GraphTransforms::new();
                 let mul = transforms.push(Transform::AddNode(NodeInfo {
                     operation: Operation::Mul,
-                    group_id: ir.group_counter
+                    #[cfg(feature = "debugger")]
+                    group_id: ir.group_counter,
                 }));
                 transforms.push(Transform::AddEdge(n.into(), mul.into(), EdgeInfo::Left));
                 transforms.push(Transform::AddEdge(

@@ -24,7 +24,7 @@ pub use literal::*;
 pub use operation::*;
 pub use seal_fhe::SecurityLevel;
 
-use sunscreen_compiler_common::{CompilationResult, Context, EdgeInfo, NodeInfo, DebugData, Group};
+use sunscreen_compiler_common::{CompilationResult, Context, DebugData, EdgeInfo, Group, NodeInfo};
 
 use std::collections::HashSet;
 
@@ -386,14 +386,14 @@ impl FheProgramTrait for FheProgram {
             #[cfg(feature = "debugger")]
             graph: CompilationResult {
                 graph: StableGraph::from(pruned),
-                metadata: DebugData::new()
+                metadata: DebugData::new(),
             },
 
             #[cfg(feature = "debugger")]
             group_counter: self.group_counter,
 
             #[cfg(feature = "debugger")]
-            group_stack: Vec::new()
+            group_stack: Vec::new(),
         }
     }
 

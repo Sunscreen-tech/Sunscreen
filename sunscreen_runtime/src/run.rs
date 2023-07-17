@@ -6,9 +6,9 @@ use sunscreen_fhe_program::{FheProgram, FheProgramTrait, Literal, Operation::*};
 #[cfg(feature = "debugger")]
 use crate::debugger::sessions::{get_sessions, BfvSession};
 
-use std::collections::HashMap;
 use crossbeam::atomic::AtomicCell;
 use petgraph::{stable_graph::NodeIndex, Direction};
+use std::collections::HashMap;
 
 use std::borrow::Cow;
 #[cfg(target_arch = "wasm32")]
@@ -123,7 +123,7 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
     evaluator: &E,
     relin_keys: &Option<&RelinearizationKeys>,
     galois_keys: &Option<&GaloisKeys>,
-    debug_info: Option<DebugInfo>
+    debug_info: Option<DebugInfo>,
 ) -> Result<Vec<Ciphertext>, FheProgramRunFailure> {
     fn get_data(
         data: &[AtomicCell<Option<Arc<SealData>>>],
@@ -141,7 +141,6 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
             None => Err(FheProgramRunFailure::MissingData),
         }
     }
-
 
     fn get_ciphertext(
         data: &[AtomicCell<Option<Arc<SealData>>>],
@@ -191,50 +190,55 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
             let session = BfvSession::new(&ir.graph, v.secret_key);
 
             guard.insert(v.session_name.clone(), session.into());
-        },
+        }
         None => {}
     }
 
     // #[cfg(feature = "debugger")]
     // this function won't actually straight up decrypt stuff, it'll just insert ciphertexts correpsonding to nodeindex
     // into sessions, and then we can decrypt those values on the backend before sending to the frontend
-    fn set_data(data: &Vec<AtomicCell<Option<Arc<SealData>>>>, 
-        node_index: NodeIndex, 
-        value: &Arc<SealData>, 
-        session: &Option<String>) -> Result<(), FheProgramRunFailure> {
-            // set on `data`
-            data[node_index.index()].store(Some(value.clone()));
+    fn set_data(
+        data: &Vec<AtomicCell<Option<Arc<SealData>>>>,
+        node_index: NodeIndex,
+        value: &Arc<SealData>,
+        session: &Option<String>,
+    ) -> Result<(), FheProgramRunFailure> {
+        // set on `data`
+        data[node_index.index()].store(Some(value.clone()));
 
-            #[cfg(feature = "debugger")]
-            if let Some(session_name) = session {
-                let mut guard = get_sessions().lock().unwrap();
-                let mut session: &mut BfvSession = guard.get_mut(session_name).unwrap().unwrap_bfv_session_mut();
-                let node_val = get_data(&data, node_index.index());
-                session.program_data[node_index.index()] = Arc::into_inner(node_val.unwrap().clone());
+        #[cfg(feature = "debugger")]
+        if let Some(session_name) = session {
+            let mut guard = get_sessions().lock().unwrap();
+            let mut session: &mut BfvSession = guard
+                .get_mut(session_name)
+                .unwrap()
+                .unwrap_bfv_session_mut();
+            let node_val = get_data(&data, node_index.index());
+            session.program_data[node_index.index()] = Arc::into_inner(node_val.unwrap().clone());
 
-                // pretty sure this code is not necessary: the point of this is that
-                // the program_infos are already created, so now it's just about
-                // storing the data into that struct
-                /* 
-                // this should not happen
-                if lock.contains_key(&session) {
-                    let program_info = lock.get(&session).unwrap();
-                    // you don't need to match on results if you just want error propagation
-                    let node_val = get_data(&data, node_index.index())?;
-                    program_info.program_data.insert(node_index.index(), )
-                }        
-    
-                // Insert for new session 
-                else {
-                    let program_info = BfvSession::new(ir.graph, dbg_info.secret_key);
-                    let node_val = get_data(&data, node_index.index())?;
-                    program_info.program_data[node_index.index()] = node_val;
-                    guard.insert(session, program_info);
-                }
-                */
+            // pretty sure this code is not necessary: the point of this is that
+            // the program_infos are already created, so now it's just about
+            // storing the data into that struct
+            /*
+            // this should not happen
+            if lock.contains_key(&session) {
+                let program_info = lock.get(&session).unwrap();
+                // you don't need to match on results if you just want error propagation
+                let node_val = get_data(&data, node_index.index())?;
+                program_info.program_data.insert(node_index.index(), )
             }
 
-            Ok(())
+            // Insert for new session
+            else {
+                let program_info = BfvSession::new(ir.graph, dbg_info.secret_key);
+                let node_val = get_data(&data, node_index.index())?;
+                program_info.program_data[node_index.index()] = node_val;
+                guard.insert(session, program_info);
+            }
+            */
+        }
+
+        Ok(())
     }
 
     let session_name = debug_info.map(|v| v.session_name);
@@ -293,7 +297,6 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
                             .ok_or(FheProgramRunFailure::MissingGaloisKeys)?,
                     )?;
                     set_data(&data, index, &Arc::new(c.into()), &session_name);
-
                 }
                 Add => {
                     let (left, right) = query.get_binary_operands(index)?;
@@ -402,7 +405,12 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
                                     return Err(FheProgramRunFailure::MalformedPlaintext);
                                 }
 
-                                set_data(&data, index, &Arc::new(p[0].data.clone().into()), &session_name);
+                                set_data(
+                                    &data,
+                                    index,
+                                    &Arc::new(p[0].data.clone().into()),
+                                    &session_name,
+                                );
                             }
                         };
                     }
@@ -707,7 +715,7 @@ mod tests {
                 &None,
                 &None,
                 // TODO: i'm pretty sure it should be fine to pass in a None here? but doublecheck
-                None
+                None,
             )
             .unwrap()
         };
@@ -722,14 +730,14 @@ mod tests {
                 &None,
                 Some(DebugInfo {
                     secret_key: &private_key,
-    
+
                     // TODO: figure out where the program name is actually stored by the compiler
-                        // when you have a compiled program `CompiledFheProgramFn` or something, use `.name()`
+                    // when you have a compiled program `CompiledFheProgramFn` or something, use `.name()`
                     // CompiledFheProgram -> Metadata -> name is a change that Rick made
                     // but where do we find where we can get that name in the first place?
                     // see what structs implement the `FheProgramFn` trait, because they have a .name() method that returns the name
-                    session_name: "simple_add".to_owned()
-                })
+                    session_name: "simple_add".to_owned(),
+                }),
             )
             .unwrap()
         };
@@ -778,7 +786,7 @@ mod tests {
                 &evaluator,
                 &Some(&relin_keys),
                 &None,
-                None
+                None,
             )
             .unwrap()
         };
@@ -793,8 +801,8 @@ mod tests {
                 &None,
                 Some(DebugInfo {
                     secret_key: &private_key,
-                    session_name: "simple_mul".to_owned()
-                })
+                    session_name: "simple_mul".to_owned(),
+                }),
             )
             .unwrap()
         };
@@ -844,7 +852,7 @@ mod tests {
                 &evaluator,
                 &Some(&relin_keys),
                 &None,
-                None
+                None,
             )
             .unwrap()
         };
@@ -858,9 +866,9 @@ mod tests {
                 &Some(&relin_keys),
                 &None,
                 Some(DebugInfo {
-                        secret_key: &private_key,
-                        session_name: "can_mul_and_relinearize".to_owned()
-                    })
+                    secret_key: &private_key,
+                    session_name: "can_mul_and_relinearize".to_owned(),
+                }),
             )
             .unwrap()
         };
@@ -925,7 +933,7 @@ mod tests {
                 &evaluator,
                 &Some(&relin_keys),
                 &None,
-                None 
+                None,
             )
             .unwrap()
         };
@@ -940,8 +948,8 @@ mod tests {
                 &None,
                 Some(DebugInfo {
                     secret_key: &private_key,
-                    session_name: "add_reduction".to_owned()
-                })
+                    session_name: "add_reduction".to_owned(),
+                }),
             )
             .unwrap()
         };
@@ -989,7 +997,7 @@ mod tests {
                 &evaluator,
                 &None,
                 &Some(&galois_keys),
-                None
+                None,
             )
             .unwrap()
         };
@@ -1002,9 +1010,9 @@ mod tests {
                 &None,
                 &Some(&galois_keys),
                 Some(DebugInfo {
-                    secret_key: &private_key, 
-                    session_name: "rotate_left".to_owned()
-                })
+                    secret_key: &private_key,
+                    session_name: "rotate_left".to_owned(),
+                }),
             )
             .unwrap()
         };
@@ -1057,7 +1065,7 @@ mod tests {
                 &evaluator,
                 &None,
                 &Some(&galois_keys),
-                None
+                None,
             )
             .unwrap()
         };
@@ -1070,9 +1078,9 @@ mod tests {
                 &None,
                 &Some(&galois_keys),
                 Some(DebugInfo {
-                    secret_key: &private_key, 
-                    session_name: "rotate_right".to_owned()
-                })
+                    secret_key: &private_key,
+                    session_name: "rotate_right".to_owned(),
+                }),
             )
             .unwrap()
         };

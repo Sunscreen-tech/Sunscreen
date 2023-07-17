@@ -296,7 +296,7 @@ impl<T, B> GenericCompiler<T, B> {
                     params: params.clone(),
                     required_keys,
                     signature: prog.signature(),
-                    name: prog.name().to_owned()
+                    name: prog.name().to_owned(),
                 };
 
                 let compiled_program = CompiledFheProgram {

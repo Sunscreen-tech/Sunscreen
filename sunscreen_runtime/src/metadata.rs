@@ -193,7 +193,7 @@ pub struct FheProgramMetadata {
     pub required_keys: Vec<RequiredKeys>,
 
     /**
-     * The name of the FHE program
+     * The name of the FHE program.
      */
     pub name: String,
 }

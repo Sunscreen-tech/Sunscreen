@@ -1,4 +1,3 @@
-
 use sunscreen::{
     types::{bfv::Signed, Cipher},
     *,
@@ -38,7 +37,8 @@ fn main() {
             &public,
             &private.0,
             mad.source(),
-        ).unwrap();
+        )
+        .unwrap();
 
     // TODO: figure out how to set it up so that we can have multiple running at the same time
     // maybe set up a server once at the start of the main method, then just have endpoints like
@@ -52,7 +52,8 @@ fn main() {
             &public,
             &private.0,
             add_squares.source(),
-        ).unwrap();
+        )
+        .unwrap();
 
-    loop { }
+    loop {}
 }

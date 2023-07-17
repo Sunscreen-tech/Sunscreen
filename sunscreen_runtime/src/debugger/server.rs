@@ -25,36 +25,34 @@ static SERVER: OnceLock<()> = OnceLock::new();
  */
 pub fn start_web_server() -> () {
     SERVER.get_or_init(|| {
-        thread::spawn(|| {
+        thread::Builder::new()
+            .name("debugger".to_owned())
+            .spawn(|| {
             let rt = tokio::runtime::Builder::new_current_thread()
                 .enable_all()
                 .build().unwrap();
 
             rt.block_on(async {
-                let url = "http://127.0.0.1:8080/";
-                println!("{:?}", "start_web_server".to_owned());
-                match reqwest::get(url).await {
-                    Ok(_response) => Ok(()),
-                    Err(_e) => {
-    
-                        HttpServer::new(move || {
-                            let cors = Cors::default()
-                            .allow_any_origin()
-                            .allowed_methods(vec!["GET"]);
+                println!("start_web_server");
                 
-                            App::new()
-                                .wrap(cors)
-                                .service(get_graph_data) 
-                                .service(get_all_sessions)
-                                .service(get_code)
-                        })
-                            .bind(("127.0.0.1", 8080))?
-                            .run()
-                            .await
-                    }
-                }
-            }).unwrap();
-        });
+                HttpServer::new(move || {
+                    let cors = Cors::default()
+                    .allow_any_origin()
+                    .allowed_methods(vec!["GET"]);
+        
+                    App::new()
+                        .wrap(cors)
+                        .service(get_graph_data) 
+                        .service(get_all_sessions)
+                        .service(get_code)
+                })
+                    .bind(("127.0.0.1", 8080))
+                    .unwrap()
+                    .run()
+                    .await
+                    .unwrap()
+            });
+        }).unwrap();
     });
 }
 

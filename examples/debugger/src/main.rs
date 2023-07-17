@@ -29,5 +29,6 @@ async fn main() {
             &public,
             &private.0,
         )
-        .await
+        .await;
+    loop {}
 }

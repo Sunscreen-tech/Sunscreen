@@ -5,7 +5,7 @@ use serde_json::{to_string, to_string_pretty};
 use std::collections::HashMap;
 use std::sync::{Mutex, MutexGuard, OnceLock};
 
-use crate::{DebugInfo, SealData, PrivateKey, FheRuntime};
+use crate::{DebugInfo, FheRuntime, PrivateKey, SealData};
 
 use sunscreen_compiler_common::CompilationResult;
 use sunscreen_fhe_program::Operation;
@@ -83,14 +83,15 @@ impl BfvSession {
 }
 
 /**
- * Lazily starts a webserver at `http://localhost:8080`.
+ * Lazily starts a webserver at `127.0.0.1:8080/`.
  */
 pub async fn start_web_server() -> std::io::Result<()> {
-    let url = "http://localhost:8080";
+    let url = "127.0.0.1:8080/";
+    println!("{:?}", "start_web_server".to_owned());
     match reqwest::get(url).await {
         Ok(_response) => Ok(()),
         Err(_e) => {
-            HttpServer::new(move || App::new().service(get_graph_data))
+            HttpServer::new(move || App::new().app_data("mad_0").service(get_graph_data))
                 .bind(("127.0.0.1", 8080))?
                 .run()
                 .await
@@ -104,19 +105,14 @@ pub async fn start_web_server() -> std::io::Result<()> {
 #[get("/")]
 async fn get_graph_data(session: String) -> impl Responder {
     // TODO: add error catching
-    let sessions = get_sessions()
-        .lock()
-        .unwrap();
-
-    let curr_session = sessions.get(&session)
-        .unwrap()
-        .unwrap_bfv_session();
-
+    let sessions = get_sessions().lock().unwrap();
+    println!("get_graph_data session keys: {:?}", sessions.keys());
+    let curr_session = sessions.get(&session).unwrap().unwrap_bfv_session();
     let graph_string = serde_json::to_string_pretty(&curr_session.graph.graph);
     HttpResponse::Ok().body(graph_string.unwrap())
 }
 
-/* 
+/*
 /**
  * Gets node data in the compilation graph.
  */

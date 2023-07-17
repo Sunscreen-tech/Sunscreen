@@ -190,6 +190,7 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
             let session = BfvSession::new(&ir.graph, v.secret_key);
 
             guard.insert(v.session_name.clone(), session.into());
+            println!("run_program_unchecked matched Some, session keys {:?}", guard.keys());
         }
         None => {}
     }
@@ -1142,7 +1143,6 @@ mod tests {
         };
 
         let session = get_sessions().lock().unwrap();
-        assert!(!session.is_empty());
-
+        assert_eq!(["rotate_left_0"], session.keys());
     }
 }

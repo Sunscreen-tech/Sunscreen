@@ -272,6 +272,7 @@ where
     where
         I: Into<FheProgramInput>,
     {
+        println!("{:?}", "run_program_unchecked".to_owned());
         // We're going to call run_program_unchecked, which
         // can result in undefined behavior, non-termination,
         // or panics on malformed programs. Since this method is safe,
@@ -411,8 +412,8 @@ where
      */
 
     // TODO: maybe SecretKey needs to be changed to PrivateKey?
-    // probably should: can always access a SecretKey via &PrivateKey.0 
-        // don't think this should cause any security issues?
+    // probably should: can always access a SecretKey via &PrivateKey.0
+    // don't think this should cause any security issues?
     pub async fn debug_fhe_program<I>(
         &self,
         fhe_program: &CompiledFheProgram,
@@ -431,7 +432,6 @@ where
             SESSION_NUM.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
         );
 
-        start_web_server().await;
 
         self.run_impl(
             fhe_program,
@@ -442,6 +442,7 @@ where
                 session_name,
             }),
         );
+        start_web_server().await;
     }
 
     /**

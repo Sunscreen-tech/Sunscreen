@@ -389,9 +389,9 @@ impl FheProgramTrait for FheProgram {
 
             #[cfg(not(feature = "debugger"))]
             graph: CompilationResult {
-                graph: StableGraph::from(pruned)
-            }, 
-            
+                graph: StableGraph::from(pruned),
+            },
+
             #[cfg(feature = "debugger")]
             graph: CompilationResult {
                 graph: StableGraph::from(pruned),

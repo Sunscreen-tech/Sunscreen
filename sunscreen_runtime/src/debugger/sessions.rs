@@ -1,10 +1,11 @@
 use actix_web::{get, web, App, HttpResponse, HttpServer, Responder};
 use reqwest;
 use serde::{Deserialize, Serialize};
+use serde_json::{to_string, to_string_pretty};
 use std::collections::HashMap;
 use std::sync::{Mutex, MutexGuard, OnceLock};
 
-use crate::{DebugInfo, SealData};
+use crate::{DebugInfo, SealData, PrivateKey, FheRuntime};
 
 use sunscreen_compiler_common::CompilationResult;
 use sunscreen_fhe_program::Operation;
@@ -103,12 +104,24 @@ pub async fn start_web_server() -> std::io::Result<()> {
 #[get("/")]
 async fn get_graph_data(session: String) -> impl Responder {
     // TODO: add error catching
-    let curr_session = get_sessions()
+    let sessions = get_sessions()
         .lock()
-        .unwrap()
-        .get(&session)
+        .unwrap();
+
+    let curr_session = sessions.get(&session)
         .unwrap()
         .unwrap_bfv_session();
 
-    HttpResponse::Ok().body(curr_session)
+    let graph_string = serde_json::to_string_pretty(&curr_session.graph.graph);
+    HttpResponse::Ok().body(graph_string.unwrap())
 }
+
+/* 
+/**
+ * Gets node data in the compilation graph.
+ */
+#[get("/nodes")]
+async fn get_node_data(session: String, runtime: FheRuntime, priv_key: &PrivateKey) -> impl Responder {
+    HttpResponse::Ok().body("hello".to_owned())
+}
+*/

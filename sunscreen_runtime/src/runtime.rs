@@ -411,13 +411,15 @@ where
      */
 
     // TODO: maybe SecretKey needs to be changed to PrivateKey?
+    // probably should: can always access a SecretKey via &PrivateKey.0 
+        // don't think this should cause any security issues?
     pub async fn debug_fhe_program<I>(
         &self,
         fhe_program: &CompiledFheProgram,
         arguments: Vec<I>,
         public_key: &PublicKey,
         secret_key: &SecretKey,
-    ) -> Result<Vec<Ciphertext>>
+    ) 
     where
         I: Into<FheProgramInput>,
     {
@@ -439,7 +441,7 @@ where
                 secret_key,
                 session_name,
             }),
-        )
+        );
     }
 
     /**

@@ -374,6 +374,9 @@ impl MeasuredModel {
                 &relin_keys.as_ref(),
                 &galois_keys.as_ref(),
                 None,
+                // TODO: does it matter what the source code is?
+                #[cfg(feature = "debugger")]
+                ""
             )
         }?;
 

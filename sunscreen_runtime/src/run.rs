@@ -124,6 +124,8 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
     relin_keys: &Option<&RelinearizationKeys>,
     galois_keys: &Option<&GaloisKeys>,
     debug_info: Option<DebugInfo>,
+    #[cfg(feature = "debugger")]
+    source_code: &str
 ) -> Result<Vec<Ciphertext>, FheProgramRunFailure> {
     fn get_data(
         data: &[AtomicCell<Option<Arc<SealData>>>],
@@ -187,7 +189,7 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
 
             assert!(!guard.contains_key(&v.session_name));
 
-            let session = BfvSession::new(&ir.graph, v.secret_key);
+            let session = BfvSession::new(&ir.graph, v.secret_key, source_code);
 
             guard.insert(v.session_name.clone(), session.into());
             println!(

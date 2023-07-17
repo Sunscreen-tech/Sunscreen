@@ -65,19 +65,24 @@ pub struct BfvSession {
      * Used for decryption of ciphertexts for visualization.
      */
     pub secret_key: SecretKey,
+
+    /**
+     * The source code of the FHE program.
+     */
+    pub source_code: String
 }
 impl BfvSession {
     /**
      * Constructs a new `FheDebugInfo`.
      */
-    pub fn new(graph: &CompilationResult<Operation>, secret_key: &SecretKey) -> Self {
+    pub fn new(graph: &CompilationResult<Operation>, secret_key: &SecretKey, source_code: &str) -> Self {
         Self {
             graph: graph.clone(),
             // don't need a hashmap; if you don't encounter in the right order, it's all initialize das None so you
             // can go back later and fill it in
             program_data: vec![None; graph.node_count()],
-
             secret_key: secret_key.clone(),
+            source_code: source_code.to_owned()
         }
     }
 }

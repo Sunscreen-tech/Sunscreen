@@ -74,9 +74,9 @@ async fn get_code(session: web::Path<String>) -> impl Responder {
 
     if sessions.contains_key(session.as_str()) {
         let curr_session = sessions.get(session.as_str()).unwrap().unwrap_bfv_session();
-        let code_string = serde_json::to_string_pretty(&curr_session.graph.graph);
+        let code_string = &curr_session.source_code;
 
-        HttpResponse::Ok().body(code_string.unwrap().to_owned())
+        HttpResponse::Ok().body(code_string.to_owned())
     } else {
         HttpResponse::NotFound().body("Session not found.".to_owned())
     }

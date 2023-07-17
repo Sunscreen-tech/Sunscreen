@@ -420,7 +420,7 @@ where
     // TODO: maybe SecretKey needs to be changed to PrivateKey?
     // probably should: can always access a SecretKey via &PrivateKey.0
     // don't think this should cause any security issues?
-    pub async fn debug_fhe_program<I>(
+    pub fn debug_fhe_program<I>(
         &self,
         fhe_program: &CompiledFheProgram,
         arguments: Vec<I>,
@@ -428,7 +428,7 @@ where
         secret_key: &SecretKey,
         #[cfg(feature = "debugger")]
         source_code: &str
-    ) where
+    ) -> Result<()> where
         I: Into<FheProgramInput>,
     {
         static SESSION_NUM: AtomicUsize = AtomicUsize::new(0);
@@ -450,8 +450,10 @@ where
             }),
             #[cfg(feature = "debugger")]
             source_code
-        );
-        start_web_server().await;
+        )?;
+        start_web_server();
+
+        Ok(())
     }
 
     /**

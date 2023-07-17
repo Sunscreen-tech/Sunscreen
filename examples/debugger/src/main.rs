@@ -4,8 +4,7 @@ use sunscreen::{
     *,
 };
 
-#[actix_web::main]
-async fn main() {
+fn main() {
     #[fhe_program(scheme = "bfv")]
     fn mad(a: Cipher<Signed>, b: Signed, c: Cipher<Signed>) -> Cipher<Signed> {
         a * b + c
@@ -17,8 +16,8 @@ async fn main() {
     }
 
     let app = Compiler::new()
-        .fhe_program(add_squares)
         .fhe_program(mad)
+        .fhe_program(add_squares)
         .compile()
         .unwrap();
 
@@ -39,13 +38,12 @@ async fn main() {
             &public,
             &private.0,
             mad.source(),
-        )
-        .await;
+        ).unwrap();
 
     // TODO: figure out how to set it up so that we can have multiple running at the same time
     // maybe set up a server once at the start of the main method, then just have endpoints like
     // /programs/{function name} to be able to see
-    let args2: Vec<FheProgramInput> = vec![a.clone().into(), b.into()];
+    let args2: Vec<FheProgramInput> = vec![a.clone().into(), c.into()];
 
     runtime
         .debug_fhe_program(
@@ -54,6 +52,7 @@ async fn main() {
             &public,
             &private.0,
             add_squares.source(),
-        )
-        .await;
+        ).unwrap();
+
+    loop { }
 }

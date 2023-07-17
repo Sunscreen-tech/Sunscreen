@@ -1,4 +1,5 @@
 use actix_web::{get, web, App, HttpResponse, HttpServer, Responder, Handler};
+use rayon::iter::Once;
 use reqwest;
 use actix_cors::Cors;
 use serde::{Deserialize, Serialize};
@@ -6,6 +7,7 @@ use serde_json::{to_string, to_string_pretty, Value, Error, json};
 use std::collections::HashMap;
 use std::ops::IndexMut;
 use std::sync::{Mutex, MutexGuard, OnceLock};
+use std::thread;
 
 
 use crate::{DebugInfo, FheRuntime, PrivateKey, SealData};
@@ -16,31 +18,52 @@ use sunscreen_fhe_program::Operation;
 use seal_fhe::SecretKey;
 use sunscreen_zkp_backend::CompiledZkpProgram;
 
+static SERVER: OnceLock<()> = OnceLock::new();
+
 /**
  * Lazily starts a webserver at `127.0.0.1:8080/`.
  */
-pub async fn start_web_server() -> std::io::Result<()> {
-    let url = "http://127.0.0.1:8080/";
-    println!("{:?}", "start_web_server".to_owned());
-    match reqwest::get(url).await {
-        Ok(_response) => Ok(()),
-        Err(_e) => {
+pub fn start_web_server() -> () {
+    SERVER.get_or_init(|| {
+        thread::spawn(|| {
+            let rt = tokio::runtime::Builder::new_current_thread()
+                .enable_all()
+                .build().unwrap();
 
-            HttpServer::new(move || {
-                let cors = Cors::default()
-                .allow_any_origin()
-                .allowed_methods(vec!["GET"]);
+            rt.block_on(async {
+                let url = "http://127.0.0.1:8080/";
+                println!("{:?}", "start_web_server".to_owned());
+                match reqwest::get(url).await {
+                    Ok(_response) => Ok(()),
+                    Err(_e) => {
     
-                App::new()
-                    .wrap(cors)
-                    .service(get_graph_data) 
-                    .service(get_code)
-            })
-                .bind(("127.0.0.1", 8080))?
-                .run()
-                .await
-        }
-    }
+                        HttpServer::new(move || {
+                            let cors = Cors::default()
+                            .allow_any_origin()
+                            .allowed_methods(vec!["GET"]);
+                
+                            App::new()
+                                .wrap(cors)
+                                .service(get_graph_data) 
+                                .service(get_all_sessions)
+                                .service(get_code)
+                        })
+                            .bind(("127.0.0.1", 8080))?
+                            .run()
+                            .await
+                    }
+                }
+            }).unwrap();
+        });
+    });
+}
+
+#[get("/graphs")]
+async fn get_all_sessions() -> impl Responder {
+    let lock = get_sessions().lock().unwrap();
+    let sessions = lock.keys().collect::<Vec<_>>();
+
+    HttpResponse::Ok().body(serde_json::to_string(&sessions).unwrap())
 }
 
 /**
@@ -85,6 +108,7 @@ async fn get_code(session: web::Path<String>) -> impl Responder {
 /**
  * Gets the info of a node in the debugging graph for an FHE program.
  */
+/*
 #[get("graphs/{session}/{nodeid}")]
 pub async fn get_fhe_node_data(
     path_info: web::Path<(String, usize)>
@@ -111,7 +135,7 @@ pub async fn get_fhe_node_data(
     } else {
         Ok(HttpResponse::NotFound().body("Node {:?} not found", nodeid))
     }
-}
+} */
 
 
 /*

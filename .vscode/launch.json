@@ -79,6 +79,25 @@
         {
             "type": "lldb",
             "request": "launch",
+            "name": "Debug integration test 'unsigned'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=unsigned",
+                    "--package=sunscreen"
+                ],
+                "filter": {
+                    "name": "unsigned",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
             "name": "Debug integration test 'fractional'",
             "cargo": {
                 "args": [
@@ -165,6 +184,25 @@
                 ],
                 "filter": {
                     "name": "edge_cases",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'serialization'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=serialization",
+                    "--package=sunscreen"
+                ],
+                "filter": {
+                    "name": "serialization",
                     "kind": "test"
                 }
             },
@@ -298,6 +336,25 @@
                 ],
                 "filter": {
                     "name": "fractional_range_proof",
+                    "kind": "bench"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug benchmark 'smart_fhe'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bench=smart_fhe",
+                    "--package=sunscreen"
+                ],
+                "filter": {
+                    "name": "smart_fhe",
                     "kind": "bench"
                 }
             },
@@ -451,25 +508,6 @@
                 "filter": {
                     "name": "sunscreen_runtime",
                     "kind": "lib"
-                }
-            },
-            "args": [],
-            "cwd": "${workspaceFolder}"
-        },
-        {
-            "type": "lldb",
-            "request": "launch",
-            "name": "Debug integration test 'serialization'",
-            "cargo": {
-                "args": [
-                    "test",
-                    "--no-run",
-                    "--test=serialization",
-                    "--package=sunscreen_runtime"
-                ],
-                "filter": {
-                    "name": "serialization",
-                    "kind": "test"
                 }
             },
             "args": [],
@@ -742,15 +780,15 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug executable 'simple_multiply'",
+            "name": "Debug executable 'bigint'",
             "cargo": {
                 "args": [
                     "build",
-                    "--bin=simple_multiply",
-                    "--package=simple_multiply"
+                    "--bin=bigint",
+                    "--package=bigint"
                 ],
                 "filter": {
-                    "name": "simple_multiply",
+                    "name": "bigint",
                     "kind": "bin"
                 }
             },
@@ -760,53 +798,16 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug unit tests in executable 'simple_multiply'",
+            "name": "Debug unit tests in executable 'bigint'",
             "cargo": {
                 "args": [
                     "test",
                     "--no-run",
-                    "--bin=simple_multiply",
-                    "--package=simple_multiply"
+                    "--bin=bigint",
+                    "--package=bigint"
                 ],
                 "filter": {
-                    "name": "simple_multiply",
-                    "kind": "bin"
-                }
-            },
-            "args": [],
-            "cwd": "${workspaceFolder}"
-        },
-        {
-            "type": "lldb",
-            "request": "launch",
-            "name": "Debug executable 'calculator_rational'",
-            "cargo": {
-                "args": [
-                    "build",
-                    "--bin=calculator_rational",
-                    "--package=calculator_rational"
-                ],
-                "filter": {
-                    "name": "calculator_rational",
-                    "kind": "bin"
-                }
-            },
-            "args": [],
-            "cwd": "${workspaceFolder}"
-        },
-        {
-            "type": "lldb",
-            "request": "launch",
-            "name": "Debug unit tests in executable 'calculator_rational'",
-            "cargo": {
-                "args": [
-                    "test",
-                    "--no-run",
-                    "--bin=calculator_rational",
-                    "--package=calculator_rational"
-                ],
-                "filter": {
-                    "name": "calculator_rational",
+                    "name": "bigint",
                     "kind": "bin"
                 }
             },
@@ -853,6 +854,43 @@
         {
             "type": "lldb",
             "request": "launch",
+            "name": "Debug executable 'calculator_rational'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=calculator_rational",
+                    "--package=calculator_rational"
+                ],
+                "filter": {
+                    "name": "calculator_rational",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'calculator_rational'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=calculator_rational",
+                    "--package=calculator_rational"
+                ],
+                "filter": {
+                    "name": "calculator_rational",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
             "name": "Debug executable 'chi_sq'",
             "cargo": {
                 "args": [
@@ -881,6 +919,43 @@
                 ],
                 "filter": {
                     "name": "chi_sq",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'debugger'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=debugger",
+                    "--package=debugger"
+                ],
+                "filter": {
+                    "name": "debugger",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'debugger'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=debugger",
+                    "--package=debugger"
+                ],
+                "filter": {
+                    "name": "debugger",
                     "kind": "bin"
                 }
             },
@@ -1001,6 +1076,80 @@
         {
             "type": "lldb",
             "request": "launch",
+            "name": "Debug executable 'simple_multiply'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=simple_multiply",
+                    "--package=simple_multiply"
+                ],
+                "filter": {
+                    "name": "simple_multiply",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'simple_multiply'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=simple_multiply",
+                    "--package=simple_multiply"
+                ],
+                "filter": {
+                    "name": "simple_multiply",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'sudoku_zkp'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=sudoku_zkp",
+                    "--package=sudoku_zkp"
+                ],
+                "filter": {
+                    "name": "sudoku_zkp",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'sudoku_zkp'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=sudoku_zkp",
+                    "--package=sudoku_zkp"
+                ],
+                "filter": {
+                    "name": "sudoku_zkp",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
             "name": "Debug unit tests in library 'logproof'",
             "cargo": {
                 "args": [
@@ -1020,6 +1169,25 @@
         {
             "type": "lldb",
             "request": "launch",
+            "name": "Debug benchmark 'linear_relation'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bench=linear_relation",
+                    "--package=logproof"
+                ],
+                "filter": {
+                    "name": "linear_relation",
+                    "kind": "bench"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
             "name": "Debug unit tests in library 'sunscreen_math'",
             "cargo": {
                 "args": [
@@ -1031,6 +1199,44 @@
                 "filter": {
                     "name": "sunscreen_math",
                     "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug benchmark 'gpu'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bench=gpu",
+                    "--package=sunscreen_math"
+                ],
+                "filter": {
+                    "name": "gpu",
+                    "kind": "bench"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug benchmark 'cpu'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bench=cpu",
+                    "--package=sunscreen_math"
+                ],
+                "filter": {
+                    "name": "cpu",
+                    "kind": "bench"
                 }
             },
             "args": [],

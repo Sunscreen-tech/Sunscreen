@@ -3184,6 +3184,7 @@ dependencies = [
  "sunscreen_fhe_program",
  "sunscreen_zkp_backend",
  "thiserror",
+ "tokio",
 ]
 
 [[package]]

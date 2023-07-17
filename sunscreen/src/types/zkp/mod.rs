@@ -196,6 +196,8 @@ pub trait NumFieldElements {
  */
 pub trait ZkpType: NumFieldElements + Sized + TypeName + ToNativeFields {}
 
+impl<T: NumFieldElements + Sized + TypeName + ToNativeFields> ZkpType for T {}
+
 /**
  * Methods for coercing ZKP data types.
  */
@@ -217,8 +219,6 @@ where
 {
     const NUM_NATIVE_FIELD_ELEMENTS: usize = T::NUM_NATIVE_FIELD_ELEMENTS * N;
 }
-
-impl<T, const N: usize> ZkpType for [T; N] where T: ZkpType {}
 
 impl<T> Coerce for T
 where

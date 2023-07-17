@@ -2,7 +2,6 @@ use std::marker::PhantomData;
 
 use subtle::{Choice, ConditionallySelectable};
 use sunscreen_compiler_macros::TypeName;
-use sunscreen_runtime::ZkpProgramInputTrait;
 use sunscreen_zkp_backend::{BackendField, BigInt};
 
 use crate::{
@@ -153,9 +152,6 @@ impl<F: BackendField> ToNativeFields for NativeField<F> {
         vec![self.val]
     }
 }
-
-impl<F: BackendField> ZkpType for NativeField<F> {}
-impl<F: BackendField> ZkpProgramInputTrait for NativeField<F> {}
 
 impl<F: BackendField> AddVar for NativeField<F> {
     fn add(lhs: ProgramNode<Self>, rhs: ProgramNode<Self>) -> ProgramNode<Self> {

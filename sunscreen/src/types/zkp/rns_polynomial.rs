@@ -1,6 +1,5 @@
 use petgraph::stable_graph::NodeIndex;
 use sunscreen_compiler_macros::TypeName;
-use sunscreen_runtime::ZkpProgramInputTrait;
 use sunscreen_zkp_backend::{BackendField, BigInt};
 
 use crate::{
@@ -9,7 +8,7 @@ use crate::{
     zkp::ZkpContextOps,
 };
 
-use super::{AddVar, Mod, MulVar, NativeField, NumFieldElements, ToNativeFields, ZkpType};
+use super::{AddVar, Mod, MulVar, NativeField, NumFieldElements, ToNativeFields};
 
 use crate as sunscreen;
 
@@ -55,8 +54,6 @@ impl<F: BackendField, const N: usize, const R: usize> ToNativeFields
     }
 }
 
-impl<F: BackendField, const N: usize, const R: usize> ZkpType for RnsRingPolynomial<F, N, R> {}
-
 /**
  * Returns the RNS residues for each coefficient. The coefficient index
  * is the leading dimension for efficient NTT transforms.
@@ -97,11 +94,6 @@ impl<F: BackendField, const N: usize, const R: usize> AddVar for RnsRingPolynomi
 
         Self::coerce(&node_indices)
     }
-}
-
-impl<F: BackendField, const N: usize, const R: usize> ZkpProgramInputTrait
-    for RnsRingPolynomial<F, N, R>
-{
 }
 
 impl<F: BackendField, const N: usize, const R: usize> MulVar for RnsRingPolynomial<F, N, R> {

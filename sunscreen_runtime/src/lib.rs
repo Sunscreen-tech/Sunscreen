@@ -204,7 +204,7 @@ pub enum FheProgramInput {
  */
 pub trait ZkpProgramInputTrait: ToNativeFields + TypeNameInstance {}
 
-impl<T, const N: usize> ZkpProgramInputTrait for [T; N] where T: ZkpProgramInputTrait + TypeName {}
+impl<T: ToNativeFields + TypeNameInstance> ZkpProgramInputTrait for T {}
 
 #[derive(Clone)]
 /**

@@ -309,6 +309,11 @@ mod tests {
     use super::*;
 
     #[test]
+    fn main_works() -> Result<(), Error> {
+        main()
+    }
+
+    #[test]
     fn one_of_failure() -> Result<(), Error> {
         let one_of_zkp = one_of.compile::<BulletproofsBackend>()?;
         let runtime = one_of.runtime::<BulletproofsBackend>()?;

@@ -101,6 +101,11 @@ mod tests {
     use super::*;
 
     #[test]
+    fn main_works() -> Result<(), Error> {
+        main()
+    }
+
+    #[test]
     fn valid_example() {
         let prog = sudoku_proof.compile::<BulletproofsBackend>().unwrap();
         let runtime = sudoku_proof.runtime::<BulletproofsBackend>().unwrap();

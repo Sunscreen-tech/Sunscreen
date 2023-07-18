@@ -35,6 +35,11 @@ fn main() -> Result<(), Error> {
 mod tests {
     use super::*;
 
+    #[test]
+    fn main_works() -> Result<(), Error> {
+        main()
+    }
+
     fn run_test(amount: BulletproofsField, threshold: BulletproofsField, should_succeed: bool) {
         let app = Compiler::new()
             .zkp_backend::<BulletproofsBackend>()

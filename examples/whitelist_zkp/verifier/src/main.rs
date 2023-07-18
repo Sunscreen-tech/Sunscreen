@@ -21,8 +21,34 @@ fn main() -> Result<()> {
         .public_input(list)
         .verify()?;
 
-    runtime.verify(&prog, &proof, vec![list], vec![])?;
-
     println!("Verified proof successfully!");
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn main_works() -> Result<()> {
+        let prog = whitelist.compile::<BulletproofsBackend>()?;
+        let runtime = whitelist.runtime::<BulletproofsBackend>()?;
+
+        let entry: BulletproofsField = 101.into();
+        let list: [BulletproofsField; 100] = default_list();
+
+        let proof = runtime
+            .proof_builder(&prog)
+            .private_input(entry)
+            .public_input(list)
+            .prove()?;
+
+        runtime
+            .verification_builder(&prog)
+            .proof(&proof)
+            .public_input(list)
+            .verify()?;
+
+        Ok(())
+    }
 }

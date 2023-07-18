@@ -180,8 +180,6 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
         data.push(AtomicCell::new(None));
     }
 
-    // TODO: maybe i can turn off the match statement? since the way i've been doing it, i've only been passing in
-    // something for debug_info if debugger is on
     #[cfg(feature = "debugger")]
     match debug_info {
         Some(ref v) => {

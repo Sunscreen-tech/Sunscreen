@@ -40,9 +40,6 @@ fn main() {
         )
         .unwrap();
 
-    // TODO: figure out how to set it up so that we can have multiple running at the same time
-    // maybe set up a server once at the start of the main method, then just have endpoints like
-    // /programs/{function name} to be able to see
     let args2: Vec<FheProgramInput> = vec![a.clone().into(), c.into()];
 
     runtime

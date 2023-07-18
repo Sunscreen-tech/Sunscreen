@@ -421,9 +421,7 @@ where
      * Used for debugging. Calls `run_impl` with a secret key.
      */
 
-    // TODO: maybe SecretKey needs to be changed to PrivateKey?
-    // probably should: can always access a SecretKey via &PrivateKey.0
-    // don't think this should cause any security issues?
+    // TODO: change SecretKey to PrivateKey
     pub fn debug_fhe_program<I>(
         &self,
         fhe_program: &CompiledFheProgram,

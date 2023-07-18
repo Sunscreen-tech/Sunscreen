@@ -1,20 +1,41 @@
 {
-  "name": "fhe-debugger-frontend",
+  "name": "test",
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "@craco/craco": "^7.1.0",
+    "@devbookhq/splitter": "^1.4.0",
+    "@emotion/react": "^11.11.1",
+    "@emotion/styled": "^11.11.0",
+    "@msagl/core": "^1.1.16",
+    "@msagl/parser": "^1.1.16",
+    "@msagl/renderer-svg": "^1.1.18",
+    "@msagl/renderer-webgl": "^1.1.18",
     "@testing-library/jest-dom": "^5.16.5",
     "@testing-library/react": "^13.4.0",
     "@testing-library/user-event": "^13.5.0",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "react-scripts": "5.0.1",
+    "@types/jest": "^29.5.3",
+    "@types/node": "^20.4.2",
+    "@types/react": "^18.2.15",
+    "@types/react-dom": "^18.2.7",
+    "mui": "^0.0.1",
+    "react-digraph": "^8.1.0",
+    "react-resizable": "^3.0.5",
+    "react-scripts": "^5.0.1",
+    "react-split": "^2.0.14",
+    "react-syntax-highlighter": "^15.5.0",
+    "split-pane-react": "^0.1.3",
+    "typescript": "^4.9.5",
     "web-vitals": "^2.1.4"
   },
+  "peerDependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
   "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
-    "test": "react-scripts test",
+    "start": "craco start",
+    "build": "craco build",
+    "test": "craco test",
     "eject": "react-scripts eject"
   },
   "eslintConfig": {

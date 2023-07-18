@@ -1,4 +1,4 @@
-use actix_web::{get, web, App, HttpResponse, HttpServer, Responder, Handler};
+use actix_web::{get, web, App, Handler, HttpResponse, HttpServer, Responder};
 use reqwest;
 use serde::{Deserialize, Serialize};
 use serde_json::{to_string, to_string_pretty};
@@ -60,7 +60,6 @@ pub struct BfvSession {
     /**
      * The values of operands in the compilation graph.
      */
-    
     // TODO: maybe this shouldn't be a Vec of SealData ...
     pub program_data: Vec<Option<SealData>>,
     /**
@@ -71,20 +70,24 @@ pub struct BfvSession {
     /**
      * The source code of the FHE program.
      */
-    pub source_code: String
+    pub source_code: String,
 }
 impl BfvSession {
     /**
      * Constructs a new `FheDebugInfo`.
      */
-    pub fn new(graph: &CompilationResult<Operation>, secret_key: &SecretKey, source_code: &str) -> Self {
+    pub fn new(
+        graph: &CompilationResult<Operation>,
+        secret_key: &SecretKey,
+        source_code: &str,
+    ) -> Self {
         Self {
             graph: graph.clone(),
             // don't need a hashmap; if you don't encounter in the right order, it's all initialize das None so you
             // can go back later and fill it in
             program_data: vec![None; graph.node_count()],
             secret_key: secret_key.clone(),
-            source_code: source_code.to_owned()
+            source_code: source_code.to_owned(),
         }
     }
 }

@@ -268,8 +268,7 @@ where
         mut arguments: Vec<I>,
         public_key: &PublicKey,
         dbg_info: Option<DebugInfo>,
-        #[cfg(feature = "debugger")]
-        source_code: &str
+        #[cfg(feature = "debugger")] source_code: &str,
     ) -> Result<Vec<Ciphertext>>
     where
         I: Into<FheProgramInput>,
@@ -364,7 +363,7 @@ where
                         &galois_key,
                         dbg_info,
                         #[cfg(feature = "debugger")]
-                        source_code
+                        source_code,
                     )
                 }?;
 
@@ -408,9 +407,14 @@ where
     where
         I: Into<FheProgramInput>,
     {
-        self.run_impl(fhe_program, arguments, public_key, None, 
+        self.run_impl(
+            fhe_program,
+            arguments,
+            public_key,
+            None,
             #[cfg(feature = "debugger")]
-            "")
+            "",
+        )
     }
 
     /**
@@ -426,9 +430,9 @@ where
         arguments: Vec<I>,
         public_key: &PublicKey,
         secret_key: &SecretKey,
-        #[cfg(feature = "debugger")]
-        source_code: &str
-    ) -> Result<()> where
+        #[cfg(feature = "debugger")] source_code: &str,
+    ) -> Result<()>
+    where
         I: Into<FheProgramInput>,
     {
         static SESSION_NUM: AtomicUsize = AtomicUsize::new(0);
@@ -449,7 +453,7 @@ where
                 session_name,
             }),
             #[cfg(feature = "debugger")]
-            source_code
+            source_code,
         )?;
         start_web_server();
 

@@ -1,17 +1,16 @@
-use actix_web::{get, web, App, HttpResponse, HttpServer, Responder, Handler};
+use actix_cors::Cors;
+use actix_web::{get, web, App, Handler, HttpResponse, HttpServer, Responder};
 use rayon::iter::Once;
 use reqwest;
-use actix_cors::Cors;
 use serde::{Deserialize, Serialize};
-use serde_json::{to_string, to_string_pretty, Value, Error, json};
+use serde_json::{json, to_string, to_string_pretty, Error, Value};
 use std::collections::HashMap;
 use std::ops::IndexMut;
 use std::sync::{Mutex, MutexGuard, OnceLock};
 use std::thread;
 
-
-use crate::{DebugInfo, FheRuntime, PrivateKey, SealData};
 use crate::debugger::get_sessions;
+use crate::{DebugInfo, FheRuntime, PrivateKey, SealData};
 use sunscreen_compiler_common::CompilationResult;
 use sunscreen_fhe_program::Operation;
 
@@ -29,31 +28,30 @@ pub fn start_web_server() -> () {
         thread::Builder::new()
             .name("debugger".to_owned())
             .spawn(|| {
-            let rt = Builder::new_current_thread()
-                .enable_all()
-                .build().unwrap();
+                let rt = Builder::new_current_thread().enable_all().build().unwrap();
 
-            rt.block_on(async {
-                println!("start_web_server");
-                
-                HttpServer::new(move || {
-                    let cors = Cors::default()
-                    .allow_any_origin()
-                    .allowed_methods(vec!["GET"]);
-        
-                    App::new()
-                        .wrap(cors)
-                        .service(get_graph_data) 
-                        .service(get_all_sessions)
-                        .service(get_code)
-                })
+                rt.block_on(async {
+                    println!("start_web_server");
+
+                    HttpServer::new(move || {
+                        let cors = Cors::default()
+                            .allow_any_origin()
+                            .allowed_methods(vec!["GET"]);
+
+                        App::new()
+                            .wrap(cors)
+                            .service(get_graph_data)
+                            .service(get_all_sessions)
+                            .service(get_code)
+                    })
                     .bind(("127.0.0.1", 8080))
                     .unwrap()
                     .run()
                     .await
                     .unwrap()
-            });
-        }).unwrap();
+                });
+            })
+            .unwrap();
     });
 }
 
@@ -112,7 +110,7 @@ async fn get_code(session: web::Path<String>) -> impl Responder {
 pub async fn get_fhe_node_data(
     path_info: web::Path<(String, usize)>
     ) -> Result<HttpResponse, actix_web::Error> {
-    
+
     let (session, nodeid) = path_info.into_inner();
     let sessions = get_sessions().lock().unwrap();
 
@@ -147,7 +145,6 @@ async fn get_node_data(session: String, runtime: FheRuntime, priv_key: &PrivateK
 }
 */
 
- 
 #[derive(Debug, Deserialize)]
 struct GraphFormat {
     nodes: Vec<Value>,
@@ -165,7 +162,7 @@ fn process_graph_json(json_str: &str) -> Result<String, serde_json::Error> {
             new_nodes.push(json!({
                 "type": "empty",
                 "title": "blank",
-                "id": index, 
+                "id": index,
             }));
         }
     }
@@ -174,7 +171,7 @@ fn process_graph_json(json_str: &str) -> Result<String, serde_json::Error> {
         for edge in edges.as_array().unwrap() {
             new_edges.push(json!({
                 "arrowhead": "normal",
-                "directed": true, 
+                "directed": true,
                 "target": edge[1].as_i64().unwrap(),
                 "source": edge[0].as_i64().unwrap(),
             }));
@@ -187,5 +184,4 @@ fn process_graph_json(json_str: &str) -> Result<String, serde_json::Error> {
     });
 
     Ok(output.to_string())
-
 }

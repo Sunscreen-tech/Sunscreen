@@ -374,7 +374,6 @@ where
      * Add a node to the parse graph.
      */
     pub fn add_node(&mut self, operation: O) -> NodeIndex {
-
         #[cfg(feature = "debugger")]
         {
             let group_id = self.group_counter;
@@ -385,10 +384,11 @@ where
                 group_id,
             });
             self.group_counter += 1;
-            node_index 
+            node_index
         }
-        #[cfg(not(feature = "debugger"))] {
-            self.graph.add_node(NodeInfo { operation } )
+        #[cfg(not(feature = "debugger"))]
+        {
+            self.graph.add_node(NodeInfo { operation })
         }
     }
 

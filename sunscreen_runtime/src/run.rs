@@ -124,8 +124,7 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
     relin_keys: &Option<&RelinearizationKeys>,
     galois_keys: &Option<&GaloisKeys>,
     debug_info: Option<DebugInfo>,
-    #[cfg(feature = "debugger")]
-    source_code: &str
+    #[cfg(feature = "debugger")] source_code: &str,
 ) -> Result<Vec<Ciphertext>, FheProgramRunFailure> {
     fn get_data(
         data: &[AtomicCell<Option<Arc<SealData>>>],

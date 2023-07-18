@@ -376,7 +376,7 @@ impl MeasuredModel {
                 None,
                 // TODO: does it matter what the source code is?
                 #[cfg(feature = "debugger")]
-                ""
+                "",
             )
         }?;
 

@@ -426,7 +426,7 @@ where
         fhe_program: &CompiledFheProgram,
         arguments: Vec<I>,
         public_key: &PublicKey,
-        secret_key: &SecretKey,
+        private_key: &PrivateKey,
         #[cfg(feature = "debugger")] source_code: &str,
     ) -> Result<()>
     where
@@ -445,7 +445,7 @@ where
             arguments,
             public_key,
             Some(DebugInfo {
-                secret_key,
+                private_key,
                 session_name,
             }),
             #[cfg(feature = "debugger")]

@@ -35,7 +35,7 @@ fn main() {
             app.get_fhe_program("mad").unwrap(),
             args1,
             &public,
-            &private.0,
+            &private,
             mad.source(),
         )
         .unwrap();
@@ -47,7 +47,7 @@ fn main() {
             app.get_fhe_program("add_squares").unwrap(),
             args2,
             &public,
-            &private.0,
+            &private,
             add_squares.source(),
         )
         .unwrap();

@@ -1,11 +1,7 @@
-
-
-
-
 use std::collections::HashMap;
 use std::sync::{Mutex, OnceLock};
 
-use crate::{SealData};
+use crate::{SealData, PrivateKey};
 
 use sunscreen_compiler_common::CompilationResult;
 use sunscreen_fhe_program::Operation;
@@ -65,7 +61,7 @@ pub struct BfvSession {
     /**
      * Used for decryption of ciphertexts for visualization.
      */
-    pub secret_key: SecretKey,
+    pub private_key: PrivateKey,
 
     /**
      * The source code of the FHE program.
@@ -78,7 +74,7 @@ impl BfvSession {
      */
     pub fn new(
         graph: &CompilationResult<Operation>,
-        secret_key: &SecretKey,
+        private_key: &PrivateKey,
         source_code: &str,
     ) -> Self {
         Self {
@@ -86,7 +82,7 @@ impl BfvSession {
             // don't need a hashmap; if you don't encounter in the right order, it's all initialize das None so you
             // can go back later and fill it in
             program_data: vec![None; graph.node_count()],
-            secret_key: secret_key.clone(),
+            private_key: private_key.clone(),
             source_code: source_code.to_owned(),
         }
     }

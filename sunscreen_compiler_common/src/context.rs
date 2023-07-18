@@ -293,7 +293,6 @@ where
     pub group_stack: Vec<Group>,
 }
 
-// TODO: add modified support for `group_stack` with feature flag
 impl<O, D> Context<O, D>
 where
     O: Operation,

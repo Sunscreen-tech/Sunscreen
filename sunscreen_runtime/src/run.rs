@@ -199,7 +199,6 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
         None => {}
     }
 
-    #[cfg(feature = "debugger")]
     fn set_data(
         data: &Vec<AtomicCell<Option<Arc<SealData>>>>,
         node_index: NodeIndex,

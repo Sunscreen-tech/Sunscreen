@@ -8,7 +8,8 @@ use crate::debugger::sessions::{get_sessions, BfvSession};
 
 use crossbeam::atomic::AtomicCell;
 use petgraph::{stable_graph::NodeIndex, Direction};
-
+#[cfg(test)]
+use serial_test::serial;
 
 use std::borrow::Cow;
 #[cfg(target_arch = "wasm32")]
@@ -185,16 +186,11 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
     match debug_info {
         Some(ref v) => {
             let mut guard = get_sessions().lock().unwrap();
-
             assert!(!guard.contains_key(&v.session_name));
 
             let session = BfvSession::new(&ir.graph, v.secret_key, source_code);
 
             guard.insert(v.session_name.clone(), session.into());
-            println!(
-                "run_program_unchecked matched Some, session keys {:?}",
-                guard.keys()
-            );
         }
         None => {}
     }
@@ -687,6 +683,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(feature = "debugger", serial)]
     fn simple_add() {
         let mut ir = FheProgram::new(SchemeType::Bfv);
 
@@ -719,7 +716,6 @@ mod tests {
                 &evaluator,
                 &None,
                 &None,
-                // TODO: i'm pretty sure it should be fine to pass in a None here? but doublecheck
                 None,
             )
             .unwrap()
@@ -735,15 +731,10 @@ mod tests {
                 &None,
                 Some(DebugInfo {
                     secret_key: &private_key,
-
-                    // TODO: figure out where the program name is actually stored by the compiler
-                    // when you have a compiled program `CompiledFheProgramFn` or something, use `.name()`
-                    // CompiledFheProgram -> Metadata -> name is a change that Rick made
-                    // but where do we find where we can get that name in the first place?
-                    // see what structs implement the `FheProgramFn` trait, because they have a .name() method that returns the name
                     session_name: "simple_add".to_owned(),
                 }),
-            )
+                "empty", 
+            )            
             .unwrap()
         };
 
@@ -758,6 +749,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(feature = "debugger", serial)]
     fn simple_mul() {
         let mut ir = FheProgram::new(SchemeType::Bfv);
 
@@ -808,6 +800,7 @@ mod tests {
                     secret_key: &private_key,
                     session_name: "simple_mul".to_owned(),
                 }),
+                "empty"
             )
             .unwrap()
         };
@@ -823,6 +816,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(feature = "debugger", serial)]
     fn can_mul_and_relinearize() {
         let mut ir = FheProgram::new(SchemeType::Bfv);
 
@@ -874,6 +868,7 @@ mod tests {
                     secret_key: &private_key,
                     session_name: "can_mul_and_relinearize".to_owned(),
                 }),
+                "empty"
             )
             .unwrap()
         };
@@ -889,6 +884,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(feature = "debugger", serial)]
     fn add_reduction() {
         let mut ir = FheProgram::new(SchemeType::Bfv);
 
@@ -955,6 +951,7 @@ mod tests {
                     secret_key: &private_key,
                     session_name: "add_reduction".to_owned(),
                 }),
+                "empty"
             )
             .unwrap()
         };
@@ -970,6 +967,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(feature = "debugger", serial)]
     fn rotate_left() {
         let mut ir = FheProgram::new(SchemeType::Bfv);
 
@@ -1018,6 +1016,7 @@ mod tests {
                     secret_key: &private_key,
                     session_name: "rotate_left".to_owned(),
                 }),
+                "empty"
             )
             .unwrap()
         };
@@ -1038,6 +1037,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(feature = "debugger", serial)]
     fn rotate_right() {
         let mut ir = FheProgram::new(SchemeType::Bfv);
 
@@ -1086,6 +1086,7 @@ mod tests {
                     secret_key: &private_key,
                     session_name: "rotate_right".to_owned(),
                 }),
+                "empty"
             )
             .unwrap()
         };
@@ -1107,6 +1108,7 @@ mod tests {
 
     #[cfg(feature = "debugger")]
     #[test]
+    #[cfg_attr(feature = "debugger", serial)]
     fn create_session() {
         let mut ir = FheProgram::new(SchemeType::Bfv);
 
@@ -1140,13 +1142,16 @@ mod tests {
                 &Some(&galois_keys),
                 Some(DebugInfo {
                     secret_key: &private_key,
-                    session_name: "rotate_left".to_owned(),
+                    session_name: "new_session".to_owned(),
                 }),
+                "empty"
             )
             .unwrap()
         };
 
         let session = get_sessions().lock().unwrap();
-        assert_eq!("rotate_left_0", session.keys().next().unwrap());
+
+        // Session names are only processed with an ID when you call `debug_fhe_program`
+        assert!(session.contains_key("new_session"));
     }
 }

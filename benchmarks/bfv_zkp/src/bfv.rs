@@ -5,11 +5,11 @@
 //! Security is a non-goal for this library. In fact, this library is known
 //! to be insecure.
 
-use ark_ff::{BigInt, BigInteger, Field, Fp, FpConfig, MontBackend, MontConfig, PrimeField};
+use ark_ff::{BigInt, BigInteger, Fp, FpConfig, MontBackend, MontConfig, PrimeField};
 use ark_poly::univariate::DensePolynomial;
 use sunscreen::{
-    types::zkp::{Mod, NativeField, RnsRingPolynomial, Scale, ToBinary, ToResidues},
-    zkp_program, Application, BackendField, Compiler, Runtime, ZkpApplication, ZkpBackend,
+    types::zkp::{Field, Mod, RnsRingPolynomial, Scale, ToBinary, ToResidues},
+    zkp_program, Application, Compiler, FieldSpec, Runtime, ZkpApplication, ZkpBackend,
     ZkpProgramInput, ZkpRuntime,
 };
 use sunscreen_zkp_backend::{bulletproofs::BulletproofsBackend, BigInt as ZkpBigInt, Proof};
@@ -202,7 +202,7 @@ fn div_round_bigint<const N: usize>(a: BigInt<N>, b: BigInt<N>) -> BigInt<N> {
 type BfvPoly<F> = RnsRingPolynomial<F, POLY_DEGREE, 1>;
 
 #[zkp_program]
-fn prove_enc<F: BackendField>(
+fn prove_enc<F: FieldSpec>(
     m: BfvPoly<F>,
     e_1: BfvPoly<F>,
     e_2: BfvPoly<F>,
@@ -211,9 +211,9 @@ fn prove_enc<F: BackendField>(
     #[constant] expected_c_1: BfvPoly<F>,
     #[constant] p_0: BfvPoly<F>,
     #[constant] p_1: BfvPoly<F>,
-    #[constant] delta: NativeField<F>,
+    #[constant] delta: Field<F>,
 ) {
-    let q = NativeField::<F>::from(CIPHER_MODULUS).into_program_node();
+    let q = Field::<F>::from(CIPHER_MODULUS).into_program_node();
 
     fn log2(x: usize) -> usize {
         let log2 = 8 * std::mem::size_of::<usize>() - x.leading_zeros() as usize;
@@ -236,7 +236,7 @@ fn prove_enc<F: BackendField>(
     // e_* coefficients are gaussian distributed from -19 to 19.
     // If we add 18 to these values, we get a distribution from
     // [0, 36], which we can range check.
-    let chi_offset = NativeField::from(19).into_program_node();
+    let chi_offset = Field::from(19).into_program_node();
 
     for i in 0..1 {
         for j in 0..POLY_DEGREE {
@@ -263,14 +263,14 @@ pub fn compile_proof() -> ZkpApplication {
 
 fn ark_bigint_to_native_field<B: ZkpBackend, F: MontConfig<N>, const N: usize>(
     x: Fp<MontBackend<F, N>, N>,
-) -> NativeField<B::Field> {
+) -> Field<B::Field> {
     let x = x.into_bigint();
     let zkp_bigint = ark_bigint_to_zkp_bigint(x);
-    NativeField::from(zkp_bigint)
+    Field::from(zkp_bigint)
 }
 
 type BpBackendField = <BulletproofsBackend as ZkpBackend>::Field;
-type BpField = NativeField<BpBackendField>;
+type BpField = Field<BpBackendField>;
 
 fn public_bfv_proof_params(
     ciphertext: &Ciphertext,

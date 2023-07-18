@@ -184,10 +184,10 @@ impl Gadget for Inverse {
 mod tests {
     use sunscreen_compiler_macros::zkp_program;
     use sunscreen_runtime::{Runtime, ZkpProgramInput};
-    use sunscreen_zkp_backend::BackendField;
+    use sunscreen_zkp_backend::FieldSpec;
     use sunscreen_zkp_backend::{bulletproofs::BulletproofsBackend, ZkpBackend};
 
-    use crate::types::zkp::NativeField;
+    use crate::types::zkp::Field;
     use crate::{self as sunscreen, invoke_gadget, Compiler};
 
     use super::*;
@@ -226,22 +226,22 @@ mod tests {
     #[test]
     fn modulus_gadget_works() {
         #[zkp_program]
-        fn div_rem<F: BackendField>(
-            x: NativeField<F>,
-            m: NativeField<F>,
-            expected_q: NativeField<F>,
-            expected_r: NativeField<F>,
+        fn div_rem<F: FieldSpec>(
+            x: Field<F>,
+            m: Field<F>,
+            expected_q: Field<F>,
+            expected_r: Field<F>,
         ) {
             let outs = invoke_gadget(
                 SignedModulus::new(F::FIELD_MODULUS, 16),
                 &[x.ids[0], m.ids[0]],
             );
 
-            let q = ProgramNode::<NativeField<F>>::new(&[outs[0]]);
-            let r = ProgramNode::<NativeField<F>>::new(&[outs[1]]);
+            let q = ProgramNode::<Field<F>>::new(&[outs[0]]);
+            let r = ProgramNode::<Field<F>>::new(&[outs[1]]);
 
-            (q - expected_q).constrain_eq(NativeField::from(0u32));
-            (r - expected_r).constrain_eq(NativeField::from(0u32));
+            (q - expected_q).constrain_eq(Field::from(0u32));
+            (r - expected_r).constrain_eq(Field::from(0u32));
         }
 
         let app = Compiler::new()
@@ -254,7 +254,7 @@ mod tests {
 
         let prog = app.get_zkp_program(div_rem).unwrap();
 
-        type BpField = NativeField<<BulletproofsBackend as ZkpBackend>::Field>;
+        type BpField = Field<<BulletproofsBackend as ZkpBackend>::Field>;
 
         let test_case = |x: i64, m: i64, expected_q: i64, expected_r: i64, expect_success: bool| {
             let result = runtime.prove(

@@ -155,9 +155,9 @@ impl Gadget for AssertBinary {
 mod tests {
     use sunscreen_runtime::{Runtime, ZkpProgramInput};
     use sunscreen_zkp_backend::bulletproofs::BulletproofsBackend;
-    use sunscreen_zkp_backend::{BackendField, ZkpBackend};
+    use sunscreen_zkp_backend::{FieldSpec, ZkpBackend};
 
-    use crate::types::zkp::{NativeField, ToBinary};
+    use crate::types::zkp::{Field, ToBinary};
     use crate::{self as sunscreen, invoke_gadget};
     use crate::{zkp_program, Compiler};
 
@@ -167,7 +167,7 @@ mod tests {
     fn can_assert_binary() {
         // Prove we know the value that decomposes into 0b101010
         #[zkp_program]
-        fn test<F: BackendField>(a: NativeField<F>) {
+        fn test<F: FieldSpec>(a: Field<F>) {
             invoke_gadget(AssertBinary, a.ids);
         }
 
@@ -181,7 +181,7 @@ mod tests {
 
         let prog = app.get_zkp_program(test).unwrap();
 
-        type BPField = NativeField<<BulletproofsBackend as ZkpBackend>::Field>;
+        type BPField = Field<<BulletproofsBackend as ZkpBackend>::Field>;
 
         let test_proof = |x: u8, expect_pass: bool| {
             let result = runtime.prove(prog, vec![BPField::from(x)], vec![], vec![]);
@@ -207,11 +207,11 @@ mod tests {
     fn can_convert_to_binary() {
         // Prove we know the value that decomposes into 0b101010
         #[zkp_program]
-        fn test<F: BackendField>(a: NativeField<F>) {
+        fn test<F: FieldSpec>(a: Field<F>) {
             let bits = a.to_unsigned::<6>();
 
             for (bit, expected) in bits.iter().zip([0u8, 1u8, 0u8, 1u8, 0u8, 1u8]) {
-                bit.constrain_eq(NativeField::from(expected));
+                bit.constrain_eq(Field::from(expected));
             }
         }
 
@@ -225,7 +225,7 @@ mod tests {
 
         let prog = app.get_zkp_program(test).unwrap();
 
-        type BPField = NativeField<<BulletproofsBackend as ZkpBackend>::Field>;
+        type BPField = Field<<BulletproofsBackend as ZkpBackend>::Field>;
 
         let proof = runtime
             .prove(prog, vec![BPField::from(42u8)], vec![], vec![])

@@ -1,9 +1,9 @@
+mod field;
 mod gadgets;
-mod native_field;
 mod program_node;
 mod rns_polynomial;
 
-pub use native_field::*;
+pub use field::*;
 // N.B. `NodeIndex` is actually common to both FHE and ZKP, but it's really only leaked as an
 // implementation detail on the ZKP side (via gadgets). So I think it makes sense to export under
 // sunscreen::types::zkp.

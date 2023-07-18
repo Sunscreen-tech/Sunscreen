@@ -366,7 +366,7 @@ pub trait ZkpBackend {
     /**
      * The field this backend uses in computation.
      */
-    type Field: BackendField;
+    type Field: FieldSpec;
 
     /**
      * Create a proof for the given executable Sunscreen
@@ -420,18 +420,17 @@ pub trait ZkpBackend {
  * ZKP backend. E.g. Bulletproofs uses Ristretto `Scalar`
  * values.
  */
-pub trait BackendField:
-    Add<Self, Output = Self>
-    + Sub<Self, Output = Self>
-    + Mul<Self, Output = Self>
-    + Neg<Output = Self>
-    + Clone // Breaks object safety due to +Sized.
-    + TryFrom<BigInt, Error = Error>
-    + ZkpInto<BigInt>
-{
-    /**
-     * The modulus of the proof system's `BackendField` type.
-     */
+pub trait FieldSpec: Clone {
+    /// The underlying field type used in a backend.
+    type BackendField: Add<Self::BackendField, Output = Self::BackendField>
+        + Sub<Self::BackendField, Output = Self::BackendField>
+        + Mul<Self::BackendField, Output = Self::BackendField>
+        + Neg<Output = Self::BackendField>
+        + Clone // Breaks object safety due to +Sized.
+        + TryFrom<BigInt, Error = Error>
+        + ZkpInto<BigInt>;
+
+    /// The modulus defining the [`FieldSpec::BackendField`] type.
     const FIELD_MODULUS: BigInt;
 }
 

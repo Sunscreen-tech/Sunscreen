@@ -1,7 +1,7 @@
 use petgraph::Graph;
 use sunscreen_runtime::{CallSignature, ZkpRuntime};
 use sunscreen_zkp_backend::{
-    BackendField, BigInt, CompiledZkpProgram, Gadget, Operation as JitOperation, ZkpBackend,
+    BigInt, CompiledZkpProgram, FieldSpec, Gadget, Operation as JitOperation, ZkpBackend,
 };
 
 use crate::{Compiler, Result};
@@ -15,7 +15,7 @@ use std::{any::Any, cell::RefCell};
 /**
  * An internal representation of a ZKP program specification.
  */
-pub trait ZkpProgramFn<F: BackendField> {
+pub trait ZkpProgramFn<F: FieldSpec> {
     /**
      * Create a circuit from this specification.
      */
@@ -40,12 +40,12 @@ pub trait ZkpProgramFnExt {
     /// ```rust
     /// use sunscreen::{
     ///     bulletproofs::BulletproofsBackend,
-    ///     zkp_program, types::zkp::{BulletproofsField, NativeField},
-    ///     BackendField, ZkpRuntime, ZkpProgramFnExt
+    ///     zkp_program, types::zkp::{BulletproofsField, Field},
+    ///     FieldSpec, ZkpRuntime, ZkpProgramFnExt
     /// };
     ///
     /// #[zkp_program]
-    /// fn is_eq<F: BackendField>(a: NativeField<F>, b: NativeField<F>) {
+    /// fn is_eq<F: FieldSpec>(a: Field<F>, b: Field<F>) {
     ///     a.constrain_eq(b)
     /// }
     /// # fn main() -> Result<(), sunscreen::Error> {
@@ -62,12 +62,12 @@ pub trait ZkpProgramFnExt {
     /// ```rust
     /// use sunscreen::{
     ///     bulletproofs::BulletproofsBackend,
-    ///     types::zkp::{BulletproofsField, NativeField},
-    ///     zkp_program, zkp_var, BackendField, Compiler, Error, ZkpRuntime,
+    ///     types::zkp::{BulletproofsField, Field},
+    ///     zkp_program, zkp_var, FieldSpec, Compiler, Error, ZkpRuntime,
     /// };
     ///
     /// #[zkp_program]
-    /// fn is_eq<F: BackendField>(a: NativeField<F>, b: NativeField<F>) {
+    /// fn is_eq<F: FieldSpec>(a: Field<F>, b: Field<F>) {
     ///     a.constrain_eq(b)
     /// }
     /// # fn main() -> Result<(), sunscreen::Error> {
@@ -104,12 +104,12 @@ pub trait ZkpProgramFnExt {
     /// ```rust
     /// use sunscreen::{
     ///     bulletproofs::BulletproofsBackend,
-    ///     zkp_program, types::zkp::{BulletproofsField, NativeField},
-    ///     BackendField, ZkpProgramFnExt
+    ///     zkp_program, types::zkp::{BulletproofsField, Field},
+    ///     FieldSpec, ZkpProgramFnExt
     /// };
     ///
     /// #[zkp_program]
-    /// fn is_eq<F: BackendField>(a: NativeField<F>, b: NativeField<F>) {
+    /// fn is_eq<F: FieldSpec>(a: Field<F>, b: Field<F>) {
     ///     a.constrain_eq(b)
     /// }
     /// # fn main() -> Result<(), sunscreen::Error> {
@@ -138,12 +138,12 @@ pub trait ZkpProgramFnExt {
     /// ```rust
     /// use sunscreen::{
     ///     bulletproofs::BulletproofsBackend,
-    ///     zkp_program, types::zkp::{BulletproofsField, NativeField},
-    ///     BackendField, ZkpProgramFnExt
+    ///     zkp_program, types::zkp::{BulletproofsField, Field},
+    ///     FieldSpec, ZkpProgramFnExt
     /// };
     ///
     /// #[zkp_program]
-    /// fn is_eq<F: BackendField>(a: NativeField<F>, b: NativeField<F>) {
+    /// fn is_eq<F: FieldSpec>(a: Field<F>, b: Field<F>) {
     ///     a.constrain_eq(b)
     /// }
     /// # fn main() -> Result<(), sunscreen::Error> {

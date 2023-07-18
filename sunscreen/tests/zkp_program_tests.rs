@@ -1,16 +1,16 @@
-use sunscreen::{types::zkp::NativeField, zkp_program, Compiler, Runtime};
+use sunscreen::{types::zkp::Field, zkp_program, Compiler, Runtime};
 use sunscreen_runtime::ZkpProgramInput;
-use sunscreen_zkp_backend::{bulletproofs::BulletproofsBackend, BackendField, ZkpBackend};
+use sunscreen_zkp_backend::{bulletproofs::BulletproofsBackend, FieldSpec, ZkpBackend};
 
-type BPField = NativeField<<BulletproofsBackend as ZkpBackend>::Field>;
+type BPField = Field<<BulletproofsBackend as ZkpBackend>::Field>;
 
 #[test]
 fn can_add_and_mul_native_fields() {
     #[zkp_program]
-    fn add_mul<F: BackendField>(a: NativeField<F>, b: NativeField<F>, c: NativeField<F>) {
+    fn add_mul<F: FieldSpec>(a: Field<F>, b: Field<F>, c: Field<F>) {
         let x = a * b + c;
 
-        x.constrain_eq(NativeField::from(42u32))
+        x.constrain_eq(Field::from(42u32))
     }
 
     let app = Compiler::new()
@@ -43,7 +43,7 @@ fn get_input_mismatch_on_incorrect_args() {
     use sunscreen_zkp_backend::Error as ZkpError;
 
     #[zkp_program]
-    fn add_mul<F: BackendField>(a: NativeField<F>, b: NativeField<F>) {
+    fn add_mul<F: FieldSpec>(a: Field<F>, b: Field<F>) {
         let _ = a + b * a;
     }
 
@@ -68,10 +68,10 @@ fn get_input_mismatch_on_incorrect_args() {
 #[test]
 fn can_use_public_inputs() {
     #[zkp_program]
-    fn add_mul<F: BackendField>(b: NativeField<F>, c: NativeField<F>, #[public] a: NativeField<F>) {
+    fn add_mul<F: FieldSpec>(b: Field<F>, c: Field<F>, #[public] a: Field<F>) {
         let x = a * b + c;
 
-        x.constrain_eq(NativeField::from(42u32))
+        x.constrain_eq(Field::from(42u32))
     }
 
     let app = Compiler::new()
@@ -101,14 +101,10 @@ fn can_use_public_inputs() {
 #[test]
 fn can_use_constant_inputs() {
     #[zkp_program]
-    fn add_mul<F: BackendField>(
-        b: NativeField<F>,
-        c: NativeField<F>,
-        #[constant] a: NativeField<F>,
-    ) {
+    fn add_mul<F: FieldSpec>(b: Field<F>, c: Field<F>, #[constant] a: Field<F>) {
         let x = a * b + c;
 
-        x.constrain_eq(NativeField::from(42u32))
+        x.constrain_eq(Field::from(42u32))
     }
 
     let app = Compiler::new()
@@ -138,10 +134,10 @@ fn can_use_constant_inputs() {
 #[test]
 fn can_declare_array_inputs() {
     #[zkp_program]
-    fn in_range<F: BackendField>(a: [[NativeField<F>; 9]; 64]) {
+    fn in_range<F: FieldSpec>(a: [[Field<F>; 9]; 64]) {
         for (i, a_i) in a.iter().enumerate() {
             for (j, a_i_j) in a_i.iter().enumerate() {
-                a_i_j.constrain_eq(NativeField::from((i + j) as u64));
+                a_i_j.constrain_eq(Field::from((i + j) as u64));
             }
         }
     }
@@ -170,10 +166,10 @@ fn can_declare_array_inputs() {
 #[test]
 fn builder_methods_work() {
     #[zkp_program]
-    fn arbitrary<F: BackendField>(
-        x: NativeField<F>,
-        ys: [NativeField<F>; 9],
-        #[constant] zss: [[NativeField<F>; 9]; 64],
+    fn arbitrary<F: FieldSpec>(
+        x: Field<F>,
+        ys: [Field<F>; 9],
+        #[constant] zss: [[Field<F>; 9]; 64],
     ) {
         for y in ys {
             x.constrain_eq(y);

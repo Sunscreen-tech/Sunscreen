@@ -8,7 +8,7 @@ use std::collections::{HashMap, HashSet};
 use std::marker::PhantomData;
 use sunscreen_fhe_program::FheProgramTrait;
 use sunscreen_runtime::{marker, CompiledFheProgram, Fhe, FheRuntime, FheZkp, Zkp};
-use sunscreen_zkp_backend::{BackendField, CompiledZkpProgram, ZkpBackend};
+use sunscreen_zkp_backend::{CompiledZkpProgram, FieldSpec, ZkpBackend};
 
 #[derive(Debug, Clone)]
 enum ParamsMode {
@@ -165,7 +165,7 @@ impl<B> Default for ZkpCompilerData<B> {
 
 struct ZkpCompilerData<B> {
     // In practice, B should always be BoxZkpFn<Field = F>> where
-    // F: BackendField.
+    // F: FieldSpec.
     zkp_program_fns: Vec<B>,
 }
 
@@ -400,7 +400,7 @@ impl<T, B> GenericCompiler<T, B> {
 
 impl<T, B> GenericCompiler<T, BoxZkpFn<B>>
 where
-    B: BackendField,
+    B: FieldSpec,
 {
     fn compile_zkp(&self) -> Result<HashMap<String, CompiledZkpProgram>> {
         let zkp_data = self.data.zkp_data();
@@ -476,7 +476,7 @@ impl FheCompiler {
 
 impl<B> ZkpCompiler<B>
 where
-    B: BackendField,
+    B: FieldSpec,
 {
     /**
      * Add the given FHE program for compilation.
@@ -526,7 +526,7 @@ where
 
 impl<B> FheZkpCompiler<B>
 where
-    B: BackendField,
+    B: FieldSpec,
 {
     /**
      * Add the given FHE program for compilation.
@@ -647,7 +647,7 @@ mod tests {
     use super::*;
 
     // Needed to make the fhe_program macro work.
-    use crate::{self as sunscreen, types::zkp::NativeField};
+    use crate::{self as sunscreen, types::zkp::Field};
 
     #[test]
     fn raw_compiler_has_correct_type() {
@@ -679,7 +679,7 @@ mod tests {
     #[test]
     fn fhe_zkp_program_yields_fhezkp_compiler() {
         #[zkp_program]
-        fn kitty<F: BackendField>() {}
+        fn kitty<F: FieldSpec>() {}
 
         #[fhe_program(scheme = "bfv")]
         fn doggie() {}
@@ -707,7 +707,7 @@ mod tests {
     #[test]
     fn compiling_zkp_program_yields_zkp_application() {
         #[zkp_program]
-        fn kitty<F: BackendField>() {}
+        fn kitty<F: FieldSpec>() {}
 
         let app = GenericCompiler::new()
             .zkp_backend::<BulletproofsBackend>()
@@ -721,7 +721,7 @@ mod tests {
     #[test]
     fn compiling_fhe_and_zkp_program_yields_fhezkp_application() {
         #[zkp_program]
-        fn kitty<F: BackendField>(_a: NativeField<F>) {}
+        fn kitty<F: FieldSpec>(_a: Field<F>) {}
 
         #[fhe_program(scheme = "bfv")]
         fn doggie() {}

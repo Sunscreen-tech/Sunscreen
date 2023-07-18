@@ -35,3 +35,4 @@ serde_json="1.0.74"
 
 [features]
 hexl = []
+transparent-ciphertexts = []

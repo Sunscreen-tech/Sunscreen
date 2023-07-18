@@ -86,7 +86,7 @@ pub use sunscreen_runtime::{
 #[cfg(feature = "bulletproofs")]
 pub use sunscreen_zkp_backend::bulletproofs;
 pub use sunscreen_zkp_backend::{
-    BackendField, Error as ZkpError, Proof, Result as ZkpResult, ZkpBackend,
+    Error as ZkpError, FieldSpec, Proof, Result as ZkpResult, ZkpBackend,
 };
 pub use zkp::{
     invoke_gadget, with_zkp_ctx, ZkpContext, ZkpContextOps, ZkpData, ZkpFrontendCompilation,

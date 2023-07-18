@@ -17,7 +17,9 @@ keywords = ["FHE", "BFV", "lattice", "cryptography"]
 categories = ["cryptography"]
 readme = "crates-io.md"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+# Load the playground with all relevant features
+[package.metadata.playground]
+features = ["bulletproofs"]
 
 [dependencies]
 bumpalo = "3.8.0"
@@ -56,6 +58,7 @@ serde_json = "1.0.74"
 [features]
 bulletproofs = ["sunscreen_zkp_backend/bulletproofs"]
 hexl = ["seal_fhe/hexl"]
+transparent-ciphertexts = ["seal_fhe/transparent-ciphertexts"]
 
 [[bench]]
 name = "fractional_range_proof"

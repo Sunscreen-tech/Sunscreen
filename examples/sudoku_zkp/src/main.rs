@@ -1,14 +1,11 @@
 use sunscreen::{
     bulletproofs::BulletproofsBackend,
-    types::zkp::{BulletproofsField, NativeField},
-    zkp_program, zkp_var, BackendField, Error, ZkpProgramFnExt,
+    types::zkp::{BulletproofsField, Field},
+    zkp_program, zkp_var, Error, FieldSpec, ZkpProgramFnExt,
 };
 
 #[zkp_program]
-fn sudoku_proof<F: BackendField>(
-    solution: [[NativeField<F>; 9]; 9],
-    #[public] board: [[NativeField<F>; 9]; 9],
-) {
+fn sudoku_proof<F: FieldSpec>(solution: [[Field<F>; 9]; 9], #[public] board: [[Field<F>; 9]; 9]) {
     let zero = zkp_var!(0);
 
     let assert_unique_numbers = |squares| {

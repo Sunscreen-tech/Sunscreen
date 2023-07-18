@@ -3,10 +3,10 @@ use std::array;
 use sunscreen::{
     bulletproofs::BulletproofsBackend,
     types::zkp::{
-        AddVar, BigInt, BulletproofsField, Coerce, MulVar, NativeField, NumFieldElements,
-        ProgramNode, SubVar, ToNativeFields,
+        AddVar, BigInt, BulletproofsField, Coerce, Field, MulVar, NumFieldElements, ProgramNode,
+        SubVar, ToNativeFields,
     },
-    with_zkp_ctx, zkp_program, zkp_var, BackendField, Compiler, Error, TypeName, ZkpBackend,
+    with_zkp_ctx, zkp_program, zkp_var, Compiler, Error, FieldSpec, TypeName, ZkpBackend,
     ZkpContextOps, ZkpRuntime,
 };
 
@@ -39,8 +39,8 @@ use sunscreen::{
 /// We represent the polynomial here as an array of coefficients, ordered from least significant to
 /// most significant.
 #[derive(Debug, Copy, Clone, TypeName)]
-pub struct Polynomial<F: BackendField, const N: usize> {
-    coefficients: [NativeField<F>; N],
+pub struct Polynomial<F: FieldSpec, const N: usize> {
+    coefficients: [Field<F>; N],
 }
 
 // To use our `Polynomial` in ZKP programs, we have to satisfy the `Polynomial: ZkpType`
@@ -48,13 +48,13 @@ pub struct Polynomial<F: BackendField, const N: usize> {
 // `ToNativeFields`. The first we are able to #[derive()].
 
 // The second one is trivial.
-impl<F: BackendField, const N: usize> NumFieldElements for Polynomial<F, N> {
+impl<F: FieldSpec, const N: usize> NumFieldElements for Polynomial<F, N> {
     const NUM_NATIVE_FIELD_ELEMENTS: usize = N;
 }
 
 // The last one is also fairly trivial! We just need to package up our representation into an
-// ordered list of the `BigInt`s underlying the `NativeField<F>`.
-impl<F: BackendField, const N: usize> ToNativeFields for Polynomial<F, N> {
+// ordered list of the `BigInt`s underlying the `Field<F>`.
+impl<F: FieldSpec, const N: usize> ToNativeFields for Polynomial<F, N> {
     fn to_native_fields(&self) -> Vec<BigInt> {
         self.coefficients.map(|x| x.val).into_iter().collect()
     }
@@ -65,7 +65,7 @@ impl<F: BackendField, const N: usize> ToNativeFields for Polynomial<F, N> {
 // type.
 
 // Addition is quite simple, we just add the corresponding coefficients together.
-impl<F: BackendField, const N: usize> AddVar for Polynomial<F, N> {
+impl<F: FieldSpec, const N: usize> AddVar for Polynomial<F, N> {
     fn add(lhs: ProgramNode<Self>, rhs: ProgramNode<Self>) -> ProgramNode<Self> {
         let mut coeff_node_indices = vec![];
 
@@ -80,7 +80,7 @@ impl<F: BackendField, const N: usize> AddVar for Polynomial<F, N> {
 }
 
 // Similarly for subtraction.
-impl<F: BackendField, const N: usize> SubVar for Polynomial<F, N> {
+impl<F: FieldSpec, const N: usize> SubVar for Polynomial<F, N> {
     fn sub(lhs: ProgramNode<Self>, rhs: ProgramNode<Self>) -> ProgramNode<Self> {
         let mut coeff_node_indices = vec![];
 
@@ -96,7 +96,7 @@ impl<F: BackendField, const N: usize> SubVar for Polynomial<F, N> {
 
 // Multiplication is a little more involved, but generally we just follow the logic described in
 // the quotient ring above.
-impl<F: BackendField, const N: usize> MulVar for Polynomial<F, N> {
+impl<F: FieldSpec, const N: usize> MulVar for Polynomial<F, N> {
     fn mul(lhs: ProgramNode<Self>, rhs: ProgramNode<Self>) -> ProgramNode<Self> {
         let mut output_coeffs = vec![];
 
@@ -134,7 +134,7 @@ impl<F: BackendField, const N: usize> MulVar for Polynomial<F, N> {
 
 // Next we'll add a few convenient methods for constructing polynomials within ZKP programs
 
-impl<F: BackendField, const N: usize> Polynomial<F, N> {
+impl<F: FieldSpec, const N: usize> Polynomial<F, N> {
     /// Create the zero polynomial.
     pub fn zero() -> ProgramNode<Self> {
         let zero = with_zkp_ctx(|ctx| ctx.add_constant(&BigInt::ZERO));
@@ -163,7 +163,7 @@ impl<F: BackendField, const N: usize> Polynomial<F, N> {
     /// the coefficient `scalar` at `x^0`.
     pub fn scalar<S>(scalar: S) -> ProgramNode<Self>
     where
-        S: Into<ProgramNode<NativeField<F>>>,
+        S: Into<ProgramNode<Field<F>>>,
     {
         let mut poly_ids: [_; N] = Self::zero().ids.try_into().unwrap();
         poly_ids[0] = scalar.into().ids[0];
@@ -173,7 +173,7 @@ impl<F: BackendField, const N: usize> Polynomial<F, N> {
     /// Make a root polynomial `(x - root)`
     pub fn root<S>(root: S) -> ProgramNode<Self>
     where
-        S: Into<ProgramNode<NativeField<F>>>,
+        S: Into<ProgramNode<Field<F>>>,
     {
         let x = Self::x();
         let r = Self::scalar(root);
@@ -188,27 +188,27 @@ pub fn from_coefficients<B: ZkpBackend, const N: usize, I>(
     coeffs: [I; N],
 ) -> Polynomial<B::Field, N>
 where
-    NativeField<B::Field>: From<I>,
+    Field<B::Field>: From<I>,
 {
     Polynomial {
-        coefficients: coeffs.map(NativeField::from),
+        coefficients: coeffs.map(Field::from),
     }
 }
 
 // Notice we want to define the evaluate function not on the `Polynomial` itself, but rather the
 // `ProgramNode`.
 
-pub trait Evaluate<F: BackendField> {
-    fn evaluate<S>(&self, point: S) -> ProgramNode<NativeField<F>>
+pub trait Evaluate<F: FieldSpec> {
+    fn evaluate<S>(&self, point: S) -> ProgramNode<Field<F>>
     where
-        S: Into<ProgramNode<NativeField<F>>>;
+        S: Into<ProgramNode<Field<F>>>;
 }
 
-impl<F: BackendField, const N: usize> Evaluate<F> for ProgramNode<Polynomial<F, N>> {
+impl<F: FieldSpec, const N: usize> Evaluate<F> for ProgramNode<Polynomial<F, N>> {
     /// Evaluate the polynomial at `point`
-    fn evaluate<S>(&self, point: S) -> ProgramNode<NativeField<F>>
+    fn evaluate<S>(&self, point: S) -> ProgramNode<Field<F>>
     where
-        S: Into<ProgramNode<NativeField<F>>>,
+        S: Into<ProgramNode<Field<F>>>,
     {
         let point = point.into().ids[0];
         let node_index = with_zkp_ctx(|ctx| {
@@ -229,7 +229,7 @@ impl<F: BackendField, const N: usize> Evaluate<F> for ProgramNode<Polynomial<F, 
 // Finally, let's use our polynomial!
 
 #[zkp_program]
-pub fn one_of<F: BackendField>(x: NativeField<F>, #[public] list: [NativeField<F>; 5]) {
+pub fn one_of<F: FieldSpec>(x: Field<F>, #[public] list: [Field<F>; 5]) {
     // Let's build up a polynomial by roots
     // Note we want to allow degree 5, so we want a ring modulo x^{6}
     let mut poly = Polynomial::<F, 6>::one();
@@ -244,9 +244,9 @@ pub fn one_of<F: BackendField>(x: NativeField<F>, #[public] list: [NativeField<F
 // We can also use polynomials as arguments
 
 #[zkp_program]
-pub fn private_eval<F: BackendField>(
-    eval: NativeField<F>,
-    point: NativeField<F>,
+pub fn private_eval<F: FieldSpec>(
+    eval: Field<F>,
+    point: Field<F>,
     #[public] poly: Polynomial<F, 10>,
 ) {
     poly.evaluate(point).constrain_eq(eval);

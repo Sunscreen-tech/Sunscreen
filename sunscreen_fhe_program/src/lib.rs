@@ -392,6 +392,7 @@ impl FheProgramTrait for FheProgram {
                 graph: StableGraph::from(pruned),
             },
 
+            // TODO: copy the metadata coming from the input
             #[cfg(feature = "debugger")]
             graph: CompilationResult {
                 graph: StableGraph::from(pruned),
@@ -432,7 +433,6 @@ impl FheProgramTrait for FheProgram {
     }
 }
 
-// TODO: change name of `graph` field to something like `compilation_result` to avoid `graph.graph`
 #[cfg(test)]
 mod tests {
     use petgraph::algo::is_isomorphic_matching;

@@ -3,6 +3,11 @@ use radix_trie::Trie;
 use std::collections::HashMap;
 use std::path::Path;
 
+pub trait IdLookup {
+    fn data_to_id(&mut self, key: &[String]) -> u64;
+    fn id_to_data(&self, key: u64) -> &[String];
+}
+
 /**
  * Stores information about individual stack frames.
  */

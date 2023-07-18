@@ -1,4 +1,4 @@
-use crate::debugger::callstack::StackFrameInfo;
+use crate::debugger::lookup::StackFrameInfo;
 use backtrace::BacktraceFrame;
 /**
  * Represents a group of `ProgramNodes` associated with an operation.

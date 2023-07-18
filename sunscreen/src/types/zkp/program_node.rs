@@ -276,7 +276,7 @@ where
  */
 pub trait ConstrainCmp<Rhs> {
     /**
-     * Constrain that this value is less than or equal than the RHS.
+     * Constrain that this value is less than or equal to the RHS.
      *
      * # Remarks
      * The number of bits is the maximum number of bits required to
@@ -290,7 +290,7 @@ pub trait ConstrainCmp<Rhs> {
     fn constrain_le_bounded(self, rhs: Rhs, bits: usize);
 
     /**
-     * Constrain that this value is less than or equal than the RHS.
+     * Constrain that this value is less than the RHS.
      *
      * # Remarks
      * The number of bits is the maximum number of bits required to
@@ -304,7 +304,7 @@ pub trait ConstrainCmp<Rhs> {
     fn constrain_lt_bounded(self, rhs: Rhs, bits: usize);
 
     /**
-     * Constrain that this value is less than or equal than the RHS.
+     * Constrain that this value is greater than or equal to the RHS.
      *
      * # Remarks
      * The number of bits is the maximum number of bits required to
@@ -318,7 +318,7 @@ pub trait ConstrainCmp<Rhs> {
     fn constrain_ge_bounded(self, rhs: Rhs, bits: usize);
 
     /**
-     * Constrain that this value is less than or equal than the RHS.
+     * Constrain that this value is greater than the RHS.
      *
      * # Remarks
      * The number of bits is the maximum number of bits required to

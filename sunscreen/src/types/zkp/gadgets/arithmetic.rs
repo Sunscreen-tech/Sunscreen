@@ -82,7 +82,7 @@ impl Gadget for SignedModulus {
         2
     }
 
-    fn compute_inputs(
+    fn compute_hidden_inputs(
         &self,
         gadget_inputs: &[sunscreen_zkp_backend::BigInt],
     ) -> ZkpResult<Vec<sunscreen_zkp_backend::BigInt>> {
@@ -144,7 +144,7 @@ impl Inverse {
 }
 
 impl Gadget for Inverse {
-    fn compute_inputs(&self, gadget_inputs: &[BigInt]) -> ZkpResult<Vec<BigInt>> {
+    fn compute_hidden_inputs(&self, gadget_inputs: &[BigInt]) -> ZkpResult<Vec<BigInt>> {
         let x = gadget_inputs[0];
 
         if x == BigInt::ZERO {
@@ -193,14 +193,14 @@ mod tests {
     use super::*;
 
     #[test]
-    fn compute_inputs_is_correct() {
+    fn compute_hidden_inputs_is_correct() {
         let m = BigInt::from(22u32);
         let field_modulus = <BulletproofsBackend as ZkpBackend>::Field::FIELD_MODULUS;
 
         let gadget = SignedModulus::new(field_modulus, 16);
 
         let test_case = |x: BigInt| {
-            let outputs = gadget.compute_inputs(&[x, m]).unwrap();
+            let outputs = gadget.compute_hidden_inputs(&[x, m]).unwrap();
 
             let q = outputs[0];
             let r = outputs[1];
@@ -250,7 +250,7 @@ mod tests {
             .compile()
             .unwrap();
 
-        let runtime = Runtime::new_zkp(&BulletproofsBackend::new()).unwrap();
+        let runtime = Runtime::new_zkp(BulletproofsBackend::new()).unwrap();
 
         let prog = app.get_zkp_program(div_rem).unwrap();
 
@@ -259,14 +259,14 @@ mod tests {
         let test_case = |x: i64, m: i64, expected_q: i64, expected_r: i64, expect_success: bool| {
             let result = runtime.prove(
                 prog,
-                vec![],
-                vec![],
                 vec![
                     BpField::from(x),
                     BpField::from(m),
                     BpField::from(expected_q),
                     BpField::from(expected_r),
                 ],
+                vec![],
+                vec![],
             );
 
             let proof = if expect_success {

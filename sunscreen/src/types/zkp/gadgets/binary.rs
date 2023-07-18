@@ -26,7 +26,7 @@ impl ToUInt {
 }
 
 impl Gadget for ToUInt {
-    fn compute_inputs(&self, gadget_inputs: &[BigInt]) -> ZkpResult<Vec<BigInt>> {
+    fn compute_hidden_inputs(&self, gadget_inputs: &[BigInt]) -> ZkpResult<Vec<BigInt>> {
         let val = gadget_inputs[0];
 
         if self.n == 0 {
@@ -112,7 +112,7 @@ impl Gadget for ToUInt {
 pub struct AssertBinary;
 
 impl Gadget for AssertBinary {
-    fn compute_inputs(&self, gadget_inputs: &[BigInt]) -> ZkpResult<Vec<BigInt>> {
+    fn compute_hidden_inputs(&self, gadget_inputs: &[BigInt]) -> ZkpResult<Vec<BigInt>> {
         let val = gadget_inputs[0];
 
         if val != BigInt::ONE && val != BigInt::ZERO {
@@ -177,14 +177,14 @@ mod tests {
             .compile()
             .unwrap();
 
-        let runtime = Runtime::new_zkp(&BulletproofsBackend::new()).unwrap();
+        let runtime = Runtime::new_zkp(BulletproofsBackend::new()).unwrap();
 
         let prog = app.get_zkp_program(test).unwrap();
 
         type BPField = Field<<BulletproofsBackend as ZkpBackend>::Field>;
 
         let test_proof = |x: u8, expect_pass: bool| {
-            let result = runtime.prove(prog, vec![], vec![], vec![BPField::from(x)]);
+            let result = runtime.prove(prog, vec![BPField::from(x)], vec![], vec![]);
 
             let proof = if expect_pass {
                 result.unwrap()
@@ -221,14 +221,14 @@ mod tests {
             .compile()
             .unwrap();
 
-        let runtime = Runtime::new_zkp(&BulletproofsBackend::new()).unwrap();
+        let runtime = Runtime::new_zkp(BulletproofsBackend::new()).unwrap();
 
         let prog = app.get_zkp_program(test).unwrap();
 
         type BPField = Field<<BulletproofsBackend as ZkpBackend>::Field>;
 
         let proof = runtime
-            .prove(prog, vec![], vec![], vec![BPField::from(42u8)])
+            .prove(prog, vec![BPField::from(42u8)], vec![], vec![])
             .unwrap();
 
         runtime

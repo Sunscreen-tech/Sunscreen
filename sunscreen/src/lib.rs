@@ -7,33 +7,31 @@
 //! # Examples
 //! This example is further annotated in `examples/simple_multiply`.
 //! ```
-//! # use sunscreen::{fhe_program, Compiler, types::{bfv::Signed, Cipher}, PlainModulusConstraint, Params, FheRuntime};
-//!
+//! # use sunscreen::{fhe_program, types::{bfv::Signed, Cipher}, FheProgramFnExt, Result};
 //! #[fhe_program(scheme = "bfv")]
 //! fn simple_multiply(a: Cipher<Signed>, b: Cipher<Signed>) -> Cipher<Signed> {
 //!     a * b
 //! }
 //!
-//! fn main() {
-//!   let app = Compiler::new()
-//!       .fhe_program(simple_multiply)
-//!       .plain_modulus_constraint(PlainModulusConstraint::Raw(600))
-//!       .additional_noise_budget(5)
-//!       .compile()
-//!       .unwrap();
+//! fn main() -> Result<()> {
+//!     let multiply_program = simple_multiply.compile()?;
+//!     let runtime = simple_multiply.runtime()?;
 //!
-//!   let runtime = FheRuntime::new(app.params()).unwrap();
+//!     let (public_key, private_key) = runtime.generate_keys()?;
 //!
-//!   let (public_key, private_key) = runtime.generate_keys().unwrap();
+//!     let a = runtime.encrypt(Signed::from(15), &public_key)?;
+//!     let b = runtime.encrypt(Signed::from(5), &public_key)?;
 //!
-//!   let a = runtime.encrypt(Signed::from(15), &public_key).unwrap();
-//!   let b = runtime.encrypt(Signed::from(5), &public_key).unwrap();
+//!     let results = runtime.run(
+//!         &multiply_program,
+//!         vec![a, b],
+//!         &public_key
+//!     )?;
 //!
-//!   let results = runtime.run(app.get_fhe_program(simple_multiply).unwrap(), vec![a, b], &public_key).unwrap();
+//!     let c: Signed = runtime.decrypt(&results[0], &private_key)?;
 //!
-//!   let c: Signed = runtime.decrypt(&results[0], &private_key).unwrap();
-//!
-//!   assert_eq!(c, 75.into());
+//!     assert_eq!(c, 75.into());
+//!     Ok(())
 //! }
 //! ```
 //!
@@ -73,7 +71,7 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::marker::PhantomData;
 
-pub use compiler::{Compiler, FheProgramFn, GenericCompiler};
+pub use compiler::{Compiler, FheProgramFn, FheProgramFnExt, GenericCompiler};
 pub use error::{Error, Result};
 pub use params::PlainModulusConstraint;
 pub use seal_fhe::Plaintext as SealPlaintext;
@@ -82,17 +80,19 @@ pub use sunscreen_fhe_program::{SchemeType, SecurityLevel};
 pub use sunscreen_runtime::{
     CallSignature, Ciphertext, CompiledFheProgram, Error as RuntimeError, FheProgramInput,
     FheProgramInputTrait, FheProgramMetadata, FheRuntime, FheZkpRuntime, InnerCiphertext,
-    InnerPlaintext, Params, Plaintext, PrivateKey, PublicKey, RequiredKeys, Runtime, WithContext,
-    ZkpProgramInput, ZkpRuntime,
+    InnerPlaintext, Params, Plaintext, PrivateKey, ProofBuilder, PublicKey, RequiredKeys, Runtime,
+    VerificationBuilder, WithContext, ZkpProgramInput, ZkpRuntime,
 };
 #[cfg(feature = "bulletproofs")]
-pub use sunscreen_zkp_backend::bulletproofs::{BulletproofsBackend, BulletproofsR1CSProof};
-pub use sunscreen_zkp_backend::{Error as ZkpError, FieldSpec, Result as ZkpResult, ZkpBackend};
-pub use zkp::ZkpProgramFn;
+pub use sunscreen_zkp_backend::bulletproofs;
+pub use sunscreen_zkp_backend::{
+    Error as ZkpError, FieldSpec, Proof, Result as ZkpResult, ZkpBackend,
+};
 pub use zkp::{
     invoke_gadget, with_zkp_ctx, ZkpContext, ZkpContextOps, ZkpData, ZkpFrontendCompilation,
     CURRENT_ZKP_CTX,
 };
+pub use zkp::{ZkpProgramFn, ZkpProgramFnExt};
 
 #[derive(Clone)]
 /**
@@ -142,7 +142,7 @@ where
      * These parameters were chosen during compilation.
      *
      * # Remarks
-     * If no [`fhe_program`] was specified, this function returns [`None`].
+     * If no [`fhe_program`] was specified, this function panics.
      */
     pub fn params(&self) -> &Params {
         &self.fhe_programs.values().next().unwrap().metadata.params
@@ -186,6 +186,18 @@ where
     pub fn get_fhe_programs(&self) -> impl Iterator<Item = (&String, &CompiledFheProgram)> {
         self.fhe_programs.iter()
     }
+
+    /// Take ownership of a compiled program with the given name, removing it from this
+    /// `Application`.
+    ///
+    /// You probably don't need this function, since runtimes can operate on borrowed
+    /// programs. See [`Self::get_fhe_program`] instead.
+    fn take_fhe_program<N>(&mut self, name: N) -> Option<CompiledFheProgram>
+    where
+        N: AsRef<str>,
+    {
+        self.fhe_programs.remove(name.as_ref())
+    }
 }
 
 impl<T> Application<T>
@@ -208,6 +220,18 @@ where
      */
     pub fn get_zkp_programs(&self) -> impl Iterator<Item = (&String, &CompiledZkpProgram)> {
         self.zkp_programs.iter()
+    }
+
+    /// Take ownership of a compiled program with the given name, removing it from this
+    /// `Application`.
+    ///
+    /// You probably don't need this function, since runtimes can operate on borrowed
+    /// programs. See [`Self::get_zkp_program`] instead.
+    fn take_zkp_program<N>(&mut self, name: N) -> Option<CompiledZkpProgram>
+    where
+        N: AsRef<str>,
+    {
+        self.zkp_programs.remove(name.as_ref())
     }
 }
 

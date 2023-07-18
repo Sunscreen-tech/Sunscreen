@@ -2,7 +2,6 @@ use std::marker::PhantomData;
 
 use subtle::{Choice, ConditionallySelectable};
 use sunscreen_compiler_macros::TypeName;
-use sunscreen_runtime::ZkpProgramInputTrait;
 use sunscreen_zkp_backend::{BigInt, FieldSpec};
 
 use crate::{
@@ -36,6 +35,14 @@ pub struct Field<F: FieldSpec> {
 
     _phantom: PhantomData<F>,
 }
+
+#[cfg(feature = "bulletproofs")]
+/// A convenient type alias for the `Field` of the bulletproofs backend.
+///
+/// This is equivalent to `Field::<BulletproofsBackend as ZkpBackend>::Field`, or
+/// [`Field::<Scalar>`].
+pub type BulletproofsField =
+    Field<<sunscreen_zkp_backend::bulletproofs::BulletproofsBackend as sunscreen_zkp_backend::ZkpBackend>::Field>;
 
 // Can't #[derive()] due to PhantomData.
 impl<F: FieldSpec> Copy for Field<F> {}
@@ -147,9 +154,6 @@ impl<F: FieldSpec> ToNativeFields for Field<F> {
         vec![self.val]
     }
 }
-
-impl<F: FieldSpec> ZkpType for Field<F> {}
-impl<F: FieldSpec> ZkpProgramInputTrait for Field<F> {}
 
 impl<F: FieldSpec> AddVar for Field<F> {
     fn add(lhs: ProgramNode<Self>, rhs: ProgramNode<Self>) -> ProgramNode<Self> {
@@ -444,7 +448,7 @@ mod tests {
             .compile()
             .unwrap();
 
-        let runtime = Runtime::new_zkp(&BulletproofsBackend::new()).unwrap();
+        let runtime = Runtime::new_zkp(BulletproofsBackend::new()).unwrap();
 
         let program = app.get_zkp_program(le).unwrap();
 
@@ -453,9 +457,9 @@ mod tests {
 
             let result = runtime.prove(
                 program,
-                vec![],
-                vec![],
                 vec![BpField::from(x), BpField::from(y)],
+                vec![],
+                vec![],
             );
 
             let proof = if expect_pass {
@@ -493,7 +497,7 @@ mod tests {
             .compile()
             .unwrap();
 
-        let runtime = Runtime::new_zkp(&BulletproofsBackend::new()).unwrap();
+        let runtime = Runtime::new_zkp(BulletproofsBackend::new()).unwrap();
 
         let program = app.get_zkp_program(le).unwrap();
 
@@ -502,9 +506,9 @@ mod tests {
 
             let result = runtime.prove(
                 program,
-                vec![],
-                vec![],
                 vec![BpField::from(x), BpField::from(y)],
+                vec![],
+                vec![],
             );
 
             let proof = if expect_pass {
@@ -542,7 +546,7 @@ mod tests {
             .compile()
             .unwrap();
 
-        let runtime = Runtime::new_zkp(&BulletproofsBackend::new()).unwrap();
+        let runtime = Runtime::new_zkp(BulletproofsBackend::new()).unwrap();
 
         let program = app.get_zkp_program(le).unwrap();
 
@@ -551,9 +555,9 @@ mod tests {
 
             let result = runtime.prove(
                 program,
-                vec![],
-                vec![],
                 vec![BpField::from(x), BpField::from(y)],
+                vec![],
+                vec![],
             );
 
             let proof = if expect_pass {
@@ -591,7 +595,7 @@ mod tests {
             .compile()
             .unwrap();
 
-        let runtime = Runtime::new_zkp(&BulletproofsBackend::new()).unwrap();
+        let runtime = Runtime::new_zkp(BulletproofsBackend::new()).unwrap();
 
         let program = app.get_zkp_program(le).unwrap();
 
@@ -600,9 +604,9 @@ mod tests {
 
             let result = runtime.prove(
                 program,
-                vec![],
-                vec![],
                 vec![BpField::from(x), BpField::from(y)],
+                vec![],
+                vec![],
             );
 
             let proof = if expect_pass {

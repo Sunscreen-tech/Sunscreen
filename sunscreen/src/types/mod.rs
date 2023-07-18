@@ -136,8 +136,9 @@ where
     }
 }
 
-/// Creates new FHE variables from literals. Note that literals can be used directly in
-/// arithmetic operations with ciphertexts:
+/// Creates new FHE variables from literals.
+///
+/// Note that literals can be used directly in arithmetic operations with ciphertexts:
 ///
 /// ```
 /// # use sunscreen::{fhe_program, types::{Cipher, bfv::Signed}};

@@ -42,26 +42,10 @@ jobs:
       run: cargo fmt --check
     # Build and run the tests
     - name: Build and run tests
-      run: cargo test --verbose --release
-    # Run our non-interactive examples and assert the complete without error
-    - name: Verify examples (amm)
-      run: cargo run --release --bin amm
-    - name: Verify examples (bigint)
-      run: cargo run --release --bin bigint
-    - name: Verify examples (chi_sq)
-      run: cargo run --release --bin chi_sq
-    - name: Verify examples (dot_prod)
-      run: cargo run --release --bin dot_prod
-    - name: Verify examples (mean_variance)
-      run: cargo run --release --bin mean_variance
-    - name: Verify examples (ordering_zkp)
-      run: cargo run --release --bin ordering_zkp
-    - name: Verify examples (pir)
-      run: cargo run --release --bin pir
-    - name: Verify examples (simple_multiply)
-      run: cargo run --release --bin simple_multiply
-    - name: Verify examples (sudoku_zkp)
-      run: cargo run --release --bin sudoku_zkp
+      run: cargo test --workspace --verbose --release
+    - name: Verify examples outside of workspace (allowlist_zkp)
+      run: cargo test --workspace --verbose
+      working-directory: ./examples/allowlist_zkp
     - name: Build sunscreen and bincode
       run: cargo build --release --package sunscreen --package bincode
     - name: Build mdBook

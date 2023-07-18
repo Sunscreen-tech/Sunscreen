@@ -314,7 +314,7 @@ impl BulletproofsCircuit {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 /**
  * A Bulletproofs backend.
  */
@@ -526,7 +526,7 @@ fn try_uint_to_scalar<const N: usize>(x: &UInt<N>) -> Result<Scalar> {
     scalar.ok_or_else(|| Error::out_of_range(&x.to_string()))
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Copy, Clone)]
 /// The specification for a field in the Bulletproofs proof system.
 pub struct BulletproofsFieldSpec {}
 

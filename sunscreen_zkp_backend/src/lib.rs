@@ -66,7 +66,7 @@ compile_error!("This crate currently requires a little endian target architectur
  *
  * We instead ask the prover to simply provide the binary decomposition
  * and prove that it's correct. To do this, we create a gadget. Its
- * [`compute_inputs`](Gadget::compute_inputs) method directly computes the
+ * [`compute_hidden_inputs`](Gadget::compute_hidden_inputs) method directly computes the
  * decomposition with shifting and masking. Then, the
  * [`gen_circuit`](Gadget::gen_circuit) method defined a circuit that proves
  * the following:
@@ -106,7 +106,7 @@ pub trait Gadget: Any + Send + Sync {
      *
      * Implementors should ensure this function runs in constant time.
      */
-    fn compute_inputs(&self, gadget_inputs: &[BigInt]) -> Result<Vec<BigInt>>;
+    fn compute_hidden_inputs(&self, gadget_inputs: &[BigInt]) -> Result<Vec<BigInt>>;
 
     /**
      * Returns the expected number of gadget inputs.
@@ -393,9 +393,9 @@ pub trait ZkpBackend {
     fn jit_prover(
         &self,
         prog: &CompiledZkpProgram,
-        constant_inputs: &[BigInt],
-        public_inputs: &[BigInt],
         private_inputs: &[BigInt],
+        public_inputs: &[BigInt],
+        constant_inputs: &[BigInt],
     ) -> Result<ExecutableZkpProgram>;
 
     /**
@@ -410,8 +410,8 @@ pub trait ZkpBackend {
     fn jit_verifier(
         &self,
         prog: &CompiledZkpProgram,
-        constant_inputs: &[BigInt],
         public_inputs: &[BigInt],
+        constant_inputs: &[BigInt],
     ) -> Result<ExecutableZkpProgram>;
 }
 

@@ -1,6 +1,5 @@
 use petgraph::stable_graph::NodeIndex;
 use sunscreen_compiler_macros::TypeName;
-use sunscreen_runtime::ZkpProgramInputTrait;
 use sunscreen_zkp_backend::{BigInt, FieldSpec};
 
 use crate::{
@@ -9,7 +8,7 @@ use crate::{
     zkp::ZkpContextOps,
 };
 
-use super::{AddVar, Field, Mod, MulVar, NumFieldElements, ToNativeFields, ZkpType};
+use super::{AddVar, Field, Mod, MulVar, NumFieldElements, ToNativeFields};
 
 use crate as sunscreen;
 
@@ -51,8 +50,6 @@ impl<F: FieldSpec, const N: usize, const R: usize> ToNativeFields for RnsRingPol
     }
 }
 
-impl<F: FieldSpec, const N: usize, const R: usize> ZkpType for RnsRingPolynomial<F, N, R> {}
-
 /**
  * Returns the RNS residues for each coefficient. The coefficient index
  * is the leading dimension for efficient NTT transforms.
@@ -93,11 +90,6 @@ impl<F: FieldSpec, const N: usize, const R: usize> AddVar for RnsRingPolynomial<
 
         Self::coerce(&node_indices)
     }
-}
-
-impl<F: FieldSpec, const N: usize, const R: usize> ZkpProgramInputTrait
-    for RnsRingPolynomial<F, N, R>
-{
 }
 
 impl<F: FieldSpec, const N: usize, const R: usize> MulVar for RnsRingPolynomial<F, N, R> {
@@ -224,7 +216,7 @@ mod tests {
             .compile()
             .unwrap();
 
-        let runtime = Runtime::new_zkp(&BulletproofsBackend::new()).unwrap();
+        let runtime = Runtime::new_zkp(BulletproofsBackend::new()).unwrap();
 
         let program = app.get_zkp_program(add_poly).unwrap();
 
@@ -237,11 +229,11 @@ mod tests {
         ]);
 
         let proof = runtime
-            .prove(program, vec![a.clone(), a.clone()], vec![], vec![])
+            .prove(program, vec![], vec![], vec![a.clone(), a.clone()])
             .unwrap();
 
         runtime
-            .verify(program, &proof, vec![a.clone(), a.clone()], vec![])
+            .verify(program, &proof, vec![], vec![a.clone(), a.clone()])
             .unwrap();
 
         let b =
@@ -281,7 +273,7 @@ mod tests {
             .compile()
             .unwrap();
 
-        let runtime = Runtime::new_zkp(&BulletproofsBackend::new()).unwrap();
+        let runtime = Runtime::new_zkp(BulletproofsBackend::new()).unwrap();
 
         let program = app.get_zkp_program(add_poly).unwrap();
 
@@ -291,11 +283,11 @@ mod tests {
         let a = BpPoly::from([[1u8, 2, 3, 4, 5, 6, 7, 8], [9, 10, 11, 12, 13, 14, 15, 16]]);
 
         let proof = runtime
-            .prove(program, vec![a.clone(), a.clone()], vec![], vec![])
+            .prove(program, vec![], vec![], vec![a.clone(), a.clone()])
             .unwrap();
 
         runtime
-            .verify(program, &proof, vec![a.clone(), a.clone()], vec![])
+            .verify(program, &proof, vec![], vec![a.clone(), a.clone()])
             .unwrap();
 
         let b = BpPoly::from([[0u8, 2, 3, 4, 5, 6, 7, 8], [9, 10, 11, 12, 13, 14, 15, 16]]);
@@ -334,7 +326,7 @@ mod tests {
             .compile()
             .unwrap();
 
-        let runtime = Runtime::new_zkp(&BulletproofsBackend::new()).unwrap();
+        let runtime = Runtime::new_zkp(BulletproofsBackend::new()).unwrap();
 
         let program = app.get_zkp_program(scale_poly).unwrap();
 
@@ -353,9 +345,9 @@ mod tests {
         let const_args: Vec<ZkpProgramInput> = vec![a.into(), b.into()];
 
         let proof = runtime
-            .prove(program, const_args.clone(), vec![], vec![])
+            .prove(program, vec![], vec![], const_args.clone())
             .unwrap();
 
-        runtime.verify(program, &proof, const_args, vec![]).unwrap();
+        runtime.verify(program, &proof, vec![], const_args).unwrap();
     }
 }

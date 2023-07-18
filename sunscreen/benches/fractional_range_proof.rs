@@ -9,7 +9,7 @@ use sunscreen_zkp_backend::{bulletproofs::BulletproofsBackend, BigInt};
 
 type BPField = NativeField<<BulletproofsBackend as ZkpBackend>::Field>;
 
-fn to_field_element<F: BackendField>(
+fn to_field_element<F: FieldSpec>(
     bits: &[ProgramNode<NativeField<F>>],
     twos_complement: bool,
 ) -> ProgramNode<NativeField<F>> {
@@ -35,7 +35,7 @@ fn to_field_element<F: BackendField>(
     val
 }
 
-fn get_coeffs<F: BackendField>(
+fn get_coeffs<F: FieldSpec>(
     x: &[[ProgramNode<NativeField<F>>; 8]],
 ) -> Vec<ProgramNode<NativeField<F>>> {
     x.iter().map(|x| to_field_element(x, true)).collect()
@@ -84,7 +84,7 @@ fn unshield_tx_fractional_range_proof(_c: &mut Criterion) {
     /**
      * Proves the 0 < a <= b and a == c
      */
-    fn in_range<F: BackendField>(
+    fn in_range<F: FieldSpec>(
         balance: [[NativeField<F>; 8]; 64],
         #[constant] unshielded: NativeField<F>,
     ) {
@@ -157,7 +157,7 @@ fn private_tx_fractional_range_proof(_c: &mut Criterion) {
     /**
      * Proves the 0 < a <= b and a == c
      */
-    fn in_range<F: BackendField>(
+    fn in_range<F: FieldSpec>(
         a: [[NativeField<F>; 8]; 64],
         b: [[NativeField<F>; 8]; 64],
         c: [[NativeField<F>; 8]; 64],
@@ -232,7 +232,7 @@ fn mean_variance_fractional_range_proof(_c: &mut Criterion) {
     /**
      * Proves the 0 < a <= b and a == c
      */
-    fn in_range<F: BackendField>(a: [[NativeField<F>; 8]; 64], b: [[NativeField<F>; 8]; 64]) {
+    fn in_range<F: FieldSpec>(a: [[NativeField<F>; 8]; 64], b: [[NativeField<F>; 8]; 64]) {
         println!("Running mean_variance_fractional_range_proof...");
 
         let a_coeffs = get_coeffs(&a);
@@ -295,7 +295,7 @@ fn chi_sq_fractional_range_proof(_c: &mut Criterion) {
     /**
      * Proves the 0 < a <= b and a == c
      */
-    fn in_range<F: BackendField>(
+    fn in_range<F: FieldSpec>(
         a_0: [[NativeField<F>; 8]; 64],
         a_1: [[NativeField<F>; 8]; 64],
         a_2: [[NativeField<F>; 8]; 64],

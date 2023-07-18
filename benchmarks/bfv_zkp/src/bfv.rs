@@ -9,14 +9,14 @@ use ark_ff::{BigInt, BigInteger, Field, Fp, FpConfig, MontBackend, MontConfig, P
 use ark_poly::univariate::DensePolynomial;
 use sunscreen::{
     types::zkp::{Mod, NativeField, RnsRingPolynomial, Scale, ToBinary, ToResidues},
-    zkp_program, Application, BackendField, Compiler, Runtime, ZkpApplication, ZkpBackend,
+    zkp_program, Application, FieldSpec, Compiler, Runtime, ZkpApplication, ZkpBackend,
     ZkpProgramInput, ZkpRuntime,
 };
 use sunscreen_zkp_backend::{bulletproofs::BulletproofsBackend, BigInt as ZkpBigInt, Proof};
 
 use crate::poly_ring::PolyRing;
 
-const POLY_DEGREE: usize = 4;
+const POLY_DEGREE: usize = 1024;
 
 #[derive(MontConfig)]
 #[modulus = "132120577"]
@@ -202,7 +202,7 @@ fn div_round_bigint<const N: usize>(a: BigInt<N>, b: BigInt<N>) -> BigInt<N> {
 type BfvPoly<F> = RnsRingPolynomial<F, POLY_DEGREE, 1>;
 
 #[zkp_program]
-fn prove_enc<F: BackendField>(
+fn prove_enc<F: FieldSpec>(
     m: BfvPoly<F>,
     e_1: BfvPoly<F>,
     e_2: BfvPoly<F>,

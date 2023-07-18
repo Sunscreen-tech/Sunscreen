@@ -1,13 +1,13 @@
 use sunscreen::{types::zkp::NativeField, zkp_program, Compiler, Runtime};
 use sunscreen_runtime::ZkpProgramInput;
-use sunscreen_zkp_backend::{bulletproofs::BulletproofsBackend, BackendField, ZkpBackend};
+use sunscreen_zkp_backend::{bulletproofs::BulletproofsBackend, FieldSpec, ZkpBackend};
 
 type BPField = NativeField<<BulletproofsBackend as ZkpBackend>::Field>;
 
 #[test]
 fn can_add_and_mul_native_fields() {
     #[zkp_program]
-    fn add_mul<F: BackendField>(a: NativeField<F>, b: NativeField<F>, c: NativeField<F>) {
+    fn add_mul<F: FieldSpec>(a: NativeField<F>, b: NativeField<F>, c: NativeField<F>) {
         let x = a * b + c;
 
         x.constrain_eq(NativeField::from(42u32))
@@ -43,7 +43,7 @@ fn get_input_mismatch_on_incorrect_args() {
     use sunscreen_zkp_backend::Error as ZkpError;
 
     #[zkp_program]
-    fn add_mul<F: BackendField>(a: NativeField<F>, b: NativeField<F>) {
+    fn add_mul<F: FieldSpec>(a: NativeField<F>, b: NativeField<F>) {
         let _ = a + b * a;
     }
 
@@ -68,7 +68,7 @@ fn get_input_mismatch_on_incorrect_args() {
 #[test]
 fn can_use_public_inputs() {
     #[zkp_program]
-    fn add_mul<F: BackendField>(#[public] a: NativeField<F>, b: NativeField<F>, c: NativeField<F>) {
+    fn add_mul<F: FieldSpec>(#[public] a: NativeField<F>, b: NativeField<F>, c: NativeField<F>) {
         let x = a * b + c;
 
         x.constrain_eq(NativeField::from(42u32))
@@ -101,7 +101,7 @@ fn can_use_public_inputs() {
 #[test]
 fn can_use_constant_inputs() {
     #[zkp_program]
-    fn add_mul<F: BackendField>(
+    fn add_mul<F: FieldSpec>(
         #[constant] a: NativeField<F>,
         b: NativeField<F>,
         c: NativeField<F>,
@@ -138,7 +138,7 @@ fn can_use_constant_inputs() {
 #[test]
 fn can_declare_array_inputs() {
     #[zkp_program]
-    fn in_range<F: BackendField>(a: [[NativeField<F>; 9]; 64]) {
+    fn in_range<F: FieldSpec>(a: [[NativeField<F>; 9]; 64]) {
         for (i, a_i) in a.iter().enumerate() {
             for (j, a_i_j) in a_i.iter().enumerate() {
                 a_i_j.constrain_eq(NativeField::from((i + j) as u64));

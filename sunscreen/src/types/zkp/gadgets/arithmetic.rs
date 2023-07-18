@@ -184,7 +184,7 @@ impl Gadget for Inverse {
 mod tests {
     use sunscreen_compiler_macros::zkp_program;
     use sunscreen_runtime::{Runtime, ZkpProgramInput};
-    use sunscreen_zkp_backend::BackendField;
+    use sunscreen_zkp_backend::FieldSpec;
     use sunscreen_zkp_backend::{bulletproofs::BulletproofsBackend, ZkpBackend};
 
     use crate::types::zkp::NativeField;
@@ -226,7 +226,7 @@ mod tests {
     #[test]
     fn modulus_gadget_works() {
         #[zkp_program]
-        fn div_rem<F: BackendField>(
+        fn div_rem<F: FieldSpec>(
             x: NativeField<F>,
             m: NativeField<F>,
             expected_q: NativeField<F>,

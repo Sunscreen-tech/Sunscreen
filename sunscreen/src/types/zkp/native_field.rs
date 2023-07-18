@@ -3,7 +3,7 @@ use std::marker::PhantomData;
 use subtle::{Choice, ConditionallySelectable};
 use sunscreen_compiler_macros::TypeName;
 use sunscreen_runtime::ZkpProgramInputTrait;
-use sunscreen_zkp_backend::{BackendField, BigInt};
+use sunscreen_zkp_backend::{FieldSpec, BigInt};
 
 use crate::{
     invoke_gadget,
@@ -28,7 +28,7 @@ use super::{gadgets::SignedModulus, ConstrainCmpVarVar, SubVar};
  * The native field type in the underlying backend proof system. For
  * example, in Bulletproofs, this is [`Scalar`](https://docs.rs/curve25519-dalek-ng/4.1.1/curve25519_dalek_ng/scalar/struct.Scalar.html).
  */
-pub struct NativeField<F: BackendField> {
+pub struct NativeField<F: FieldSpec> {
     /**
      * The native field's value.
      */
@@ -38,9 +38,9 @@ pub struct NativeField<F: BackendField> {
 }
 
 // Can't #[derive()] due to PhantomData.
-impl<F: BackendField> Copy for NativeField<F> {}
+impl<F: FieldSpec> Copy for NativeField<F> {}
 
-impl<F: BackendField> NativeField<F> {
+impl<F: FieldSpec> NativeField<F> {
     /**
      * Converts a big-endian hex string into a native field.
      */
@@ -52,7 +52,7 @@ impl<F: BackendField> NativeField<F> {
     }
 }
 
-impl<F: BackendField> From<BigInt> for NativeField<F> {
+impl<F: FieldSpec> From<BigInt> for NativeField<F> {
     fn from(val: BigInt) -> Self {
         Self {
             val,
@@ -61,25 +61,25 @@ impl<F: BackendField> From<BigInt> for NativeField<F> {
     }
 }
 
-impl<F: BackendField> From<u8> for NativeField<F> {
+impl<F: FieldSpec> From<u8> for NativeField<F> {
     fn from(x: u8) -> Self {
         (u64::from(x)).into()
     }
 }
 
-impl<F: BackendField> From<u16> for NativeField<F> {
+impl<F: FieldSpec> From<u16> for NativeField<F> {
     fn from(x: u16) -> Self {
         (u64::from(x)).into()
     }
 }
 
-impl<F: BackendField> From<u32> for NativeField<F> {
+impl<F: FieldSpec> From<u32> for NativeField<F> {
     fn from(x: u32) -> Self {
         (u64::from(x)).into()
     }
 }
 
-impl<F: BackendField> From<u64> for NativeField<F> {
+impl<F: FieldSpec> From<u64> for NativeField<F> {
     fn from(x: u64) -> Self {
         assert!(F::FIELD_MODULUS != BigInt::ZERO);
 
@@ -92,25 +92,25 @@ impl<F: BackendField> From<u64> for NativeField<F> {
     }
 }
 
-impl<F: BackendField> From<i8> for NativeField<F> {
+impl<F: FieldSpec> From<i8> for NativeField<F> {
     fn from(x: i8) -> Self {
         (i64::from(x)).into()
     }
 }
 
-impl<F: BackendField> From<i16> for NativeField<F> {
+impl<F: FieldSpec> From<i16> for NativeField<F> {
     fn from(x: i16) -> Self {
         (i64::from(x)).into()
     }
 }
 
-impl<F: BackendField> From<i32> for NativeField<F> {
+impl<F: FieldSpec> From<i32> for NativeField<F> {
     fn from(x: i32) -> Self {
         (i64::from(x)).into()
     }
 }
 
-impl<F: BackendField> From<i64> for NativeField<F> {
+impl<F: FieldSpec> From<i64> for NativeField<F> {
     fn from(x: i64) -> Self {
         assert!(F::FIELD_MODULUS != BigInt::ZERO);
         assert_ne!(
@@ -138,20 +138,20 @@ impl<F: BackendField> From<i64> for NativeField<F> {
     }
 }
 
-impl<F: BackendField> NumFieldElements for NativeField<F> {
+impl<F: FieldSpec> NumFieldElements for NativeField<F> {
     const NUM_NATIVE_FIELD_ELEMENTS: usize = 1;
 }
 
-impl<F: BackendField> ToNativeFields for NativeField<F> {
+impl<F: FieldSpec> ToNativeFields for NativeField<F> {
     fn to_native_fields(&self) -> Vec<BigInt> {
         vec![self.val]
     }
 }
 
-impl<F: BackendField> ZkpType for NativeField<F> {}
-impl<F: BackendField> ZkpProgramInputTrait for NativeField<F> {}
+impl<F: FieldSpec> ZkpType for NativeField<F> {}
+impl<F: FieldSpec> ZkpProgramInputTrait for NativeField<F> {}
 
-impl<F: BackendField> AddVar for NativeField<F> {
+impl<F: FieldSpec> AddVar for NativeField<F> {
     fn add(lhs: ProgramNode<Self>, rhs: ProgramNode<Self>) -> ProgramNode<Self> {
         with_zkp_ctx(|ctx| {
             let o = ctx.add_addition(lhs.ids[0], rhs.ids[0]);
@@ -161,7 +161,7 @@ impl<F: BackendField> AddVar for NativeField<F> {
     }
 }
 
-impl<F: BackendField> SubVar for NativeField<F> {
+impl<F: FieldSpec> SubVar for NativeField<F> {
     fn sub(lhs: ProgramNode<Self>, rhs: ProgramNode<Self>) -> ProgramNode<Self> {
         with_zkp_ctx(|ctx| {
             let o = ctx.add_subtraction(lhs.ids[0], rhs.ids[0]);
@@ -171,7 +171,7 @@ impl<F: BackendField> SubVar for NativeField<F> {
     }
 }
 
-impl<F: BackendField> MulVar for NativeField<F> {
+impl<F: FieldSpec> MulVar for NativeField<F> {
     fn mul(lhs: ProgramNode<Self>, rhs: ProgramNode<Self>) -> ProgramNode<Self> {
         with_zkp_ctx(|ctx| {
             let o = ctx.add_multiplication(lhs.ids[0], rhs.ids[0]);
@@ -181,7 +181,7 @@ impl<F: BackendField> MulVar for NativeField<F> {
     }
 }
 
-impl<F: BackendField> NegVar for NativeField<F> {
+impl<F: FieldSpec> NegVar for NativeField<F> {
     fn neg(lhs: ProgramNode<Self>) -> ProgramNode<Self> {
         with_zkp_ctx(|ctx| {
             let o = ctx.add_negate(lhs.ids[0]);
@@ -191,7 +191,7 @@ impl<F: BackendField> NegVar for NativeField<F> {
     }
 }
 
-impl<F: BackendField> ConstrainEqVarVar for NativeField<F> {
+impl<F: FieldSpec> ConstrainEqVarVar for NativeField<F> {
     fn constrain_eq(lhs: ProgramNode<Self>, rhs: ProgramNode<Self>) -> ProgramNode<Self> {
         with_zkp_ctx(|ctx| {
             let sub = ctx.add_subtraction(lhs.ids[0], rhs.ids[0]);
@@ -203,7 +203,7 @@ impl<F: BackendField> ConstrainEqVarVar for NativeField<F> {
     }
 }
 
-impl<F: BackendField> ConstrainCmpVarVar for NativeField<F> {
+impl<F: FieldSpec> ConstrainCmpVarVar for NativeField<F> {
     fn constrain_le_bounded(lhs: ProgramNode<Self>, rhs: ProgramNode<Self>, bits: usize) {
         let diff = rhs - lhs;
 
@@ -229,7 +229,7 @@ impl<F: BackendField> ConstrainCmpVarVar for NativeField<F> {
     }
 }
 
-impl<F: BackendField> IntoProgramNode for NativeField<F> {
+impl<F: FieldSpec> IntoProgramNode for NativeField<F> {
     type Output = NativeField<F>;
 
     fn into_program_node(self) -> ProgramNode<Self> {
@@ -240,7 +240,7 @@ impl<F: BackendField> IntoProgramNode for NativeField<F> {
 /**
  * A trait for doing modular arithmetic.
  */
-pub trait Mod<F: BackendField>
+pub trait Mod<F: FieldSpec>
 where
     Self: ZkpType,
 {
@@ -277,7 +277,7 @@ where
     ) -> ProgramNode<Self>;
 }
 
-impl<F: BackendField> Mod<F> for NativeField<F> {
+impl<F: FieldSpec> Mod<F> for NativeField<F> {
     fn signed_reduce(
         lhs: ProgramNode<Self>,
         m: ProgramNode<NativeField<F>>,
@@ -295,7 +295,7 @@ impl<F: BackendField> Mod<F> for NativeField<F> {
 /**
  * Methods for decomposing values into binary.
  */
-pub trait ToBinary<F: BackendField> {
+pub trait ToBinary<F: FieldSpec> {
     /**
      * Decompose this value into unsigned N-bit binary. If the value
      * is too large, the proof will fail to validate.
@@ -303,7 +303,7 @@ pub trait ToBinary<F: BackendField> {
     fn to_unsigned<const N: usize>(&self) -> [ProgramNode<NativeField<F>>; N];
 }
 
-impl<F: BackendField> ToBinary<F> for ProgramNode<NativeField<F>> {
+impl<F: FieldSpec> ToBinary<F> for ProgramNode<NativeField<F>> {
     fn to_unsigned<const N: usize>(&self) -> [ProgramNode<NativeField<F>>; N] {
         let bits = invoke_gadget(ToUInt::new(N), self.ids);
 
@@ -393,7 +393,7 @@ mod tests {
         }
     }
 
-    impl BackendField for TestField {
+    impl FieldSpec for TestField {
         const FIELD_MODULUS: BigInt = BigInt::from_u32(7);
     }
 
@@ -429,7 +429,7 @@ mod tests {
     #[test]
     fn can_compare_le_bounded() {
         #[zkp_program]
-        fn le<F: BackendField>(x: NativeField<F>, y: NativeField<F>) {
+        fn le<F: FieldSpec>(x: NativeField<F>, y: NativeField<F>) {
             x.constrain_le_bounded(y, 16);
         }
 
@@ -478,7 +478,7 @@ mod tests {
     #[test]
     fn can_compare_lt_bounded() {
         #[zkp_program]
-        fn le<F: BackendField>(x: NativeField<F>, y: NativeField<F>) {
+        fn le<F: FieldSpec>(x: NativeField<F>, y: NativeField<F>) {
             x.constrain_lt_bounded(y, 16);
         }
 
@@ -527,7 +527,7 @@ mod tests {
     #[test]
     fn can_compare_ge_bounded() {
         #[zkp_program]
-        fn le<F: BackendField>(x: NativeField<F>, y: NativeField<F>) {
+        fn le<F: FieldSpec>(x: NativeField<F>, y: NativeField<F>) {
             x.constrain_ge_bounded(y, 16);
         }
 
@@ -576,7 +576,7 @@ mod tests {
     #[test]
     fn can_compare_gt_bounded() {
         #[zkp_program]
-        fn le<F: BackendField>(x: NativeField<F>, y: NativeField<F>) {
+        fn le<F: FieldSpec>(x: NativeField<F>, y: NativeField<F>) {
             x.constrain_gt_bounded(y, 16);
         }
 

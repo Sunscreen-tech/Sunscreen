@@ -1,10 +1,10 @@
 use sunscreen::{
     types::zkp::{ConstrainCmp, NativeField},
-    zkp_program, BackendField, BulletproofsBackend, Compiler, Error, ZkpBackend, ZkpRuntime,
+    zkp_program, FieldSpec, BulletproofsBackend, Compiler, Error, ZkpBackend, ZkpRuntime,
 };
 
 #[zkp_program]
-fn greater_than<F: BackendField>(a: NativeField<F>, #[constant] b: NativeField<F>) {
+fn greater_than<F: FieldSpec>(a: NativeField<F>, #[constant] b: NativeField<F>) {
     a.constrain_gt_bounded(b, 32)
 }
 

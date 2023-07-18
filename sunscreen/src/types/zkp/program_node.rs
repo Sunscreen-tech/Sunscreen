@@ -1,5 +1,5 @@
 use petgraph::stable_graph::NodeIndex;
-use sunscreen_zkp_backend::BackendField;
+use sunscreen_zkp_backend::FieldSpec;
 
 use std::{
     marker::PhantomData,
@@ -45,9 +45,9 @@ impl<T: ZkpType> std::fmt::Debug for ProgramNode<T> {
 }
 
 /// Convenience function to create a ZKP program node
-pub fn zkp_node<F: BackendField, L>(lit: L) -> ProgramNode<NativeField<F>>
+pub fn zkp_node<F: FieldSpec, L>(lit: L) -> ProgramNode<NativeField<F>>
 where
-    F: BackendField,
+    F: FieldSpec,
     NativeField<F>: From<L>,
 {
     NativeField::<F>::from(lit).into_program_node()

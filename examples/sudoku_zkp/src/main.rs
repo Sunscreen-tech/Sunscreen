@@ -1,9 +1,9 @@
 use sunscreen::{
-    types::zkp::NativeField, zkp_program, zkp_var, BackendField, BulletproofsBackend, Compiler,
-    Error, ZkpBackend, ZkpProgramInput, ZkpRuntime,
+    types::zkp::Field, zkp_program, zkp_var, BulletproofsBackend, Compiler, Error, FieldSpec,
+    ZkpBackend, ZkpProgramInput, ZkpRuntime,
 };
 
-type BPField = NativeField<<BulletproofsBackend as ZkpBackend>::Field>;
+type BPField = Field<<BulletproofsBackend as ZkpBackend>::Field>;
 
 fn main() -> Result<(), Error> {
     let app = Compiler::new()
@@ -51,9 +51,9 @@ fn main() -> Result<(), Error> {
 }
 
 #[zkp_program]
-fn sudoku_proof<F: BackendField>(
-    #[constant] constraints: [[NativeField<F>; 9]; 9],
-    board: [[NativeField<F>; 9]; 9],
+fn sudoku_proof<F: FieldSpec>(
+    #[constant] constraints: [[Field<F>; 9]; 9],
+    board: [[Field<F>; 9]; 9],
 ) {
     let zero = zkp_var!(0);
 

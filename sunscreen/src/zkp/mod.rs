@@ -1,7 +1,7 @@
 use petgraph::Graph;
 use sunscreen_runtime::CallSignature;
 use sunscreen_zkp_backend::{
-    BackendField, BigInt, CompiledZkpProgram, Gadget, Operation as JitOperation,
+    BigInt, CompiledZkpProgram, FieldSpec, Gadget, Operation as JitOperation,
 };
 
 use crate::Result;
@@ -15,7 +15,7 @@ use std::{any::Any, cell::RefCell};
 /**
  * An internal representation of a ZKP program specification.
  */
-pub trait ZkpProgramFn<F: BackendField> {
+pub trait ZkpProgramFn<F: FieldSpec> {
     /**
      * Create a circuit from this specification.
      */

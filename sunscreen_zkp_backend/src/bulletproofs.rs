@@ -16,8 +16,8 @@ use serde::{Deserialize, Serialize};
 use sunscreen_compiler_common::{forward_traverse, GraphQuery};
 
 use crate::{
-    exec::Operation, jit::jit_verifier, jit_prover, BackendField, BigInt, Error,
-    ExecutableZkpProgram, Proof, Result, ZkpBackend,
+    exec::Operation, jit::jit_verifier, jit_prover, BigInt, Error, ExecutableZkpProgram, FieldSpec,
+    Proof, Result, ZkpBackend,
 };
 
 #[derive(Clone)]
@@ -371,7 +371,7 @@ fn constraint_count(graph: &ExecutableZkpProgram) -> Result<usize> {
 }
 
 impl ZkpBackend for BulletproofsBackend {
-    type Field = Scalar;
+    type Field = BulletproofsFieldSpec;
 
     fn prove(&self, graph: &ExecutableZkpProgram, inputs: &[BigInt]) -> Result<Proof> {
         let expected_input_count = graph
@@ -475,7 +475,7 @@ impl ZkpBackend for BulletproofsBackend {
             .map(Scalar::try_from)
             .collect::<Result<Vec<Scalar>>>()?;
 
-        jit_prover::<Scalar>(prog, &constant_inputs, &public_inputs, &private_inputs)
+        jit_prover::<BulletproofsFieldSpec>(prog, &constant_inputs, &public_inputs, &private_inputs)
     }
 
     fn jit_verifier(
@@ -494,7 +494,7 @@ impl ZkpBackend for BulletproofsBackend {
             .map(Scalar::try_from)
             .collect::<Result<Vec<Scalar>>>()?;
 
-        jit_verifier(prog, &constant_inputs, &public_inputs)
+        jit_verifier::<BulletproofsFieldSpec>(prog, &constant_inputs, &public_inputs)
     }
 }
 
@@ -526,7 +526,13 @@ fn try_uint_to_scalar<const N: usize>(x: &UInt<N>) -> Result<Scalar> {
     scalar.ok_or_else(|| Error::out_of_range(&x.to_string()))
 }
 
-impl BackendField for Scalar {
+#[derive(Debug, Clone)]
+/// The specification for a field in the Bulletproofs proof system.
+pub struct BulletproofsFieldSpec {}
+
+impl FieldSpec for BulletproofsFieldSpec {
+    type BackendField = Scalar;
+
     // 2^252+27742317777372353535851937790883648493,
     const FIELD_MODULUS: BigInt = BigInt::from_words([
         6346243789798364141,
@@ -631,7 +637,7 @@ mod tests {
 
     #[test]
     fn barely_too_bit_u512_to_scalar_fails() {
-        let l = Scalar::FIELD_MODULUS;
+        let l = BulletproofsFieldSpec::FIELD_MODULUS;
 
         assert!(Scalar::try_from(l).is_err());
 

@@ -2,20 +2,20 @@ use std::time::Instant;
 
 use criterion::{criterion_group, criterion_main, Criterion};
 use sunscreen::{
-    types::zkp::{ConstrainCmp, IntoProgramNode, NativeField, ProgramNode},
+    types::zkp::{ConstrainCmp, Field, IntoProgramNode, ProgramNode},
     *,
 };
 use sunscreen_zkp_backend::{bulletproofs::BulletproofsBackend, BigInt};
 
-type BPField = NativeField<<BulletproofsBackend as ZkpBackend>::Field>;
+type BPField = Field<<BulletproofsBackend as ZkpBackend>::Field>;
 
 fn to_field_element<F: FieldSpec>(
-    bits: &[ProgramNode<NativeField<F>>],
+    bits: &[ProgramNode<Field<F>>],
     twos_complement: bool,
-) -> ProgramNode<NativeField<F>> {
+) -> ProgramNode<Field<F>> {
     let powers = (0..bits.len())
         .map(|x| {
-            let power = NativeField::<F>::from(BigInt::from(BigInt::ONE.shl_vartime(x)));
+            let power = Field::<F>::from(BigInt::from(BigInt::ONE.shl_vartime(x)));
 
             let msb = bits.len() - 1;
 
@@ -26,7 +26,7 @@ fn to_field_element<F: FieldSpec>(
             }
         })
         .collect::<Vec<_>>();
-    let mut val = NativeField::from(0u8).into_program_node();
+    let mut val = Field::from(0u8).into_program_node();
 
     for (i, bit) in bits.iter().enumerate() {
         val = val + *bit * powers[i];
@@ -35,9 +35,7 @@ fn to_field_element<F: FieldSpec>(
     val
 }
 
-fn get_coeffs<F: FieldSpec>(
-    x: &[[ProgramNode<NativeField<F>>; 8]],
-) -> Vec<ProgramNode<NativeField<F>>> {
+fn get_coeffs<F: FieldSpec>(x: &[[ProgramNode<Field<F>>; 8]]) -> Vec<ProgramNode<Field<F>>> {
     x.iter().map(|x| to_field_element(x, true)).collect()
 }
 
@@ -48,7 +46,7 @@ fn encode(val: i8) -> [BPField; 8] {
     let as_u8 = val.to_le_bytes()[0];
 
     (0..8)
-        .map(|x| NativeField::from((as_u8 >> x) & 0x1))
+        .map(|x| Field::from((as_u8 >> x) & 0x1))
         .collect::<Vec<_>>()
         .try_into()
         .unwrap()
@@ -84,10 +82,7 @@ fn unshield_tx_fractional_range_proof(_c: &mut Criterion) {
     /**
      * Proves the 0 < a <= b and a == c
      */
-    fn in_range<F: FieldSpec>(
-        balance: [[NativeField<F>; 8]; 64],
-        #[constant] unshielded: NativeField<F>,
-    ) {
+    fn in_range<F: FieldSpec>(balance: [[Field<F>; 8]; 64], #[constant] unshielded: Field<F>) {
         println!("Running unshield proof...");
 
         let balance_coeffs = get_coeffs(&balance);
@@ -158,9 +153,9 @@ fn private_tx_fractional_range_proof(_c: &mut Criterion) {
      * Proves the 0 < a <= b and a == c
      */
     fn in_range<F: FieldSpec>(
-        a: [[NativeField<F>; 8]; 64],
-        b: [[NativeField<F>; 8]; 64],
-        c: [[NativeField<F>; 8]; 64],
+        a: [[Field<F>; 8]; 64],
+        b: [[Field<F>; 8]; 64],
+        c: [[Field<F>; 8]; 64],
     ) {
         println!("Running private_tx_fractional_range_proof...");
 
@@ -172,7 +167,7 @@ fn private_tx_fractional_range_proof(_c: &mut Criterion) {
         let b_val = to_field_element(&b_coeffs, false);
         let c_val = to_field_element(&c_coeffs, false);
 
-        a_val.constrain_gt_bounded(NativeField::<F>::from(0).into_program_node(), 8);
+        a_val.constrain_gt_bounded(Field::<F>::from(0).into_program_node(), 8);
         a_val.constrain_le_bounded(b_val, 8);
         a_val.constrain_eq(c_val);
     }
@@ -232,7 +227,7 @@ fn mean_variance_fractional_range_proof(_c: &mut Criterion) {
     /**
      * Proves the 0 < a <= b and a == c
      */
-    fn in_range<F: FieldSpec>(a: [[NativeField<F>; 8]; 64], b: [[NativeField<F>; 8]; 64]) {
+    fn in_range<F: FieldSpec>(a: [[Field<F>; 8]; 64], b: [[Field<F>; 8]; 64]) {
         println!("Running mean_variance_fractional_range_proof...");
 
         let a_coeffs = get_coeffs(&a);
@@ -241,7 +236,7 @@ fn mean_variance_fractional_range_proof(_c: &mut Criterion) {
         let a_val = to_field_element(&a_coeffs, false);
         let b_val = to_field_element(&b_coeffs, false);
 
-        a_val.constrain_ge_bounded(NativeField::<F>::from(0).into_program_node(), 8);
+        a_val.constrain_ge_bounded(Field::<F>::from(0).into_program_node(), 8);
         a_val.constrain_le_bounded(b_val, 8);
     }
 
@@ -296,10 +291,10 @@ fn chi_sq_fractional_range_proof(_c: &mut Criterion) {
      * Proves the 0 < a <= b and a == c
      */
     fn in_range<F: FieldSpec>(
-        a_0: [[NativeField<F>; 8]; 64],
-        a_1: [[NativeField<F>; 8]; 64],
-        a_2: [[NativeField<F>; 8]; 64],
-        #[constant] n: NativeField<F>,
+        a_0: [[Field<F>; 8]; 64],
+        a_1: [[Field<F>; 8]; 64],
+        a_2: [[Field<F>; 8]; 64],
+        #[constant] n: Field<F>,
     ) {
         println!("Running chi_sq_fractional_range_proof...");
 

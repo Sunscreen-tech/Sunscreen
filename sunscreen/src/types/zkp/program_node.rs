@@ -12,7 +12,7 @@ use crate::{
     INDEX_ARENA,
 };
 
-use super::{ConstrainCmpVarVar, ConstrainEqVarVar, NativeField};
+use super::{ConstrainCmpVarVar, ConstrainEqVarVar, Field};
 
 #[derive(Clone, Copy)]
 /**
@@ -45,12 +45,12 @@ impl<T: ZkpType> std::fmt::Debug for ProgramNode<T> {
 }
 
 /// Convenience function to create a ZKP program node
-pub fn zkp_node<F: FieldSpec, L>(lit: L) -> ProgramNode<NativeField<F>>
+pub fn zkp_node<F: FieldSpec, L>(lit: L) -> ProgramNode<Field<F>>
 where
     F: FieldSpec,
-    NativeField<F>: From<L>,
+    Field<F>: From<L>,
 {
-    NativeField::<F>::from(lit).into_program_node()
+    Field::<F>::from(lit).into_program_node()
 }
 
 /**

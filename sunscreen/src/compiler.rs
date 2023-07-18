@@ -560,7 +560,7 @@ mod tests {
     use super::*;
 
     // Needed to make the fhe_program macro work.
-    use crate::{self as sunscreen, types::zkp::NativeField};
+    use crate::{self as sunscreen, types::zkp::Field};
 
     #[test]
     fn raw_compiler_has_correct_type() {
@@ -634,7 +634,7 @@ mod tests {
     #[test]
     fn compiling_fhe_and_zkp_program_yields_fhezkp_application() {
         #[zkp_program]
-        fn kitty<F: FieldSpec>(_a: NativeField<F>) {}
+        fn kitty<F: FieldSpec>(_a: Field<F>) {}
 
         #[fhe_program(scheme = "bfv")]
         fn doggie() {}

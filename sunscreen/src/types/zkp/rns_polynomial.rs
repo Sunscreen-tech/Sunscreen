@@ -9,7 +9,7 @@ use crate::{
     zkp::ZkpContextOps,
 };
 
-use super::{AddVar, Mod, MulVar, NativeField, NumFieldElements, ToNativeFields, ZkpType};
+use super::{AddVar, Mod, MulVar, Field, NumFieldElements, ToNativeFields, ZkpType};
 
 use crate as sunscreen;
 
@@ -26,13 +26,13 @@ use crate as sunscreen;
  */
 #[derive(Debug, Clone, TypeName)]
 pub struct RnsRingPolynomial<F: FieldSpec, const N: usize, const R: usize> {
-    data: Box<[[NativeField<F>; N]; R]>,
+    data: Box<[[Field<F>; N]; R]>,
 }
 
 impl<F: FieldSpec, T, const N: usize, const R: usize> From<[[T; N]; R]>
     for RnsRingPolynomial<F, N, R>
 where
-    T: Into<NativeField<F>> + std::fmt::Debug,
+    T: Into<Field<F>> + std::fmt::Debug,
 {
     fn from(x: [[T; N]; R]) -> Self {
         Self {
@@ -61,13 +61,13 @@ pub trait ToResidues<F: FieldSpec, const N: usize, const R: usize> {
     /**
      * Return the residues.
      */
-    fn residues(&self) -> [[ProgramNode<NativeField<F>>; N]; R];
+    fn residues(&self) -> [[ProgramNode<Field<F>>; N]; R];
 }
 
 impl<F: FieldSpec, const N: usize, const R: usize> ToResidues<F, N, R>
     for ProgramNode<RnsRingPolynomial<F, N, R>>
 {
-    fn residues(&self) -> [[ProgramNode<NativeField<F>>; N]; R] {
+    fn residues(&self) -> [[ProgramNode<Field<F>>; N]; R] {
         let mut program_nodes = [[ProgramNode::new(&[]); N]; R];
 
         for i in 0..N * R {
@@ -145,13 +145,13 @@ pub trait Scale<F: FieldSpec> {
     /**
      * Return a structure scaled by `x`.
      */
-    fn scale(self, x: ProgramNode<NativeField<F>>) -> Self;
+    fn scale(self, x: ProgramNode<Field<F>>) -> Self;
 }
 
 impl<F: FieldSpec, const D: usize, const R: usize> Scale<F>
     for ProgramNode<RnsRingPolynomial<F, D, R>>
 {
-    fn scale(self, x: ProgramNode<NativeField<F>>) -> Self {
+    fn scale(self, x: ProgramNode<Field<F>>) -> Self {
         let mut output = vec![NodeIndex::from(0); D * R];
 
         with_zkp_ctx(|ctx| {
@@ -167,7 +167,7 @@ impl<F: FieldSpec, const D: usize, const R: usize> Scale<F>
 impl<F: FieldSpec, const D: usize, const R: usize> Mod<F> for RnsRingPolynomial<F, D, R> {
     fn signed_reduce(
         lhs: ProgramNode<Self>,
-        m: ProgramNode<NativeField<F>>,
+        m: ProgramNode<Field<F>>,
         remainder_bits: usize,
     ) -> ProgramNode<Self> {
         let residues = lhs.residues();
@@ -176,7 +176,7 @@ impl<F: FieldSpec, const D: usize, const R: usize> Mod<F> for RnsRingPolynomial<
 
         for r in residues.iter().take(R) {
             for j in r {
-                outputs.push(NativeField::signed_reduce(*j, m, remainder_bits).ids[0]);
+                outputs.push(Field::signed_reduce(*j, m, remainder_bits).ids[0]);
             }
         }
 
@@ -192,7 +192,7 @@ mod tests {
 
     use crate as sunscreen;
     use crate::types::zkp::rns_polynomial::{RnsRingPolynomial, ToResidues};
-    use crate::types::zkp::{NativeField, Scale};
+    use crate::types::zkp::{Field, Scale};
     use crate::{zkp_program, Compiler};
 
     #[test]
@@ -213,7 +213,7 @@ mod tests {
 
             for i in 0..residues.len() {
                 for j in 0..residues[i].len() {
-                    residues[i][j].constrain_eq(NativeField::from(expected[i][j]));
+                    residues[i][j].constrain_eq(Field::from(expected[i][j]));
                 }
             }
         }
@@ -270,7 +270,7 @@ mod tests {
 
             for i in 0..residues.len() {
                 for j in 0..residues[i].len() {
-                    residues[i][j].constrain_eq(NativeField::from(expected[i][j]));
+                    residues[i][j].constrain_eq(Field::from(expected[i][j]));
                 }
             }
         }
@@ -310,7 +310,7 @@ mod tests {
         #[zkp_program]
         fn scale_poly<F: FieldSpec>(
             #[constant] a: RnsRingPolynomial<F, 8, 2>,
-            #[constant] b: NativeField<F>,
+            #[constant] b: Field<F>,
         ) {
             let c = a.scale(b);
 
@@ -323,7 +323,7 @@ mod tests {
 
             for i in 0..residues.len() {
                 for j in 0..residues[i].len() {
-                    residues[i][j].constrain_eq(NativeField::from(expected[i][j]));
+                    residues[i][j].constrain_eq(Field::from(expected[i][j]));
                 }
             }
         }
@@ -346,7 +346,7 @@ mod tests {
             [9, 10, 11, 12, 13, 14, 15, 16],
         ]);
 
-        type BpField = NativeField<<BulletproofsBackend as ZkpBackend>::Field>;
+        type BpField = Field<<BulletproofsBackend as ZkpBackend>::Field>;
 
         let b = BpField::from(2u8);
 

@@ -8,7 +8,7 @@
 use ark_ff::{BigInt, BigInteger, Field, Fp, FpConfig, MontBackend, MontConfig, PrimeField};
 use ark_poly::univariate::DensePolynomial;
 use sunscreen::{
-    types::zkp::{Mod, NativeField, RnsRingPolynomial, Scale, ToBinary, ToResidues},
+    types::zkp::{Field, Mod, RnsRingPolynomial, Scale, ToBinary, ToResidues},
     zkp_program, Application, Compiler, FieldSpec, Runtime, ZkpApplication, ZkpBackend,
     ZkpProgramInput, ZkpRuntime,
 };
@@ -211,9 +211,9 @@ fn prove_enc<F: FieldSpec>(
     #[constant] expected_c_1: BfvPoly<F>,
     #[constant] p_0: BfvPoly<F>,
     #[constant] p_1: BfvPoly<F>,
-    #[constant] delta: NativeField<F>,
+    #[constant] delta: Field<F>,
 ) {
-    let q = NativeField::<F>::from(CIPHER_MODULUS).into_program_node();
+    let q = Field::<F>::from(CIPHER_MODULUS).into_program_node();
 
     fn log2(x: usize) -> usize {
         let log2 = 8 * std::mem::size_of::<usize>() - x.leading_zeros() as usize;
@@ -236,7 +236,7 @@ fn prove_enc<F: FieldSpec>(
     // e_* coefficients are gaussian distributed from -19 to 19.
     // If we add 18 to these values, we get a distribution from
     // [0, 36], which we can range check.
-    let chi_offset = NativeField::from(19).into_program_node();
+    let chi_offset = Field::from(19).into_program_node();
 
     for i in 0..1 {
         for j in 0..POLY_DEGREE {
@@ -263,14 +263,14 @@ pub fn compile_proof() -> ZkpApplication {
 
 fn ark_bigint_to_native_field<B: ZkpBackend, F: MontConfig<N>, const N: usize>(
     x: Fp<MontBackend<F, N>, N>,
-) -> NativeField<B::Field> {
+) -> Field<B::Field> {
     let x = x.into_bigint();
     let zkp_bigint = ark_bigint_to_zkp_bigint(x);
-    NativeField::from(zkp_bigint)
+    Field::from(zkp_bigint)
 }
 
 type BpBackendField = <BulletproofsBackend as ZkpBackend>::Field;
-type BpField = NativeField<BpBackendField>;
+type BpField = Field<BpBackendField>;
 
 fn public_bfv_proof_params(
     ciphertext: &Ciphertext,

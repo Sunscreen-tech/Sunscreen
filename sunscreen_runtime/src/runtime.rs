@@ -273,7 +273,6 @@ where
     where
         I: Into<FheProgramInput>,
     {
-        println!("{:?}", "run_program_unchecked".to_owned());
         // We're going to call run_program_unchecked, which
         // can result in undefined behavior, non-termination,
         // or panics on malformed programs. Since this method is safe,
@@ -440,7 +439,6 @@ where
             fhe_program.metadata.name,
             SESSION_NUM.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
         );
-        println!("session name: {:?}", session_name);
 
         self.run_impl(
             fhe_program,

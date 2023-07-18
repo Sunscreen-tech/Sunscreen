@@ -45,20 +45,6 @@ function CodeBlock({ code, onClickHandler, selectedLine }: CodeBlockProps) {
   );
 };
 
-const exampleUberGraph = {
-  nodes: [
-      { id: 1, title: '2', type: 'empty' },
-      { id: 2, title: '3', type: 'empty'  },
-      { id: 3, title: '+', type: 'empty'  },
-      { id: 4, title: 'square', type: 'empty', test: 27183912  },
-  ],
-  edges: [
-    { source: 1, target: 3, directed: true, arrowhead: 'normal' },
-    { source: 2, target: 3, directed: true, arrowhead: 'normal' },
-    { source: 3, target: 4, directed: true, arrowhead: 'normal' },
-  ]
-}
-
 const exampleCode: string = `fn sudoku_proof<F: BackendField>(
   #[constant] constraints: [[NativeField<F>; 9]; 9],
   board: [[NativeField<F>; 9]; 9],
@@ -113,46 +99,66 @@ const exampleCode: string = `fn sudoku_proof<F: BackendField>(
   }
 }`
 
-const dataToGraph = (data: { graph: { graph: any; }; nodes: string | any[]; edges: string | any[]; }, incRelin: boolean) => {
-  
-  data = data.graph.graph
-  var nodes: any[] = [];
-  var edges: any[] = [];
-  if (incRelin) {
-    for (let i: number = 0; i < data.nodes.length; ++i) {
-      if (data.nodes[i].operation.constructor == Object && data.nodes[i].operation.hasOwnProperty('InputCiphertext')) {
-        nodes.push({id: i, title: JSON.stringify(data.nodes[i].operation.InputCiphertext), type: 'input'})
-      } else {
-        nodes.push({id: i, title: JSON.stringify(data.nodes[i].operation), type: 'empty'})
-      }
-    }
-    for (let i: number = 0; i < data.edges.length; ++i) {
-      edges.push({source: data.edges[i][0], target: data.edges[i][1], type: data.edges[i][2]})
-    }
-  } else {
-    for (let i: number = 0; i < data.nodes.length; ++i) {
-      if (data.nodes[i].operation.constructor == Object && data.nodes[i].operation.hasOwnProperty('InputCiphertext')) {
-        nodes.push({id: i, title: JSON.stringify(data.nodes[i].operation.InputCiphertext), type: 'input'})
-      } else if (data.nodes[i].operation == "Relinearize") {
+type InputCiphertextOp = {
+  kind: 'InputCiphertext';
+  data: number
+};
 
-      } else {
-        nodes.push({id: i, title: JSON.stringify(data.nodes[i].operation), type: 'empty'})
-      }
-    }
-    var relinSources = Array<number>(5)
+type MultiplyOp = {
+  kind: 'Multiply'
+};
 
-    for (let i: number = 0; i < data.edges.length; ++i) {
-      if (data.nodes[data.edges[i][1]].operation == "Relinearize") {
-        relinSources[data.edges[i][1]] = data.edges[i][0];
-      } else if (data.nodes[data.edges[i][0]].operation != "Relinearize") {
-        edges.push({source: data.edges[i][0], target: data.edges[i][1], type: data.edges[i][2]})
-      } 
+type AddOp = {
+  kind: 'Add'
+};
+
+type RelinearizeOp = {
+  kind: 'Relinearize'
+};
+
+type OutputCiphertextOp = {
+  kind: 'OutputCiphertext'
+};
+
+type FheProgramOperation = InputCiphertextOp | MultiplyOp | AddOp | RelinearizeOp | OutputCiphertextOp
+
+type FheProgramNode = {
+  operation: FheProgramOperation
+}
+
+type EdgeType = 'Left' | 'Right' | 'Unary'
+type FheProgramEdge = [number, number, EdgeType]
+
+type FheProgramGraph = {
+  nodes: FheProgramNode[];
+  edges: FheProgramEdge[]
+}
+
+type FheProgram = {
+  graph: { graph: { graph: FheProgramGraph }};
+  data: 'Bfv'
+}
+
+const dataToGraph = (data: FheProgramGraph, incRelin: boolean) => {
+  const nodes: any[] = [];
+  const edges: any[] = [];
+
+  for (let i: number = 0; i < data.nodes  .length; ++i) {
+    const op = data.nodes[i].operation
+    switch (op.kind) {
+      case 'InputCiphertext':
+        nodes.push({id: i, title: JSON.stringify(op.data), type: 'input'})
+        break
+      case 'Multiply':
+      case 'Add':
+      case 'Relinearize':
+      case 'OutputCiphertext':
+      default: 
+        nodes.push({id: i, title: JSON.stringify(data.nodes[i].operation), type: 'empty'})
     }
-    for (let i: number = 0; i < data.edges.length; ++i) {
-      if (data.nodes[data.edges[i][0]].operation == "Relinearize") {
-        edges.push({source: relinSources[data.edges[i][0]], target: data.edges[i][1], type: data.edges[i][2]})
-      } 
-    }
+  }
+  for (let i: number = 0; i < data.edges.length; ++i) {
+    edges.push({source: data.edges[i][0], target: data.edges[i][1], type: data.edges[i][2]})
   }
   return {nodes: nodes, edges: edges}
 }

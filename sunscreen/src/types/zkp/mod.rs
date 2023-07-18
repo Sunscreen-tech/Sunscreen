@@ -1,9 +1,9 @@
+mod field;
 mod gadgets;
-mod native_field;
 mod program_node;
 mod rns_polynomial;
 
-pub use native_field::*;
+pub use field::*;
 use petgraph::stable_graph::NodeIndex;
 pub use program_node::*;
 pub use rns_polynomial::*;

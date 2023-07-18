@@ -9,7 +9,7 @@ use crate::{
     zkp::ZkpContextOps,
 };
 
-use super::{AddVar, Mod, MulVar, Field, NumFieldElements, ToNativeFields, ZkpType};
+use super::{AddVar, Field, Mod, MulVar, NumFieldElements, ToNativeFields, ZkpType};
 
 use crate as sunscreen;
 

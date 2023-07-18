@@ -19,14 +19,6 @@ fn get_params() -> Params {
     }
 }
 
-/*
-    TODO: these tests will all fail when we actually try to pass in metadata when constructing programs
-    Need to add support for having `debugger` feature on, which means that metadata can't be an empty field.
-    Will just do this by doing something like:
-    #[cfg(feature = "debugger")]
-    let expected = ...
-        where this includes the metadata field
-*/
 #[test]
 fn fhe_program_gets_called() {
     static mut FOO: u32 = 0;

@@ -31,7 +31,6 @@ pub fn start_web_server() {
                 let rt = Builder::new_current_thread().enable_all().build().unwrap();
 
                 rt.block_on(async {
-                    println!("start_web_server");
 
                     HttpServer::new(move || {
                         let cors = Cors::default()
@@ -69,7 +68,6 @@ async fn get_all_sessions() -> impl Responder {
 #[get("/graphs/{session}")]
 async fn get_graph_data(session: web::Path<String>) -> impl Responder {
     let sessions = get_sessions().lock().unwrap();
-    println!("get_graph_data session keys: {:?}", sessions.keys());
 
     if sessions.contains_key(session.as_str()) {
         let curr_session = sessions.get(session.as_str()).unwrap().unwrap_bfv_session();
@@ -90,7 +88,6 @@ async fn get_graph_data(session: web::Path<String>) -> impl Responder {
 #[get("programs/{session}")]
 async fn get_code(session: web::Path<String>) -> impl Responder {
     let sessions = get_sessions().lock().unwrap();
-    println!("get_code session keys: {:?}", sessions.keys());
 
     if sessions.contains_key(session.as_str()) {
         let curr_session = sessions.get(session.as_str()).unwrap().unwrap_bfv_session();

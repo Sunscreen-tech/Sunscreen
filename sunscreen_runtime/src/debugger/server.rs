@@ -17,6 +17,7 @@ use sunscreen_fhe_program::Operation;
 
 use seal_fhe::SecretKey;
 use sunscreen_zkp_backend::CompiledZkpProgram;
+use tokio::runtime::Builder;
 
 static SERVER: OnceLock<()> = OnceLock::new();
 
@@ -28,7 +29,7 @@ pub fn start_web_server() -> () {
         thread::Builder::new()
             .name("debugger".to_owned())
             .spawn(|| {
-            let rt = tokio::runtime::Builder::new_current_thread()
+            let rt = Builder::new_current_thread()
                 .enable_all()
                 .build().unwrap();
 

@@ -38,10 +38,10 @@ backtrace = "0.3.67"
 actix-web = "4.3.1"
 reqwest = "0.11"
 actix-cors = "0.6.4"
-tokio = { version = "1.29.1", optional = true, features = ["rt"] }
+tokio = { version = "1.29.1", features = ["rt"] }
 
 [dev-dependencies]
 serde_json = "1.0.74"
 
 [features]
-debugger = ["sunscreen_compiler_common/debugger", "sunscreen_zkp_backend/debugger", "sunscreen_fhe_program/debugger", "dep:tokio"]
+debugger = ["sunscreen_compiler_common/debugger", "sunscreen_zkp_backend/debugger", "sunscreen_fhe_program/debugger"]

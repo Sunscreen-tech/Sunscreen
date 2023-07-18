@@ -11,41 +11,6 @@ use serde::{Deserialize, Serialize};
 use crate::{Operation, Render};
 
 /**
- * Stores information about the nodes associated with a certain operation.
- */
-#[cfg(feature = "debugger")]
-#[derive(Clone, Deserialize, Serialize, Debug)]
-pub struct Group {
-    /**
-     * The name of the `Group`, representing the name of the operation/gadget.
-     */
-    pub label: String,
-
-    /**
-     * A list of ID's for the nodes contained in the operation.
-     */
-    pub node_ids: Vec<u64>,
-}
-#[cfg(feature = "debugger")]
-impl Group {
-    /**
-     * Creates a new `Group` instance.
-     */
-    pub fn new(name: String) -> Self {
-        Group {
-            label: name.to_string(),
-            node_ids: Vec::new(),
-        }
-    }
-
-    /**
-     * Adds a node ID to the group.
-     */
-    pub fn add_node<O: Operation>(mut self, node: NodeInfo<O>) {
-        self.node_ids.push(node.group_id);
-    }
-}
-/**
  * Stores debug information about groups and stack traces.
  */
 #[cfg(feature = "debugger")]
@@ -53,10 +18,6 @@ impl Group {
 pub struct DebugData {
     // TODO: Trie doesn't implement serialize/deserialize
     // pub stack_trace: Trie<Vec<u64>, u64>,
-    /**
-     * Represents the program context, where groups of nodes can be pushed/popped.
-     */
-    pub group_stack: Vec<Group>,
 }
 
 #[cfg(feature = "debugger")]
@@ -67,7 +28,6 @@ impl DebugData {
     pub fn new() -> Self {
         DebugData {
             //stack_trace: Trie::new(),
-            group_stack: Vec::new(),
         }
     }
 }
@@ -197,25 +157,6 @@ impl Render for EdgeInfo {
 #[derive(Clone, Deserialize, Serialize)]
 /**
  * The result of a frontend compiler.
- *
- * Need to modify this to also include DebugMetadata which contains info like the tries associated with groups/stack
- * The thing containing the CompilationResult (which is the Context).
- *
- * Also need to have a group stack
- *  I don't need to figure out how to group things on my own
- *  Just determine groups based off of what is currently on the group stack
- *      Make a new type called `Group` which contains group name
- *      Nodes in the `CompilationResult` are actually called `NodeIndex`
- *
- *  Given a function call, we want like a `get_group_id` and `get_groups` that'll return you the group ID and also the group associated
- *      Occassionalyl may need to mutate the trie with getting if the id isn't in there and then return the ID associated with it
- *  with that function
- *   
- * `nodes_for_group` gives you a Vec of NodeIndex that'll, given a group id, return you a vector of nodeindex
- *
- * And need to have a stack trace trie
- *
- * Group stack goes on the level of the Context struct
  */
 pub struct CompilationResult<O>
 where
@@ -317,6 +258,7 @@ where
         Self::new()
     }
 }
+type Group = String;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 /**
@@ -346,7 +288,7 @@ where
 
     #[cfg(feature = "debugger")]
     /**
-     * Tracks
+     * Represents the program context. Tracks groups of nodes in the compilation graph.
      */
     pub group_stack: Vec<Group>,
 }

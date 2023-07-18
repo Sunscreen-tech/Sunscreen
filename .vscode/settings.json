@@ -18,13 +18,5 @@
     "OpenCL.server.buildOptions": [
         "-I", "${workspaceFolder}/sunscreen_math/src/opencl_impl/shaders/include"
     ],
-    "OpenCL.server.deviceID": 124252029,
-    "rust-analyzer.linkedProjects": [
-        "./sunscreen_compiler_common/Cargo.toml",
-        "./sunscreen_compiler_common/Cargo.toml",
-        "./sunscreen_runtime/Cargo.toml",
-        "./sunscreen_runtime/Cargo.toml",
-        "./sunscreen_runtime/Cargo.toml"
-    ],
-    "rust-analyzer.showUnlinkedFileNotification": false
+    "OpenCL.server.deviceID": 124252029
 }

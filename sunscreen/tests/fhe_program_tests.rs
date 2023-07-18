@@ -6,6 +6,7 @@ use sunscreen::{
 };
 
 use serde_json::json;
+#[cfg(feature = "debugger")]
 use sunscreen_compiler_common::DebugData;
 
 fn get_params() -> Params {
@@ -329,25 +330,37 @@ fn can_mul() {
     let expected: serde_json::Value = serde_json::json!({
         "graph": {
             "nodes": [
-                { "operation": "InputCiphertext" },
-                { "operation": "InputPlaintext" },
-                { "operation": "AddPlaintext" },
+            { "operation": "InputCiphertext" },
+            { "operation": "InputCiphertext" },
+            { "operation": "InputCiphertext" },
+            { "operation": "Multiply" },
+            { "operation": "Multiply" }
+        ],
+        "node_holes": [],
+        "edge_property": "directed",
+        "edges": [
+            [
+                0,
+                3,
+                "Left"
             ],
-            "node_holes": [],
-            "edge_property": "directed",
-            "edges": [
-                [
-                    0,
-                    2,
-                    "Left"
-                ],
-                [
-                    1,
-                    2,
-                    "Right"
-                ],
+            [
+                1,
+                3,
+                "Right"
+            ],
+            [
+                3,
+                4,
+                "Left"
+            ],
+            [
+                2,
+                4,
+                "Right"
             ]
-        }
+        ]
+        },
     });
 
     let expected_compilation: FheFrontendCompilation = serde_json::from_value(expected).unwrap();
@@ -359,27 +372,42 @@ fn can_mul() {
     let expected: serde_json::Value = serde_json::json!({
         "graph": {
             "nodes": [
-                { "operation": "InputCiphertext",
-                "group_id": 0  },
-                { "operation": "InputPlaintext",
-                "group_id": 1  },
-                { "operation": "AddPlaintext",
-                "group_id": 2  },
+            { "operation": "InputCiphertext",
+            "group_id": 0
+             },
+            { "operation": "InputCiphertext",
+            "group_id": 1 },
+            { "operation": "InputCiphertext",
+        "group_id": 2 },
+            { "operation": "Multiply",
+        "group_id": 3 },
+            { "operation": "Multiply",
+        "group_id": 4 }
+        ],
+        "node_holes": [],
+        "edge_property": "directed",
+        "edges": [
+            [
+                0,
+                3,
+                "Left"
             ],
-            "node_holes": [],
-            "edge_property": "directed",
-            "edges": [
-                [
-                    0,
-                    2,
-                    "Left"
-                ],
-                [
-                    1,
-                    2,
-                    "Right"
-                ],
+            [
+                1,
+                3,
+                "Right"
+            ],
+            [
+                3,
+                4,
+                "Left"
+            ],
+            [
+                2,
+                4,
+                "Right"
             ]
+        ]
         },
         "metadata": DebugData::new() 
     });

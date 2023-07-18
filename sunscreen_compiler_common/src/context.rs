@@ -239,7 +239,6 @@ where
 {
     type Target = StableGraph<NodeInfo<O>, EdgeInfo>;
 
-    //TODO: support for debugger feature
     fn deref(&self) -> &Self::Target {
         &self.graph
     }
@@ -289,7 +288,6 @@ impl<O> DerefMut for CompilationResult<O>
 where
     O: Operation,
 {
-    //TODO: support for debugger feature
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.graph
     }
@@ -315,7 +313,6 @@ impl<O> Default for CompilationResult<O>
 where
     O: Operation,
 {
-    // TODO: support for debugger feature
     fn default() -> Self {
         Self::new()
     }
@@ -377,14 +374,22 @@ where
      * Add a node to the parse graph.
      */
     pub fn add_node(&mut self, operation: O) -> NodeIndex {
-        #[cfg(feature = "debugger")]
-        let group_id = self.group_counter;
 
-        self.graph.add_node(NodeInfo {
-            operation,
-            #[cfg(feature = "debugger")]
-            group_id,
-        })
+        #[cfg(feature = "debugger")]
+        {
+            let group_id = self.group_counter;
+
+            let node_index = self.graph.add_node(NodeInfo {
+                operation,
+                #[cfg(feature = "debugger")]
+                group_id,
+            });
+            self.group_counter += 1;
+            node_index 
+        }
+        #[cfg(not(feature = "debugger"))] {
+            self.graph.add_node(NodeInfo { operation } )
+        }
     }
 
     /**

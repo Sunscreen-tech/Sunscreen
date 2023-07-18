@@ -5,11 +5,11 @@ use sunscreen::{
     bulletproofs::BulletproofsBackend, types::zkp::BulletproofsField, Proof, ZkpProgramFnExt,
 };
 
-use zkp::{default_list, whitelist};
+use zkp::{default_list, allowlist};
 
 fn main() -> Result<()> {
-    let prog = whitelist.compile::<BulletproofsBackend>()?;
-    let runtime = whitelist.runtime::<BulletproofsBackend>()?;
+    let prog = allowlist.compile::<BulletproofsBackend>()?;
+    let runtime = allowlist.runtime::<BulletproofsBackend>()?;
 
     let proof: Proof = bincode::deserialize_from(io::stdin())?;
 
@@ -31,8 +31,8 @@ mod tests {
 
     #[test]
     fn main_works() -> Result<()> {
-        let prog = whitelist.compile::<BulletproofsBackend>()?;
-        let runtime = whitelist.runtime::<BulletproofsBackend>()?;
+        let prog = allowlist.compile::<BulletproofsBackend>()?;
+        let runtime = allowlist.runtime::<BulletproofsBackend>()?;
 
         let entry: BulletproofsField = 101.into();
         let list: [BulletproofsField; 100] = default_list();

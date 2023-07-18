@@ -43,9 +43,9 @@ jobs:
     # Build and run the tests
     - name: Build and run tests
       run: cargo test --workspace --verbose --release
-    - name: Verify examples outside of workspace (whitelist_zkp)
+    - name: Verify examples outside of workspace (allowlist_zkp)
       run: cargo test --workspace --verbose
-      working-directory: ./examples/whitelist_zkp
+      working-directory: ./examples/allowlist_zkp
     - name: Build sunscreen and bincode
       run: cargo build --release --package sunscreen --package bincode
     - name: Build mdBook

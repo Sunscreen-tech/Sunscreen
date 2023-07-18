@@ -4,7 +4,7 @@ use sunscreen::{types::zkp::Field, zkp_program, zkp_var, FieldSpec};
 
 /// A ZKP proving a private entry is equal to one of the values in a list.
 #[zkp_program]
-pub fn whitelist<F: FieldSpec>(entry: Field<F>, #[public] list: [Field<F>; 100]) {
+pub fn allowlist<F: FieldSpec>(entry: Field<F>, #[public] list: [Field<F>; 100]) {
     let zero = zkp_var!(0);
     let one = zkp_var!(1);
     let mut poly = one;

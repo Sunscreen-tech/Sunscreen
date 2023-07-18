@@ -1,4 +1,5 @@
 use petgraph::Graph;
+#[cfg(feature = "debugger")]
 use sunscreen_compiler_common::DebugData;
 use sunscreen_runtime::CallSignature;
 use sunscreen_zkp_backend::{

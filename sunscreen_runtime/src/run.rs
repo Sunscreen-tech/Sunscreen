@@ -8,14 +8,14 @@ use crate::debugger::sessions::{get_sessions, BfvSession};
 
 use crossbeam::atomic::AtomicCell;
 use petgraph::{stable_graph::NodeIndex, Direction};
-use std::collections::HashMap;
+
 
 use std::borrow::Cow;
 #[cfg(target_arch = "wasm32")]
 use std::collections::VecDeque;
 #[cfg(not(target_arch = "wasm32"))]
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc};
 
 use seal_fhe::{
     Ciphertext, Error as SealError, Evaluator, GaloisKeys, Plaintext, RelinearizationKeys,
@@ -214,11 +214,11 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
         #[cfg(feature = "debugger")]
         if let Some(session_name) = session {
             let mut guard = get_sessions().lock().unwrap();
-            let mut session: &mut BfvSession = guard
+            let session: &mut BfvSession = guard
                 .get_mut(session_name)
                 .unwrap()
                 .unwrap_bfv_session_mut();
-            let node_val = get_data(&data, node_index.index());
+            let node_val = get_data(data, node_index.index());
             session.program_data[node_index.index()] = Arc::into_inner(node_val.unwrap().clone());
 
             // pretty sure this code is not necessary: the point of this is that

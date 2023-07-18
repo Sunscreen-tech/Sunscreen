@@ -27,7 +27,7 @@ pub use seal_fhe::SecurityLevel;
 use sunscreen_compiler_common::{CompilationResult, Context, EdgeInfo, NodeInfo};
 
 #[cfg(feature = "debugger")]
-use sunscreen_compiler_common::{DebugData, Group};
+use sunscreen_compiler_common::{DebugData};
 
 use std::collections::HashSet;
 
@@ -354,8 +354,8 @@ impl FheProgramTrait for FheProgram {
             closure_set.insert(mapped_id);
         }
 
-        while !visit.is_empty() {
-            let node = visit.pop().expect("Fatal error: prune queue was empty.");
+        while let Some(node) = visit.pop() {
+            
 
             for edge in closure.neighbors(node) {
                 if !closure_set.contains(&edge) {

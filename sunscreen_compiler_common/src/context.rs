@@ -5,7 +5,7 @@ use petgraph::algo::is_isomorphic_matching;
 use petgraph::stable_graph::{NodeIndex, StableGraph};
 use petgraph::visit::{EdgeRef, IntoEdgeReferences, IntoNodeReferences};
 use petgraph::Graph;
-use radix_trie::Trie;
+
 use serde::{Deserialize, Serialize};
 
 use crate::{Operation, Render};

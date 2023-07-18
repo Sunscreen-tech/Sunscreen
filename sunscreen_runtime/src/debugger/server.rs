@@ -1,21 +1,21 @@
 use actix_cors::Cors;
-use actix_web::{get, web, App, Handler, HttpResponse, HttpServer, Responder};
-use rayon::iter::Once;
-use reqwest;
-use serde::{Deserialize, Serialize};
-use serde_json::{json, to_string, to_string_pretty, Error, Value};
-use std::collections::HashMap;
-use std::ops::IndexMut;
-use std::sync::{Mutex, MutexGuard, OnceLock};
+use actix_web::{get, web, App, HttpResponse, HttpServer, Responder};
+
+
+use serde::{Deserialize};
+use serde_json::{json, Value};
+
+
+use std::sync::{OnceLock};
 use std::thread;
 
 use crate::debugger::get_sessions;
-use crate::{DebugInfo, FheRuntime, PrivateKey, SealData};
-use sunscreen_compiler_common::CompilationResult;
-use sunscreen_fhe_program::Operation;
 
-use seal_fhe::SecretKey;
-use sunscreen_zkp_backend::CompiledZkpProgram;
+
+
+
+
+
 use tokio::runtime::Builder;
 
 static SERVER: OnceLock<()> = OnceLock::new();
@@ -23,7 +23,7 @@ static SERVER: OnceLock<()> = OnceLock::new();
 /**
  * Lazily starts a webserver at `127.0.0.1:8080/`.
  */
-pub fn start_web_server() -> () {
+pub fn start_web_server() {
     SERVER.get_or_init(|| {
         thread::Builder::new()
             .name("debugger".to_owned())

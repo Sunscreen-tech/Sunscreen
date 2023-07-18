@@ -9,14 +9,14 @@ use ark_ff::{BigInt, BigInteger, Field, Fp, FpConfig, MontBackend, MontConfig, P
 use ark_poly::univariate::DensePolynomial;
 use sunscreen::{
     types::zkp::{Mod, NativeField, RnsRingPolynomial, Scale, ToBinary, ToResidues},
-    zkp_program, Application, FieldSpec, Compiler, Runtime, ZkpApplication, ZkpBackend,
+    zkp_program, Application, Compiler, FieldSpec, Runtime, ZkpApplication, ZkpBackend,
     ZkpProgramInput, ZkpRuntime,
 };
 use sunscreen_zkp_backend::{bulletproofs::BulletproofsBackend, BigInt as ZkpBigInt, Proof};
 
 use crate::poly_ring::PolyRing;
 
-const POLY_DEGREE: usize = 1024;
+const POLY_DEGREE: usize = 4;
 
 #[derive(MontConfig)]
 #[modulus = "132120577"]

@@ -1,7 +1,7 @@
 use petgraph::stable_graph::NodeIndex;
 use sunscreen_compiler_macros::TypeName;
 use sunscreen_runtime::ZkpProgramInputTrait;
-use sunscreen_zkp_backend::{FieldSpec, BigInt};
+use sunscreen_zkp_backend::{BigInt, FieldSpec};
 
 use crate::{
     types::zkp::{Coerce, ProgramNode},
@@ -41,15 +41,11 @@ where
     }
 }
 
-impl<F: FieldSpec, const N: usize, const R: usize> NumFieldElements
-    for RnsRingPolynomial<F, N, R>
-{
+impl<F: FieldSpec, const N: usize, const R: usize> NumFieldElements for RnsRingPolynomial<F, N, R> {
     const NUM_NATIVE_FIELD_ELEMENTS: usize = N * R;
 }
 
-impl<F: FieldSpec, const N: usize, const R: usize> ToNativeFields
-    for RnsRingPolynomial<F, N, R>
-{
+impl<F: FieldSpec, const N: usize, const R: usize> ToNativeFields for RnsRingPolynomial<F, N, R> {
     fn to_native_fields(&self) -> Vec<BigInt> {
         self.data.into_iter().flatten().map(|x| x.val).collect()
     }

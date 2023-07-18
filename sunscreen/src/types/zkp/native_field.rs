@@ -3,7 +3,7 @@ use std::marker::PhantomData;
 use subtle::{Choice, ConditionallySelectable};
 use sunscreen_compiler_macros::TypeName;
 use sunscreen_runtime::ZkpProgramInputTrait;
-use sunscreen_zkp_backend::{FieldSpec, BigInt};
+use sunscreen_zkp_backend::{BigInt, FieldSpec};
 
 use crate::{
     invoke_gadget,
@@ -324,7 +324,10 @@ mod tests {
     use curve25519_dalek::scalar::Scalar;
     use sunscreen_compiler_macros::zkp_program;
     use sunscreen_runtime::{Runtime, ZkpProgramInput};
-    use sunscreen_zkp_backend::{bulletproofs::BulletproofsBackend, ZkpBackend, ZkpInto};
+    use sunscreen_zkp_backend::{
+        bulletproofs::{BulletproofsBackend, BulletproofsFieldSpec},
+        ZkpBackend, ZkpInto,
+    };
 
     use crate::{types::zkp::ConstrainCmp, Compiler};
 
@@ -332,14 +335,14 @@ mod tests {
 
     #[test]
     fn can_encode_negative_number() {
-        let x = NativeField::<Scalar>::from(-1);
+        let x = NativeField::<BulletproofsFieldSpec>::from(-1);
 
         assert_eq!(
             x.val,
-            BigInt::from(Scalar::FIELD_MODULUS.wrapping_sub(&BigInt::ONE))
+            BigInt::from(BulletproofsFieldSpec::FIELD_MODULUS.wrapping_sub(&BigInt::ONE))
         );
 
-        let x = NativeField::<Scalar>::from(1i64);
+        let x = NativeField::<BulletproofsFieldSpec>::from(1i64);
 
         assert_eq!(x.val, BigInt::ONE);
     }
@@ -394,6 +397,8 @@ mod tests {
     }
 
     impl FieldSpec for TestField {
+        type BackendField = Scalar;
+
         const FIELD_MODULUS: BigInt = BigInt::from_u32(7);
     }
 

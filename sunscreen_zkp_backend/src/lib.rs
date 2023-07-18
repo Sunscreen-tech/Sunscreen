@@ -420,11 +420,9 @@ pub trait ZkpBackend {
  * ZKP backend. E.g. Bulletproofs uses Ristretto `Scalar`
  * values.
  */
-pub trait FieldSpec: Clone
-{
+pub trait FieldSpec: Clone {
     /// The underlying field type used in a backend.
-    type BackendField:
-        Add<Self::BackendField, Output = Self::BackendField>
+    type BackendField: Add<Self::BackendField, Output = Self::BackendField>
         + Sub<Self::BackendField, Output = Self::BackendField>
         + Mul<Self::BackendField, Output = Self::BackendField>
         + Neg<Output = Self::BackendField>

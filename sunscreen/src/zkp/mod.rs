@@ -1,7 +1,7 @@
 use petgraph::Graph;
 use sunscreen_runtime::CallSignature;
 use sunscreen_zkp_backend::{
-    FieldSpec, BigInt, CompiledZkpProgram, Gadget, Operation as JitOperation,
+    BigInt, CompiledZkpProgram, FieldSpec, Gadget, Operation as JitOperation,
 };
 
 use crate::Result;

@@ -1,6 +1,6 @@
 use sunscreen::{
     types::zkp::{ConstrainCmp, NativeField},
-    zkp_program, FieldSpec, BulletproofsBackend, Compiler, Error, ZkpBackend, ZkpRuntime,
+    zkp_program, BulletproofsBackend, Compiler, Error, FieldSpec, ZkpBackend, ZkpRuntime,
 };
 
 #[zkp_program]

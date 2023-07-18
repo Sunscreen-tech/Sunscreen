@@ -101,11 +101,7 @@ fn can_use_public_inputs() {
 #[test]
 fn can_use_constant_inputs() {
     #[zkp_program]
-    fn add_mul<F: FieldSpec>(
-        #[constant] a: NativeField<F>,
-        b: NativeField<F>,
-        c: NativeField<F>,
-    ) {
+    fn add_mul<F: FieldSpec>(#[constant] a: NativeField<F>, b: NativeField<F>, c: NativeField<F>) {
         let x = a * b + c;
 
         x.constrain_eq(NativeField::from(42u32))

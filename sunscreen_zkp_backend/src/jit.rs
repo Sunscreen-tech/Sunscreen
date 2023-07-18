@@ -2,7 +2,7 @@ use std::{any::Any, collections::HashMap, convert::Infallible, fmt::Debug, hash:
 
 use crate::{
     exec::{ExecutableZkpProgram, Operation as ExecOperation},
-    FieldSpec, BigInt, Error, Gadget, Result, ZkpInto,
+    BigInt, Error, FieldSpec, Gadget, Result, ZkpInto,
 };
 use petgraph::{stable_graph::NodeIndex, visit::EdgeRef, Direction, Graph};
 use sunscreen_compiler_common::{
@@ -523,7 +523,10 @@ fn verify_constant_inputs<U>(prog: &CompiledZkpProgram, constant_inputs: &[U]) -
     Ok(())
 }
 
-fn constrain_public_inputs<U>(prog: &mut CompiledZkpProgram, public_inputs: &[U::BackendField]) -> Result<()>
+fn constrain_public_inputs<U>(
+    prog: &mut CompiledZkpProgram,
+    public_inputs: &[U::BackendField],
+) -> Result<()>
 where
     U: FieldSpec,
 {

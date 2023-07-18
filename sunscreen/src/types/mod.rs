@@ -203,9 +203,9 @@ macro_rules! fhe_var {
 /// Creates new ZKP variables from literals.
 ///
 /// ```
-/// # use sunscreen::{zkp_var, zkp_program, BackendField, types::zkp::NativeField};
+/// # use sunscreen::{zkp_var, zkp_program, FieldSpec, types::zkp::NativeField};
 /// #[zkp_program]
-/// fn equals_ten<F: BackendField>(a: NativeField<F>) {
+/// fn equals_ten<F: FieldSpec>(a: NativeField<F>) {
 ///     let ten = zkp_var!(10);
 ///     a.constrain_eq(ten);
 /// }
@@ -214,9 +214,9 @@ macro_rules! fhe_var {
 /// You can also create arrays of variables:
 ///
 /// ```
-/// # use sunscreen::{zkp_var, zkp_program, BackendField, types::zkp::NativeField};
+/// # use sunscreen::{zkp_var, zkp_program, FieldSpec, types::zkp::NativeField};
 /// #[zkp_program]
-/// fn equals_ten<F: BackendField>(a: NativeField<F>) {
+/// fn equals_ten<F: FieldSpec>(a: NativeField<F>) {
 ///     let tens = zkp_var![10, 10, 10];
 ///     for ten in tens {
 ///         a.constrain_eq(ten);

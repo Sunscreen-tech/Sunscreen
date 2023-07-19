@@ -1,14 +1,14 @@
 use actix_cors::Cors;
 use actix_web::{get, web, App, HttpResponse, HttpServer, Responder};
 
+use semver::Version;
 use serde::Deserialize;
 use serde_json::{json, Value};
 
 use std::sync::OnceLock;
 use std::thread;
 
-use crate::{Ciphertext, Plaintext, SealData, Runtime};
-use crate::debugger::get_sessions;
+use crate::{Ciphertext, Plaintext, SealData, Runtime, InnerCiphertext, InnerPlaintext, Type, debugger::get_sessions, debugger::SerializedSealData, WithContext};
 
 use tokio::runtime::Builder;
 
@@ -107,22 +107,83 @@ pub async fn get_fhe_node_data(
         let curr_session = sessions.get(&session).unwrap().unwrap_bfv_session();
 
         if let Some(data) = curr_session.program_data.get(nodeid).unwrap() {
-            let plaintext = match data {
+            let pk = &curr_session.private_key;
+            let runtime = Runtime::new_fhe(&pk.0.params).unwrap();
+
+            let data_for_server: SerializedSealData = match data {
                 SealData::Ciphertext(ct) => {
-                    let runtime = Runtime::new_fhe(&curr_session.private_key.0.params).unwrap();
 
-                    runtime.decrypt(ct, &curr_session.private_key)
+                    let with_context = WithContext {
+                        params: pk.0.params,
+                        data: *ct
+                    };
+
+                    let sunscreen_ciphertext = Ciphertext {
+                        // TODO: actually be able to extract type information
+                        // Currently, any values we display to users will (in general) be garbage
+                        data_type: Type {
+                            is_encrypted: true, 
+                            name: "".to_owned(),
+                            version: Version::new(1, 1, 1)
+                        }, 
+
+                        inner: InnerCiphertext::Seal(vec![with_context])
+                    };
+
+                    // TODO: this is not guaranteed to be a valid value since the ciphertext is not properly constructed
+                    let decrypted = runtime.decrypt(&sunscreen_ciphertext, pk).unwrap();
+
+                    // you can get this with SEAL
+                    let noise_budget = runtime.measure_noise_budget(&sunscreen_ciphertext, pk).unwrap();
+                    // TODO: figure out how to update this
+                    let multiplicative_depth = 0;
+                    // you can get this with SEAL
+                    let coefficients = vec![0];
+
+                    SerializedSealData {
+                        value: 0,
+                        data_type: sunscreen_ciphertext.data_type,
+                        noise_budget,
+                        coefficients,
+                        multiplicative_depth
+                    }
                 },
-                SealData::Plaintext(pt) => pt
-            };
+                SealData::Plaintext(pt) => {
 
-            let data_json = serde_json::to_string(data).map_err(|e| {
-                actix_web::error::ErrorInternalServerError(format!(
-                    "Failed to serialize node data to JSON: {}",
-                    e
-                ))
-            })?;
-            Ok(HttpResponse::Ok().body(data_json))
+                    let with_context = WithContext {
+                        params: pk.0.params,
+                        data: *pt
+                    };
+
+                    let sunscreen_plaintext = Plaintext {
+                        // TODO: actually be able to extract type information
+                        // Currently, any values we display to users will (in general) be garbage
+                        data_type: Type {
+                            is_encrypted: true, 
+                            name: "".to_owned(),
+                            version: Version::new(1, 1, 1)
+                        }, 
+
+                        inner: InnerPlaintext::Seal(vec![with_context])
+                    };
+
+                    // you can get this with SEAL
+                    let noise_budget = 0;
+                    // TODO: figure out how to update this
+                    let multiplicative_depth = 0;
+                    // you can get this with SEAL
+                    let coefficients = vec![0];
+
+                    SerializedSealData {
+                        value: 0,
+                        data_type: sunscreen_plaintext.data_type,
+                        noise_budget,
+                        coefficients,
+                        multiplicative_depth
+                    }
+                }
+            };
+            Ok(HttpResponse::Ok().body(data_for_server))
         } else {
             Ok(HttpResponse::NotFound().body(format!("Node {} not found", nodeid)))
         }

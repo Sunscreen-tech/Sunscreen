@@ -7,7 +7,6 @@ use sunscreen_compiler_common::Group;
 pub trait IdLookup<K, V> {
     fn data_to_id(&mut self, key: K, val: V) -> u64;
 
-    // TODO: can i just use a group id or do i need a stack id as well?
     fn id_to_data(&self, id: u64) -> Result<V, Error>;
 }
 

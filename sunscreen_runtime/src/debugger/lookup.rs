@@ -81,7 +81,7 @@ impl StackFrameLookup {
         }
     }
 
-    pub fn backtrace_to_stackframes(&self, trace: Backtrace, id: u64) -> Vec<StackFrameInfo> {
+    pub fn backtrace_to_stackframes(&self, _trace: Backtrace, id: u64) -> Vec<StackFrameInfo> {
         let key = self.dict.get(&id).unwrap();
 
         let mut trace = Vec::<StackFrameInfo>::new();
@@ -120,9 +120,9 @@ impl IdLookup<Vec<u64>, Vec<StackFrameInfo>> for StackFrameLookup {
     fn id_to_data(&self, id: u64) -> Result<Vec<StackFrameInfo>, Error> {
         let key = self.dict.get(&id);
         let mut trace = Vec::<StackFrameInfo>::new();
-        let mut temp_key = Vec::<u64>::new();
+        let _temp_key = Vec::<u64>::new();
 
-        for index in key {
+        for _index in key {
             let next_frame = key.ok_or(Error::IdNotFound).and_then(|frame_id| {
                 self.frames
                     .get(frame_id)

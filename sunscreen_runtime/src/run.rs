@@ -3,14 +3,12 @@ use static_assertions::const_assert;
 use sunscreen_compiler_common::{GraphQuery, GraphQueryError};
 use sunscreen_fhe_program::{FheProgram, FheProgramTrait, Literal, Operation::*};
 
-#[cfg(feature = "debugger")]
-use sunscreen_fhe_program::{SchemeType::Bfv, SecurityLevel::TC128};
+
 
 #[cfg(feature = "debugger")]
 use crate::debugger::sessions::{get_sessions, BfvSession};
 
-#[cfg(feature = "debugger")]
-use crate::serialization::WithContext;
+
 
 use crossbeam::atomic::AtomicCell;
 use petgraph::{stable_graph::NodeIndex, Direction};
@@ -26,7 +24,6 @@ use std::sync::Arc;
 
 use seal_fhe::{
     Ciphertext, Error as SealError, Evaluator, GaloisKeys, Plaintext, RelinearizationKeys,
-    SecretKey,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, thiserror::Error)]

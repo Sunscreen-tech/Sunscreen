@@ -202,30 +202,30 @@ mod tests {
                 Operation::PublicInput(NodeIndex::from(0)),
                 group_counter,
             ));
-            group_counter += 1;
+            
             let in_2 = fe.add_node(make_node(
                 Operation::PublicInput(NodeIndex::from(1)),
                 group_counter,
             ));
-            group_counter += 1;
+            
             let in_3 = fe.add_node(make_node(
                 Operation::PublicInput(NodeIndex::from(2)),
                 group_counter,
             ));
-            group_counter += 1;
+            
 
             // Layer 2
             // sub_2 gets eliminated.
             // add_2, add_3 get eliminated
             // mul_2, mul_3 get eliminated
             let sub_1 = fe.add_node(make_node(Operation::Sub, group_counter));
-            group_counter += 1;
+            
             let sub_2 = fe.add_node(make_node(Operation::Sub, group_counter));
-            group_counter += 1;
+            
             let sub_3 = fe.add_node(make_node(Operation::Sub, group_counter));
-            group_counter += 1;
+            
             let sub_4 = fe.add_node(make_node(Operation::Sub, group_counter));
-            group_counter += 1;
+            
 
             fe.add_edge(in_1, sub_1, EdgeInfo::Left);
             fe.add_edge(in_2, sub_1, EdgeInfo::Right);
@@ -237,13 +237,13 @@ mod tests {
             fe.add_edge(in_3, sub_4, EdgeInfo::Left);
 
             let add_1 = fe.add_node(make_node(Operation::Add, group_counter));
-            group_counter += 1;
+            
             let add_2 = fe.add_node(make_node(Operation::Add, group_counter));
-            group_counter += 1;
+            
             let add_3 = fe.add_node(make_node(Operation::Add, group_counter));
-            group_counter += 1;
+            
             let add_4 = fe.add_node(make_node(Operation::Add, group_counter));
-            group_counter += 1;
+            
 
             fe.add_edge(in_1, add_1, EdgeInfo::Left);
             fe.add_edge(in_2, add_1, EdgeInfo::Right);
@@ -255,13 +255,13 @@ mod tests {
             fe.add_edge(in_3, add_4, EdgeInfo::Left);
 
             let mul_1 = fe.add_node(make_node(Operation::Mul, group_counter));
-            group_counter += 1;
+            
             let mul_2 = fe.add_node(make_node(Operation::Mul, group_counter));
-            group_counter += 1;
+            
             let mul_3 = fe.add_node(make_node(Operation::Mul, group_counter));
-            group_counter += 1;
+            
             let mul_4 = fe.add_node(make_node(Operation::Mul, group_counter));
-            group_counter += 1;
+            
 
             fe.add_edge(in_1, mul_1, EdgeInfo::Left);
             fe.add_edge(in_2, mul_1, EdgeInfo::Right);
@@ -273,11 +273,11 @@ mod tests {
             fe.add_edge(in_3, mul_4, EdgeInfo::Left);
 
             let neg_1 = fe.add_node(make_node(Operation::Neg, group_counter));
-            group_counter += 1;
+            
             let neg_2 = fe.add_node(make_node(Operation::Neg, group_counter));
-            group_counter += 1;
+            
             let neg_3 = fe.add_node(make_node(Operation::Neg, group_counter));
-            group_counter += 1;
+            
 
             fe.add_edge(in_1, neg_1, EdgeInfo::Unary);
             fe.add_edge(in_1, neg_2, EdgeInfo::Unary);
@@ -285,17 +285,17 @@ mod tests {
 
             // Layer 3
             let out_1 = fe.add_node(make_node(Operation::Add, group_counter));
-            group_counter += 1;
+            
             let out_2 = fe.add_node(make_node(Operation::Add, group_counter));
-            group_counter += 1;
+            
             let out_3 = fe.add_node(make_node(Operation::Add, group_counter));
-            group_counter += 1;
+            
             let out_4 = fe.add_node(make_node(Operation::Add, group_counter));
-            group_counter += 1;
+            
             let out_5 = fe.add_node(make_node(Operation::Add, group_counter));
-            group_counter += 1;
+            
             let out_6 = fe.add_node(make_node(Operation::Add, group_counter));
-            group_counter += 1;
+            
 
             fe.add_edge(sub_1, out_1, EdgeInfo::Left);
             fe.add_edge(add_1, out_1, EdgeInfo::Right);
@@ -421,28 +421,28 @@ mod tests {
                 Operation::PublicInput(NodeIndex::from(0)),
                 group_counter,
             ));
-            group_counter += 1;
+            
             let in_2 = fe.add_node(make_node(
                 Operation::PublicInput(NodeIndex::from(1)),
                 group_counter,
             ));
-            group_counter += 1;
+            
             let in_3 = fe.add_node(make_node(
                 Operation::PublicInput(NodeIndex::from(2)),
                 group_counter,
             ));
-            group_counter += 1;
+            
 
             // Layer 2
             // sub_2 gets eliminated.
             // add_1, add_2 get eliminated, leaving commuted add_3
             // mul_1, mul_2 get eliminated, leaving commuted mul_3
             let sub_1 = fe.add_node(make_node(Operation::Sub, group_counter));
-            group_counter += 1;
+            
             let sub_3 = fe.add_node(make_node(Operation::Sub, group_counter));
-            group_counter += 1;
+            
             let sub_4 = fe.add_node(make_node(Operation::Sub, group_counter));
-            group_counter += 1;
+            
 
             fe.add_edge(in_1, sub_1, EdgeInfo::Left);
             fe.add_edge(in_2, sub_1, EdgeInfo::Right);
@@ -452,9 +452,9 @@ mod tests {
             fe.add_edge(in_3, sub_4, EdgeInfo::Left);
 
             let add_1 = fe.add_node(make_node(Operation::Add, group_counter));
-            group_counter += 1;
+            
             let add_4 = fe.add_node(make_node(Operation::Add, group_counter));
-            group_counter += 1;
+            
 
             // The left and right edges get permuted after CSE because
             // add is commutative.
@@ -464,9 +464,9 @@ mod tests {
             fe.add_edge(in_3, add_4, EdgeInfo::Left);
 
             let mul_1 = fe.add_node(make_node(Operation::Mul, group_counter));
-            group_counter += 1;
+            
             let mul_4 = fe.add_node(make_node(Operation::Mul, group_counter));
-            group_counter += 1;
+            
 
             // The left and right edges get permuted after CSE because
             // mul is commutative.
@@ -477,9 +477,9 @@ mod tests {
 
             // neg_2 gets removed by CSE
             let neg_1 = fe.add_node(make_node(Operation::Neg, group_counter));
-            group_counter += 1;
+            
             let neg_3 = fe.add_node(make_node(Operation::Neg, group_counter));
-            group_counter += 1;
+            
 
             fe.add_edge(in_1, neg_1, EdgeInfo::Unary);
             fe.add_edge(in_2, neg_3, EdgeInfo::Unary);
@@ -487,13 +487,13 @@ mod tests {
             // Layer 3
             // out_2 gets culled
             let out_1 = fe.add_node(make_node(Operation::Add, group_counter));
-            group_counter += 1;
+            
             let out_3 = fe.add_node(make_node(Operation::Add, group_counter));
-            group_counter += 1;
+            
             let out_4 = fe.add_node(make_node(Operation::Add, group_counter));
-            group_counter += 1;
+            
             let out_6 = fe.add_node(make_node(Operation::Add, group_counter));
-            group_counter += 1;
+            
 
             fe.add_edge(sub_1, out_1, EdgeInfo::Left);
             fe.add_edge(add_1, out_1, EdgeInfo::Right);

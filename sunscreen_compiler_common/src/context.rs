@@ -8,8 +8,8 @@ use petgraph::Graph;
 
 use serde::{Deserialize, Serialize};
 
-use radix_trie::Trie;
 use crate::{Operation, Render};
+use radix_trie::Trie;
 
 /**
  * Stores debug information about groups and stack traces.
@@ -24,7 +24,7 @@ pub struct DebugData {
     /**
      * Used for looking up group data given a node's `group_id`.
      */
-    pub group_trace: Trie<Vec<u64>, u64>
+    pub group_trace: Trie<Vec<u64>, u64>,
 }
 
 #[cfg(feature = "debugger")]
@@ -35,7 +35,7 @@ impl DebugData {
     pub fn new() -> Self {
         DebugData {
             stack_trace: Trie::new(),
-            group_trace: Trie::new()
+            group_trace: Trie::new(),
         }
     }
 }
@@ -63,7 +63,7 @@ where
     /**
      * The stack ID associated with the ProgramNode.
      */
-    pub stack_id: u64
+    pub stack_id: u64,
 }
 
 impl<O> NodeInfo<O>
@@ -86,7 +86,7 @@ where
         Self {
             operation,
             group_id,
-            stack_id
+            stack_id,
         }
     }
 }
@@ -335,7 +335,7 @@ where
             #[cfg(feature = "debugger")]
             group_counter: 0,
             #[cfg(feature = "debugger")]
-            stack_counter: 0
+            stack_counter: 0,
         }
     }
 
@@ -354,7 +354,7 @@ where
                 #[cfg(feature = "debugger")]
                 group_id,
                 #[cfg(feature = "debugger")]
-                stack_id
+                stack_id,
             });
             self.group_counter += 1;
             node_index

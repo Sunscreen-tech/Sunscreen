@@ -420,7 +420,6 @@ where
      * Used for debugging. Calls `run_impl` with a secret key.
      */
 
-    // TODO: change SecretKey to PrivateKey
     pub fn debug_fhe_program<I>(
         &self,
         fhe_program: &CompiledFheProgram,

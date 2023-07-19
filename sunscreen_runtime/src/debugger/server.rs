@@ -8,7 +8,10 @@ use serde_json::{json, Value};
 use std::sync::OnceLock;
 use std::thread;
 
-use crate::{Ciphertext, Plaintext, SealData, Runtime, InnerCiphertext, InnerPlaintext, Type, debugger::get_sessions, debugger::SerializedSealData, WithContext};
+use crate::{
+    debugger::get_sessions, debugger::SerializedSealData, Ciphertext, InnerCiphertext,
+    InnerPlaintext, Plaintext, Runtime, SealData, Type, WithContext,
+};
 
 use tokio::runtime::Builder;
 
@@ -35,6 +38,7 @@ pub fn start_web_server() {
                             .service(get_session_data)
                             .service(get_all_sessions)
                             .service(get_code)
+                            .service(get_fhe_node_data)
                     })
                     .bind(("127.0.0.1", 8080))
                     .unwrap()
@@ -97,9 +101,8 @@ async fn get_code(session: web::Path<String>) -> impl Responder {
  */
 #[get("sessions/{session}/{nodeid}")]
 pub async fn get_fhe_node_data(
-    path_info: web::Path<(String, usize)>
-    ) -> Result<HttpResponse, actix_web::Error> {
-
+    path_info: web::Path<(String, usize)>,
+) -> Result<HttpResponse, actix_web::Error> {
     let (session, nodeid) = path_info.into_inner();
     let sessions = get_sessions().lock().unwrap();
 
@@ -112,29 +115,30 @@ pub async fn get_fhe_node_data(
 
             let data_for_server: SerializedSealData = match data {
                 SealData::Ciphertext(ct) => {
-
                     let with_context = WithContext {
                         params: pk.0.params.clone(),
-                        data: ct.clone()
+                        data: ct.clone(),
                     };
 
                     let sunscreen_ciphertext = Ciphertext {
                         // TODO: actually be able to extract type information
                         // Currently, any values we display to users will (in general) be garbage
                         data_type: Type {
-                            is_encrypted: true, 
+                            is_encrypted: true,
                             name: "".to_owned(),
-                            version: Version::new(1, 1, 1)
-                        }, 
+                            version: Version::new(1, 1, 1),
+                        },
 
-                        inner: InnerCiphertext::Seal(vec![with_context])
+                        inner: InnerCiphertext::Seal(vec![with_context]),
                     };
 
                     // TODO: this is not guaranteed to be a valid value since the ciphertext is not properly constructed
                     // let decrypted = runtime.decrypt(&sunscreen_ciphertext, pk).unwrap();
 
                     // you can get this with SEAL
-                    let noise_budget = runtime.measure_noise_budget(&sunscreen_ciphertext, pk).unwrap();
+                    let noise_budget = runtime
+                        .measure_noise_budget(&sunscreen_ciphertext, pk)
+                        .unwrap();
                     // TODO: figure out how to update this
                     let multiplicative_depth = 0;
                     // you can get this with SEAL
@@ -145,26 +149,25 @@ pub async fn get_fhe_node_data(
                         data_type: sunscreen_ciphertext.data_type,
                         noise_budget,
                         coefficients,
-                        multiplicative_depth
+                        multiplicative_depth,
                     }
-                },
+                }
                 SealData::Plaintext(pt) => {
-
                     let with_context = WithContext {
                         params: pk.0.params.clone(),
-                        data: pt.clone()
+                        data: pt.clone(),
                     };
 
                     let sunscreen_plaintext = Plaintext {
                         // TODO: actually be able to extract type information
                         // Currently, any values we display to users will (in general) be garbage
                         data_type: Type {
-                            is_encrypted: true, 
+                            is_encrypted: true,
                             name: "".to_owned(),
-                            version: Version::new(1, 1, 1)
-                        }, 
+                            version: Version::new(1, 1, 1),
+                        },
 
-                        inner: InnerPlaintext::Seal(vec![with_context])
+                        inner: InnerPlaintext::Seal(vec![with_context]),
                     };
 
                     // you can get this with SEAL
@@ -179,7 +182,7 @@ pub async fn get_fhe_node_data(
                         data_type: sunscreen_plaintext.data_type,
                         noise_budget,
                         coefficients,
-                        multiplicative_depth
+                        multiplicative_depth,
                     }
                 }
             };
@@ -190,14 +193,13 @@ pub async fn get_fhe_node_data(
                 ))
             })?;
             Ok(HttpResponse::Ok().body(data_json))
-            } else {
+        } else {
             Ok(HttpResponse::NotFound().body(format!("Node {} not found", nodeid)))
         }
     } else {
         Ok(HttpResponse::NotFound().body(format!("Session {} not found", session)))
     }
-} 
-
+}
 
 /*
 /**

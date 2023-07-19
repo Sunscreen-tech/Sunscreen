@@ -187,7 +187,7 @@ mod tests {
             NodeInfo {
                 operation,
                 group_id,
-                stack_id
+                stack_id,
             }
         }
 
@@ -203,19 +203,19 @@ mod tests {
             let in_1 = fe.add_node(make_node(
                 Operation::PublicInput(NodeIndex::from(0)),
                 group_counter,
-                stack_counter
+                stack_counter,
             ));
 
             let in_2 = fe.add_node(make_node(
                 Operation::PublicInput(NodeIndex::from(1)),
                 group_counter,
-                stack_counter
+                stack_counter,
             ));
 
             let in_3 = fe.add_node(make_node(
                 Operation::PublicInput(NodeIndex::from(2)),
                 group_counter,
-                stack_counter
+                stack_counter,
             ));
 
             // Layer 2
@@ -406,7 +406,7 @@ mod tests {
             NodeInfo {
                 operation,
                 group_id,
-                stack_id
+                stack_id,
             }
         }
 
@@ -421,19 +421,19 @@ mod tests {
             let in_1 = fe.add_node(make_node(
                 Operation::PublicInput(NodeIndex::from(0)),
                 group_counter,
-                stack_counter
+                stack_counter,
             ));
 
             let in_2 = fe.add_node(make_node(
                 Operation::PublicInput(NodeIndex::from(1)),
                 group_counter,
-                stack_counter
+                stack_counter,
             ));
 
             let in_3 = fe.add_node(make_node(
                 Operation::PublicInput(NodeIndex::from(2)),
                 group_counter,
-                stack_counter
+                stack_counter,
             ));
 
             // Layer 2

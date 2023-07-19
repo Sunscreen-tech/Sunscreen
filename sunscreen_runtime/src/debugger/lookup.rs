@@ -83,7 +83,7 @@ impl StackFrameLookup {
 
     pub fn backtrace_to_stackframes(&self, trace: Backtrace, id: u64) -> Vec<StackFrameInfo> {
         let key = self.dict.get(&id).unwrap();
-        
+
         let mut trace = Vec::<StackFrameInfo>::new();
         let mut temp_key = Vec::<u64>::new();
 
@@ -92,7 +92,7 @@ impl StackFrameLookup {
             let frame = self.frames.get(&temp_key).unwrap();
             trace.push(frame.clone());
         }
-        trace 
+        trace
     }
 }
 
@@ -113,7 +113,7 @@ impl IdLookup<Vec<u64>, Vec<StackFrameInfo>> for StackFrameLookup {
         0
     }
 
-    /** 
+    /**
      * Returns the backtrace associated with a node given the node's group_id.
      * This is analogous to a retrieval method.
      */
@@ -124,17 +124,17 @@ impl IdLookup<Vec<u64>, Vec<StackFrameInfo>> for StackFrameLookup {
 
         for index in key {
             let next_frame = key.ok_or(Error::IdNotFound).and_then(|frame_id| {
-                self.frames.get(frame_id)
+                self.frames
+                    .get(frame_id)
                     .map(Ok)
                     .unwrap_or_else(|| Err(Error::FrameNotFound))
             });
 
             trace.push(next_frame.unwrap().clone());
         }
-        Ok(trace) 
+        Ok(trace)
     }
 }
-
 
 pub struct GroupLookup {
     /**
@@ -147,14 +147,13 @@ pub struct GroupLookup {
     pub groups: Trie<Vec<u64>, Vec<Group>>,
 }
 
-
 #[derive(Debug)]
 pub enum Error {
     IdNotFound,
-    FrameNotFound
+    FrameNotFound,
 }
 
-/* 
+/*
 #[cfg(test)]
 mod tests {
     use super::*;

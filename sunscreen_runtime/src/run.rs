@@ -1,10 +1,10 @@
-use crate::{InnerPlaintext, SealData, PrivateKey};
+use crate::{InnerPlaintext, PrivateKey, SealData};
 use static_assertions::const_assert;
 use sunscreen_compiler_common::{GraphQuery, GraphQueryError};
 use sunscreen_fhe_program::{FheProgram, FheProgramTrait, Literal, Operation::*};
 
 #[cfg(feature = "debugger")]
-use sunscreen_fhe_program::{SecurityLevel::TC128, SchemeType::Bfv};
+use sunscreen_fhe_program::{SchemeType::Bfv, SecurityLevel::TC128};
 
 #[cfg(feature = "debugger")]
 use crate::debugger::sessions::{get_sessions, BfvSession};
@@ -22,7 +22,7 @@ use std::borrow::Cow;
 use std::collections::VecDeque;
 #[cfg(not(target_arch = "wasm32"))]
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::{Arc};
+use std::sync::Arc;
 
 use seal_fhe::{
     Ciphertext, Error as SealError, Evaluator, GaloisKeys, Plaintext, RelinearizationKeys,
@@ -615,8 +615,8 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::Params;
     use super::*;
+    use crate::Params;
     use seal_fhe::*;
     use sunscreen_fhe_program::{FheProgramTrait, SchemeType};
 
@@ -724,8 +724,8 @@ mod tests {
                 plain_modulus: 1024,
                 scheme_type: Bfv,
                 security_level: TC128
-            }, 
-            data: private_key
+            },
+            data: private_key,
         });
 
         #[cfg(feature = "debugger")]
@@ -740,8 +740,8 @@ mod tests {
                     private_key: &private_key,
                     session_name: "simple_add".to_owned(),
                 }),
-                "empty", 
-            )            
+                "empty",
+            )
             .unwrap()
         };
 
@@ -806,8 +806,8 @@ mod tests {
                 plain_modulus: 1024,
                 scheme_type: Bfv,
                 security_level: TC128
-            }, 
-            data: private_key
+            },
+            data: private_key,
         });
 
         #[cfg(feature = "debugger")]
@@ -822,7 +822,7 @@ mod tests {
                     private_key: &private_key,
                     session_name: "simple_mul".to_owned(),
                 }),
-                "empty"
+                "empty",
             )
             .unwrap()
         };
@@ -889,8 +889,8 @@ mod tests {
                 plain_modulus: 1024,
                 scheme_type: Bfv,
                 security_level: TC128
-            }, 
-            data: private_key
+            },
+            data: private_key,
         });
 
         #[cfg(feature = "debugger")]
@@ -905,7 +905,7 @@ mod tests {
                     private_key: &private_key,
                     session_name: "can_mul_and_relinearize".to_owned(),
                 }),
-                "empty"
+                "empty",
             )
             .unwrap()
         };
@@ -987,8 +987,8 @@ mod tests {
                 plain_modulus: 1024,
                 scheme_type: Bfv,
                 security_level: TC128
-            }, 
-            data: private_key
+            },
+            data: private_key,
         });
 
         #[cfg(feature = "debugger")]
@@ -1003,7 +1003,7 @@ mod tests {
                     private_key: &private_key,
                     session_name: "add_reduction".to_owned(),
                 }),
-                "empty"
+                "empty",
             )
             .unwrap()
         };
@@ -1068,8 +1068,8 @@ mod tests {
                 plain_modulus: 1024,
                 scheme_type: Bfv,
                 security_level: TC128
-            }, 
-            data: private_key
+            },
+            data: private_key,
         });
 
         #[cfg(feature = "debugger")]
@@ -1084,7 +1084,7 @@ mod tests {
                     private_key: &private_key,
                     session_name: "rotate_left".to_owned(),
                 }),
-                "empty"
+                "empty",
             )
             .unwrap()
         };
@@ -1154,8 +1154,8 @@ mod tests {
                 plain_modulus: 1024,
                 scheme_type: Bfv,
                 security_level: TC128
-            }, 
-            data: private_key
+            },
+            data: private_key,
         });
 
         #[cfg(feature = "debugger")]
@@ -1170,7 +1170,7 @@ mod tests {
                     private_key: &private_key,
                     session_name: "rotate_right".to_owned(),
                 }),
-                "empty"
+                "empty",
             )
             .unwrap()
         };
@@ -1226,8 +1226,8 @@ mod tests {
                 plain_modulus: 1024,
                 scheme_type: Bfv,
                 security_level: TC128
-            }, 
-            data: private_key
+            },
+            data: private_key,
         });
 
         let output = unsafe {
@@ -1241,7 +1241,7 @@ mod tests {
                     private_key: &private_key,
                     session_name: "new_session".to_owned(),
                 }),
-                "empty"
+                "empty",
             )
             .unwrap()
         };

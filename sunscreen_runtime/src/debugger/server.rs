@@ -111,7 +111,7 @@ pub async fn get_fhe_node_data(
                 SealData::Ciphertext(ct) => {
                     let runtime = Runtime::new_fhe(&curr_session.private_key.0.params).unwrap();
 
-                    runtime.decrypt()
+                    runtime.decrypt(ct, &curr_session.private_key)
                 },
                 SealData::Plaintext(pt) => pt
             };

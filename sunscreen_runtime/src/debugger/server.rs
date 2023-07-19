@@ -7,6 +7,7 @@ use serde_json::{json, Value};
 use std::sync::OnceLock;
 use std::thread;
 
+use crate::{Ciphertext, Plaintext};
 use crate::debugger::get_sessions;
 
 use tokio::runtime::Builder;
@@ -31,7 +32,7 @@ pub fn start_web_server() {
 
                         App::new()
                             .wrap(cors)
-                            .service(get_graph_data)
+                            .service(get_session_data)
                             .service(get_all_sessions)
                             .service(get_code)
                     })
@@ -46,7 +47,7 @@ pub fn start_web_server() {
     });
 }
 
-#[get("/graphs")]
+#[get("/sessions")]
 async fn get_all_sessions() -> impl Responder {
     let lock = get_sessions().lock().unwrap();
     let sessions = lock.keys().collect::<Vec<_>>();
@@ -57,8 +58,8 @@ async fn get_all_sessions() -> impl Responder {
 /**
  * Gets the graph data of a function.
  */
-#[get("/graphs/{session}")]
-async fn get_graph_data(session: web::Path<String>) -> impl Responder {
+#[get("/sessions/{session}")]
+async fn get_session_data(session: web::Path<String>) -> impl Responder {
     let sessions = get_sessions().lock().unwrap();
 
     if sessions.contains_key(session.as_str()) {
@@ -94,8 +95,7 @@ async fn get_code(session: web::Path<String>) -> impl Responder {
 /**
  * Gets the info of a node in the debugging graph for an FHE program.
  */
-/*
-#[get("graphs/{session}/{nodeid}")]
+#[get("sessions/{session}/{nodeid}")]
 pub async fn get_fhe_node_data(
     path_info: web::Path<(String, usize)>
     ) -> Result<HttpResponse, actix_web::Error> {
@@ -106,22 +106,21 @@ pub async fn get_fhe_node_data(
     if sessions.contains_key(&session) {
         let curr_session = sessions.get(&session).unwrap().unwrap_bfv_session();
 
-        let data = curr_session
-            .program_data
-            .get(nodeid)
-            .unwrap();
-
-        let data_json = serde_json::to_string(data).map_err(|e| {
-            actix_web::error::ErrorInternalServerError(format!(
-                "Failed to serialize node data to JSON: {}",
-                e
-            ))
-        })?;
-        Ok(HttpResponse::Ok().body(data_json))
+        if let Some(data) = curr_session.program_data.get(nodeid) {
+            let data_json = serde_json::to_string(data).map_err(|e| {
+                actix_web::error::ErrorInternalServerError(format!(
+                    "Failed to serialize node data to JSON: {}",
+                    e
+                ))
+            })?;
+            Ok(HttpResponse::Ok().body(data_json))
+        } else {
+            Ok(HttpResponse::NotFound().body(format!("Node {} not found", nodeid)))
+        }
     } else {
-        Ok(HttpResponse::NotFound().body("Node {:?} not found", nodeid))
+        Ok(HttpResponse::NotFound().body(format!("Session {} not found", session)))
     }
-} */
+} 
 
 
 /*

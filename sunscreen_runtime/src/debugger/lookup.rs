@@ -3,9 +3,11 @@ use radix_trie::Trie;
 use std::collections::HashMap;
 use std::path::Path;
 
-pub trait IdLookup {
-    fn data_to_id(&mut self, key: &[String]) -> u64;
-    fn id_to_data(&self, key: u64) -> &[String];
+pub trait IdLookup<K, V> {
+    fn data_to_id(&mut self, key: K, val: V) -> u64;
+
+    // TODO: can i just use a group id or do i need a stack id as well?
+    fn id_to_data(&self, id: u64) -> Result<V, Error>;
 }
 
 /**
@@ -57,45 +59,6 @@ impl StackFrameInfo {
     }
 }
 
-pub trait StackFrames {
-    fn add_stack_trace(&mut self, key: Vec<u64>, val: Backtrace);
-
-    fn get_stack_trace(&self, key: Vec<u64>) -> Vec<StackFrameInfo>;
-}
-
-impl StackFrames for Trie<Vec<u64>, StackFrameInfo> {
-    /**
-     * Adds an entire Backtrace to the trie by storing each BacktraceFrame.
-     * Keys are stored as lists for insertion.
-     */
-
-    fn add_stack_trace(&mut self, key: Vec<u64>, val: Backtrace) {
-        let frames = val.frames().iter().clone();
-        let mut temp_key: Vec<u64> = Vec::<u64>::new();
-
-        for (index, frame) in key.iter().zip(frames) {
-            temp_key.push(*index);
-            let frame_info = StackFrameInfo::new(frame);
-            self.insert(temp_key.clone(), frame_info);
-        }
-    }
-
-    /**
-     * Returns a sequence of StackFrames given a node in the StackTrie.
-     */
-    fn get_stack_trace(&self, key: Vec<u64>) -> Vec<StackFrameInfo> {
-        let mut trace = Vec::<StackFrameInfo>::new();
-        let mut temp_key = Vec::<u64>::new();
-
-        for index in key {
-            temp_key.push(index);
-            let frame = self.get(&temp_key).unwrap();
-            trace.push(frame.clone());
-        }
-        trace
-    }
-}
-
 /**
  * Allows for lookup of call stack information given a ProgramNode's `group_id`.
  */
@@ -105,22 +68,78 @@ pub struct StackFrameLookup {
      */
     pub dict: HashMap<u64, Vec<u64>>,
     /**
-     * Retrieves `Backtrace` objects representing stack frames, given values from `dict`.
+     * Retrieves `StackFrameInfo` objects representing stack frames, given values from `dict`.
      */
-    pub frames: Trie<Vec<u64>, Backtrace>,
+    pub frames: Trie<Vec<u64>, StackFrameInfo>,
 }
 
 impl StackFrameLookup {
     pub fn new() -> Self {
         StackFrameLookup {
             dict: HashMap::<u64, Vec<u64>>::new(),
-            frames: Trie::<Vec<u64>, Backtrace>::new(),
+            frames: Trie::<Vec<u64>, StackFrameInfo>::new(),
         }
     }
-    // TODO: make this functional
-    pub fn get() -> Backtrace {
-        Backtrace::new()
+
+    pub fn backtrace_to_stackframes(&self, trace: Backtrace, id: u64) -> Vec<StackFrameInfo> {
+        let key = self.dict.get(&id).unwrap();
+        
+        let mut trace = Vec::<StackFrameInfo>::new();
+        let mut temp_key = Vec::<u64>::new();
+
+        for index in key {
+            temp_key.push(*index);
+            let frame = self.frames.get(&temp_key).unwrap();
+            trace.push(frame.clone());
+        }
+        trace 
     }
+}
+
+impl IdLookup<Vec<u64>, Vec<StackFrameInfo>> for StackFrameLookup {
+    /**
+     * Inserts the backtrace associated with a node into the trie. Backtraces are stored as a `Vec<StackFrameInfo>`.
+     * Returns the node's group_id.
+     * This is analogous to an insertion method.
+     */
+    fn data_to_id(&mut self, key: Vec<u64>, val: Vec<StackFrameInfo>) -> u64 {
+        let mut temp_key: Vec<u64> = Vec::<u64>::new();
+
+        for (index, frame_info) in key.iter().zip(val) {
+            temp_key.push(*index);
+            self.frames.insert(temp_key.clone(), frame_info);
+        }
+        // TODO: somehow need to get the node's id?
+        0
+    }
+
+    /** 
+     * Returns the backtrace associated with a node given the node's group_id.
+     * This is analogous to a retrieval method.
+     */
+    fn id_to_data(&self, id: u64) -> Result<Vec<StackFrameInfo>, Error> {
+        let key = self.dict.get(&id);
+        let mut trace = Vec::<StackFrameInfo>::new();
+        let mut temp_key = Vec::<u64>::new();
+
+        for index in key {
+            let next_frame = key.ok_or(Error::IdNotFound).and_then(|frame_id| {
+                self.frames.get(frame_id)
+                    .map(Ok)
+                    .unwrap_or_else(|| Err(Error::FrameNotFound))
+            });
+
+            trace.push(next_frame.unwrap().clone());
+        }
+        Ok(trace) 
+    }
+}
+
+
+#[derive(Debug)]
+enum Error {
+    IdNotFound,
+    FrameNotFound
 }
 
 #[cfg(test)]

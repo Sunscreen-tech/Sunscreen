@@ -8,6 +8,7 @@ use petgraph::Graph;
 
 use serde::{Deserialize, Serialize};
 
+use radix_trie::Trie;
 use crate::{Operation, Render};
 
 /**
@@ -16,8 +17,8 @@ use crate::{Operation, Render};
 #[cfg(feature = "debugger")]
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct DebugData {
-    // TODO: Trie doesn't implement serialize/deserialize
     // pub stack_trace: Trie<Vec<u64>, u64>,
+    // pub group_trace: Trie<Vec<u64>, u64>
 }
 
 #[cfg(feature = "debugger")]
@@ -27,7 +28,8 @@ impl DebugData {
      */
     pub fn new() -> Self {
         DebugData {
-            //stack_trace: Trie::new(),
+            // stack_trace: Trie::new(),
+            // group_trace: Trie::new()
         }
     }
 }

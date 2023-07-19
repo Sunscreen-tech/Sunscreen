@@ -212,8 +212,13 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
                 .get_mut(session_name)
                 .unwrap()
                 .unwrap_bfv_session_mut();
-            let node_val = get_data(data, node_index.index());
-            session.program_data[node_index.index()] = Arc::into_inner(node_val.unwrap().clone());
+            let node_val = get_data(data, node_index.index());            
+            match Arc::try_unwrap(node_val.unwrap().clone()) {
+                Ok(val) => session.program_data[node_index.index()] = Some(val),
+                Err(arc) => {
+                    session.program_data[node_index.index()] = Some((*arc).clone());
+                }
+            }            
         }
 
         Ok(())

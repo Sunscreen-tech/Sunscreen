@@ -149,7 +149,7 @@ pub struct GroupLookup {
 
 
 #[derive(Debug)]
-enum Error {
+pub enum Error {
     IdNotFound,
     FrameNotFound
 }

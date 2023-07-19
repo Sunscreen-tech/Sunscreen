@@ -114,8 +114,8 @@ pub async fn get_fhe_node_data(
                 SealData::Ciphertext(ct) => {
 
                     let with_context = WithContext {
-                        params: pk.0.params,
-                        data: *ct
+                        params: pk.0.params.clone(),
+                        data: ct.clone()
                     };
 
                     let sunscreen_ciphertext = Ciphertext {
@@ -131,7 +131,7 @@ pub async fn get_fhe_node_data(
                     };
 
                     // TODO: this is not guaranteed to be a valid value since the ciphertext is not properly constructed
-                    let decrypted = runtime.decrypt(&sunscreen_ciphertext, pk).unwrap();
+                    // let decrypted = runtime.decrypt(&sunscreen_ciphertext, pk).unwrap();
 
                     // you can get this with SEAL
                     let noise_budget = runtime.measure_noise_budget(&sunscreen_ciphertext, pk).unwrap();
@@ -151,8 +151,8 @@ pub async fn get_fhe_node_data(
                 SealData::Plaintext(pt) => {
 
                     let with_context = WithContext {
-                        params: pk.0.params,
-                        data: *pt
+                        params: pk.0.params.clone(),
+                        data: pt.clone()
                     };
 
                     let sunscreen_plaintext = Plaintext {
@@ -183,8 +183,14 @@ pub async fn get_fhe_node_data(
                     }
                 }
             };
-            Ok(HttpResponse::Ok().body(data_for_server))
-        } else {
+            let data_json = serde_json::to_string(&data_for_server).map_err(|e| {
+                actix_web::error::ErrorInternalServerError(format!(
+                    "Failed to serialize node data to JSON: {}",
+                    e
+                ))
+            })?;
+            Ok(HttpResponse::Ok().body(data_json))
+            } else {
             Ok(HttpResponse::NotFound().body(format!("Node {} not found", nodeid)))
         }
     } else {

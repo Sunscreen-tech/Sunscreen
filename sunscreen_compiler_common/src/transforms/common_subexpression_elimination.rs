@@ -196,7 +196,7 @@ mod tests {
 
         #[cfg(feature = "debugger")]
         {
-            let mut group_counter: u64 = 0;
+            let group_counter: u64 = 0;
 
             let in_1 = fe.add_node(make_node(
                 Operation::PublicInput(NodeIndex::from(0)),

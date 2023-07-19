@@ -98,7 +98,7 @@ impl InnerPlaintext {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 /**
  * A type that can be either a SEAL plaintext or a ciphertext.
  */

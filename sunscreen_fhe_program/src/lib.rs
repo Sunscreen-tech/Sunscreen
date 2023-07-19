@@ -402,6 +402,9 @@ impl FheProgramTrait for FheProgram {
 
             #[cfg(feature = "debugger")]
             group_stack: Vec::new(),
+
+            #[cfg(feature = "debugger")]
+            stack_counter: self.stack_counter
         }
     }
 

@@ -17,8 +17,14 @@ use crate::{Operation, Render};
 #[cfg(feature = "debugger")]
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct DebugData {
-    // pub stack_trace: Trie<Vec<u64>, u64>,
-    // pub group_trace: Trie<Vec<u64>, u64>
+    /**
+     * Used for looking up stack traces given a node's `stack_id`.
+     */
+    pub stack_trace: Trie<Vec<u64>, u64>,
+    /**
+     * Used for looking up group data given a node's `group_id`.
+     */
+    pub group_trace: Trie<Vec<u64>, u64>
 }
 
 #[cfg(feature = "debugger")]
@@ -28,8 +34,8 @@ impl DebugData {
      */
     pub fn new() -> Self {
         DebugData {
-            // stack_trace: Trie::new(),
-            // group_trace: Trie::new()
+            stack_trace: Trie::new(),
+            group_trace: Trie::new()
         }
     }
 }
@@ -76,10 +82,11 @@ where
      * Creates a new [`NodeInfo`] with debug information.
      */
     #[cfg(feature = "debugger")]
-    pub fn new(operation: O, id: u64) -> Self {
+    pub fn new(operation: O, group_id: u64, stack_id: u64) -> Self {
         Self {
             operation,
-            group_id: id,
+            group_id,
+            stack_id
         }
     }
 }
@@ -300,6 +307,13 @@ where
 
     #[cfg(feature = "debugger")]
     /**
+     * Used to assign stack ID's for debugging.
+     * Updated whenever a stack ID is assigned so that ProgramNodes are sequentially identified.
+     */
+    pub stack_counter: u64,
+
+    #[cfg(feature = "debugger")]
+    /**
      * Represents the program context. Tracks groups of nodes in the compilation graph.
      */
     pub group_stack: Vec<Group>,
@@ -320,6 +334,8 @@ where
             group_stack: Vec::new(),
             #[cfg(feature = "debugger")]
             group_counter: 0,
+            #[cfg(feature = "debugger")]
+            stack_counter: 0
         }
     }
 
@@ -331,10 +347,14 @@ where
         {
             let group_id = self.group_counter;
 
+            let stack_id = self.stack_counter;
+
             let node_index = self.graph.add_node(NodeInfo {
                 operation,
                 #[cfg(feature = "debugger")]
                 group_id,
+                #[cfg(feature = "debugger")]
+                stack_id
             });
             self.group_counter += 1;
             node_index

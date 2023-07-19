@@ -14,7 +14,7 @@ serde = { version = "1.0.147", features = ["derive"] }
 syn = { version = "2.0.16", features = ["full"] }
 thiserror = "1.0.37"
 static_assertions = "1.1.0"
-radix_trie = "0.2.1"
+radix_trie = { version = "0.2.1", features = ["serde"] }
 
 [features]
 debugger = []

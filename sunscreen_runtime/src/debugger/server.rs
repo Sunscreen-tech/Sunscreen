@@ -7,7 +7,7 @@ use serde_json::{json, Value};
 use std::sync::OnceLock;
 use std::thread;
 
-use crate::{Ciphertext, Plaintext};
+use crate::{Ciphertext, Plaintext, SealData, Runtime};
 use crate::debugger::get_sessions;
 
 use tokio::runtime::Builder;
@@ -106,7 +106,16 @@ pub async fn get_fhe_node_data(
     if sessions.contains_key(&session) {
         let curr_session = sessions.get(&session).unwrap().unwrap_bfv_session();
 
-        if let Some(data) = curr_session.program_data.get(nodeid) {
+        if let Some(data) = curr_session.program_data.get(nodeid).unwrap() {
+            let plaintext = match data {
+                SealData::Ciphertext(ct) => {
+                    let runtime = Runtime::new_fhe(&curr_session.private_key.0.params).unwrap();
+
+                    runtime.decrypt()
+                },
+                SealData::Plaintext(pt) => pt
+            };
+
             let data_json = serde_json::to_string(data).map_err(|e| {
                 actix_web::error::ErrorInternalServerError(format!(
                     "Failed to serialize node data to JSON: {}",

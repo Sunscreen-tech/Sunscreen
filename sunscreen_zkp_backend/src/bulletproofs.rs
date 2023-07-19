@@ -653,6 +653,7 @@ mod tests {
             let n = graph.add_node(NodeInfo {
                 operation: op,
                 group_id: 0,
+                stack_id: 0
             });
 
             #[cfg(not(feature = "debugger"))]

@@ -27,7 +27,7 @@ pub use seal_fhe::SecurityLevel;
 use sunscreen_compiler_common::{CompilationResult, Context, EdgeInfo, NodeInfo};
 
 #[cfg(feature = "debugger")]
-use sunscreen_compiler_common::{DebugData};
+use sunscreen_compiler_common::DebugData;
 
 use std::collections::HashSet;
 
@@ -355,8 +355,6 @@ impl FheProgramTrait for FheProgram {
         }
 
         while let Some(node) = visit.pop() {
-            
-
             for edge in closure.neighbors(node) {
                 if !closure_set.contains(&edge) {
                     closure_set.insert(edge);

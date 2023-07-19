@@ -1,13 +1,10 @@
 use std::collections::HashMap;
 use std::sync::{Mutex, OnceLock};
 
-use crate::{SealData, PrivateKey};
+use crate::{PrivateKey, SealData};
 
 use sunscreen_compiler_common::CompilationResult;
 use sunscreen_fhe_program::Operation;
-
-use seal_fhe::SecretKey;
-
 
 // Global data structure storing session information
 static SESSIONS: OnceLock<Mutex<HashMap<String, Session>>> = OnceLock::new();

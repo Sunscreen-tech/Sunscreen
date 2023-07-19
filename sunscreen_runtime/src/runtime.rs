@@ -14,7 +14,7 @@ use crate::{
 };
 
 use log::trace;
-use seal_fhe::SecretKey;
+
 use sunscreen_fhe_program::FheProgramTrait;
 use sunscreen_fhe_program::SchemeType;
 

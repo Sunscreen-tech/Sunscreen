@@ -1,6 +1,6 @@
 pub mod build;
-pub mod lookup;
 pub mod groups;
+pub mod lookup;
 pub mod programs;
 pub mod server;
 pub mod sessions;

@@ -1,20 +1,13 @@
 use actix_cors::Cors;
 use actix_web::{get, web, App, HttpResponse, HttpServer, Responder};
 
-
-use serde::{Deserialize};
+use serde::Deserialize;
 use serde_json::{json, Value};
 
-
-use std::sync::{OnceLock};
+use std::sync::OnceLock;
 use std::thread;
 
 use crate::debugger::get_sessions;
-
-
-
-
-
 
 use tokio::runtime::Builder;
 
@@ -31,7 +24,6 @@ pub fn start_web_server() {
                 let rt = Builder::new_current_thread().enable_all().build().unwrap();
 
                 rt.block_on(async {
-
                     HttpServer::new(move || {
                         let cors = Cors::default()
                             .allow_any_origin()

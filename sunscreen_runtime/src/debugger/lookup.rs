@@ -2,6 +2,7 @@ use backtrace::{Backtrace, BacktraceFrame, SymbolName};
 use radix_trie::Trie;
 use std::collections::HashMap;
 use std::path::Path;
+use sunscreen_compiler_common::Group;
 
 pub trait IdLookup<K, V> {
     fn data_to_id(&mut self, key: K, val: V) -> u64;
@@ -68,7 +69,7 @@ pub struct StackFrameLookup {
      */
     pub dict: HashMap<u64, Vec<u64>>,
     /**
-     * Retrieves `StackFrameInfo` objects representing stack frames, given values from `dict`.
+     * Retrieves `Vec<StackFrameInfo>` objects representing a stack trace, given values from `dict`.
      */
     pub frames: Trie<Vec<u64>, StackFrameInfo>,
 }
@@ -136,12 +137,25 @@ impl IdLookup<Vec<u64>, Vec<StackFrameInfo>> for StackFrameLookup {
 }
 
 
+pub struct GroupLookup {
+    /**
+     * Given a ProgramNode's `group_id`, return the key used in the `groups` trie for retrieval.
+     */
+    pub dict: HashMap<u64, Vec<u64>>,
+    /**
+     * Retrieves `Vec<Group>` objects representing sequential groups, given values from `dict`.
+     */
+    pub groups: Trie<Vec<u64>, Vec<Group>>,
+}
+
+
 #[derive(Debug)]
 enum Error {
     IdNotFound,
     FrameNotFound
 }
 
+/* 
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -236,3 +250,4 @@ mod tests {
     #[test]
     fn test_empty_retrieval() {}
 }
+*/

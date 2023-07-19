@@ -52,6 +52,12 @@ where
      * The group ID associated with the ProgramNode.
      */
     pub group_id: u64,
+
+    #[cfg(feature = "debugger")]
+    /**
+     * The stack ID associated with the ProgramNode.
+     */
+    pub stack_id: u64
 }
 
 impl<O> NodeInfo<O>
@@ -260,7 +266,11 @@ where
         Self::new()
     }
 }
-type Group = String;
+
+/**
+ * Program groups are given names as strings.
+ */
+pub type Group = String;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 /**

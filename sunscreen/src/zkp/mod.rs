@@ -420,6 +420,8 @@ pub(crate) fn compile(program: &ZkpFrontendCompilation) -> CompiledZkpProgram {
                 operation,
                 #[cfg(feature = "debugger")]
                 group_id: n.group_id,
+                #[cfg(feature = "debugger")]
+                stack_id: n.stack_id
             }
         },
         |_, e| *e,

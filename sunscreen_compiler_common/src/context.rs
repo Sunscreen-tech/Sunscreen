@@ -23,11 +23,11 @@ pub struct DebugData {
     /**
      * Used for looking up stack traces given a node's `stack_id`.
      */
-    pub stack_trace: Trie<Vec<u64>, u64>,
+    pub stack_lookup: StackFrameLookup,
     /**
      * Used for looking up group data given a node's `group_id`.
      */
-    pub group_trace: Trie<Vec<u64>, u64>,
+    pub group_lookup: GroupLookup,
 
     /**
      * Used to assign a node's `stack_id`.

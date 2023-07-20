@@ -67,6 +67,12 @@ where
      * The stack ID associated with the ProgramNode.
      */
     pub stack_id: u64,
+
+    #[cfg(feature = "debugger")]
+    /**
+     * The maximum number of sequential multiplications without an intermediate decryption. 
+     */
+    pub multiplicative_depth: u64
 }
 
 impl<O> NodeInfo<O>
@@ -85,11 +91,30 @@ where
      * Creates a new [`NodeInfo`] with debug information.
      */
     #[cfg(feature = "debugger")]
-    pub fn new(operation: O, group_id: u64, stack_id: u64) -> Self {
+    pub fn new(operation: O, group_id: u64, stack_id: u64, multiplicative_depth: u64) -> Self {
         Self {
             operation,
             group_id,
-            stack_id        }
+            stack_id,
+            multiplicative_depth        }
+    }
+
+    #[cfg(feature = "debugger")]
+    /**
+     * Updates the multiplicative depth of the current node in the compilation graph.
+     */
+    pub fn update_multiplicative_depth(&mut self, node_index: &NodeIndex, graph: &StableGraph<NodeInfo<O>, EdgeInfo>) {
+
+        let mut multiplicative_depth = 0;
+        for edge in graph.edges_directed(node_index.clone(), petgraph::Incoming) {
+            let source_node_info = graph.node_weight(edge.source()).unwrap();
+            if source_node_info.operation.is_multiplication() {
+                multiplicative_depth = multiplicative_depth.max(source_node_info.multiplicative_depth + 1);
+            }
+        }
+
+        self.multiplicative_depth = multiplicative_depth;
+
     }
 }
 
@@ -356,8 +381,16 @@ where
                 group_id,
                 #[cfg(feature = "debugger")]
                 stack_id,
+                #[cfg(feature = "debugger")]
+                multiplicative_depth: 0
             });
+
+            if let Some(node_info) = self.graph.graph.clone().node_weight_mut(node_index) {
+                node_info.update_multiplicative_depth(&node_index, &self.graph.graph);
+            }
+
             self.group_counter += 1;
+            
             node_index
         }
         #[cfg(not(feature = "debugger"))]

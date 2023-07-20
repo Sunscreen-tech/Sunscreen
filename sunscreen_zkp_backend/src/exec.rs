@@ -44,6 +44,10 @@ impl OperationTrait for Operation {
     fn is_ordered(&self) -> bool {
         false
     }
+
+    fn is_multiplication(&self) -> bool {
+        matches!(self, Operation::Mul)
+    }
 }
 
 /**

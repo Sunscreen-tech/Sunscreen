@@ -102,6 +102,8 @@ async fn get_code(session: web::Path<String>) -> impl Responder {
 /**
  * Gets the info of a node in the debugging graph for an FHE program.
  */
+
+// TODO: be able to extract type information to have non-garbage `value` and `data_type` fields
 #[get("sessions/{session}/{nodeid}")]
 pub async fn get_fhe_node_data(
     path_info: web::Path<(String, usize)>,
@@ -125,8 +127,7 @@ pub async fn get_fhe_node_data(
                     };
 
                     let sunscreen_ciphertext = Ciphertext {
-                        // TODO: actually be able to extract type information
-                        // Currently, any values we display to users will (in general) be garbage
+                        // WARNING: this is garbage data, so we can't return a Ciphertext value that makes sense
                         data_type: Type {
                             is_encrypted: true,
                             name: "".to_owned(),
@@ -136,18 +137,13 @@ pub async fn get_fhe_node_data(
                         inner: InnerCiphertext::Seal(vec![with_context]),
                     };
 
-                    // TODO: this is not guaranteed to be a valid value since the ciphertext is not properly constructed
-                    // let decrypted = runtime.decrypt(&sunscreen_ciphertext, pk).unwrap();
 
                     let noise_budget = runtime
                         .measure_noise_budget(&sunscreen_ciphertext, pk)
                         .unwrap();
 
-                    let node_index = NodeIndex::new(nodeid); 
-                    let node_data = stable_graph.node_weight(node_index).unwrap();
-
                     // calculate this dynamically instead of storing it on the node
-                    let multiplicative_depth: u64 = get_mult_depth(&stable_graph, nodeid as u32);
+                    let multiplicative_depth: u64 = get_mult_depth(&stable_graph, nodeid as u32, 0);
                     // you can get this with SEAL
                         // decrypt it and then iterate through its coefficients, report those
                     let coefficients = vec![0];

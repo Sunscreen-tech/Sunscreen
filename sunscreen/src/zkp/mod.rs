@@ -153,6 +153,10 @@ impl OperationTrait for Operation {
     fn is_ordered(&self) -> bool {
         matches!(self, Operation::InvokeGadget(_))
     }
+
+    fn is_multiplication(&self) -> bool {
+        matches!(self, Operation::Mul)
+    }
 }
 
 impl Operation {
@@ -422,6 +426,8 @@ pub(crate) fn compile(program: &ZkpFrontendCompilation) -> CompiledZkpProgram {
                 group_id: n.group_id,
                 #[cfg(feature = "debugger")]
                 stack_id: n.stack_id,
+                #[cfg(feature = "debugger")]
+                multiplicative_depth: 0
             }
         },
         |_, e| *e,

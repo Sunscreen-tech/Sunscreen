@@ -26,6 +26,8 @@ pub fn apply_insert_relinearizations(ir: &mut FheProgram) {
             group_id: node.group_id,
             #[cfg(feature = "debugger")]
             stack_id: node.stack_id,
+            #[cfg(feature = "debugger")]
+            multiplicative_depth: 0
         }));
 
         transforms.push(Transform::AddEdge(

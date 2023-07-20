@@ -487,6 +487,8 @@ where
                 n.group_id,
                 #[cfg(feature = "debugger")]
                 n.stack_id,
+                #[cfg(feature = "debugger")]
+                0
             ),
             Operation::Mul => NodeInfo::new(
                 ExecOperation::Mul,
@@ -494,6 +496,8 @@ where
                 n.group_id,
                 #[cfg(feature = "debugger")]
                 n.stack_id,
+                #[cfg(feature = "debugger")]
+                0
             ),
             Operation::Sub => NodeInfo::new(
                 ExecOperation::Sub,
@@ -501,6 +505,8 @@ where
                 n.group_id,
                 #[cfg(feature = "debugger")]
                 n.stack_id,
+                #[cfg(feature = "debugger")]
+                0
             ),
             Operation::Neg => NodeInfo::new(
                 ExecOperation::Neg,
@@ -508,6 +514,8 @@ where
                 n.group_id,
                 #[cfg(feature = "debugger")]
                 n.stack_id,
+                #[cfg(feature = "debugger")]
+                0
             ),
             Operation::Constant(x) => NodeInfo::new(
                 ExecOperation::Constant(x),
@@ -515,6 +523,8 @@ where
                 n.group_id,
                 #[cfg(feature = "debugger")]
                 n.stack_id,
+                #[cfg(feature = "debugger")]
+                0
             ),
             Operation::Constraint(x) => NodeInfo::new(
                 ExecOperation::Constraint(x),
@@ -522,6 +532,8 @@ where
                 n.group_id,
                 #[cfg(feature = "debugger")]
                 n.stack_id,
+                #[cfg(feature = "debugger")]
+                0
             ),
             Operation::PublicInput(id) => NodeInfo::new(
                 ExecOperation::Input(id),
@@ -529,6 +541,8 @@ where
                 n.group_id,
                 #[cfg(feature = "debugger")]
                 n.stack_id,
+                #[cfg(feature = "debugger")]
+                0
             ),
             Operation::PrivateInput(id) => NodeInfo::new(
                 ExecOperation::Input(public_inputs.len() + id),
@@ -536,6 +550,8 @@ where
                 n.group_id,
                 #[cfg(feature = "debugger")]
                 n.stack_id,
+                #[cfg(feature = "debugger")]
+                0
             ),
             Operation::ConstantInput(x) => {
                 let val = constant_inputs[x].clone();
@@ -546,6 +562,8 @@ where
                     n.group_id,
                     #[cfg(feature = "debugger")]
                     n.stack_id,
+                    #[cfg(feature = "debugger")]
+                    0
                 )
             }
             Operation::HiddenInput(_) => match node_outputs.as_ref() {
@@ -555,6 +573,8 @@ where
                     n.group_id,
                     #[cfg(feature = "debugger")]
                     n.stack_id,
+                    #[cfg(feature = "debugger")]
+                    0
                 ),
                 None => NodeInfo::new(
                     ExecOperation::HiddenInput(None),
@@ -562,6 +582,8 @@ where
                     n.group_id,
                     #[cfg(feature = "debugger")]
                     n.stack_id,
+                    #[cfg(feature = "debugger")]
+                    0
                 ),
             },
             Operation::InvokeGadget(_) => unreachable!("Not all gadgets processed and removed"),
@@ -642,6 +664,8 @@ where
                 group_id: node.group_id,
                 #[cfg(feature = "debugger")]
                 stack_id: node.stack_id,
+                #[cfg(feature = "debugger")]
+                multiplicative_depth: 0
             }));
             transforms.push(Transform::AddEdge(
                 id.into(),

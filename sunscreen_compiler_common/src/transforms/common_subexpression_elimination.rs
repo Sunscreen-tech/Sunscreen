@@ -192,6 +192,7 @@ mod tests {
                 operation,
                 group_id,
                 stack_id,
+                multiplicative_depth: 0
             }
         }
 
@@ -411,6 +412,7 @@ mod tests {
                 operation,
                 group_id,
                 stack_id,
+                multiplicative_depth: 0
             }
         }
 

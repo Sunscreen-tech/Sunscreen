@@ -760,6 +760,8 @@ mod tests {
                     group_id: ir.group_counter,
                     #[cfg(feature = "debugger")]
                     stack_id: ir.stack_counter,
+                    #[cfg(feature = "debugger")]
+                    multiplicative_depth: 0
                 }));
                 transforms.push(Transform::AddEdge(n.into(), mul.into(), EdgeInfo::Left));
                 transforms.push(Transform::AddEdge(

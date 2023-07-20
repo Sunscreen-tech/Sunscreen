@@ -747,6 +747,7 @@ mod tests {
 
         let mut visited = vec![];
 
+        let ir_clone = ir.clone();
         forward_traverse_mut(&mut ir.graph, |_, n| {
             visited.push(n);
 
@@ -757,9 +758,9 @@ mod tests {
                 let mul = transforms.push(Transform::AddNode(NodeInfo {
                     operation: Operation::Mul,
                     #[cfg(feature = "debugger")]
-                    group_id: ir.group_counter,
+                    group_id: ir_clone.graph.metadata.group_counter,
                     #[cfg(feature = "debugger")]
-                    stack_id: ir.stack_counter
+                    stack_id: ir_clone.graph.metadata.stack_counter
                 }));
                 transforms.push(Transform::AddEdge(n.into(), mul.into(), EdgeInfo::Left));
                 transforms.push(Transform::AddEdge(

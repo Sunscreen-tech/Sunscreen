@@ -376,7 +376,7 @@ impl FheCompile for FheFrontendCompilation {
                     // HACKHACK: Input nodes are always added first to the graph in the order
                     // they're specified as function arguments. We should not depend on this.
                     NodeInfo::new(
-                        FheProgramOperation::InputCiphertext(id.index()),
+                        FheProgramOperation::InputCiphertext{ id: id.index()},
                         #[cfg(feature = "debugger")]
                         n.group_id,
                         #[cfg(feature = "debugger")]
@@ -387,7 +387,7 @@ impl FheCompile for FheFrontendCompilation {
                     // HACKHACK: Input nodes are always added first to the graph in the order
                     // they're specified as function arguments. We should not depend on this.
                     NodeInfo::new(
-                        FheProgramOperation::InputPlaintext(id.index()),
+                        FheProgramOperation::InputPlaintext{ id: id.index()},
                         #[cfg(feature = "debugger")]
                         n.group_id,
                         #[cfg(feature = "debugger")]
@@ -395,7 +395,7 @@ impl FheCompile for FheFrontendCompilation {
                     )
                 }
                 FheOperation::Literal(Literal::U64(x)) => NodeInfo::new(
-                    FheProgramOperation::Literal(FheProgramLiteral::U64(*x)),
+                    FheProgramOperation::Literal{ val: FheProgramLiteral::U64(*x)},
                     #[cfg(feature = "debugger")]
                     n.group_id,
                     #[cfg(feature = "debugger")]
@@ -405,9 +405,9 @@ impl FheCompile for FheFrontendCompilation {
                     // It's okay to unwrap here because fhe_program compilation will
                     // catch the panic and return a compilation error.
                     NodeInfo::new(
-                        FheProgramOperation::Literal(FheProgramLiteral::Plaintext(
+                        FheProgramOperation::Literal{val: FheProgramLiteral::Plaintext(
                             x.to_bytes().expect("Failed to serialize plaintext."),
-                        )),
+                        )},
                         #[cfg(feature = "debugger")]
                         n.group_id,
                         #[cfg(feature = "debugger")]

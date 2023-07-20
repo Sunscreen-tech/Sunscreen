@@ -145,7 +145,7 @@ pub async fn get_fhe_node_data(
                     let node_data = &curr_session.graph.graph.node_weight(node_index).unwrap();
 
                     // calculate this dynamically instead of storing it on the node
-                    let multiplicative_depth = node_data.multiplicative_depth;
+                    let multiplicative_depth = 0;
                     // you can get this with SEAL
                         // decrypt it and then iterate through its coefficients, report those
                     let coefficients = vec![0];

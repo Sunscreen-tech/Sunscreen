@@ -1,8 +1,7 @@
 use crossbeam::atomic::AtomicCell;
 use sunscreen_compiler_common::GraphQuery;
-use sunscreen_fhe_program::{FheProgram, Literal, Operation::*};
+use sunscreen_fhe_program::{FheProgram, Literal, Operation::*, Operation};
 use sunscreen_runtime::traverse;
-
 use std::collections::HashMap;
 
 mod canonical_embedding_norm;
@@ -60,8 +59,8 @@ pub fn predict_noise(model: &(dyn NoiseModel + Sync), fhe_program: &FheProgram) 
             let query = GraphQuery::new(&fhe_program.graph.graph);
 
             let noise = match &node.operation {
-                InputCiphertext(_) => model.encrypt(),
-                InputPlaintext(_) => 0.0,
+                InputCiphertext{..} => model.encrypt(),
+                InputPlaintext{..} => 0.0,
                 Add => {
                     let (left, right) = query.get_binary_operands(node_id).unwrap();
 
@@ -117,12 +116,12 @@ pub fn predict_noise(model: &(dyn NoiseModel + Sync), fhe_program: &FheProgram) 
 
                     model.output(output_id, noise_levels[x.index()].load())
                 }
-                Literal(_) => 0.0,
+                Operation::Literal{..} => 0.0,
                 ShiftLeft => {
                     let (left, right) = query.get_binary_operands(node_id).unwrap();
 
                     let b = match fhe_program.graph[right].operation {
-                        Literal(Literal::U64(v)) => v as i32,
+                        Operation::Literal{ val: Literal::U64(v)} => v as i32,
                         _ => panic!(
                             "Illegal right operand for ShiftLeft: {:#?}",
                             fhe_program.graph[right].operation
@@ -135,7 +134,7 @@ pub fn predict_noise(model: &(dyn NoiseModel + Sync), fhe_program: &FheProgram) 
                     let (left, right) = query.get_binary_operands(node_id).unwrap();
 
                     let b = match fhe_program.graph[right].operation {
-                        Literal(Literal::U64(v)) => v as i32,
+                        Operation::Literal{ val: Literal::U64(v)} => v as i32,
                         _ => panic!(
                             "Illegal right operand for ShiftLeft: {:#?}",
                             fhe_program.graph[right].operation

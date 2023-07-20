@@ -9,6 +9,8 @@ use petgraph::Graph;
 use radix_trie::Trie;
 use serde::{Deserialize, Serialize};
 
+use backtrace::Backtrace;
+
 use crate::{Operation, Render};
 
 

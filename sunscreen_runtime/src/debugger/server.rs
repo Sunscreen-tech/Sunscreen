@@ -170,7 +170,6 @@ pub async fn get_fhe_node_data(
                         inner: InnerPlaintext::Seal(vec![with_context]),
                     };
 
-                    // you can get this with SEAL
                     let noise_budget = 0;
                     // TODO: figure out how to update this
                     let multiplicative_depth = 0;
@@ -199,55 +198,4 @@ pub async fn get_fhe_node_data(
     } else {
         Ok(HttpResponse::NotFound().body(format!("Session {} not found", session)))
     }
-}
-
-/*
-/**
- * Gets node data in the compilation graph.
- */
-#[get("/nodes")]
-async fn get_node_data(session: String, runtime: FheRuntime, priv_key: &PrivateKey) -> impl Responder {
-    HttpResponse::Ok().body("hello".to_owned())
-}
-*/
-
-#[derive(Debug, Deserialize)]
-struct GraphFormat {
-    nodes: Vec<Value>,
-    edges: Vec<Vec<Value>>,
-}
-
-fn process_graph_json(json_str: &str) -> Result<String, serde_json::Error> {
-    let input_json: serde_json::Value = serde_json::from_str(json_str).unwrap();
-
-    let mut new_nodes = Vec::new();
-    let mut new_edges = Vec::new();
-
-    if let Some(nodes) = input_json.get("nodes") {
-        for (index, _) in nodes.as_array().unwrap().iter().enumerate() {
-            new_nodes.push(json!({
-                "type": "empty",
-                "title": "blank",
-                "id": index,
-            }));
-        }
-    }
-
-    if let Some(edges) = input_json.get("edges") {
-        for edge in edges.as_array().unwrap() {
-            new_edges.push(json!({
-                "arrowhead": "normal",
-                "directed": true,
-                "target": edge[1].as_i64().unwrap(),
-                "source": edge[0].as_i64().unwrap(),
-            }));
-        }
-    }
-
-    let output = json!({
-        "nodes": new_nodes,
-        "edges": new_edges
-    });
-
-    Ok(output.to_string())
 }

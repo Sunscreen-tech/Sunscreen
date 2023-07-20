@@ -5,6 +5,7 @@ use petgraph::Direction::Incoming;
 use semver::Version;
 use serde::Deserialize;
 use serde_json::{json, Value};
+use petgraph::stable_graph::NodeIndex;
 
 use std::sync::OnceLock;
 use std::thread;
@@ -142,7 +143,9 @@ pub async fn get_fhe_node_data(
                         .measure_noise_budget(&sunscreen_ciphertext, pk)
                         .unwrap();
 
-                    let multiplicative_depth = 0;
+                    let node_index = NodeIndex::new(nodeid); 
+                    let node_data = &curr_session.graph.graph.node_weight(node_index).unwrap();
+                    let multiplicative_depth = node_data.multiplicative_depth;
                     // you can get this with SEAL
                     let coefficients = vec![0];
 

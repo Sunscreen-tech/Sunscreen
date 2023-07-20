@@ -89,8 +89,7 @@ where
         Self {
             operation,
             group_id,
-            stack_id,
-        }
+            stack_id        }
     }
 }
 
@@ -349,7 +348,6 @@ where
         #[cfg(feature = "debugger")]
         {
             let group_id = self.group_counter;
-
             let stack_id = self.stack_counter;
 
             let node_index = self.graph.add_node(NodeInfo {

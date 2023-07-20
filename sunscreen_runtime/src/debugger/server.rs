@@ -1,6 +1,7 @@
 use actix_cors::Cors;
 use actix_web::{get, web, App, HttpResponse, HttpServer, Responder};
 
+use petgraph::Direction::Incoming;
 use semver::Version;
 use serde::Deserialize;
 use serde_json::{json, Value};
@@ -136,10 +137,11 @@ pub async fn get_fhe_node_data(
                     // let decrypted = runtime.decrypt(&sunscreen_ciphertext, pk).unwrap();
 
                     // you can get this with SEAL
+                    // TODO: does this accurately get the noise budget even if the `data_type` field in the ciphertext is wrong?
                     let noise_budget = runtime
                         .measure_noise_budget(&sunscreen_ciphertext, pk)
                         .unwrap();
-                    // TODO: figure out how to update this
+
                     let multiplicative_depth = 0;
                     // you can get this with SEAL
                     let coefficients = vec![0];
@@ -166,12 +168,10 @@ pub async fn get_fhe_node_data(
                             name: "".to_owned(),
                             version: Version::new(1, 1, 1),
                         },
-
                         inner: InnerPlaintext::Seal(vec![with_context]),
                     };
-
+                    // TODO: how does the value work?
                     let noise_budget = 0;
-                    // TODO: figure out how to update this
                     let multiplicative_depth = 0;
                     // you can get this with SEAL
                     let coefficients = vec![0];

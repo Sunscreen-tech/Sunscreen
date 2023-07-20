@@ -2,13 +2,14 @@ use crate::{InnerPlaintext, PrivateKey, SealData};
 use static_assertions::const_assert;
 use sunscreen_compiler_common::{GraphQuery, GraphQueryError};
 use sunscreen_fhe_program::{FheProgram, FheProgramTrait, Literal, Operation::*};
+use sunscreen_fhe_program::SchemeType::Bfv;
+use seal_fhe::SecurityLevel::TC128;
 
 
 
 #[cfg(feature = "debugger")]
 use crate::debugger::sessions::{get_sessions, BfvSession};
-
-
+use crate::WithContext;
 
 use crossbeam::atomic::AtomicCell;
 use petgraph::{stable_graph::NodeIndex, Direction};

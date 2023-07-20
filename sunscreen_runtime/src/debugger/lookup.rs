@@ -147,6 +147,28 @@ pub struct GroupLookup {
     pub groups: Trie<Vec<u64>, Vec<Group>>,
 }
 
+impl GroupLookup {
+    /**
+     * Creates a new `GroupLookup` object.
+     */
+    pub fn new() -> Self {
+        Self {
+            dict: HashMap::new(),
+            groups: Trie::new()
+        }
+    }
+}
+
+impl IdLookup<Vec<u64>, String> for GroupLookup {
+    fn data_to_id(&mut self, key: Vec<u64>, val: String) -> u64 {
+        0
+    }
+
+    fn id_to_data(&self, id: u64) -> Result<String, Error> {
+        Ok("hi".to_owned())
+    }
+}
+
 #[derive(Debug)]
 pub enum Error {
     IdNotFound,

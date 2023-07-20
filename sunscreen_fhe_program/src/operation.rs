@@ -4,6 +4,7 @@ use sunscreen_compiler_common::Operation as OperationTrait;
 use crate::Literal;
 
 #[derive(Debug, Clone, Serialize, Hash, Deserialize, PartialEq, Eq)]
+#[serde(tag = "type")]
 /**
  * An operation in the execution graph.
  */
@@ -73,17 +74,35 @@ pub enum Operation {
     /**
      * Represents an input ciphertext for the FHE program.
      */
-    InputCiphertext(usize),
+    InputCiphertext
+    {
+        /**
+         * The ID of the ciphertext.
+         */
+        id: usize
+    },
 
     /**
      * Represents an input plaintext for the current FHE program.
      */
-    InputPlaintext(usize),
+    InputPlaintext
+    {
+        /**
+         * The ID of the plaintext.
+         */
+        id: usize
+    },
 
     /**
      * Represents a literal value.
      */
-    Literal(Literal),
+    Literal
+    {
+        /**
+         * The value of the literal.
+         */
+        val: Literal
+    },
 
     /**
      * Represents a ciphertext output for the FHE program.

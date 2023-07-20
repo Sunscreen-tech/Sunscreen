@@ -191,8 +191,7 @@ mod tests {
             NodeInfo {
                 operation,
                 group_id,
-                stack_id,
-                multiplicative_depth: 0
+                stack_id
             }
         }
 
@@ -412,7 +411,6 @@ mod tests {
                 operation,
                 group_id,
                 stack_id,
-                multiplicative_depth: 0
             }
         }
 

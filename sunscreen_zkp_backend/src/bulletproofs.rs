@@ -654,7 +654,6 @@ mod tests {
                 operation: op,
                 group_id: 0,
                 stack_id: 0,
-                multiplicative_depth: 0
             });
 
             #[cfg(not(feature = "debugger"))]

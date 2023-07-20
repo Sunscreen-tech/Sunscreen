@@ -137,18 +137,25 @@ pub async fn get_fhe_node_data(
                     // TODO: this is not guaranteed to be a valid value since the ciphertext is not properly constructed
                     // let decrypted = runtime.decrypt(&sunscreen_ciphertext, pk).unwrap();
 
-                    // you can get this with SEAL
-                    // TODO: does this accurately get the noise budget even if the `data_type` field in the ciphertext is wrong?
                     let noise_budget = runtime
                         .measure_noise_budget(&sunscreen_ciphertext, pk)
                         .unwrap();
 
                     let node_index = NodeIndex::new(nodeid); 
                     let node_data = &curr_session.graph.graph.node_weight(node_index).unwrap();
+
+                    // calculate this dynamically instead of storing it on the node
                     let multiplicative_depth = node_data.multiplicative_depth;
                     // you can get this with SEAL
+                        // decrypt it and then iterate through its coefficients, report those
                     let coefficients = vec![0];
 
+                    // detecting overflow: a value is negative if a number is greater than plaintextmodulus/2, positive else
+                    // if two input operands have same sign and output is opposite sign, then overflow
+
+                    // detecting noise budget exceeded: noise budget will be 0
+                        // noise budget in bits: a number between 0 and number of bits in q is number of bits remaining
+                        // advantage of this: number of bits is linear in mult depth, decreasing
                     SerializedSealData {
                         value: 0,
                         data_type: sunscreen_ciphertext.data_type,

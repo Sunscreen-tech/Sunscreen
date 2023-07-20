@@ -370,9 +370,7 @@ impl FheCompile for FheFrontendCompilation {
                     #[cfg(feature = "debugger")]
                     n.group_id,
                     #[cfg(feature = "debugger")]
-                    n.stack_id,
-                    #[cfg(feature = "debugger")]
-                    0
+                    n.stack_id
                 ),
                 FheOperation::InputCiphertext => {
                     // HACKHACK: Input nodes are always added first to the graph in the order
@@ -382,9 +380,7 @@ impl FheCompile for FheFrontendCompilation {
                         #[cfg(feature = "debugger")]
                         n.group_id,
                         #[cfg(feature = "debugger")]
-                        n.stack_id,
-                        #[cfg(feature = "debugger")]
-                        0
+                        n.stack_id
                     )
                 }
                 FheOperation::InputPlaintext => {
@@ -395,9 +391,7 @@ impl FheCompile for FheFrontendCompilation {
                         #[cfg(feature = "debugger")]
                         n.group_id,
                         #[cfg(feature = "debugger")]
-                        n.stack_id,
-                        #[cfg(feature = "debugger")]
-                        0
+                        n.stack_id
                     )
                 }
                 FheOperation::Literal(Literal::U64(x)) => NodeInfo::new(
@@ -405,9 +399,7 @@ impl FheCompile for FheFrontendCompilation {
                     #[cfg(feature = "debugger")]
                     n.group_id,
                     #[cfg(feature = "debugger")]
-                    n.stack_id,
-                    #[cfg(feature = "debugger")]
-                    0
+                    n.stack_id
                 ),
                 FheOperation::Literal(Literal::Plaintext(x)) => {
                     // It's okay to unwrap here because fhe_program compilation will
@@ -419,9 +411,7 @@ impl FheCompile for FheFrontendCompilation {
                         #[cfg(feature = "debugger")]
                         n.group_id,
                         #[cfg(feature = "debugger")]
-                        n.stack_id,
-                        #[cfg(feature = "debugger")]
-                        0
+                        n.stack_id
                     )
                 }
                 FheOperation::Sub => NodeInfo::new(
@@ -429,90 +419,70 @@ impl FheCompile for FheFrontendCompilation {
                     #[cfg(feature = "debugger")]
                     n.group_id,
                     #[cfg(feature = "debugger")]
-                    n.stack_id,
-                    #[cfg(feature = "debugger")]
-                    0
+                    n.stack_id
                 ),
                 FheOperation::SubPlaintext => NodeInfo::new(
                     FheProgramOperation::SubPlaintext,
                     #[cfg(feature = "debugger")]
                     n.group_id,
                     #[cfg(feature = "debugger")]
-                    n.stack_id,
-                    #[cfg(feature = "debugger")]
-                    0
+                    n.stack_id
                 ),
                 FheOperation::Negate => NodeInfo::new(
                     FheProgramOperation::Negate,
                     #[cfg(feature = "debugger")]
                     n.group_id,
                     #[cfg(feature = "debugger")]
-                    n.stack_id,
-                    #[cfg(feature = "debugger")]
-                    0
+                    n.stack_id
                 ),
                 FheOperation::Multiply => NodeInfo::new(
                     FheProgramOperation::Multiply,
                     #[cfg(feature = "debugger")]
                     n.group_id,
                     #[cfg(feature = "debugger")]
-                    n.stack_id,
-                    #[cfg(feature = "debugger")]
-                    0
+                    n.stack_id
                 ),
                 FheOperation::MultiplyPlaintext => NodeInfo::new(
                     FheProgramOperation::MultiplyPlaintext,
                     #[cfg(feature = "debugger")]
                     n.group_id,
                     #[cfg(feature = "debugger")]
-                    n.stack_id,
-                    #[cfg(feature = "debugger")]
-                    0
+                    n.stack_id
                 ),
                 FheOperation::Output => NodeInfo::new(
                     FheProgramOperation::OutputCiphertext,
                     #[cfg(feature = "debugger")]
                     n.group_id,
                     #[cfg(feature = "debugger")]
-                    n.stack_id,
-                    #[cfg(feature = "debugger")]
-                    0
+                    n.stack_id
                 ),
                 FheOperation::RotateLeft => NodeInfo::new(
                     FheProgramOperation::ShiftLeft,
                     #[cfg(feature = "debugger")]
                     n.group_id,
                     #[cfg(feature = "debugger")]
-                    n.stack_id,
-                    #[cfg(feature = "debugger")]
-                    0
+                    n.stack_id
                 ),
                 FheOperation::RotateRight => NodeInfo::new(
                     FheProgramOperation::ShiftRight,
                     #[cfg(feature = "debugger")]
                     n.group_id,
                     #[cfg(feature = "debugger")]
-                    n.stack_id,
-                    #[cfg(feature = "debugger")]
-                    0
+                    n.stack_id
                 ),
                 FheOperation::SwapRows => NodeInfo::new(
                     FheProgramOperation::SwapRows,
                     #[cfg(feature = "debugger")]
                     n.group_id,
                     #[cfg(feature = "debugger")]
-                    n.stack_id,
-                    #[cfg(feature = "debugger")]
-                    0
+                    n.stack_id
                 ),
                 FheOperation::AddPlaintext => NodeInfo::new(
                     FheProgramOperation::AddPlaintext,
                     #[cfg(feature = "debugger")]
                     n.group_id,
                     #[cfg(feature = "debugger")]
-                    n.stack_id,
-                    #[cfg(feature = "debugger")]
-                    0
+                    n.stack_id
                 ),
             },
             |_, e| match e {

@@ -6,12 +6,13 @@ use semver::Version;
 use serde::Deserialize;
 use serde_json::{json, Value};
 use petgraph::stable_graph::NodeIndex;
+use sunscreen_compiler_common::{lookup};
 
 use std::sync::OnceLock;
 use std::thread;
 
 use crate::{
-    debugger::get_sessions, debugger::SerializedSealData, Ciphertext, InnerCiphertext,
+    debugger::{get_sessions, get_mult_depth}, debugger::SerializedSealData, Ciphertext, InnerCiphertext,
     InnerPlaintext, Plaintext, Runtime, SealData, Type, WithContext,
 };
 
@@ -114,6 +115,7 @@ pub async fn get_fhe_node_data(
         if let Some(data) = curr_session.program_data.get(nodeid).unwrap() {
             let pk = &curr_session.private_key;
             let runtime = Runtime::new_fhe(&pk.0.params).unwrap();
+            let stable_graph = &curr_session.graph.graph;
 
             let data_for_server: SerializedSealData = match data {
                 SealData::Ciphertext(ct) => {
@@ -142,10 +144,10 @@ pub async fn get_fhe_node_data(
                         .unwrap();
 
                     let node_index = NodeIndex::new(nodeid); 
-                    let node_data = &curr_session.graph.graph.node_weight(node_index).unwrap();
+                    let node_data = stable_graph.node_weight(node_index).unwrap();
 
                     // calculate this dynamically instead of storing it on the node
-                    let multiplicative_depth = 0;
+                    let multiplicative_depth: u64 = get_mult_depth(&stable_graph, nodeid as u32);
                     // you can get this with SEAL
                         // decrypt it and then iterate through its coefficients, report those
                     let coefficients = vec![0];

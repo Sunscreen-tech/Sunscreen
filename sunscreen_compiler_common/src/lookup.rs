@@ -2,18 +2,27 @@ use backtrace::{Backtrace, BacktraceFrame, SymbolName};
 use radix_trie::Trie;
 use std::collections::HashMap;
 use std::path::Path;
-use sunscreen_compiler_common::Group;
+use serde::{Serialize, Deserialize};
 
+/**
+ * Support for retrieval and insertion from lookup structures.
+ */
 pub trait IdLookup<K, V> {
+    /**
+     * Inserts data into the lookup structure.
+     */
     fn data_to_id(&mut self, key: K, val: V) -> u64;
 
+    /**
+     * Retrieves data from the lookup structure.
+     */
     fn id_to_data(&self, id: u64) -> Result<V, Error>;
 }
 
 /**
  * Stores information about individual stack frames.
  */
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct StackFrameInfo {
     /**
      * Name of the function called.
@@ -62,6 +71,7 @@ impl StackFrameInfo {
 /**
  * Allows for lookup of call stack information given a ProgramNode's `group_id`.
  */
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct StackFrameLookup {
     /**
      * Given a ProgramNode's `group_id`, return the key used in the `frames` trie for retrieval.
@@ -74,6 +84,9 @@ pub struct StackFrameLookup {
 }
 
 impl StackFrameLookup {
+    /**
+     * Creates a new `StackFrameLookup` object.
+     */
     pub fn new() -> Self {
         StackFrameLookup {
             dict: HashMap::<u64, Vec<u64>>::new(),
@@ -81,6 +94,9 @@ impl StackFrameLookup {
         }
     }
 
+    /**
+     * Extracts backtrace info, turning it into a `Vec<StackFrameInfo>`.
+     */
     pub fn backtrace_to_stackframes(&self, _trace: Backtrace, id: u64) -> Vec<StackFrameInfo> {
         let key = self.dict.get(&id).unwrap();
 
@@ -136,6 +152,12 @@ impl IdLookup<Vec<u64>, Vec<StackFrameInfo>> for StackFrameLookup {
     }
 }
 
+type Group = String;
+
+/**
+ * Stores information about groups.
+ */
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct GroupLookup {
     /**
      * Given a ProgramNode's `group_id`, return the key used in the `groups` trie for retrieval.
@@ -170,8 +192,17 @@ impl IdLookup<Vec<u64>, String> for GroupLookup {
 }
 
 #[derive(Debug)]
+/**
+ * Lookup error types.
+ */
 pub enum Error {
+    /**
+     * Returned if a node ID isn't found in the initial lookup structure.
+     */
     IdNotFound,
+    /**
+     * Returned if a stack frame isn't found in the trie.
+     */
     FrameNotFound,
 }
 

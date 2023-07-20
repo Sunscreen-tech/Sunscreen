@@ -3,7 +3,6 @@
 
 //! This crate contains common types and infrastructure for Sunscreen's
 //! compilers.
-
 mod context;
 mod graph;
 /**
@@ -15,6 +14,11 @@ pub mod macros;
  * A set of generic compiler transforms.
  */
 pub mod transforms;
+
+/**
+ * Allows for lookup of stack and group information.
+ */
+pub mod lookup;
 
 pub use context::*;
 pub use graph::*;

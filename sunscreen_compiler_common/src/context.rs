@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 use backtrace::Backtrace;
 
 use crate::{Operation, Render};
-
+use crate::lookup::{StackFrameLookup, GroupLookup};
 
 /**
  * Stores debug information about groups and stack traces.
@@ -47,8 +47,8 @@ impl DebugData {
      */
     pub fn new() -> Self {
         DebugData {
-            stack_trace: Trie::new(),
-            group_trace: Trie::new(),
+            stack_lookup: StackFrameLookup::new(),
+            group_lookup: GroupLookup::new(),
             group_counter: 0,
             stack_counter: 0
         }

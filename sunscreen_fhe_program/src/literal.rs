@@ -2,6 +2,7 @@ use core::hash::Hash;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Hash, Serialize, Deserialize, PartialEq, Eq)]
+#[cfg_attr(feature = "debugger", serde(tag = "type"))]
 /**
  * Represents a literal value in an expression.
  */

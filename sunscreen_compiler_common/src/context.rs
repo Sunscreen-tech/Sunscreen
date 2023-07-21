@@ -345,16 +345,16 @@ where
             let group_id = self.graph.metadata.group_counter;
             let stack_id = self.graph.metadata.stack_counter;
 
-            let node_index = self.graph.add_node(NodeInfo {
+            
+            // TOOD: figure out updates to group and stack id?
+
+            self.graph.add_node(NodeInfo {
                 operation,
                 #[cfg(feature = "debugger")]
                 group_id,
                 #[cfg(feature = "debugger")]
                 stack_id,
-            });
-            // TOOD: figure out updates to group and stack id?
-
-            node_index
+            })
         }
         #[cfg(not(feature = "debugger"))]
         {

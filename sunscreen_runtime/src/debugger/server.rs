@@ -159,7 +159,7 @@ pub async fn get_fhe_node_data(
                         .measure_noise_budget(&sunscreen_ciphertext, pk)
                         .unwrap();
 
-                    let multiplicative_depth: u64 = get_mult_depth(&stable_graph, nodeid as u32, 0);
+                    let multiplicative_depth: u64 = get_mult_depth(stable_graph, nodeid as u32, 0);
 
                     let mut coefficients = Vec::new();
 

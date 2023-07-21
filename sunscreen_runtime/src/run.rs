@@ -9,9 +9,7 @@ use crate::debugger::sessions::{get_sessions, BfvSession};
 #[cfg(feature = "debugger")]
 use crate::WithContext;
 #[cfg(feature = "debugger")]
-use sunscreen_fhe_program::SchemeType::Bfv;
-#[cfg(feature = "debugger")]
-use sunscreen_fhe_program::SecurityLevel::TC128;
+use sunscreen_fhe_program::{SchemeType::Bfv, SecurityLevel::TC128};
 
 use crossbeam::atomic::AtomicCell;
 use petgraph::{stable_graph::NodeIndex, Direction};

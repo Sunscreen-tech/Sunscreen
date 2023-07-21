@@ -142,11 +142,18 @@ pub async fn get_fhe_node_data(
                         .measure_noise_budget(&sunscreen_ciphertext, pk)
                         .unwrap();
 
-                    // calculate this dynamically instead of storing it on the node
                     let multiplicative_depth: u64 = get_mult_depth(&stable_graph, nodeid as u32, 0);
-                    // you can get this with SEAL
-                        // decrypt it and then iterate through its coefficients, report those
-                    let coefficients = vec![0];
+
+                    let mut coefficients:Vec<u64>= vec![0];
+
+                    // how do i get the polynomials stored in this ciphertext?
+                    // and how do i decrypt a seal ciphertext?
+                    /* 
+                    for cipher_index in 0..ct.num_polynomials() {
+
+                    }
+                    */
+
 
                     // detecting overflow: a value is negative if a number is greater than plaintextmodulus/2, positive else
                     // if two input operands have same sign and output is opposite sign, then overflow
@@ -178,11 +185,14 @@ pub async fn get_fhe_node_data(
                         },
                         inner: InnerPlaintext::Seal(vec![with_context]),
                     };
-                    // TODO: how does the value work?
+
                     let noise_budget = 0;
                     let multiplicative_depth = 0;
-                    // you can get this with SEAL
-                    let coefficients = vec![0];
+
+                    let mut coefficients = Vec::new();
+                    for index in 0..pt.len() {
+                        coefficients.push(pt.get_coefficient(index));
+                    }
 
                     SerializedSealData {
                         value: 0,

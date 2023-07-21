@@ -1,5 +1,4 @@
-use actix_cors::Cors;
-use actix_web::{get, web, App, HttpResponse, HttpServer, Responder};
+use actix_web::{get, web, App, HttpResponse, HttpServer, Responder, http::header};
 
 use petgraph::Direction::Incoming;
 use seal_fhe::{Decryptor, Context, EncryptionParameters, BfvEncryptionParametersBuilder, Modulus, CoefficientModulus};
@@ -33,17 +32,16 @@ pub fn start_web_server() {
 
                 rt.block_on(async {
                     HttpServer::new(move || {
-                        let cors = Cors::default()
-                            .allow_any_origin()
-                            .allowed_methods(vec!["GET"]);
-
                         App::new()
-                            .wrap(cors)
                             .service(get_session_data)
                             .service(get_all_sessions)
                             .service(get_code)
                             .service(get_fhe_node_data)
+                            .service(index)
+                            .service(app_css)
+                            .service(main_js)
                     })
+                    .disable_signals()
                     .bind(("127.0.0.1", 8080))
                     .unwrap()
                     .run()
@@ -53,6 +51,27 @@ pub fn start_web_server() {
             })
             .unwrap();
     });
+}
+
+#[get("/")]
+async fn index() -> impl Responder {
+    HttpResponse::Ok()
+        .insert_header(header::ContentType(mime::TEXT_HTML))
+        .body(include_str!("../../debugger-frontend/index.html"))
+}
+
+#[get("/main.js")]
+async fn main_js() -> impl Responder {
+    HttpResponse::Ok()
+        .insert_header(header::ContentType(mime::APPLICATION_JAVASCRIPT))
+        .body(include_str!("../../debugger-frontend/build/main.js"))
+}
+
+#[get("/App.css")]
+async fn app_css() -> impl Responder {
+    HttpResponse::Ok()
+        .insert_header(header::ContentType(mime::TEXT_CSS))
+        .body(include_str!("../../debugger-frontend/src/App.css"))
 }
 
 #[get("/sessions")]
@@ -145,16 +164,16 @@ pub async fn get_fhe_node_data(
 
                     let multiplicative_depth: u64 = get_mult_depth(&stable_graph, nodeid as u32, 0);
 
-                    let mut coefficients: Vec<Vec<u64>> = Vec::new();
+                    let mut coefficients = Vec::new();
 
                     let inner_cipher = sunscreen_ciphertext.inner;
                     match inner_cipher {
                         InnerCiphertext::Seal(vec) => {
                             for inner_cipher in vec {
-                                let mut inner_coefficients= Vec::new();
+                                //let mut inner_coefficients= Vec::new();
 
-                                let test = inner_cipher.params.coeff_modulus;
-                                let t = inner_cipher.params.lattice_dimension;
+                                //let test = inner_cipher.params.coeff_modulus;
+                                //let t = inner_cipher.params.lattice_dimension;
                                 // Decrypt inner ciphertext
                                 /* 
                                 let mut encryption_params_builder = BfvEncryptionParametersBuilder::new()
@@ -170,7 +189,7 @@ pub async fn get_fhe_node_data(
 
 
 
-                                coefficients.push(inner_coefficients);
+                                //coefficients.push(inner_coefficients);
                             }
                         }
                     }
@@ -211,9 +230,11 @@ pub async fn get_fhe_node_data(
                     let multiplicative_depth = 0;
 
                     let mut coefficients = Vec::new();
+                    /* 
                     for index in 0..pt.len() {
                         coefficients.push(pt.get_coefficient(index));
                     }
+                    */
 
                     SerializedSealData {
                         value: 0,

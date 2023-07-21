@@ -36,8 +36,8 @@ thiserror = "1.0.37"
 radix_trie = "0.2.1"
 backtrace = "0.3.67"
 actix-web = "4.3.1"
+mime = "0.3.17"
 reqwest = "0.11"
-actix-cors = "0.6.4"
 tokio = { version = "1.29.1", features = ["rt"] }
 
 [dev-dependencies]

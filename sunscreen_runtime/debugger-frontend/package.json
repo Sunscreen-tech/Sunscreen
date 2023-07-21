@@ -1,0 +1,54 @@
+{
+  "name": "test",
+  "version": "0.1.0",
+  "private": true,
+  "dependencies": {
+    "@craco/craco": "^7.1.0",
+    "@devbookhq/splitter": "^1.4.0",
+    "@emotion/react": "^11.11.1",
+    "@emotion/styled": "^11.11.0",
+    "@msagl/core": "^1.1.16",
+    "@msagl/parser": "^1.1.16",
+    "@msagl/renderer-svg": "^1.1.18",
+    "@msagl/renderer-webgl": "^1.1.18",
+    "@types/jest": "^29.5.3",
+    "@types/node": "^20.4.2",
+    "@types/react": "^18.2.15",
+    "@types/react-dom": "^18.2.7",
+    "mui": "^0.0.1",
+    "react": "16.14.0",
+    "react-digraph": "^8.1.0",
+    "react-dom": "16.14.0",
+    "react-resizable": "^3.0.5",
+    "react-scripts": "^5.0.1",
+    "react-split": "^2.0.14",
+    "react-syntax-highlighter": "^15.5.0",
+    "split-pane-react": "^0.1.3",
+    "ts-loader": "9.4.4",
+    "typescript": "^4.9.5",
+    "web-vitals": "^2.1.4",
+    "webpack": "^5.88.2",
+    "webpack-cli": "^5.1.4"
+  },
+  "scripts": {
+    "build": "webpack-cli build --config webpack.config.js"
+  },
+  "eslintConfig": {
+    "extends": [
+      "react-app",
+      "react-app/jest"
+    ]
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  }
+}

@@ -2,6 +2,7 @@ use actix_cors::Cors;
 use actix_web::{get, web, App, HttpResponse, HttpServer, Responder};
 
 use petgraph::Direction::Incoming;
+use seal_fhe::{Decryptor, Context, EncryptionParameters, BfvEncryptionParametersBuilder, Modulus, CoefficientModulus};
 use semver::Version;
 use serde::Deserialize;
 use serde_json::{json, Value};
@@ -144,18 +145,32 @@ pub async fn get_fhe_node_data(
 
                     let multiplicative_depth: u64 = get_mult_depth(&stable_graph, nodeid as u32, 0);
 
-                    let mut coefficients: Vec<u64> /*Vec<Vec<u64>>*/= Vec::new();
+                    let mut coefficients: Vec<Vec<u64>> = Vec::new();
 
                     let inner_cipher = sunscreen_ciphertext.inner;
                     match inner_cipher {
                         InnerCiphertext::Seal(vec) => {
                             for inner_cipher in vec {
-                                //let mut inner_coefficients= Vec::new();
+                                let mut inner_coefficients= Vec::new();
+
+                                let test = inner_cipher.params.coeff_modulus;
+                                let t = inner_cipher.params.lattice_dimension;
                                 // Decrypt inner ciphertext
+                                /* 
+                                let mut encryption_params_builder = BfvEncryptionParametersBuilder::new()
+                                    .set_coefficient_modulus(CoefficientModulus::create(inner_cipher.params.lattice_dimension, inner_cipher.params.coeff_modulus))
+                                    .set_plain_modulus_u64(inner_cipher.params.plain_modulus)
+                                    .set_poly_modulus_degree(inner_cipher.params.lattice_dimension);
+                                */
+                                //let encryption_params = encryption_params_builder.build().unwrap();
+                                //let decryptor = Decryptor::new(
+                                //    encryption_params,
+                                //    &pk.0.data
+                                //);
 
 
 
-                                //coefficients.push(inner_coefficients);
+                                coefficients.push(inner_coefficients);
                             }
                         }
                     }

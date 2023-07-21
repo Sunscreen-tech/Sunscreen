@@ -54,6 +54,13 @@ impl DebugData {
     }
 }
 
+#[cfg(feature = "debugger")]
+impl Default for DebugData {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[derive(Clone, Deserialize, Serialize, Debug, PartialEq, Eq)]
 /**
  * Information about a node in the compilation graph.

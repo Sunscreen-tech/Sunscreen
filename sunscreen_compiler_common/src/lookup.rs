@@ -112,6 +112,12 @@ impl StackFrameLookup {
     }
 }
 
+impl Default for StackFrameLookup {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl IdLookup<Vec<u64>, Vec<StackFrameInfo>> for StackFrameLookup {
     /**
      * Inserts the backtrace associated with a node into the trie. Backtraces are stored as a `Vec<StackFrameInfo>`.
@@ -189,6 +195,12 @@ impl IdLookup<Vec<u64>, String> for GroupLookup {
 
     fn id_to_data(&self, _id: u64) -> Result<String, Error> {
         Ok("hi".to_owned())
+    }
+}
+
+impl Default for GroupLookup {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

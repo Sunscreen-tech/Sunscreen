@@ -5,9 +5,13 @@ use sunscreen_fhe_program::Operation;
 use sunscreen_fhe_program::{FheProgram, FheProgramTrait, Literal, Operation::*};
 
 #[cfg(feature = "debugger")]
-use sunscreen_fhe_program::{SchemeType::Bfv, SecurityLevel::TC128};
+use sunscreen_fhe_program::SchemeType::Bfv;
 #[cfg(feature = "debugger")]
-use crate::{debugger::sessions::{get_sessions, BfvSession}, WithContext};
+use sunscreen_fhe_program::SecurityLevel::TC128;
+#[cfg(feature = "debugger")]
+use crate::debugger::sessions::{get_sessions, BfvSession};
+#[cfg(feature = "debugger")]
+use crate::WithContext;
 
 use crossbeam::atomic::AtomicCell;
 use petgraph::{stable_graph::NodeIndex, Direction};
@@ -1206,7 +1210,7 @@ mod tests {
 
         let degree = 4096;
 
-        let (keygen, context, _public_key, private_key, encryptor, decryptor, evaluator) =
+        let (keygen, context, _public_key, private_key, encryptor, _decryptor, evaluator) =
             setup_scheme(degree);
 
         let encoder = BFVEncoder::new(&context).unwrap();
@@ -1231,7 +1235,7 @@ mod tests {
             data: private_key,
         });
 
-        let output = unsafe {
+        let _output = unsafe {
             run_program_unchecked(
                 &ir,
                 &[ct_0.into()],

@@ -5,9 +5,8 @@
 //! (i.e. an [`FheProgram`](sunscreen_fhe_program::FheProgram)).
 
 mod array;
-//#[cfg(feature = "debugger")]
+#[cfg(feature = "debugger")]
 mod debugger;
-// use crate::debugger::{stuff} to actually use these
 mod error;
 mod keys;
 mod metadata;

@@ -1,5 +1,5 @@
-use sunscreen_compiler_common::lookup::StackFrameInfo;
 use backtrace::BacktraceFrame;
+use sunscreen_compiler_common::lookup::StackFrameInfo;
 /**
  * Represents a group of `ProgramNodes` associated with an operation.
  *

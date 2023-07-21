@@ -191,7 +191,7 @@ mod tests {
             NodeInfo {
                 operation,
                 group_id,
-                stack_id
+                stack_id,
             }
         }
 

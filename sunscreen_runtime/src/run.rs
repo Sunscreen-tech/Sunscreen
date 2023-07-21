@@ -1,12 +1,10 @@
 use crate::{InnerPlaintext, PrivateKey, SealData};
+use seal_fhe::SecurityLevel::TC128;
 use static_assertions::const_assert;
 use sunscreen_compiler_common::{GraphQuery, GraphQueryError};
-use sunscreen_fhe_program::{FheProgram, FheProgramTrait, Literal, Operation::*};
-use sunscreen_fhe_program::SchemeType::Bfv;
 use sunscreen_fhe_program::Operation;
-use seal_fhe::SecurityLevel::TC128;
-
-
+use sunscreen_fhe_program::SchemeType::Bfv;
+use sunscreen_fhe_program::{FheProgram, FheProgramTrait, Literal, Operation::*};
 
 #[cfg(feature = "debugger")]
 use crate::debugger::sessions::{get_sessions, BfvSession};
@@ -214,13 +212,13 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
                 .get_mut(session_name)
                 .unwrap()
                 .unwrap_bfv_session_mut();
-            let node_val = get_data(data, node_index.index());            
+            let node_val = get_data(data, node_index.index());
             match Arc::try_unwrap(node_val.unwrap().clone()) {
                 Ok(val) => session.program_data[node_index.index()] = Some(val),
                 Err(arc) => {
                     session.program_data[node_index.index()] = Some((*arc).clone());
                 }
-            }            
+            }
         }
 
         Ok(())
@@ -235,10 +233,10 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
             let query = GraphQuery::new(&ir.graph.graph);
 
             match &node.operation {
-                InputCiphertext {id} => {
+                InputCiphertext { id } => {
                     set_data(&data, index, &inputs[*id], &session_name);
                 }
-                InputPlaintext{id} => {
+                InputPlaintext { id } => {
                     set_data(&data, index, &inputs[*id], &session_name);
                 }
                 ShiftLeft => {
@@ -246,7 +244,9 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
 
                     let a = get_ciphertext(&data, left.index())?;
                     let b = match ir.graph[right].operation {
-                        Operation::Literal { val: Literal::U64(v)} => v as i32,
+                        Operation::Literal {
+                            val: Literal::U64(v),
+                        } => v as i32,
                         _ => panic!(
                             "Illegal right operand for ShiftLeft: {:#?}",
                             ir.graph[right].operation
@@ -267,7 +267,9 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
 
                     let a = get_ciphertext(&data, left.index())?;
                     let b = match ir.graph[right].operation {
-                        Operation::Literal{val: Literal::U64(v)} => v as i32,
+                        Operation::Literal {
+                            val: Literal::U64(v),
+                        } => v as i32,
                         _ => panic!(
                             "Illegal right operand for ShiftLeft: {:#?}",
                             ir.graph[right].operation
@@ -378,7 +380,7 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
 
                     set_data(&data, index, &Arc::new(c.into()), &session_name);
                 }
-                Operation::Literal{ val: x} => {
+                Operation::Literal { val: x } => {
                     if let Literal::Plaintext(p) = x {
                         let p = InnerPlaintext::from_bytes(p)
                             .map_err(|_| FheProgramRunFailure::MalformedPlaintext)?;

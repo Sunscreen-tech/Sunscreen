@@ -1,8 +1,8 @@
 use backtrace::{Backtrace, BacktraceFrame, SymbolName};
 use radix_trie::Trie;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::Path;
-use serde::{Serialize, Deserialize};
 
 /**
  * Support for retrieval and insertion from lookup structures.
@@ -176,7 +176,7 @@ impl GroupLookup {
     pub fn new() -> Self {
         Self {
             dict: HashMap::new(),
-            groups: Trie::new()
+            groups: Trie::new(),
         }
     }
 }

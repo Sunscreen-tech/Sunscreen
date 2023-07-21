@@ -760,7 +760,7 @@ mod tests {
                     #[cfg(feature = "debugger")]
                     group_id: ir_clone.graph.metadata.group_counter,
                     #[cfg(feature = "debugger")]
-                    stack_id: ir_clone.graph.metadata.stack_counter
+                    stack_id: ir_clone.graph.metadata.stack_counter,
                 }));
                 transforms.push(Transform::AddEdge(n.into(), mul.into(), EdgeInfo::Left));
                 transforms.push(Transform::AddEdge(

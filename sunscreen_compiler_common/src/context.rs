@@ -9,6 +9,8 @@ use petgraph::Graph;
 use serde::{Deserialize, Serialize};
 
 use crate::{Operation, Render};
+
+#[cfg(feature = "debugger")]
 use crate::lookup::{StackFrameLookup, GroupLookup};
 
 /**

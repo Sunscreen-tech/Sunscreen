@@ -1,7 +1,5 @@
 use petgraph::adj::NodeIndex;
 use petgraph::stable_graph::StableGraph;
-use petgraph::visit::{Dfs, IntoNeighborsDirected, Walker};
-use petgraph::Direction::Incoming;
 use serde::{Deserialize, Serialize};
 use sunscreen_compiler_common::Operation;
 use sunscreen_compiler_common::Type;
@@ -22,9 +20,9 @@ pub struct SerializedSealData {
 
 // TODO: implement with memoization? will have to see how performance is with naive algorithm
 pub fn get_mult_depth<O>(
-    graph: &StableGraph<NodeInfo<O>, EdgeInfo>,
-    node: NodeIndex,
-    depth: u64,
+    _graph: &StableGraph<NodeInfo<O>, EdgeInfo>,
+    _node: NodeIndex,
+    _depth: u64,
 ) -> u64
 where
     O: Operation,

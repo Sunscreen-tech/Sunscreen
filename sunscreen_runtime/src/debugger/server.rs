@@ -1,15 +1,9 @@
 use actix_web::{get, http::header, web, App, HttpResponse, HttpServer, Responder};
 
-use petgraph::stable_graph::NodeIndex;
-use petgraph::Direction::Incoming;
 use seal_fhe::{
-    BfvEncryptionParametersBuilder, CoefficientModulus, Context, Decryptor, EncryptionParameters,
-    Modulus,
+    BfvEncryptionParametersBuilder, CoefficientModulus, Context, Decryptor
 };
 use semver::Version;
-use serde::Deserialize;
-use serde_json::{json, Value};
-use sunscreen_compiler_common::lookup;
 
 use std::sync::OnceLock;
 use std::thread;

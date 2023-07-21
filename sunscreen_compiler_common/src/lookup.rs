@@ -138,7 +138,7 @@ impl IdLookup<Vec<u64>, Vec<StackFrameInfo>> for StackFrameLookup {
         let mut trace = Vec::<StackFrameInfo>::new();
         let _temp_key = Vec::<u64>::new();
 
-        for _index in key {
+        while let Some(_index) = key {
             let next_frame = key.ok_or(Error::IdNotFound).and_then(|frame_id| {
                 self.frames
                     .get(frame_id)
@@ -181,12 +181,13 @@ impl GroupLookup {
     }
 }
 
+// TODO: implement these
 impl IdLookup<Vec<u64>, String> for GroupLookup {
-    fn data_to_id(&mut self, key: Vec<u64>, val: String) -> u64 {
+    fn data_to_id(&mut self, _key: Vec<u64>, _val: String) -> u64 {
         0
     }
 
-    fn id_to_data(&self, id: u64) -> Result<String, Error> {
+    fn id_to_data(&self, _id: u64) -> Result<String, Error> {
         Ok("hi".to_owned())
     }
 }

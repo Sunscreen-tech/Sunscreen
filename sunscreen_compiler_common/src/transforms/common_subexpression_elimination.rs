@@ -418,8 +418,8 @@ mod tests {
 
         #[cfg(feature = "debugger")]
         {
-            let mut group_counter = 0;
-            let mut stack_counter = 0;
+            let group_counter = 0;
+            let stack_counter = 0;
 
             // Layer 1
             let in_1 = fe.add_node(make_node(

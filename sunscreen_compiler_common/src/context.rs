@@ -6,10 +6,7 @@ use petgraph::stable_graph::{NodeIndex, StableGraph};
 use petgraph::visit::{EdgeRef, IntoEdgeReferences, IntoNodeReferences};
 use petgraph::Graph;
 
-use radix_trie::Trie;
 use serde::{Deserialize, Serialize};
-
-use backtrace::Backtrace;
 
 use crate::{Operation, Render};
 use crate::lookup::{StackFrameLookup, GroupLookup};

@@ -144,15 +144,20 @@ pub async fn get_fhe_node_data(
 
                     let multiplicative_depth: u64 = get_mult_depth(&stable_graph, nodeid as u32, 0);
 
-                    let mut coefficients:Vec<u64>= vec![0];
+                    let mut coefficients:Vec<Vec<u64>>= Vec::new();
 
-                    // how do i get the polynomials stored in this ciphertext?
-                    // and how do i decrypt a seal ciphertext?
-                    /* 
-                    for cipher_index in 0..ct.num_polynomials() {
+                    let inner_cipher = sunscreen_ciphertext.inner;
+                    match inner_cipher {
+                        InnerCiphertext::Seal(vec) => {
+                            for inner_cipher in vec {
+                                let mut inner_coefficients= Vec::new();
+                                // Decrypt inner ciphertext
+                                
 
+                                coefficients.push(inner_coefficients);
+                            }
+                        }
                     }
-                    */
 
 
                     // detecting overflow: a value is negative if a number is greater than plaintextmodulus/2, positive else

@@ -6,10 +6,13 @@ use petgraph::stable_graph::{NodeIndex, StableGraph};
 use petgraph::visit::{EdgeRef, IntoEdgeReferences, IntoNodeReferences};
 use petgraph::Graph;
 
+use radix_trie::Trie;
 use serde::{Deserialize, Serialize};
 
-use crate::lookup::{GroupLookup, StackFrameLookup};
+use backtrace::Backtrace;
+
 use crate::{Operation, Render};
+use crate::lookup::{StackFrameLookup, GroupLookup};
 
 /**
  * Stores debug information about groups and stack traces.
@@ -47,7 +50,7 @@ impl DebugData {
             stack_lookup: StackFrameLookup::new(),
             group_lookup: GroupLookup::new(),
             group_counter: 0,
-            stack_counter: 0,
+            stack_counter: 0
         }
     }
 }

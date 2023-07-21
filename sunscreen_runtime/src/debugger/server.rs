@@ -179,12 +179,9 @@ pub async fn get_fhe_node_data(
                                     .params
                                     .coeff_modulus
                                     .iter()
-                                    .map(|&num| num as i32)
-                                    .collect();
+                                    .map(|&num| num.leading_zeros() as i32)
+                                    .collect();                                
                                 // Decrypt inner ciphertext
-
-                                println!("lattice_dimension: {}", inner_cipher.params.lattice_dimension);
-                                println!("coeff_mod: {:?}", coeff_mod);
                                 let encryption_params_builder =
                                     BfvEncryptionParametersBuilder::new()
                                         .set_coefficient_modulus(
@@ -199,13 +196,19 @@ pub async fn get_fhe_node_data(
                                             inner_cipher.params.lattice_dimension,
                                         );
                                 let encryption_params = encryption_params_builder.build().unwrap();
+                                println!("encryption params");
+                                println!("poly mod degree: {:?}", encryption_params.get_poly_modulus_degree());
+                                println!("coeff mod degree: {:?}", encryption_params.get_coefficient_modulus());
+                                println!("plain mod: {:?}", encryption_params.get_plain_modulus());
+                                println!("scheme: {:?}", encryption_params.get_scheme());
+
                                 let decryptor = Decryptor::new(
                                     &Context::new(
                                         &encryption_params,
-                                        true,
+                                        false,
                                         inner_cipher.params.security_level,
                                     )
-                                    .unwrap(),
+                                    .expect("Failed to create context"),
                                     &pk.0.data,
                                 )
                                 .unwrap();

@@ -4,11 +4,11 @@ use sunscreen_compiler_common::{GraphQuery, GraphQueryError};
 use sunscreen_fhe_program::Operation;
 use sunscreen_fhe_program::{FheProgram, FheProgramTrait, Literal, Operation::*};
 
-#[cfg(feature = "debugger")]
+#[allow(unused_imports)]
 use crate::debugger::sessions::{get_sessions, BfvSession};
-#[cfg(feature = "debugger")]
+#[allow(unused_imports)]
 use crate::WithContext;
-#[cfg(feature = "debugger")]
+#[allow(unused_imports)]
 use sunscreen_fhe_program::{SchemeType::Bfv, SecurityLevel::TC128};
 
 use crossbeam::atomic::AtomicCell;

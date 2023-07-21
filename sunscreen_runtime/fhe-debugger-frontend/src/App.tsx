@@ -6,6 +6,8 @@ import './App.css'
 
 import { UberGraph } from './UberGraph';
 import { SelectionT } from 'react-digraph';
+import ReactDOM from 'react-dom';
+import { render } from 'react-dom';
 
 interface CodeBlockProps {
   code: string;
@@ -226,8 +228,6 @@ const App = () => {
   );
 }
 
-
-
 function NodeInfo({info}) {
   if (info !== null) {
     return <p>{JSON.stringify(info)}</p>
@@ -235,5 +235,4 @@ function NodeInfo({info}) {
   return <p>{JSON.stringify(info)}</p>
 }
 
-
-export default App;
+const root = render(<App/>, document.getElementById('root'));

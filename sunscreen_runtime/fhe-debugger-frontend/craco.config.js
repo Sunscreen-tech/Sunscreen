@@ -18,6 +18,9 @@ module.exports = {
     ],
     webpack: {
         configure:  {
+            entry: {
+                app: 'src/App.tsx',
+            },
             module: {
                 rules: [
                      {

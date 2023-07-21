@@ -144,17 +144,18 @@ pub async fn get_fhe_node_data(
 
                     let multiplicative_depth: u64 = get_mult_depth(&stable_graph, nodeid as u32, 0);
 
-                    let mut coefficients:Vec<Vec<u64>>= Vec::new();
+                    let mut coefficients: Vec<u64> /*Vec<Vec<u64>>*/= Vec::new();
 
                     let inner_cipher = sunscreen_ciphertext.inner;
                     match inner_cipher {
                         InnerCiphertext::Seal(vec) => {
                             for inner_cipher in vec {
-                                let mut inner_coefficients= Vec::new();
+                                //let mut inner_coefficients= Vec::new();
                                 // Decrypt inner ciphertext
-                                
 
-                                coefficients.push(inner_coefficients);
+
+
+                                //coefficients.push(inner_coefficients);
                             }
                         }
                     }

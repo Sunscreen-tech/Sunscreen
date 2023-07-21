@@ -29,13 +29,13 @@ impl From<BfvSession> for Session {
 impl Session {
     pub fn unwrap_bfv_session(&self) -> &BfvSession {
         match self {
-            Self::BfvSession(s) => s
+            Self::BfvSession(s) => s,
         }
     }
 
     pub fn unwrap_bfv_session_mut(&mut self) -> &mut BfvSession {
         match self {
-            Self::BfvSession(s) => s
+            Self::BfvSession(s) => s,
         }
     }
 }

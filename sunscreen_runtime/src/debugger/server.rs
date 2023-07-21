@@ -1,8 +1,6 @@
 use actix_web::{get, http::header, web, App, HttpResponse, HttpServer, Responder};
 
-use seal_fhe::{
-    BfvEncryptionParametersBuilder, CoefficientModulus, Context, Decryptor
-};
+use seal_fhe::{BfvEncryptionParametersBuilder, CoefficientModulus, Context, Decryptor};
 use semver::Version;
 
 use std::sync::OnceLock;
@@ -174,7 +172,7 @@ pub async fn get_fhe_node_data(
                                     .coeff_modulus
                                     .iter()
                                     .map(|&num| num.leading_zeros() as i32)
-                                    .collect();                                
+                                    .collect();
                                 // Decrypt inner ciphertext
                                 let encryption_params_builder =
                                     BfvEncryptionParametersBuilder::new()
@@ -191,8 +189,14 @@ pub async fn get_fhe_node_data(
                                         );
                                 let encryption_params = encryption_params_builder.build().unwrap();
                                 println!("encryption params");
-                                println!("poly mod degree: {:?}", encryption_params.get_poly_modulus_degree());
-                                println!("coeff mod degree: {:?}", encryption_params.get_coefficient_modulus());
+                                println!(
+                                    "poly mod degree: {:?}",
+                                    encryption_params.get_poly_modulus_degree()
+                                );
+                                println!(
+                                    "coeff mod degree: {:?}",
+                                    encryption_params.get_coefficient_modulus()
+                                );
                                 println!("plain mod: {:?}", encryption_params.get_plain_modulus());
                                 println!("scheme: {:?}", encryption_params.get_scheme());
 

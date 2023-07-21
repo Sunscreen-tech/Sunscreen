@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 use crate::{Operation, Render};
 
 #[cfg(feature = "debugger")]
-use crate::lookup::{StackFrameLookup, GroupLookup};
+use crate::lookup::{GroupLookup, StackFrameLookup};
 
 /**
  * Stores debug information about groups and stack traces.
@@ -49,7 +49,7 @@ impl DebugData {
             stack_lookup: StackFrameLookup::new(),
             group_lookup: GroupLookup::new(),
             group_counter: 0,
-            stack_counter: 0
+            stack_counter: 0,
         }
     }
 }
@@ -345,7 +345,6 @@ where
             let group_id = self.graph.metadata.group_counter;
             let stack_id = self.graph.metadata.stack_counter;
 
-            
             // TOOD: figure out updates to group and stack id?
 
             self.graph.add_node(NodeInfo {

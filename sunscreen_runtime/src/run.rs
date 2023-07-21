@@ -5,13 +5,13 @@ use sunscreen_fhe_program::Operation;
 use sunscreen_fhe_program::{FheProgram, FheProgramTrait, Literal, Operation::*};
 
 #[cfg(feature = "debugger")]
-use sunscreen_fhe_program::SchemeType::Bfv;
-#[cfg(feature = "debugger")]
-use sunscreen_fhe_program::SecurityLevel::TC128;
-#[cfg(feature = "debugger")]
 use crate::debugger::sessions::{get_sessions, BfvSession};
 #[cfg(feature = "debugger")]
 use crate::WithContext;
+#[cfg(feature = "debugger")]
+use sunscreen_fhe_program::SchemeType::Bfv;
+#[cfg(feature = "debugger")]
+use sunscreen_fhe_program::SecurityLevel::TC128;
 
 use crossbeam::atomic::AtomicCell;
 use petgraph::{stable_graph::NodeIndex, Direction};
@@ -233,10 +233,14 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
 
             match &node.operation {
                 InputCiphertext { id } => {
-                    set_data(&data, index, &inputs[*id], &session_name).unwrap_or_else(|_| panic!("Failed to set data for InputCiphertext {:?}", id));
+                    set_data(&data, index, &inputs[*id], &session_name).unwrap_or_else(|_| {
+                        panic!("Failed to set data for InputCiphertext {:?}", id)
+                    });
                 }
                 InputPlaintext { id } => {
-                    set_data(&data, index, &inputs[*id], &session_name).unwrap_or_else(|_| panic!("Failed to set data for InputPlaintext {:?}", id));
+                    set_data(&data, index, &inputs[*id], &session_name).unwrap_or_else(|_| {
+                        panic!("Failed to set data for InputPlaintext {:?}", id)
+                    });
                 }
                 ShiftLeft => {
                     let (left, right) = query.get_binary_operands(index)?;
@@ -259,7 +263,14 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
                             .as_ref()
                             .ok_or(FheProgramRunFailure::MissingGaloisKeys)?,
                     )?;
-                    set_data(&data, index, &Arc::new(c.into()), &session_name).unwrap_or_else(|_| panic!("Failed to set data for ShiftLeft, (left: {:?}, right: {:?}", left, right));
+                    set_data(&data, index, &Arc::new(c.into()), &session_name).unwrap_or_else(
+                        |_| {
+                            panic!(
+                                "Failed to set data for ShiftLeft, (left: {:?}, right: {:?}",
+                                left, right
+                            )
+                        },
+                    );
                 }
                 ShiftRight => {
                     let (left, right) = query.get_binary_operands(index)?;
@@ -282,7 +293,14 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
                             .as_ref()
                             .ok_or(FheProgramRunFailure::MissingGaloisKeys)?,
                     )?;
-                    set_data(&data, index, &Arc::new(c.into()), &session_name).unwrap_or_else(|_| panic!("Failed to set data for ShiftRight, (left: {:?}, right: {:?}", left, right));
+                    set_data(&data, index, &Arc::new(c.into()), &session_name).unwrap_or_else(
+                        |_| {
+                            panic!(
+                                "Failed to set data for ShiftRight, (left: {:?}, right: {:?}",
+                                left, right
+                            )
+                        },
+                    );
                 }
                 Add => {
                     let (left, right) = query.get_binary_operands(index)?;
@@ -292,7 +310,14 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
 
                     let c = evaluator.add(a, b)?;
 
-                    set_data(&data, index, &Arc::new(c.into()), &session_name).unwrap_or_else(|_| panic!("Failed to set data for Add, (left: {:?}, right: {:?}", left, right));
+                    set_data(&data, index, &Arc::new(c.into()), &session_name).unwrap_or_else(
+                        |_| {
+                            panic!(
+                                "Failed to set data for Add, (left: {:?}, right: {:?}",
+                                left, right
+                            )
+                        },
+                    );
                 }
                 AddPlaintext => {
                     let (left, right) = query.get_binary_operands(index)?;
@@ -302,7 +327,14 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
 
                     let c = evaluator.add_plain(a, b)?;
 
-                    set_data(&data, index, &Arc::new(c.into()), &session_name).unwrap_or_else(|_| panic!("Failed to set data for AddPlaintext, (left: {:?}, right: {:?}", left, right));
+                    set_data(&data, index, &Arc::new(c.into()), &session_name).unwrap_or_else(
+                        |_| {
+                            panic!(
+                                "Failed to set data for AddPlaintext, (left: {:?}, right: {:?}",
+                                left, right
+                            )
+                        },
+                    );
                 }
                 Multiply => {
                     let (left, right) = query.get_binary_operands(index)?;
@@ -312,7 +344,14 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
 
                     let c = evaluator.multiply(a, b)?;
 
-                    set_data(&data, index, &Arc::new(c.into()), &session_name).unwrap_or_else(|_| panic!("Failed to set data for Multiply, (left: {:?}, right: {:?}", left, right));
+                    set_data(&data, index, &Arc::new(c.into()), &session_name).unwrap_or_else(
+                        |_| {
+                            panic!(
+                                "Failed to set data for Multiply, (left: {:?}, right: {:?}",
+                                left, right
+                            )
+                        },
+                    );
                 }
                 MultiplyPlaintext => {
                     let (left, right) = query.get_binary_operands(index)?;
@@ -335,7 +374,8 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
 
                     let y = evaluator.rotate_columns(x, galois_keys)?;
 
-                    set_data(&data, index, &Arc::new(y.into()), &session_name).unwrap_or_else(|_| panic!("Failed to set data for SwapRows {:?}", input));
+                    set_data(&data, index, &Arc::new(y.into()), &session_name)
+                        .unwrap_or_else(|_| panic!("Failed to set data for SwapRows {:?}", input));
                 }
                 Relinearize => {
                     let relin_keys = relin_keys
@@ -348,7 +388,9 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
 
                     let c = evaluator.relinearize(a, relin_keys)?;
 
-                    set_data(&data, index, &Arc::new(c.into()), &session_name).unwrap_or_else(|_| panic!("Failed to set data for Relinearize {:?}", input));
+                    set_data(&data, index, &Arc::new(c.into()), &session_name).unwrap_or_else(
+                        |_| panic!("Failed to set data for Relinearize {:?}", input),
+                    );
                 }
                 Negate => {
                     let x_id = query.get_unary_operand(index)?;
@@ -357,7 +399,8 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
 
                     let y = evaluator.negate(x)?;
 
-                    set_data(&data, index, &Arc::new(y.into()), &session_name).unwrap_or_else(|_| panic!("Failed to set data for Negate {:?}", x_id));
+                    set_data(&data, index, &Arc::new(y.into()), &session_name)
+                        .unwrap_or_else(|_| panic!("Failed to set data for Negate {:?}", x_id));
                 }
                 Sub => {
                     let (left, right) = query.get_binary_operands(index)?;
@@ -367,7 +410,14 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
 
                     let c = evaluator.sub(a, b)?;
 
-                    set_data(&data, index, &Arc::new(c.into()), &session_name).unwrap_or_else(|_| panic!("Failed to set data for Sub, (left: {:?}, right: {:?}", left, right));
+                    set_data(&data, index, &Arc::new(c.into()), &session_name).unwrap_or_else(
+                        |_| {
+                            panic!(
+                                "Failed to set data for Sub, (left: {:?}, right: {:?}",
+                                left, right
+                            )
+                        },
+                    );
                 }
                 SubPlaintext => {
                     let (left, right) = query.get_binary_operands(index)?;
@@ -377,7 +427,14 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
 
                     let c = evaluator.sub_plain(a, b)?;
 
-                    set_data(&data, index, &Arc::new(c.into()), &session_name).unwrap_or_else(|_| panic!("Failed to set data for SubPlaintext, (left: {:?}, right: {:?}", left, right));
+                    set_data(&data, index, &Arc::new(c.into()), &session_name).unwrap_or_else(
+                        |_| {
+                            panic!(
+                                "Failed to set data for SubPlaintext, (left: {:?}, right: {:?}",
+                                left, right
+                            )
+                        },
+                    );
                 }
                 Operation::Literal { val: x } => {
                     if let Literal::Plaintext(p) = x {
@@ -396,7 +453,10 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
                                     index,
                                     &Arc::new(p[0].data.clone().into()),
                                     &session_name,
-                                ).unwrap_or_else(|_| panic!("Failed to set data for Literal, plaintext {:?}", p));
+                                )
+                                .unwrap_or_else(|_| {
+                                    panic!("Failed to set data for Literal, plaintext {:?}", p)
+                                });
                             }
                         };
                     }
@@ -406,7 +466,9 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
 
                     let a = get_data(&data, input.index())?;
 
-                    set_data(&data, index, &a.clone(), &session_name).unwrap_or_else(|_| panic!("Failed to set data for OutputCiphertext, input {:?}", input));
+                    set_data(&data, index, &a.clone(), &session_name).unwrap_or_else(|_| {
+                        panic!("Failed to set data for OutputCiphertext, input {:?}", input)
+                    });
                 }
             };
 

@@ -42,7 +42,7 @@ fn main() {
         )
         .unwrap();
 
-    let args2: Vec<FheProgramInput> = vec![a.clone().into(), c.into()];
+    let args2: Vec<FheProgramInput> = vec![a.clone().into(), c.clone().into()];
 
     runtime
         .debug_fhe_program(
@@ -54,6 +54,17 @@ fn main() {
         )
         .unwrap();
 
+    let args3: Vec<FheProgramInput> = vec![a.clone().into(), b.into(), c.clone().into()];
+
+    runtime
+        .debug_fhe_program(
+            app.get_fhe_program("mad").unwrap(),
+            args3,
+            &public,
+            &private,
+            mad.source(),
+        )
+        .unwrap();
     loop {
         thread::sleep(Duration::from_secs(1));
     }

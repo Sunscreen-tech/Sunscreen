@@ -363,6 +363,13 @@ where
 
             // Capture backtrace and insert into lookup structure
             let bt = Backtrace::new();
+
+            self.graph
+                .metadata
+                .stack_lookup
+                .dict
+                .insert(stack_id, vec![0]);
+
             let key = self
                 .graph
                 .metadata

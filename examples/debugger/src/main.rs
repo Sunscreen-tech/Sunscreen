@@ -1,9 +1,9 @@
+use std::thread;
+use std::time::Duration;
 use sunscreen::{
     types::{bfv::Signed, Cipher},
     *,
 };
-use std::time::Duration;
-use std::thread;
 
 fn main() {
     #[fhe_program(scheme = "bfv")]

@@ -6,11 +6,11 @@ use petgraph::stable_graph::{NodeIndex, StableGraph};
 use petgraph::visit::{EdgeRef, IntoEdgeReferences, IntoNodeReferences};
 use petgraph::Graph;
 
-use serde::{Deserialize, Serialize};
 use crate::{Operation, Render};
+use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "debugger")]
-use crate::lookup::{GroupLookup, StackFrameLookup, IdLookup};
+use crate::lookup::{GroupLookup, IdLookup, StackFrameLookup};
 
 #[cfg(feature = "debugger")]
 use backtrace::Backtrace;

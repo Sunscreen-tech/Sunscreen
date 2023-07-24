@@ -135,7 +135,7 @@ where
         let fhe_data = self.runtime_data.unwrap_fhe();
 
         let val = match (&fhe_data.context, &ciphertext.inner) {
-            (Context::Seal(context), InnerCiphertext::Seal(ciphertexts)) => {
+            (Context::Seal(context), InnerCiphertext::Seal{value: ciphertexts}) => {
                 let decryptor = Decryptor::new(context, &private_key.0)?;
 
                 let plaintexts = ciphertexts
@@ -162,7 +162,7 @@ where
                 P::try_from_plaintext(
                     &Plaintext {
                         data_type: P::type_name(),
-                        inner: InnerPlaintext::Seal(plaintexts),
+                        inner: InnerPlaintext::Seal{value: plaintexts},
                     },
                     &fhe_data.params,
                 )?
@@ -186,7 +186,7 @@ where
         let fhe_data = self.runtime_data.unwrap_fhe();
 
         match (&fhe_data.context, &c.inner) {
-            (Context::Seal(ctx), InnerCiphertext::Seal(ciphertexts)) => {
+            (Context::Seal(ctx), InnerCiphertext::Seal{value: ciphertexts}) => {
                 let decryptor = Decryptor::new(ctx, &private_key.0)?;
 
                 Ok(ciphertexts
@@ -330,7 +330,7 @@ where
                 for i in arguments.drain(0..) {
                     match i {
                         FheProgramInput::Ciphertext(c) => match c.inner {
-                            InnerCiphertext::Seal(mut c) => {
+                            InnerCiphertext::Seal{value: mut c} => {
                                 for j in c.drain(0..) {
                                     inputs.push(SealData::Ciphertext(j.data));
                                 }
@@ -340,7 +340,7 @@ where
                             let p = p.try_into_plaintext(&fhe_data.params)?;
 
                             match p.inner {
-                                InnerPlaintext::Seal(mut p) => {
+                                InnerPlaintext::Seal{value: mut p} => {
                                     for j in p.drain(0..) {
                                         inputs.push(SealData::Plaintext(j.data));
                                     }
@@ -377,15 +377,15 @@ where
                 {
                     packed_ciphertexts.push(Ciphertext {
                         data_type: fhe_program.metadata.signature.returns[i].clone(),
-                        inner: InnerCiphertext::Seal(
-                            raw_ciphertexts
+                        inner: InnerCiphertext::Seal{
+                            value: raw_ciphertexts
                                 .drain(0..*ciphertext_count)
                                 .map(|c| WithContext {
                                     params: fhe_data.params.clone(),
                                     data: c,
                                 })
                                 .collect(),
-                        ),
+                            },
                     });
                 }
 
@@ -470,7 +470,7 @@ where
         let plaintext = val.try_into_plaintext(&fhe_data.params)?;
 
         let ciphertext = match (&fhe_data.context, plaintext.inner) {
-            (Context::Seal(context), InnerPlaintext::Seal(inner_plain)) => {
+            (Context::Seal(context), InnerPlaintext::Seal{value: inner_plain}) => {
                 let encryptor = Encryptor::with_public_key(context, &public_key.public_key.data)?;
 
                 let ciphertexts = inner_plain
@@ -489,7 +489,7 @@ where
                         is_encrypted: true,
                         ..P::type_name()
                     },
-                    inner: InnerCiphertext::Seal(ciphertexts),
+                    inner: InnerCiphertext::Seal{value: ciphertexts},
                 }
             }
         };

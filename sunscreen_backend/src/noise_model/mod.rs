@@ -122,7 +122,7 @@ pub fn predict_noise(model: &(dyn NoiseModel + Sync), fhe_program: &FheProgram) 
 
                     let b = match fhe_program.graph[right].operation {
                         Operation::Literal {
-                            val: Literal::U64(v),
+                            val: Literal::U64{ value: v},
                         } => v as i32,
                         _ => panic!(
                             "Illegal right operand for ShiftLeft: {:#?}",
@@ -137,7 +137,7 @@ pub fn predict_noise(model: &(dyn NoiseModel + Sync), fhe_program: &FheProgram) 
 
                     let b = match fhe_program.graph[right].operation {
                         Operation::Literal {
-                            val: Literal::U64(v),
+                            val: Literal::U64{ value: v},
                         } => v as i32,
                         _ => panic!(
                             "Illegal right operand for ShiftLeft: {:#?}",

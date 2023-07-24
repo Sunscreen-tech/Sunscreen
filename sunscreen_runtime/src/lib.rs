@@ -35,7 +35,12 @@ pub enum InnerPlaintext {
     /**
      * This plaintext wraps a SEAL [`Plaintext`](seal_fhe::Plaintext).
      */
-    Seal(Vec<WithContext<SealPlaintext>>),
+    Seal {
+        /**
+         * The value of the plaintext.
+         */
+        value: Vec<WithContext<SealPlaintext>>,
+    },
 }
 
 impl InnerPlaintext {
@@ -44,7 +49,7 @@ impl InnerPlaintext {
      */
     pub fn len(&self) -> usize {
         match self {
-            Self::Seal(d) => d.len(),
+            Self::Seal { value: d } => d.len(),
         }
     }
 
@@ -62,7 +67,7 @@ impl InnerPlaintext {
      */
     pub fn scatter(&self) -> Vec<InnerPlaintext> {
         match self {
-            Self::Seal(d) => d.iter().map(|p| Self::Seal(vec![p.clone()])).collect(),
+            Self::Seal{ value: d} => d.iter().map(|p| Self::Seal{ value: vec![p.clone()]}).collect(),
         }
     }
 
@@ -92,7 +97,7 @@ impl InnerPlaintext {
      */
     pub fn as_seal_plaintext(&self) -> Result<&[WithContext<SealPlaintext>]> {
         match self {
-            Self::Seal(d) => Ok(d),
+            Self::Seal{ value: d}=> Ok(d),
         }
     }
 }
@@ -160,7 +165,12 @@ pub enum InnerCiphertext {
     /**
      * A set of ciphertexts in SEAL's runtime.
      */
-    Seal(Vec<WithContext<SealCiphertext>>),
+    Seal {
+        /**
+         * The ciphertexts.
+         */
+        value: Vec<WithContext<SealCiphertext>>
+    }
 }
 
 #[derive(Clone, Deserialize, Serialize)]

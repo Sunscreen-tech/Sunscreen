@@ -10,16 +10,26 @@ pub enum Literal {
     /**
      * An unsigned 64-bit integer.
      */
-    U64(u64),
+    U64 {
+        /**
+         * The value of the integer.
+         */
+        value: u64,
+    },
 
     /**
      * A plaintext stored as a sequence of bytes.
      */
-    Plaintext(Vec<u8>),
+    Plaintext {
+        /**
+         * The value of the plaintext.
+         */
+        value: Vec<u8>,
+    },
 }
 
 impl From<u64> for Literal {
     fn from(val: u64) -> Self {
-        Self::U64(val)
+        Self::U64 { value: val }
     }
 }

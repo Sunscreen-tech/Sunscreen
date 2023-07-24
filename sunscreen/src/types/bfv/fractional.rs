@@ -452,10 +452,10 @@ impl<const INT_BITS: usize> TryIntoPlaintext for Fractional<INT_BITS> {
         if self.val.is_subnormal() || self.val == 0.0 {
             return Ok(Plaintext {
                 data_type: self.type_name_instance(),
-                inner: InnerPlaintext::Seal(vec![WithContext {
+                inner: InnerPlaintext::Seal{value: vec![WithContext {
                     params: params.clone(),
                     data: seal_plaintext,
-                }]),
+                }]},
             });
         }
 
@@ -508,10 +508,10 @@ impl<const INT_BITS: usize> TryIntoPlaintext for Fractional<INT_BITS> {
 
         Ok(Plaintext {
             data_type: self.type_name_instance(),
-            inner: InnerPlaintext::Seal(vec![WithContext {
+            inner: InnerPlaintext::Seal{value: vec![WithContext {
                 params: params.clone(),
                 data: seal_plaintext,
-            }]),
+            }]},
         })
     }
 }
@@ -522,7 +522,7 @@ impl<const INT_BITS: usize> TryFromPlaintext for Fractional<INT_BITS> {
         params: &Params,
     ) -> std::result::Result<Self, sunscreen_runtime::Error> {
         let val = match &plaintext.inner {
-            InnerPlaintext::Seal(p) => {
+            InnerPlaintext::Seal{ value: p} => {
                 if p.len() != 1 {
                     return Err(sunscreen_runtime::Error::IncorrectCiphertextCount);
                 }

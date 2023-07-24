@@ -150,7 +150,7 @@ pub async fn get_fhe_node_data(
                             version: Version::new(1, 1, 1),
                         },
 
-                        inner: InnerCiphertext::Seal(vec![with_context]),
+                        inner: InnerCiphertext::Seal{ value: vec![with_context]},
                     };
 
                     let noise_budget = runtime
@@ -163,7 +163,7 @@ pub async fn get_fhe_node_data(
 
                     let inner_cipher = sunscreen_ciphertext.inner;
                     match inner_cipher {
-                        InnerCiphertext::Seal(vec) => {
+                        InnerCiphertext::Seal{value: vec} => {
                             for inner_cipher in vec {
                                 let mut inner_coefficients = Vec::new();
 
@@ -249,7 +249,7 @@ pub async fn get_fhe_node_data(
                             name: "".to_owned(),
                             version: Version::new(1, 1, 1),
                         },
-                        inner: InnerPlaintext::Seal(vec![with_context]),
+                        inner: InnerPlaintext::Seal { value: vec![with_context]},
                     };
 
                     let noise_budget = 0;

@@ -159,7 +159,12 @@ pub enum EdgeInfo {
     /**
      * The source is node is i of N ordered operands.
      */
-    Ordered(usize),
+    Ordered {
+        /**
+         * The value of the edge.
+         */
+        value: usize
+        },
 }
 
 impl EdgeInfo {

@@ -187,10 +187,10 @@ impl<const LANES: usize> TryIntoPlaintext for Batched<LANES> {
 
         Ok(Plaintext {
             data_type: Self::type_name(),
-            inner: InnerPlaintext::Seal(vec![WithContext {
+            inner: InnerPlaintext::Seal{value: vec![WithContext {
                 params: params.clone(),
                 data: plaintext,
-            }]),
+            }]},
         })
     }
 }

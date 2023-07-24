@@ -475,7 +475,7 @@ pub fn invoke_gadget<G: Gadget>(g: G, gadget_inputs: &[NodeIndex]) -> Vec<NodeIn
         }
 
         for (i, gadget_input) in gadget_inputs.iter().enumerate() {
-            ctx.add_edge(*gadget_input, gadget, EdgeInfo::Ordered(i));
+            ctx.add_edge(*gadget_input, gadget, EdgeInfo::Ordered{value: i});
         }
     });
 

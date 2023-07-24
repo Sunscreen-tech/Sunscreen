@@ -505,7 +505,7 @@ where
         let mut parent_edges = self
             .edges_directed(index, Direction::Incoming)
             .map(|x| match x.weight() {
-                EdgeInfo::Ordered(arg_id) => Ok(SortableEdge(x.source(), *arg_id)),
+                EdgeInfo::Ordered { value: arg_id } => Ok(SortableEdge(x.source(), *arg_id)),
                 _ => Err(GraphQueryError::IncorrectOrderedOperandEdge),
             })
             .collect::<Result<Vec<SortableEdge>, _>>()?;
@@ -760,7 +760,7 @@ mod tests {
                     #[cfg(feature = "debugger")]
                     group_id: ir_clone.graph.metadata.group_counter,
                     #[cfg(feature = "debugger")]
-                    stack_id: ir_clone.graph.metadata.stack_counter
+                    stack_id: ir_clone.graph.metadata.stack_counter,
                 }));
                 transforms.push(Transform::AddEdge(n.into(), mul.into(), EdgeInfo::Left));
                 transforms.push(Transform::AddEdge(

@@ -1,5 +1,4 @@
 pub mod data;
-pub mod groups;
 pub mod server;
 pub mod sessions;
 

@@ -278,12 +278,12 @@ fn create_inputs_for_program(
         .filter(|n| {
             matches!(
                 n.operation,
-                Operation::InputCiphertext{..} | Operation::InputPlaintext{..}
+                Operation::InputCiphertext { .. } | Operation::InputPlaintext { .. }
             )
         })
         .zip(noise_targets)
         .map(|(n, target)| match n.operation {
-            Operation::InputCiphertext{..} => Ok(create_ciphertext_with_noise_level(
+            Operation::InputCiphertext { .. } => Ok(create_ciphertext_with_noise_level(
                 context,
                 public_key,
                 private_key,
@@ -291,7 +291,7 @@ fn create_inputs_for_program(
                 *target,
             )?
             .into()),
-            Operation::InputPlaintext{..} => Ok(encoder.encode_unsigned(1)?.into()),
+            Operation::InputPlaintext { .. } => Ok(encoder.encode_unsigned(1)?.into()),
             _ => unreachable!(),
         })
         .collect::<Result<Vec<SealData>>>()

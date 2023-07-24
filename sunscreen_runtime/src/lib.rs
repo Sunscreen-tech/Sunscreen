@@ -5,9 +5,7 @@
 //! (i.e. an [`FheProgram`](sunscreen_fhe_program::FheProgram)).
 
 mod array;
-//#[cfg(feature = "debugger")]
 mod debugger;
-// use crate::debugger::{stuff} to actually use these
 mod error;
 mod keys;
 mod metadata;
@@ -29,7 +27,7 @@ use serde::{Deserialize, Serialize};
 use sunscreen_zkp_backend::BigInt;
 
 #[derive(Debug, Clone, PartialEq, Hash, Serialize, Deserialize, Eq)]
-#[cfg_attr(feature = "debugger", serde(tag = "type"))]
+#[serde(tag = "type")]
 /**
  * The underlying backend implementation of a plaintext (e.g. SEAL's [`Plaintext`](seal_fhe::Plaintext)).
  */
@@ -37,7 +35,12 @@ pub enum InnerPlaintext {
     /**
      * This plaintext wraps a SEAL [`Plaintext`](seal_fhe::Plaintext).
      */
-    Seal(Vec<WithContext<SealPlaintext>>),
+    Seal {
+        /**
+         * The value of the plaintext.
+         */
+        value: Vec<WithContext<SealPlaintext>>,
+    },
 }
 
 impl InnerPlaintext {
@@ -46,7 +49,7 @@ impl InnerPlaintext {
      */
     pub fn len(&self) -> usize {
         match self {
-            Self::Seal(d) => d.len(),
+            Self::Seal { value: d } => d.len(),
         }
     }
 
@@ -64,7 +67,12 @@ impl InnerPlaintext {
      */
     pub fn scatter(&self) -> Vec<InnerPlaintext> {
         match self {
-            Self::Seal(d) => d.iter().map(|p| Self::Seal(vec![p.clone()])).collect(),
+            Self::Seal { value: d } => d
+                .iter()
+                .map(|p| Self::Seal {
+                    value: vec![p.clone()],
+                })
+                .collect(),
         }
     }
 
@@ -94,7 +102,7 @@ impl InnerPlaintext {
      */
     pub fn as_seal_plaintext(&self) -> Result<&[WithContext<SealPlaintext>]> {
         match self {
-            Self::Seal(d) => Ok(d),
+            Self::Seal { value: d } => Ok(d),
         }
     }
 }
@@ -154,7 +162,7 @@ impl Plaintext {
 }
 
 #[derive(Clone, Deserialize, Serialize)]
-#[cfg_attr(feature = "debugger", serde(tag = "type"))]
+#[serde(tag = "type")]
 /**
  * The underlying backend implementation of a ciphertext (e.g SEAL's [`Ciphertext`](seal_fhe::Ciphertext)).
  */
@@ -162,7 +170,12 @@ pub enum InnerCiphertext {
     /**
      * A set of ciphertexts in SEAL's runtime.
      */
-    Seal(Vec<WithContext<SealCiphertext>>),
+    Seal {
+        /**
+         * The ciphertexts.
+         */
+        value: Vec<WithContext<SealCiphertext>>,
+    },
 }
 
 #[derive(Clone, Deserialize, Serialize)]

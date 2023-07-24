@@ -74,34 +74,31 @@ pub enum Operation {
     /**
      * Represents an input ciphertext for the FHE program.
      */
-    InputCiphertext
-    {
+    InputCiphertext {
         /**
          * The ID of the ciphertext.
          */
-        id: usize
+        id: usize,
     },
 
     /**
      * Represents an input plaintext for the current FHE program.
      */
-    InputPlaintext
-    {
+    InputPlaintext {
         /**
          * The ID of the plaintext.
          */
-        id: usize
+        id: usize,
     },
 
     /**
      * Represents a literal value.
      */
-    Literal
-    {
+    Literal {
         /**
          * The value of the literal.
          */
-        val: Literal
+        val: Literal,
     },
 
     /**

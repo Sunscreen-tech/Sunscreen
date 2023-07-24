@@ -32,7 +32,7 @@ use sunscreen_compiler_common::DebugData;
 use std::collections::HashSet;
 
 #[derive(Debug, Clone, Copy, Serialize, Hash, Deserialize, PartialEq, Eq)]
-#[cfg_attr(feature = "debugger", serde(tag = "type"))]
+#[serde(tag = "type")]
 /**
  * Sunscreen supports the BFV scheme.
  */
@@ -121,7 +121,7 @@ impl TryFrom<u8> for SchemeType {
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
-#[cfg_attr(feature = "debugger", serde(tag = "type"))]
+#[serde(tag = "type")]
 /**
  * The type of output from an Fhe Program's graph node.
  */
@@ -150,8 +150,8 @@ pub trait OutputTypeTrait {
 impl OutputTypeTrait for NodeInfo<Operation> {
     fn output_type(&self) -> OutputType {
         match self.operation {
-            Operation::InputPlaintext{ .. } => OutputType::Plaintext,
-            Operation::Literal{ .. } => OutputType::Plaintext,
+            Operation::InputPlaintext { .. } => OutputType::Plaintext,
+            Operation::Literal { .. } => OutputType::Plaintext,
             _ => OutputType::Ciphertext,
         }
     }
@@ -296,15 +296,15 @@ impl FheProgramTrait for FheProgram {
     }
 
     fn add_input_ciphertext(&mut self, id: usize) -> NodeIndex {
-        self.add_node(Operation::InputCiphertext{ id })
+        self.add_node(Operation::InputCiphertext { id })
     }
 
     fn add_input_plaintext(&mut self, id: usize) -> NodeIndex {
-        self.add_node(Operation::InputPlaintext{id})
+        self.add_node(Operation::InputPlaintext { id })
     }
 
     fn add_input_literal(&mut self, value: Literal) -> NodeIndex {
-        self.add_node(Operation::Literal{val: value})
+        self.add_node(Operation::Literal { val: value })
     }
 
     fn add_output_ciphertext(&mut self, x: NodeIndex) -> NodeIndex {
@@ -334,7 +334,7 @@ impl FheProgramTrait for FheProgram {
     fn num_inputs(&self) -> usize {
         self.graph
             .node_weights()
-            .filter(|n| matches!(n.operation, Operation::InputCiphertext{..}))
+            .filter(|n| matches!(n.operation, Operation::InputCiphertext { .. }))
             .count()
     }
 
@@ -372,7 +372,7 @@ impl FheProgramTrait for FheProgram {
                 // Don't prune input nodes.
                 let is_input = matches!(
                     n.operation,
-                    Operation::InputPlaintext{..} | Operation::InputCiphertext{..}
+                    Operation::InputPlaintext { .. } | Operation::InputCiphertext { .. }
                 );
 
                 if closure_set.contains(&revmap[id.index()]) || is_input {
@@ -400,7 +400,7 @@ impl FheProgramTrait for FheProgram {
             },
 
             #[cfg(feature = "debugger")]
-            group_stack: Vec::new()
+            group_stack: Vec::new(),
         }
     }
 

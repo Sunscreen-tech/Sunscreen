@@ -205,7 +205,6 @@ where
     let args: Vec<FheProgramInput> = vec![n_0_enc.into(), n_1_enc.into(), n_2_enc.into()];
 
     let result = runtime.debug_fhe_program(app.get_fhe_program(c).unwrap(), args, &public_key, &private_key, "test")?;
-    let elapsed = start.elapsed().as_secs_f64();
 
     println!("\t\tRun time {elapsed}s");
 
@@ -286,4 +285,4 @@ fn main() -> Result<(), Error> {
     )?;
 
     Ok(())
-}
+=======

@@ -1,8 +1,8 @@
 use crossbeam::atomic::AtomicCell;
-use sunscreen_compiler_common::GraphQuery;
-use sunscreen_fhe_program::{FheProgram, Literal, Operation::*, Operation};
-use sunscreen_runtime::traverse;
 use std::collections::HashMap;
+use sunscreen_compiler_common::GraphQuery;
+use sunscreen_fhe_program::{FheProgram, Literal, Operation, Operation::*};
+use sunscreen_runtime::traverse;
 
 mod canonical_embedding_norm;
 mod measured_model;
@@ -59,8 +59,8 @@ pub fn predict_noise(model: &(dyn NoiseModel + Sync), fhe_program: &FheProgram) 
             let query = GraphQuery::new(&fhe_program.graph.graph);
 
             let noise = match &node.operation {
-                InputCiphertext{..} => model.encrypt(),
-                InputPlaintext{..} => 0.0,
+                InputCiphertext { .. } => model.encrypt(),
+                InputPlaintext { .. } => 0.0,
                 Add => {
                     let (left, right) = query.get_binary_operands(node_id).unwrap();
 
@@ -116,12 +116,14 @@ pub fn predict_noise(model: &(dyn NoiseModel + Sync), fhe_program: &FheProgram) 
 
                     model.output(output_id, noise_levels[x.index()].load())
                 }
-                Operation::Literal{..} => 0.0,
+                Operation::Literal { .. } => 0.0,
                 ShiftLeft => {
                     let (left, right) = query.get_binary_operands(node_id).unwrap();
 
                     let b = match fhe_program.graph[right].operation {
-                        Operation::Literal{ val: Literal::U64(v)} => v as i32,
+                        Operation::Literal {
+                            val: Literal::U64 { value: v },
+                        } => v as i32,
                         _ => panic!(
                             "Illegal right operand for ShiftLeft: {:#?}",
                             fhe_program.graph[right].operation
@@ -134,7 +136,9 @@ pub fn predict_noise(model: &(dyn NoiseModel + Sync), fhe_program: &FheProgram) 
                     let (left, right) = query.get_binary_operands(node_id).unwrap();
 
                     let b = match fhe_program.graph[right].operation {
-                        Operation::Literal{ val: Literal::U64(v)} => v as i32,
+                        Operation::Literal {
+                            val: Literal::U64 { value: v },
+                        } => v as i32,
                         _ => panic!(
                             "Illegal right operand for ShiftLeft: {:#?}",
                             fhe_program.graph[right].operation

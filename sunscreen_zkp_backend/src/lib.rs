@@ -127,7 +127,7 @@ pub trait Gadget: Any + Send + Sync {
 }
 
 #[derive(Clone, Serialize, Deserialize)]
-#[cfg_attr(feature = "debugger", serde(tag = "type"))]
+#[serde(tag = "type")]
 /**
  * An R1CS proof.
  */
@@ -136,7 +136,12 @@ pub enum Proof {
     /**
      * A Bulletproofs R1CS proof.
      */
-    Bulletproofs(Box<bulletproofs::BulletproofsR1CSProof>),
+    Bulletproofs {
+        /**
+         * The value of the Proof.
+         */
+        value: Box<bulletproofs::BulletproofsR1CSProof>,
+    },
 
     /**
      * A custom proof type provided by an external crate.

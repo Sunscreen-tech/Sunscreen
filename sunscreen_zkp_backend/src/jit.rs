@@ -486,56 +486,56 @@ where
                 #[cfg(feature = "debugger")]
                 n.group_id,
                 #[cfg(feature = "debugger")]
-                n.stack_id
+                n.stack_id,
             ),
             Operation::Mul => NodeInfo::new(
                 ExecOperation::Mul,
                 #[cfg(feature = "debugger")]
                 n.group_id,
                 #[cfg(feature = "debugger")]
-                n.stack_id
+                n.stack_id,
             ),
             Operation::Sub => NodeInfo::new(
                 ExecOperation::Sub,
                 #[cfg(feature = "debugger")]
                 n.group_id,
                 #[cfg(feature = "debugger")]
-                n.stack_id
+                n.stack_id,
             ),
             Operation::Neg => NodeInfo::new(
                 ExecOperation::Neg,
                 #[cfg(feature = "debugger")]
                 n.group_id,
                 #[cfg(feature = "debugger")]
-                n.stack_id
+                n.stack_id,
             ),
             Operation::Constant(x) => NodeInfo::new(
                 ExecOperation::Constant(x),
                 #[cfg(feature = "debugger")]
                 n.group_id,
                 #[cfg(feature = "debugger")]
-                n.stack_id
+                n.stack_id,
             ),
             Operation::Constraint(x) => NodeInfo::new(
                 ExecOperation::Constraint(x),
                 #[cfg(feature = "debugger")]
                 n.group_id,
                 #[cfg(feature = "debugger")]
-                n.stack_id
+                n.stack_id,
             ),
             Operation::PublicInput(id) => NodeInfo::new(
                 ExecOperation::Input(id),
                 #[cfg(feature = "debugger")]
                 n.group_id,
                 #[cfg(feature = "debugger")]
-                n.stack_id
+                n.stack_id,
             ),
             Operation::PrivateInput(id) => NodeInfo::new(
                 ExecOperation::Input(public_inputs.len() + id),
                 #[cfg(feature = "debugger")]
                 n.group_id,
                 #[cfg(feature = "debugger")]
-                n.stack_id
+                n.stack_id,
             ),
             Operation::ConstantInput(x) => {
                 let val = constant_inputs[x].clone();
@@ -545,7 +545,7 @@ where
                     #[cfg(feature = "debugger")]
                     n.group_id,
                     #[cfg(feature = "debugger")]
-                    n.stack_id
+                    n.stack_id,
                 )
             }
             Operation::HiddenInput(_) => match node_outputs.as_ref() {
@@ -554,14 +554,14 @@ where
                     #[cfg(feature = "debugger")]
                     n.group_id,
                     #[cfg(feature = "debugger")]
-                    n.stack_id
+                    n.stack_id,
                 ),
                 None => NodeInfo::new(
                     ExecOperation::HiddenInput(None),
                     #[cfg(feature = "debugger")]
                     n.group_id,
                     #[cfg(feature = "debugger")]
-                    n.stack_id
+                    n.stack_id,
                 ),
             },
             Operation::InvokeGadget(_) => unreachable!("Not all gadgets processed and removed"),
@@ -641,7 +641,7 @@ where
                 #[cfg(feature = "debugger")]
                 group_id: node.group_id,
                 #[cfg(feature = "debugger")]
-                stack_id: node.stack_id
+                stack_id: node.stack_id,
             }));
             transforms.push(Transform::AddEdge(
                 id.into(),

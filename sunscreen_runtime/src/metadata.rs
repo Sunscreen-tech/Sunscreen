@@ -44,7 +44,7 @@ pub struct CallSignature {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[cfg_attr(feature = "debugger", serde(tag = "type"))]
+#[serde(tag = "type")]
 /**
  * A key type required for an Fhe Program to function correctly.
  */

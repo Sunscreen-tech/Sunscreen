@@ -67,11 +67,11 @@ pub(crate) fn validate_nodes(ir: &FheProgram) -> Vec<IRError> {
             ShiftLeft => None,
             ShiftRight => None,
             Negate => Some(validate_unary_op_has_correct_operands(ir, i)),
-            InputCiphertext{..} => None,
-            InputPlaintext{..} => None,
+            InputCiphertext { .. } => None,
+            InputPlaintext { .. } => None,
             OutputCiphertext => Some(validate_unary_op_has_correct_operands(ir, i)),
             Relinearize => Some(validate_unary_op_has_correct_operands(ir, i)),
-            Literal{..} => None,
+            Literal { .. } => None,
             SwapRows => None,
         };
 

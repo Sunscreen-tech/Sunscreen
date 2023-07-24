@@ -6,13 +6,14 @@ use petgraph::stable_graph::{NodeIndex, StableGraph};
 use petgraph::visit::{EdgeRef, IntoEdgeReferences, IntoNodeReferences};
 use petgraph::Graph;
 
-use radix_trie::Trie;
+use crate::{Operation, Render};
 use serde::{Deserialize, Serialize};
 
-use backtrace::Backtrace;
+#[cfg(feature = "debugger")]
+use crate::lookup::{GroupLookup, IdLookup, StackFrameLookup};
 
-use crate::{Operation, Render};
-use crate::lookup::{StackFrameLookup, GroupLookup};
+#[cfg(feature = "debugger")]
+use backtrace::Backtrace;
 
 /**
  * Stores debug information about groups and stack traces.
@@ -50,8 +51,15 @@ impl DebugData {
             stack_lookup: StackFrameLookup::new(),
             group_lookup: GroupLookup::new(),
             group_counter: 0,
-            stack_counter: 0
+            stack_counter: 0,
         }
+    }
+}
+
+#[cfg(feature = "debugger")]
+impl Default for DebugData {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -125,7 +133,7 @@ where
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, Serialize)]
-#[cfg_attr(feature = "debugger", serde(tag = "type"))]
+#[serde(tag = "type")]
 /**
  * Information about how one compiler graph node relates to another.
  */
@@ -153,7 +161,12 @@ pub enum EdgeInfo {
     /**
      * The source is node is i of N ordered operands.
      */
-    Ordered(usize),
+    Ordered {
+        /**
+         * The value of the edge.
+         */
+        value: usize,
+    },
 }
 
 impl EdgeInfo {
@@ -346,16 +359,33 @@ where
             let group_id = self.graph.metadata.group_counter;
             let stack_id = self.graph.metadata.stack_counter;
 
-            let node_index = self.graph.add_node(NodeInfo {
+            // TOOD: figure out updates to group and stack id?
+
+            // Capture backtrace and insert into lookup structure
+            let bt = Backtrace::new();
+            let key = self
+                .graph
+                .metadata
+                .stack_lookup
+                .dict
+                .get(&stack_id)
+                .expect("Invalid stack key");
+            self.graph.metadata.stack_lookup.data_to_id(
+                key.clone(),
+                self.graph
+                    .metadata
+                    .stack_lookup
+                    .backtrace_to_stackframes(bt),
+            );
+
+            // Add node to graph
+            self.graph.add_node(NodeInfo {
                 operation,
                 #[cfg(feature = "debugger")]
                 group_id,
                 #[cfg(feature = "debugger")]
                 stack_id,
-            });
-            // TOOD: figure out updates to group and stack id?
-
-            node_index
+            })
         }
         #[cfg(not(feature = "debugger"))]
         {

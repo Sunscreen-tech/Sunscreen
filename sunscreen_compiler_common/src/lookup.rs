@@ -1,8 +1,8 @@
 use backtrace::{Backtrace, BacktraceFrame, SymbolName};
 use radix_trie::Trie;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::Path;
-use serde::{Serialize, Deserialize};
 
 /**
  * Support for retrieval and insertion from lookup structures.
@@ -97,18 +97,19 @@ impl StackFrameLookup {
     /**
      * Extracts backtrace info, turning it into a `Vec<StackFrameInfo>`.
      */
-    pub fn backtrace_to_stackframes(&self, _trace: Backtrace, id: u64) -> Vec<StackFrameInfo> {
-        let key = self.dict.get(&id).unwrap();
-
+    pub fn backtrace_to_stackframes(&self, bt: Backtrace) -> Vec<StackFrameInfo> {
         let mut trace = Vec::<StackFrameInfo>::new();
-        let mut temp_key = Vec::<u64>::new();
-
-        for index in key {
-            temp_key.push(*index);
-            let frame = self.frames.get(&temp_key).unwrap();
-            trace.push(frame.clone());
+        let frames = bt.frames();
+        for frame in frames {
+            trace.push(StackFrameInfo::new(frame));
         }
         trace
+    }
+}
+
+impl Default for StackFrameLookup {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -118,13 +119,17 @@ impl IdLookup<Vec<u64>, Vec<StackFrameInfo>> for StackFrameLookup {
      * Returns the node's group_id.
      * This is analogous to an insertion method.
      */
+
+    // TODO: maybe update the interface here to also take in an id for insertion reasons?
     fn data_to_id(&mut self, key: Vec<u64>, val: Vec<StackFrameInfo>) -> u64 {
-        let mut temp_key: Vec<u64> = Vec::<u64>::new();
+        let mut temp_key = Vec::new();
 
         for (index, frame_info) in key.iter().zip(val) {
             temp_key.push(*index);
             self.frames.insert(temp_key.clone(), frame_info);
         }
+
+        self.dict.insert(0, key);
         // TODO: somehow need to get the node's id?
         0
     }
@@ -138,7 +143,7 @@ impl IdLookup<Vec<u64>, Vec<StackFrameInfo>> for StackFrameLookup {
         let mut trace = Vec::<StackFrameInfo>::new();
         let _temp_key = Vec::<u64>::new();
 
-        for _index in key {
+        while let Some(_index) = key {
             let next_frame = key.ok_or(Error::IdNotFound).and_then(|frame_id| {
                 self.frames
                     .get(frame_id)
@@ -176,18 +181,25 @@ impl GroupLookup {
     pub fn new() -> Self {
         Self {
             dict: HashMap::new(),
-            groups: Trie::new()
+            groups: Trie::new(),
         }
     }
 }
 
+// TODO: implement these
 impl IdLookup<Vec<u64>, String> for GroupLookup {
-    fn data_to_id(&mut self, key: Vec<u64>, val: String) -> u64 {
+    fn data_to_id(&mut self, _key: Vec<u64>, _val: String) -> u64 {
         0
     }
 
-    fn id_to_data(&self, id: u64) -> Result<String, Error> {
+    fn id_to_data(&self, _id: u64) -> Result<String, Error> {
         Ok("hi".to_owned())
+    }
+}
+
+impl Default for GroupLookup {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

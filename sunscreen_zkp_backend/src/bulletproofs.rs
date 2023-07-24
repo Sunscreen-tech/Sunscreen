@@ -417,12 +417,14 @@ impl ZkpBackend for BulletproofsBackend {
 
         trace!("Bulletproofs prover time {}s", now.elapsed().as_secs_f64());
 
-        Ok(Proof::Bulletproofs(Box::new(BulletproofsR1CSProof(proof))))
+        Ok(Proof::Bulletproofs {
+            value: Box::new(BulletproofsR1CSProof(proof)),
+        })
     }
 
     fn verify(&self, graph: &ExecutableZkpProgram, proof: &Proof) -> Result<()> {
         let proof = match proof {
-            Proof::Bulletproofs(x) => x,
+            Proof::Bulletproofs { value: x } => x,
             _ => {
                 return Err(Error::IncorrectProofType);
             }

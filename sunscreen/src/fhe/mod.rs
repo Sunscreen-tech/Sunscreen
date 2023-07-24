@@ -147,8 +147,7 @@ impl OperationTrait for FheOperation {
     fn is_multiplication(&self) -> bool {
         matches!(
             self,
-            FheOperation::Multiply
-                | FheOperation::MultiplyPlaintext
+            FheOperation::Multiply | FheOperation::MultiplyPlaintext
         )
     }
 }
@@ -370,48 +369,52 @@ impl FheCompile for FheFrontendCompilation {
                     #[cfg(feature = "debugger")]
                     n.group_id,
                     #[cfg(feature = "debugger")]
-                    n.stack_id
+                    n.stack_id,
                 ),
                 FheOperation::InputCiphertext => {
                     // HACKHACK: Input nodes are always added first to the graph in the order
                     // they're specified as function arguments. We should not depend on this.
                     NodeInfo::new(
-                        FheProgramOperation::InputCiphertext{ id: id.index()},
+                        FheProgramOperation::InputCiphertext { id: id.index() },
                         #[cfg(feature = "debugger")]
                         n.group_id,
                         #[cfg(feature = "debugger")]
-                        n.stack_id
+                        n.stack_id,
                     )
                 }
                 FheOperation::InputPlaintext => {
                     // HACKHACK: Input nodes are always added first to the graph in the order
                     // they're specified as function arguments. We should not depend on this.
                     NodeInfo::new(
-                        FheProgramOperation::InputPlaintext{ id: id.index()},
+                        FheProgramOperation::InputPlaintext { id: id.index() },
                         #[cfg(feature = "debugger")]
                         n.group_id,
                         #[cfg(feature = "debugger")]
-                        n.stack_id
+                        n.stack_id,
                     )
                 }
                 FheOperation::Literal(Literal::U64(x)) => NodeInfo::new(
-                    FheProgramOperation::Literal{ val: FheProgramLiteral::U64(*x)},
+                    FheProgramOperation::Literal {
+                        val: FheProgramLiteral::U64 { value: *x },
+                    },
                     #[cfg(feature = "debugger")]
                     n.group_id,
                     #[cfg(feature = "debugger")]
-                    n.stack_id
+                    n.stack_id,
                 ),
                 FheOperation::Literal(Literal::Plaintext(x)) => {
                     // It's okay to unwrap here because fhe_program compilation will
                     // catch the panic and return a compilation error.
                     NodeInfo::new(
-                        FheProgramOperation::Literal{val: FheProgramLiteral::Plaintext(
-                            x.to_bytes().expect("Failed to serialize plaintext."),
-                        )},
+                        FheProgramOperation::Literal {
+                            val: FheProgramLiteral::Plaintext {
+                                value: x.to_bytes().expect("Failed to serialize plaintext."),
+                            },
+                        },
                         #[cfg(feature = "debugger")]
                         n.group_id,
                         #[cfg(feature = "debugger")]
-                        n.stack_id
+                        n.stack_id,
                     )
                 }
                 FheOperation::Sub => NodeInfo::new(
@@ -419,70 +422,70 @@ impl FheCompile for FheFrontendCompilation {
                     #[cfg(feature = "debugger")]
                     n.group_id,
                     #[cfg(feature = "debugger")]
-                    n.stack_id
+                    n.stack_id,
                 ),
                 FheOperation::SubPlaintext => NodeInfo::new(
                     FheProgramOperation::SubPlaintext,
                     #[cfg(feature = "debugger")]
                     n.group_id,
                     #[cfg(feature = "debugger")]
-                    n.stack_id
+                    n.stack_id,
                 ),
                 FheOperation::Negate => NodeInfo::new(
                     FheProgramOperation::Negate,
                     #[cfg(feature = "debugger")]
                     n.group_id,
                     #[cfg(feature = "debugger")]
-                    n.stack_id
+                    n.stack_id,
                 ),
                 FheOperation::Multiply => NodeInfo::new(
                     FheProgramOperation::Multiply,
                     #[cfg(feature = "debugger")]
                     n.group_id,
                     #[cfg(feature = "debugger")]
-                    n.stack_id
+                    n.stack_id,
                 ),
                 FheOperation::MultiplyPlaintext => NodeInfo::new(
                     FheProgramOperation::MultiplyPlaintext,
                     #[cfg(feature = "debugger")]
                     n.group_id,
                     #[cfg(feature = "debugger")]
-                    n.stack_id
+                    n.stack_id,
                 ),
                 FheOperation::Output => NodeInfo::new(
                     FheProgramOperation::OutputCiphertext,
                     #[cfg(feature = "debugger")]
                     n.group_id,
                     #[cfg(feature = "debugger")]
-                    n.stack_id
+                    n.stack_id,
                 ),
                 FheOperation::RotateLeft => NodeInfo::new(
                     FheProgramOperation::ShiftLeft,
                     #[cfg(feature = "debugger")]
                     n.group_id,
                     #[cfg(feature = "debugger")]
-                    n.stack_id
+                    n.stack_id,
                 ),
                 FheOperation::RotateRight => NodeInfo::new(
                     FheProgramOperation::ShiftRight,
                     #[cfg(feature = "debugger")]
                     n.group_id,
                     #[cfg(feature = "debugger")]
-                    n.stack_id
+                    n.stack_id,
                 ),
                 FheOperation::SwapRows => NodeInfo::new(
                     FheProgramOperation::SwapRows,
                     #[cfg(feature = "debugger")]
                     n.group_id,
                     #[cfg(feature = "debugger")]
-                    n.stack_id
+                    n.stack_id,
                 ),
                 FheOperation::AddPlaintext => NodeInfo::new(
                     FheProgramOperation::AddPlaintext,
                     #[cfg(feature = "debugger")]
                     n.group_id,
                     #[cfg(feature = "debugger")]
-                    n.stack_id
+                    n.stack_id,
                 ),
             },
             |_, e| match e {
@@ -490,7 +493,7 @@ impl FheCompile for FheFrontendCompilation {
                 EdgeInfo::Right => EdgeInfo::Right,
                 EdgeInfo::Unary => EdgeInfo::Unary,
                 EdgeInfo::Unordered => unreachable!("FHE programs have no unordered edges."),
-                EdgeInfo::Ordered(_) => unreachable!("FHE programs have no ordered edges."),
+                EdgeInfo::Ordered { .. } => unreachable!("FHE programs have no ordered edges."),
             },
         );
 

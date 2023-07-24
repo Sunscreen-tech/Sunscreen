@@ -67,7 +67,12 @@ impl InnerPlaintext {
      */
     pub fn scatter(&self) -> Vec<InnerPlaintext> {
         match self {
-            Self::Seal{ value: d} => d.iter().map(|p| Self::Seal{ value: vec![p.clone()]}).collect(),
+            Self::Seal { value: d } => d
+                .iter()
+                .map(|p| Self::Seal {
+                    value: vec![p.clone()],
+                })
+                .collect(),
         }
     }
 
@@ -97,7 +102,7 @@ impl InnerPlaintext {
      */
     pub fn as_seal_plaintext(&self) -> Result<&[WithContext<SealPlaintext>]> {
         match self {
-            Self::Seal{ value: d}=> Ok(d),
+            Self::Seal { value: d } => Ok(d),
         }
     }
 }
@@ -169,8 +174,8 @@ pub enum InnerCiphertext {
         /**
          * The ciphertexts.
          */
-        value: Vec<WithContext<SealCiphertext>>
-    }
+        value: Vec<WithContext<SealCiphertext>>,
+    },
 }
 
 #[derive(Clone, Deserialize, Serialize)]

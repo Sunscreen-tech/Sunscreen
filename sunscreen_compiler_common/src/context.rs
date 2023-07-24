@@ -167,8 +167,8 @@ pub enum EdgeInfo {
         /**
          * The value of the edge.
          */
-        value: usize
-        },
+        value: usize,
+    },
 }
 
 impl EdgeInfo {
@@ -365,8 +365,20 @@ where
 
             // Capture backtrace and insert into lookup structure
             let bt = Backtrace::new();
-            let key = self.graph.metadata.stack_lookup.dict.get(&stack_id).expect("Invalid stack key");
-            self.graph.metadata.stack_lookup.data_to_id(key.clone(), self.graph.metadata.stack_lookup.backtrace_to_stackframes(bt));
+            let key = self
+                .graph
+                .metadata
+                .stack_lookup
+                .dict
+                .get(&stack_id)
+                .expect("Invalid stack key");
+            self.graph.metadata.stack_lookup.data_to_id(
+                key.clone(),
+                self.graph
+                    .metadata
+                    .stack_lookup
+                    .backtrace_to_stackframes(bt),
+            );
 
             // Add node to graph
             self.graph.add_node(NodeInfo {

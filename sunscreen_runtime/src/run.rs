@@ -246,7 +246,7 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
                     let a = get_ciphertext(&data, left.index())?;
                     let b = match ir.graph[right].operation {
                         Operation::Literal {
-                            val: Literal::U64{ value: v },
+                            val: Literal::U64 { value: v },
                         } => v as i32,
                         _ => panic!(
                             "Illegal right operand for ShiftLeft: {:#?}",
@@ -435,12 +435,12 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
                     );
                 }
                 Operation::Literal { val: x } => {
-                    if let Literal::Plaintext{value: p} = x {
+                    if let Literal::Plaintext { value: p } = x {
                         let p = InnerPlaintext::from_bytes(p)
                             .map_err(|_| FheProgramRunFailure::MalformedPlaintext)?;
 
                         match p {
-                            InnerPlaintext::Seal{ value: p } => {
+                            InnerPlaintext::Seal { value: p } => {
                                 // Plaintext literals should always have exactly one plaintext.
                                 if p.len() != 1 {
                                     return Err(FheProgramRunFailure::MalformedPlaintext);
@@ -1089,7 +1089,7 @@ mod tests {
         let mut ir = FheProgram::new(SchemeType::Bfv);
 
         let a = ir.add_input_ciphertext(0);
-        let l = ir.add_input_literal(Literal::U64{value: 3});
+        let l = ir.add_input_literal(Literal::U64 { value: 3 });
 
         let res = ir.add_rotate_left(a, l);
 
@@ -1175,7 +1175,7 @@ mod tests {
         let mut ir = FheProgram::new(SchemeType::Bfv);
 
         let a = ir.add_input_ciphertext(0);
-        let l = ir.add_input_literal(Literal::U64{value: 3});
+        let l = ir.add_input_literal(Literal::U64 { value: 3 });
 
         let res = ir.append_rotate_right(a, l);
 
@@ -1262,7 +1262,7 @@ mod tests {
         let mut ir = FheProgram::new(SchemeType::Bfv);
 
         let a = ir.add_input_ciphertext(0);
-        let l = ir.add_input_literal(Literal::U64{value: 3});
+        let l = ir.add_input_literal(Literal::U64 { value: 3 });
 
         let res = ir.add_rotate_left(a, l);
 

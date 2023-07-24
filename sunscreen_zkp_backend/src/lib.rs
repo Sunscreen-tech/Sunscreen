@@ -140,7 +140,7 @@ pub enum Proof {
         /**
          * The value of the Proof.
          */
-        value: Box<bulletproofs::BulletproofsR1CSProof>
+        value: Box<bulletproofs::BulletproofsR1CSProof>,
     },
 
     /**

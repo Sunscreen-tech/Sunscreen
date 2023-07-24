@@ -89,10 +89,12 @@ impl TryIntoPlaintext for Signed {
 
         Ok(Plaintext {
             data_type: self.type_name_instance(),
-            inner: InnerPlaintext::Seal{value: vec![WithContext {
-                params: params.clone(),
-                data: seal_plaintext,
-            }]},
+            inner: InnerPlaintext::Seal {
+                value: vec![WithContext {
+                    params: params.clone(),
+                    data: seal_plaintext,
+                }],
+            },
         })
     }
 }
@@ -103,7 +105,7 @@ impl TryFromPlaintext for Signed {
         params: &Params,
     ) -> std::result::Result<Self, sunscreen_runtime::Error> {
         let val = match &plaintext.inner {
-            InnerPlaintext::Seal{value: p} => {
+            InnerPlaintext::Seal { value: p } => {
                 if p.len() != 1 {
                     return Err(sunscreen_runtime::Error::IncorrectCiphertextCount);
                 }

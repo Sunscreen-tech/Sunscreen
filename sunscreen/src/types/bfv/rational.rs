@@ -45,14 +45,18 @@ impl NumCiphertexts for Rational {
 impl TryFromPlaintext for Rational {
     fn try_from_plaintext(plaintext: &Plaintext, params: &Params) -> Result<Self, Error> {
         let (num, den) = match &plaintext.inner {
-            InnerPlaintext::Seal{value: p} => {
+            InnerPlaintext::Seal { value: p } => {
                 let num = Plaintext {
                     data_type: Self::type_name(),
-                    inner: InnerPlaintext::Seal{value: vec![p[0].clone()]},
+                    inner: InnerPlaintext::Seal {
+                        value: vec![p[0].clone()],
+                    },
                 };
                 let den = Plaintext {
                     data_type: Self::type_name(),
-                    inner: InnerPlaintext::Seal{ value: vec![p[1].clone()]},
+                    inner: InnerPlaintext::Seal {
+                        value: vec![p[1].clone()],
+                    },
                 };
 
                 (
@@ -72,12 +76,16 @@ impl TryIntoPlaintext for Rational {
         let den = self.den.try_into_plaintext(params)?;
 
         let (num, den) = match (num.inner, den.inner) {
-            (InnerPlaintext::Seal{value: n}, InnerPlaintext::Seal{value: d}) => (n[0].clone(), d[0].clone()),
+            (InnerPlaintext::Seal { value: n }, InnerPlaintext::Seal { value: d }) => {
+                (n[0].clone(), d[0].clone())
+            }
         };
 
         Ok(Plaintext {
             data_type: Self::type_name(),
-            inner: InnerPlaintext::Seal{value: vec![num, den]},
+            inner: InnerPlaintext::Seal {
+                value: vec![num, den],
+            },
         })
     }
 }

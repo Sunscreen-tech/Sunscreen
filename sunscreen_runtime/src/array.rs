@@ -16,12 +16,14 @@ where
             .collect::<Result<Vec<Plaintext>>>()?
             .drain(0..)
             .flat_map(|p| match p.inner {
-                InnerPlaintext::Seal{value: v} => v,
+                InnerPlaintext::Seal { value: v } => v,
             })
             .collect::<Vec<WithContext<SealPlaintext>>>();
 
         Ok(Plaintext {
-            inner: InnerPlaintext::Seal{value: element_plaintexts},
+            inner: InnerPlaintext::Seal {
+                value: element_plaintexts,
+            },
             data_type: Self::type_name(),
         })
     }
@@ -34,7 +36,7 @@ where
 {
     fn try_from_plaintext(plaintext: &Plaintext, params: &Params) -> Result<Self> {
         let data = match &plaintext.inner {
-            InnerPlaintext::Seal{ value: p} => {
+            InnerPlaintext::Seal { value: p } => {
                 if p.len() != Self::NUM_CIPHERTEXTS {
                     return Err(Error::MalformedPlaintext);
                 }
@@ -43,7 +45,9 @@ where
                     .map(|c| {
                         let p = Plaintext {
                             data_type: T::type_name(),
-                            inner: InnerPlaintext::Seal{value: c.to_owned()},
+                            inner: InnerPlaintext::Seal {
+                                value: c.to_owned(),
+                            },
                         };
 
                         T::try_from_plaintext(&p, params)

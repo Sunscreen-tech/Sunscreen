@@ -395,7 +395,7 @@ impl FheCompile for FheFrontendCompilation {
                 }
                 FheOperation::Literal(Literal::U64(x)) => NodeInfo::new(
                     FheProgramOperation::Literal {
-                        val: FheProgramLiteral::U64{value: *x},
+                        val: FheProgramLiteral::U64 { value: *x },
                     },
                     #[cfg(feature = "debugger")]
                     n.group_id,
@@ -407,8 +407,8 @@ impl FheCompile for FheFrontendCompilation {
                     // catch the panic and return a compilation error.
                     NodeInfo::new(
                         FheProgramOperation::Literal {
-                            val: FheProgramLiteral::Plaintext{value: 
-                                x.to_bytes().expect("Failed to serialize plaintext."),
+                            val: FheProgramLiteral::Plaintext {
+                                value: x.to_bytes().expect("Failed to serialize plaintext."),
                             },
                         },
                         #[cfg(feature = "debugger")]
@@ -493,7 +493,7 @@ impl FheCompile for FheFrontendCompilation {
                 EdgeInfo::Right => EdgeInfo::Right,
                 EdgeInfo::Unary => EdgeInfo::Unary,
                 EdgeInfo::Unordered => unreachable!("FHE programs have no unordered edges."),
-                EdgeInfo::Ordered{..} => unreachable!("FHE programs have no ordered edges."),
+                EdgeInfo::Ordered { .. } => unreachable!("FHE programs have no ordered edges."),
             },
         );
 

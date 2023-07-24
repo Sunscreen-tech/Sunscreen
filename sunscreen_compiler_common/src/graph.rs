@@ -505,7 +505,7 @@ where
         let mut parent_edges = self
             .edges_directed(index, Direction::Incoming)
             .map(|x| match x.weight() {
-                EdgeInfo::Ordered{value: arg_id} => Ok(SortableEdge(x.source(), *arg_id)),
+                EdgeInfo::Ordered { value: arg_id } => Ok(SortableEdge(x.source(), *arg_id)),
                 _ => Err(GraphQueryError::IncorrectOrderedOperandEdge),
             })
             .collect::<Result<Vec<SortableEdge>, _>>()?;

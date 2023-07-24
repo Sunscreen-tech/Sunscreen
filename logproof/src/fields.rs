@@ -1,8 +1,8 @@
 use std::borrow::Borrow;
 
 use ark_ff::{
-    BigInt, BigInteger, Fp, Fp128, Fp256, Fp64, FpConfig, MontBackend, MontConfig, One as ArkOne,
-    PrimeField, Zero as ArkZero,
+    BigInt, BigInteger, Fp, Fp128, Fp192, Fp256, Fp64, FpConfig, MontBackend, MontConfig,
+    One as ArkOne, PrimeField, Zero as ArkZero,
 };
 use curve25519_dalek::scalar::Scalar;
 
@@ -48,10 +48,15 @@ where
  *
  * SEAL uses Q =
  * 0x7fffffd8001 * 0x7fffffc8001 * 0xfffffffc001 * 0xffffff6c001 * 0xfffffebc001
+ *
+ * This can be derived by running
+ * `CoefficientModulus::bfv_default(8192, SecurityLevel::TC128)`
+ * or by running the underlying SEAL function
+ * `CoeffModulus::BFVDefault(8192, sec_level_type::tc128)`
  */
 #[derive(MontConfig)]
-#[modulus = "421249101157150430150591791601812858371395928330411389778873040897"]
 #[generator = "3"]
+#[modulus = "23945240908173643396739775218143152511335532357255169"]
 pub struct SealQ128_8192 {}
 
 /**
@@ -62,24 +67,34 @@ pub struct SealQ128_8192 {}
  *
  * SEAL uses Q =
  * 0xffffee001, 0xffffc4001, 0x1ffffe0001
+ *
+ * This can be derived by running
+ * `CoefficientModulus::bfv_default(4096, SecurityLevel::TC128)`
+ * or by running the underlying SEAL function
+ * `CoeffModulus::BFVDefault(4096, sec_level_type::tc128)`
  */
 #[derive(MontConfig)]
 #[generator = "3"]
-#[modulus = "649033470896967801447398927572993"]
+#[modulus = "4722344527977019809793"]
 pub struct SealQ128_4096 {}
 
 /**
  * The configuration type for q modulus SEAL BFV uses with 128-bit security
- * an lattice dimension 4096.
+ * an lattice dimension 2048.
  *
  * # Remarks
  *
  * SEAL uses Q =
- * 0xffffee001, 0xffffc4001, 0x1ffffe0001
+ * 0x3fffffff000001
+ *
+ * This can be derived by running
+ * `CoefficientModulus::bfv_default(2048, SecurityLevel::TC128)`
+ * or by running the underlying SEAL function
+ * `CoeffModulus::BFVDefault(2048, sec_level_type::tc128)`
  */
 #[derive(MontConfig)]
 #[generator = "3"]
-#[modulus = "4611686014132420865"]
+#[modulus = "18014398492704769"]
 pub struct SealQ128_2048 {}
 
 /**
@@ -89,11 +104,16 @@ pub struct SealQ128_2048 {}
  * # Remarks
  *
  * SEAL uses Q =
- * 0xffffee001, 0xffffc4001, 0x1ffffe0001
+ * 0x7e00001
+ *
+ * This can be derived by running
+ * `CoefficientModulus::bfv_default(1024, SecurityLevel::TC128)`
+ * or by running the underlying SEAL function
+ * `CoeffModulus::BFVDefault(1024, sec_level_type::tc128)`
  */
 #[derive(MontConfig)]
 #[generator = "3"]
-#[modulus = "33822867713"]
+#[modulus = "132120577"]
 pub struct SealQ128_1024 {}
 
 #[allow(unused)]
@@ -105,7 +125,7 @@ pub struct SealQ128_1024 {}
  * Fp expects the modulus to be prime, but ours isn't. We need to be good
  * children and not use anything that relies on field primality.
  */
-pub type FqSeal128_8192 = Fp256<MontBackend<SealQ128_8192, 4>>;
+pub type FqSeal128_8192 = Fp192<MontBackend<SealQ128_8192, 3>>;
 
 #[allow(unused)]
 /**
@@ -371,7 +391,10 @@ mod tests {
 
         let b: FpRistretto = a.mod_switch_unsigned();
 
-        assert_eq!(MontBackend::into_bigint(a), MontBackend::into_bigint(b));
+        assert_eq!(
+            extend_bigint(&MontBackend::into_bigint(a)),
+            MontBackend::into_bigint(b)
+        );
     }
 
     #[test]
@@ -396,7 +419,7 @@ mod tests {
     #[test]
     fn can_log_2_modulus() {
         let modulus: BigInt<4> = FqSeal128_8192::field_modulus();
-        assert_eq!(Log2::log2(&modulus), 217);
+        assert_eq!(Log2::log2(&modulus), 173);
     }
 
     #[test]

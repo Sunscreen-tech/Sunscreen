@@ -22,6 +22,7 @@ sunscreen_math = { path = "../sunscreen_math" }
 bincode = "1.3.3"
 criterion = "0.4.0"
 once_cell = "1.18.0"
+seal_fhe = { path = "../seal_fhe" }
 
 [features]
 default = []

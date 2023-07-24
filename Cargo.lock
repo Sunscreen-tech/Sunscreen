@@ -1573,6 +1573,7 @@ dependencies = [
  "once_cell",
  "rand",
  "rayon",
+ "seal_fhe",
  "serde",
  "sha3 0.10.8",
  "sunscreen_curve25519",

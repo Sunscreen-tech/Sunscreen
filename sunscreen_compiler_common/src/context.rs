@@ -131,7 +131,7 @@ where
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, Serialize)]
-#[cfg_attr(feature = "debugger", serde(tag = "type"))]
+#[serde(tag = "type")]
 /**
  * Information about how one compiler graph node relates to another.
  */

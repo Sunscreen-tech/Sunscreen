@@ -127,7 +127,7 @@ pub trait Gadget: Any + Send + Sync {
 }
 
 #[derive(Clone, Serialize, Deserialize)]
-#[cfg_attr(feature = "debugger", serde(tag = "type"))]
+#[serde(tag = "type")]
 /**
  * An R1CS proof.
  */

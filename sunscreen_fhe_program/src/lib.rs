@@ -32,7 +32,7 @@ use sunscreen_compiler_common::DebugData;
 use std::collections::HashSet;
 
 #[derive(Debug, Clone, Copy, Serialize, Hash, Deserialize, PartialEq, Eq)]
-#[cfg_attr(feature = "debugger", serde(tag = "type"))]
+#[serde(tag = "type")]
 /**
  * Sunscreen supports the BFV scheme.
  */
@@ -121,7 +121,7 @@ impl TryFrom<u8> for SchemeType {
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
-#[cfg_attr(feature = "debugger", serde(tag = "type"))]
+#[serde(tag = "type")]
 /**
  * The type of output from an Fhe Program's graph node.
  */

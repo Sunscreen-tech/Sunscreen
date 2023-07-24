@@ -97,16 +97,11 @@ impl StackFrameLookup {
     /**
      * Extracts backtrace info, turning it into a `Vec<StackFrameInfo>`.
      */
-    pub fn backtrace_to_stackframes(&self, _trace: Backtrace, id: u64) -> Vec<StackFrameInfo> {
-        let key = self.dict.get(&id).unwrap();
-
+    pub fn backtrace_to_stackframes(&self, bt: Backtrace) -> Vec<StackFrameInfo> {
         let mut trace = Vec::<StackFrameInfo>::new();
-        let mut temp_key = Vec::<u64>::new();
-
-        for index in key {
-            temp_key.push(*index);
-            let frame = self.frames.get(&temp_key).unwrap();
-            trace.push(frame.clone());
+        let frames = bt.frames();
+        for frame in frames {
+            trace.push(StackFrameInfo::new(frame));
         }
         trace
     }
@@ -125,7 +120,7 @@ impl IdLookup<Vec<u64>, Vec<StackFrameInfo>> for StackFrameLookup {
      * This is analogous to an insertion method.
      */
     fn data_to_id(&mut self, key: Vec<u64>, val: Vec<StackFrameInfo>) -> u64 {
-        let mut temp_key: Vec<u64> = Vec::<u64>::new();
+        let mut temp_key = Vec::new();
 
         for (index, frame_info) in key.iter().zip(val) {
             temp_key.push(*index);

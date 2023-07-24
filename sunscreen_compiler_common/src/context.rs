@@ -8,10 +8,14 @@ use petgraph::Graph;
 
 use serde::{Deserialize, Serialize};
 
+use crate::lookup::IdLookup;
 use crate::{Operation, Render};
 
 #[cfg(feature = "debugger")]
 use crate::lookup::{GroupLookup, StackFrameLookup};
+
+#[cfg(feature = "debugger")]
+use backtrace::Backtrace;
 
 /**
  * Stores debug information about groups and stack traces.
@@ -359,6 +363,12 @@ where
 
             // TOOD: figure out updates to group and stack id?
 
+            // Capture backtrace and insert into lookup structure
+            let bt = Backtrace::new();
+            let key = self.graph.metadata.stack_lookup.dict.get(&stack_id).expect("Invalid stack key");
+            self.graph.metadata.stack_lookup.data_to_id(key.clone(), self.graph.metadata.stack_lookup.backtrace_to_stackframes(bt));
+
+            // Add node to graph
             self.graph.add_node(NodeInfo {
                 operation,
                 #[cfg(feature = "debugger")]

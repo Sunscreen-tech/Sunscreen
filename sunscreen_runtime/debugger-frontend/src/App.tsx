@@ -108,18 +108,22 @@ type InputCiphertextOp = {
 
 type MultiplyOp = {
   kind: 'Multiply'
+  id: number
 };
 
 type AddOp = {
   kind: 'Add'
+  id: number
 };
 
 type RelinearizeOp = {
   kind: 'Relinearize'
+  id: number
 };
 
 type OutputCiphertextOp = {
   kind: 'OutputCiphertext'
+  id: number
 };
 
 type FheProgramOperation = InputCiphertextOp | MultiplyOp | AddOp | RelinearizeOp | OutputCiphertextOp
@@ -152,6 +156,7 @@ const dataToGraph = (data: FheProgramGraph) => {
         nodes.push({id: op.id, title: "", type: 'input'})
         break
       case 'Multiply':
+        // nodes.push({id: op.id, title: "", type: 'multiply'})
       case 'Add':
       case 'Relinearize':
       case 'OutputCiphertext':

@@ -119,6 +119,8 @@ impl IdLookup<Vec<u64>, Vec<StackFrameInfo>> for StackFrameLookup {
      * Returns the node's group_id.
      * This is analogous to an insertion method.
      */
+
+    // TODO: maybe update the interface here to also take in an id for insertion reasons?
     fn data_to_id(&mut self, key: Vec<u64>, val: Vec<StackFrameInfo>) -> u64 {
         let mut temp_key = Vec::new();
 
@@ -126,6 +128,8 @@ impl IdLookup<Vec<u64>, Vec<StackFrameInfo>> for StackFrameLookup {
             temp_key.push(*index);
             self.frames.insert(temp_key.clone(), frame_info);
         }
+
+        self.dict.insert(0, key);
         // TODO: somehow need to get the node's id?
         0
     }

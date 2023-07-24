@@ -1,0 +1,25 @@
+{
+  "name": "ngraph.events",
+  "version": "1.2.2",
+  "description": "Basic events supoort for ngraph.js ",
+  "main": "index.js",
+  "scripts": {
+    "test": "tap test/*.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/anvaka/ngraph.events.git"
+  },
+  "keywords": [
+    "ngraph",
+    "ngraphjs"
+  ],
+  "author": "Andrei Kashcha",
+  "license": "BSD-3-Clause",
+  "bugs": {
+    "url": "https://github.com/anvaka/ngraph.events/issues"
+  },
+  "devDependencies": {
+    "tap": "^16.2.0"
+  }
+}

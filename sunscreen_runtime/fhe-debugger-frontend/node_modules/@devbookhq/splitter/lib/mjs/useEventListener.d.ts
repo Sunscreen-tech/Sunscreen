@@ -1,0 +1,5 @@
+interface UseAddEventListenerOptions extends AddEventListenerOptions {
+    condition: boolean;
+}
+declare function useEventListener(event: string, handler: (event: any) => void, deps?: any[], useAddEventListenerOptions?: UseAddEventListenerOptions): void;
+export default useEventListener;

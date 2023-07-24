@@ -1,0 +1,1 @@
+{"version":3,"file":"make-array-buffer-iterator.d.ts","sourceRoot":"","sources":["../../../src/iterators/make-iterator/make-array-buffer-iterator.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,EAAC,eAAe,EAAC,MAAM,iBAAiB,CAAC;AAIrD;;;;;GAKG;AACH,wBAAiB,uBAAuB,CACtC,WAAW,EAAE,WAAW,EACxB,OAAO,GAAE,eAAoB,GAC5B,QAAQ,CAAC,WAAW,CAAC,CAmBvB"}

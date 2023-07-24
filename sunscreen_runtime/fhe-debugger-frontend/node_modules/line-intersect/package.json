@@ -1,0 +1,44 @@
+{
+  "name": "line-intersect",
+  "version": "2.2.4",
+  "description": "Line vs line, point vs line",
+  "main": "commonjs/index.js",
+  "module": "es/index.js",
+  "scripts": {
+    "test": "BABEL_ENV=test mocha --require @babel/register",
+    "prebuild": "npm run clean",
+    "build": "npm run build:commonjs && npm run build:es",
+    "build:commonjs": "BABEL_ENV=commonjs babel src --out-dir commonjs",
+    "build:es": "BABEL_ENV=es babel src --out-dir es",
+    "clean": "rimraf es commonjs",
+    "prepublishOnly": "npm run test && npm run build"
+  },
+  "files": [
+    "es",
+    "commonjs"
+  ],
+  "keywords": [
+    "line",
+    "segment",
+    "intersect",
+    "2d"
+  ],
+  "author": "Paul Salaets <psalaets@gmail.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/psalaets/line-intersect.git"
+  },
+  "homepage": "https://github.com/psalaets/line-intersect",
+  "bugs": {
+    "url": "https://github.com/psalaets/line-intersect/issues"
+  },
+  "devDependencies": {
+    "@babel/cli": "^7.0.0-beta.40",
+    "@babel/core": "^7.0.0-beta.40",
+    "@babel/preset-env": "^7.0.0-beta.40",
+    "@babel/register": "^7.0.0-beta.40",
+    "mocha": "^5.0.1",
+    "rimraf": "^2.6.2"
+  }
+}

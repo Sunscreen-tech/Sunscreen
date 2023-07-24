@@ -1,0 +1,42 @@
+{
+  "name": "core-assert",
+  "version": "0.2.1",
+  "description": "Node.js `assert` as a standalone module",
+  "license": "MIT",
+  "repository": "sindresorhus/core-assert",
+  "author": {
+    "name": "Sindre Sorhus",
+    "email": "sindresorhus@gmail.com",
+    "url": "sindresorhus.com"
+  },
+  "engines": {
+    "node": ">=0.10.0"
+  },
+  "scripts": {
+    "test": "node test/test.js"
+  },
+  "files": [
+    "index.js"
+  ],
+  "keywords": [
+    "builtin",
+    "core",
+    "ponyfill",
+    "polyfill",
+    "shim",
+    "assert",
+    "assertion",
+    "test",
+    "testing",
+    "deep",
+    "strict",
+    "equal",
+    "equality",
+    "eq",
+    "same"
+  ],
+  "dependencies": {
+    "buf-compare": "^1.0.0",
+    "is-error": "^2.2.0"
+  }
+}

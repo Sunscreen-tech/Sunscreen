@@ -1,0 +1,23 @@
+"use strict";
+// math.gl MIT license
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.getS2OrientedBoundingBoxCornerPoints = exports.getS2Region = exports.getS2LngLatFromS2Cell = exports.getS2CellIdFromQuadkey = exports.getS2CellFromQuadKey = exports.getS2QuadkeyFromCellId = exports.getS2QuadKey = exports.getS2Cell = exports.getS2LngLat = exports.getS2BoundaryFlat = exports.getS2ChildCellId = exports.getS2TokenFromCellId = exports.getS2CellIdFromToken = void 0;
+var s2_token_functions_1 = require("./s2-token-functions");
+Object.defineProperty(exports, "getS2CellIdFromToken", { enumerable: true, get: function () { return s2_token_functions_1.getS2CellIdFromToken; } });
+Object.defineProperty(exports, "getS2TokenFromCellId", { enumerable: true, get: function () { return s2_token_functions_1.getS2TokenFromCellId; } });
+Object.defineProperty(exports, "getS2ChildCellId", { enumerable: true, get: function () { return s2_token_functions_1.getS2ChildCellId; } });
+var s2_geometry_functions_1 = require("./s2-geometry-functions");
+Object.defineProperty(exports, "getS2BoundaryFlat", { enumerable: true, get: function () { return s2_geometry_functions_1.getS2BoundaryFlat; } });
+Object.defineProperty(exports, "getS2LngLat", { enumerable: true, get: function () { return s2_geometry_functions_1.getS2LngLat; } });
+var s2_cell_utils_1 = require("./s2geometry/s2-cell-utils");
+Object.defineProperty(exports, "getS2Cell", { enumerable: true, get: function () { return s2_cell_utils_1.getS2Cell; } });
+Object.defineProperty(exports, "getS2QuadKey", { enumerable: true, get: function () { return s2_cell_utils_1.getS2QuadKey; } });
+var s2_geometry_1 = require("./s2geometry/s2-geometry");
+Object.defineProperty(exports, "getS2QuadkeyFromCellId", { enumerable: true, get: function () { return s2_geometry_1.getS2QuadkeyFromCellId; } });
+Object.defineProperty(exports, "getS2CellFromQuadKey", { enumerable: true, get: function () { return s2_geometry_1.getS2CellFromQuadKey; } });
+Object.defineProperty(exports, "getS2CellIdFromQuadkey", { enumerable: true, get: function () { return s2_geometry_1.getS2CellIdFromQuadkey; } });
+Object.defineProperty(exports, "getS2LngLatFromS2Cell", { enumerable: true, get: function () { return s2_geometry_1.getS2LngLatFromS2Cell; } });
+var s2_to_region_1 = require("./converters/s2-to-region");
+Object.defineProperty(exports, "getS2Region", { enumerable: true, get: function () { return s2_to_region_1.getS2Region; } });
+var s2_to_obb_points_1 = require("./converters/s2-to-obb-points");
+Object.defineProperty(exports, "getS2OrientedBoundingBoxCornerPoints", { enumerable: true, get: function () { return s2_to_obb_points_1.getS2OrientedBoundingBoxCornerPoints; } });

@@ -1,0 +1,8 @@
+{
+  "scripts": {
+    "start": "browserify index.js > bundle.js"
+  },
+  "dependencies": {
+    "query-state": "^3.0.4"
+  }
+}

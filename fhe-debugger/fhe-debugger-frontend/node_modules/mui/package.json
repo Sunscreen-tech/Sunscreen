@@ -1,0 +1,26 @@
+{
+  "name": "mui",
+  "version": "0.0.1",
+  "description": "Material user interface library",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vertexsystems/mui.git"
+  },
+  "keywords": [
+    "component",
+    "components",
+    "material",
+    "ui",
+    "ux"
+  ],
+  "author": "Chedwick Montoril <chedwick@vertex.systems> (http://vertex.systems)",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/vertexsystems/mui/issues"
+  },
+  "homepage": "https://github.com/vertexsystems/mui#readme"
+}

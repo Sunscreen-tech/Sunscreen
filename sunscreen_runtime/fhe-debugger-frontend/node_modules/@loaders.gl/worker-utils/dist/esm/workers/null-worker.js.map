@@ -1,0 +1,1 @@
+{"version":3,"file":"null-worker.js","names":["createWorker","data"],"sources":["../../../src/workers/null-worker.ts"],"sourcesContent":["import {createWorker} from '../lib/worker-api/create-worker';\n\ncreateWorker(async (data) => {\n  // @ts-ignore\n  return data;\n});\n"],"mappings":"AAAA,SAAQA,YAAY,QAAO,iCAAiC;AAE5DA,YAAY,CAAC,MAAOC,IAAI,IAAK;EAE3B,OAAOA,IAAI;AACb,CAAC,CAAC"}

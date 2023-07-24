@@ -1,0 +1,42 @@
+{
+  "name": "deep-strict-equal",
+  "version": "0.2.0",
+  "description": "Test for deep equality - Node.js `assert.deepStrictEqual()` algorithm as a standalone module",
+  "license": "MIT",
+  "repository": "sindresorhus/deep-strict-equal",
+  "author": {
+    "name": "Sindre Sorhus",
+    "email": "sindresorhus@gmail.com",
+    "url": "sindresorhus.com"
+  },
+  "engines": {
+    "node": ">=0.10.0"
+  },
+  "scripts": {
+    "test": "xo && ava"
+  },
+  "files": [
+    "index.js"
+  ],
+  "keywords": [
+    "builtin",
+    "core",
+    "ponyfill",
+    "polyfill",
+    "shim",
+    "deep",
+    "strict",
+    "equal",
+    "equality",
+    "eq",
+    "same",
+    "algorithm"
+  ],
+  "dependencies": {
+    "core-assert": "^0.2.0"
+  },
+  "devDependencies": {
+    "ava": "*",
+    "xo": "*"
+  }
+}

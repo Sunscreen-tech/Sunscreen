@@ -1,0 +1,40 @@
+{
+  "name": "kld-intersections",
+  "version": "0.4.3",
+  "description": "A library of intersection algorithms covering all SVG shape types",
+  "author": {
+    "name": "Kevin Lindsey",
+    "email": "kevin@kevlindev.com"
+  },
+  "license": "BSD-3-Clause",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/thelonious/kld-intersections.git"
+  },
+  "main": "index.js",
+  "scripts": {
+    "test": "mocha"
+  },
+  "keywords": [
+    "intersection",
+    "bezier",
+    "circle",
+    "ellipse",
+    "line",
+    "polygon",
+    "rectangle",
+    "path"
+  ],
+  "dependencies": {
+    "kld-affine": "^2.0.4",
+    "kld-polynomial": "^0.1.3"
+  },
+  "devDependencies": {
+    "kld-contours": "^0.2.0",
+    "kld-path-parser": "0.0.2",
+    "mocha": "^3.4.2"
+  },
+  "engines": {
+    "node": ">= 6.11.1"
+  }
+}

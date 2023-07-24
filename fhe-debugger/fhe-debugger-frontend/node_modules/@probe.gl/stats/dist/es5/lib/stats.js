@@ -1,0 +1,110 @@
+"use strict";
+
+var _interopRequireDefault = require("@babel/runtime/helpers/interopRequireDefault");
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.default = void 0;
+
+var _classCallCheck2 = _interopRequireDefault(require("@babel/runtime/helpers/classCallCheck"));
+
+var _createClass2 = _interopRequireDefault(require("@babel/runtime/helpers/createClass"));
+
+var _defineProperty2 = _interopRequireDefault(require("@babel/runtime/helpers/defineProperty"));
+
+var _stat = _interopRequireDefault(require("./stat"));
+
+var Stats = function () {
+  function Stats(options) {
+    (0, _classCallCheck2.default)(this, Stats);
+    (0, _defineProperty2.default)(this, "id", void 0);
+    (0, _defineProperty2.default)(this, "stats", {});
+    this.id = options.id;
+    this.stats = {};
+
+    this._initializeStats(options.stats);
+
+    Object.seal(this);
+  }
+
+  (0, _createClass2.default)(Stats, [{
+    key: "get",
+    value: function get(name) {
+      var type = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 'count';
+      return this._getOrCreate({
+        name: name,
+        type: type
+      });
+    }
+  }, {
+    key: "size",
+    get: function get() {
+      return Object.keys(this.stats).length;
+    }
+  }, {
+    key: "reset",
+    value: function reset() {
+      for (var key in this.stats) {
+        this.stats[key].reset();
+      }
+
+      return this;
+    }
+  }, {
+    key: "forEach",
+    value: function forEach(fn) {
+      for (var key in this.stats) {
+        fn(this.stats[key]);
+      }
+    }
+  }, {
+    key: "getTable",
+    value: function getTable() {
+      var table = {};
+      this.forEach(function (stat) {
+        table[stat.name] = {
+          time: stat.time || 0,
+          count: stat.count || 0,
+          average: stat.getAverageTime() || 0,
+          hz: stat.getHz() || 0
+        };
+      });
+      return table;
+    }
+  }, {
+    key: "_initializeStats",
+    value: function _initializeStats() {
+      var _this = this;
+
+      var stats = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : [];
+      stats.forEach(function (stat) {
+        return _this._getOrCreate(stat);
+      });
+    }
+  }, {
+    key: "_getOrCreate",
+    value: function _getOrCreate(stat) {
+      if (!stat || !stat.name) {
+        return null;
+      }
+
+      var name = stat.name,
+          type = stat.type;
+
+      if (!this.stats[name]) {
+        if (stat instanceof _stat.default) {
+          this.stats[name] = stat;
+        } else {
+          this.stats[name] = new _stat.default(name, type);
+        }
+      }
+
+      return this.stats[name];
+    }
+  }]);
+  return Stats;
+}();
+
+exports.default = Stats;
+//# sourceMappingURL=stats.js.map

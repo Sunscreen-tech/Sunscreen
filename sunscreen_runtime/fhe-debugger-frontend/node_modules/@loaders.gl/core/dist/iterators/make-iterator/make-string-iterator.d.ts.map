@@ -1,0 +1,1 @@
+{"version":3,"file":"make-string-iterator.d.ts","sourceRoot":"","sources":["../../../src/iterators/make-iterator/make-string-iterator.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,EAAC,eAAe,EAAC,MAAM,iBAAiB,CAAC;AAIrD;;;;;GAKG;AACH,wBAAiB,kBAAkB,CACjC,MAAM,EAAE,MAAM,EACd,OAAO,CAAC,EAAE,eAAe,GACxB,QAAQ,CAAC,WAAW,CAAC,CAcvB"}

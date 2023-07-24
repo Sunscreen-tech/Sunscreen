@@ -1,0 +1,153 @@
+import _defineProperty from "@babel/runtime/helpers/esm/defineProperty";
+import getHiResTimestamp from '../utils/hi-res-timestamp';
+export default class Stat {
+  constructor(name, type) {
+    _defineProperty(this, "name", void 0);
+
+    _defineProperty(this, "type", void 0);
+
+    _defineProperty(this, "sampleSize", 1);
+
+    _defineProperty(this, "time", void 0);
+
+    _defineProperty(this, "count", void 0);
+
+    _defineProperty(this, "samples", void 0);
+
+    _defineProperty(this, "lastTiming", void 0);
+
+    _defineProperty(this, "lastSampleTime", void 0);
+
+    _defineProperty(this, "lastSampleCount", void 0);
+
+    _defineProperty(this, "_count", 0);
+
+    _defineProperty(this, "_time", 0);
+
+    _defineProperty(this, "_samples", 0);
+
+    _defineProperty(this, "_startTime", 0);
+
+    _defineProperty(this, "_timerPending", false);
+
+    this.name = name;
+    this.type = type;
+    this.reset();
+  }
+
+  setSampleSize(samples) {
+    this.sampleSize = samples;
+    return this;
+  }
+
+  incrementCount() {
+    this.addCount(1);
+    return this;
+  }
+
+  decrementCount() {
+    this.subtractCount(1);
+    return this;
+  }
+
+  addCount(value) {
+    this._count += value;
+    this._samples++;
+
+    this._checkSampling();
+
+    return this;
+  }
+
+  subtractCount(value) {
+    this._count -= value;
+    this._samples++;
+
+    this._checkSampling();
+
+    return this;
+  }
+
+  addTime(time) {
+    this._time += time;
+    this.lastTiming = time;
+    this._samples++;
+
+    this._checkSampling();
+
+    return this;
+  }
+
+  timeStart() {
+    this._startTime = getHiResTimestamp();
+    this._timerPending = true;
+    return this;
+  }
+
+  timeEnd() {
+    if (!this._timerPending) {
+      return this;
+    }
+
+    this.addTime(getHiResTimestamp() - this._startTime);
+    this._timerPending = false;
+
+    this._checkSampling();
+
+    return this;
+  }
+
+  getSampleAverageCount() {
+    return this.sampleSize > 0 ? this.lastSampleCount / this.sampleSize : 0;
+  }
+
+  getSampleAverageTime() {
+    return this.sampleSize > 0 ? this.lastSampleTime / this.sampleSize : 0;
+  }
+
+  getSampleHz() {
+    return this.lastSampleTime > 0 ? this.sampleSize / (this.lastSampleTime / 1000) : 0;
+  }
+
+  getAverageCount() {
+    return this.samples > 0 ? this.count / this.samples : 0;
+  }
+
+  getAverageTime() {
+    return this.samples > 0 ? this.time / this.samples : 0;
+  }
+
+  getHz() {
+    return this.time > 0 ? this.samples / (this.time / 1000) : 0;
+  }
+
+  reset() {
+    this.time = 0;
+    this.count = 0;
+    this.samples = 0;
+    this.lastTiming = 0;
+    this.lastSampleTime = 0;
+    this.lastSampleCount = 0;
+    this._count = 0;
+    this._time = 0;
+    this._samples = 0;
+    this._startTime = 0;
+    this._timerPending = false;
+    return this;
+  }
+
+  _checkSampling() {
+    if (this._samples === this.sampleSize) {
+      this.lastSampleTime = this._time;
+      this.lastSampleCount = this._count;
+      this.count += this._count;
+      this.time += this._time;
+      this.samples += this._samples;
+      this._time = 0;
+      this._count = 0;
+      this._samples = 0;
+    }
+  }
+
+}
+//# sourceMappingURL=stat.js.map

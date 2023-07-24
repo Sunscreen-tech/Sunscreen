@@ -1,0 +1,1 @@
+{"version":3,"file":"log.js","names":["Log","log","id"],"sources":["../../../../src/lib/utils/log.ts"],"sourcesContent":["// loaders.gl, MIT license\nimport {Log} from '@probe.gl/log';\n\nexport const log = new Log({id: 'loaders.gl'});\n"],"mappings":"AACA,SAAQA,GAAG,QAAO,eAAe;AAEjC,OAAO,MAAMC,GAAG,GAAG,IAAID,GAAG,CAAC;EAACE,EAAE,EAAE;AAAY,CAAC,CAAC"}

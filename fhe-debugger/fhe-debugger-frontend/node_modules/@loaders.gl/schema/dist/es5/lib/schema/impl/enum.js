@@ -1,0 +1,55 @@
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.Type = void 0;
+var Type = function (Type) {
+  Type[Type["NONE"] = 0] = "NONE";
+  Type[Type["Null"] = 1] = "Null";
+  Type[Type["Int"] = 2] = "Int";
+  Type[Type["Float"] = 3] = "Float";
+  Type[Type["Binary"] = 4] = "Binary";
+  Type[Type["Utf8"] = 5] = "Utf8";
+  Type[Type["Bool"] = 6] = "Bool";
+  Type[Type["Decimal"] = 7] = "Decimal";
+  Type[Type["Date"] = 8] = "Date";
+  Type[Type["Time"] = 9] = "Time";
+  Type[Type["Timestamp"] = 10] = "Timestamp";
+  Type[Type["Interval"] = 11] = "Interval";
+  Type[Type["List"] = 12] = "List";
+  Type[Type["Struct"] = 13] = "Struct";
+  Type[Type["Union"] = 14] = "Union";
+  Type[Type["FixedSizeBinary"] = 15] = "FixedSizeBinary";
+  Type[Type["FixedSizeList"] = 16] = "FixedSizeList";
+  Type[Type["Map"] = 17] = "Map";
+  Type[Type["Dictionary"] = -1] = "Dictionary";
+  Type[Type["Int8"] = -2] = "Int8";
+  Type[Type["Int16"] = -3] = "Int16";
+  Type[Type["Int32"] = -4] = "Int32";
+  Type[Type["Int64"] = -5] = "Int64";
+  Type[Type["Uint8"] = -6] = "Uint8";
+  Type[Type["Uint16"] = -7] = "Uint16";
+  Type[Type["Uint32"] = -8] = "Uint32";
+  Type[Type["Uint64"] = -9] = "Uint64";
+  Type[Type["Float16"] = -10] = "Float16";
+  Type[Type["Float32"] = -11] = "Float32";
+  Type[Type["Float64"] = -12] = "Float64";
+  Type[Type["DateDay"] = -13] = "DateDay";
+  Type[Type["DateMillisecond"] = -14] = "DateMillisecond";
+  Type[Type["TimestampSecond"] = -15] = "TimestampSecond";
+  Type[Type["TimestampMillisecond"] = -16] = "TimestampMillisecond";
+  Type[Type["TimestampMicrosecond"] = -17] = "TimestampMicrosecond";
+  Type[Type["TimestampNanosecond"] = -18] = "TimestampNanosecond";
+  Type[Type["TimeSecond"] = -19] = "TimeSecond";
+  Type[Type["TimeMillisecond"] = -20] = "TimeMillisecond";
+  Type[Type["TimeMicrosecond"] = -21] = "TimeMicrosecond";
+  Type[Type["TimeNanosecond"] = -22] = "TimeNanosecond";
+  Type[Type["DenseUnion"] = -23] = "DenseUnion";
+  Type[Type["SparseUnion"] = -24] = "SparseUnion";
+  Type[Type["IntervalDayTime"] = -25] = "IntervalDayTime";
+  Type[Type["IntervalYearMonth"] = -26] = "IntervalYearMonth";
+  return Type;
+}({});
+exports.Type = Type;
+//# sourceMappingURL=enum.js.map

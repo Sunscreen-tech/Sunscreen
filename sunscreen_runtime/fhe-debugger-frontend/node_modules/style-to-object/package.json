@@ -1,0 +1,49 @@
+{
+  "name": "style-to-object",
+  "version": "0.2.2",
+  "description": "Converts inline style to object.",
+  "author": "Mark <mark@remarkablemark.org>",
+  "main": "index.js",
+  "scripts": {
+    "prepublishOnly": "npm run build",
+    "release": "standard-version",
+    "test": "mocha",
+    "lint": "eslint --ignore-path .gitignore .",
+    "cover": "istanbul cover _mocha -- -R spec \"test/**/*.js\"",
+    "coveralls": "cat coverage/lcov.info | coveralls",
+    "clean": "rm -rf dist",
+    "build": "npm run clean && npm run build:min && npm run build:unmin",
+    "build:min": "NODE_ENV=production rollup --config --output.file dist/style-to-object.min.js",
+    "build:unmin": "rollup --config --output.file dist/style-to-object.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/remarkablemark/style-to-object"
+  },
+  "bugs": {
+    "url": "https://github.com/remarkablemark/style-to-object/issues"
+  },
+  "keywords": [
+    "inline",
+    "css",
+    "style",
+    "object",
+    "pojo"
+  ],
+  "dependencies": {
+    "css": "2.2.4"
+  },
+  "devDependencies": {
+    "coveralls": "3.0.2",
+    "eslint": "5.5.0",
+    "istanbul": "0.4.5",
+    "mocha": "5.2.0",
+    "rollup": "0.65.2",
+    "rollup-plugin-commonjs": "9.1.6",
+    "rollup-plugin-node-resolve": "3.4.0",
+    "rollup-plugin-uglify": "5.0.2",
+    "standard-version": "4.4.0",
+    "uglify-es": "3.3.9"
+  },
+  "license": "MIT"
+}

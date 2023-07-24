@@ -1,0 +1,42 @@
+"use strict";
+// TODO - build/integrate proper MIME type parsing
+// https://mimesniff.spec.whatwg.org/
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.parseMIMETypeFromURL = exports.parseMIMEType = void 0;
+const DATA_URL_PATTERN = /^data:([-\w.]+\/[-\w.+]+)(;|,)/;
+const MIME_TYPE_PATTERN = /^([-\w.]+\/[-\w.+]+)/;
+/**
+ * Remove extra data like `charset` from MIME types
+ * @param mimeString
+ * @returns A clean MIME type, or an empty string
+ *
+ * @todo - handle more advanced MIMETYpes, multiple types
+ * @todo - extract charset etc
+ */
+function parseMIMEType(mimeString) {
+    // If resource is a data url, extract any embedded mime type
+    const matches = MIME_TYPE_PATTERN.exec(mimeString);
+    if (matches) {
+        return matches[1];
+    }
+    return mimeString;
+}
+exports.parseMIMEType = parseMIMEType;
+/**
+ * Extract MIME type from data URL
+ *
+ * @param mimeString
+ * @returns A clean MIME type, or an empty string
+ *
+ * @todo - handle more advanced MIMETYpes, multiple types
+ * @todo - extract charset etc
+ */
+function parseMIMETypeFromURL(url) {
+    // If resource is a data URL, extract any embedded mime type
+    const matches = DATA_URL_PATTERN.exec(url);
+    if (matches) {
+        return matches[1];
+    }
+    return '';
+}
+exports.parseMIMETypeFromURL = parseMIMETypeFromURL;

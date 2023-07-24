@@ -1,0 +1,1 @@
+{"version":3,"file":"get-transfer-list.d.ts","sourceRoot":"","sources":["../../../src/lib/worker-utils/get-transfer-list.ts"],"names":[],"mappings":"AAGA;;;;;;;GAOG;AACH,wBAAgB,eAAe,CAC7B,MAAM,EAAE,GAAG,EACX,SAAS,GAAE,OAAc,EACzB,SAAS,CAAC,EAAE,GAAG,CAAC,GAAG,CAAC,GACnB,YAAY,EAAE,CAwBhB;AAuBD;;;GAGG;AACH,wBAAgB,wBAAwB,CAAC,MAAM,EAAE,MAAM,GAAG,IAAI,GAAG,MAAM,CAsBtE"}

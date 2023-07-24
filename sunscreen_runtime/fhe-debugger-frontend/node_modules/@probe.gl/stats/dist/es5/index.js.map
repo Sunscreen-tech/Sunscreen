@@ -1,0 +1,1 @@
+{"version":3,"sources":["../../src/index.ts"],"names":[],"mappings":";;;;;;;;;;;;;;;;;;;;;;;;;;AAAA;;AACA;;AAGA","sourcesContent":["export {default as Stats} from './lib/stats';\nexport {default as Stat} from './lib/stat';\n\n// UTILITIES\nexport {default as _getHiResTimestamp} from './utils/hi-res-timestamp';\n"],"file":"index.js"}

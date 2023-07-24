@@ -1,0 +1,4 @@
+**/dist*/**/*
+dist.js
+*.min.js
+*.md

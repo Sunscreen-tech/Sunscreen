@@ -1,0 +1,27 @@
+{
+  "name": "amator",
+  "version": "1.1.0",
+  "description": "Tiny animation library",
+  "main": "index.js",
+  "scripts": {
+    "test": "tap test/*.js",
+    "build": "browserify -s amator ./index.js > dist/amator.js && uglifyjs dist/amator.js > dist/amator.min.js"
+  },
+  "keywords": [
+    "animation",
+    "small",
+    "library"
+  ],
+  "author": "Andrei Kashcha",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/anvaka/amator"
+  },
+  "dependencies": {
+    "bezier-easing": "^2.0.3"
+  },
+  "devDependencies": {
+    "tap": "^5.7.1"
+  }
+}

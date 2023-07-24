@@ -1,0 +1,872 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "definitions": {
+        "GraphEdgeLayerStyle": {
+            "allOf": [
+                {
+                    "properties": {
+                        "filter": {
+                            "anyOf": [
+                                {
+                                    "properties": {
+                                        "operator": {
+                                            "enum": [
+                                                "!=",
+                                                "$=",
+                                                "*=",
+                                                "<",
+                                                "<=",
+                                                "=",
+                                                ">",
+                                                ">=",
+                                                "^="
+                                            ],
+                                            "type": "string"
+                                        },
+                                        "property": {
+                                            "enum": [
+                                                "id",
+                                                "label",
+                                                "rank",
+                                                "shape",
+                                                "source-id",
+                                                "target-id"
+                                            ],
+                                            "type": "string"
+                                        },
+                                        "value": {
+                                            "type": [
+                                                "string",
+                                                "number"
+                                            ]
+                                        }
+                                    },
+                                    "type": "object"
+                                },
+                                {
+                                    "items": {
+                                        "properties": {
+                                            "operator": {
+                                                "enum": [
+                                                    "!=",
+                                                    "$=",
+                                                    "*=",
+                                                    "<",
+                                                    "<=",
+                                                    "=",
+                                                    ">",
+                                                    ">=",
+                                                    "^="
+                                                ],
+                                                "type": "string"
+                                            },
+                                            "property": {
+                                                "enum": [
+                                                    "id",
+                                                    "label",
+                                                    "rank",
+                                                    "shape",
+                                                    "source-id",
+                                                    "target-id"
+                                                ],
+                                                "type": "string"
+                                            },
+                                            "value": {
+                                                "type": [
+                                                    "string",
+                                                    "number"
+                                                ]
+                                            }
+                                        },
+                                        "type": "object"
+                                    },
+                                    "type": "array"
+                                }
+                            ]
+                        },
+                        "id": {
+                            "type": "string"
+                        },
+                        "maxZoom": {
+                            "type": "number"
+                        },
+                        "minZoom": {
+                            "type": "number"
+                        },
+                        "type": {
+                            "type": "string"
+                        },
+                        "visible": {
+                            "type": "boolean"
+                        }
+                    },
+                    "type": "object"
+                },
+                {
+                    "properties": {
+                        "arrowColor": {
+                            "anyOf": [
+                                {
+                                    "properties": {
+                                        "input": {
+                                            "enum": [
+                                                "zoom"
+                                            ],
+                                            "type": "string"
+                                        },
+                                        "inputStops": {
+                                            "items": {
+                                                "type": "number"
+                                            },
+                                            "type": "array"
+                                        },
+                                        "interpolation": {
+                                            "enum": [
+                                                "linear",
+                                                "power",
+                                                "step"
+                                            ],
+                                            "type": "string"
+                                        },
+                                        "interpolationParameters": {
+                                            "items": {
+                                                "type": "number"
+                                            },
+                                            "type": "array"
+                                        },
+                                        "outputStops": {
+                                            "items": {
+                                                "type": "string"
+                                            },
+                                            "type": "array"
+                                        }
+                                    },
+                                    "type": "object"
+                                },
+                                {
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "arrowSize": {
+                            "anyOf": [
+                                {
+                                    "properties": {
+                                        "input": {
+                                            "enum": [
+                                                "zoom"
+                                            ],
+                                            "type": "string"
+                                        },
+                                        "inputStops": {
+                                            "items": {
+                                                "type": "number"
+                                            },
+                                            "type": "array"
+                                        },
+                                        "interpolation": {
+                                            "enum": [
+                                                "linear",
+                                                "power",
+                                                "step"
+                                            ],
+                                            "type": "string"
+                                        },
+                                        "interpolationParameters": {
+                                            "items": {
+                                                "type": "number"
+                                            },
+                                            "type": "array"
+                                        },
+                                        "outputStops": {
+                                            "items": {
+                                                "type": "number"
+                                            },
+                                            "type": "array"
+                                        }
+                                    },
+                                    "type": "object"
+                                },
+                                {
+                                    "type": "number"
+                                }
+                            ]
+                        },
+                        "labelColor": {
+                            "anyOf": [
+                                {
+                                    "properties": {
+                                        "input": {
+                                            "enum": [
+                                                "zoom"
+                                            ],
+                                            "type": "string"
+                                        },
+                                        "inputStops": {
+                                            "items": {
+                                                "type": "number"
+                                            },
+                                            "type": "array"
+                                        },
+                                        "interpolation": {
+                                            "enum": [
+                                                "linear",
+                                                "power",
+                                                "step"
+                                            ],
+                                            "type": "string"
+                                        },
+                                        "interpolationParameters": {
+                                            "items": {
+                                                "type": "number"
+                                            },
+                                            "type": "array"
+                                        },
+                                        "outputStops": {
+                                            "items": {
+                                                "type": "string"
+                                            },
+                                            "type": "array"
+                                        }
+                                    },
+                                    "type": "object"
+                                },
+                                {
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "labelSize": {
+                            "anyOf": [
+                                {
+                                    "properties": {
+                                        "input": {
+                                            "enum": [
+                                                "zoom"
+                                            ],
+                                            "type": "string"
+                                        },
+                                        "inputStops": {
+                                            "items": {
+                                                "type": "number"
+                                            },
+                                            "type": "array"
+                                        },
+                                        "interpolation": {
+                                            "enum": [
+                                                "linear",
+                                                "power",
+                                                "step"
+                                            ],
+                                            "type": "string"
+                                        },
+                                        "interpolationParameters": {
+                                            "items": {
+                                                "type": "number"
+                                            },
+                                            "type": "array"
+                                        },
+                                        "outputStops": {
+                                            "items": {
+                                                "type": "number"
+                                            },
+                                            "type": "array"
+                                        }
+                                    },
+                                    "type": "object"
+                                },
+                                {
+                                    "type": "number"
+                                }
+                            ]
+                        },
+                        "opacity": {
+                            "anyOf": [
+                                {
+                                    "properties": {
+                                        "input": {
+                                            "enum": [
+                                                "zoom"
+                                            ],
+                                            "type": "string"
+                                        },
+                                        "inputStops": {
+                                            "items": {
+                                                "type": "number"
+                                            },
+                                            "type": "array"
+                                        },
+                                        "interpolation": {
+                                            "enum": [
+                                                "linear",
+                                                "power",
+                                                "step"
+                                            ],
+                                            "type": "string"
+                                        },
+                                        "interpolationParameters": {
+                                            "items": {
+                                                "type": "number"
+                                            },
+                                            "type": "array"
+                                        },
+                                        "outputStops": {
+                                            "items": {
+                                                "type": "number"
+                                            },
+                                            "type": "array"
+                                        }
+                                    },
+                                    "type": "object"
+                                },
+                                {
+                                    "type": "number"
+                                }
+                            ]
+                        },
+                        "strokeColor": {
+                            "anyOf": [
+                                {
+                                    "properties": {
+                                        "input": {
+                                            "enum": [
+                                                "zoom"
+                                            ],
+                                            "type": "string"
+                                        },
+                                        "inputStops": {
+                                            "items": {
+                                                "type": "number"
+                                            },
+                                            "type": "array"
+                                        },
+                                        "interpolation": {
+                                            "enum": [
+                                                "linear",
+                                                "power",
+                                                "step"
+                                            ],
+                                            "type": "string"
+                                        },
+                                        "interpolationParameters": {
+                                            "items": {
+                                                "type": "number"
+                                            },
+                                            "type": "array"
+                                        },
+                                        "outputStops": {
+                                            "items": {
+                                                "type": "string"
+                                            },
+                                            "type": "array"
+                                        }
+                                    },
+                                    "type": "object"
+                                },
+                                {
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "strokeWidth": {
+                            "anyOf": [
+                                {
+                                    "properties": {
+                                        "input": {
+                                            "enum": [
+                                                "zoom"
+                                            ],
+                                            "type": "string"
+                                        },
+                                        "inputStops": {
+                                            "items": {
+                                                "type": "number"
+                                            },
+                                            "type": "array"
+                                        },
+                                        "interpolation": {
+                                            "enum": [
+                                                "linear",
+                                                "power",
+                                                "step"
+                                            ],
+                                            "type": "string"
+                                        },
+                                        "interpolationParameters": {
+                                            "items": {
+                                                "type": "number"
+                                            },
+                                            "type": "array"
+                                        },
+                                        "outputStops": {
+                                            "items": {
+                                                "type": "number"
+                                            },
+                                            "type": "array"
+                                        }
+                                    },
+                                    "type": "object"
+                                },
+                                {
+                                    "type": "number"
+                                }
+                            ]
+                        },
+                        "type": {
+                            "enum": [
+                                "edge"
+                            ],
+                            "type": "string"
+                        }
+                    },
+                    "type": "object"
+                }
+            ]
+        },
+        "GraphNodeLayerStyle": {
+            "allOf": [
+                {
+                    "properties": {
+                        "filter": {
+                            "anyOf": [
+                                {
+                                    "properties": {
+                                        "operator": {
+                                            "enum": [
+                                                "!=",
+                                                "$=",
+                                                "*=",
+                                                "<",
+                                                "<=",
+                                                "=",
+                                                ">",
+                                                ">=",
+                                                "^="
+                                            ],
+                                            "type": "string"
+                                        },
+                                        "property": {
+                                            "enum": [
+                                                "id",
+                                                "label",
+                                                "rank",
+                                                "shape",
+                                                "source-id",
+                                                "target-id"
+                                            ],
+                                            "type": "string"
+                                        },
+                                        "value": {
+                                            "type": [
+                                                "string",
+                                                "number"
+                                            ]
+                                        }
+                                    },
+                                    "type": "object"
+                                },
+                                {
+                                    "items": {
+                                        "properties": {
+                                            "operator": {
+                                                "enum": [
+                                                    "!=",
+                                                    "$=",
+                                                    "*=",
+                                                    "<",
+                                                    "<=",
+                                                    "=",
+                                                    ">",
+                                                    ">=",
+                                                    "^="
+                                                ],
+                                                "type": "string"
+                                            },
+                                            "property": {
+                                                "enum": [
+                                                    "id",
+                                                    "label",
+                                                    "rank",
+                                                    "shape",
+                                                    "source-id",
+                                                    "target-id"
+                                                ],
+                                                "type": "string"
+                                            },
+                                            "value": {
+                                                "type": [
+                                                    "string",
+                                                    "number"
+                                                ]
+                                            }
+                                        },
+                                        "type": "object"
+                                    },
+                                    "type": "array"
+                                }
+                            ]
+                        },
+                        "id": {
+                            "type": "string"
+                        },
+                        "maxZoom": {
+                            "type": "number"
+                        },
+                        "minZoom": {
+                            "type": "number"
+                        },
+                        "type": {
+                            "type": "string"
+                        },
+                        "visible": {
+                            "type": "boolean"
+                        }
+                    },
+                    "type": "object"
+                },
+                {
+                    "properties": {
+                        "fillColor": {
+                            "anyOf": [
+                                {
+                                    "properties": {
+                                        "input": {
+                                            "enum": [
+                                                "zoom"
+                                            ],
+                                            "type": "string"
+                                        },
+                                        "inputStops": {
+                                            "items": {
+                                                "type": "number"
+                                            },
+                                            "type": "array"
+                                        },
+                                        "interpolation": {
+                                            "enum": [
+                                                "linear",
+                                                "power",
+                                                "step"
+                                            ],
+                                            "type": "string"
+                                        },
+                                        "interpolationParameters": {
+                                            "items": {
+                                                "type": "number"
+                                            },
+                                            "type": "array"
+                                        },
+                                        "outputStops": {
+                                            "items": {
+                                                "type": "string"
+                                            },
+                                            "type": "array"
+                                        }
+                                    },
+                                    "type": "object"
+                                },
+                                {
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "labelColor": {
+                            "anyOf": [
+                                {
+                                    "properties": {
+                                        "input": {
+                                            "enum": [
+                                                "zoom"
+                                            ],
+                                            "type": "string"
+                                        },
+                                        "inputStops": {
+                                            "items": {
+                                                "type": "number"
+                                            },
+                                            "type": "array"
+                                        },
+                                        "interpolation": {
+                                            "enum": [
+                                                "linear",
+                                                "power",
+                                                "step"
+                                            ],
+                                            "type": "string"
+                                        },
+                                        "interpolationParameters": {
+                                            "items": {
+                                                "type": "number"
+                                            },
+                                            "type": "array"
+                                        },
+                                        "outputStops": {
+                                            "items": {
+                                                "type": "string"
+                                            },
+                                            "type": "array"
+                                        }
+                                    },
+                                    "type": "object"
+                                },
+                                {
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "labelSize": {
+                            "anyOf": [
+                                {
+                                    "properties": {
+                                        "input": {
+                                            "enum": [
+                                                "zoom"
+                                            ],
+                                            "type": "string"
+                                        },
+                                        "inputStops": {
+                                            "items": {
+                                                "type": "number"
+                                            },
+                                            "type": "array"
+                                        },
+                                        "interpolation": {
+                                            "enum": [
+                                                "linear",
+                                                "power",
+                                                "step"
+                                            ],
+                                            "type": "string"
+                                        },
+                                        "interpolationParameters": {
+                                            "items": {
+                                                "type": "number"
+                                            },
+                                            "type": "array"
+                                        },
+                                        "outputStops": {
+                                            "items": {
+                                                "type": "number"
+                                            },
+                                            "type": "array"
+                                        }
+                                    },
+                                    "type": "object"
+                                },
+                                {
+                                    "type": "number"
+                                }
+                            ]
+                        },
+                        "opacity": {
+                            "anyOf": [
+                                {
+                                    "properties": {
+                                        "input": {
+                                            "enum": [
+                                                "zoom"
+                                            ],
+                                            "type": "string"
+                                        },
+                                        "inputStops": {
+                                            "items": {
+                                                "type": "number"
+                                            },
+                                            "type": "array"
+                                        },
+                                        "interpolation": {
+                                            "enum": [
+                                                "linear",
+                                                "power",
+                                                "step"
+                                            ],
+                                            "type": "string"
+                                        },
+                                        "interpolationParameters": {
+                                            "items": {
+                                                "type": "number"
+                                            },
+                                            "type": "array"
+                                        },
+                                        "outputStops": {
+                                            "items": {
+                                                "type": "number"
+                                            },
+                                            "type": "array"
+                                        }
+                                    },
+                                    "type": "object"
+                                },
+                                {
+                                    "type": "number"
+                                }
+                            ]
+                        },
+                        "size": {
+                            "anyOf": [
+                                {
+                                    "properties": {
+                                        "input": {
+                                            "enum": [
+                                                "zoom"
+                                            ],
+                                            "type": "string"
+                                        },
+                                        "inputStops": {
+                                            "items": {
+                                                "type": "number"
+                                            },
+                                            "type": "array"
+                                        },
+                                        "interpolation": {
+                                            "enum": [
+                                                "linear",
+                                                "power",
+                                                "step"
+                                            ],
+                                            "type": "string"
+                                        },
+                                        "interpolationParameters": {
+                                            "items": {
+                                                "type": "number"
+                                            },
+                                            "type": "array"
+                                        },
+                                        "outputStops": {
+                                            "items": {
+                                                "type": "number"
+                                            },
+                                            "type": "array"
+                                        }
+                                    },
+                                    "type": "object"
+                                },
+                                {
+                                    "type": "number"
+                                }
+                            ]
+                        },
+                        "strokeColor": {
+                            "anyOf": [
+                                {
+                                    "properties": {
+                                        "input": {
+                                            "enum": [
+                                                "zoom"
+                                            ],
+                                            "type": "string"
+                                        },
+                                        "inputStops": {
+                                            "items": {
+                                                "type": "number"
+                                            },
+                                            "type": "array"
+                                        },
+                                        "interpolation": {
+                                            "enum": [
+                                                "linear",
+                                                "power",
+                                                "step"
+                                            ],
+                                            "type": "string"
+                                        },
+                                        "interpolationParameters": {
+                                            "items": {
+                                                "type": "number"
+                                            },
+                                            "type": "array"
+                                        },
+                                        "outputStops": {
+                                            "items": {
+                                                "type": "string"
+                                            },
+                                            "type": "array"
+                                        }
+                                    },
+                                    "type": "object"
+                                },
+                                {
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "strokeWidth": {
+                            "anyOf": [
+                                {
+                                    "properties": {
+                                        "input": {
+                                            "enum": [
+                                                "zoom"
+                                            ],
+                                            "type": "string"
+                                        },
+                                        "inputStops": {
+                                            "items": {
+                                                "type": "number"
+                                            },
+                                            "type": "array"
+                                        },
+                                        "interpolation": {
+                                            "enum": [
+                                                "linear",
+                                                "power",
+                                                "step"
+                                            ],
+                                            "type": "string"
+                                        },
+                                        "interpolationParameters": {
+                                            "items": {
+                                                "type": "number"
+                                            },
+                                            "type": "array"
+                                        },
+                                        "outputStops": {
+                                            "items": {
+                                                "type": "number"
+                                            },
+                                            "type": "array"
+                                        }
+                                    },
+                                    "type": "object"
+                                },
+                                {
+                                    "type": "number"
+                                }
+                            ]
+                        },
+                        "type": {
+                            "enum": [
+                                "node"
+                            ],
+                            "type": "string"
+                        }
+                    },
+                    "type": "object"
+                }
+            ]
+        }
+    },
+    "properties": {
+        "layers": {
+            "items": {
+                "anyOf": [
+                    {
+                        "$ref": "#/definitions/GraphNodeLayerStyle"
+                    },
+                    {
+                        "$ref": "#/definitions/GraphEdgeLayerStyle"
+                    }
+                ]
+            },
+            "type": "array"
+        },
+        "version": {
+            "enum": [
+                1
+            ],
+            "type": "number"
+        }
+    },
+    "type": "object"
+}
+

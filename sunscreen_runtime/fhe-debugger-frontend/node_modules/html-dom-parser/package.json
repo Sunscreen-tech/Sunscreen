@@ -1,0 +1,49 @@
+{
+  "name": "html-dom-parser",
+  "version": "0.1.3",
+  "description": "An HTML to DOM parser that works on the server and client.",
+  "author": "Mark <mark@remarkablemark.org>",
+  "main": "index.js",
+  "scripts": {
+    "prepublish": "npm run clean && npm run build",
+    "clean": "rm -rf dist",
+    "build": "npm run build:min && npm run build:unmin",
+    "build:min": "webpack index.js dist/html-dom-parser.min.js -p --output-library HTMLDOMParser --output-library-target umd",
+    "build:unmin": "webpack index.js dist/html-dom-parser.js --output-library HTMLDOMParser --output-library-target umd",
+    "test": "mocha",
+    "lint": "eslint . --ignore-path .gitignore",
+    "cover": "istanbul cover _mocha -- -R spec",
+    "coveralls": "cat coverage/lcov.info | coveralls"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/remarkablemark/html-dom-parser"
+  },
+  "bugs": {
+    "url": "https://github.com/remarkablemark/html-dom-parser/issues"
+  },
+  "keywords": [
+    "html",
+    "dom",
+    "parser",
+    "htmlparser2"
+  ],
+  "dependencies": {
+    "domhandler": "2.3.0",
+    "htmlparser2": "3.9.1"
+  },
+  "devDependencies": {
+    "chai": "^3.5.0",
+    "coveralls": "^2.11.14",
+    "eslint": "^3.4.0",
+    "html-minifier": "^3.1.0",
+    "istanbul": "^0.4.5",
+    "jsdomify": "^3.1.0",
+    "mocha": "^3.4.2",
+    "webpack": "^2.6.1"
+  },
+  "browser": {
+    "./index.js": "./lib/html-to-dom-client.js"
+  },
+  "license": "MIT"
+}

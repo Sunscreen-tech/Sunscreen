@@ -1,0 +1,21 @@
+/**
+ *
+ *   Polynomial.js
+ *
+ *   copyright 2002, 2013 Kevin Lindsey
+ * 
+ *   contribution {@link http://github.com/Quazistax/kld-polynomial}
+ *       @copyright 2015 Robert Benko (Quazistax) <quazistax@gmail.com>
+ *       @license MIT
+ */
+
+/**
+ *
+ *  Intersection.js
+ *
+ *  copyright 2002, 2013 Kevin Lindsey
+ *
+ *  contribution {@link http://github.com/Quazistax/kld-intersections}
+ *      @copyright 2015 Robert Benko (Quazistax) <quazistax@gmail.com>
+ *      @license MIT
+ */

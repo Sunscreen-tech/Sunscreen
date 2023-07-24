@@ -1,0 +1,63 @@
+{
+  "name": "mjolnir.js",
+  "description": "An Event Manager",
+  "version": "2.7.1",
+  "keywords": [
+    "hammerjs",
+    "touch",
+    "gesture",
+    "mouse",
+    "keyboard",
+    "event manager"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/uber-web/mjolnir.js"
+  },
+  "license": "MIT",
+  "main": "dist/es5/index.js",
+  "module": "dist/esm/index.js",
+  "browser": {
+    "./src/utils/hammer.js": "./src/utils/hammer.browser.js",
+    "./dist/es5/utils/hammer.js": "./dist/es5/utils/hammer.browser.js",
+    "./dist/esm/utils/hammer.js": "./dist/esm/utils/hammer.browser.js"
+  },
+  "files": [
+    "src",
+    "dist"
+  ],
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "bootstrap": "PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true yarn && ocular-bootstrap",
+    "start": "(cd examples/main && (path-exists node_modules || npm i) && npm run start-local)",
+    "build": "ocular-clean && tsc -b tsconfig.esm.json && tsc -b tsconfig.es5.json",
+    "lint": "ocular-lint",
+    "cover:node": "ocular-test cover",
+    "cover:browser": "MOCK_BROWSER=true ocular-test cover",
+    "cover": "npm run cover:node && npm run cover:browser && nyc report --reporter=lcov",
+    "publish-prod": "ocular-publish prod",
+    "publish-beta": "ocular-publish beta",
+    "test": "ocular-test"
+  },
+  "pre-commit": [
+    "test"
+  ],
+  "dependencies": {
+    "@types/hammerjs": "^2.0.41",
+    "hammerjs": "^2.0.8"
+  },
+  "devDependencies": {
+    "@istanbuljs/nyc-config-typescript": "^1.0.2",
+    "@probe.gl/test-utils": "^3.2.1",
+    "coveralls": "^3.0.0",
+    "jsdom": "^15.0.0",
+    "ocular-dev-tools": "beta",
+    "pre-commit": "^1.2.2",
+    "ts-loader": "^9.2.6",
+    "typescript": "^4.0.0"
+  },
+  "engines": {
+    "node": ">= 4",
+    "npm": ">= 3"
+  }
+}

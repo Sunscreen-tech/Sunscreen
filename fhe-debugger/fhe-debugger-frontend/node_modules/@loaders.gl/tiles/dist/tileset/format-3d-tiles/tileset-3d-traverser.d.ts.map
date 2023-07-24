@@ -1,0 +1,1 @@
+{"version":3,"file":"tileset-3d-traverser.d.ts","sourceRoot":"","sources":["../../../src/tileset/format-3d-tiles/tileset-3d-traverser.ts"],"names":[],"mappings":"AAMA,OAAO,EAAC,gBAAgB,EAAC,MAAM,sBAAsB,CAAC;AAEtD,qBAAa,kBAAmB,SAAQ,gBAAgB;IACtD,uBAAuB,CAAC,CAAC,KAAA,EAAE,CAAC,KAAA;IAO5B,oBAAoB,CAAC,IAAI,KAAA,EAAE,UAAU,KAAA;IAmCrC,0BAA0B,CAAC,IAAI,KAAA,EAAE,UAAU,KAAA;CAS5C"}

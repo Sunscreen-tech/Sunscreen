@@ -1,0 +1,1 @@
+{"version":3,"file":"parse-sync.d.ts","sourceRoot":"","sources":["../../../src/lib/api/parse-sync.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,EACV,YAAY,EACZ,MAAM,EAEN,aAAa,EACb,aAAa,EACd,MAAM,0BAA0B,CAAC;AASlC;;;;;;GAMG;AACH,wBAAgB,SAAS,CACvB,IAAI,EAAE,YAAY,EAClB,OAAO,CAAC,EAAE,MAAM,GAAG,MAAM,EAAE,GAAG,aAAa,EAC3C,OAAO,CAAC,EAAE,aAAa,EACvB,OAAO,CAAC,EAAE,aAAa,GACtB,GAAG,CAuCL"}

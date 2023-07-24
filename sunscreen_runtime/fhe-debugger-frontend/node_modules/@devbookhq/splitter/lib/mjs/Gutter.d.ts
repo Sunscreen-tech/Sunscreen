@@ -1,0 +1,12 @@
+import React from 'react';
+import type { MouseEvent, TouchEvent } from 'react';
+import { SplitDirection, GutterTheme } from './index';
+interface GutterProps {
+    className?: string;
+    theme: GutterTheme;
+    draggerClassName?: string;
+    direction?: SplitDirection;
+    onDragging?: (e: MouseEvent | TouchEvent) => void;
+}
+declare const Gutter: React.ForwardRefExoticComponent<GutterProps & React.RefAttributes<HTMLDivElement>>;
+export default Gutter;

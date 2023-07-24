@@ -1,0 +1,1 @@
+{"version":3,"file":"validate-worker-version.d.ts","sourceRoot":"","sources":["../../../src/lib/worker-api/validate-worker-version.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,EAAC,YAAY,EAAC,MAAM,aAAa,CAAC;AAI9C;;;;;GAKG;AACH,wBAAgB,qBAAqB,CACnC,MAAM,EAAE,YAAY,EACpB,WAAW,GAAE,MAAgB,GAC5B,OAAO,CAmBT"}

@@ -1,4 +1,4 @@
-import React, { useCallback,  useState } from 'react';
+import React, { useCallback,  useEffect,  useState } from 'react';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { atomDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import ReactSplit, { SplitDirection } from '@devbookhq/splitter'
@@ -103,7 +103,7 @@ const exampleCode: string = `fn sudoku_proof<F: BackendField>(
 
 type InputCiphertextOp = {
   kind: 'InputCiphertext';
-  data: number
+  id: number
 };
 
 type MultiplyOp = {
@@ -141,7 +141,7 @@ type FheProgram = {
   data: 'Bfv'
 }
 
-const dataToGraph = (data: FheProgramGraph, incRelin: boolean) => {
+const dataToGraph = (data: FheProgramGraph) => {
   const nodes: any[] = [];
   const edges: any[] = [];
 
@@ -149,7 +149,7 @@ const dataToGraph = (data: FheProgramGraph, incRelin: boolean) => {
     const op = data.nodes[i].operation
     switch (op.kind) {
       case 'InputCiphertext':
-        nodes.push({id: i, title: JSON.stringify(op.data), type: 'input'})
+        nodes.push({id: op.id, title: "", type: 'input'})
         break
       case 'Multiply':
       case 'Add':
@@ -167,17 +167,25 @@ const dataToGraph = (data: FheProgramGraph, incRelin: boolean) => {
 
 
 const App = () => {
-  
-  const sampleData = JSON.parse(`{"graph":{"graph":{"nodes":[{"operation":{"InputCiphertext":0}},{"operation":{"InputCiphertext":1}},{"operation":{"InputCiphertext":2}},{"operation":{"InputCiphertext":3}},{"operation":"Multiply"},{"operation":"Multiply"},{"operation":"Multiply"},{"operation":"Add"},{"operation":"OutputCiphertext"},{"operation":"OutputCiphertext"},{"operation":"Relinearize"},{"operation":"Relinearize"},{"operation":"Relinearize"}],"node_holes":[],"edge_property":"directed","edges":[[0,4,"Left"],[3,4,"Right"],[1,5,"Left"],[2,5,"Right"],[1,6,"Left"],[3,6,"Right"],[12,7,"Left"],[10,7,"Right"],[7,8,"Unary"],[11,9,"Unary"],[5,10,"Unary"],[6,11,"Unary"],[4,12,"Unary"]]}},"data":"Bfv"}`)
-  const exGraph = dataToGraph(sampleData, true);
+
+  // const exGraph = dataToGraph({}, true);
   const [selectedLine, setLine] = useState<number>(0);
   const [vertSize, setVertSize] = useState<any[]>();
   const [horSize, setHorSize] = useState<any[]>();
-  const [currGraph, setGraph] = useState(exGraph);
+  const [currCode, setCode] = useState<string>("select a session");
+  const [currGraph, setGraph] = useState({nodes: [], edges: []});
   const [selected, select] = useState<SelectionT | null>(null);
+  const [sessionList, setSessionList] = useState<string[]>([]);
+  const [session, setSession]  = useState<string>('mad_0');
+
+  useEffect(
+    () => {fetch("/sessions").then(j => j.json()).then(l => setSessionList(l))}, []
+  )
+
+  
 
   const updateLine = useCallback(
-    (lineNumber: number) => {
+    async (lineNumber: number) => {
       setLine(lineNumber)
       const graph = {
         nodes: [
@@ -200,7 +208,7 @@ const App = () => {
           { source: 1, target: 2, directed: true, arrowhead: 'normal' }
         ]
       }
-      setGraph(lineNumber !== 1 ? graph : exGraph)
+      setGraph(lineNumber !== 1 ? graph : dataToGraph(await fetch(`/sessions/${session}`).then(d => d.json())))
     }, [setLine, setGraph]
   )
 
@@ -208,17 +216,32 @@ const App = () => {
     (selection, e) => {select(selection); console.log(selection.nodes?.values().next().value)}, [select]
   )
 
+  const updateSession = useCallback(
+    async (event) => {
+      const newSession = event.target.value
+      setSession(newSession)
+      console.log(newSession);
+      setGraph(dataToGraph(await fetch(`/sessions/${newSession}`).then(d => d.json())))
+      setCode(await fetch(`/programs/${newSession}`).then(p => p.text()))
+      console.log(session)
+    }, [setSession, setGraph]
+  )
+
   return (
+    
     <div className='splits'>
       <ReactSplit direction={SplitDirection.Horizontal} onResizeFinished={(p, n) => setHorSize(n)} initialSizes={horSize}>
         <div className="pane">
           <ReactSplit direction={SplitDirection.Vertical} onResizeFinished={(p, n) => setVertSize(n)} initialSizes={vertSize}>
             <div className='pane'><CodeBlock 
-            code={exampleCode} 
+            code={currCode} 
             onClickHandler={updateLine}
             selectedLine={selectedLine}
             ></CodeBlock></div>
-            <div className='pane'><NodeInfo info={selected?.nodes?.values().next().value}/></div>
+            <div className='pane'>
+              <SessionPicker sessionList={sessionList} setSession={updateSession}/> 
+              <NodeInfo info={selected?.nodes?.values().next().value}/>
+            </div>
           </ReactSplit>
         </div>
         <div className='pane'><UberGraph
@@ -235,8 +258,18 @@ function NodeInfo({info}) {
   return <p>{JSON.stringify(info)}</p>
 }
 
+function SessionPicker({sessionList, setSession}: {sessionList: string[], setSession: (string) => void}) {
+  
+  return (
+    <select onChange={setSession} style={{backgroundColor: 'white'}}>
+      {sessionList.map(s => (<option value={s}>{s}</option>))}
+    </select>
+  )
+}
+
 window.addEventListener('load', () => {
   alert()
   const root = render(<App/>, document.getElementById('root'));
 });
+
 

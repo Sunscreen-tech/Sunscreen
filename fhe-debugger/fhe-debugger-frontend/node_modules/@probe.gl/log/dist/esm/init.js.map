@@ -1,0 +1,1 @@
+{"version":3,"sources":["../../src/init.js"],"names":["globalThis","probe"],"mappings":"AAEAA,UAAU,CAACC,KAAX,GAAmB,EAAnB","sourcesContent":["// @ts-nocheck\n/* eslint-disable */\nglobalThis.probe = {};\n"],"file":"init.js"}

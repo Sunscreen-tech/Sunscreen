@@ -1,0 +1,1 @@
+{"version":3,"file":"s2-to-region.d.ts","sourceRoot":"","sources":["../../../../../src/lib/utils/s2/converters/s2-to-region.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,EAAC,MAAM,EAAC,MAAM,2BAA2B,CAAC;AAItD;;;;GAIG;AACH,wBAAgB,WAAW,CAAC,MAAM,EAAE,MAAM,GAAG;IAC3C,IAAI,EAAE,MAAM,CAAC;IACb,IAAI,EAAE,MAAM,CAAC;IACb,KAAK,EAAE,MAAM,CAAC;IACd,KAAK,EAAE,MAAM,CAAC;CACf,CAqBA"}

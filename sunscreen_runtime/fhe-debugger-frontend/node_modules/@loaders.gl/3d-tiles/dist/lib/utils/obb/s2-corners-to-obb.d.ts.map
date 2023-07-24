@@ -1,0 +1,1 @@
+{"version":3,"file":"s2-corners-to-obb.d.ts","sourceRoot":"","sources":["../../../../src/lib/utils/obb/s2-corners-to-obb.ts"],"names":[],"mappings":"AASA,MAAM,MAAM,YAAY,GAAG;IACzB,sBAAsB;IACtB,KAAK,EAAE,MAAM,CAAC;IACd,+BAA+B;IAC/B,aAAa,EAAE,MAAM,CAAC;IACtB,+BAA+B;IAC/B,aAAa,EAAE,MAAM,CAAC;CACvB,CAAC;AAEF;;;;GAIG;AACH,wBAAgB,4BAA4B,CAAC,YAAY,EAAE,YAAY,GAAG,MAAM,EAAE,CA2BjF"}

@@ -1,0 +1,31 @@
+{
+  "name": "@probe.gl/env",
+  "description": "JavaScript environment detection for browser and Node",
+  "license": "MIT",
+  "version": "3.6.0",
+  "keywords": [
+    "javascript",
+    "profiling",
+    "instrumentation",
+    "logging"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/uber-web/probe.gl.git"
+  },
+  "types": "dist/index.d.ts",
+  "main": "dist/es5/index.js",
+  "module": "dist/esm/index.js",
+  "files": [
+    "dist",
+    "src"
+  ],
+  "sideEffects": [
+    "./src/env/globals.js",
+    "./src/lib/globals.js"
+  ],
+  "dependencies": {
+    "@babel/runtime": "^7.0.0"
+  },
+  "gitHead": "4317dfd211d771250d91c10784461106fd8cb45d"
+}

@@ -2,6 +2,8 @@ use sunscreen::{
     types::{bfv::Signed, Cipher},
     *,
 };
+use std::time::Duration;
+use std::thread;
 
 fn main() {
     #[fhe_program(scheme = "bfv")]
@@ -52,5 +54,7 @@ fn main() {
         )
         .unwrap();
 
-    loop {}
+    loop {
+        thread::sleep(Duration::from_secs(1));
+    }
 }

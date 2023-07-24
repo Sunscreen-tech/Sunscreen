@@ -7,12 +7,10 @@ use petgraph::visit::{EdgeRef, IntoEdgeReferences, IntoNodeReferences};
 use petgraph::Graph;
 
 use serde::{Deserialize, Serialize};
-
-use crate::lookup::IdLookup;
 use crate::{Operation, Render};
 
 #[cfg(feature = "debugger")]
-use crate::lookup::{GroupLookup, StackFrameLookup};
+use crate::lookup::{GroupLookup, StackFrameLookup, IdLookup};
 
 #[cfg(feature = "debugger")]
 use backtrace::Backtrace;

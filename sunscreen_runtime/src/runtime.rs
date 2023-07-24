@@ -16,7 +16,7 @@ use sunscreen_fhe_program::SchemeType;
 
 use seal_fhe::{
     BFVEvaluator, BfvEncryptionParametersBuilder, Context as SealContext, Decryptor, Encryptor,
-    KeyGenerator, Modulus,
+    KeyGenerator, Modulus, PolynomialArray,
 };
 
 pub use sunscreen_compiler_common::{Type, TypeName};
@@ -395,17 +395,103 @@ where
     where
         P: TryIntoPlaintext + TypeName,
     {
+        self.encrypt_return_components_switched(val, public_key, false)
+            .map(|x| x.0)
+    }
+
+    #[allow(dead_code)]
+    /**
+     * Encrypts the given [`FheType`](crate::FheType) using the given public
+     * key, and the components used in encrypting the data.
+     *
+     * Returns [`Error::ParameterMismatch`] if the plaintext is incompatible
+     * with this runtime's scheme.
+     */
+    fn encrypt_return_components<P>(
+        &self,
+        val: P,
+        public_key: &PublicKey,
+    ) -> Result<(
+        Ciphertext,
+        Vec<PolynomialArray>,
+        Vec<PolynomialArray>,
+        Vec<Plaintext>,
+    )>
+    where
+        P: TryIntoPlaintext + TypeName,
+    {
+        self.encrypt_return_components_switched(val, public_key, true)
+    }
+    /**
+     * Encrypts the given [`FheType`](crate::FheType) using the given public
+     * key, returning the encrypted value along with the randomness added to the
+     * message.
+     *
+     * Note that this will disable the special modulus!
+     *
+     * Returns [`Error::ParameterMismatch`] if the plaintext is incompatible with this runtime's
+     * scheme.
+     */
+    fn encrypt_return_components_switched<P>(
+        &self,
+        val: P,
+        public_key: &PublicKey,
+        export_components: bool,
+    ) -> Result<(
+        Ciphertext,
+        Vec<PolynomialArray>,
+        Vec<PolynomialArray>,
+        Vec<Plaintext>,
+    )>
+    where
+        P: TryIntoPlaintext + TypeName,
+    {
         let fhe_data = self.runtime_data.unwrap_fhe();
 
         let plaintext = val.try_into_plaintext(&fhe_data.params)?;
 
-        let ciphertext = match (&fhe_data.context, plaintext.inner) {
+        let (ciphertext, u, e, r) = match (&fhe_data.context, plaintext.inner) {
             (Context::Seal(context), InnerPlaintext::Seal(inner_plain)) => {
                 let encryptor = Encryptor::with_public_key(context, &public_key.public_key.data)?;
 
+                let capacity = if export_components {
+                    inner_plain.len()
+                } else {
+                    0
+                };
+                let mut us = Vec::with_capacity(capacity);
+                let mut es = Vec::with_capacity(capacity);
+                let mut rs = Vec::with_capacity(capacity);
+
                 let ciphertexts = inner_plain
                     .iter()
-                    .map(|p| encryptor.encrypt(p).map_err(Error::SealError))
+                    .map(|p| {
+                        let ciphertext = if export_components {
+                            encryptor.encrypt(p).map_err(Error::SealError)
+                        } else {
+                            let (ciphertext, u, e, r) = encryptor
+                                .encrypt_return_components(p)
+                                .map_err(Error::SealError)?;
+
+                            let r_context = WithContext {
+                                params: fhe_data.params.clone(),
+                                data: r,
+                            };
+
+                            let r = Plaintext {
+                                data_type: P::type_name(),
+                                inner: InnerPlaintext::Seal(vec![r_context]),
+                            };
+
+                            us.push(u);
+                            es.push(e);
+                            rs.push(r);
+
+                            Ok(ciphertext)
+                        }?;
+
+                        Ok(ciphertext)
+                    })
                     .collect::<Result<Vec<SealCiphertext>>>()?
                     .drain(0..)
                     .map(|c| WithContext {
@@ -414,17 +500,22 @@ where
                     })
                     .collect();
 
-                Ciphertext {
-                    data_type: Type {
-                        is_encrypted: true,
-                        ..P::type_name()
+                (
+                    Ciphertext {
+                        data_type: Type {
+                            is_encrypted: true,
+                            ..P::type_name()
+                        },
+                        inner: InnerCiphertext::Seal(ciphertexts),
                     },
-                    inner: InnerCiphertext::Seal(ciphertexts),
-                }
+                    us,
+                    es,
+                    rs,
+                )
             }
         };
 
-        Ok(ciphertext)
+        Ok((ciphertext, u, e, r))
     }
 }
 

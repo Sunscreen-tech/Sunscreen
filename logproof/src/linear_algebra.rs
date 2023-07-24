@@ -881,7 +881,7 @@ impl<F: Field> std::fmt::Display for &Matrix<DensePolynomial<F>> {
 
 #[cfg(test)]
 mod tests {
-    use crate::fields::{FpRistretto, FqSeal128_8192};
+    use crate::fields::{extend_bigint, FpRistretto, FqSeal128_8192};
 
     use super::*;
     use ark_ff::{FpConfig, MontBackend};
@@ -984,7 +984,7 @@ mod tests {
         for i in 0..a.rows {
             for j in 0..a.cols {
                 assert_eq!(
-                    MontBackend::into_bigint(a[(i, j)]),
+                    extend_bigint(&MontBackend::into_bigint(a[(i, j)])),
                     MontBackend::into_bigint(b[(i, j)])
                 );
             }

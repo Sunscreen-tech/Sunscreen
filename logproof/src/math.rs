@@ -653,6 +653,49 @@ where
     }
 }
 
+/**
+ * Computes the quotient and remainder of a / b.
+ */
+pub fn div_rem_bigint<const N: usize>(a: BigInt<N>, b: BigInt<N>) -> (BigInt<N>, BigInt<N>) {
+    let mut rem = a;
+    let mut div = BigInt::zero();
+
+    let mut leading_b = 0;
+
+    if b == BigInt::zero() {
+        panic!("Divide by zero.");
+    }
+
+    // Find the position of the leading 1 in b.
+    for i in 0..64 * N {
+        let i = 64 * N - 1 - i;
+
+        if b.get_bit(i) {
+            leading_b = i;
+            break;
+        }
+    }
+
+    for i in leading_b..N * 64 {
+        let i = 64 * N as u32 - 1 - i as u32;
+
+        let mut b_shift = b;
+        b_shift.muln(i);
+
+        let mut pow = BigInt::<N>::one();
+        pow.muln(i);
+
+        if b_shift <= rem {
+            rem.sub_with_borrow(&b_shift);
+            div.add_with_carry(&pow);
+        }
+
+        b_shift.div2();
+    }
+
+    (div, rem)
+}
+
 #[cfg(test)]
 mod test {
     use crate::fields::{FpRistretto, FqSeal128_8192};
@@ -712,14 +755,9 @@ mod test {
     #[test]
     fn modulus_in_standard_form() {
         let m = FqSeal128_8192::field_modulus();
-        // 0x3fffff5_9001c92abc42a839_730ec3bf0a9c26b9_923cfd7defdc4001
-        // == 421249101157150430150591791601812858371395928330411389778873040897
-        let expected = BigInt::new([
-            0x923cfd7defdc4001,
-            0x730ec3bf0a9c26b9,
-            0x9001c92abc42a839,
-            0x3fffff5,
-        ]);
+        // [0x1b9f30440ff08001, 0x25d3e81a62469512, 0x3fffffaa0018]
+        // == 23945240908173643396739775218143152511335532357255169
+        let expected = BigInt::new([0x1b9f30440ff08001, 0x25d3e81a62469512, 0x3fffffaa0018]);
 
         assert_eq!(m, expected);
     }
@@ -728,15 +766,10 @@ mod test {
     fn field_modulus_div_2_in_standard_form() {
         let m = FqSeal128_8192::field_modulus_div_2();
 
-        // 421249101157150430150591791601812858371395928330411389778873040897 / 2
-        // = 210624550578575215075295895800906429185697964165205694889436520448
-        // = 0x1fffffa_c800e4955e21541c_b98761df854e135c_c91e7ebef7ee2000
-        let expected = BigInt::new([
-            0xc91e7ebef7ee2000,
-            0xb98761df854e135c,
-            0xc800e4955e21541c,
-            0x1fffffa,
-        ]);
+        // 23945240908173643396739775218143152511335532357255169 / 2
+        // = 11972620454086821698369887609071576255667766178627584
+        // = [0xdcf982207f84000, 0x12e9f40d31234a89, 0x1fffffd5000c]
+        let expected = BigInt::new([0xdcf982207f84000, 0x12e9f40d31234a89, 0x1fffffd5000c]);
 
         assert_eq!(m, expected);
     }

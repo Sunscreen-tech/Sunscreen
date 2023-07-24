@@ -51,6 +51,10 @@ pub enum Error {
     #[error("Plain modulus not set")]
     PlainModulusNotSet,
 
+    /// User failed to set a coefficient modulus.
+    #[error("Cannot reduce the modulus from a set size of 1 to 0")]
+    CoefficientModulusSingletonSetDrop,
+
     /// Serialization failed.
     #[error("Serialization failed {0}")]
     SerializationError(Box<String>),

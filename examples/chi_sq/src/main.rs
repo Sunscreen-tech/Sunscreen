@@ -255,7 +255,7 @@ fn main() -> Result<(), Error> {
     // just under 50ms...
     run_fhe(
         chi_sq_optimized_fhe_program,
-        PhantomData::<Signed>::default(),
+        PhantomData::<Signed>,
         n_0,
         n_1,
         n_2,

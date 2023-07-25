@@ -1,11 +1,11 @@
 use actix_web::{get, http::header, web, App, HttpResponse, HttpServer, Responder};
 
-use seal_fhe::{BfvEncryptionParametersBuilder, CoefficientModulus, Context, Decryptor, Modulus};
+use seal_fhe::{BfvEncryptionParametersBuilder, Context, Decryptor, Modulus};
 use semver::Version;
 
 use std::sync::OnceLock;
 use std::thread;
-
+use petgraph::stable_graph::NodeIndex;
 use crate::{
     debugger::SerializedSealData,
     debugger::{get_mult_depth, get_sessions},
@@ -285,7 +285,7 @@ pub async fn get_stack_trace(
 
         if let Some(node_weight) = curr_session
             .graph
-            .node_weight(petgraph::stable_graph::NodeIndex(nodeid as u32))
+            .node_weight(NodeIndex::new(nodeid))
         {
             match stack_lookup.id_to_data(node_weight.stack_id) {
                 Ok(stack_frames) => {

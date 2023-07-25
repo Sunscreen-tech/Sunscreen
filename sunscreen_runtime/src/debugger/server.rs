@@ -12,6 +12,8 @@ use crate::{
     Ciphertext, InnerCiphertext, InnerPlaintext, Plaintext, Runtime, SealData, Type, WithContext,
 };
 
+use sunscreen_compiler_common::lookup::*;
+
 use tokio::runtime::Builder;
 
 static SERVER: OnceLock<()> = OnceLock::new();
@@ -33,6 +35,7 @@ pub fn start_web_server() {
                             .service(get_all_sessions)
                             .service(get_code)
                             .service(get_fhe_node_data)
+                            .service(get_stack_trace)
                             .service(index)
                             .service(app_css)
                             .service(main_js)
@@ -88,9 +91,6 @@ async fn get_session_data(session: web::Path<String>) -> impl Responder {
     if sessions.contains_key(session.as_str()) {
         let curr_session = sessions.get(session.as_str()).unwrap().unwrap_bfv_session();
         let graph_string = serde_json::to_string_pretty(&curr_session.graph.graph);
-
-        //let frontend_graph = process_graph_json(&graph_string.unwrap());
-        //HttpResponse::Ok().body(frontend_graph.unwrap().to_owned())
 
         HttpResponse::Ok().body(graph_string.unwrap().to_owned())
     } else {
@@ -203,16 +203,17 @@ pub async fn get_fhe_node_data(
                                 println!("scheme: {:?}", encryption_params.get_scheme());
 
                                 let ctx = Context::new(
-                                        &encryption_params,
-                                        false,
-                                        inner_cipher.params.security_level,
-                                    ).expect("Failed to create context");
+                                    &encryption_params,
+                                    false,
+                                    inner_cipher.params.security_level,
+                                )
+                                .expect("Failed to create context");
                                 let sk = &pk.0.data;
 
                                 dbg!(ctx.get_handle(), sk.get_handle());
 
-                                let decryptor = Decryptor::new(&ctx, sk)
-                                    .expect("Failed to create decryptor");
+                                let decryptor =
+                                    Decryptor::new(&ctx, sk).expect("Failed to create decryptor");
                                 let pt = decryptor.decrypt(&inner_cipher.data).unwrap();
 
                                 for i in 0..pt.len() {
@@ -223,12 +224,8 @@ pub async fn get_fhe_node_data(
                         }
                     }
 
-                    // detecting overflow: a value is negative if a number is greater than plaintextmodulus/2, positive else
-                    // if two input operands have same sign and output is opposite sign, then overflow
-
-                    // detecting noise budget exceeded: noise budget will be 0
-                    // noise budget in bits: a number between 0 and number of bits in q is number of bits remaining
-                    // advantage of this: number of bits is linear in mult depth, decreasing
+                    // TODO: implement detection for overflow. Values overflow if two input operands have the same sign
+                    // but the output is opposite sign. Values are negative if greater than plaintextmodulus/2, else positive
                     SerializedSealData {
                         // WARNING: `value` and `data_type` are nonsense values
                         value: 0,
@@ -289,4 +286,36 @@ pub async fn get_fhe_node_data(
     } else {
         Ok(HttpResponse::NotFound().body(format!("Session {} not found", session)))
     }
+}
+
+/**
+ * Gets the stack trace associated with a node.
+ */
+#[get("sessions/{session}/stacktrace/{nodeid}")]
+pub async fn get_stack_trace(
+    path_info: web::Path<(String, usize)>,
+) -> Result<HttpResponse, actix_web::Error> {
+    let (session, nodeid) = path_info.into_inner();
+
+    let sessions = get_sessions().lock().unwrap();
+    if sessions.contains_key(&session) {
+        let curr_session = sessions.get(&session).unwrap().unwrap_bfv_session();
+        let stack_lookup = &curr_session.graph.metadata.stack_lookup;
+        if let Some(node_weight) = curr_session
+            .graph
+            .node_weight(petgraph::stable_graph::NodeIndex(nodeid as u32))
+        {
+            match stack_lookup.id_to_data(node_weight.stack_id) {
+                Ok(stack_frames) => {
+                    let stack_frames_json = serde_json::to_string(&stack_frames).unwrap();
+                    return Ok(HttpResponse::Ok().body(stack_frames_json));
+                }
+                Err(_e) => {
+                    return Ok(HttpResponse::NotFound()
+                        .body(format!("Stack trace for node {} not found", nodeid)));
+                }
+            }
+        }
+    }
+    Ok(HttpResponse::NotFound().body(format!("Session {} not found", session)))
 }

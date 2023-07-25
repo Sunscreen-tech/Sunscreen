@@ -362,6 +362,20 @@ where
             // TODO: figure out updates to group and stack id?
             // I think that stack id should be updated every time a node is added to the graph
             // and that group id should be updated every time a function is called/returned via proc macro
+            // Group counter should be updated every time you push onto the group stack, and group stack is pushed/popped with functions being called and returned
+            // Without being able to implement grouping, can't dive into lines of code. Still can click nodes and see stack traces
+            // To assign group ids, look up current group stack, look up group id corresponding to it, and assign that to nodes.
+            // If you don't find the group id corresponding to this, then assign the group counter
+            // Group counter is updated every time you push onto the group stack
+            // Group counter is also appended to the name of functions
+
+            /*
+            Lines of code => graph:
+                - When you click a line, you know function + lineno
+                - Need to traverse the stack trie until you find a stack frame whose top entry contains the line of code the user clicked on
+                - Then everything underneath that node in the trie is a callee of the current function, and everything with that stack id is the current line
+
+            */
 
             // Capture backtrace and insert into lookup structure
             let bt = Backtrace::new();

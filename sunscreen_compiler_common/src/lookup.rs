@@ -70,6 +70,21 @@ impl StackFrameInfo {
 
 /**
  * Allows for lookup of call stack information given a ProgramNode's `group_id`.
+ *
+ * Maybe: use stack frame as key, node id as value.
+ *
+ * Forward lookup: "given a stack frame, give me the stack ID" is what the trie is for
+ *  We need this for "while constructing the graph, want to know 'is there anything else with the same stack trace'"
+ *  If it is, let me reuse the same stack id. This way every node with the same stack trace has the same stack id
+ *
+ * So in `add_node`, need to look up to see if this stack id already exists. If it exists, just assign that and keep stack_counter the same
+ * If it doesn't exist, then assign and increment stack_counter
+ *
+ * Use a hashmap (key: stack id, val: pointer to node in the trie, use unsafe to dereference it).
+ *  Gives reverse lookup: given a stack id, what nodes does it correspond to
+ *  Pointers not serializable so this could be a problem
+ *  Need to figure out what to store as the value here: just need something that'll allow me to reference a node in the trie
+ *  Value could just be the entire stack trace
  */
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct StackFrameLookup {

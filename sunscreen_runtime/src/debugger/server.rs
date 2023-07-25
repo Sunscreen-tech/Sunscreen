@@ -1,6 +1,6 @@
 use actix_web::{get, http::header, web, App, HttpResponse, HttpServer, Responder};
 
-use seal_fhe::{BfvEncryptionParametersBuilder, CoefficientModulus, Context, Decryptor};
+use seal_fhe::{BfvEncryptionParametersBuilder, CoefficientModulus, Context, Decryptor, Modulus};
 use semver::Version;
 
 use std::sync::OnceLock;
@@ -169,39 +169,22 @@ pub async fn get_fhe_node_data(
                             for inner_cipher in vec {
                                 let mut inner_coefficients = Vec::new();
 
-                                let coeff_mod: Vec<i32> = inner_cipher
+                                // coeff_mod is supposed to be the actual modulus, not the size in bits
+                                let coeff_mod = inner_cipher
                                     .params
                                     .coeff_modulus
                                     .iter()
-                                    .map(|&num| (num.ilog2() + 1) as i32)
-                                    .collect();
+                                    .map(|&num| Modulus::new(num).unwrap())
+                                    .collect::<Vec<_>>();
                                 // Decrypt inner ciphertext
                                 let encryption_params_builder =
                                     BfvEncryptionParametersBuilder::new()
-                                        .set_coefficient_modulus(
-                                            CoefficientModulus::create(
-                                                inner_cipher.params.lattice_dimension,
-                                                &coeff_mod,
-                                            )
-                                            .expect("Failed to create coefficient modulus"),
-                                        )
+                                        .set_coefficient_modulus(coeff_mod)
                                         .set_plain_modulus_u64(inner_cipher.params.plain_modulus)
                                         .set_poly_modulus_degree(
                                             inner_cipher.params.lattice_dimension,
                                         );
                                 let encryption_params = encryption_params_builder.build().unwrap();
-                                println!("encryption params");
-                                println!(
-                                    "poly mod degree: {:?}",
-                                    encryption_params.get_poly_modulus_degree()
-                                );
-                                println!(
-                                    "coeff mod degree: {:?}",
-                                    encryption_params.get_coefficient_modulus()
-                                );
-                                println!("plain mod: {:?}", encryption_params.get_plain_modulus());
-                                println!("scheme: {:?}", encryption_params.get_scheme());
-
                                 let ctx = Context::new(
                                     &encryption_params,
                                     false,
@@ -209,8 +192,6 @@ pub async fn get_fhe_node_data(
                                 )
                                 .expect("Failed to create context");
                                 let sk = &pk.0.data;
-
-                                dbg!(ctx.get_handle(), sk.get_handle());
 
                                 let decryptor =
                                     Decryptor::new(&ctx, sk).expect("Failed to create decryptor");
@@ -301,6 +282,7 @@ pub async fn get_stack_trace(
     if sessions.contains_key(&session) {
         let curr_session = sessions.get(&session).unwrap().unwrap_bfv_session();
         let stack_lookup = &curr_session.graph.metadata.stack_lookup;
+
         if let Some(node_weight) = curr_session
             .graph
             .node_weight(petgraph::stable_graph::NodeIndex(nodeid as u32))

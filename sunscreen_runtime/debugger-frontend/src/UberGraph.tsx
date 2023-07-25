@@ -1,6 +1,8 @@
 import { GraphView } from "react-digraph";
 import React from "react";
 
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+
 const GraphConfig =  {
   NodeTypes: {
     empty: { // required to show empty nodes
@@ -12,8 +14,8 @@ const GraphConfig =  {
         </symbol>
       )
     },
-    input: { // required to show empty nodes
-      typeText: "Input",
+    inputCiphertext: { // required to show empty nodes
+      typeText: "Ciphertext Input",
       shapeId: "#input", // relates to the type property of a node
       shape: (
         <symbol viewBox="0 0 100 100" id="input" key="0">
@@ -21,7 +23,10 @@ const GraphConfig =  {
         </symbol>
       )
     },
-    output: { // required to show empty nodes
+    inputPlaintext: {
+      
+    },
+    outputCiphertext: { // required to show empty nodes
       typeText: "Output",
       shapeId: "#output", // relates to the type property of a node
       shape: (
@@ -30,6 +35,16 @@ const GraphConfig =  {
         </symbol>
       )
     },
+    relinearize: {
+      typeText: "",
+      shapeId: "relinearize",
+      shape: (
+        <symbol viewBox="0 0 20 20" id="relinearize" key="0">
+          <FontAwesomeIcon icon="down-left-and-up-right-to-center" />
+        </symbol>
+      )
+    },
+
     custom: { // required to show empty nodes
       typeText: "Custom",
       shapeId: "#custom", // relates to the type property of a node

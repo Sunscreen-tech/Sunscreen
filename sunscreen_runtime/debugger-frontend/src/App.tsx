@@ -6,7 +6,6 @@ import './App.css'
 
 import { UberGraph } from './UberGraph';
 import { SelectionT } from 'react-digraph';
-import ReactDOM from 'react-dom';
 import { render } from 'react-dom';
 
 interface CodeBlockProps {
@@ -106,6 +105,11 @@ type InputCiphertextOp = {
   id: number
 };
 
+type InputPlaintextOp = {
+  kind: 'InputCiphertext';
+  id: number
+};
+
 type MultiplyOp = {
   kind: 'Multiply'
   id: number
@@ -126,7 +130,7 @@ type OutputCiphertextOp = {
   id: number
 };
 
-type FheProgramOperation = InputCiphertextOp | MultiplyOp | AddOp | RelinearizeOp | OutputCiphertextOp
+type FheProgramOperation = InputCiphertextOp | InputPlaintextOp | MultiplyOp | AddOp | RelinearizeOp | OutputCiphertextOp
 
 type FheProgramNode = {
   operation: FheProgramOperation
@@ -155,10 +159,12 @@ const dataToGraph = (data: FheProgramGraph) => {
       case 'InputCiphertext':
         nodes.push({id: op.id, title: "", type: 'input'})
         break
+      case 'Relinearize':
+        nodes.push({id: op.id, title: "", type: 'relinearize'})
+        break
       case 'Multiply':
         // nodes.push({id: op.id, title: "", type: 'multiply'})
       case 'Add':
-      case 'Relinearize':
       case 'OutputCiphertext':
       default: 
         nodes.push({id: i, title: JSON.stringify(data.nodes[i].operation), type: 'empty'})

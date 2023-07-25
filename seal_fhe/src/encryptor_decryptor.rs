@@ -155,6 +155,7 @@ impl Decryptor {
     pub fn new(ctx: &Context, secret_key: &SecretKey) -> Result<Self> {
         let mut handle = null_mut();
 
+        dbg!(ctx.get_handle(), secret_key.get_handle(), handle);
         convert_seal_error(unsafe {
             bindgen::Decryptor_Create(ctx.get_handle(), secret_key.get_handle(), &mut handle)
         })?;

@@ -173,7 +173,7 @@ pub async fn get_fhe_node_data(
                                     .params
                                     .coeff_modulus
                                     .iter()
-                                    .map(|&num| num.leading_zeros() as i32)
+                                    .map(|&num| (num.ilog2() + 1) as i32)
                                     .collect();
                                 // Decrypt inner ciphertext
                                 let encryption_params_builder =
@@ -202,17 +202,17 @@ pub async fn get_fhe_node_data(
                                 println!("plain mod: {:?}", encryption_params.get_plain_modulus());
                                 println!("scheme: {:?}", encryption_params.get_scheme());
 
-                                let decryptor = Decryptor::new(
-                                    &Context::new(
+                                let ctx = Context::new(
                                         &encryption_params,
                                         false,
                                         inner_cipher.params.security_level,
-                                    )
-                                    .expect("Failed to create context"),
-                                    &pk.0.data,
-                                )
-                                .unwrap();
+                                    ).expect("Failed to create context");
+                                let sk = &pk.0.data;
 
+                                dbg!(ctx.get_handle(), sk.get_handle());
+
+                                let decryptor = Decryptor::new(&ctx, sk)
+                                    .expect("Failed to create decryptor");
                                 let pt = decryptor.decrypt(&inner_cipher.data).unwrap();
 
                                 for i in 0..pt.len() {

@@ -146,7 +146,7 @@ pub async fn get_fhe_node_data(
                         // WARNING: this is garbage data, so we can't return a decrypted Ciphertext whose value makes sense
                         data_type: Type {
                             is_encrypted: true,
-                            name: "".to_owned(),
+                            name: "ciphertext".to_owned(),
                             version: Version::new(1, 1, 1),
                         },
 
@@ -224,8 +224,8 @@ pub async fn get_fhe_node_data(
                     let sunscreen_plaintext = Plaintext {
                         // WARNING: this is garbage data, so we can't return a Plaintext whose value makes sense
                         data_type: Type {
-                            is_encrypted: true,
-                            name: "".to_owned(),
+                            is_encrypted: false,
+                            name: "plaintext".to_owned(),
                             version: Version::new(1, 1, 1),
                         },
                         inner: InnerPlaintext::Seal {

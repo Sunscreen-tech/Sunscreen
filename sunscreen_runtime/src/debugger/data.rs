@@ -9,7 +9,7 @@ use sunscreen_compiler_common::{EdgeInfo, NodeInfo};
 pub struct SerializedSealData {
     pub value: i64,
     pub data_type: Type,
-    pub noise_budget: u32,
+    pub noise_budget: Option<u32>,
     pub coefficients: Vec<Vec<u64>>,
     pub multiplicative_depth: u64,
 }

@@ -130,7 +130,7 @@ pub async fn get_fhe_node_data(
     if sessions.contains_key(&session) {
         let curr_session = sessions.get(&session).unwrap().unwrap_bfv_session();
 
-        if let Some(data) = curr_session.program_data.get(nodeid).unwrap() {
+        if let Some(data) = curr_session.program_data.get(nodeid).expect(&format!("Index {} out of range", nodeid)) {
             let pk = &curr_session.private_key;
             let runtime = Runtime::new_fhe(&pk.0.params).unwrap();
             let stable_graph = &curr_session.graph.graph;
@@ -169,7 +169,6 @@ pub async fn get_fhe_node_data(
                             for inner_cipher in vec {
                                 let mut inner_coefficients = Vec::new();
 
-                                // coeff_mod is supposed to be the actual modulus, not the size in bits
                                 let coeff_mod = inner_cipher
                                     .params
                                     .coeff_modulus
@@ -211,7 +210,7 @@ pub async fn get_fhe_node_data(
                         // WARNING: `value` and `data_type` are nonsense values
                         value: 0,
                         data_type: sunscreen_ciphertext.data_type,
-                        noise_budget,
+                        noise_budget: Some(noise_budget),
                         coefficients,
                         multiplicative_depth,
                     }
@@ -234,7 +233,6 @@ pub async fn get_fhe_node_data(
                         },
                     };
 
-                    let noise_budget = 0;
                     let multiplicative_depth = 0;
 
                     let mut coefficients: Vec<Vec<u64>> = Vec::new();
@@ -248,7 +246,7 @@ pub async fn get_fhe_node_data(
                         // WARNING: `value` and `data_type` contain nonsense
                         value: 0,
                         data_type: sunscreen_plaintext.data_type,
-                        noise_budget,
+                        noise_budget: None,
                         coefficients,
                         multiplicative_depth,
                     }

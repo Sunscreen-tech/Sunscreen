@@ -1,7 +1,7 @@
 use std::marker::PhantomData;
 use std::sync::atomic::AtomicUsize;
 use std::time::Instant;
-
+#[cfg(feature = "debugger")]
 use crate::debugger::server::start_web_server;
 use crate::error::*;
 use crate::metadata::*;
@@ -419,7 +419,7 @@ where
     /**
      * Used for debugging. Calls `run_impl` with a secret key.
      */
-
+    #[cfg(feature = "debugger")]
     pub fn debug_fhe_program<I>(
         &self,
         fhe_program: &CompiledFheProgram,

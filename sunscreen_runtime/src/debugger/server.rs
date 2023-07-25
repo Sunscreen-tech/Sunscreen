@@ -12,12 +12,13 @@ use petgraph::stable_graph::NodeIndex;
 use std::sync::OnceLock;
 use std::thread;
 
-use sunscreen_compiler_common::lookup::*;
+use sunscreen_compiler_common::lookup::IdLookup;
 
 use tokio::runtime::Builder;
 
 static SERVER: OnceLock<()> = OnceLock::new();
 
+#[cfg(feature = "debugger")]
 /**
  * Lazily starts a webserver at `127.0.0.1:8080/`.
  */
@@ -52,13 +53,14 @@ pub fn start_web_server() {
     });
 }
 
+#[cfg(feature = "debugger")]
 #[get("/")]
 async fn index() -> impl Responder {
     HttpResponse::Ok()
         .insert_header(header::ContentType(mime::TEXT_HTML))
         .body(include_str!("../../debugger-frontend/index.html"))
 }
-
+#[cfg(feature = "debugger")]
 #[get("/main.js")]
 async fn main_js() -> impl Responder {
     HttpResponse::Ok()
@@ -66,6 +68,7 @@ async fn main_js() -> impl Responder {
         .body(include_str!("../../debugger-frontend/build/main.js"))
 }
 
+#[cfg(feature = "debugger")]
 #[get("/App.css")]
 async fn app_css() -> impl Responder {
     HttpResponse::Ok()
@@ -73,6 +76,7 @@ async fn app_css() -> impl Responder {
         .body(include_str!("../../debugger-frontend/src/App.css"))
 }
 
+#[cfg(feature = "debugger")]
 #[get("/sessions")]
 async fn get_all_sessions() -> impl Responder {
     let lock = get_sessions().lock().unwrap();
@@ -84,6 +88,7 @@ async fn get_all_sessions() -> impl Responder {
 /**
  * Gets the graph data of a function.
  */
+#[cfg(feature = "debugger")]
 #[get("/sessions/{session}")]
 async fn get_session_data(session: web::Path<String>) -> impl Responder {
     let sessions = get_sessions().lock().unwrap();
@@ -101,6 +106,7 @@ async fn get_session_data(session: web::Path<String>) -> impl Responder {
 /**
  * Gets the Rust code of a function.
  */
+#[cfg(feature = "debugger")]
 #[get("programs/{session}")]
 async fn get_code(session: web::Path<String>) -> impl Responder {
     let sessions = get_sessions().lock().unwrap();
@@ -120,6 +126,7 @@ async fn get_code(session: web::Path<String>) -> impl Responder {
  */
 
 // TODO: be able to extract type information to have non-garbage `value` and `data_type` fields
+#[cfg(feature = "debugger")]
 #[get("sessions/{session}/{nodeid}")]
 pub async fn get_fhe_node_data(
     path_info: web::Path<(String, usize)>,
@@ -270,6 +277,7 @@ pub async fn get_fhe_node_data(
 /**
  * Gets the stack trace associated with a node.
  */
+#[cfg(feature = "debugger")]
 #[get("sessions/{session}/stacktrace/{nodeid}")]
 pub async fn get_stack_trace(
     path_info: web::Path<(String, usize)>,
@@ -281,8 +289,8 @@ pub async fn get_stack_trace(
         let curr_session = sessions.get(&session).unwrap().unwrap_bfv_session();
         let stack_lookup = &curr_session.graph.metadata.stack_lookup;
 
-        if let Some(node_weight) = curr_session.graph.node_weight(NodeIndex::new(nodeid)) {
-            match stack_lookup.id_to_data(node_weight.stack_id) {
+        if let Some(node_info) = curr_session.graph.node_weight(NodeIndex::new(nodeid)) {
+            match stack_lookup.id_to_data(node_info.stack_id) {
                 Ok(stack_frames) => {
                     let stack_frames_json = serde_json::to_string(&stack_frames).unwrap();
                     return Ok(HttpResponse::Ok().body(stack_frames_json));

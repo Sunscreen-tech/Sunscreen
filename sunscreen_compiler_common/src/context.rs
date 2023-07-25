@@ -360,8 +360,8 @@ where
             let stack_id = self.graph.metadata.stack_counter;
 
             // TODO: figure out updates to group and stack id?
-                // I think that stack id should be updated every time a node is added to the graph
-                // and that group id should be updated every time a function is called/returned via proc macro
+            // I think that stack id should be updated every time a node is added to the graph
+            // and that group id should be updated every time a function is called/returned via proc macro
 
             // Capture backtrace and insert into lookup structure
             let bt = Backtrace::new();

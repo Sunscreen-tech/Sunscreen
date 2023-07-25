@@ -3,14 +3,14 @@ use actix_web::{get, http::header, web, App, HttpResponse, HttpServer, Responder
 use seal_fhe::{BfvEncryptionParametersBuilder, Context, Decryptor, Modulus};
 use semver::Version;
 
-use std::sync::OnceLock;
-use std::thread;
-use petgraph::stable_graph::NodeIndex;
 use crate::{
     debugger::SerializedSealData,
     debugger::{get_mult_depth, get_sessions},
     Ciphertext, InnerCiphertext, InnerPlaintext, Plaintext, Runtime, SealData, Type, WithContext,
 };
+use petgraph::stable_graph::NodeIndex;
+use std::sync::OnceLock;
+use std::thread;
 
 use sunscreen_compiler_common::lookup::*;
 
@@ -283,10 +283,7 @@ pub async fn get_stack_trace(
         let curr_session = sessions.get(&session).unwrap().unwrap_bfv_session();
         let stack_lookup = &curr_session.graph.metadata.stack_lookup;
 
-        if let Some(node_weight) = curr_session
-            .graph
-            .node_weight(NodeIndex::new(nodeid))
-        {
+        if let Some(node_weight) = curr_session.graph.node_weight(NodeIndex::new(nodeid)) {
             match stack_lookup.id_to_data(node_weight.stack_id) {
                 Ok(stack_frames) => {
                     let stack_frames_json = serde_json::to_string(&stack_frames).unwrap();

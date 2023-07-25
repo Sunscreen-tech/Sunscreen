@@ -127,7 +127,7 @@ pub trait Gadget: Any + Send + Sync {
 }
 
 #[derive(Clone, Serialize, Deserialize)]
-#[serde(tag = "type")]
+//#[serde(tag = "type")]
 /**
  * An R1CS proof.
  */

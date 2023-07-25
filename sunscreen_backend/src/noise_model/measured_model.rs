@@ -382,9 +382,8 @@ impl MeasuredModel {
             Err(e) => {
                 println!("Error occurred during run_program_unchecked: {:?}", e);
                 return Err(crate::Error::RuntimeError(e));
-            },
+            }
         };
-        
 
         let mut noise_levels = vec![];
 

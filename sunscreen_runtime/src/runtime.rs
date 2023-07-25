@@ -1,6 +1,3 @@
-use std::marker::PhantomData;
-use std::sync::atomic::AtomicUsize;
-use std::time::Instant;
 #[cfg(feature = "debugger")]
 use crate::debugger::server::start_web_server;
 use crate::error::*;
@@ -12,6 +9,9 @@ use crate::{
     InnerCiphertext, InnerPlaintext, Plaintext, PrivateKey, PublicKey, SealCiphertext, SealData,
     SealPlaintext, TryFromPlaintext, TryIntoPlaintext, TypeNameInstance,
 };
+use std::marker::PhantomData;
+use std::sync::atomic::AtomicUsize;
+use std::time::Instant;
 
 use log::trace;
 

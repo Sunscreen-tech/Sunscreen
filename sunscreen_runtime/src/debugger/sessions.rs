@@ -73,8 +73,6 @@ impl BfvSession {
     ) -> Self {
         Self {
             graph: graph.clone(),
-            // don't need a hashmap; if you don't encounter in the right order, it's all initialize das None so you
-            // can go back later and fill it in
             program_data: vec![None; graph.node_count()],
             private_key: private_key.clone(),
             source_code: source_code.to_owned(),

@@ -359,10 +359,20 @@ where
             let group_id = self.graph.metadata.group_counter;
             let stack_id = self.graph.metadata.stack_counter;
 
-            // TOOD: figure out updates to group and stack id?
+            // TODO: figure out updates to group and stack id?
+            // I think that stack id should be updated every time a node is added to the graph
+            // and that group id should be updated every time a function is called/returned via proc macro
 
             // Capture backtrace and insert into lookup structure
             let bt = Backtrace::new();
+
+            // Not totally sure what key to insert or how to insert a key into the lookup structure only given a node ID
+            self.graph
+                .metadata
+                .stack_lookup
+                .dict
+                .insert(stack_id, vec![0]);
+
             let key = self
                 .graph
                 .metadata
@@ -370,6 +380,7 @@ where
                 .dict
                 .get(&stack_id)
                 .expect("Invalid stack key");
+
             self.graph.metadata.stack_lookup.data_to_id(
                 key.clone(),
                 self.graph
@@ -378,12 +389,12 @@ where
                     .backtrace_to_stackframes(bt),
             );
 
+            self.graph.metadata.stack_counter += 1;
+
             // Add node to graph
             self.graph.add_node(NodeInfo {
                 operation,
-                #[cfg(feature = "debugger")]
                 group_id,
-                #[cfg(feature = "debugger")]
                 stack_id,
             })
         }

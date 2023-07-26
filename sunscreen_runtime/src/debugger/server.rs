@@ -1,6 +1,5 @@
 use actix_web::{get, http::header, web, App, HttpResponse, HttpServer, Responder};
 
-use seal_fhe::{BfvEncryptionParametersBuilder, Context, Decryptor, Modulus};
 use semver::Version;
 
 use crate::{

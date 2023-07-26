@@ -5,7 +5,6 @@ use crate::SealData;
 use crate::WithContext;
 use petgraph::stable_graph::NodeIndex;
 use petgraph::stable_graph::StableGraph;
-use petgraph::visit::EdgeRef;
 use petgraph::Direction::Incoming;
 use seal_fhe::BfvEncryptionParametersBuilder;
 use seal_fhe::Context;

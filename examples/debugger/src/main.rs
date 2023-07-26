@@ -19,6 +19,7 @@ fn main() {
     let app = Compiler::new()
         .fhe_program(mad)
         .fhe_program(add_squares)
+        .plain_modulus_constraint(PlainModulusConstraint::Raw(1024))
         .compile()
         .unwrap();
 

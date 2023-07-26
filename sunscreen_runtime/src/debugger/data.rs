@@ -80,12 +80,20 @@ pub fn overflow_occurred<O>(
 where
     O: Operation,
 {
+    // Overflow only happens after an arithmetic operation involving ciphertexts
+    // If the current node has more than 1 parent, then it's an arithmetic operation, so it can't overflow
+    // If the current node has no parents, then it's an input node, so it can't overflow
+    let mut incoming_neighbors = graph.neighbors_directed(node, Incoming);
+    if incoming_neighbors.clone().count() != 1 {
+        return false; 
+    }
+
     let mut add_overflow = false;
     let mut mul_overflow = false;
 
     // Create operands
     let mut operands: Vec<Vec<Vec<u64>>> = Vec::new();
-    let parent = graph.neighbors_directed(node, Incoming).next().unwrap();
+    let parent = incoming_neighbors.next().unwrap();
     let operand_nodes = graph.neighbors_directed(parent, Incoming);
     for operand_node in operand_nodes {
         let operand_data = program_data

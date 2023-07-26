@@ -102,6 +102,12 @@ impl StackFrameLookup {
     }
 }
 
+impl Default for StackFrameLookup {
+    fn default() -> Self {
+        Self::new()   
+    }
+}
+
 type Group = String;
 /**
  * Lookup structure for the one-to-one correspondence between grouping information and a ProgramNode's `group_id`.
@@ -128,6 +134,12 @@ impl GroupLookup {
             id_data_lookup: HashMap::new(),
             data_id_lookup: HashMap::new(),
         }
+    }
+}
+
+impl Default for GroupLookup {
+    fn default() -> Self {
+        Self::new()
     }
 }
 /*

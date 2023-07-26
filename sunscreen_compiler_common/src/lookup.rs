@@ -104,7 +104,7 @@ impl StackFrameLookup {
 
 impl Default for StackFrameLookup {
     fn default() -> Self {
-        Self::new()   
+        Self::new()
     }
 }
 

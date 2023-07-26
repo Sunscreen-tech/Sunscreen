@@ -1,5 +1,4 @@
 use backtrace::{Backtrace, BacktraceFrame, SymbolName};
-use radix_trie::Trie;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::Path;

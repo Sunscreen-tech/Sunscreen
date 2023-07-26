@@ -383,15 +383,18 @@ where
 
             let group_id = self.graph.metadata.group_counter;
 
-            self.graph.metadata.stack_lookup.id_data_lookup
+            self.graph
+                .metadata
+                .stack_lookup
+                .id_data_lookup
                 .entry(stack_id.clone())
                 .or_insert(stack_frames);
 
-            return self.graph.add_node(NodeInfo {
+            self.graph.add_node(NodeInfo {
                 operation: operation,
                 group_id: group_id,
                 stack_id: stack_id,
-            });
+            })
         }
         #[cfg(not(feature = "debugger"))]
         {

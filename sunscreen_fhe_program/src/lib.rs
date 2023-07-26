@@ -395,7 +395,7 @@ impl FheProgramTrait for FheProgram {
             #[cfg(feature = "debugger")]
             graph: CompilationResult {
                 graph: StableGraph::from(pruned),
-                metadata: self.graph.metadata.clone()
+                metadata: self.graph.metadata.clone(),
             },
 
             #[cfg(feature = "debugger")]

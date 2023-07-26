@@ -5,7 +5,7 @@ use crate::{PrivateKey, SealData};
 
 use sunscreen_compiler_common::CompilationResult;
 use sunscreen_fhe_program::Operation as FheOperation;
-use sunscreen_zkp_backend::{Operation as ZkpOperation, BigInt};
+use sunscreen_zkp_backend::{BigInt, Operation as ZkpOperation};
 
 // Global data structure storing session information
 static SESSIONS: OnceLock<Mutex<HashMap<String, Session>>> = OnceLock::new();

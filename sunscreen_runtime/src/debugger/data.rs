@@ -1,3 +1,8 @@
+use crate::Ciphertext;
+use crate::InnerCiphertext;
+use crate::PrivateKey;
+use crate::SealData;
+use crate::WithContext;
 use petgraph::stable_graph::NodeIndex;
 use petgraph::stable_graph::StableGraph;
 use petgraph::visit::EdgeRef;
@@ -7,13 +12,11 @@ use seal_fhe::Context;
 use seal_fhe::Decryptor;
 use seal_fhe::Modulus;
 use seal_fhe::SecretKey;
+use semver::Version;
 use serde::{Deserialize, Serialize};
 use sunscreen_compiler_common::Operation;
 use sunscreen_compiler_common::Type;
 use sunscreen_compiler_common::{EdgeInfo, NodeInfo};
-
-use crate::InnerCiphertext;
-use crate::SealData;
 
 pub enum DebugNodeType {
     Bfv(BfvNodeType),
@@ -71,15 +74,81 @@ pub fn overflow_occurred<O>(
     graph: &StableGraph<NodeInfo<O>, EdgeInfo>,
     node: NodeIndex,
     p: u64,
-    sk: &SecretKey,
-    program_data: Vec<Option<SealData>>,
+    pk: &PrivateKey,
+    program_data: &Vec<Option<SealData>>,
 ) -> bool
 where
     O: Operation,
 {
-    let mut add_overflow = true;
-    let mut mul_overflow = true;
+    let mut add_overflow = false;
+    let mut mul_overflow = false;
 
+    // Create operands
+    let mut operands: Vec<Vec<Vec<u64>>> = Vec::new();
+    let parent = graph.neighbors_directed(node, Incoming).next().unwrap();
+    let operand_nodes = graph.neighbors_directed(parent, Incoming);
+    for operand_node in operand_nodes {
+        let operand_data = program_data
+            .get(operand_node.index())
+            .expect(&format!(
+                "Couldn't find Option<SealData> in index {:?} of program_data",
+                operand_node.index()
+            ))
+            .clone()
+            .expect(&format!(
+                "Option<SealData> in index {:?} was None",
+                operand_node.index()
+            ));
+        let ciphertext = match operand_data {
+            SealData::Ciphertext(ct) => {
+                let with_context = WithContext {
+                    params: pk.0.params.clone(),
+                    data: ct.clone(),
+                };
+
+                let sunscreen_ciphertext = Ciphertext {
+                    data_type: Type {
+                        is_encrypted: true,
+                        name: "ciphertext".to_owned(),
+                        version: Version::new(1, 1, 1),
+                    },
+                    inner: InnerCiphertext::Seal {
+                        value: vec![with_context],
+                    },
+                };
+                sunscreen_ciphertext.inner
+            }
+            // Overflow only happens as the result of operations involving ciphertexts
+            _ => continue,
+        };
+        operands.push(decrypt_seal(ciphertext, &pk.0.data));
+    }
+
+    if operands.len() >= 2 {
+        for (c0, c1) in operands[0].iter().zip(operands[1].iter()) {
+            // Addition overflow
+            for i in 0..c0.len() {
+                let sum = c0[i] + c1[i];
+                if (c0[i] > p / 2 && c1[i] > p / 2 && sum <= p / 2)
+                    || (c0[i] <= p / 2 && c1[i] <= p / 2 && sum > p / 2)
+                {
+                    add_overflow = true;
+                    break;
+                }
+            }
+
+            // Multiplication overflow
+            let z_prod = polynomial_mult(&c0, &c1);
+            let zp_prod = polynomial_mult_mod(&c0, &c1, p);
+            if z_prod != zp_prod {
+                mul_overflow = true;
+            }
+
+            if add_overflow || mul_overflow {
+                break;
+            }
+        }
+    }
     add_overflow || mul_overflow
 }
 
@@ -98,6 +167,7 @@ fn polynomial_mult_mod(a: &[u64], b: &[u64], p: u64) -> Vec<u64> {
     for (i, &ai) in a.iter().enumerate() {
         for (j, &bj) in b.iter().enumerate() {
             product[i + j] += (ai * bj) % p;
+            product[i + j] %= p;
         }
     }
     product

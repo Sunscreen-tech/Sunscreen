@@ -175,8 +175,8 @@ pub async fn get_node_data(
                         stable_graph,
                         NodeIndex::new(nodeid),
                         pk.0.params.plain_modulus,
-                        &pk.0.data,
-                        curr_session.program_data.clone(),
+                        &pk,
+                        &curr_session.program_data.clone(),
                     );
 
                     let coefficients = decrypt_seal(sunscreen_ciphertext.inner, &pk.0.data);

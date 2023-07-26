@@ -85,7 +85,7 @@ where
     // If the current node has no parents, then it's an input node, so it can't overflow
     let mut incoming_neighbors = graph.neighbors_directed(node, Incoming);
     if incoming_neighbors.clone().count() != 1 {
-        return false; 
+        return false;
     }
 
     let mut add_overflow = false;
@@ -224,7 +224,7 @@ pub fn decrypt_seal(inner_cipher: InnerCiphertext, sk: &SecretKey) -> Vec<Vec<u6
 }
 #[derive(Clone, Serialize, Deserialize)]
 pub struct ZkpNodeType {
-    // Send `BigInt` values as strings 
+    // Send `BigInt` values as strings
     pub value: String,
 }
 

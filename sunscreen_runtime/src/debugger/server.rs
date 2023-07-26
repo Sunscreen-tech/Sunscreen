@@ -3,9 +3,9 @@ use actix_web::{get, http::header, web, App, HttpResponse, HttpServer, Responder
 use semver::Version;
 
 use crate::{
+    debugger::sessions::{BfvSession, Session, ZkpSession},
     debugger::{decrypt_seal, get_mult_depth, get_sessions, overflow_occurred},
     debugger::{BfvNodeType, DebugNodeType, ZkpNodeType},
-    debugger::sessions::{BfvSession, ZkpSession, Session},
     Ciphertext, InnerCiphertext, InnerPlaintext, Plaintext, Runtime, SealData, Type, WithContext,
 };
 use petgraph::stable_graph::NodeIndex;
@@ -152,7 +152,7 @@ pub async fn get_node_data(
                                 params: pk.0.params.clone(),
                                 data: ct.clone(),
                             };
-        
+
                             let sunscreen_ciphertext = Ciphertext {
                                 // WARNING: this is garbage data, so we can't return a decrypted Ciphertext whose value makes sense
                                 data_type: Type {
@@ -160,19 +160,19 @@ pub async fn get_node_data(
                                     name: "ciphertext".to_owned(),
                                     version: Version::new(1, 1, 1),
                                 },
-        
+
                                 inner: InnerCiphertext::Seal {
                                     value: vec![with_context],
                                 },
                             };
-        
+
                             let noise_budget = runtime
                                 .measure_noise_budget(&sunscreen_ciphertext, pk)
                                 .unwrap();
-        
+
                             let multiplicative_depth: u64 =
                                 get_mult_depth(stable_graph, NodeIndex::new(nodeid), 0);
-        
+
                             let overflowed = overflow_occurred(
                                 stable_graph,
                                 NodeIndex::new(nodeid),
@@ -180,7 +180,7 @@ pub async fn get_node_data(
                                 &pk,
                                 &bfv_session.program_data.clone(),
                             );
-        
+
                             let coefficients = decrypt_seal(sunscreen_ciphertext.inner, &pk.0.data);
 
                             DebugNodeType::Bfv(BfvNodeType {
@@ -199,7 +199,7 @@ pub async fn get_node_data(
                                 params: pk.0.params.clone(),
                                 data: pt.clone(),
                             };
-        
+
                             let sunscreen_plaintext = Plaintext {
                                 // WARNING: this is garbage data, so we can't return a Plaintext whose value makes sense
                                 data_type: Type {
@@ -211,9 +211,9 @@ pub async fn get_node_data(
                                     value: vec![with_context],
                                 },
                             };
-        
+
                             let multiplicative_depth = 0;
-        
+
                             let mut coefficients: Vec<Vec<u64>> = Vec::new();
                             let mut inner_coefficients = Vec::new();
                             for i in 0..pt.len() {
@@ -238,10 +238,7 @@ pub async fn get_node_data(
                 }
             }
             Session::ZkpSession(zkp_session) => {
-                if let Some(data) = zkp_session
-                    .program_data
-                    .get(nodeid)
-                {
+                if let Some(data) = zkp_session.program_data.get(nodeid) {
                     DebugNodeType::Zkp(ZkpNodeType {
                         value: data.unwrap().to_string(),
                     })

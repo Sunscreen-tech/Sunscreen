@@ -2,6 +2,8 @@ use std::thread;
 use std::time::Duration;
 use sunscreen::{
     types::{bfv::Signed, Cipher},
+    SchemeType::Bfv,
+    SecurityLevel::TC128,
     *,
 };
 
@@ -21,17 +23,25 @@ fn main() {
         a * a * a * b * b * b
     }
 
+    /*
     #[fhe_program(scheme = "bfv", chain_count = 5)]
     fn mul_cubes_chained(a: Cipher<Signed>, b: Cipher<Signed>) -> Cipher<Signed> {
         a * a * a * b * b * b
     }
+    */
 
     let app = Compiler::new()
         .fhe_program(mad)
         .fhe_program(add_squares)
         .fhe_program(mul_cubes)
-        .fhe_program(mul_cubes_chained)
-        .plain_modulus_constraint(PlainModulusConstraint::Raw(1024))
+        .with_params(&Params {
+            lattice_dimension: 4096,
+            coeff_modulus: [68719403009, 68719230977, 137438822401].to_vec(),
+            plain_modulus: 64,
+            scheme_type: Bfv,
+            security_level: TC128,
+        })
+        //.fhe_program(mul_cubes_chained)
         .compile()
         .unwrap();
 
@@ -91,17 +101,19 @@ fn main() {
         )
         .unwrap();
 
-    let args5: Vec<FheProgramInput> = vec![a.clone().into(), c.clone().into()];
+    /*
+        let args5: Vec<FheProgramInput> = vec![a.clone().into(), c.clone().into()];
 
-    runtime
-        .debug_fhe_program(
-            app.get_fhe_program("mul_cubes_chained").unwrap(),
-            args5,
-            &public,
-            &private,
-            mul_cubes_chained.source(),
-        )
-        .unwrap();
+        runtime
+            .debug_fhe_program(
+                app.get_fhe_program("mul_cubes_chained").unwrap(),
+                args5,
+                &public,
+                &private,
+                mul_cubes_chained.source(),
+            )
+            .unwrap();
+    */
     loop {
         thread::sleep(Duration::from_secs(1));
     }

@@ -4,8 +4,8 @@ use seal_fhe::{BfvEncryptionParametersBuilder, Context, Decryptor, Modulus};
 use semver::Version;
 
 use crate::{
-    debugger::{BfvNodeType, ZkpNodeType, DebugNodeType},
-    debugger::{get_mult_depth, get_sessions, overflow_occurred, decrypt_seal},
+    debugger::{decrypt_seal, get_mult_depth, get_sessions, overflow_occurred},
+    debugger::{BfvNodeType, DebugNodeType, ZkpNodeType},
     Ciphertext, InnerCiphertext, InnerPlaintext, Plaintext, Runtime, SealData, Type, WithContext,
 };
 use petgraph::stable_graph::NodeIndex;
@@ -171,8 +171,14 @@ pub async fn get_node_data(
                     let multiplicative_depth: u64 =
                         get_mult_depth(stable_graph, NodeIndex::new(nodeid), 0);
 
-                    let overflowed = overflow_occurred(stable_graph, NodeIndex::new(nodeid));
-                    
+                    let overflowed = overflow_occurred(
+                        stable_graph,
+                        NodeIndex::new(nodeid),
+                        pk.0.params.plain_modulus,
+                        &pk.0.data,
+                        curr_session.program_data.clone(),
+                    );
+
                     let coefficients = decrypt_seal(sunscreen_ciphertext.inner, &pk.0.data);
 
                     // TODO: implement detection for overflow. Values overflow if two input operands have the same sign

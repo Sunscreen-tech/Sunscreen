@@ -1,10 +1,11 @@
 use petgraph::stable_graph::NodeIndex;
 use petgraph::stable_graph::StableGraph;
+use petgraph::visit::EdgeRef;
 use petgraph::Direction::Incoming;
-use seal_fhe::Modulus;
 use seal_fhe::BfvEncryptionParametersBuilder;
 use seal_fhe::Context;
 use seal_fhe::Decryptor;
+use seal_fhe::Modulus;
 use seal_fhe::SecretKey;
 use serde::{Deserialize, Serialize};
 use sunscreen_compiler_common::Operation;
@@ -12,7 +13,7 @@ use sunscreen_compiler_common::Type;
 use sunscreen_compiler_common::{EdgeInfo, NodeInfo};
 
 use crate::InnerCiphertext;
-use crate::PrivateKey;
+use crate::SealData;
 
 pub enum DebugNodeType {
     Bfv(BfvNodeType),
@@ -27,7 +28,7 @@ pub struct BfvNodeType {
     pub coefficients: Vec<Vec<u64>>,
     pub multiplicative_depth: u64,
     pub overflowed: Option<bool>,
-    pub noise_exceeded: Option<bool>
+    pub noise_exceeded: Option<bool>,
 }
 
 /**
@@ -68,14 +69,38 @@ where
  */
 pub fn overflow_occurred<O>(
     graph: &StableGraph<NodeInfo<O>, EdgeInfo>,
-    node: NodeIndex,) -> bool 
-where 
-    O: Operation
+    node: NodeIndex,
+    p: u64,
+    sk: &SecretKey,
+    program_data: Vec<Option<SealData>>,
+) -> bool
+where
+    O: Operation,
 {
-    let add_overflow = false;
-    let mul_overflow = false;
+    let mut add_overflow = true;
+    let mut mul_overflow = true;
 
-    add_overflow | mul_overflow
+    add_overflow || mul_overflow
+}
+
+fn polynomial_mult(a: &[u64], b: &[u64]) -> Vec<u64> {
+    let mut product = vec![0; a.len() + b.len() - 1];
+    for (i, &ai) in a.iter().enumerate() {
+        for (j, &bj) in b.iter().enumerate() {
+            product[i + j] += ai * bj;
+        }
+    }
+    product
+}
+
+fn polynomial_mult_mod(a: &[u64], b: &[u64], p: u64) -> Vec<u64> {
+    let mut product = vec![0; a.len() + b.len() - 1];
+    for (i, &ai) in a.iter().enumerate() {
+        for (j, &bj) in b.iter().enumerate() {
+            product[i + j] += (ai * bj) % p;
+        }
+    }
+    product
 }
 
 /**
@@ -95,13 +120,10 @@ pub fn decrypt_seal(inner_cipher: InnerCiphertext, sk: &SecretKey) -> Vec<Vec<u6
                     .map(|&num| Modulus::new(num).unwrap())
                     .collect::<Vec<_>>();
                 // Decrypt inner ciphertext
-                let encryption_params_builder =
-                    BfvEncryptionParametersBuilder::new()
-                        .set_coefficient_modulus(coeff_mod)
-                        .set_plain_modulus_u64(inner_cipher.params.plain_modulus)
-                        .set_poly_modulus_degree(
-                            inner_cipher.params.lattice_dimension,
-                        );
+                let encryption_params_builder = BfvEncryptionParametersBuilder::new()
+                    .set_coefficient_modulus(coeff_mod)
+                    .set_plain_modulus_u64(inner_cipher.params.plain_modulus)
+                    .set_poly_modulus_degree(inner_cipher.params.lattice_dimension);
                 let encryption_params = encryption_params_builder.build().unwrap();
                 let ctx = Context::new(
                     &encryption_params,
@@ -110,8 +132,7 @@ pub fn decrypt_seal(inner_cipher: InnerCiphertext, sk: &SecretKey) -> Vec<Vec<u6
                 )
                 .expect("Failed to create context");
 
-                let decryptor =
-                    Decryptor::new(&ctx, sk).expect("Failed to create decryptor");
+                let decryptor = Decryptor::new(&ctx, sk).expect("Failed to create decryptor");
                 let pt = decryptor.decrypt(&inner_cipher.data).unwrap();
 
                 for i in 0..pt.len() {
@@ -121,7 +142,7 @@ pub fn decrypt_seal(inner_cipher: InnerCiphertext, sk: &SecretKey) -> Vec<Vec<u6
             }
         }
     }
-    coefficients 
+    coefficients
 }
 #[derive(Clone, Serialize, Deserialize)]
 pub struct ZkpNodeType {

@@ -19,7 +19,7 @@ pub fn get_sessions() -> &'static Mutex<HashMap<String, Session>> {
  */
 pub enum Session {
     BfvSession(BfvSession),
-    ZkpSession(ZkpSession)
+    ZkpSession(ZkpSession),
 }
 
 impl From<BfvSession> for Session {
@@ -40,7 +40,6 @@ impl Session {
         match self {
             Self::BfvSession(s) => s,
             _ => panic!("Called unwrap_bfv_session_mut on a non-BFV session"),
-
         }
     }
 
@@ -112,7 +111,7 @@ pub struct ZkpSession {
      */
     // TODO: figure out how to refactor this
     pub program_data: Vec<Option<SealData>>,
-    
+
     /**
      * The source code of the ZKP program.
      */
@@ -123,10 +122,7 @@ impl ZkpSession {
     /**
      * Constructs a new `ZkpDebugInfo`.
      */
-    pub fn new(
-        graph: &CompilationResult<ZkpOperation>,
-        source_code: &str,
-    ) -> Self {
+    pub fn new(graph: &CompilationResult<ZkpOperation>, source_code: &str) -> Self {
         Self {
             graph: graph.clone(),
             program_data: vec![None; graph.node_count()],

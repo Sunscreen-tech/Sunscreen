@@ -392,11 +392,10 @@ impl FheProgramTrait for FheProgram {
                 graph: StableGraph::from(pruned),
             },
 
-            // TODO: copy the metadata coming from the input
             #[cfg(feature = "debugger")]
             graph: CompilationResult {
                 graph: StableGraph::from(pruned),
-                metadata: DebugData::new(),
+                metadata: self.graph.metadata.clone()
             },
 
             #[cfg(feature = "debugger")]

@@ -4,7 +4,8 @@ use std::sync::{Mutex, OnceLock};
 use crate::{PrivateKey, SealData};
 
 use sunscreen_compiler_common::CompilationResult;
-use sunscreen_fhe_program::Operation;
+use sunscreen_fhe_program::Operation as FheOperation;
+use sunscreen_zkp_backend::Operation as ZkpOperation;
 
 // Global data structure storing session information
 static SESSIONS: OnceLock<Mutex<HashMap<String, Session>>> = OnceLock::new();
@@ -18,6 +19,7 @@ pub fn get_sessions() -> &'static Mutex<HashMap<String, Session>> {
  */
 pub enum Session {
     BfvSession(BfvSession),
+    ZkpSession(ZkpSession)
 }
 
 impl From<BfvSession> for Session {
@@ -30,12 +32,29 @@ impl Session {
     pub fn unwrap_bfv_session(&self) -> &BfvSession {
         match self {
             Self::BfvSession(s) => s,
+            _ => panic!("Called unwrap_bfv_session on a non-BFV session"),
         }
     }
 
     pub fn unwrap_bfv_session_mut(&mut self) -> &mut BfvSession {
         match self {
             Self::BfvSession(s) => s,
+            _ => panic!("Called unwrap_bfv_session_mut on a non-BFV session"),
+
+        }
+    }
+
+    pub fn unwrap_zkp_session(&self) -> &ZkpSession {
+        match self {
+            Self::ZkpSession(s) => s,
+            _ => panic!("Called unwrap_zkp_session on a non-ZKP session"),
+        }
+    }
+
+    pub fn unwrap_zkp_session_mut(&mut self) -> &mut ZkpSession {
+        match self {
+            Self::ZkpSession(s) => s,
+            _ => panic!("Called unwrap_zkp_session_mut on a non-ZKP session"),
         }
     }
 }
@@ -47,7 +66,7 @@ pub struct BfvSession {
     /**
      * The compilation graph used to execute the program.
      */
-    pub graph: CompilationResult<Operation>,
+    pub graph: CompilationResult<FheOperation>,
     /**
      * The values of operands in the compilation graph.
      */
@@ -67,7 +86,7 @@ impl BfvSession {
      * Constructs a new `FheDebugInfo`.
      */
     pub fn new(
-        graph: &CompilationResult<Operation>,
+        graph: &CompilationResult<FheOperation>,
         private_key: &PrivateKey,
         source_code: &str,
     ) -> Self {
@@ -75,6 +94,42 @@ impl BfvSession {
             graph: graph.clone(),
             program_data: vec![None; graph.node_count()],
             private_key: private_key.clone(),
+            source_code: source_code.to_owned(),
+        }
+    }
+}
+
+/**
+ * Stores the relevant information for debugging a ZKP program.
+ */
+pub struct ZkpSession {
+    /**
+     * The compilation graph used to execute the program.
+     */
+    pub graph: CompilationResult<ZkpOperation>,
+    /**
+     * The values of operands in the compilation graph.
+     */
+    // TODO: figure out how to refactor this
+    pub program_data: Vec<Option<SealData>>,
+    
+    /**
+     * The source code of the ZKP program.
+     */
+    pub source_code: String,
+}
+
+impl ZkpSession {
+    /**
+     * Constructs a new `ZkpDebugInfo`.
+     */
+    pub fn new(
+        graph: &CompilationResult<ZkpOperation>,
+        source_code: &str,
+    ) -> Self {
+        Self {
+            graph: graph.clone(),
+            program_data: vec![None; graph.node_count()],
             source_code: source_code.to_owned(),
         }
     }

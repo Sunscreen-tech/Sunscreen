@@ -6,10 +6,10 @@ use sunscreen_compiler_common::Operation;
 use sunscreen_compiler_common::Type;
 use sunscreen_compiler_common::{EdgeInfo, NodeInfo};
 
-//pub enum DebugNodeType {
-//    Bfv(BfvNodeType),
-//    Zkp(ZkpNodeType),
-//}
+pub enum DebugNodeType {
+    Bfv(BfvNodeType),
+    Zkp(ZkpNodeType),
+}
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct BfvNodeType {

@@ -43,3 +43,8 @@ where
 
     max_depth
 }
+
+#[test]
+fn test_get_mul_depth() {
+
+}

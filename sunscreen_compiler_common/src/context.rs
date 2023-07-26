@@ -369,7 +369,7 @@ where
                 .collect::<Vec<_>>()
                 .join("_");
 
-            let stack_id = self
+            let stack_id = *self
                 .graph
                 .metadata
                 .stack_lookup
@@ -378,8 +378,7 @@ where
                 .or_insert_with(|| {
                     self.graph.metadata.stack_counter += 1;
                     self.graph.metadata.stack_counter
-                })
-                .clone();
+                });
 
             let group_id = self.graph.metadata.group_counter;
 
@@ -387,13 +386,13 @@ where
                 .metadata
                 .stack_lookup
                 .id_data_lookup
-                .entry(stack_id.clone())
+                .entry(stack_id)
                 .or_insert(stack_frames);
 
             self.graph.add_node(NodeInfo {
-                operation: operation,
-                group_id: group_id,
-                stack_id: stack_id,
+                operation,
+                group_id,
+                stack_id,
             })
         }
         #[cfg(not(feature = "debugger"))]

@@ -138,7 +138,7 @@ pub async fn get_fhe_node_data(
         if let Some(data) = curr_session
             .program_data
             .get(nodeid)
-            .expect(&format!("Index {} out of range", nodeid))
+            .unwrap_or_else(|| panic!("Index {} out of range", nodeid))
         {
             let pk = &curr_session.private_key;
             let runtime = Runtime::new_fhe(&pk.0.params).unwrap();

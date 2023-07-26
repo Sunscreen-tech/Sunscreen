@@ -7,6 +7,7 @@ import './App.css'
 import { UberGraph } from './UberGraph';
 import { SelectionT } from 'react-digraph';
 import { render } from 'react-dom';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 
 interface CodeBlockProps {
   code: string;
@@ -101,36 +102,41 @@ const exampleCode: string = `fn sudoku_proof<F: BackendField>(
 }`
 
 type InputCiphertextOp = {
-  kind: 'InputCiphertext';
+  type: 'InputCiphertext';
   id: number
 };
 
 type InputPlaintextOp = {
-  kind: 'InputCiphertext';
+  type: 'InputCiphertext';
   id: number
 };
 
 type MultiplyOp = {
-  kind: 'Multiply'
+  type: 'Multiply'
   id: number
 };
 
 type AddOp = {
-  kind: 'Add'
+  type: 'Add'
+  id: number
+};
+
+type SubOp = {
+  type: 'Sub'
   id: number
 };
 
 type RelinearizeOp = {
-  kind: 'Relinearize'
+  type: 'Relinearize'
   id: number
 };
 
 type OutputCiphertextOp = {
-  kind: 'OutputCiphertext'
+  type: 'OutputCiphertext'
   id: number
 };
 
-type FheProgramOperation = InputCiphertextOp | InputPlaintextOp | MultiplyOp | AddOp | RelinearizeOp | OutputCiphertextOp
+type FheProgramOperation = InputCiphertextOp | InputPlaintextOp | MultiplyOp | AddOp | SubOp | RelinearizeOp | OutputCiphertextOp
 
 type FheProgramNode = {
   operation: FheProgramOperation
@@ -153,21 +159,31 @@ const dataToGraph = (data: FheProgramGraph) => {
   const nodes: any[] = [];
   const edges: any[] = [];
 
-  for (let i: number = 0; i < data.nodes  .length; ++i) {
+  for (let i: number = 0; i < data.nodes.length; ++i) {
     const op = data.nodes[i].operation
-    switch (op.kind) {
+    switch (op.type) {
       case 'InputCiphertext':
-        nodes.push({id: op.id, title: "", type: 'input'})
+        console.log('test')
+        nodes.push({id: i, title: "", type: 'inputCiphertext'})
         break
       case 'Relinearize':
-        nodes.push({id: op.id, title: "", type: 'relinearize'})
+        nodes.push({id: i, title: <FontAwesomeIcon icon="down-left-and-up-right-to-center"></FontAwesomeIcon>, type: 'relinearize'})
         break
       case 'Multiply':
-        // nodes.push({id: op.id, title: "", type: 'multiply'})
+        nodes.push({id: i, title: "", type: 'multiply'})
+        break
       case 'Add':
+        nodes.push({id: i, title: "", type: 'add'})
+        break
+      case 'Sub':
+        nodes.push({id: i, title: "", type: 'sub'})
+        break
       case 'OutputCiphertext':
+        nodes.push({id: i, title: "", type: 'outputCiphertext'})
+        break;
       default: 
         nodes.push({id: i, title: JSON.stringify(data.nodes[i].operation), type: 'empty'})
+        break;
     }
   }
   for (let i: number = 0; i < data.edges.length; ++i) {
@@ -187,13 +203,12 @@ const App = () => {
   const [currGraph, setGraph] = useState({nodes: [], edges: []});
   const [selected, select] = useState<SelectionT | null>(null);
   const [sessionList, setSessionList] = useState<string[]>([]);
-  const [session, setSession]  = useState<string>('mad_0');
+  const [session, setSession] = useState<string>('chi_sq_optimized_fhe_program_0');
+  const [info, setInfo] = useState<any>({id: "no node selected"});
 
   useEffect(
     () => {fetch("/sessions").then(j => j.json()).then(l => setSessionList(l))}, []
   )
-
-  
 
   const updateLine = useCallback(
     async (lineNumber: number) => {
@@ -224,19 +239,41 @@ const App = () => {
   )
 
   const updateSelection = useCallback(
-    (selection, e) => {select(selection); console.log(selection.nodes?.values().next().value)}, [select]
+    async (selection, e) => {
+      select(selection); 
+      const node = selection.nodes?.values().next().value;
+      console.log(node)
+      if (node != null) {
+        console.log(session)
+        setInfo({
+          ...selection.nodes?.values().next().value, 
+          ...(await fetch(`sessions/${session}/${node.id}`).then(d => d.json()))
+        })
+      } else {
+        setInfo({id: "no node selected"})
+      }
+    }, [select]
   )
 
   const updateSession = useCallback(
-    async (event) => {
+    (event) => {
       const newSession = event.target.value
+      
       setSession(newSession)
-      console.log(newSession);
-      setGraph(dataToGraph(await fetch(`/sessions/${newSession}`).then(d => d.json())))
-      setCode(await fetch(`/programs/${newSession}`).then(p => p.text()))
-      console.log(session)
-    }, [setSession, setGraph]
+    }, [setSession]
   )
+
+  useEffect(() => {
+    const update = async () => {
+      setGraph(dataToGraph(await fetch(`/sessions/${session}`).then(d => d.json())))
+      setCode(await fetch(`/programs/${session}`).then(p => p.text()))
+      alert(session)
+      const delay = ms => new Promise(res => setTimeout(res, ms));
+      await delay(1000)
+      alert(session)
+    }
+    update()
+  }, [session, setSession])
 
   return (
     
@@ -251,7 +288,7 @@ const App = () => {
             ></CodeBlock></div>
             <div className='pane'>
               <SessionPicker sessionList={sessionList} setSession={updateSession}/> 
-              <NodeInfo info={selected?.nodes?.values().next().value}/>
+              <NodeInfo info={info}/>
             </div>
           </ReactSplit>
         </div>
@@ -263,8 +300,13 @@ const App = () => {
 }
 
 function NodeInfo({info}) {
-  if (info !== null) {
-    return <p>{JSON.stringify(info)}</p>
+  if (info != null) {
+    for (let field in info) {
+      
+    }
+    return (<div>
+      {Object.keys(info).map((k) => (<p>{k}: {info[k]}</p>))}
+    </div>)
   }
   return <p>{JSON.stringify(info)}</p>
 }
@@ -273,6 +315,7 @@ function SessionPicker({sessionList, setSession}: {sessionList: string[], setSes
   
   return (
     <select onChange={setSession} style={{backgroundColor: 'white'}}>
+      <option value='none'>Select a session!</option>
       {sessionList.map(s => (<option value={s}>{s}</option>))}
     </select>
   )

@@ -223,6 +223,7 @@ where
 }
 
 fn main() -> Result<(), Error> {
+    env_logger::init();
     let n_0 = 2;
     let n_1 = 7;
     let n_2 = 9;
@@ -236,21 +237,6 @@ fn main() -> Result<(), Error> {
     run_native(chi_sq_impl, n_0, n_1, n_2);
     println!("\t**********FHE************");
     run_fhe(
-        chi_sq_fhe_program,
-        PhantomData::<Signed>::default(),
-        n_0,
-        n_1,
-        n_2,
-        plain_modulus,
-    )?;
-    println!("**********Optimized************");
-    println!("\t**********Native************");
-    // run_native(chi_sq_optimized_impl, n_0, n_1, n_2);
-    println!("\t**********FHE************");
-    // On a first-gen M1 mac, the optimized fhe_program is around 6
-    // orders of magnitude slower than running natively, taking
-    // just under 50ms...
-    run_fhe(
         chi_sq_optimized_fhe_program,
         PhantomData::<Signed>::default(),
         n_0,
@@ -258,9 +244,24 @@ fn main() -> Result<(), Error> {
         n_2,
         plain_modulus,
     )?;
+    // println!("**********Optimized************");
+    // println!("\t**********Native************");
+    // // run_native(chi_sq_optimized_impl, n_0, n_1, n_2);
+    // println!("\t**********FHE************");
+    // // On a first-gen M1 mac, the optimized fhe_program is around 6
+    // // orders of magnitude slower than running natively, taking
+    // // just under 50ms...
+    // run_fhe(
+    //     chi_sq_optimized_fhe_program,
+    //     PhantomData::<Signed>::default(),
+    //     n_0,
+    //     n_1,
+    //     n_2,
+    //     plain_modulus,
+    // )?;
 
-    // Pack repetitions of n_0, n_1, n_2 into 2x4096 vectors
-    // to demonstrate batching.
+    // // Pack repetitions of n_0, n_1, n_2 into 2x4096 vectors
+    // // to demonstrate batching.
     let n_0 = [[n_0; 4096], [n_0; 4096]];
     let n_1 = [[n_1; 4096], [n_1; 4096]];
     let n_2 = [[n_2; 4096], [n_2; 4096]];
@@ -283,6 +284,8 @@ fn main() -> Result<(), Error> {
         n_2,
         plain_modulus,
     )?;
+
+    loop { }
 
     Ok(())
 }

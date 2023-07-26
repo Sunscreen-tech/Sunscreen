@@ -9,6 +9,7 @@
     "@emotion/styled": "^11.11.0",
     "@fortawesome/fontawesome": "^1.1.8",
     "@fortawesome/fontawesome-svg-core": "^6.4.0",
+    "@fortawesome/free-solid-svg-icons": "^6.4.0",
     "@fortawesome/react-fontawesome": "^0.2.0",
     "@msagl/core": "^1.1.16",
     "@msagl/parser": "^1.1.16",

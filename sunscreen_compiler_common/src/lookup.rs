@@ -53,17 +53,15 @@ impl StackFrameInfo {
         let frame_symbols = frame.symbols();
         let ip_as_bytes = (frame.ip() as usize).to_ne_bytes();
         StackFrameInfo {
-            callee_name: frame_symbols[0]
-                .name()
+            callee_name: frame_symbols.first().and_then(|s| s.name())
                 .unwrap_or(SymbolName::new(&ip_as_bytes))
                 .to_string(),
-            callee_file: frame_symbols[0]
-                .filename()
+            callee_file: frame_symbols.first().and_then(|s| s.filename())
                 .unwrap_or(Path::new("No such file"))
                 .to_string_lossy()
                 .into_owned(),
-            callee_lineno: frame_symbols[0].lineno().unwrap_or(0),
-            callee_col: frame_symbols[0].colno().unwrap_or(0),
+            callee_lineno: frame_symbols.first().and_then(|s| s.lineno()).unwrap_or(0),
+            callee_col: frame_symbols.first().and_then(|s| s.colno()).unwrap_or(0),
         }
     }
 }

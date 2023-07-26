@@ -285,7 +285,8 @@ pub async fn get_stack_trace(
 
         if let Some(node_weight) = curr_session
             .graph
-            .node_weight(petgraph::stable_graph::NodeIndex(nodeid as u32))
+            .node_weight(petgraph::stable_graph::node_index(nodeid)
+        )
         {
             match stack_lookup.id_to_data(node_weight.stack_id) {
                 Ok(stack_frames) => {

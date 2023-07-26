@@ -2,6 +2,7 @@ import { GraphView } from "react-digraph";
 import React from "react";
 
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faDownLeftAndUpRightToCenter } from '@fortawesome/free-solid-svg-icons'
 
 const GraphConfig =  {
   NodeTypes: {
@@ -16,41 +17,102 @@ const GraphConfig =  {
     },
     inputCiphertext: { // required to show empty nodes
       typeText: "Ciphertext Input",
-      shapeId: "#input", // relates to the type property of a node
+      shapeId: "#inputCiphertext", // relates to the type property of a node
       shape: (
-        <symbol viewBox="0 0 100 100" id="input" key="0">
-          <circle cx="50" cy="50" r="45"></circle>
+        <symbol viewBox="0 0 90 50" id="inputCiphertext" key="0">
+          <rect cx='50' cy='50' width='90' height='50'/>
         </symbol>
       )
     },
     inputPlaintext: {
-      
+      typeText: "Plain Input",
+      shapeId: '#inputPlaintext',
+      shape: (
+        <symbol viewBox="0 0 100 100" id="inputCiphertext" key="0">
+          <ellipse cx='50' cy='50' width='90' height='50'/>
+        </symbol>
+      )
     },
     outputCiphertext: { // required to show empty nodes
       typeText: "Output",
-      shapeId: "#output", // relates to the type property of a node
+      shapeId: "#outputCiphertext", // relates to the type property of a node
       shape: (
-        <symbol viewBox="0 0 100 100" id="input" key="0">
+        <symbol viewBox="0 0 100 100" id="outputCiphertext" key="0">
           <circle cx="50" cy="50" r="45"></circle>
         </symbol>
       )
     },
-    relinearize: {
-      typeText: "",
-      shapeId: "relinearize",
+    add: {
+      typeText: "+",
+      shapeId: "#add",
       shape: (
-        <symbol viewBox="0 0 20 20" id="relinearize" key="0">
-          <FontAwesomeIcon icon="down-left-and-up-right-to-center" />
+        <symbol viewBox="0 0 50 50" id="add" key="0" fontSize="18pt" fill='aquamarine'>
+          <svg viewBox="0 0 50 50">
+            <circle cx="25" cy="25" r="12" fill="aquamarine" stroke-width="1.5"></circle>
+            <line x1="17.5" y1="25" x2="32.5" y2="25" stroke-width="3.5"></line>
+            <line x1="25" y1="17.5" x2="25" y2="32.5" stroke-width="3.5"></line>
+          </svg>
+
         </symbol>
       )
     },
+    multiply: {
+      typeText: "*",
+      shapeId: "#multiply",
+      shape: <symbol viewBox="0 0 50 50" id="multiply" key="0" fontSize="18pt">
+      <svg viewBox="0 0 50 50">
+        <circle cx="25" cy="25" r="12" fill="khaki" stroke-width="1.5"></circle>
+        <line x1="20" y1="20" x2="30" y2="30" stroke-width="3.5"></line>
+        <line x1="30" y1="20" x2="20" y2="30" stroke-width="3.5"></line>
+      </svg>
 
-    custom: { // required to show empty nodes
-      typeText: "Custom",
-      shapeId: "#custom", // relates to the type property of a node
+    </symbol>
+    },
+    sub: {
+      typeText: "",
+      shapeId: "#sub",
       shape: (
-        <symbol viewBox="0 0 50 25" id="custom" key="0">
-          <ellipse cx="50" cy="25" rx="50" ry="25"></ellipse>
+        <symbol viewBox="0 0 50 50" id="sub" key="0" fontSize="18pt" fill='plum'>
+          <svg viewBox="0 0 50 50">
+            <circle cx="25" cy="25" r="12" fill="plum" stroke-width="1.5"></circle>
+            <line x1="17.5" y1="25" x2="32.5" y2="25" stroke-width="3.5"></line>
+          </svg>
+
+        </symbol>
+      )
+    },
+    relinearize: {
+      typeText: "Relin",
+      shapeId: "#relinearize",
+      shape: (
+        <symbol viewBox="0 0 50 50" id="relinearize" key="0">
+          <svg viewBox="0 0 50 50">
+            <circle cx="25" cy="25" r="12">
+            </circle>
+            {/* <defs>
+              <marker id='head' orient="auto"
+                markerWidth='1.5' markerHeight='4'
+                refX='0.1' refY='2'>
+                <path d='M0,0 V4 L2,2 Z' fill="black"/>
+              </marker>
+            </defs>
+
+            <path
+              id='arrow-line'
+              marker-end='url(#head)'
+              stroke-width='1.5'
+              fill='none' stroke='black'  
+              d='M20,20 23,23'
+              />
+            <path
+              id='arrow-line'
+              marker-end='url(#head)'
+              stroke-width='1.5'
+              fill='none' stroke='black'  
+              d='M30,30 28,28'
+              /> */}
+          </svg>
+          
         </symbol>
       )
     },

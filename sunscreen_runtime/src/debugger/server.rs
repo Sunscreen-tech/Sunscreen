@@ -4,8 +4,8 @@ use seal_fhe::{BfvEncryptionParametersBuilder, Context, Decryptor, Modulus};
 use semver::Version;
 
 use crate::{
-    debugger::BfvNodeType,
-    debugger::{get_mult_depth, get_sessions},
+    debugger::{BfvNodeType, ZkpNodeType, DebugNodeType},
+    debugger::{get_mult_depth, get_sessions, overflow_occurred, decrypt_seal},
     Ciphertext, InnerCiphertext, InnerPlaintext, Plaintext, Runtime, SealData, Type, WithContext,
 };
 use petgraph::stable_graph::NodeIndex;
@@ -171,48 +171,9 @@ pub async fn get_node_data(
                     let multiplicative_depth: u64 =
                         get_mult_depth(stable_graph, NodeIndex::new(nodeid), 0);
 
-                    let mut coefficients = Vec::new();
-
-                    let inner_cipher = sunscreen_ciphertext.inner;
-                    match inner_cipher {
-                        InnerCiphertext::Seal { value: vec } => {
-                            for inner_cipher in vec {
-                                let mut inner_coefficients = Vec::new();
-
-                                let coeff_mod = inner_cipher
-                                    .params
-                                    .coeff_modulus
-                                    .iter()
-                                    .map(|&num| Modulus::new(num).unwrap())
-                                    .collect::<Vec<_>>();
-                                // Decrypt inner ciphertext
-                                let encryption_params_builder =
-                                    BfvEncryptionParametersBuilder::new()
-                                        .set_coefficient_modulus(coeff_mod)
-                                        .set_plain_modulus_u64(inner_cipher.params.plain_modulus)
-                                        .set_poly_modulus_degree(
-                                            inner_cipher.params.lattice_dimension,
-                                        );
-                                let encryption_params = encryption_params_builder.build().unwrap();
-                                let ctx = Context::new(
-                                    &encryption_params,
-                                    false,
-                                    inner_cipher.params.security_level,
-                                )
-                                .expect("Failed to create context");
-                                let sk = &pk.0.data;
-
-                                let decryptor =
-                                    Decryptor::new(&ctx, sk).expect("Failed to create decryptor");
-                                let pt = decryptor.decrypt(&inner_cipher.data).unwrap();
-
-                                for i in 0..pt.len() {
-                                    inner_coefficients.push(pt.get_coefficient(i));
-                                }
-                                coefficients.push(inner_coefficients);
-                            }
-                        }
-                    }
+                    let overflowed = overflow_occurred(stable_graph, NodeIndex::new(nodeid));
+                    
+                    let coefficients = decrypt_seal(sunscreen_ciphertext.inner, &pk.0.data);
 
                     // TODO: implement detection for overflow. Values overflow if two input operands have the same sign
                     // but the output is opposite sign. Values are negative if greater than plaintextmodulus/2, else positive
@@ -223,6 +184,8 @@ pub async fn get_node_data(
                         noise_budget: Some(noise_budget),
                         coefficients,
                         multiplicative_depth,
+                        overflowed: Some(overflowed),
+                        noise_exceeded: Some(noise_budget == 0),
                     }
                 }
                 SealData::Plaintext(pt) => {
@@ -259,6 +222,8 @@ pub async fn get_node_data(
                         noise_budget: None,
                         coefficients,
                         multiplicative_depth,
+                        overflowed: None,
+                        noise_exceeded: None,
                     }
                 }
             };

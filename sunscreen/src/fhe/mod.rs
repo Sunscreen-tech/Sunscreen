@@ -5,8 +5,7 @@ use sunscreen_compiler_common::{
     CompilationResult, Context, EdgeInfo, NodeInfo, Operation as OperationTrait,
 };
 
-#[cfg(feature = "debugger")]
-use sunscreen_compiler_common::DebugData;
+
 
 use sunscreen_fhe_program::{
     FheProgram, Literal as FheProgramLiteral, Operation as FheProgramOperation, SchemeType,

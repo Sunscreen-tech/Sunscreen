@@ -26,9 +26,6 @@ pub use seal_fhe::SecurityLevel;
 
 use sunscreen_compiler_common::{CompilationResult, Context, EdgeInfo, NodeInfo};
 
-#[cfg(feature = "debugger")]
-use sunscreen_compiler_common::DebugData;
-
 use std::collections::HashSet;
 
 #[derive(Debug, Clone, Copy, Serialize, Hash, Deserialize, PartialEq, Eq)]

@@ -5,9 +5,6 @@ use sunscreen_compiler_common::{
     CompilationResult, Context, EdgeInfo, NodeInfo, Operation as OperationTrait,
 };
 
-#[cfg(feature = "debugger")]
-use sunscreen_compiler_common::DebugData;
-
 use sunscreen_fhe_program::{
     FheProgram, Literal as FheProgramLiteral, Operation as FheProgramOperation, SchemeType,
 };
@@ -500,7 +497,7 @@ impl FheCompile for FheFrontendCompilation {
         fhe_program.graph = CompilationResult {
             graph: mapped_graph,
             #[cfg(feature = "debugger")]
-            metadata: DebugData::new(),
+            metadata: self.metadata.clone(),
         };
 
         compile_inplace(fhe_program)

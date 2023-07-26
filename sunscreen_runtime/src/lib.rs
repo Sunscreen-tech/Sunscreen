@@ -27,7 +27,7 @@ use serde::{Deserialize, Serialize};
 use sunscreen_zkp_backend::BigInt;
 
 #[derive(Debug, Clone, PartialEq, Hash, Serialize, Deserialize, Eq)]
-#[serde(tag = "type")]
+//#[serde(tag = "type")]
 /**
  * The underlying backend implementation of a plaintext (e.g. SEAL's [`Plaintext`](seal_fhe::Plaintext)).
  */
@@ -162,7 +162,7 @@ impl Plaintext {
 }
 
 #[derive(Clone, Deserialize, Serialize)]
-#[serde(tag = "type")]
+//#[serde(tag = "type")]
 /**
  * The underlying backend implementation of a ciphertext (e.g SEAL's [`Ciphertext`](seal_fhe::Ciphertext)).
  */

@@ -4,7 +4,7 @@ use sunscreen_compiler_common::Operation as OperationTrait;
 use crate::Literal;
 
 #[derive(Debug, Clone, Serialize, Hash, Deserialize, PartialEq, Eq)]
-#[serde(tag = "type")]
+//#[serde(tag = "type")]
 /**
  * An operation in the execution graph.
  */

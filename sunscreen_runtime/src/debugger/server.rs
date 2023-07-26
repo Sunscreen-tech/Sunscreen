@@ -1,23 +1,22 @@
 use actix_web::{get, http::header, web, App, HttpResponse, HttpServer, Responder};
 
-use seal_fhe::{BfvEncryptionParametersBuilder, CoefficientModulus, Context, Decryptor, Modulus};
+use seal_fhe::{BfvEncryptionParametersBuilder, Context, Decryptor, Modulus};
 use semver::Version;
 
-use std::sync::OnceLock;
-use std::thread;
-
 use crate::{
-    debugger::SerializedSealData,
-    debugger::{get_mult_depth, get_sessions},
+    debugger::{decrypt_seal, get_mult_depth, get_sessions, overflow_occurred},
+    debugger::{BfvNodeType, DebugNodeType, ZkpNodeType},
     Ciphertext, InnerCiphertext, InnerPlaintext, Plaintext, Runtime, SealData, Type, WithContext,
 };
-
-use sunscreen_compiler_common::lookup::*;
+use petgraph::stable_graph::NodeIndex;
+use std::sync::OnceLock;
+use std::thread;
 
 use tokio::runtime::Builder;
 
 static SERVER: OnceLock<()> = OnceLock::new();
 
+#[cfg(feature = "debugger")]
 /**
  * Lazily starts a webserver at `127.0.0.1:8080/`.
  */
@@ -34,7 +33,7 @@ pub fn start_web_server() {
                             .service(get_session_data)
                             .service(get_all_sessions)
                             .service(get_code)
-                            .service(get_fhe_node_data)
+                            .service(get_node_data)
                             .service(get_stack_trace)
                             .service(index)
                             .service(app_css)
@@ -52,13 +51,14 @@ pub fn start_web_server() {
     });
 }
 
+#[cfg(feature = "debugger")]
 #[get("/")]
 async fn index() -> impl Responder {
     HttpResponse::Ok()
         .insert_header(header::ContentType(mime::TEXT_HTML))
         .body(include_str!("../../debugger-frontend/index.html"))
 }
-
+#[cfg(feature = "debugger")]
 #[get("/main.js")]
 async fn main_js() -> impl Responder {
     HttpResponse::Ok()
@@ -66,6 +66,7 @@ async fn main_js() -> impl Responder {
         .body(include_str!("../../debugger-frontend/build/main.js"))
 }
 
+#[cfg(feature = "debugger")]
 #[get("/App.css")]
 async fn app_css() -> impl Responder {
     HttpResponse::Ok()
@@ -73,6 +74,7 @@ async fn app_css() -> impl Responder {
         .body(include_str!("../../debugger-frontend/src/App.css"))
 }
 
+#[cfg(feature = "debugger")]
 #[get("/sessions")]
 async fn get_all_sessions() -> impl Responder {
     let lock = get_sessions().lock().unwrap();
@@ -84,6 +86,7 @@ async fn get_all_sessions() -> impl Responder {
 /**
  * Gets the graph data of a function.
  */
+#[cfg(feature = "debugger")]
 #[get("/sessions/{session}")]
 async fn get_session_data(session: web::Path<String>) -> impl Responder {
     let sessions = get_sessions().lock().unwrap();
@@ -101,6 +104,7 @@ async fn get_session_data(session: web::Path<String>) -> impl Responder {
 /**
  * Gets the Rust code of a function.
  */
+#[cfg(feature = "debugger")]
 #[get("programs/{session}")]
 async fn get_code(session: web::Path<String>) -> impl Responder {
     let sessions = get_sessions().lock().unwrap();
@@ -120,8 +124,9 @@ async fn get_code(session: web::Path<String>) -> impl Responder {
  */
 
 // TODO: be able to extract type information to have non-garbage `value` and `data_type` fields
+#[cfg(feature = "debugger")]
 #[get("sessions/{session}/{nodeid}")]
-pub async fn get_fhe_node_data(
+pub async fn get_node_data(
     path_info: web::Path<(String, usize)>,
 ) -> Result<HttpResponse, actix_web::Error> {
     let (session, nodeid) = path_info.into_inner();
@@ -130,12 +135,16 @@ pub async fn get_fhe_node_data(
     if sessions.contains_key(&session) {
         let curr_session = sessions.get(&session).unwrap().unwrap_bfv_session();
 
-        if let Some(data) = curr_session.program_data.get(nodeid).unwrap() {
+        if let Some(data) = curr_session
+            .program_data
+            .get(nodeid)
+            .unwrap_or_else(|| panic!("Index {} out of range", nodeid))
+        {
             let pk = &curr_session.private_key;
             let runtime = Runtime::new_fhe(&pk.0.params).unwrap();
             let stable_graph = &curr_session.graph.graph;
 
-            let data_for_server: SerializedSealData = match data {
+            let data_for_server: BfvNodeType = match data {
                 SealData::Ciphertext(ct) => {
                     let with_context = WithContext {
                         params: pk.0.params.clone(),
@@ -146,7 +155,7 @@ pub async fn get_fhe_node_data(
                         // WARNING: this is garbage data, so we can't return a decrypted Ciphertext whose value makes sense
                         data_type: Type {
                             is_encrypted: true,
-                            name: "".to_owned(),
+                            name: "ciphertext".to_owned(),
                             version: Version::new(1, 1, 1),
                         },
 
@@ -159,61 +168,30 @@ pub async fn get_fhe_node_data(
                         .measure_noise_budget(&sunscreen_ciphertext, pk)
                         .unwrap();
 
-                    let multiplicative_depth: u64 = get_mult_depth(stable_graph, nodeid as u32, 0);
+                    let multiplicative_depth: u64 =
+                        get_mult_depth(stable_graph, NodeIndex::new(nodeid), 0);
 
-                    let mut coefficients = Vec::new();
+                    let overflowed = overflow_occurred(
+                        stable_graph,
+                        NodeIndex::new(nodeid),
+                        pk.0.params.plain_modulus,
+                        &pk.0.data,
+                        curr_session.program_data.clone(),
+                    );
 
-                    let inner_cipher = sunscreen_ciphertext.inner;
-                    match inner_cipher {
-                        InnerCiphertext::Seal { value: vec } => {
-                            for inner_cipher in vec {
-                                let mut inner_coefficients = Vec::new();
-
-                                // coeff_mod is supposed to be the actual modulus, not the size in bits
-                                let coeff_mod = inner_cipher
-                                    .params
-                                    .coeff_modulus
-                                    .iter()
-                                    .map(|&num| Modulus::new(num).unwrap())
-                                    .collect::<Vec<_>>();
-                                // Decrypt inner ciphertext
-                                let encryption_params_builder =
-                                    BfvEncryptionParametersBuilder::new()
-                                        .set_coefficient_modulus(coeff_mod)
-                                        .set_plain_modulus_u64(inner_cipher.params.plain_modulus)
-                                        .set_poly_modulus_degree(
-                                            inner_cipher.params.lattice_dimension,
-                                        );
-                                let encryption_params = encryption_params_builder.build().unwrap();
-                                let ctx = Context::new(
-                                    &encryption_params,
-                                    false,
-                                    inner_cipher.params.security_level,
-                                )
-                                .expect("Failed to create context");
-                                let sk = &pk.0.data;
-
-                                let decryptor =
-                                    Decryptor::new(&ctx, sk).expect("Failed to create decryptor");
-                                let pt = decryptor.decrypt(&inner_cipher.data).unwrap();
-
-                                for i in 0..pt.len() {
-                                    inner_coefficients.push(pt.get_coefficient(i));
-                                }
-                                coefficients.push(inner_coefficients);
-                            }
-                        }
-                    }
+                    let coefficients = decrypt_seal(sunscreen_ciphertext.inner, &pk.0.data);
 
                     // TODO: implement detection for overflow. Values overflow if two input operands have the same sign
                     // but the output is opposite sign. Values are negative if greater than plaintextmodulus/2, else positive
-                    SerializedSealData {
+                    BfvNodeType {
                         // WARNING: `value` and `data_type` are nonsense values
                         value: 0,
                         data_type: sunscreen_ciphertext.data_type,
-                        noise_budget,
+                        noise_budget: Some(noise_budget),
                         coefficients,
                         multiplicative_depth,
+                        overflowed: Some(overflowed),
+                        noise_exceeded: Some(noise_budget == 0),
                     }
                 }
                 SealData::Plaintext(pt) => {
@@ -225,8 +203,8 @@ pub async fn get_fhe_node_data(
                     let sunscreen_plaintext = Plaintext {
                         // WARNING: this is garbage data, so we can't return a Plaintext whose value makes sense
                         data_type: Type {
-                            is_encrypted: true,
-                            name: "".to_owned(),
+                            is_encrypted: false,
+                            name: "plaintext".to_owned(),
                             version: Version::new(1, 1, 1),
                         },
                         inner: InnerPlaintext::Seal {
@@ -234,7 +212,6 @@ pub async fn get_fhe_node_data(
                         },
                     };
 
-                    let noise_budget = 0;
                     let multiplicative_depth = 0;
 
                     let mut coefficients: Vec<Vec<u64>> = Vec::new();
@@ -244,13 +221,15 @@ pub async fn get_fhe_node_data(
                     }
                     coefficients.push(inner_coefficients);
 
-                    SerializedSealData {
+                    BfvNodeType {
                         // WARNING: `value` and `data_type` contain nonsense
                         value: 0,
                         data_type: sunscreen_plaintext.data_type,
-                        noise_budget,
+                        noise_budget: None,
                         coefficients,
                         multiplicative_depth,
+                        overflowed: None,
+                        noise_exceeded: None,
                     }
                 }
             };
@@ -272,31 +251,25 @@ pub async fn get_fhe_node_data(
 /**
  * Gets the stack trace associated with a node.
  */
+#[cfg(feature = "debugger")]
 #[get("sessions/{session}/stacktrace/{nodeid}")]
 pub async fn get_stack_trace(
     path_info: web::Path<(String, usize)>,
 ) -> Result<HttpResponse, actix_web::Error> {
     let (session, nodeid) = path_info.into_inner();
-
     let sessions = get_sessions().lock().unwrap();
-    if sessions.contains_key(&session) {
-        let curr_session = sessions.get(&session).unwrap().unwrap_bfv_session();
+
+    if let Some(curr_session) = sessions.get(&session) {
+        let curr_session = curr_session.unwrap_bfv_session();
         let stack_lookup = &curr_session.graph.metadata.stack_lookup;
 
-        if let Some(node_weight) = curr_session
-            .graph
-            .node_weight(petgraph::stable_graph::node_index(nodeid)
-        )
-        {
-            match stack_lookup.id_to_data(node_weight.stack_id) {
-                Ok(stack_frames) => {
-                    let stack_frames_json = serde_json::to_string(&stack_frames).unwrap();
-                    return Ok(HttpResponse::Ok().body(stack_frames_json));
-                }
-                Err(_e) => {
-                    return Ok(HttpResponse::NotFound()
-                        .body(format!("Stack trace for node {} not found", nodeid)));
-                }
+        if let Some(node_info) = curr_session.graph.node_weight(NodeIndex::new(nodeid)) {
+            if let Some(stack_frames) = stack_lookup.id_data_lookup.get(&node_info.stack_id) {
+                let stack_frames_json = serde_json::to_string(&stack_frames).unwrap();
+                return Ok(HttpResponse::Ok().body(stack_frames_json));
+            } else {
+                return Ok(HttpResponse::NotFound()
+                    .body(format!("Stack trace for node {} not found", nodeid)));
             }
         }
     }

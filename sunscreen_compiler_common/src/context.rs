@@ -10,7 +10,7 @@ use crate::{Operation, Render};
 use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "debugger")]
-use crate::lookup::{GroupLookup, IdLookup, StackFrameLookup};
+use crate::lookup::{GroupLookup, StackFrameLookup};
 
 #[cfg(feature = "debugger")]
 use backtrace::Backtrace;
@@ -133,7 +133,7 @@ where
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, Serialize)]
-#[serde(tag = "type")]
+//#[serde(tag = "type")]
 /**
  * Information about how one compiler graph node relates to another.
  */
@@ -356,56 +356,39 @@ where
     pub fn add_node(&mut self, operation: O) -> NodeIndex {
         #[cfg(feature = "debugger")]
         {
-            let group_id = self.graph.metadata.group_counter;
-            let stack_id = self.graph.metadata.stack_counter;
-
-            // TODO: figure out updates to group and stack id?
-            // I think that stack id should be updated every time a node is added to the graph
-            // and that group id should be updated every time a function is called/returned via proc macro
-            // Group counter should be updated every time you push onto the group stack, and group stack is pushed/popped with functions being called and returned
-            // Without being able to implement grouping, can't dive into lines of code. Still can click nodes and see stack traces
-            // To assign group ids, look up current group stack, look up group id corresponding to it, and assign that to nodes.
-            // If you don't find the group id corresponding to this, then assign the group counter
-            // Group counter is updated every time you push onto the group stack
-            // Group counter is also appended to the name of functions
-
-            /*
-            Lines of code => graph:
-                - When you click a line, you know function + lineno
-                - Need to traverse the stack trie until you find a stack frame whose top entry contains the line of code the user clicked on
-                - Then everything underneath that node in the trie is a callee of the current function, and everything with that stack id is the current line
-
-            */
-
-            // Capture backtrace and insert into lookup structure
+            // Capture backtrace and insert into lookup
             let bt = Backtrace::new();
-
-            // Not totally sure what key to insert or how to insert a key into the lookup structure only given a node ID
-            self.graph
-                .metadata
-                .stack_lookup
-                .dict
-                .insert(stack_id, vec![0]);
-
-            let key = self
+            let stack_frames = self
                 .graph
                 .metadata
                 .stack_lookup
-                .dict
-                .get(&stack_id)
-                .expect("Invalid stack key");
+                .backtrace_to_stackframes(bt);
+            let serialized_stack_frames = stack_frames
+                .iter()
+                .map(|frame| frame.serialize())
+                .collect::<Vec<_>>()
+                .join("_");
 
-            self.graph.metadata.stack_lookup.data_to_id(
-                key.clone(),
-                self.graph
-                    .metadata
-                    .stack_lookup
-                    .backtrace_to_stackframes(bt),
-            );
+            let stack_id = *self
+                .graph
+                .metadata
+                .stack_lookup
+                .data_id_lookup
+                .entry(serialized_stack_frames.clone())
+                .or_insert_with(|| {
+                    self.graph.metadata.stack_counter += 1;
+                    self.graph.metadata.stack_counter
+                });
 
-            self.graph.metadata.stack_counter += 1;
+            let group_id = self.graph.metadata.group_counter;
 
-            // Add node to graph
+            self.graph
+                .metadata
+                .stack_lookup
+                .id_data_lookup
+                .entry(stack_id)
+                .or_insert(stack_frames);
+
             self.graph.add_node(NodeInfo {
                 operation,
                 group_id,

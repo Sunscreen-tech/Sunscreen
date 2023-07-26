@@ -26,13 +26,10 @@ pub use seal_fhe::SecurityLevel;
 
 use sunscreen_compiler_common::{CompilationResult, Context, EdgeInfo, NodeInfo};
 
-#[cfg(feature = "debugger")]
-use sunscreen_compiler_common::DebugData;
-
 use std::collections::HashSet;
 
 #[derive(Debug, Clone, Copy, Serialize, Hash, Deserialize, PartialEq, Eq)]
-#[serde(tag = "type")]
+//#[serde(tag = "type")]
 /**
  * Sunscreen supports the BFV scheme.
  */
@@ -121,7 +118,7 @@ impl TryFrom<u8> for SchemeType {
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
-#[serde(tag = "type")]
+//#[serde(tag = "type")]
 /**
  * The type of output from an Fhe Program's graph node.
  */
@@ -392,11 +389,10 @@ impl FheProgramTrait for FheProgram {
                 graph: StableGraph::from(pruned),
             },
 
-            // TODO: copy the metadata coming from the input
             #[cfg(feature = "debugger")]
             graph: CompilationResult {
                 graph: StableGraph::from(pruned),
-                metadata: DebugData::new(),
+                metadata: self.graph.metadata.clone(),
             },
 
             #[cfg(feature = "debugger")]

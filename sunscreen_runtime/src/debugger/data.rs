@@ -1,6 +1,6 @@
-use petgraph::Direction::Incoming;
-use petgraph::stable_graph::StableGraph;
 use petgraph::stable_graph::NodeIndex;
+use petgraph::stable_graph::StableGraph;
+use petgraph::Direction::Incoming;
 use serde::{Deserialize, Serialize};
 use sunscreen_compiler_common::Operation;
 use sunscreen_compiler_common::Type;
@@ -27,13 +27,18 @@ pub fn get_mult_depth<O>(
 where
     O: Operation,
 {
-    if graph.node_weight(node).unwrap().operation.is_multiplication() {
+    if graph
+        .node_weight(node)
+        .unwrap()
+        .operation
+        .is_multiplication()
+    {
         depth += 1;
     }
 
     let neighbors = graph.neighbors_directed(node, Incoming);
     if neighbors.clone().count() == 0 {
-        return depth; 
+        return depth;
     }
     let mut max_depth = 0;
     for neighbor in neighbors.clone() {
@@ -45,6 +50,4 @@ where
 }
 
 #[test]
-fn test_get_mul_depth() {
-
-}
+fn test_get_mul_depth() {}

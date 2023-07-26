@@ -12,8 +12,6 @@ use petgraph::stable_graph::NodeIndex;
 use std::sync::OnceLock;
 use std::thread;
 
-use sunscreen_compiler_common::lookup::IdLookup;
-
 use tokio::runtime::Builder;
 
 static SERVER: OnceLock<()> = OnceLock::new();
@@ -170,7 +168,8 @@ pub async fn get_fhe_node_data(
                         .measure_noise_budget(&sunscreen_ciphertext, pk)
                         .unwrap();
 
-                    let multiplicative_depth: u64 = get_mult_depth(stable_graph, NodeIndex::new(nodeid), 0);
+                    let multiplicative_depth: u64 =
+                        get_mult_depth(stable_graph, NodeIndex::new(nodeid), 0);
 
                     let mut coefficients = Vec::new();
 
@@ -287,22 +286,19 @@ pub async fn get_stack_trace(
     path_info: web::Path<(String, usize)>,
 ) -> Result<HttpResponse, actix_web::Error> {
     let (session, nodeid) = path_info.into_inner();
-
     let sessions = get_sessions().lock().unwrap();
-    if sessions.contains_key(&session) {
-        let curr_session = sessions.get(&session).unwrap().unwrap_bfv_session();
+
+    if let Some(curr_session) = sessions.get(&session) {
+        let curr_session = curr_session.unwrap_bfv_session();
         let stack_lookup = &curr_session.graph.metadata.stack_lookup;
 
         if let Some(node_info) = curr_session.graph.node_weight(NodeIndex::new(nodeid)) {
-            match stack_lookup.id_to_data(node_info.stack_id) {
-                Ok(stack_frames) => {
-                    let stack_frames_json = serde_json::to_string(&stack_frames).unwrap();
-                    return Ok(HttpResponse::Ok().body(stack_frames_json));
-                }
-                Err(_e) => {
-                    return Ok(HttpResponse::NotFound()
-                        .body(format!("Stack trace for node {} not found", nodeid)));
-                }
+            if let Some(stack_frames) = stack_lookup.id_data_lookup.get(&node_info.stack_id) {
+                let stack_frames_json = serde_json::to_string(&stack_frames).unwrap();
+                return Ok(HttpResponse::Ok().body(stack_frames_json));
+            } else {
+                return Ok(HttpResponse::NotFound()
+                    .body(format!("Stack trace for node {} not found", nodeid)));
             }
         }
     }

@@ -10,7 +10,7 @@ use crate::{Operation, Render};
 use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "debugger")]
-use crate::lookup::{GroupLookup, IdLookup, StackFrameLookup};
+use crate::lookup::{GroupLookup, StackFrameLookup};
 
 #[cfg(feature = "debugger")]
 use backtrace::Backtrace;
@@ -356,49 +356,42 @@ where
     pub fn add_node(&mut self, operation: O) -> NodeIndex {
         #[cfg(feature = "debugger")]
         {
-            let group_id = self.graph.metadata.group_counter;
-            let stack_id = self.graph.metadata.stack_counter;
-            /*
-            Lines of code => graph:
-                - When you click a line, you know function + lineno
-                - Need to traverse the stack trie until you find a stack frame whose top entry contains the line of code the user clicked on
-                - Then everything underneath that node in the trie is a callee of the current function, and everything with that stack id is the current line
-            */
-
-            // Capture backtrace and insert into lookup structure
+            // Capture backtrace and insert into lookup
             let bt = Backtrace::new();
-
-            // Not totally sure what key to insert or how to insert a key into the lookup structure only given a node ID
-            self.graph
-                .metadata
-                .stack_lookup
-                .dict
-                .insert(stack_id, vec![0]);
-
-            let key = self
+            let stack_frames = self
                 .graph
                 .metadata
                 .stack_lookup
-                .dict
-                .get(&stack_id)
-                .expect("Invalid stack key");
+                .backtrace_to_stackframes(bt);
+            let serialized_stack_frames = stack_frames
+                .iter()
+                .map(|frame| frame.serialize())
+                .collect::<Vec<_>>()
+                .join("_");
 
-            self.graph.metadata.stack_lookup.data_to_id(
-                key.clone(),
-                self.graph
-                    .metadata
-                    .stack_lookup
-                    .backtrace_to_stackframes(bt),
-            );
+            let stack_id = self
+                .graph
+                .metadata
+                .stack_lookup
+                .data_id_lookup
+                .entry(serialized_stack_frames.clone())
+                .or_insert_with(|| {
+                    self.graph.metadata.stack_counter += 1;
+                    self.graph.metadata.stack_counter
+                })
+                .clone();
 
-            self.graph.metadata.stack_counter += 1;
+            let group_id = self.graph.metadata.group_counter;
 
-            // Add node to graph
-            self.graph.add_node(NodeInfo {
-                operation,
-                group_id,
-                stack_id,
-            })
+            self.graph.metadata.stack_lookup.id_data_lookup
+                .entry(stack_id.clone())
+                .or_insert(stack_frames);
+
+            return self.graph.add_node(NodeInfo {
+                operation: operation,
+                group_id: group_id,
+                stack_id: stack_id,
+            });
         }
         #[cfg(not(feature = "debugger"))]
         {

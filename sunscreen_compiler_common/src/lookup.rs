@@ -64,7 +64,7 @@ impl StackFrameInfo {
 }
 
 /**
- * Lookup structure for the one-to-one correspondence between call stack information and a ProgramNode's `stack-id`.
+ * Lookup structure for the one-to-one correspondence between call stack information and a ProgramNode's `stack_id`.
  */
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct StackFrameLookup {
@@ -76,7 +76,7 @@ pub struct StackFrameLookup {
     /**
      * Given a node's serialized stack trace, return its `stack_id`.
      */
-    pub data_id_lookup: HashMap<String, u64>
+    pub data_id_lookup: HashMap<String, u64>,
 }
 
 impl StackFrameLookup {
@@ -86,12 +86,52 @@ impl StackFrameLookup {
     pub fn new() -> Self {
         Self {
             id_data_lookup: HashMap::new(),
-            data_id_lookup: HashMap::new()
+            data_id_lookup: HashMap::new(),
         }
+    }
+
+    /**
+     * Extracts backtrace info, turning it into a `Vec<StackFrameInfo>`.
+     */
+    pub fn backtrace_to_stackframes(&self, bt: Backtrace) -> Vec<StackFrameInfo> {
+        let mut trace = Vec::<StackFrameInfo>::new();
+        let frames = bt.frames();
+        for frame in frames {
+            trace.push(StackFrameInfo::new(frame));
+        }
+        trace
     }
 }
 
-/* 
+type Group = String;
+/**
+ * Lookup structure for the one-to-one correspondence between grouping information and a ProgramNode's `group_id`.
+ */
+#[derive(Clone, Serialize, Deserialize, Debug)]
+pub struct GroupLookup {
+    /**
+     * Given a node's `group_id`, return the node's group.
+     */
+    pub id_data_lookup: HashMap<u64, Group>,
+
+    /**
+     * Given a node's group name, return its `group_id`.
+     */
+    pub data_id_lookup: HashMap<Group, u64>,
+}
+
+impl GroupLookup {
+    /**
+     * Creates a new `GroupLookup` object.
+     */
+    pub fn new() -> Self {
+        Self {
+            id_data_lookup: HashMap::new(),
+            data_id_lookup: HashMap::new(),
+        }
+    }
+}
+/*
 /**
  * Support for retrieval and insertion from lookup structures.
  */

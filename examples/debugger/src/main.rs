@@ -16,9 +16,21 @@ fn main() {
         a * a + b * b
     }
 
+    #[fhe_program(scheme = "bfv")]
+    fn mul_cubes(a: Cipher<Signed>, b: Cipher<Signed>) -> Cipher<Signed> {
+        a * a * a * b * b * b
+    }
+
+    #[fhe_program(scheme = "bfv", chain_count = 5)]
+    fn mul_cubes_chained(a: Cipher<Signed>, b: Cipher<Signed>) -> Cipher<Signed> {
+        a * a * a * b * b * b
+    }
+
     let app = Compiler::new()
         .fhe_program(mad)
         .fhe_program(add_squares)
+        .fhe_program(mul_cubes)
+        .fhe_program(mul_cubes_chained)
         .plain_modulus_constraint(PlainModulusConstraint::Raw(1024))
         .compile()
         .unwrap();
@@ -64,6 +76,30 @@ fn main() {
             &public,
             &private,
             mad.source(),
+        )
+        .unwrap();
+
+    let args4: Vec<FheProgramInput> = vec![a.clone().into(), c.clone().into()];
+
+    runtime
+        .debug_fhe_program(
+            app.get_fhe_program("mul_cubes").unwrap(),
+            args4,
+            &public,
+            &private,
+            mul_cubes.source(),
+        )
+        .unwrap();
+
+    let args5: Vec<FheProgramInput> = vec![a.clone().into(), c.clone().into()];
+
+    runtime
+        .debug_fhe_program(
+            app.get_fhe_program("mul_cubes_chained").unwrap(),
+            args5,
+            &public,
+            &private,
+            mul_cubes_chained.source(),
         )
         .unwrap();
     loop {

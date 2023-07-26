@@ -5,8 +5,6 @@ use sunscreen_compiler_common::{
     CompilationResult, Context, EdgeInfo, NodeInfo, Operation as OperationTrait,
 };
 
-
-
 use sunscreen_fhe_program::{
     FheProgram, Literal as FheProgramLiteral, Operation as FheProgramOperation, SchemeType,
 };

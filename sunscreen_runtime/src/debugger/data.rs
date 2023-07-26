@@ -17,6 +17,7 @@ use sunscreen_compiler_common::Operation;
 use sunscreen_compiler_common::Type;
 use sunscreen_compiler_common::{EdgeInfo, NodeInfo};
 
+#[derive(Clone, Serialize, Deserialize)]
 pub enum DebugNodeType {
     Bfv(BfvNodeType),
     Zkp(ZkpNodeType),
@@ -223,7 +224,8 @@ pub fn decrypt_seal(inner_cipher: InnerCiphertext, sk: &SecretKey) -> Vec<Vec<u6
 }
 #[derive(Clone, Serialize, Deserialize)]
 pub struct ZkpNodeType {
-    pub value: i64,
+    // Send `BigInt` values as strings 
+    pub value: String,
 }
 
 #[test]

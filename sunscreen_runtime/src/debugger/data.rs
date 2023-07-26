@@ -1,5 +1,6 @@
-use petgraph::adj::NodeIndex;
+use petgraph::Direction::Incoming;
 use petgraph::stable_graph::StableGraph;
+use petgraph::stable_graph::NodeIndex;
 use serde::{Deserialize, Serialize};
 use sunscreen_compiler_common::Operation;
 use sunscreen_compiler_common::Type;
@@ -18,14 +19,27 @@ pub struct SerializedSealData {
  * Gets the multiplicative depth of a node in the compilation graph.
  */
 
-// TODO: implement with memoization? will have to see how performance is with naive algorithm
 pub fn get_mult_depth<O>(
-    _graph: &StableGraph<NodeInfo<O>, EdgeInfo>,
-    _node: NodeIndex,
-    _depth: u64,
+    graph: &StableGraph<NodeInfo<O>, EdgeInfo>,
+    node: NodeIndex,
+    mut depth: u64,
 ) -> u64
 where
     O: Operation,
 {
-    0
+    if graph.node_weight(node).unwrap().operation.is_multiplication() {
+        depth += 1;
+    }
+
+    let neighbors = graph.neighbors_directed(node, Incoming);
+    if neighbors.clone().count() == 0 {
+        return depth; 
+    }
+    let mut max_depth = 0;
+    for neighbor in neighbors.clone() {
+        let neighbor_depth = get_mult_depth(graph, neighbor, depth);
+        max_depth = max_depth.max(neighbor_depth);
+    }
+
+    max_depth
 }

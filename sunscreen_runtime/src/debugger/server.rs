@@ -243,7 +243,7 @@ pub async fn get_node_data(
                     .get(nodeid)
                 {
                     DebugNodeType::Zkp(ZkpNodeType {
-                        value: "".to_owned(),
+                        value: data.unwrap().to_string(),
                     })
                 } else {
                     return Ok(HttpResponse::NotFound().body(format!("Node {} not found", nodeid)));

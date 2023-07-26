@@ -33,7 +33,7 @@ pub fn start_web_server() {
                             .service(get_session_data)
                             .service(get_all_sessions)
                             .service(get_code)
-                            .service(get_fhe_node_data)
+                            .service(get_node_data)
                             .service(get_stack_trace)
                             .service(index)
                             .service(app_css)
@@ -126,7 +126,7 @@ async fn get_code(session: web::Path<String>) -> impl Responder {
 // TODO: be able to extract type information to have non-garbage `value` and `data_type` fields
 #[cfg(feature = "debugger")]
 #[get("sessions/{session}/{nodeid}")]
-pub async fn get_fhe_node_data(
+pub async fn get_node_data(
     path_info: web::Path<(String, usize)>,
 ) -> Result<HttpResponse, actix_web::Error> {
     let (session, nodeid) = path_info.into_inner();

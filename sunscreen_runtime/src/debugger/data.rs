@@ -6,8 +6,13 @@ use sunscreen_compiler_common::Operation;
 use sunscreen_compiler_common::Type;
 use sunscreen_compiler_common::{EdgeInfo, NodeInfo};
 
+pub enum DebugNodeType {
+    Bfv(BfvNodeType),
+    Zkp(ZkpNodeType)
+}
+
 #[derive(Clone, Serialize, Deserialize)]
-pub struct SerializedSealData {
+pub struct BfvNodeType {
     pub value: i64,
     pub data_type: Type,
     pub noise_budget: Option<u32>,
@@ -47,6 +52,12 @@ where
     }
 
     max_depth
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct ZkpNodeType {
+    pub value: i64,
+    
 }
 
 #[test]

@@ -4,7 +4,7 @@ use seal_fhe::{BfvEncryptionParametersBuilder, Context, Decryptor, Modulus};
 use semver::Version;
 
 use crate::{
-    debugger::SerializedSealData,
+    debugger::BfvNodeType,
     debugger::{get_mult_depth, get_sessions},
     Ciphertext, InnerCiphertext, InnerPlaintext, Plaintext, Runtime, SealData, Type, WithContext,
 };
@@ -144,7 +144,7 @@ pub async fn get_fhe_node_data(
             let runtime = Runtime::new_fhe(&pk.0.params).unwrap();
             let stable_graph = &curr_session.graph.graph;
 
-            let data_for_server: SerializedSealData = match data {
+            let data_for_server: BfvNodeType = match data {
                 SealData::Ciphertext(ct) => {
                     let with_context = WithContext {
                         params: pk.0.params.clone(),
@@ -216,7 +216,7 @@ pub async fn get_fhe_node_data(
 
                     // TODO: implement detection for overflow. Values overflow if two input operands have the same sign
                     // but the output is opposite sign. Values are negative if greater than plaintextmodulus/2, else positive
-                    SerializedSealData {
+                    BfvNodeType {
                         // WARNING: `value` and `data_type` are nonsense values
                         value: 0,
                         data_type: sunscreen_ciphertext.data_type,
@@ -252,7 +252,7 @@ pub async fn get_fhe_node_data(
                     }
                     coefficients.push(inner_coefficients);
 
-                    SerializedSealData {
+                    BfvNodeType {
                         // WARNING: `value` and `data_type` contain nonsense
                         value: 0,
                         data_type: sunscreen_plaintext.data_type,

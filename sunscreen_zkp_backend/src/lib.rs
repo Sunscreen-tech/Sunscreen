@@ -26,7 +26,7 @@ use crypto_bigint::{
 };
 pub use error::*;
 pub use exec::ExecutableZkpProgram;
-pub use jit::{jit_prover, jit_verifier, CompiledZkpProgram, Operation};
+pub use jit::{jit_prover, jit_verifier, CompiledZkpProgram, ZkpProgramMetadata, Operation};
 use petgraph::stable_graph::NodeIndex;
 use serde::{Deserialize, Serialize};
 

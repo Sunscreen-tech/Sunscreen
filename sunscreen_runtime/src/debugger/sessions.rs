@@ -5,7 +5,7 @@ use crate::{PrivateKey, SealData};
 
 use sunscreen_compiler_common::CompilationResult;
 use sunscreen_fhe_program::Operation as FheOperation;
-use sunscreen_zkp_backend::{BigInt, Operation as ZkpOperation};
+use sunscreen_zkp_backend::{Operation as ZkpOperation, BigInt};
 
 // Global data structure storing session information
 static SESSIONS: OnceLock<Mutex<HashMap<String, Session>>> = OnceLock::new();
@@ -109,6 +109,7 @@ pub struct ZkpSession {
     /**
      * The values of operands in the compilation graph.
      */
+    // TODO: figure out how to refactor this
     pub program_data: Vec<Option<BigInt>>,
 
     /**

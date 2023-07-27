@@ -431,7 +431,7 @@ where
     where
         I: Into<FheProgramInput>,
     {
-        static SESSION_NUM: AtomicUsize = AtomicUsize::new(0);
+        
 
         let session_name = format!(
             "{}_{}",
@@ -582,6 +582,61 @@ where
 
         Ok(backend.verify(&prog, proof)?)
     }
+
+    /**
+     * 
+     */
+    #[cfg(feature = "debugger")]
+    pub fn debug_prove<I>(
+        &self,
+        program: &CompiledZkpProgram,
+        constant_inputs: Vec<I>,
+        public_inputs: Vec<I>,
+        private_inputs: Vec<I>,
+    ) -> Result<Proof>
+    where
+        I: Into<ZkpProgramInput>,
+    {
+        use crate::debugger::get_sessions;
+
+        let session_name = format!(
+            "{}_{}",
+            program.metadata.name,
+            SESSION_NUM.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
+        );
+
+        let constant_inputs = constant_inputs
+            .into_iter()
+            .flat_map(|x| I::into(x).0.to_native_fields())
+            .collect::<Vec<BigInt>>();
+        let public_inputs = public_inputs
+            .into_iter()
+            .flat_map(|x| I::into(x).0.to_native_fields())
+            .collect::<Vec<BigInt>>();
+        let private_inputs = private_inputs
+            .into_iter()
+            .flat_map(|x| I::into(x).0.to_native_fields())
+            .collect::<Vec<BigInt>>();
+
+        let backend = &self.zkp_backend;
+
+        trace!("Starting JIT (prover)...");
+
+        let now = Instant::now();
+
+        let prog =
+            backend.jit_prover(program, &constant_inputs, &public_inputs, &private_inputs)?;
+
+        trace!("Prover JIT time {}s", now.elapsed().as_secs_f64());
+
+        let inputs = [public_inputs, private_inputs].concat();
+
+        trace!("Starting backend prove...");
+        trace!("Starting webserver");
+        start_web_server();
+
+        Ok(backend.prove(&prog, &inputs)?)
+    }
 }
 
 impl GenericRuntime<(), ()> {
@@ -730,3 +785,4 @@ impl<B> ZkpRuntime<B> {
  *   can do both.
  */
 pub type Runtime = GenericRuntime<(), ()>;
+static SESSION_NUM: AtomicUsize = AtomicUsize::new(0);

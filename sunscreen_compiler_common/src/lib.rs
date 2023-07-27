@@ -206,3 +206,31 @@ where
         }
     }
 }
+
+/**
+ * 
+ */
+pub trait SessionProvider<O: Operation, T, M> {
+    /**
+     * 
+     */
+    fn new_session();
+}
+
+/**
+ * 
+ */
+pub struct Session<O: Operation, T, M> {
+    /**
+     * 
+     */
+    pub graph: CompilationResult<O>,
+    /**
+     * 
+     */
+    pub run_data: Vec<Option<T>>,
+    /**
+     * 
+     */
+    pub metadata: M,
+}

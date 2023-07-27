@@ -477,7 +477,7 @@ impl ZkpBackend for BulletproofsBackend {
             .map(Scalar::try_from)
             .collect::<Result<Vec<Scalar>>>()?;
 
-        jit_prover::<Scalar>(prog, &constant_inputs, &public_inputs, &private_inputs)
+        jit_prover::<Scalar, ()>(prog, &constant_inputs, &public_inputs, &private_inputs)
     }
 
     fn jit_verifier(

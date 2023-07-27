@@ -8,7 +8,7 @@ use std::collections::{HashMap, HashSet};
 use std::marker::PhantomData;
 use sunscreen_fhe_program::FheProgramTrait;
 use sunscreen_runtime::{marker, CompiledFheProgram, Fhe, FheZkp, Zkp};
-use sunscreen_zkp_backend::{BackendField, CompiledZkpProgram, ZkpBackend};
+use sunscreen_zkp_backend::{BackendField, CompiledZkpProgram, ZkpBackend, ZkpProgramMetadata};
 
 #[derive(Debug, Clone)]
 enum ParamsMode {
@@ -331,7 +331,14 @@ where
                 let result = prog.build()?;
                 let result = zkp::compile(&result);
 
-                Ok((prog.name().to_owned(), result))
+                Ok((prog.name().to_owned(), 
+                    CompiledZkpProgram{
+                        graph: result,
+                        metadata: ZkpProgramMetadata{
+                            name: prog.name().to_string()
+                        }
+                    }
+            ))
             })
             .collect::<Result<HashMap<_, _>>>()?;
 

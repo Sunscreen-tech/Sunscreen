@@ -4,8 +4,8 @@ use semver::Version;
 
 use crate::{
     debugger::sessions::{BfvSession, Session, ZkpSession},
-    debugger::{decrypt_seal, get_mult_depth, get_sessions, overflow_occurred},
-    debugger::{BfvNodeType, DebugNodeType, ZkpNodeType},
+    debugger::{decrypt_seal, get_mult_depth, overflow_occurred},
+    debugger::{get_sessions, BfvNodeType, DebugNodeType, ZkpNodeType},
     Ciphertext, InnerCiphertext, InnerPlaintext, Plaintext, Runtime, SealData, Type, WithContext,
 };
 use petgraph::stable_graph::NodeIndex;
@@ -240,7 +240,9 @@ pub async fn get_node_data(
             Session::ZkpSession(zkp_session) => {
                 if let Some(data) = zkp_session.program_data.get(nodeid) {
                     DebugNodeType::Zkp(ZkpNodeType {
-                        value: data.unwrap_or(sunscreen_zkp_backend::BigInt::from(0u32)).to_string(),
+                        value: data
+                            .unwrap_or(sunscreen_zkp_backend::BigInt::from(0u32))
+                            .to_string(),
                     })
                 } else {
                     return Ok(HttpResponse::NotFound().body(format!("Node {} not found", nodeid)));

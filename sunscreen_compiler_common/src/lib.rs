@@ -31,8 +31,8 @@ use serde::{
 };
 
 use core::hash::Hash;
-use std::{fmt::Debug, collections::HashMap};
 use std::str::FromStr;
+use std::{collections::HashMap, fmt::Debug};
 
 /**
  * Renders this object into a format that can be viewed by external
@@ -209,40 +209,29 @@ where
 }
 
 /**
- * 
+ *
  */
-pub trait SessionProvider<O: Operation, T, M> {
-
+pub trait DebugSessionProvider<O: Operation, T, M> {
     /**
-     * 
+     *
      */
-    fn new_session(session: Session<O, T, M>);
-
-    /**
-     * 
-     */
-    // fn get_sessions() -> HashMap<String, Session<O, T, M>>;
-
-    /**
-     * 
-     */
-    fn set_data(session_name: String, index: NodeIndex, data: T);
+    fn add_session(&self, session: Session<O, T, M>);
 }
 
 /**
- * 
+ *
  */
 pub struct Session<O: Operation, T, M> {
     /**
-     * 
+     *
      */
     pub graph: CompilationResult<O>,
     /**
-     * 
+     *
      */
     pub run_data: Vec<Option<T>>,
     /**
-     * 
+     *
      */
     pub metadata: M,
 }

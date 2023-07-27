@@ -1,5 +1,7 @@
+use crate::debugger::get_session_name;
 #[cfg(feature = "debugger")]
 use crate::debugger::server::start_web_server;
+use crate::debugger::GlobalSessionProvider;
 use crate::error::*;
 use crate::metadata::*;
 use crate::DebugInfo;
@@ -431,13 +433,7 @@ where
     where
         I: Into<FheProgramInput>,
     {
-        
-
-        let session_name = format!(
-            "{}_{}",
-            fhe_program.metadata.name,
-            SESSION_NUM.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
-        );
+        let session_name = get_session_name(&fhe_program.metadata.name);
 
         self.run_impl(
             fhe_program,
@@ -501,7 +497,7 @@ where
 impl<T, B> GenericRuntime<T, B>
 where
     T: marker::Zkp,
-    B: ZkpBackend,
+    B: ZkpBackend<GlobalSessionProvider>,
 {
     /**
      * Prove the given `inputs` satisfy `program`.
@@ -535,8 +531,21 @@ where
 
         let now = Instant::now();
 
-        let prog =
-            backend.jit_prover(program, &constant_inputs, &public_inputs, &private_inputs)?;
+        let session_provider = if cfg!(feature = "debugger") {
+            Some(GlobalSessionProvider::new(&get_session_name(
+                &program.metadata.name,
+            )))
+        } else {
+            None
+        };
+
+        let prog = backend.jit_prover(
+            program,
+            &constant_inputs,
+            &public_inputs,
+            &private_inputs,
+            session_provider.as_ref(),
+        )?;
 
         trace!("Prover JIT time {}s", now.elapsed().as_secs_f64());
 
@@ -581,61 +590,6 @@ where
         trace!("Starting backend verify...");
 
         Ok(backend.verify(&prog, proof)?)
-    }
-
-    /**
-     * 
-     */
-    #[cfg(feature = "debugger")]
-    pub fn debug_prove<I>(
-        &self,
-        program: &CompiledZkpProgram,
-        constant_inputs: Vec<I>,
-        public_inputs: Vec<I>,
-        private_inputs: Vec<I>,
-    ) -> Result<Proof>
-    where
-        I: Into<ZkpProgramInput>,
-    {
-        use crate::debugger::get_sessions;
-
-        let session_name = format!(
-            "{}_{}",
-            program.metadata.name,
-            SESSION_NUM.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
-        );
-
-        let constant_inputs = constant_inputs
-            .into_iter()
-            .flat_map(|x| I::into(x).0.to_native_fields())
-            .collect::<Vec<BigInt>>();
-        let public_inputs = public_inputs
-            .into_iter()
-            .flat_map(|x| I::into(x).0.to_native_fields())
-            .collect::<Vec<BigInt>>();
-        let private_inputs = private_inputs
-            .into_iter()
-            .flat_map(|x| I::into(x).0.to_native_fields())
-            .collect::<Vec<BigInt>>();
-
-        let backend = &self.zkp_backend;
-
-        trace!("Starting JIT (prover)...");
-
-        let now = Instant::now();
-
-        let prog =
-            backend.jit_prover(program, &constant_inputs, &public_inputs, &private_inputs)?;
-
-        trace!("Prover JIT time {}s", now.elapsed().as_secs_f64());
-
-        let inputs = [public_inputs, private_inputs].concat();
-
-        trace!("Starting backend prove...");
-        trace!("Starting webserver");
-        start_web_server();
-
-        Ok(backend.prove(&prog, &inputs)?)
     }
 }
 
@@ -696,7 +650,7 @@ impl GenericRuntime<(), ()> {
      */
     pub fn new_zkp<B>(backend: &B) -> Result<ZkpRuntime<B>>
     where
-        B: ZkpBackend + Clone + 'static,
+        B: ZkpBackend<GlobalSessionProvider> + Clone + 'static,
     {
         Ok(GenericRuntime {
             runtime_data: RuntimeData::Zkp(Self::make_zkp_runtime_data()),
@@ -710,7 +664,7 @@ impl GenericRuntime<(), ()> {
      */
     pub fn new_fhe_zkp<B>(params: &Params, zkp_backend: &B) -> Result<FheZkpRuntime<B>>
     where
-        B: ZkpBackend + Clone + 'static,
+        B: ZkpBackend<GlobalSessionProvider> + Clone + 'static,
     {
         let runtime_data = RuntimeData::FheZkp(
             Self::make_fhe_runtime_data(params)?,
@@ -736,7 +690,7 @@ impl<B> FheZkpRuntime<B> {
      */
     pub fn new(params: &Params, zkp_backend: &B) -> Result<Self>
     where
-        B: ZkpBackend + Clone + 'static,
+        B: ZkpBackend<GlobalSessionProvider> + Clone + 'static,
     {
         Runtime::new_fhe_zkp(params, zkp_backend)
     }
@@ -767,7 +721,7 @@ impl<B> ZkpRuntime<B> {
      */
     pub fn new(backend: &B) -> Result<Self>
     where
-        B: ZkpBackend + Clone + 'static,
+        B: ZkpBackend<GlobalSessionProvider> + Clone + 'static,
     {
         Runtime::new_zkp(backend)
     }
@@ -785,4 +739,3 @@ impl<B> ZkpRuntime<B> {
  *   can do both.
  */
 pub type Runtime = GenericRuntime<(), ()>;
-static SESSION_NUM: AtomicUsize = AtomicUsize::new(0);

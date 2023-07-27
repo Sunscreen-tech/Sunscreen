@@ -436,15 +436,11 @@ pub(crate) fn compile(program: &ZkpFrontendCompilation) -> CompilationResult<Jit
 
     let mut metadata = DebugData::new();
 
-
-    
     CompilationResult {
         graph: jit,
         #[cfg(feature = "debugger")]
-        metadata: metadata
+        metadata: metadata,
     }
-    
-   
 }
 
 /**

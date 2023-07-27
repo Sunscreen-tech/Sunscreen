@@ -331,14 +331,15 @@ where
                 let result = prog.build()?;
                 let result = zkp::compile(&result);
 
-                Ok((prog.name().to_owned(), 
-                    CompiledZkpProgram{
+                Ok((
+                    prog.name().to_owned(),
+                    CompiledZkpProgram {
                         graph: result,
-                        metadata: ZkpProgramMetadata{
-                            name: prog.name().to_string()
-                        }
-                    }
-            ))
+                        metadata: ZkpProgramMetadata {
+                            name: prog.name().to_string(),
+                        },
+                    },
+                ))
             })
             .collect::<Result<HashMap<_, _>>>()?;
 

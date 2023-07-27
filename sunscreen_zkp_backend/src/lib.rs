@@ -26,9 +26,10 @@ use crypto_bigint::{
 };
 pub use error::*;
 pub use exec::ExecutableZkpProgram;
-pub use jit::{jit_prover, jit_verifier, CompiledZkpProgram, ZkpProgramMetadata, Operation};
+pub use jit::{jit_prover, jit_verifier, CompiledZkpProgram, Operation, ZkpProgramMetadata};
 use petgraph::stable_graph::NodeIndex;
 use serde::{Deserialize, Serialize};
+use sunscreen_compiler_common::DebugSessionProvider;
 
 // Converting between U512 and backend numeric types requires an
 // assumption about endianess. We require little endian for now unless
@@ -368,7 +369,10 @@ impl BigInt {
  * The methods needed for a type to serve as a proof
  * system in the Sunscreen ecosystem.
  */
-pub trait ZkpBackend {
+pub trait ZkpBackend<P>
+where
+    P: DebugSessionProvider<Operation, BigInt, String>,
+{
     /**
      * The field this backend uses in computation.
      */
@@ -402,6 +406,7 @@ pub trait ZkpBackend {
         constant_inputs: &[BigInt],
         public_inputs: &[BigInt],
         private_inputs: &[BigInt],
+        debug_session_provider: Option<&P>,
     ) -> Result<ExecutableZkpProgram>;
 
     /**
@@ -494,12 +499,23 @@ mod tests {
             assert_eq!(x_inv.wrapping_mul(&x).reduce(&p).unwrap(), UInt::ONE);
         };
 
+        struct TestProvider {}
+
+        impl DebugSessionProvider<jit::Operation, BigInt, String> for TestProvider {
+            fn add_session(
+                &self,
+                session: sunscreen_compiler_common::Session<jit::Operation, BigInt, String>,
+            ) {
+                unreachable!()
+            }
+        }
+
         test_case(BigInt::from(7u16), BigInt::from(11u16));
         test_case(BigInt::from(8u16), BigInt::from(11u16));
         test_case(BigInt::from(9u16), BigInt::from(11u16));
         test_case(
             BigInt::from(1234u32),
-            <BulletproofsBackend as ZkpBackend>::Field::FIELD_MODULUS,
+            <BulletproofsBackend as ZkpBackend<TestProvider>>::Field::FIELD_MODULUS,
         );
     }
 }

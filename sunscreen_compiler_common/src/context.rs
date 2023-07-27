@@ -87,7 +87,6 @@ where
      * The stack ID associated with the ProgramNode.
      */
     pub stack_id: u64,
-
     // #[cfg(feature = "debugger")]
     // pub index: u64,
 }

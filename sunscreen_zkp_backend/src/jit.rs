@@ -278,13 +278,17 @@ pub fn jit_prover<U, P>(
     constant_inputs: &[U],
     public_inputs: &[U],
     private_inputs: &[U],
-    // session_provider: Option<P>
+    session_provider: Option<P>
 ) -> Result<ExecutableZkpProgram>
 where
     U: BackendField,
-    // P: SessionProvider<Operation, BigInt, ()>
+    P: SessionProvider<Operation, BigInt, String>
 {
     let mut prog = prog.clone();
+
+    if let Some(v) = session_provider {
+        <P as SessionProvider<Operation, BigInt, String>>::new_session(todo!());
+    }
 
     let expected_private_inputs = prog.graph
         .node_weights()

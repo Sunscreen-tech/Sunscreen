@@ -23,6 +23,7 @@ pub mod lookup;
 pub use context::*;
 pub use graph::*;
 
+use petgraph::stable_graph::NodeIndex;
 use semver::Version;
 use serde::{
     de::{self, Error, Visitor},
@@ -30,7 +31,7 @@ use serde::{
 };
 
 use core::hash::Hash;
-use std::fmt::Debug;
+use std::{fmt::Debug, collections::HashMap};
 use std::str::FromStr;
 
 /**
@@ -211,10 +212,21 @@ where
  * 
  */
 pub trait SessionProvider<O: Operation, T, M> {
+
     /**
      * 
      */
-    fn new_session();
+    fn new_session(session: Session<O, T, M>);
+
+    /**
+     * 
+     */
+    // fn get_sessions() -> HashMap<String, Session<O, T, M>>;
+
+    /**
+     * 
+     */
+    fn set_data(session_name: String, index: NodeIndex, data: T);
 }
 
 /**

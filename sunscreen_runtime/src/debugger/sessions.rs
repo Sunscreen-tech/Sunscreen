@@ -3,15 +3,42 @@ use std::sync::{Mutex, OnceLock};
 
 use crate::{PrivateKey, SealData};
 
-use sunscreen_compiler_common::CompilationResult;
+use sunscreen_compiler_common::{CompilationResult, SessionProvider};
 use sunscreen_fhe_program::Operation as FheOperation;
 use sunscreen_zkp_backend::{Operation as ZkpOperation, BigInt};
 
 // Global data structure storing session information
 static SESSIONS: OnceLock<Mutex<HashMap<String, Session>>> = OnceLock::new();
 
-pub fn get_sessions() -> &'static Mutex<HashMap<String, Session>> {
+fn get_sessions() -> &'static Mutex<HashMap<String, Session>> {
     SESSIONS.get_or_init(|| Mutex::new(HashMap::new()))
+}
+
+pub struct GlobalSessionProvider;
+
+impl SessionProvider<FheOperation, SealData, ()> for GlobalSessionProvider {
+    
+
+    fn new_session(session: sunscreen_compiler_common::Session<FheOperation, SealData, ()>) {
+        
+    }
+
+    fn set_data(session_name: String, index: petgraph::stable_graph::NodeIndex, data: SealData) {
+        todo!()
+    }
+}
+
+impl SessionProvider<ZkpOperation, BigInt, String> for GlobalSessionProvider {
+    fn new_session(session: sunscreen_compiler_common::Session<ZkpOperation, BigInt, String>) {
+        let session = ZkpSession::new(&session.graph, &session.metadata);
+        let mut guard = get_sessions().lock().unwrap();
+        assert!(!guard.contains_key(""));
+        guard.insert("".to_string(), session.into());
+    }
+
+    fn set_data(session_name: String, index: petgraph::stable_graph::NodeIndex, data: BigInt) {
+        todo!()
+    }
 }
 
 /**
@@ -128,5 +155,11 @@ impl ZkpSession {
             program_data: vec![None; graph.node_count()],
             source_code: source_code.to_owned(),
         }
+    }
+}
+
+impl From<ZkpSession> for Session {
+    fn from(session: ZkpSession) -> Session {
+        Self::ZkpSession(session)
     }
 }

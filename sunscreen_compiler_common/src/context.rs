@@ -63,7 +63,7 @@ impl Default for DebugData {
     }
 }
 
-#[derive(Clone, Deserialize, Serialize, Debug, PartialEq, Eq)]
+#[derive(Clone, Deserialize, Serialize, Debug, Eq)]
 /**
  * Information about a node in the compilation graph.
  */
@@ -87,6 +87,12 @@ where
      * The stack ID associated with the ProgramNode.
      */
     pub stack_id: u64,
+}
+
+impl<O: Operation> PartialEq for NodeInfo<O> {
+    fn eq(&self, other: &Self) -> bool {
+        self.operation.eq(&other.operation)
+    }
 }
 
 impl<O> NodeInfo<O>

@@ -36,18 +36,31 @@ impl StackFrameInfo {
     pub fn new(frame: &BacktraceFrame) -> Self {
         let frame_symbols = frame.symbols();
         let ip_as_bytes = (frame.ip() as usize).to_ne_bytes();
+
         StackFrameInfo {
-            callee_name: frame_symbols[0]
-                .name()
+            callee_name: frame_symbols
+                .iter()
+                .nth(0)
+                .map(|x| x.name().unwrap_or(SymbolName::new(&ip_as_bytes)))
                 .unwrap_or(SymbolName::new(&ip_as_bytes))
                 .to_string(),
-            callee_file: frame_symbols[0]
-                .filename()
-                .unwrap_or(Path::new("No such file"))
+            callee_file: frame_symbols
+                .iter()
+                .nth(0)
+                .map(|x| x.filename().unwrap_or(Path::new("")))
+                .unwrap_or(Path::new(""))
                 .to_string_lossy()
                 .into_owned(),
-            callee_lineno: frame_symbols[0].lineno().unwrap_or(0),
-            callee_col: frame_symbols[0].colno().unwrap_or(0),
+            callee_lineno: frame_symbols
+                .iter()
+                .nth(0)
+                .map(|x| x.lineno().unwrap_or(0))
+                .unwrap_or(0),
+            callee_col: frame_symbols
+                .iter()
+                .nth(0)
+                .map(|x| x.colno().unwrap_or(0))
+                .unwrap_or(0),
         }
     }
 

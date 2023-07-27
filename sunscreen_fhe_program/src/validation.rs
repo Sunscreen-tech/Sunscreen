@@ -215,12 +215,16 @@ mod tests {
               "nodes": [
               {
                 "operation": {
-                  "InputCiphertext": 0
+                  "InputCiphertext": {
+                    "id": 0
+                  }
                 }
               },
               {
                 "operation": {
-                  "InputCiphertext": 1
+                  "InputCiphertext": {
+                    "id": 1
+                  }
                 }
               },
               {
@@ -267,12 +271,16 @@ mod tests {
               "nodes": [
               {
                 "operation": {
-                  "InputCiphertext": 0
+                  "InputCiphertext": {
+                    "id": 0
+                  }
                 }
               },
               {
                 "operation": {
-                  "InputCiphertext": 1
+                  "InputCiphertext": {
+                    "id": 1
+                  }
                 }
               },
               {
@@ -321,12 +329,16 @@ mod tests {
               "nodes": [
               {
                 "operation": {
-                  "InputCiphertext": 0
+                  "InputCiphertext": {
+                    "id": 0
+                  }
                 }
               },
               {
                 "operation": {
-                  "InputCiphertext": 1
+                  "InputCiphertext": {
+                    "id": 1
+                  }
                 }
               },
               {
@@ -370,12 +382,16 @@ mod tests {
               "nodes": [
               {
                 "operation": {
-                  "InputCiphertext": 0
+                  "InputCiphertext": {
+                    "id": 0
+                  }
                 }
               },
               {
                 "operation": {
-                  "InputCiphertext": 1
+                  "InputCiphertext": {
+                    "id": 1
+                  }
                 }
               },
               {

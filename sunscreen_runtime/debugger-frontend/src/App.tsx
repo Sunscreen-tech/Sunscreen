@@ -9,6 +9,8 @@ import { SelectionT } from 'react-digraph';
 import { render } from 'react-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 
+import { open } from 'node:fs/promises';
+
 interface CodeBlockProps {
   code: string;
   onClickHandler: (number: number) => void;
@@ -46,60 +48,6 @@ function CodeBlock({ code, onClickHandler, selectedLine }: CodeBlockProps) {
     </SyntaxHighlighter>
   );
 };
-
-const exampleCode: string = `fn sudoku_proof<F: BackendField>(
-  #[constant] constraints: [[NativeField<F>; 9]; 9],
-  board: [[NativeField<F>; 9]; 9],
-) {
-  fn assert_unique_numbers<F: BackendField>(arr: [ProgramNode<NativeField<F>>; 9]) {
-      for i in 1..=9 {
-          let mut circuit = NativeField::<F>::from(1).into_program_node();
-          for a in arr {
-              circuit = circuit * (NativeField::<F>::from(i).into_program_node() - a);
-          }
-          circuit.constrain_eq(NativeField::<F>::from(0));
-      }
-  }
-  // Proves that the board matches up with the puzzle where applicable
-  let zero = NativeField::<F>::from(0).into_program_node();
-
-  for i in 0..9 {
-      for j in 0..9 {
-          let square = board[i][j].into_program_node();
-          let constraint = constraints[i][j].into_program_node();
-          (constraint * (constraint - square)).constrain_eq(zero);
-      }
-  }
-
-  // Checks rows contain every number from 1 to 9
-  for row in board {
-      assert_unique_numbers(row);
-  }
-
-  // Checks columns contain each number from 1 to 9
-  for col in 0..9 {
-      let column = board.map(|r| r[col]);
-      assert_unique_numbers(column);
-  }
-
-  // Checks squares contain each number from 1 to 9
-  for i in 0..3 {
-      for j in 0..3 {
-          let rows = &board[(i * 3)..(i * 3 + 3)];
-
-          let square = rows.iter().map(|s| &s[(j * 3)..(j * 3 + 3)]);
-
-          let flattened_sq: [ProgramNode<NativeField<F>>; 9] = square
-              .flatten()
-              .copied()
-              .collect::<Vec<_>>()
-              .try_into()
-              .unwrap_or([zero; 9]);
-
-          assert_unique_numbers(flattened_sq);
-      }
-  }
-}`
 
 type InputCiphertextOp = {
   type: 'InputCiphertext';
@@ -139,7 +87,7 @@ type OutputCiphertextOp = {
 type FheProgramOperation = InputCiphertextOp | InputPlaintextOp | MultiplyOp | AddOp | SubOp | RelinearizeOp | OutputCiphertextOp
 
 type FheProgramNode = {
-  operation: FheProgramOperation
+  operation: any
 }
 
 type EdgeType = 'Left' | 'Right' | 'Unary'
@@ -161,13 +109,13 @@ const dataToGraph = (data: FheProgramGraph) => {
 
   for (let i: number = 0; i < data.nodes.length; ++i) {
     const op = data.nodes[i].operation
-    switch (op.type) {
+    switch (op) {
       case 'InputCiphertext':
         console.log('test')
         nodes.push({id: i, title: "", type: 'inputCiphertext'})
         break
       case 'Relinearize':
-        nodes.push({id: i, title: <FontAwesomeIcon icon="down-left-and-up-right-to-center"></FontAwesomeIcon>, type: 'relinearize'})
+        nodes.push({id: i, title: "", type: 'relinearize'})
         break
       case 'Multiply':
         nodes.push({id: i, title: "", type: 'multiply'})
@@ -182,7 +130,7 @@ const dataToGraph = (data: FheProgramGraph) => {
         nodes.push({id: i, title: "", type: 'outputCiphertext'})
         break;
       default: 
-        nodes.push({id: i, title: JSON.stringify(data.nodes[i].operation), type: 'empty'})
+        nodes.push({id: i, title: "", type: 'inputCiphertext'})
         break;
     }
   }
@@ -247,7 +195,8 @@ const App = () => {
         console.log(session)
         setInfo({
           ...selection.nodes?.values().next().value, 
-          ...(await fetch(`sessions/${session}/${node.id}`).then(d => d.json()))
+          ...(await fetch(`sessions/${session}/${node.id}`).then(d => d.json())),
+          stacktrace: filterStackTrace(await fetch(`sessions/${session}/stacktrace/${node.id}`).then(d => d.json()))
         })
       } else {
         setInfo({id: "no node selected"})
@@ -267,10 +216,10 @@ const App = () => {
     const update = async () => {
       setGraph(dataToGraph(await fetch(`/sessions/${session}`).then(d => d.json())))
       setCode(await fetch(`/programs/${session}`).then(p => p.text()))
-      alert(session)
+      // alert(session)
       const delay = ms => new Promise(res => setTimeout(res, ms));
-      await delay(1000)
-      alert(session)
+      // await delay(1000)
+      // alert(session)
     }
     update()
   }, [session, setSession])
@@ -301,12 +250,18 @@ const App = () => {
 
 function NodeInfo({info}) {
   if (info != null) {
-    for (let field in info) {
-      
+    if (Object.keys(info).includes('stacktrace')) {
+      return (<div>
+        {Object.keys(info).filter(k => k != "stacktrace").map((k) => (<p>{k}: {JSON.stringify(info[k])}</p>))}
+        <p>stacktrace:</p>
+        {info.stacktrace.map(c => (<p>{`${c.callee_name.split("::").at(-2)} @ ${c.callee_file}:${c.callee_lineno}`}</p>))}
+      </div>)
+    } else {
+      return (<div>
+        {Object.keys(info).filter(k => k != "stacktrace").map((k) => (<p>{k}: {info[k]}</p>))}
+      </div>)
     }
-    return (<div>
-      {Object.keys(info).map((k) => (<p>{k}: {info[k]}</p>))}
-    </div>)
+    
   }
   return <p>{JSON.stringify(info)}</p>
 }
@@ -326,4 +281,27 @@ window.addEventListener('load', () => {
   const root = render(<App/>, document.getElementById('root'));
 });
 
+function filterStackTrace(st) {
+  console.log(st)
+  const re1 = RegExp("\S*/sunscreen_compiler_common/src/\S*")
+  const re2 = RegExp("\S*/sunscreen/src/\S*")
+  const re3 = RegExp("\S*/rustc/\S*")
+  const re4 = RegExp("\S*/cargo/\*")
+  const filtered = st.filter(c => !re1.test(c.callee_file))
+    .filter(c => !re2.test(c.callee_file))
+    .filter(c => !re3.test(c.callee_file))
+    .filter(c => !re4.test(c.callee_file))
+    .filter(c => c.callee_file !== 'No such file')
+  return filtered;
+}
 
+// async function getLine(filePath, lineNo) {
+//   const file = await open(filePath)
+//   let currLine = 0;
+//   for await (const line of file.readLines()) {
+//     currLine += 1;
+//     if (currLine === lineNo) {
+//       return line
+//     }
+//   }
+// }

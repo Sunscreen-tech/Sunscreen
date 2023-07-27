@@ -28,4 +28,5 @@ thiserror = "1.0.37"
 serde_json = "1.0.74"
 
 [features]
-debugger = []
+default = ["debugger"]
+debugger = ["sunscreen_compiler_common/debugger"]

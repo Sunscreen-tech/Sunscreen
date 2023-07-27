@@ -316,96 +316,13 @@ mod tests {
 
     #[test]
     fn add_wrong_operands() {
-      #[cfg(not(feature = "debugger"))]
-      let ir_str = serde_json::json!({
-        "data": "Bfv",
-        "graph": {
-          "graph": {
-            "nodes": [
-            {
-              "operation": {
-                "InputCiphertext": {
-                  "id": 0
-                }
-              }
-            },
-            {
-              "operation": {
-                "InputCiphertext": {
-                  "id": 1
-                }
-              }
-            },
-            {
-              "operation": "Add"
-            }
-          ],
-          "node_holes": [],
-          "edge_property": "directed",
-          "edges": [
-            [
-              0,
-              2,
-              "Left"
-            ],
-            [
-              1,
-              2,
-              "Left"
-            ],
-          ]
-          }
-        }
-      });
-      #[cfg(feature = "debugger")]
-        let ir_str = serde_json::json!({
-          "data": "Bfv",
-          "graph": {
-            "graph": {
-              "nodes": [
-              {
-                "operation": {
-                  "InputCiphertext": {
-                    "id": 0
-                  }
-                },
-                "group_id": 0,
-                "stack_id": 1
-              },
-              {
-                "operation": {
-                  "InputCiphertext": {
-                    "id": 1
-                  }
-                },
-                "group_id": 0,
-                "stack_id": 1
-              },
-              {
-                "operation": "Add"
-              }
-            ],
-            "node_holes": [],
-            "edge_property": "directed",
-            "edges": [
-              [
-                0,
-                2,
-                "Left"
-              ],
-              [
-                1,
-                2,
-                "Left"
-              ],
-            ]
-            }
-          }
-        });
+        let mut prog = FheProgram::new(SchemeType::Bfv);
 
-        let ir: FheProgram = serde_json::from_value(ir_str).unwrap();
+        let in_0 = prog.add_input_ciphertext(0);
+        let in_1 = prog.add_input_ciphertext(0);
+        let _ = prog.add_add(in_0, in_1);
 
-        let errors = validate_ir(&ir);
+        let errors = validate_ir(&prog);
 
         assert_eq!(errors.len(), 1);
         assert_eq!(

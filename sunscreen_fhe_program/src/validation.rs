@@ -208,6 +208,54 @@ mod tests {
 
     #[test]
     fn error_for_cycle() {
+      #[cfg(not(feature = "debugger"))]
+      let ir_str = serde_json::json!({
+        "data": "Bfv",
+        "graph": {
+          "graph": {
+            "nodes": [
+            {
+              "operation": {
+                "InputCiphertext": {
+                  "id": 0
+                }
+              }
+            },
+            {
+              "operation": {
+                "InputCiphertext": {
+                  "id": 1
+                }
+              }
+            },
+            {
+              "operation": "Add"
+            }
+          ],
+          "node_holes": [],
+          "edge_property": "directed",
+          "edges": [
+            [
+              0,
+              2,
+              "Left"
+            ],
+            [
+              1,
+              2,
+              "Right"
+            ],
+            [
+              2,
+              0,
+              "Right"
+            ]
+          ]
+          }
+        }
+      });
+
+      #[cfg(feature = "debugger")]
         let ir_str = serde_json::json!({
           "data": "Bfv",
           "graph": {
@@ -218,14 +266,18 @@ mod tests {
                   "InputCiphertext": {
                     "id": 0
                   }
-                }
+                },
+                "group_id": 0,
+                "stack_id": 1
               },
               {
                 "operation": {
                   "InputCiphertext": {
                     "id": 1
                   }
-                }
+                },
+                "group_id": 0,
+                "stack_id": 1
               },
               {
                 "operation": "Add"
@@ -264,6 +316,48 @@ mod tests {
 
     #[test]
     fn add_wrong_operands() {
+      #[cfg(not(feature = "debugger"))]
+      let ir_str = serde_json::json!({
+        "data": "Bfv",
+        "graph": {
+          "graph": {
+            "nodes": [
+            {
+              "operation": {
+                "InputCiphertext": {
+                  "id": 0
+                }
+              }
+            },
+            {
+              "operation": {
+                "InputCiphertext": {
+                  "id": 1
+                }
+              }
+            },
+            {
+              "operation": "Add"
+            }
+          ],
+          "node_holes": [],
+          "edge_property": "directed",
+          "edges": [
+            [
+              0,
+              2,
+              "Left"
+            ],
+            [
+              1,
+              2,
+              "Left"
+            ],
+          ]
+          }
+        }
+      });
+      #[cfg(feature = "debugger")]
         let ir_str = serde_json::json!({
           "data": "Bfv",
           "graph": {
@@ -274,14 +368,18 @@ mod tests {
                   "InputCiphertext": {
                     "id": 0
                   }
-                }
+                },
+                "group_id": 0,
+                "stack_id": 1
               },
               {
                 "operation": {
                   "InputCiphertext": {
                     "id": 1
                   }
-                }
+                },
+                "group_id": 0,
+                "stack_id": 1
               },
               {
                 "operation": "Add"

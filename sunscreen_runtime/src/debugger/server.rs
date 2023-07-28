@@ -4,7 +4,7 @@ use semver::Version;
 
 use crate::{
     debugger::sessions::Session,
-    debugger::{decrypt_seal, get_mult_depth, overflow_occurred},
+    debugger::{decrypt_inner_cipher, decrypt_inner_plain, get_mult_depth, overflow_occurred},
     debugger::{get_sessions, BfvNodeType, DebugNodeType, ZkpNodeType},
     Ciphertext, InnerCiphertext, InnerPlaintext, Plaintext, Runtime, SealData, Type, WithContext,
 };
@@ -188,7 +188,7 @@ pub async fn get_node_data(
                                 &bfv_session.program_data.clone(),
                             );
 
-                            let coefficients = decrypt_seal(sunscreen_ciphertext.inner, &pk.0.data);
+                            let coefficients = decrypt_inner_cipher(sunscreen_ciphertext.inner, &pk.0.data);
 
                             DebugNodeType::Bfv(BfvNodeType {
                                 // WARNING: `value` and `data_type` are nonsense values

@@ -175,15 +175,20 @@ fn can_add() {
             "graph": {
                 "nodes": [
                     { "operation": "InputCiphertext",
-                    "group_id": 0 },
+                    "group_id": 0,
+                    "stack_id": 1 },
                     { "operation": "InputCiphertext",
-                    "group_id": 1 },
+                    "group_id": 0,
+                    "stack_id": 1 },
                     { "operation": "InputCiphertext",
-                    "group_id": 2},
+                    "group_id": 0,
+                    "stack_id": 1},
                     { "operation": "Add",
-                    "group_id": 3 },
+                    "group_id": 0,
+                    "stack_id": 2 },
                     { "operation": "Add",
-                    "group_id": 4}
+                    "group_id": 0,
+                    "stack_id": 2}
                 ],
                 "node_holes": [],
                 "edge_property": "directed",
@@ -273,11 +278,14 @@ fn can_add_plaintext() {
             "graph": {
                 "nodes": [
                     { "operation": "InputCiphertext",
-                    "group_id": 0  },
+                    "group_id": 0,
+                    "stack_id": 1  },
                     { "operation": "InputPlaintext",
-                    "group_id": 1  },
+                    "group_id": 0,
+                    "stack_id": 2  },
                     { "operation": "AddPlaintext",
-                    "group_id": 2  },
+                    "group_id": 0,
+                    "stack_id": 3  },
                 ],
                 "node_holes": [],
                 "edge_property": "directed",
@@ -370,16 +378,21 @@ fn can_mul() {
             "graph": {
                 "nodes": [
                 { "operation": "InputCiphertext",
-                "group_id": 0
+                "group_id": 0,
+                "stack_id": 1
                  },
                 { "operation": "InputCiphertext",
-                "group_id": 1 },
+                "group_id": 0,
+                "stack_id": 1 },
                 { "operation": "InputCiphertext",
-            "group_id": 2 },
+            "group_id": 0,
+            "stack_id": 1 },
                 { "operation": "Multiply",
-            "group_id": 3 },
+            "group_id": 0,
+            "stack_id": 2 },
                 { "operation": "Multiply",
-            "group_id": 4 }
+            "group_id": 0,
+            "stack_id": 2 }
             ],
             "node_holes": [],
             "edge_property": "directed",
@@ -406,7 +419,7 @@ fn can_mul() {
                 ]
             ]
             },
-            "metadata": DebugData::new()
+            "metadata": DebugData::new(),
         });
 
         let expected_compilation: FheFrontendCompilation =
@@ -489,15 +502,20 @@ fn can_collect_output() {
             "graph": {
                 "nodes": [
                     { "operation": "InputCiphertext",
-                    "group_id": 0  },
+                    "group_id": 0,
+                    "stack_id": 1  },
                     { "operation": "InputCiphertext",
-                    "group_id": 1 },
+                    "group_id": 0,
+                    "stack_id": 1 },
                     { "operation": "Multiply",
-                    "group_id": 2  },
+                    "group_id": 0,
+                    "stack_id": 2  },
                     { "operation": "Add",
-                    "group_id": 3  },
+                    "group_id": 0,
+                    "stack_id": 3  },
                     { "operation": "Output",
-                    "group_id": 4  },
+                    "group_id": 0,
+                    "stack_id": 4  },
                   ],
                   "node_holes": [],
                   "edge_property": "directed",
@@ -620,17 +638,23 @@ fn can_collect_multiple_outputs() {
             "graph": {
                 "nodes": [
                 { "operation": "InputCiphertext",
-                    "group_id": 0 },
+                    "group_id": 0,
+                    "stack_id": 1 },
                 { "operation": "InputCiphertext",
-                    "group_id": 1     },
+                    "group_id": 0,
+                    "stack_id": 1     },
                 { "operation": "Multiply",
-                "group_id": 2  },
+                "group_id": 0,
+                "stack_id": 2  },
                 { "operation": "Add",
-                "group_id": 3  },
+                "group_id": 0,
+                "stack_id": 3  },
                 { "operation": "Output",
-                "group_id": 4  },
+                "group_id": 0,
+                "stack_id": 4  },
                 { "operation": "Output",
-                "group_id": 5 },
+                "group_id": 0,
+                "stack_id": 4 },
               ],
               "node_holes": [],
               "edge_property": "directed",
@@ -667,7 +691,7 @@ fn can_collect_multiple_outputs() {
                 ]
               ]
             },
-            "metadata": DebugData::new(),
+            "metadata": DebugData::new()
         });
         let expected_compilation: FheFrontendCompilation =
             serde_json::from_value(expected).unwrap();

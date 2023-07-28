@@ -12,6 +12,7 @@ mod metadata;
 mod run;
 mod runtime;
 mod serialization;
+mod zkp;
 
 use std::sync::Arc;
 
@@ -21,6 +22,7 @@ pub use crate::metadata::*;
 pub use run::*;
 pub use runtime::*;
 pub use serialization::WithContext;
+pub use zkp::RuntimeZkpBackend as ZkpBackend;
 
 use seal_fhe::{Ciphertext as SealCiphertext, Plaintext as SealPlaintext};
 use serde::{Deserialize, Serialize};

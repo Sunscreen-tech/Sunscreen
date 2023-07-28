@@ -36,18 +36,19 @@ impl StackFrameInfo {
     pub fn new(frame: &BacktraceFrame) -> Self {
         let frame_symbols = frame.symbols();
         let ip_as_bytes = (frame.ip() as usize).to_ne_bytes();
+
         StackFrameInfo {
-            callee_name: frame_symbols[0]
-                .name()
+            callee_name: frame_symbols.first()
+                .and_then(|c| c.name())
                 .unwrap_or(SymbolName::new(&ip_as_bytes))
                 .to_string(),
-            callee_file: frame_symbols[0]
-                .filename()
+            callee_file: frame_symbols.first()
+                .and_then(|c| c.filename())
                 .unwrap_or(Path::new("No such file"))
                 .to_string_lossy()
                 .into_owned(),
-            callee_lineno: frame_symbols[0].lineno().unwrap_or(0),
-            callee_col: frame_symbols[0].colno().unwrap_or(0),
+            callee_lineno: frame_symbols.first().and_then(|c| c.lineno()).unwrap_or(0),
+            callee_col: frame_symbols.first().and_then(|c| c.colno()).unwrap_or(0),
         }
     }
 
@@ -369,101 +370,4 @@ pub enum Error {
      */
     FrameNotFound,
 }
-
-/*
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn single_frame_insert() {
-        let b1 = Backtrace::new();
-
-        let trace1 = b1.frames();
-        let mut trace1_key: Vec<u64> = vec![];
-        let mut trie: Trie<Vec<u64>, StackFrameInfo> = Trie::new();
-
-        // Verifies the trie is constructed correctly
-        for (i, trace) in trace1.iter().enumerate() {
-            // Grab previous and ancestor frames
-            let temp_trie = trie.clone();
-            let prev_frame = temp_trie.get(&trace1_key);
-            let ancestor = temp_trie.get_ancestor_value(&trace1_key);
-
-            // Insert next frame
-            trace1_key.push(i as u64);
-            let t_info = StackFrameInfo::new(trace);
-            trie.insert(trace1_key.clone(), t_info);
-
-            // First insertion doesn't have a parent
-            if i == 0 {
-                continue;
-            }
-
-            println!();
-            println!("prev frame: {:?}", prev_frame);
-            println!("ancestor frame: {:?}", trie.get_ancestor_value(&trace1_key));
-
-            assert_eq!(ancestor, prev_frame);
-        }
-    }
-
-    #[test]
-    fn single_backtrace_insert() {
-        // Insertion
-        let b = Backtrace::new();
-        let b_frames = b.frames();
-        let mut trie: Trie<Vec<u64>, StackFrameInfo> = Trie::new();
-        let key: Vec<u64> = (1..b_frames.len() as u64).collect();
-
-        trie.add_stack_trace(key.clone(), b.clone());
-
-        // Verifies the trie is constructed correctly
-        let mut temp_key: Vec<u64> = vec![];
-        for (i, val) in key.iter().enumerate() {
-            let ancestor = trie.get_ancestor_value(&temp_key);
-            let prev_frame = trie.get(&temp_key);
-            temp_key.push(*val);
-
-            println!();
-            println!("curr key: {:?}", temp_key);
-            println!("prev frame: {:?}", prev_frame);
-            println!("ancestor frame: {:?}", ancestor);
-
-            if i == 0 {
-                continue;
-            }
-
-            assert_eq!(ancestor, prev_frame);
-        }
-    }
-
-    #[test]
-    fn mult_frame_insert() {}
-
-    #[test]
-    fn mult_backtrace_insert() {
-        let b1 = Backtrace::new();
-        let b2 = Backtrace::new();
-        let b1_frames = b1.frames();
-        let b2_frames = b2.frames();
-
-        let mut trie: Trie<Vec<u64>, StackFrameInfo> = Trie::new();
-
-        let k1: Vec<u64> = (1..b1_frames.len() as u64).collect();
-        let k2: Vec<u64> = (2..(b2_frames.len() + 1) as u64).collect();
-
-        trie.add_stack_trace(k1, b1);
-        trie.add_stack_trace(k2, b2);
-    }
-
-    #[test]
-    fn test_retrieval() {
-        let _b1 = Backtrace::new();
-    }
-
-    #[test]
-    fn test_empty_retrieval() {}
-}
-*/
 */

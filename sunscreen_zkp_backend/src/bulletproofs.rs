@@ -371,8 +371,7 @@ fn constraint_count(graph: &ExecutableZkpProgram) -> Result<usize> {
     Ok(count)
 }
 
-impl ZkpBackend for BulletproofsBackend
-{
+impl ZkpBackend for BulletproofsBackend {
     type Field = Scalar;
 
     fn prove(&self, graph: &ExecutableZkpProgram, inputs: &[BigInt]) -> Result<Proof> {
@@ -465,7 +464,9 @@ impl ZkpBackend for BulletproofsBackend
         constant_inputs: &[BigInt],
         public_inputs: &[BigInt],
         private_inputs: &[BigInt],
-        debug_session_provider: Option<&Box<dyn DebugSessionProvider<jit::Operation, BigInt, String>>>,
+        debug_session_provider: Option<
+            &Box<dyn DebugSessionProvider<jit::Operation, BigInt, String>>,
+        >,
     ) -> Result<ExecutableZkpProgram> {
         let constant_inputs = constant_inputs
             .iter()
@@ -695,8 +696,7 @@ mod tests {
             &[(add_1, EdgeInfo::Unordered)],
         );
 
-        let backend: Box<dyn ZkpBackend<Field = Scalar>> =
-            Box::new(BulletproofsBackend::new());
+        let backend: Box<dyn ZkpBackend<Field = Scalar>> = Box::new(BulletproofsBackend::new());
 
         struct TestProvider {}
 

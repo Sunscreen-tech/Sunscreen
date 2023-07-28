@@ -1,17 +1,16 @@
 use std::{thread, time::Duration};
 
-use sunscreen::{zkp_program, types::zkp::{NativeField, ConstrainCmp}, Compiler, Runtime, ZkpProgramInput};
-use sunscreen_zkp_backend::{BackendField, bulletproofs::BulletproofsBackend, ZkpBackend};
+use sunscreen::{
+    types::zkp::{ConstrainCmp, NativeField},
+    zkp_program, Compiler, Runtime, ZkpProgramInput,
+};
+use sunscreen_zkp_backend::{bulletproofs::BulletproofsBackend, BackendField, ZkpBackend};
 
 fn main() {
     type BPField = NativeField<<BulletproofsBackend as ZkpBackend>::Field>;
 
     #[zkp_program(backend = "bulletproofs")]
-    fn prove_sum_eq<F: BackendField>(
-        a: NativeField<F>,
-        b: NativeField<F>,
-        c: NativeField<F>
-    ) {
+    fn prove_sum_eq<F: BackendField>(a: NativeField<F>, b: NativeField<F>, c: NativeField<F>) {
         (a + b).constrain_eq(c);
         a.constrain_lt_bounded(b, 8)
     }
@@ -26,7 +25,11 @@ fn main() {
 
     let runtime = Runtime::new_zkp(&BulletproofsBackend::new()).unwrap();
 
-    let inputs: Vec<ZkpProgramInput> = vec![BPField::from(1).into(), BPField::from(2).into(), BPField::from(3).into()];
+    let inputs: Vec<ZkpProgramInput> = vec![
+        BPField::from(1).into(),
+        BPField::from(2).into(),
+        BPField::from(3).into(),
+    ];
 
     let proof = runtime.prove(prog, vec![], vec![], inputs);
 

@@ -6,7 +6,7 @@ use crate::{
 };
 
 use petgraph::{stable_graph::NodeIndex, visit::EdgeRef, Direction, Graph};
-use serde::{Serialize};
+use serde::Serialize;
 use sunscreen_compiler_common::{
     forward_traverse, forward_traverse_mut,
     transforms::{GraphTransforms, Transform},
@@ -80,7 +80,6 @@ pub enum Operation {
      */
     Constant(BigInt),
 }
-
 
 impl Hash for Operation {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {

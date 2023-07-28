@@ -541,7 +541,8 @@ where
             None
         };
         #[cfg(feature = "debugger")]
-        let boxed = session_provider.unwrap() as Box<dyn DebugSessionProvider<ZkpOperation, BigInt, String>>;
+        let boxed = session_provider.unwrap()
+            as Box<dyn DebugSessionProvider<ZkpOperation, BigInt, String>>;
 
         let debug_session_provider = if cfg!(feature = "debugger") {
             Some(&boxed)
@@ -554,7 +555,7 @@ where
             &constant_inputs,
             &public_inputs,
             &private_inputs,
-            debug_session_provider
+            debug_session_provider,
         )?;
 
         trace!("Prover JIT time {}s", now.elapsed().as_secs_f64());

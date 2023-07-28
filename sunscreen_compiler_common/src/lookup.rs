@@ -38,11 +38,13 @@ impl StackFrameInfo {
         let ip_as_bytes = (frame.ip() as usize).to_ne_bytes();
 
         StackFrameInfo {
-            callee_name: frame_symbols.first()
+            callee_name: frame_symbols
+                .first()
                 .and_then(|c| c.name())
                 .unwrap_or(SymbolName::new(&ip_as_bytes))
                 .to_string(),
-            callee_file: frame_symbols.first()
+            callee_file: frame_symbols
+                .first()
                 .and_then(|c| c.filename())
                 .unwrap_or(Path::new("No such file"))
                 .to_string_lossy()

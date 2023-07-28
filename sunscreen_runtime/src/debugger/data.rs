@@ -98,11 +98,19 @@ where
     for operand_node in operand_nodes {
         let operand_data = program_data
             .get(operand_node.index())
-            .unwrap_or_else(|| panic!("Couldn't find Option<SealData> in index {:?} of program_data",
-                operand_node.index()))
+            .unwrap_or_else(|| {
+                panic!(
+                    "Couldn't find Option<SealData> in index {:?} of program_data",
+                    operand_node.index()
+                )
+            })
             .clone()
-            .unwrap_or_else(|| panic!("Option<SealData> in index {:?} was None",
-                operand_node.index()));
+            .unwrap_or_else(|| {
+                panic!(
+                    "Option<SealData> in index {:?} was None",
+                    operand_node.index()
+                )
+            });
         let ciphertext = match operand_data {
             SealData::Ciphertext(ct) => {
                 let with_context = WithContext {

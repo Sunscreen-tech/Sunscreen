@@ -12,19 +12,12 @@
 //! [SoK: Fully Homomorphic Encryption Compilers](https://arxiv.org/abs/2101.07078).
 
 use sunscreen::{
-<<<<<<< HEAD
     fhe_program,
     types::{
         bfv::{Batched, Signed},
         Cipher, FheType, TypeName,
     },
     Compiler, Error, FheProgramFn, FheProgramInput, FheRuntime, PlainModulusConstraint,
-=======
-    types::{bfv::Signed, Cipher},
-    SchemeType::Bfv,
-    SecurityLevel::TC128,
-    *,
->>>>>>> mliu-backend
 };
 
 use std::marker::PhantomData;
@@ -193,26 +186,10 @@ where
     */
 
     let app = Compiler::new()
-<<<<<<< HEAD
         .fhe_program(c.clone())
         .plain_modulus_constraint(plain_modulus)
         .compile()?;
     let elapsed = start.elapsed().as_secs_f64();
-=======
-        .fhe_program(mad)
-        .fhe_program(add_squares)
-        .fhe_program(mul_cubes)
-        .with_params(&Params {
-            lattice_dimension: 4096,
-            coeff_modulus: [68719403009, 68719230977, 137438822401].to_vec(),
-            plain_modulus: 64,
-            scheme_type: Bfv,
-            security_level: TC128,
-        })
-        //.fhe_program(mul_cubes_chained)
-        .compile()
-        .unwrap();
->>>>>>> mliu-backend
 
     println!("\t\tCompile time {elapsed}s");
 
@@ -239,7 +216,6 @@ where
     let start = Instant::now();
     let args: Vec<FheProgramInput> = vec![n_0_enc.into(), n_1_enc.into(), n_2_enc.into()];
 
-<<<<<<< HEAD
     let result = runtime.debug_fhe_program(app.get_fhe_program(c).unwrap(), args, &public_key, &private_key, "test")?;
 
     println!("\t\tRun time {elapsed}s");
@@ -324,44 +300,4 @@ fn main() -> Result<(), Error> {
     loop { }
 
     Ok(())
-=======
-    runtime
-        .debug_fhe_program(
-            app.get_fhe_program("mad").unwrap(),
-            args3,
-            &public,
-            &private,
-            mad.source(),
-        )
-        .unwrap();
-
-    let args4: Vec<FheProgramInput> = vec![a.clone().into(), c.clone().into()];
-
-    runtime
-        .debug_fhe_program(
-            app.get_fhe_program("mul_cubes").unwrap(),
-            args4,
-            &public,
-            &private,
-            mul_cubes.source(),
-        )
-        .unwrap();
-
-    /*
-        let args5: Vec<FheProgramInput> = vec![a.clone().into(), c.clone().into()];
-
-        runtime
-            .debug_fhe_program(
-                app.get_fhe_program("mul_cubes_chained").unwrap(),
-                args5,
-                &public,
-                &private,
-                mul_cubes_chained.source(),
-            )
-            .unwrap();
-    */
-    loop {
-        thread::sleep(Duration::from_secs(1));
-    }
->>>>>>> mliu-backend
 }

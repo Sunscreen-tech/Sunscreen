@@ -281,7 +281,7 @@ pub fn jit_prover<U>(
     constant_inputs: &[U],
     public_inputs: &[U],
     private_inputs: &[U],
-    session_provider: Option<&Box<dyn DebugSessionProvider<Operation, BigInt, String>>>,
+    session_provider: Option<&dyn DebugSessionProvider<Operation, BigInt, String>>,
 ) -> Result<ExecutableZkpProgram>
 where
     U: BackendField,

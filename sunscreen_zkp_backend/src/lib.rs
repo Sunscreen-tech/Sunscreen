@@ -421,7 +421,7 @@ pub trait ZkpBackend {
         constant_inputs: &[BigInt],
         public_inputs: &[BigInt],
         private_inputs: &[BigInt],
-        debug_session_provider: Option<&Box<dyn DebugSessionProvider<Operation, BigInt, String>>>,
+        debug_session_provider: Option<&dyn DebugSessionProvider<Operation, BigInt, String>>,
     ) -> Result<ExecutableZkpProgram>;
 
     /**

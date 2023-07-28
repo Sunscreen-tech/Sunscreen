@@ -75,7 +75,7 @@ pub fn overflow_occurred<O>(
     node: NodeIndex,
     p: u64,
     pk: &PrivateKey,
-    program_data: &Vec<Option<SealData>>,
+    program_data: &[Option<SealData>],
 ) -> bool
 where
     O: Operation,

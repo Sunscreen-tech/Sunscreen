@@ -534,18 +534,18 @@ where
         let now = Instant::now();
 
         let session_provider = if cfg!(feature = "debugger") {
-            Some(Box::new(GlobalSessionProvider::new(&get_session_name(
+            Some(GlobalSessionProvider::new(&get_session_name(
                 &program.metadata.name,
-            ))))
+            )))
         } else {
             None
         };
         #[cfg(feature = "debugger")]
-        let boxed = session_provider.unwrap()
-            as Box<dyn DebugSessionProvider<ZkpOperation, BigInt, String>>;
+        let boxed = &session_provider.unwrap()
+            as &dyn DebugSessionProvider<ZkpOperation, BigInt, String>;
 
         let debug_session_provider = if cfg!(feature = "debugger") {
-            Some(&boxed)
+            Some(boxed)
         } else {
             None
         };

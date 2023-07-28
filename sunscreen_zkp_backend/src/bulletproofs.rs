@@ -465,7 +465,7 @@ impl ZkpBackend for BulletproofsBackend {
         public_inputs: &[BigInt],
         private_inputs: &[BigInt],
         debug_session_provider: Option<
-            &Box<dyn DebugSessionProvider<jit::Operation, BigInt, String>>,
+            &dyn DebugSessionProvider<jit::Operation, BigInt, String>,
         >,
     ) -> Result<ExecutableZkpProgram> {
         let constant_inputs = constant_inputs

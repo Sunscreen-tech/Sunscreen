@@ -178,7 +178,7 @@ pub async fn get_node_data(
                                 .unwrap();
 
                             let multiplicative_depth: u64 =
-                                get_mult_depth(stable_graph, NodeIndex::new(nodeid), 0);
+                                get_mult_depth(stable_graph, NodeIndex::new(nodeid));
 
                             let overflowed = overflow_occurred(
                                 stable_graph,

@@ -16,6 +16,7 @@ use serde::{Deserialize, Serialize};
 use sunscreen_compiler_common::Operation;
 use sunscreen_compiler_common::Type;
 use sunscreen_compiler_common::{EdgeInfo, NodeInfo};
+use std::collections::{HashMap, VecDeque};
 
 #[derive(Clone, Serialize, Deserialize)]
 pub enum DebugNodeType {
@@ -39,29 +40,31 @@ pub struct BfvNodeType {
  */
 pub fn get_mult_depth<O>(
     graph: &StableGraph<NodeInfo<O>, EdgeInfo>,
-    node: NodeIndex,
-    mut depth: u64,
+    start_node: NodeIndex,
 ) -> u64
 where
     O: Operation,
 {
-    if graph
-        .node_weight(node)
-        .unwrap()
-        .operation
-        .is_multiplication()
-    {
-        depth += 1;
-    }
+    let mut queue: VecDeque<(NodeIndex, u64)> = VecDeque::new();
+    let mut visited: HashMap<NodeIndex, bool> = HashMap::new();
 
-    let neighbors = graph.neighbors_directed(node, Incoming);
-    if neighbors.clone().count() == 0 {
-        return depth;
-    }
     let mut max_depth = 0;
-    for neighbor in neighbors.clone() {
-        let neighbor_depth = get_mult_depth(graph, neighbor, depth);
-        max_depth = max_depth.max(neighbor_depth);
+
+    queue.push_back((start_node, 0));
+
+    while let Some((node, depth)) = queue.pop_front() {
+        visited.insert(node, true);
+
+        let curr_depth = depth + graph.node_weight(node).unwrap().operation.is_multiplication() as u64;
+
+        max_depth = max_depth.max(curr_depth);
+
+        let neighbors = graph.neighbors_directed(node, Incoming);
+        for neighbor in neighbors {
+            if !visited.contains_key(&neighbor) {
+                queue.push_back((neighbor, curr_depth));
+            }
+        }
     }
 
     max_depth

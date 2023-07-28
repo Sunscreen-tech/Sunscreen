@@ -36,6 +36,7 @@ impl StackFrameInfo {
     pub fn new(frame: &BacktraceFrame) -> Self {
         let frame_symbols = frame.symbols();
         let ip_as_bytes = (frame.ip() as usize).to_ne_bytes();
+
         StackFrameInfo {
             callee_name: frame_symbols.first()
                 .and_then(|c| c.name())

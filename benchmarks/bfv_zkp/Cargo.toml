@@ -11,7 +11,7 @@ ark-poly = "0.4.0-alpha.4"
 crypto-bigint = "0.4.9"
 rand = "0.8.5"
 rand_distr = "0.4.3"
-sunscreen = { path = "../../sunscreen" }
+sunscreen = { path = "../../sunscreen", features = ["debugger"] }
 sunscreen_zkp_backend = { path = "../../sunscreen_zkp_backend" }
 
 [dev-dependencies]

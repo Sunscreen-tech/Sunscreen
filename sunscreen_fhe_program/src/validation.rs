@@ -208,51 +208,15 @@ mod tests {
 
     #[test]
     fn error_for_cycle() {
-        let ir_str = serde_json::json!({
-          "data": "Bfv",
-          "graph": {
-            "graph": {
-              "nodes": [
-              {
-                "operation": {
-                  "InputCiphertext": 0
-                }
-              },
-              {
-                "operation": {
-                  "InputCiphertext": 1
-                }
-              },
-              {
-                "operation": "Add"
-              }
-            ],
-            "node_holes": [],
-            "edge_property": "directed",
-            "edges": [
-              [
-                0,
-                2,
-                "Left"
-              ],
-              [
-                1,
-                2,
-                "Right"
-              ],
-              [
-                2,
-                0,
-                "Right"
-              ]
-            ]
-            }
-          }
-        });
+        let mut prog = FheProgram::new(SchemeType::Bfv);
 
-        let ir: FheProgram = serde_json::from_value(ir_str).unwrap();
+        let in_0 = prog.add_input_ciphertext(0);
+        let in_1 = prog.add_input_ciphertext(0);
+        let add = prog.add_add(in_0, in_1);
 
-        let errors = validate_ir(&ir);
+        prog.graph.add_edge(add, in_0, EdgeInfo::Left);
+
+        let errors = validate_ir(&prog);
 
         assert_eq!(errors.len(), 1);
         assert_eq!(errors[0], IRError::IRHasCycles);
@@ -260,46 +224,18 @@ mod tests {
 
     #[test]
     fn add_wrong_operands() {
-        let ir_str = serde_json::json!({
-          "data": "Bfv",
-          "graph": {
-            "graph": {
-              "nodes": [
-              {
-                "operation": {
-                  "InputCiphertext": 0
-                }
-              },
-              {
-                "operation": {
-                  "InputCiphertext": 1
-                }
-              },
-              {
-                "operation": "Add"
-              }
-            ],
-            "node_holes": [],
-            "edge_property": "directed",
-            "edges": [
-              [
-                0,
-                2,
-                "Left"
-              ],
-              [
-                1,
-                2,
-                "Left"
-              ],
-            ]
-            }
-          }
-        });
+        let mut prog: sunscreen_compiler_common::Context<crate::Operation, SchemeType> =
+            FheProgram::new(SchemeType::Bfv);
 
-        let ir: FheProgram = serde_json::from_value(ir_str).unwrap();
+        let in_0 = prog.add_input_ciphertext(0);
+        let in_1 = prog.add_input_ciphertext(0);
+        let add = prog.add_add(in_0, in_1);
 
-        let errors = validate_ir(&ir);
+        let edge_ref = prog.graph.find_edge(in_1, add).unwrap();
+        prog.graph.remove_edge(edge_ref);
+        prog.graph.add_edge(in_1, add, EdgeInfo::Left);
+
+        let errors = validate_ir(&prog);
 
         assert_eq!(errors.len(), 1);
         assert_eq!(
@@ -314,41 +250,16 @@ mod tests {
 
     #[test]
     fn add_too_few_operands() {
-        let ir_str = serde_json::json!({
-          "data": "Bfv",
-          "graph": {
-            "graph": {
-              "nodes": [
-              {
-                "operation": {
-                  "InputCiphertext": 0
-                }
-              },
-              {
-                "operation": {
-                  "InputCiphertext": 1
-                }
-              },
-              {
-                "operation": "Add"
-              }
-            ],
-            "node_holes": [],
-            "edge_property": "directed",
-            "edges": [
-              [
-                0,
-                2,
-                "Left"
-              ],
-            ]
-            }
-          }
-        });
+        let mut prog = FheProgram::new(SchemeType::Bfv);
 
-        let ir: FheProgram = serde_json::from_value(ir_str).unwrap();
+        let in_0 = prog.add_input_ciphertext(0);
+        let in_1 = prog.add_input_ciphertext(0);
+        let add = prog.add_add(in_0, in_1);
 
-        let errors = validate_ir(&ir);
+        let remove_edge = prog.graph.find_edge_undirected(in_1, add).unwrap().0;
+        prog.graph.remove_edge(remove_edge);
+
+        let errors = validate_ir(&prog);
 
         assert_eq!(errors.len(), 1);
         assert_eq!(
@@ -363,51 +274,15 @@ mod tests {
 
     #[test]
     fn add_too_many_operands() {
-        let ir_str = serde_json::json!({
-          "data": "Bfv",
-          "graph": {
-            "graph": {
-              "nodes": [
-              {
-                "operation": {
-                  "InputCiphertext": 0
-                }
-              },
-              {
-                "operation": {
-                  "InputCiphertext": 1
-                }
-              },
-              {
-                "operation": "Add"
-              }
-            ],
-            "node_holes": [],
-            "edge_property": "directed",
-            "edges": [
-              [
-                0,
-                2,
-                "Left"
-              ],
-              [
-                0,
-                2,
-                "Right"
-              ],
-              [
-                0,
-                2,
-                "Left"
-              ],
-            ]
-            }
-          }
-        });
+        let mut prog = FheProgram::new(SchemeType::Bfv);
 
-        let ir: FheProgram = serde_json::from_value(ir_str).unwrap();
+        let in_0 = prog.add_input_ciphertext(0);
+        let in_1 = prog.add_input_ciphertext(0);
+        let add = prog.add_add(in_0, in_1);
 
-        let errors = validate_ir(&ir);
+        prog.graph.add_edge(in_1, add, EdgeInfo::Left);
+
+        let errors = validate_ir(&prog);
 
         assert_eq!(errors.len(), 1);
         assert_eq!(

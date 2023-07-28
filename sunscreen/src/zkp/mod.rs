@@ -432,6 +432,7 @@ pub(crate) fn compile(program: &ZkpFrontendCompilation) -> CompilationResult<Jit
     // Convert in and out of Graph to compact all the node indices.
     let jit = Graph::from(jit).into();
 
+    #[cfg(feature = "debugger")]
     let metadata = DebugData::new();
 
     CompilationResult {

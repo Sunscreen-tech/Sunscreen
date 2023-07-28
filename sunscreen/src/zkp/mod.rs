@@ -403,7 +403,7 @@ where
  * Takes the parsed frontend program and turns into a format ready to be
  * run.
  */
-pub(crate) fn compile(program: &ZkpFrontendCompilation) -> CompiledZkpProgram {
+pub(crate) fn compile(program: &ZkpFrontendCompilation) -> CompilationResult<JitOperation> {
     let jit = program.graph.map(
         |_, n| {
             let operation = match n.operation {
@@ -434,10 +434,12 @@ pub(crate) fn compile(program: &ZkpFrontendCompilation) -> CompiledZkpProgram {
     // Convert in and out of Graph to compact all the node indices.
     let jit = Graph::from(jit).into();
 
+    let mut metadata = DebugData::new();
+
     CompilationResult {
         graph: jit,
         #[cfg(feature = "debugger")]
-        metadata: DebugData::new(),
+        metadata: metadata,
     }
 }
 

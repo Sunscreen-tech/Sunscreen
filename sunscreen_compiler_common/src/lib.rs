@@ -23,6 +23,7 @@ pub mod lookup;
 pub use context::*;
 pub use graph::*;
 
+use petgraph::stable_graph::NodeIndex;
 use semver::Version;
 use serde::{
     de::{self, Error, Visitor},
@@ -30,8 +31,8 @@ use serde::{
 };
 
 use core::hash::Hash;
-use std::fmt::Debug;
 use std::str::FromStr;
+use std::{collections::HashMap, fmt::Debug};
 
 /**
  * Renders this object into a format that can be viewed by external
@@ -205,4 +206,32 @@ where
             ..inner_type
         }
     }
+}
+
+/**
+ *
+ */
+pub trait DebugSessionProvider<O: Operation, T, M> {
+    /**
+     *
+     */
+    fn add_session(&self, session: Session<O, T, M>);
+}
+
+/**
+ *
+ */
+pub struct Session<O: Operation, T, M> {
+    /**
+     *
+     */
+    pub graph: CompilationResult<O>,
+    /**
+     *
+     */
+    pub run_data: Vec<Option<T>>,
+    /**
+     *
+     */
+    pub metadata: M,
 }

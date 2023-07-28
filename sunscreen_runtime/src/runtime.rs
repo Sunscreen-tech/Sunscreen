@@ -1,5 +1,7 @@
+use crate::debugger::get_session_name;
 #[cfg(feature = "debugger")]
 use crate::debugger::server::start_web_server;
+use crate::debugger::GlobalSessionProvider;
 use crate::error::*;
 use crate::metadata::*;
 use crate::DebugInfo;
@@ -11,10 +13,13 @@ use crate::{
 };
 use std::marker::PhantomData;
 use std::sync::atomic::AtomicUsize;
+use sunscreen_zkp_backend::{BigInt, Operation as ZkpOperation};
+
 use std::time::Instant;
 
 use log::trace;
 
+use sunscreen_compiler_common::DebugSessionProvider;
 use sunscreen_fhe_program::FheProgramTrait;
 use sunscreen_fhe_program::SchemeType;
 
@@ -24,7 +29,6 @@ use seal_fhe::{
 };
 
 pub use sunscreen_compiler_common::{Type, TypeName};
-use sunscreen_zkp_backend::BigInt;
 use sunscreen_zkp_backend::CompiledZkpProgram;
 use sunscreen_zkp_backend::Proof;
 use sunscreen_zkp_backend::ZkpBackend;
@@ -431,13 +435,7 @@ where
     where
         I: Into<FheProgramInput>,
     {
-        static SESSION_NUM: AtomicUsize = AtomicUsize::new(0);
-
-        let session_name = format!(
-            "{}_{}",
-            fhe_program.metadata.name,
-            SESSION_NUM.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
-        );
+        let session_name = get_session_name(&fhe_program.metadata.name);
 
         self.run_impl(
             fhe_program,
@@ -535,14 +533,38 @@ where
 
         let now = Instant::now();
 
-        let prog =
-            backend.jit_prover(program, &constant_inputs, &public_inputs, &private_inputs)?;
+        let session_provider = if cfg!(feature = "debugger") {
+            Some(Box::new(GlobalSessionProvider::new(&get_session_name(
+                &program.metadata.name,
+            ))))
+        } else {
+            None
+        };
+        #[cfg(feature = "debugger")]
+        let boxed = session_provider.unwrap() as Box<dyn DebugSessionProvider<ZkpOperation, BigInt, String>>;
+
+        let debug_session_provider = if cfg!(feature = "debugger") {
+            Some(&boxed)
+        } else {
+            None
+        };
+
+        let prog = backend.jit_prover(
+            program,
+            &constant_inputs,
+            &public_inputs,
+            &private_inputs,
+            debug_session_provider
+        )?;
 
         trace!("Prover JIT time {}s", now.elapsed().as_secs_f64());
 
         let inputs = [public_inputs, private_inputs].concat();
 
         trace!("Starting backend prove...");
+
+        #[cfg(feature = "debugger")]
+        start_web_server();
 
         Ok(backend.prove(&prog, &inputs)?)
     }

@@ -2,19 +2,22 @@ use std::{any::Any, collections::HashMap, convert::Infallible, fmt::Debug, hash:
 
 use crate::{
     exec::{ExecutableZkpProgram, Operation as ExecOperation},
-    BackendField, BigInt, Error, Gadget, Result,
+    BackendField, BigInt, Error, Gadget, Result, ZkpFrom,
 };
+
 use petgraph::{stable_graph::NodeIndex, visit::EdgeRef, Direction, Graph};
+use serde::{Serialize, Deserialize};
 use sunscreen_compiler_common::{
     forward_traverse, forward_traverse_mut,
     transforms::{GraphTransforms, Transform},
-    CompilationResult, EdgeInfo, GraphQueryError, NodeInfo, Operation as OperationTrait,
+    CompilationResult, DebugSessionProvider, EdgeInfo, GraphQueryError, NodeInfo,
+    Operation as OperationTrait, Session,
 };
 
 #[cfg(feature = "debugger")]
 use sunscreen_compiler_common::DebugData;
 
-#[derive(Clone)]
+#[derive(Clone, Serialize)]
 /**
  * An operation in Sunscreen's intermediate representation programs before JIT compilation.
  */
@@ -77,6 +80,7 @@ pub enum Operation {
      */
     Constant(BigInt),
 }
+
 
 impl Hash for Operation {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
@@ -182,11 +186,35 @@ impl OperationTrait for Operation {
 }
 
 /**
+ *
+ */
+#[derive(Clone)]
+pub struct ZkpProgramMetadata {
+    /**
+     *
+     */
+    pub name: String,
+}
+
+/**
+ *
+ */
+#[derive(Clone)]
+pub struct CompiledZkpProgram {
+    /**
+     *
+     */
+    pub graph: CompilationResult<Operation>,
+    /**
+     *
+     */
+    pub metadata: ZkpProgramMetadata,
+}
+
+/**
  * A ZKP program that has been through frontend compilation, but not yet
  * JIT'd.
  */
-pub type CompiledZkpProgram = CompilationResult<Operation>;
-
 fn validate_zkp_program(prog: &CompiledZkpProgram) -> Result<()> {
     fn assert_range(inputs: &[usize], input_type: &str) -> Result<()> {
         for (i, j) in inputs.iter().enumerate() {
@@ -202,6 +230,7 @@ fn validate_zkp_program(prog: &CompiledZkpProgram) -> Result<()> {
 
     // Check that the constant, public, and private inputs form a range.
     let mut constant_inputs = prog
+        .graph
         .node_weights()
         .filter_map(|x| match x.operation {
             Operation::ConstantInput(x) => Some(x),
@@ -213,6 +242,7 @@ fn validate_zkp_program(prog: &CompiledZkpProgram) -> Result<()> {
     assert_range(&constant_inputs, "constant input")?;
 
     let mut private_inputs = prog
+        .graph
         .node_weights()
         .filter_map(|x| match x.operation {
             Operation::PrivateInput(x) => Some(x),
@@ -224,6 +254,7 @@ fn validate_zkp_program(prog: &CompiledZkpProgram) -> Result<()> {
     assert_range(&private_inputs, "private input")?;
 
     let mut public_inputs = prog
+        .graph
         .node_weights()
         .filter_map(|x| match x.operation {
             Operation::PublicInput(x) => Some(x),
@@ -251,13 +282,20 @@ pub fn jit_prover<U>(
     constant_inputs: &[U],
     public_inputs: &[U],
     private_inputs: &[U],
+    session_provider: Option<&Box<dyn DebugSessionProvider<Operation, BigInt, String>>>,
 ) -> Result<ExecutableZkpProgram>
 where
     U: BackendField,
 {
     let mut prog = prog.clone();
+    let mut session = session_provider.as_ref().map(|_| Session {
+        graph: prog.graph.clone(),
+        run_data: vec![],
+        metadata: prog.metadata.name.to_owned(),
+    });
 
     let expected_private_inputs = prog
+        .graph
         .node_weights()
         .filter(|x| matches!(x.operation, Operation::PrivateInput(_)))
         .count();
@@ -279,7 +317,7 @@ where
 
     // Run the graph as a computation (not a ZKP) to compute all the
     // gadget hidden input values.
-    forward_traverse(&prog, |query, id| {
+    forward_traverse(&prog.graph, |query, id| {
         let node = query.get_node(id).unwrap();
 
         match node.operation {
@@ -364,7 +402,7 @@ where
                             return Err(GraphQueryError::NotUnaryOperation)?;
                         }
 
-                        match prog[x.target()].operation {
+                        match prog.graph[x.target()].operation {
                             Operation::HiddenInput(arg_idx) => {
                                 Ok(SortableEdge(x.target(), arg_idx))
                             }
@@ -431,7 +469,28 @@ where
         Ok::<_, Error>(())
     })?;
 
-    jit_common(prog, constant_inputs, public_inputs, Some(node_outputs))
+    if let Some(session) = session.as_mut() {
+        let mut out_vec = vec![None; prog.graph.node_count()];
+
+        for (k, v) in node_outputs.iter() {
+            out_vec[k.index()] = Some((*v).clone().zkp_into());
+        }
+
+        session.run_data = out_vec;
+    }
+
+    if let Some(v) = session_provider {
+        v.add_session(session.unwrap());
+    }
+
+    jit_common(
+        prog,
+        constant_inputs,
+        public_inputs,
+        Some(node_outputs),
+        #[cfg(feature = "debugger")]
+        None,
+    )
 }
 
 /**
@@ -455,7 +514,19 @@ where
     verify_constant_inputs(&prog, constant_inputs)?;
     constrain_public_inputs(&mut prog, public_inputs)?;
 
-    jit_common(prog, constant_inputs, public_inputs, None)
+    jit_common(
+        prog,
+        constant_inputs,
+        public_inputs,
+        None,
+        #[cfg(feature = "debugger")]
+        None,
+    )
+}
+
+#[cfg(feature = "debugger")]
+pub struct ZkpDebugInfo {
+    pub session_name: String,
 }
 
 /**
@@ -466,20 +537,22 @@ fn jit_common<U>(
     constant_inputs: &[U],
     public_inputs: &[U],
     node_outputs: Option<HashMap<NodeIndex, U>>,
+    #[cfg(feature = "debugger")] debug_info: Option<ZkpDebugInfo>,
 ) -> Result<ExecutableZkpProgram>
 where
     U: BackendField,
 {
     // Remove Gadgets, as we should have already extracted their outputs.
     for n in prog
+        .graph
         .node_indices()
-        .filter(|x| matches!(prog[*x].operation, Operation::InvokeGadget(_)))
+        .filter(|x| matches!(prog.graph[*x].operation, Operation::InvokeGadget(_)))
         .collect::<Vec<NodeIndex>>()
     {
-        prog.remove_node(n);
+        prog.graph.remove_node(n);
     }
 
-    let executable_graph = prog.map(
+    let executable_graph = prog.graph.map(
         |id, n| match n.operation {
             Operation::Add => NodeInfo::new(
                 ExecOperation::Add,
@@ -581,6 +654,7 @@ where
 
 fn verify_constant_inputs<U>(prog: &CompiledZkpProgram, constant_inputs: &[U]) -> Result<()> {
     let expected_constant_inputs = prog
+        .graph
         .node_weights()
         .filter(|x| matches!(x.operation, Operation::ConstantInput(_)))
         .count();
@@ -601,6 +675,7 @@ where
     U: BackendField,
 {
     let mut arg_indices = prog
+        .graph
         .node_weights()
         .filter_map(|x| match x.operation {
             Operation::PublicInput(x) => Some(x),
@@ -628,10 +703,10 @@ where
         }
     }
 
-    forward_traverse_mut(prog, |query, id| {
+    forward_traverse_mut(&mut prog.graph.graph, |query, id| {
         let mut transforms = GraphTransforms::new();
 
-        let node = query.get_node(id).unwrap();
+        let node: &NodeInfo<Operation> = query.get_node(id).unwrap();
 
         if let Operation::PublicInput(x) = node.operation {
             let as_bigint: BigInt = public_inputs[x].clone().zkp_into();

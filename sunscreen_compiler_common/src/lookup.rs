@@ -38,29 +38,17 @@ impl StackFrameInfo {
         let ip_as_bytes = (frame.ip() as usize).to_ne_bytes();
 
         StackFrameInfo {
-            callee_name: frame_symbols
-                .iter()
-                .nth(0)
-                .map(|x| x.name().unwrap_or(SymbolName::new(&ip_as_bytes)))
+            callee_name: frame_symbols.first()
+                .and_then(|c| c.name())
                 .unwrap_or(SymbolName::new(&ip_as_bytes))
                 .to_string(),
-            callee_file: frame_symbols
-                .iter()
-                .nth(0)
-                .map(|x| x.filename().unwrap_or(Path::new("")))
-                .unwrap_or(Path::new(""))
+            callee_file: frame_symbols.first()
+                .and_then(|c| c.filename())
+                .unwrap_or(Path::new("No such file"))
                 .to_string_lossy()
                 .into_owned(),
-            callee_lineno: frame_symbols
-                .iter()
-                .nth(0)
-                .map(|x| x.lineno().unwrap_or(0))
-                .unwrap_or(0),
-            callee_col: frame_symbols
-                .iter()
-                .nth(0)
-                .map(|x| x.colno().unwrap_or(0))
-                .unwrap_or(0),
+            callee_lineno: frame_symbols.first().and_then(|c| c.lineno()).unwrap_or(0),
+            callee_col: frame_symbols.first().and_then(|c| c.colno()).unwrap_or(0),
         }
     }
 

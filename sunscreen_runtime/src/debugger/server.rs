@@ -4,8 +4,8 @@ use semver::Version;
 
 use crate::{
     debugger::sessions::{BfvSession, Session, ZkpSession},
-    debugger::{decrypt_seal, get_mult_depth, get_sessions, overflow_occurred},
-    debugger::{BfvNodeType, DebugNodeType, ZkpNodeType},
+    debugger::{decrypt_seal, get_mult_depth, overflow_occurred},
+    debugger::{get_sessions, BfvNodeType, DebugNodeType, ZkpNodeType},
     Ciphertext, InnerCiphertext, InnerPlaintext, Plaintext, Runtime, SealData, Type, WithContext,
 };
 use petgraph::stable_graph::NodeIndex;
@@ -92,8 +92,17 @@ async fn get_session_data(session: web::Path<String>) -> impl Responder {
     let sessions = get_sessions().lock().unwrap();
 
     if sessions.contains_key(session.as_str()) {
-        let curr_session = sessions.get(session.as_str()).unwrap().unwrap_bfv_session();
-        let graph_string = serde_json::to_string_pretty(&curr_session.graph.graph);
+
+        let curr_session = sessions.get(session.as_str()).unwrap();
+        let graph_string = match curr_session {
+            Session::BfvSession(_) => {
+                serde_json::to_string_pretty(&curr_session.unwrap_bfv_session().graph.graph)
+            },
+            Session::ZkpSession(_) => {
+                serde_json::to_string_pretty(&curr_session.unwrap_zkp_session().graph.graph)
+            }
+            _ => panic!("Not Zkp or Bfv session")
+        };
 
         HttpResponse::Ok().body(graph_string.unwrap().to_owned())
     } else {
@@ -240,7 +249,9 @@ pub async fn get_node_data(
             Session::ZkpSession(zkp_session) => {
                 if let Some(data) = zkp_session.program_data.get(nodeid) {
                     DebugNodeType::Zkp(ZkpNodeType {
-                        value: data.unwrap().to_string(),
+                        value: data
+                            .unwrap_or(sunscreen_zkp_backend::BigInt::from(0u32))
+                            .to_string(),
                     })
                 } else {
                     return Ok(HttpResponse::NotFound().body(format!("Node {} not found", nodeid)));

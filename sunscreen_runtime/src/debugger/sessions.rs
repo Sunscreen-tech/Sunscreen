@@ -1,9 +1,10 @@
 use std::collections::HashMap;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Mutex, OnceLock};
 
 use crate::{PrivateKey, SealData};
 
-use sunscreen_compiler_common::CompilationResult;
+use sunscreen_compiler_common::{CompilationResult, DebugSessionProvider};
 use sunscreen_fhe_program::Operation as FheOperation;
 use sunscreen_zkp_backend::{BigInt, Operation as ZkpOperation};
 
@@ -12,6 +13,35 @@ static SESSIONS: OnceLock<Mutex<HashMap<String, Session>>> = OnceLock::new();
 
 pub fn get_sessions() -> &'static Mutex<HashMap<String, Session>> {
     SESSIONS.get_or_init(|| Mutex::new(HashMap::new()))
+}
+
+pub struct GlobalSessionProvider {
+    name: String,
+}
+
+impl GlobalSessionProvider {
+    pub fn new(name: &str) -> Self {
+        Self {
+            name: name.to_owned(),
+        }
+    }
+}
+
+impl DebugSessionProvider<FheOperation, SealData, ()> for GlobalSessionProvider {
+    fn add_session(&self, session: sunscreen_compiler_common::Session<FheOperation, SealData, ()>) {
+    }
+}
+
+impl DebugSessionProvider<ZkpOperation, BigInt, String> for GlobalSessionProvider {
+    fn add_session(
+        &self,
+        session: sunscreen_compiler_common::Session<ZkpOperation, BigInt, String>,
+    ) {
+        let session = ZkpSession::new(&session.graph, session.run_data, &session.metadata);
+        let mut guard = get_sessions().lock().unwrap();
+        assert!(!guard.contains_key(&self.name));
+        guard.insert(self.name.to_owned(), session.into());
+    }
 }
 
 /**
@@ -109,6 +139,7 @@ pub struct ZkpSession {
     /**
      * The values of operands in the compilation graph.
      */
+    // TODO: figure out how to refactor this
     pub program_data: Vec<Option<BigInt>>,
 
     /**
@@ -121,11 +152,35 @@ impl ZkpSession {
     /**
      * Constructs a new `ZkpDebugInfo`.
      */
-    pub fn new(graph: &CompilationResult<ZkpOperation>, source_code: &str) -> Self {
+    // pub fn new(graph: &CompilationResult<ZkpOperation>, source_code: &str) -> Self {
+    //     Self {
+    //         graph: graph.clone(),
+    //         program_data: vec![None; graph.node_count()],
+    //         source_code: source_code.to_owned(),
+    //     }
+    // }
+
+    pub fn new(graph: &CompilationResult<ZkpOperation>, data: Vec<Option<BigInt>>, source_code: &str) -> Self {
         Self {
             graph: graph.clone(),
-            program_data: vec![None; graph.node_count()],
+            program_data: data,
             source_code: source_code.to_owned(),
         }
     }
+}
+
+impl From<ZkpSession> for Session {
+    fn from(session: ZkpSession) -> Session {
+        Self::ZkpSession(session)
+    }
+}
+
+static SESSION_NUM: AtomicUsize = AtomicUsize::new(0);
+
+pub fn get_session_name(program_name: &str) -> String {
+    format!(
+        "{}_{}",
+        program_name,
+        SESSION_NUM.fetch_add(1, Ordering::Relaxed)
+    )
 }

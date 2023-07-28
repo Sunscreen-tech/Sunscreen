@@ -183,9 +183,9 @@ impl Gadget for Inverse {
 #[cfg(test)]
 mod tests {
     use sunscreen_compiler_macros::zkp_program;
-    use sunscreen_runtime::{Runtime, ZkpProgramInput};
+    use sunscreen_runtime::{Runtime, ZkpBackend, ZkpProgramInput};
+    use sunscreen_zkp_backend::bulletproofs::BulletproofsBackend;
     use sunscreen_zkp_backend::BackendField;
-    use sunscreen_zkp_backend::{bulletproofs::BulletproofsBackend, ZkpBackend};
 
     use crate::types::zkp::NativeField;
     use crate::{self as sunscreen, invoke_gadget, Compiler};

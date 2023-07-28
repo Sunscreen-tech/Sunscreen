@@ -26,9 +26,10 @@ use crypto_bigint::{
 };
 pub use error::*;
 pub use exec::ExecutableZkpProgram;
-pub use jit::{jit_prover, jit_verifier, CompiledZkpProgram, Operation};
+pub use jit::{jit_prover, jit_verifier, CompiledZkpProgram, Operation, ZkpProgramMetadata};
 use petgraph::stable_graph::NodeIndex;
 use serde::{Deserialize, Serialize};
+use sunscreen_compiler_common::DebugSessionProvider;
 
 // Converting between U512 and backend numeric types requires an
 // assumption about endianess. We require little endian for now unless
@@ -126,6 +127,14 @@ pub trait Gadget: Any + Send + Sync {
     }
 }
 
+impl Serialize for dyn Gadget {
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer {
+        serializer.serialize_str(self.debug_name())
+    }
+}
+
 #[derive(Clone, Serialize, Deserialize)]
 //#[serde(tag = "type")]
 /**
@@ -168,7 +177,16 @@ pub struct BigInt(
      * The wrapped value.
      */
     pub U512,
+
 );
+
+impl Serialize for BigInt {
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer {
+        serializer.serialize_str(self.to_string().as_str())
+    }
+}
 
 impl<T> std::convert::From<T> for BigInt
 where
@@ -402,6 +420,7 @@ pub trait ZkpBackend {
         constant_inputs: &[BigInt],
         public_inputs: &[BigInt],
         private_inputs: &[BigInt],
+        debug_session_provider: Option<&Box<dyn DebugSessionProvider<Operation, BigInt, String>>>,
     ) -> Result<ExecutableZkpProgram>;
 
     /**
@@ -493,6 +512,17 @@ mod tests {
 
             assert_eq!(x_inv.wrapping_mul(&x).reduce(&p).unwrap(), UInt::ONE);
         };
+
+        struct TestProvider {}
+
+        impl DebugSessionProvider<jit::Operation, BigInt, String> for TestProvider {
+            fn add_session(
+                &self,
+                session: sunscreen_compiler_common::Session<jit::Operation, BigInt, String>,
+            ) {
+                unreachable!()
+            }
+        }
 
         test_case(BigInt::from(7u16), BigInt::from(11u16));
         test_case(BigInt::from(8u16), BigInt::from(11u16));

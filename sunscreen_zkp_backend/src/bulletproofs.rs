@@ -13,11 +13,12 @@ use log::trace;
 use merlin::Transcript;
 use petgraph::stable_graph::NodeIndex;
 use serde::{Deserialize, Serialize};
-use sunscreen_compiler_common::{forward_traverse, GraphQuery};
+use sunscreen_compiler_common::{forward_traverse, DebugSessionProvider, GraphQuery};
 
 use crate::{
-    exec::Operation, jit::jit_verifier, jit_prover, BackendField, BigInt, Error,
-    ExecutableZkpProgram, Proof, Result, ZkpBackend,
+    exec::Operation,
+    jit::{self, jit_verifier},
+    jit_prover, BackendField, BigInt, Error, ExecutableZkpProgram, Proof, Result, ZkpBackend,
 };
 
 #[derive(Clone)]
@@ -370,7 +371,8 @@ fn constraint_count(graph: &ExecutableZkpProgram) -> Result<usize> {
     Ok(count)
 }
 
-impl ZkpBackend for BulletproofsBackend {
+impl ZkpBackend for BulletproofsBackend
+{
     type Field = Scalar;
 
     fn prove(&self, graph: &ExecutableZkpProgram, inputs: &[BigInt]) -> Result<Proof> {
@@ -463,6 +465,7 @@ impl ZkpBackend for BulletproofsBackend {
         constant_inputs: &[BigInt],
         public_inputs: &[BigInt],
         private_inputs: &[BigInt],
+        debug_session_provider: Option<&Box<dyn DebugSessionProvider<jit::Operation, BigInt, String>>>,
     ) -> Result<ExecutableZkpProgram> {
         let constant_inputs = constant_inputs
             .iter()
@@ -477,7 +480,13 @@ impl ZkpBackend for BulletproofsBackend {
             .map(Scalar::try_from)
             .collect::<Result<Vec<Scalar>>>()?;
 
-        jit_prover::<Scalar>(prog, &constant_inputs, &public_inputs, &private_inputs)
+        jit_prover::<Scalar>(
+            prog,
+            &constant_inputs,
+            &public_inputs,
+            &private_inputs,
+            debug_session_provider,
+        )
     }
 
     fn jit_verifier(
@@ -686,7 +695,19 @@ mod tests {
             &[(add_1, EdgeInfo::Unordered)],
         );
 
-        let backend = BulletproofsBackend::new();
+        let backend: Box<dyn ZkpBackend<Field = Scalar>> =
+            Box::new(BulletproofsBackend::new());
+
+        struct TestProvider {}
+
+        impl DebugSessionProvider<jit::Operation, BigInt, String> for TestProvider {
+            fn add_session(
+                &self,
+                session: sunscreen_compiler_common::Session<jit::Operation, BigInt, String>,
+            ) {
+                unreachable!()
+            }
+        }
 
         // 10 * 4 + 2 == 42
         let proof = backend

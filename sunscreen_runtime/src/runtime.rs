@@ -541,8 +541,8 @@ where
             None
         };
         #[cfg(feature = "debugger")]
-        let boxed = &session_provider.unwrap()
-            as &dyn DebugSessionProvider<ZkpOperation, BigInt, String>;
+        let boxed =
+            &session_provider.unwrap() as &dyn DebugSessionProvider<ZkpOperation, BigInt, String>;
 
         let debug_session_provider = if cfg!(feature = "debugger") {
             Some(boxed)

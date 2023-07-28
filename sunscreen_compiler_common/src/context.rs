@@ -15,6 +15,13 @@ use crate::lookup::{GroupLookup, StackFrameLookup};
 #[cfg(feature = "debugger")]
 use backtrace::Backtrace;
 
+#[cfg(feature = "debugger")]
+use std::hash::{Hash, Hasher};
+
+#[cfg(feature = "debugger")]
+use std::collections::hash_map::DefaultHasher;
+
+
 /**
  * Stores debug information about groups and stack traces.
  */
@@ -363,23 +370,21 @@ where
         {
             // Capture backtrace and insert into lookup
             let bt = Backtrace::new();
+            let mut hasher = DefaultHasher::new();
             let stack_frames = self
                 .graph
                 .metadata
                 .stack_lookup
                 .backtrace_to_stackframes(bt);
-            let serialized_stack_frames = stack_frames
-                .iter()
-                .map(|frame| frame.serialize())
-                .collect::<Vec<_>>()
-                .join("_");
+            stack_frames.hash(&mut hasher);
+            let hash = hasher.finish();
 
             let stack_id = *self
                 .graph
                 .metadata
                 .stack_lookup
                 .data_id_lookup
-                .entry(serialized_stack_frames.clone())
+                .entry(hash.clone())
                 .or_insert_with(|| {
                     self.graph.metadata.stack_counter += 1;
                     self.graph.metadata.stack_counter

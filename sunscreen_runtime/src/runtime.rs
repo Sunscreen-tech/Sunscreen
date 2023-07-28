@@ -541,12 +541,13 @@ where
             None
         };
         #[cfg(feature = "debugger")]
-        let provider = &session_provider.unwrap() as &dyn DebugSessionProvider<ZkpOperation, BigInt, String>;
+        let provider =
+            &session_provider.unwrap() as &dyn DebugSessionProvider<ZkpOperation, BigInt, String>;
         #[cfg(feature = "debugger")]
         let debug_session_provider = Some(provider);
 
         #[cfg(not(feature = "debugger"))]
-        let debug_session_provider = None;        
+        let debug_session_provider = None;
 
         let prog = backend.jit_prover(
             program,

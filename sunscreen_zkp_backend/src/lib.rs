@@ -369,10 +369,7 @@ impl BigInt {
  * The methods needed for a type to serve as a proof
  * system in the Sunscreen ecosystem.
  */
-pub trait ZkpBackend<P>
-where
-    P: DebugSessionProvider<Operation, BigInt, String>,
-{
+pub trait ZkpBackend {
     /**
      * The field this backend uses in computation.
      */
@@ -406,7 +403,7 @@ where
         constant_inputs: &[BigInt],
         public_inputs: &[BigInt],
         private_inputs: &[BigInt],
-        debug_session_provider: Option<&P>,
+        debug_session_provider: Option<&Box<dyn DebugSessionProvider<Operation, BigInt, String>>>,
     ) -> Result<ExecutableZkpProgram>;
 
     /**
@@ -515,7 +512,7 @@ mod tests {
         test_case(BigInt::from(9u16), BigInt::from(11u16));
         test_case(
             BigInt::from(1234u32),
-            <BulletproofsBackend as ZkpBackend<TestProvider>>::Field::FIELD_MODULUS,
+            <BulletproofsBackend as ZkpBackend>::Field::FIELD_MODULUS,
         );
     }
 }

@@ -275,16 +275,15 @@ fn validate_zkp_program(prog: &CompiledZkpProgram) -> Result<()> {
  * This method computes [`Gadget`]'s hidden inputs from their gadget inputs. To do this,
  * we first directly run the execution graph and store the outputs of each node.
  */
-pub fn jit_prover<U, P>(
+pub fn jit_prover<U>(
     prog: &CompiledZkpProgram,
     constant_inputs: &[U],
     public_inputs: &[U],
     private_inputs: &[U],
-    session_provider: Option<&P>,
+    session_provider: Option<&Box<dyn DebugSessionProvider<Operation, BigInt, String>>>,
 ) -> Result<ExecutableZkpProgram>
 where
     U: BackendField,
-    P: DebugSessionProvider<Operation, BigInt, String>,
 {
     let mut prog = prog.clone();
     let mut session = session_provider.as_ref().map(|_| Session {

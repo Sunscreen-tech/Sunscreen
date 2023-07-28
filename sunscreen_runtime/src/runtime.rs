@@ -13,10 +13,13 @@ use crate::{
 };
 use std::marker::PhantomData;
 use std::sync::atomic::AtomicUsize;
+use sunscreen_zkp_backend::{BigInt, Operation as ZkpOperation};
+
 use std::time::Instant;
 
 use log::trace;
 
+use sunscreen_compiler_common::DebugSessionProvider;
 use sunscreen_fhe_program::FheProgramTrait;
 use sunscreen_fhe_program::SchemeType;
 
@@ -26,7 +29,6 @@ use seal_fhe::{
 };
 
 pub use sunscreen_compiler_common::{Type, TypeName};
-use sunscreen_zkp_backend::BigInt;
 use sunscreen_zkp_backend::CompiledZkpProgram;
 use sunscreen_zkp_backend::Proof;
 use sunscreen_zkp_backend::ZkpBackend;
@@ -497,7 +499,7 @@ where
 impl<T, B> GenericRuntime<T, B>
 where
     T: marker::Zkp,
-    B: ZkpBackend<GlobalSessionProvider>,
+    B: ZkpBackend,
 {
     /**
      * Prove the given `inputs` satisfy `program`.
@@ -532,9 +534,17 @@ where
         let now = Instant::now();
 
         let session_provider = if cfg!(feature = "debugger") {
-            Some(GlobalSessionProvider::new(&get_session_name(
+            Some(Box::new(GlobalSessionProvider::new(&get_session_name(
                 &program.metadata.name,
-            )))
+            ))))
+        } else {
+            None
+        };
+        #[cfg(feature = "debugger")]
+        let boxed = session_provider.unwrap() as Box<dyn DebugSessionProvider<ZkpOperation, BigInt, String>>;
+        
+        let debug_session_provider = if cfg!(feature = "debugger") {
+            Some(&boxed)
         } else {
             None
         };
@@ -544,7 +554,7 @@ where
             &constant_inputs,
             &public_inputs,
             &private_inputs,
-            session_provider.as_ref(),
+            debug_session_provider
         )?;
 
         trace!("Prover JIT time {}s", now.elapsed().as_secs_f64());
@@ -650,7 +660,7 @@ impl GenericRuntime<(), ()> {
      */
     pub fn new_zkp<B>(backend: &B) -> Result<ZkpRuntime<B>>
     where
-        B: ZkpBackend<GlobalSessionProvider> + Clone + 'static,
+        B: ZkpBackend + Clone + 'static,
     {
         Ok(GenericRuntime {
             runtime_data: RuntimeData::Zkp(Self::make_zkp_runtime_data()),
@@ -664,7 +674,7 @@ impl GenericRuntime<(), ()> {
      */
     pub fn new_fhe_zkp<B>(params: &Params, zkp_backend: &B) -> Result<FheZkpRuntime<B>>
     where
-        B: ZkpBackend<GlobalSessionProvider> + Clone + 'static,
+        B: ZkpBackend + Clone + 'static,
     {
         let runtime_data = RuntimeData::FheZkp(
             Self::make_fhe_runtime_data(params)?,
@@ -690,7 +700,7 @@ impl<B> FheZkpRuntime<B> {
      */
     pub fn new(params: &Params, zkp_backend: &B) -> Result<Self>
     where
-        B: ZkpBackend<GlobalSessionProvider> + Clone + 'static,
+        B: ZkpBackend + Clone + 'static,
     {
         Runtime::new_fhe_zkp(params, zkp_backend)
     }
@@ -721,7 +731,7 @@ impl<B> ZkpRuntime<B> {
      */
     pub fn new(backend: &B) -> Result<Self>
     where
-        B: ZkpBackend<GlobalSessionProvider> + Clone + 'static,
+        B: ZkpBackend + Clone + 'static,
     {
         Runtime::new_zkp(backend)
     }

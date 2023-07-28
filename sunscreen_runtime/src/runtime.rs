@@ -542,7 +542,7 @@ where
         };
         #[cfg(feature = "debugger")]
         let boxed = session_provider.unwrap() as Box<dyn DebugSessionProvider<ZkpOperation, BigInt, String>>;
-        
+
         let debug_session_provider = if cfg!(feature = "debugger") {
             Some(&boxed)
         } else {
@@ -562,6 +562,9 @@ where
         let inputs = [public_inputs, private_inputs].concat();
 
         trace!("Starting backend prove...");
+
+        #[cfg(feature = "debugger")]
+        start_web_server();
 
         Ok(backend.prove(&prog, &inputs)?)
     }

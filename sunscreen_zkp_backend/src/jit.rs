@@ -6,6 +6,7 @@ use crate::{
 };
 
 use petgraph::{stable_graph::NodeIndex, visit::EdgeRef, Direction, Graph};
+use serde::{Serialize, Deserialize};
 use sunscreen_compiler_common::{
     forward_traverse, forward_traverse_mut,
     transforms::{GraphTransforms, Transform},
@@ -16,7 +17,7 @@ use sunscreen_compiler_common::{
 #[cfg(feature = "debugger")]
 use sunscreen_compiler_common::DebugData;
 
-#[derive(Clone)]
+#[derive(Clone, Serialize)]
 /**
  * An operation in Sunscreen's intermediate representation programs before JIT compilation.
  */
@@ -79,6 +80,7 @@ pub enum Operation {
      */
     Constant(BigInt),
 }
+
 
 impl Hash for Operation {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {

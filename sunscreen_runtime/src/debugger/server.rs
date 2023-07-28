@@ -92,8 +92,17 @@ async fn get_session_data(session: web::Path<String>) -> impl Responder {
     let sessions = get_sessions().lock().unwrap();
 
     if sessions.contains_key(session.as_str()) {
-        let curr_session = sessions.get(session.as_str()).unwrap().unwrap_bfv_session();
-        let graph_string = serde_json::to_string_pretty(&curr_session.graph.graph);
+
+        let curr_session = sessions.get(session.as_str()).unwrap();
+        let graph_string = match curr_session {
+            Session::BfvSession(_) => {
+                serde_json::to_string_pretty(&curr_session.unwrap_bfv_session().graph.graph)
+            },
+            Session::ZkpSession(_) => {
+                serde_json::to_string_pretty(&curr_session.unwrap_zkp_session().graph.graph)
+            }
+            _ => panic!("Not Zkp or Bfv session")
+        };
 
         HttpResponse::Ok().body(graph_string.unwrap().to_owned())
     } else {

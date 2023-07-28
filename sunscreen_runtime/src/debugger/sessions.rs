@@ -37,7 +37,7 @@ impl DebugSessionProvider<ZkpOperation, BigInt, String> for GlobalSessionProvide
         &self,
         session: sunscreen_compiler_common::Session<ZkpOperation, BigInt, String>,
     ) {
-        let session = ZkpSession::new(&session.graph, &session.metadata);
+        let session = ZkpSession::new(&session.graph, session.run_data, &session.metadata);
         let mut guard = get_sessions().lock().unwrap();
         assert!(!guard.contains_key(&self.name));
         guard.insert(self.name.to_owned(), session.into());
@@ -152,10 +152,18 @@ impl ZkpSession {
     /**
      * Constructs a new `ZkpDebugInfo`.
      */
-    pub fn new(graph: &CompilationResult<ZkpOperation>, source_code: &str) -> Self {
+    // pub fn new(graph: &CompilationResult<ZkpOperation>, source_code: &str) -> Self {
+    //     Self {
+    //         graph: graph.clone(),
+    //         program_data: vec![None; graph.node_count()],
+    //         source_code: source_code.to_owned(),
+    //     }
+    // }
+
+    pub fn new(graph: &CompilationResult<ZkpOperation>, data: Vec<Option<BigInt>>, source_code: &str) -> Self {
         Self {
             graph: graph.clone(),
-            program_data: vec![None; graph.node_count()],
+            program_data: data,
             source_code: source_code.to_owned(),
         }
     }

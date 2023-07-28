@@ -1,0 +1,12 @@
+[package]
+name = "zkp-debugger"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+sunscreen = { path = "../../sunscreen", features = ["debugger"] }
+sunscreen_zkp_backend = { path = "../../sunscreen_zkp_backend", features = ["debugger"]}
+tokio = {version = "1", features = ["macros"]}
+actix-web = "4.3.1"

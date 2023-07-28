@@ -11,10 +11,10 @@ pub fn fhe_program_impl(
     metadata: proc_macro::TokenStream,
     input: proc_macro::TokenStream,
 ) -> proc_macro::TokenStream {
-    let raw_fn = input.clone().to_string();
 
     let input_fn = parse_macro_input!(input as ItemFn);
-
+    let raw_fn = input_fn.span().source_text().unwrap_or_default();
+    
     let fhe_program_name = &input_fn.sig.ident;
     let vis = &input_fn.vis;
     let body = &input_fn.block;

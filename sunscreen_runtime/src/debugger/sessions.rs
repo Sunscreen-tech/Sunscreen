@@ -79,13 +79,6 @@ impl Session {
             _ => panic!("Called unwrap_zkp_session on a non-ZKP session"),
         }
     }
-
-    pub fn unwrap_zkp_session_mut(&mut self) -> &mut ZkpSession {
-        match self {
-            Self::ZkpSession(s) => s,
-            _ => panic!("Called unwrap_zkp_session_mut on a non-ZKP session"),
-        }
-    }
 }
 
 /**

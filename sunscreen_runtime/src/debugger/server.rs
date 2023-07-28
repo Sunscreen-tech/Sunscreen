@@ -3,7 +3,7 @@ use actix_web::{get, http::header, web, App, HttpResponse, HttpServer, Responder
 use semver::Version;
 
 use crate::{
-    debugger::sessions::{Session},
+    debugger::sessions::Session,
     debugger::{decrypt_seal, get_mult_depth, overflow_occurred},
     debugger::{get_sessions, BfvNodeType, DebugNodeType, ZkpNodeType},
     Ciphertext, InnerCiphertext, InnerPlaintext, Plaintext, Runtime, SealData, Type, WithContext,
@@ -101,7 +101,6 @@ async fn get_session_data(session: web::Path<String>) -> impl Responder {
             Session::ZkpSession(_) => {
                 serde_json::to_string_pretty(&curr_session.unwrap_zkp_session().graph.graph)
             }
-            _ => panic!("Not Zkp or Bfv session")
         };
 
         HttpResponse::Ok().body(graph_string.unwrap().to_owned())

@@ -84,10 +84,43 @@ type OutputCiphertextOp = {
   id: number
 };
 
+type HiddenInputOp = {
+  type: 'HiddenInput'
+}
+
+type PublicInputOp = {
+  type: 'PublicInput'
+}
+
+type ConstantInputOp = {
+  type: 'ConstantInput'
+}
+
+type ZkpConstantOp = {
+  type: 'Constant'
+  content: string
+}
+
+type InvokeGadgetOp = {
+  type: 'InvokeGadget',
+  content: string
+}
+
+type ConstraintOp = {
+  type: 'Constraint',
+  content: string
+}
+
+type MulOp = {
+  type: 'Mul'
+}
+
 type FheProgramOperation = InputCiphertextOp | InputPlaintextOp | MultiplyOp | AddOp | SubOp | RelinearizeOp | OutputCiphertextOp
 
+type ZkpProgramOperation = HiddenInputOp | PublicInputOp | ConstantInputOp | MultiplyOp | AddOp | SubOp | InvokeGadgetOp | ConstraintOp | ZkpConstantOp | MulOp
+
 type FheProgramNode = {
-  operation: any
+  operation: FheProgramOperation
 }
 
 type EdgeType = 'Left' | 'Right' | 'Unary'
@@ -103,12 +136,23 @@ type FheProgram = {
   data: 'Bfv'
 }
 
-const dataToGraph = (data: FheProgramGraph) => {
+type ZkpProgram = {
+  graph: { graph: {graph: ZkpProgramGraph}};
+  data: any
+}
+
+
+type ZkpProgramGraph = {
+  nodes: [{ operation: ZkpProgramOperation }],
+  edges: FheProgramEdge
+}
+
+const dataToGraph = (data: FheProgramGraph | ZkpProgramGraph) => {
   const nodes: any[] = [];
   const edges: any[] = [];
 
   for (let i: number = 0; i < data.nodes.length; ++i) {
-    const op = data.nodes[i].operation
+    const op = data.nodes[i].operation.type
     switch (op) {
       case 'InputCiphertext':
         console.log('test')
@@ -117,6 +161,7 @@ const dataToGraph = (data: FheProgramGraph) => {
       case 'Relinearize':
         nodes.push({id: i, title: "", type: 'relinearize'})
         break
+      case 'Mul':
       case 'Multiply':
         nodes.push({id: i, title: "", type: 'multiply'})
         break
@@ -129,8 +174,15 @@ const dataToGraph = (data: FheProgramGraph) => {
       case 'OutputCiphertext':
         nodes.push({id: i, title: "", type: 'outputCiphertext'})
         break;
+      case 'Constraint':
+        nodes.push({id: i, title: "", type: 'constraint'})
+        break;
+      case 'HiddenInput': 
+      case 'PublicInput':
+      case 'ConstantInput':
+        
       default: 
-        nodes.push({id: i, title: "", type: 'inputCiphertext'})
+        nodes.push({id: i, title: JSON.stringify(op), type: 'empty'})
         break;
     }
   }
@@ -151,7 +203,7 @@ const App = () => {
   const [currGraph, setGraph] = useState({nodes: [], edges: []});
   const [selected, select] = useState<SelectionT | null>(null);
   const [sessionList, setSessionList] = useState<string[]>([]);
-  const [session, setSession] = useState<string>('chi_sq_optimized_fhe_program_0');
+  const [session, setSession] = useState<string>("");
   const [info, setInfo] = useState<any>({id: "no node selected"});
 
   useEffect(
@@ -183,7 +235,7 @@ const App = () => {
         ]
       }
       setGraph(lineNumber !== 1 ? graph : dataToGraph(await fetch(`/sessions/${session}`).then(d => d.json())))
-    }, [setLine, setGraph]
+    }, [setLine, setGraph, session]
   )
 
   const updateSelection = useCallback(
@@ -196,12 +248,12 @@ const App = () => {
         setInfo({
           ...selection.nodes?.values().next().value, 
           ...(await fetch(`sessions/${session}/${node.id}`).then(d => d.json())),
-          stacktrace: filterStackTrace(await fetch(`sessions/${session}/stacktrace/${node.id}`).then(d => d.json()))
+          // stacktrace: filterStackTrace(await fetch(`sessions/${session}/stacktrace/${node.id}`).then(d => d.json()))
         })
       } else {
         setInfo({id: "no node selected"})
       }
-    }, [select]
+    }, [select, session]
   )
 
   const updateSession = useCallback(
@@ -214,15 +266,16 @@ const App = () => {
 
   useEffect(() => {
     const update = async () => {
+      console.log("New Session:" +  session)
       setGraph(dataToGraph(await fetch(`/sessions/${session}`).then(d => d.json())))
-      setCode(await fetch(`/programs/${session}`).then(p => p.text()))
-      // alert(session)
-      const delay = ms => new Promise(res => setTimeout(res, ms));
+      // setCode(await fetch(`/programs/${session}`).then(p => p.text()))
+      
+      // const delay = ms => new Promise(res => setTimeout(res, ms));
       // await delay(1000)
       // alert(session)
     }
     update()
-  }, [session, setSession])
+  }, [session])
 
   return (
     
@@ -236,7 +289,7 @@ const App = () => {
             selectedLine={selectedLine}
             ></CodeBlock></div>
             <div className='pane'>
-              <SessionPicker sessionList={sessionList} setSession={updateSession}/> 
+              <SessionPicker sessionList={sessionList} onUpdate={updateSession}/> 
               <NodeInfo info={info}/>
             </div>
           </ReactSplit>
@@ -258,7 +311,7 @@ function NodeInfo({info}) {
       </div>)
     } else {
       return (<div>
-        {Object.keys(info).filter(k => k != "stacktrace").map((k) => (<p>{k}: {info[k]}</p>))}
+        {Object.keys(info).filter(k => k != "stacktrace").map((k) => (<p>{k}: {JSON.stringify(info[k])}</p>))}
       </div>)
     }
     
@@ -266,10 +319,10 @@ function NodeInfo({info}) {
   return <p>{JSON.stringify(info)}</p>
 }
 
-function SessionPicker({sessionList, setSession}: {sessionList: string[], setSession: (string) => void}) {
+function SessionPicker({sessionList, onUpdate}: {sessionList: string[], onUpdate: (string) => void}) {
   
   return (
-    <select onChange={setSession} style={{backgroundColor: 'white'}}>
+    <select onChange={onUpdate} style={{backgroundColor: 'white'}}>
       <option value='none'>Select a session!</option>
       {sessionList.map(s => (<option value={s}>{s}</option>))}
     </select>

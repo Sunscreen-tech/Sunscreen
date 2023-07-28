@@ -18,6 +18,7 @@ use sunscreen_compiler_common::{
 use sunscreen_compiler_common::DebugData;
 
 #[derive(Clone, Serialize)]
+#[serde(tag = "type", content = "content")]
 /**
  * An operation in Sunscreen's intermediate representation programs before JIT compilation.
  */
@@ -79,6 +80,8 @@ pub enum Operation {
      * A constant field element.
      */
     Constant(BigInt),
+
+    
 }
 
 

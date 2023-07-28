@@ -48,9 +48,9 @@ const GraphConfig =  {
       shape: (
         <symbol viewBox="0 0 50 50" id="add" key="0" fontSize="18pt" fill='aquamarine'>
           <svg viewBox="0 0 50 50">
-            <circle cx="25" cy="25" r="12" fill="aquamarine" stroke-width="1.5"></circle>
-            <line x1="17.5" y1="25" x2="32.5" y2="25" stroke-width="3.5"></line>
-            <line x1="25" y1="17.5" x2="25" y2="32.5" stroke-width="3.5"></line>
+            <circle cx="25" cy="25" r="12" fill="aquamarine" strokeWidth="1.5"></circle>
+            <line x1="17.5" y1="25" x2="32.5" y2="25" strokeWidth="3.5"></line>
+            <line x1="25" y1="17.5" x2="25" y2="32.5" strokeWidth="3.5"></line>
           </svg>
 
         </symbol>
@@ -61,9 +61,9 @@ const GraphConfig =  {
       shapeId: "#multiply",
       shape: <symbol viewBox="0 0 50 50" id="multiply" key="0" fontSize="18pt">
       <svg viewBox="0 0 50 50">
-        <circle cx="25" cy="25" r="12" fill="khaki" stroke-width="1.5"></circle>
-        <line x1="20" y1="20" x2="30" y2="30" stroke-width="3.5"></line>
-        <line x1="30" y1="20" x2="20" y2="30" stroke-width="3.5"></line>
+        <circle cx="25" cy="25" r="12" fill="khaki" strokeWidth="1.5"></circle>
+        <line x1="20" y1="20" x2="30" y2="30" strokeWidth="3.5"></line>
+        <line x1="30" y1="20" x2="20" y2="30" strokeWidth="3.5"></line>
       </svg>
 
     </symbol>
@@ -74,10 +74,23 @@ const GraphConfig =  {
       shape: (
         <symbol viewBox="0 0 50 50" id="sub" key="0" fontSize="18pt" fill='plum'>
           <svg viewBox="0 0 50 50">
-            <circle cx="25" cy="25" r="12" fill="plum" stroke-width="1.5"></circle>
-            <line x1="17.5" y1="25" x2="32.5" y2="25" stroke-width="3.5"></line>
+            <circle cx="25" cy="25" r="12" fill="plum" strokeWidth="1.5"></circle>
+            <line x1="17.5" y1="25" x2="32.5" y2="25" strokeWidth="3.5"></line>
           </svg>
 
+        </symbol>
+      )
+    },
+    constraint: {
+      typeText: "",
+      shapeId: "#constraint",
+      shape: (
+        <symbol viewBox="0 0 50 50" id="constraint" key="0" fontSize="18pt" fill='plum'>
+          <svg viewBox="0 0 50 50">
+            <circle cx="25" cy="25" r="12" fill="lime" strokeWidth="1.5"></circle>
+            <line x1="17.5" y1="30" x2="32.5" y2="30" strokeWidth="3.5"></line>
+            <line x1="17.5" y1="20" x2="32.5" y2="20" strokeWidth="3.5"></line>
+          </svg>
         </symbol>
       )
     },

@@ -28,7 +28,7 @@ impl GlobalSessionProvider {
 }
 
 impl DebugSessionProvider<FheOperation, SealData, ()> for GlobalSessionProvider {
-    fn add_session(&self, session: sunscreen_compiler_common::Session<FheOperation, SealData, ()>) {
+    fn add_session(&self, _session: sunscreen_compiler_common::Session<FheOperation, SealData, ()>) {
     }
 }
 

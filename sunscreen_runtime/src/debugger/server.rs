@@ -3,7 +3,7 @@ use actix_web::{get, http::header, web, App, HttpResponse, HttpServer, Responder
 use semver::Version;
 
 use crate::{
-    debugger::sessions::{BfvSession, Session, ZkpSession},
+    debugger::sessions::{Session},
     debugger::{decrypt_seal, get_mult_depth, overflow_occurred},
     debugger::{get_sessions, BfvNodeType, DebugNodeType, ZkpNodeType},
     Ciphertext, InnerCiphertext, InnerPlaintext, Plaintext, Runtime, SealData, Type, WithContext,
@@ -186,7 +186,7 @@ pub async fn get_node_data(
                                 stable_graph,
                                 NodeIndex::new(nodeid),
                                 pk.0.params.plain_modulus,
-                                &pk,
+                                pk,
                                 &bfv_session.program_data.clone(),
                             );
 

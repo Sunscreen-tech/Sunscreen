@@ -12,7 +12,7 @@ use crate::{
     SealPlaintext, TryFromPlaintext, TryIntoPlaintext, TypeNameInstance,
 };
 use std::marker::PhantomData;
-use std::sync::atomic::AtomicUsize;
+
 use sunscreen_zkp_backend::{BigInt, Operation as ZkpOperation};
 
 use std::time::Instant;

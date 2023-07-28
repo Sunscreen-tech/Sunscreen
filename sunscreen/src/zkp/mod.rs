@@ -3,7 +3,7 @@ use petgraph::Graph;
 use sunscreen_compiler_common::DebugData;
 use sunscreen_runtime::CallSignature;
 use sunscreen_zkp_backend::{
-    BackendField, BigInt, CompiledZkpProgram, Gadget, Operation as JitOperation,
+    BackendField, BigInt, Gadget, Operation as JitOperation,
 };
 
 use crate::Result;
@@ -434,12 +434,12 @@ pub(crate) fn compile(program: &ZkpFrontendCompilation) -> CompilationResult<Jit
     // Convert in and out of Graph to compact all the node indices.
     let jit = Graph::from(jit).into();
 
-    let mut metadata = DebugData::new();
+    let metadata = DebugData::new();
 
     CompilationResult {
         graph: jit,
         #[cfg(feature = "debugger")]
-        metadata: metadata,
+        metadata,
     }
 }
 

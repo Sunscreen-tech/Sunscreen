@@ -98,15 +98,11 @@ where
     for operand_node in operand_nodes {
         let operand_data = program_data
             .get(operand_node.index())
-            .expect(&format!(
-                "Couldn't find Option<SealData> in index {:?} of program_data",
-                operand_node.index()
-            ))
+            .unwrap_or_else(|| panic!("Couldn't find Option<SealData> in index {:?} of program_data",
+                operand_node.index()))
             .clone()
-            .expect(&format!(
-                "Option<SealData> in index {:?} was None",
-                operand_node.index()
-            ));
+            .unwrap_or_else(|| panic!("Option<SealData> in index {:?} was None",
+                operand_node.index()));
         let ciphertext = match operand_data {
             SealData::Ciphertext(ct) => {
                 let with_context = WithContext {
@@ -146,8 +142,8 @@ where
             }
 
             // Multiplication overflow
-            let z_prod = polynomial_mult(&c0, &c1);
-            let zp_prod = polynomial_mult_mod(&c0, &c1, p);
+            let z_prod = polynomial_mult(c0, c1);
+            let zp_prod = polynomial_mult_mod(c0, c1, p);
             if z_prod != zp_prod {
                 mul_overflow = true;
             }

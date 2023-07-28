@@ -703,7 +703,7 @@ mod tests {
         impl DebugSessionProvider<jit::Operation, BigInt, String> for TestProvider {
             fn add_session(
                 &self,
-                session: sunscreen_compiler_common::Session<jit::Operation, BigInt, String>,
+                _session: sunscreen_compiler_common::Session<jit::Operation, BigInt, String>,
             ) {
                 unreachable!()
             }

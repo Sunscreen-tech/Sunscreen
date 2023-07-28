@@ -2,11 +2,11 @@ use std::{any::Any, collections::HashMap, convert::Infallible, fmt::Debug, hash:
 
 use crate::{
     exec::{ExecutableZkpProgram, Operation as ExecOperation},
-    BackendField, BigInt, Error, Gadget, Result, ZkpFrom,
+    BackendField, BigInt, Error, Gadget, Result,
 };
 
 use petgraph::{stable_graph::NodeIndex, visit::EdgeRef, Direction, Graph};
-use serde::{Serialize, Deserialize};
+use serde::{Serialize};
 use sunscreen_compiler_common::{
     forward_traverse, forward_traverse_mut,
     transforms::{GraphTransforms, Transform},
@@ -537,7 +537,7 @@ fn jit_common<U>(
     constant_inputs: &[U],
     public_inputs: &[U],
     node_outputs: Option<HashMap<NodeIndex, U>>,
-    #[cfg(feature = "debugger")] debug_info: Option<ZkpDebugInfo>,
+    #[cfg(feature = "debugger")] _debug_info: Option<ZkpDebugInfo>,
 ) -> Result<ExecutableZkpProgram>
 where
     U: BackendField,

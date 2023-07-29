@@ -89,7 +89,7 @@ pub fn overflow_occurred(
 {
     // Overflow only occurs at the output of an operation node
     let mut parents = graph.neighbors_directed(node, Incoming);
-    if parents.count() != 1 {
+    if parents.clone().count() != 1 {
         return false;
     }
 
@@ -123,8 +123,10 @@ pub fn overflow_occurred(
                 let ciphertext = create_ciphertext_from_seal_data(ct, pk);
                 op_coefficients[idx] = decrypt_inner_cipher(ciphertext, &pk.0.data);
             },
-            // Overflow only happens as the result of operations involving ciphertexts
-            _ => continue,
+            SealData::Plaintext(pt) => {
+                let plaintext = create_plaintext_from_seal_data(pt, pk);
+                op_coefficients[idx] = decrypt_inner_plain(plaintext);
+            }
         };
     }
 
@@ -157,16 +159,17 @@ pub fn overflow_occurred(
 
     // Overflow only occurs on arithmetic operations involving at least 1 ciphertext
     match graph.node_weight(node).unwrap().operation {
-        FheOperation::Multiply | FheOperation::MultiplyPlaintext => mul_overflow_occurred(&op_coefficients, &result),
-        FheOperation::Add | FheOperation::AddPlaintext => add_overflow_occurred(&op_coefficients, &result),
-        FheOperation::Sub | FheOperation::SubPlaintext => sub_overflow_occurred(&op_coefficients, &result),
+        FheOperation::Multiply | FheOperation::MultiplyPlaintext => mul_overflow_occurred(op_coefficients, result, p),
+        FheOperation::Add | FheOperation::AddPlaintext => add_overflow_occurred(op_coefficients, result, p),
+        FheOperation::Sub | FheOperation::SubPlaintext => sub_overflow_occurred(op_coefficients, result, p),
         _ => false
     }
 }
 
 pub fn add_overflow_occurred(
-    operands: [Vec<Vec<i64>>; 2],
-    result: Vec<i64>
+    operands: [Vec<Vec<u64>>; 2],
+    result: Vec<Vec<u64>>,
+    p: u64
 ) -> bool
 {
     for (c0, c1) in operands[0].iter().zip(operands[1].iter()) {
@@ -184,16 +187,18 @@ pub fn add_overflow_occurred(
 }
 
 pub fn sub_overflow_occurred(
-    operands: [Vec<Vec<i64>>; 2],
-    result: Vec<i64>
+    operands: [Vec<Vec<u64>>; 2],
+    result: Vec<Vec<u64>>,
+    p: u64
 ) -> bool
 {
     true
 }
 
 pub fn mul_overflow_occurred(
-    operands: [Vec<Vec<i64>>; 2],
-    result: Vec<i64>
+    operands: [Vec<Vec<u64>>; 2],
+    result: Vec<Vec<u64>>,
+    p: u64
 ) -> bool
 {
     true

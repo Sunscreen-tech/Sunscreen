@@ -152,8 +152,8 @@ const dataToGraph = (data: FheProgramGraph | ZkpProgramGraph) => {
   const edges: any[] = [];
 
   for (let i: number = 0; i < data.nodes.length; ++i) {
-    const op = data.nodes[i].operation.type
-    switch (op) {
+    const op = data.nodes[i].operation
+    switch (op.type) {
       case 'InputCiphertext':
         console.log('test')
         nodes.push({id: i, title: "", type: 'inputCiphertext'})
@@ -175,7 +175,7 @@ const dataToGraph = (data: FheProgramGraph | ZkpProgramGraph) => {
         nodes.push({id: i, title: "", type: 'outputCiphertext'})
         break;
       case 'Constraint':
-        nodes.push({id: i, title: "", type: 'constraint'})
+        nodes.push({id: i, title: "", type: 'constraint', value: op.content})
         break;
       case 'HiddenInput': 
       case 'PublicInput':
@@ -192,6 +192,36 @@ const dataToGraph = (data: FheProgramGraph | ZkpProgramGraph) => {
   return {nodes: nodes, edges: edges}
 }
 
+async function isProblematic(node, session: string) {
+  switch (node.type) {
+    case 'add':
+    case 'sub':
+    case 'multiply':
+      if (session.split('_')[0] === 'zkp') {
+        return false
+      } else {
+        const info = await fetch(`sessions/${session}/${node.id}`).then(d => d.json())
+        return info.Bfv.overflowed || info.Bfv.noise_budget <= 0
+      }
+      break;
+    case 'constraint':
+      const info = await fetch(`sessions/${session}/${node.id}`).then(d => d.json())
+      return info.Zkp.value != 0
+    default:
+      return false;
+  }
+  return false;
+}
+async function updateProblematicNodes(graph, session) {
+  const newGraph = JSON.parse(JSON.stringify(graph))
+  const nodes = newGraph.nodes;
+  for (const node of nodes) {
+    if (await isProblematic(node, session)) {
+      node.type = "prob" + node.type.charAt(0).toUpperCase() + node.type.slice(1)
+    }
+  }
+  return newGraph
+}
 
 const App = () => {
 
@@ -247,7 +277,7 @@ const App = () => {
         console.log(session)
         setInfo({
           ...selection.nodes?.values().next().value, 
-          ...(await fetch(`sessions/${session}/${node.id}`).then(d => d.json())),
+          ...(await fetch(`sessions/${session}/${node.id}`).then(d => d.json())).Bfv,
           // stacktrace: filterStackTrace(await fetch(`sessions/${session}/stacktrace/${node.id}`).then(d => d.json()))
         })
       } else {
@@ -267,8 +297,9 @@ const App = () => {
   useEffect(() => {
     const update = async () => {
       console.log("New Session:" +  session)
-      setGraph(dataToGraph(await fetch(`/sessions/${session}`).then(d => d.json())))
-      // setCode(await fetch(`/programs/${session}`).then(p => p.text()))
+      const graph = await updateProblematicNodes(dataToGraph(await fetch(`/sessions/${session}`).then(d => d.json())), session)
+      setGraph(graph)
+      setCode(await fetch(`/programs/${session}`).then(p => p.text()))
       
       // const delay = ms => new Promise(res => setTimeout(res, ms));
       // await delay(1000)

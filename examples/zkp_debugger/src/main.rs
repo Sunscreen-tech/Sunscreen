@@ -13,7 +13,7 @@ fn main() {
         c: NativeField<F>
     ) {
         (a + b).constrain_eq(c);
-        a.constrain_lt_bounded(b, 8)
+        (b - a).constrain_eq(NativeField::<F>::from(1));
     }
 
     let app = Compiler::new()
@@ -26,11 +26,11 @@ fn main() {
 
     let runtime = Runtime::new_zkp(&BulletproofsBackend::new()).unwrap();
 
-    let inputs: Vec<ZkpProgramInput> = vec![BPField::from(1).into(), BPField::from(2).into(), BPField::from(3).into()];
+    let inputs: Vec<ZkpProgramInput> = vec![BPField::from(1).into(), BPField::from(2).into(), BPField::from(4).into()];
 
     let proof = runtime.prove(prog, vec![], vec![], inputs);
 
-    proof.unwrap();
+    // proof.unwrap();
 
     loop {
         thread::sleep(Duration::from_secs(1));

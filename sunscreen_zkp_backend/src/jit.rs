@@ -2,7 +2,7 @@ use std::{any::Any, collections::HashMap, convert::Infallible, fmt::Debug, hash:
 
 use crate::{
     exec::{ExecutableZkpProgram, Operation as ExecOperation},
-    BackendField, BigInt, Error, Gadget, Result, ZkpFrom,
+    BackendField, BigInt, Error, Gadget, Result, ZkpFrom, ZkpInto,
 };
 
 use petgraph::{stable_graph::NodeIndex, visit::EdgeRef, Direction, Graph};
@@ -323,6 +323,10 @@ where
 
     let mut node_outputs: HashMap<NodeIndex, U> = HashMap::new();
 
+    
+    #[cfg(feature = "debugger")]
+    let mut unsatisfied_constraint: Option<NodeIndex> = None;
+
     // Run the graph as a computation (not a ZKP) to compute all the
     // gadget hidden input values.
     forward_traverse(&prog.graph, |query, id| {
@@ -380,11 +384,19 @@ where
             Operation::Constraint(x) => {
                 // Constraints produce no outputs, but verify it's met.
                 let parents = query.get_unordered_operands(id)?;
+                
 
                 for parent in parents {
-                    let actual = node_outputs[&parent].clone().zkp_into();
+                    let actual = node_outputs[&parent].clone()
+                        .zkp_into();
                     if actual != x {
-                        return Err(Error::UnsatisfiableConstraint(id));
+                        if (cfg!(feature = "debugger")) {
+                            unsatisfied_constraint = Some(id);
+                            node_outputs.insert(id, U::try_from(BigInt::from(1u32)).unwrap());
+                        } else {
+                            return Err(Error::UnsatisfiableConstraint(id));
+                        }
+                        
                     }
                 }
             }
@@ -491,6 +503,11 @@ where
         v.add_session(session.unwrap());
     }
 
+    #[cfg(feature = "debugger")]
+    if (unsatisfied_constraint.is_some()) {
+        return Err(Error::UnsatisfiableConstraint(unsatisfied_constraint.unwrap()));
+    }
+    
     jit_common(
         prog,
         constant_inputs,
@@ -656,7 +673,7 @@ where
     Ok(CompilationResult {
         graph: executable_graph,
         #[cfg(feature = "debugger")]
-        metadata: DebugData::new(),
+        metadata: prog.graph.metadata,
     })
 }
 

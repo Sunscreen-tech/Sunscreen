@@ -56,18 +56,45 @@ const GraphConfig =  {
         </symbol>
       )
     },
-    multiply: {
-      typeText: "*",
-      shapeId: "#multiply",
-      shape: <symbol viewBox="0 0 50 50" id="multiply" key="0" fontSize="18pt">
-      <svg viewBox="0 0 50 50">
-        <circle cx="25" cy="25" r="12" fill="khaki" strokeWidth="1.5"></circle>
-        <line x1="20" y1="20" x2="30" y2="30" strokeWidth="3.5"></line>
-        <line x1="30" y1="20" x2="20" y2="30" strokeWidth="3.5"></line>
-      </svg>
+    probAdd: {
+      typeText: "",
+      shapeId: "#probAdd",
+      shape: (
+        <symbol viewBox="0 0 50 50" id="probAdd" key="0" fontSize="18pt" fill='pink'>
+          <svg viewBox="0 0 50 50">
+            <circle cx="25" cy="25" r="12" fill="red" strokeWidth="1.5"></circle>
+            <line x1="17.5" y1="25" x2="32.5" y2="25" strokeWidth="3.5"></line>
+            <line x1="25" y1="17.5" x2="25" y2="32.5" strokeWidth="3.5"></line>
+          </svg>
 
-    </symbol>
+        </symbol>
+      )
     },
+    multiply: {
+      typeText: "",
+      shapeId: "#multiply",
+      shape: (<symbol viewBox="0 0 50 50" id="multiply" key="0" fontSize="18pt">
+        <svg viewBox="0 0 50 50">
+          <circle cx="25" cy="25" r="12" fill="khaki" strokeWidth="1.5"></circle>
+          <line x1="20" y1="20" x2="30" y2="30" strokeWidth="3.5"></line>
+          <line x1="30" y1="20" x2="20" y2="30" strokeWidth="3.5"></line>
+        </svg>
+
+      </symbol>)
+    },
+    probMultiply: {
+      typeText: "",
+      shapeId: "#probMultiply",
+      shape: (<symbol viewBox="0 0 50 50" id="probMultiply" key="0" fontSize="18pt">
+        <svg viewBox="0 0 50 50">
+          <circle cx="25" cy="25" r="12" fill="red" strokeWidth="1.5"></circle>
+          <line x1="20" y1="20" x2="30" y2="30" strokeWidth="3.5"></line>
+          <line x1="30" y1="20" x2="20" y2="30" strokeWidth="3.5"></line>
+        </svg>
+
+      </symbol>)
+    },
+    
     sub: {
       typeText: "",
       shapeId: "#sub",
@@ -81,6 +108,19 @@ const GraphConfig =  {
         </symbol>
       )
     },
+    probSub: {
+      typeText: "",
+      shapeId: "#probSub",
+      shape: (
+        <symbol viewBox="0 0 50 50" id="probSub" key="0" fontSize="18pt" fill='red'>
+          <svg viewBox="0 0 50 50">
+            <circle cx="25" cy="25" r="12" fill="pink" strokeWidth="1.5"></circle>
+            <line x1="17.5" y1="25" x2="32.5" y2="25" strokeWidth="3.5"></line>
+          </svg>
+
+        </symbol>
+      )
+    },
     constraint: {
       typeText: "",
       shapeId: "#constraint",
@@ -88,8 +128,21 @@ const GraphConfig =  {
         <symbol viewBox="0 0 50 50" id="constraint" key="0" fontSize="18pt" fill='plum'>
           <svg viewBox="0 0 50 50">
             <circle cx="25" cy="25" r="12" fill="lime" strokeWidth="1.5"></circle>
-            <line x1="17.5" y1="29" x2="32.5" y2="29" strokeWidth="3.5"></line>
-            <line x1="17.5" y1="21" x2="32.5" y2="21" strokeWidth="3.5"></line>
+            <line x1="17.5" y1="28" x2="32.5" y2="28" strokeWidth="3.5"></line>
+            <line x1="17.5" y1="22" x2="32.5" y2="22" strokeWidth="3.5"></line>
+          </svg>
+        </symbol>
+      )
+    },
+    probConstraint: {
+      typeText: "",
+      shapeId: "#probConstraint",
+      shape: (
+        <symbol viewBox="0 0 50 50" id="probConstraint" key="0" fontSize="18pt" fill='plum'>
+          <svg viewBox="0 0 50 50">
+            <circle cx="25" cy="25" r="12" fill="red" strokeWidth="1.5"></circle>
+            <line x1="17.5" y1="28" x2="32.5" y2="28" strokeWidth="3.5"></line>
+            <line x1="17.5" y1="22" x2="32.5" y2="22" strokeWidth="3.5"></line>
           </svg>
         </symbol>
       )
@@ -151,6 +204,8 @@ const GraphConfig =  {
     }
   }
 }
+
+
 
 function UberGraph({graph, onSelect, selected}) {
   // const [selected, select] = useState(null);

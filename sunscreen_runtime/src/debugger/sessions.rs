@@ -24,7 +24,7 @@ impl GlobalSessionProvider {
         Self {
             name: name.to_owned(),
         }
-    }
+    } 
 }
 
 impl DebugSessionProvider<FheOperation, SealData, ()> for GlobalSessionProvider {

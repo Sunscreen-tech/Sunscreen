@@ -47,6 +47,7 @@ impl DebugData {
      * Creates a new `DebugData` instance.
      */
     pub fn new() -> Self {
+        println!("new debugdata");
         DebugData {
             stack_lookup: StackFrameLookup::new(),
             group_lookup: GroupLookup::new(),
@@ -396,6 +397,8 @@ where
                 .id_data_lookup
                 .entry(stack_id)
                 .or_insert(stack_frames);
+
+            // println!("{:#?}", self.graph.metadata.stack_lookup.id_data_lookup);
 
             self.graph.add_node(NodeInfo {
                 operation,

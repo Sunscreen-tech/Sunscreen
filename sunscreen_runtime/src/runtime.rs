@@ -549,6 +549,9 @@ where
             None
         };
 
+        #[cfg(feature = "debugger")]
+        start_web_server();
+
         let prog = backend.jit_prover(
             program,
             &constant_inputs,
@@ -562,9 +565,7 @@ where
         let inputs = [public_inputs, private_inputs].concat();
 
         trace!("Starting backend prove...");
-
-        #[cfg(feature = "debugger")]
-        start_web_server();
+        println!("test");
 
         Ok(backend.prove(&prog, &inputs)?)
     }

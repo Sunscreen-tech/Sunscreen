@@ -181,14 +181,13 @@ mod tests {
     }
 
     fn get_graph() -> CompilationResult<Operation> {
-
         fn make_node(operation: Operation) -> NodeInfo<Operation> {
-            NodeInfo { 
-                operation, 
+            NodeInfo {
+                operation,
                 #[cfg(feature = "debugger")]
                 group_id: 0,
                 #[cfg(feature = "debugger")]
-                stack_id: 0
+                stack_id: 0,
             }
         }
         let mut fe = CompilationResult::new();
@@ -197,17 +196,11 @@ mod tests {
 
         #[cfg(feature = "debugger")]
         {
-            let in_1 = fe.add_node(make_node(
-                Operation::PublicInput(NodeIndex::from(0))
-            ));
+            let in_1 = fe.add_node(make_node(Operation::PublicInput(NodeIndex::from(0))));
 
-            let in_2 = fe.add_node(make_node(
-                Operation::PublicInput(NodeIndex::from(1))
-            ));
+            let in_2 = fe.add_node(make_node(Operation::PublicInput(NodeIndex::from(1))));
 
-            let in_3 = fe.add_node(make_node(
-                Operation::PublicInput(NodeIndex::from(2))
-            ));
+            let in_3 = fe.add_node(make_node(Operation::PublicInput(NodeIndex::from(2))));
 
             // Layer 2
             // sub_2 gets eliminated.
@@ -305,12 +298,12 @@ mod tests {
 
     fn get_expected() -> CompilationResult<Operation> {
         fn make_node(operation: Operation) -> NodeInfo<Operation> {
-            NodeInfo { 
-                operation, 
+            NodeInfo {
+                operation,
                 #[cfg(feature = "debugger")]
                 group_id: 0,
                 #[cfg(feature = "debugger")]
-                stack_id: 0
+                stack_id: 0,
             }
         }
 
@@ -318,19 +311,12 @@ mod tests {
 
         #[cfg(feature = "debugger")]
         {
-
             // Layer 1
-            let in_1 = fe.add_node(make_node(
-                Operation::PublicInput(NodeIndex::from(0))
-            ));
+            let in_1 = fe.add_node(make_node(Operation::PublicInput(NodeIndex::from(0))));
 
-            let in_2 = fe.add_node(make_node(
-                Operation::PublicInput(NodeIndex::from(1))
-            ));
+            let in_2 = fe.add_node(make_node(Operation::PublicInput(NodeIndex::from(1))));
 
-            let in_3 = fe.add_node(make_node(
-                Operation::PublicInput(NodeIndex::from(2))
-            ));
+            let in_3 = fe.add_node(make_node(Operation::PublicInput(NodeIndex::from(2))));
 
             // Layer 2
             // sub_2 gets eliminated.

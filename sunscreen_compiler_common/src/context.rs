@@ -21,7 +21,6 @@ use std::hash::{Hash, Hasher};
 #[cfg(feature = "debugger")]
 use std::collections::hash_map::DefaultHasher;
 
-
 /**
  * Stores debug information about groups and stack traces.
  */

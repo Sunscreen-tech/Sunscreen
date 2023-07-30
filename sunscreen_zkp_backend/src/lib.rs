@@ -137,7 +137,6 @@ impl Serialize for dyn Gadget {
 }
 
 #[derive(Clone, Serialize, Deserialize)]
-//#[serde(tag = "type")]
 /**
  * An R1CS proof.
  */

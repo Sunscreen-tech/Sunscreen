@@ -97,10 +97,12 @@ pub fn overflow_occurred(
 
     // Extract operand data
     let parent = parents.next().unwrap();
-    let (left_op, right_op) = query.get_binary_operands(parent).expect(&format!(
-        "Parent node of {:?} is not a binary operation",
-        node.index()
-    ));
+
+    if !graph.node_weight(parent).unwrap().operation.is_binary() {
+        return false;
+    }
+
+    let (left_op, right_op) = query.get_binary_operands(parent).unwrap();
 
     let operand_nodes = [left_op, right_op];
     let mut op_coefficients: [Vec<Vec<u64>>; 2] = [Vec::new(), Vec::new()];

@@ -110,15 +110,11 @@ pub fn overflow_occurred(
     for (idx, &operand_node) in operand_nodes.iter().enumerate() {
         let operand_data = program_data
             .get(operand_node.index())
-            .expect(&format!(
-                "Couldn't find Option<SealData> in index {:?} of program_data",
-                operand_node.index()
-            ))
+            .unwrap_or_else(|| panic!("Couldn't find Option<SealData> in index {:?} of program_data",
+                operand_node.index()))
             .clone()
-            .expect(&format!(
-                "Option<SealData> in index {:?} was None",
-                operand_node.index()
-            ));
+            .unwrap_or_else(|| panic!("Option<SealData> in index {:?} was None",
+                operand_node.index()));
         match operand_data {
             SealData::Ciphertext(ct) => {
                 let ciphertext = create_ciphertext_from_seal_data(ct, pk);

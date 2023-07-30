@@ -1,6 +1,6 @@
 use std::{thread, time::Duration};
 
-use sunscreen::{zkp_program, types::zkp::{NativeField, ConstrainCmp}, Compiler, Runtime, ZkpProgramInput};
+use sunscreen::{zkp_program, types::zkp::{NativeField}, Compiler, Runtime, ZkpProgramInput};
 use sunscreen_zkp_backend::{BackendField, bulletproofs::BulletproofsBackend, ZkpBackend};
 
 fn main() {
@@ -12,7 +12,7 @@ fn main() {
         b: NativeField<F>,
         c: NativeField<F>
     ) {
-        (a + b).constrain_eq(c);
+        (a + b).constrain_eq(c); 
         (b - a).constrain_eq(NativeField::<F>::from(1));
     }
 
@@ -28,7 +28,7 @@ fn main() {
 
     let inputs: Vec<ZkpProgramInput> = vec![BPField::from(1).into(), BPField::from(2).into(), BPField::from(4).into()];
 
-    let proof = runtime.prove(prog, vec![], vec![], inputs);
+    let _proof = runtime.prove(prog, vec![], vec![], inputs);
 
     // proof.unwrap();
 

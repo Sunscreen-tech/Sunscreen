@@ -175,7 +175,7 @@ const dataToGraph = (data: FheProgramGraph | ZkpProgramGraph) => {
         nodes.push({id: i, title: "", type: 'outputCiphertext'})
         break;
       case 'Constraint':
-        nodes.push({id: i, title: "", type: 'constraint', value: op.content})
+        nodes.push({id: i, title: "", type: 'constraint', constraint: op.content})
         break;
       case 'HiddenInput': 
       case 'PublicInput':
@@ -274,12 +274,21 @@ const App = () => {
       const node = selection.nodes?.values().next().value;
       console.log(node)
       if (node != null) {
-        console.log(session)
-        setInfo({
-          ...selection.nodes?.values().next().value, 
-          ...(await fetch(`sessions/${session}/${node.id}`).then(d => d.json())).Bfv,
-          // stacktrace: filterStackTrace(await fetch(`sessions/${session}/stacktrace/${node.id}`).then(d => d.json()))
-        })
+        // console.log(session)
+        if (session.split('_')[0] == "fhe") {
+          setInfo({
+            ...selection.nodes?.values().next().value, 
+            ...(await fetch(`sessions/${session}/${node.id}`).then(d => d.json())).Bfv,
+            stacktrace: filterStackTrace(await fetch(`sessions/${session}/stacktrace/${node.id}`).then(d => d.json()))
+          })
+        } else {
+          setInfo({
+            ...selection.nodes?.values().next().value, 
+            ...(await fetch(`sessions/${session}/${node.id}`).then(d => d.json())).Zkp,
+            stacktrace: filterStackTrace(await fetch(`sessions/${session}/stacktrace/${node.id}`).then(d => d.json()))
+          })
+        }
+        
       } else {
         setInfo({id: "no node selected"})
       }
@@ -299,7 +308,7 @@ const App = () => {
       console.log("New Session:" +  session)
       const graph = await updateProblematicNodes(dataToGraph(await fetch(`/sessions/${session}`).then(d => d.json())), session)
       setGraph(graph)
-      setCode(await fetch(`/programs/${session}`).then(p => p.text()))
+      setCode(await fetch(`/programs/${session}`).then(p => p.json()))
       
       // const delay = ms => new Promise(res => setTimeout(res, ms));
       // await delay(1000)
@@ -335,7 +344,7 @@ const App = () => {
 function NodeInfo({info}) {
   if (info != null) {
     if (Object.keys(info).includes('stacktrace')) {
-      return (<div>
+      return (<div style={{fontFamily: 'sans-serif'}}>
         {Object.keys(info).filter(k => k != "stacktrace").map((k) => (<p>{k}: {JSON.stringify(info[k])}</p>))}
         <p>stacktrace:</p>
         {info.stacktrace.map(c => (<p>{`${c.callee_name.split("::").at(-2)} @ ${c.callee_file}:${c.callee_lineno}`}</p>))}
@@ -353,7 +362,7 @@ function NodeInfo({info}) {
 function SessionPicker({sessionList, onUpdate}: {sessionList: string[], onUpdate: (string) => void}) {
   
   return (
-    <select onChange={onUpdate} style={{backgroundColor: 'white'}}>
+    <select onChange={onUpdate} style={{backgroundColor: 'white', fontFamily: 'monospace'}}>
       <option value='none'>Select a session!</option>
       {sessionList.map(s => (<option value={s}>{s}</option>))}
     </select>
@@ -377,6 +386,12 @@ function filterStackTrace(st) {
     .filter(c => !re4.test(c.callee_file))
     .filter(c => c.callee_file !== 'No such file')
   return filtered;
+}
+
+const excludedKeys = ['x', 'y', 'title']
+
+function infoToHtml(info: any) {
+  
 }
 
 // async function getLine(filePath, lineNo) {

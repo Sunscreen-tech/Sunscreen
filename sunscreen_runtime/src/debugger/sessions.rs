@@ -177,9 +177,10 @@ impl From<ZkpSession> for Session {
 
 static SESSION_NUM: AtomicUsize = AtomicUsize::new(0);
 
-pub fn get_session_name(program_name: &str) -> String {
+pub fn get_session_name(program_name: &str, prefix: &str) -> String {
     format!(
-        "{}_{}",
+        "{}_{}_{}",
+        prefix,
         program_name,
         SESSION_NUM.fetch_add(1, Ordering::Relaxed)
     )

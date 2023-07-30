@@ -435,7 +435,7 @@ where
     where
         I: Into<FheProgramInput>,
     {
-        let session_name = get_session_name(&fhe_program.metadata.name);
+        let session_name = get_session_name(&fhe_program.metadata.name, "fhe");
 
         self.run_impl(
             fhe_program,
@@ -536,6 +536,7 @@ where
         let session_provider = if cfg!(feature = "debugger") {
             Some(Box::new(GlobalSessionProvider::new(&get_session_name(
                 &program.metadata.name,
+                "zkp"
             ))))
         } else {
             None

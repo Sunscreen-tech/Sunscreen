@@ -398,8 +398,6 @@ where
                 .entry(stack_id)
                 .or_insert(stack_frames);
 
-            // println!("{:#?}", self.graph.metadata.stack_lookup.id_data_lookup);
-
             self.graph.add_node(NodeInfo {
                 operation,
                 group_id,

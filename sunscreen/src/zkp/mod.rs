@@ -439,12 +439,12 @@ pub(crate) fn compile(program: &ZkpFrontendCompilation) -> CompilationResult<Jit
     // Convert in and out of Graph to compact all the node indices.
     let jit = Graph::from(jit).into();
 
-    let mut metadata = DebugData::new();
+    // let mut metadata = DebugData::new();
 
     CompilationResult {
         graph: jit,
         #[cfg(feature = "debugger")]
-        metadata: metadata,
+        metadata: program.metadata.to_owned(),
     }
 }
 

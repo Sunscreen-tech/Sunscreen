@@ -84,7 +84,6 @@ impl StackFrameLookup {
      * Creates a new `StackFrameLookup` object.
      */
     pub fn new() -> Self {
-        println!("new stackframelookup");
         Self {
             id_data_lookup: HashMap::new(),
             data_id_lookup: HashMap::new(),

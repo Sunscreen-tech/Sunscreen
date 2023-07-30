@@ -313,7 +313,6 @@ pub async fn get_stack_trace(
                 let stack_lookup = &curr_session.graph.metadata.stack_lookup;
 
                 if let Some(node_info) = curr_session.graph.node_weight(NodeIndex::new(nodeid)) {
-                    println!("{:#?}", stack_lookup.id_data_lookup);
                     if let Some(stack_frames) = stack_lookup.id_data_lookup.get(&node_info.stack_id)
                     {
                         let stack_frames_json = serde_json::to_string(&stack_frames).unwrap();

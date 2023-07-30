@@ -10,6 +10,7 @@ use petgraph::Direction::Incoming;
 use rayon::vec;
 use crate::SealPlaintext;
 use crate::SealCiphertext;
+use crate::Plaintext;
 use seal_fhe::BfvEncryptionParametersBuilder;
 use seal_fhe::Context;
 use seal_fhe::Decryptor;
@@ -268,7 +269,17 @@ pub fn decrypt_inner_cipher(inner_cipher: InnerCiphertext, sk: &SecretKey) -> Ve
 }
 
 pub fn decrypt_inner_plain(inner_plain: InnerPlaintext) -> Vec<Vec<u64>> {
-    Vec::new()
+    let mut coefficients: Vec<Vec<u64>> = Vec::new();
+
+    for i in 0..inner_plain.as_seal_plaintext().unwrap().len() {
+        let inner = inner_plain.as_seal_plaintext().unwrap().get(i).unwrap();
+        let mut inner_coefficients = Vec::new();
+            for j in 0..inner.len() {
+                inner_coefficients.push(inner.get_coefficient(j));
+            }
+        coefficients.push(inner_coefficients);
+    }
+    coefficients    
 }
 
 fn create_ciphertext_from_seal_data(ct: SealCiphertext, pk: &PrivateKey) -> InnerCiphertext {

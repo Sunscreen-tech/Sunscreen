@@ -32,6 +32,11 @@ pub trait ZkpProgramFn<F: BackendField> {
      * Gets the name of this program.
      */
     fn name(&self) -> &str;
+
+    /**
+     * Gets the source code of this program
+     */
+    fn source(&self) -> &str;
 }
 
 use std::fmt::Debug;

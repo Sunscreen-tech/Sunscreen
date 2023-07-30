@@ -197,6 +197,11 @@ pub struct ZkpProgramMetadata {
      *
      */
     pub name: String,
+
+    /**
+     * source code
+     */
+    pub source: String,
 }
 
 /**
@@ -294,7 +299,7 @@ where
     let mut session = session_provider.as_ref().map(|_| Session {
         graph: prog.graph.clone(),
         run_data: vec![],
-        metadata: prog.metadata.name.to_owned(),
+        metadata: prog.metadata.source.to_owned(),
     });
 
     let expected_private_inputs = prog

@@ -88,8 +88,8 @@ const GraphConfig =  {
         <symbol viewBox="0 0 50 50" id="constraint" key="0" fontSize="18pt" fill='plum'>
           <svg viewBox="0 0 50 50">
             <circle cx="25" cy="25" r="12" fill="lime" strokeWidth="1.5"></circle>
-            <line x1="17.5" y1="30" x2="32.5" y2="30" strokeWidth="3.5"></line>
-            <line x1="17.5" y1="20" x2="32.5" y2="20" strokeWidth="3.5"></line>
+            <line x1="17.5" y1="29" x2="32.5" y2="29" strokeWidth="3.5"></line>
+            <line x1="17.5" y1="21" x2="32.5" y2="21" strokeWidth="3.5"></line>
           </svg>
         </symbol>
       )

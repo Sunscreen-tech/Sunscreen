@@ -101,7 +101,6 @@ async fn get_session_data(session: web::Path<String>) -> impl Responder {
             Session::ZkpSession(_) => {
                 serde_json::to_string_pretty(&curr_session.unwrap_zkp_session().graph.graph)
             }
-            _ => panic!("Not Zkp or Bfv session")
         };
 
         HttpResponse::Ok().body(graph_string.unwrap().to_owned())
@@ -119,10 +118,18 @@ async fn get_code(session: web::Path<String>) -> impl Responder {
     let sessions = get_sessions().lock().unwrap();
 
     if sessions.contains_key(session.as_str()) {
-        let curr_session = sessions.get(session.as_str()).unwrap().unwrap_bfv_session();
-        let code_string = &curr_session.source_code;
+        let curr_session = sessions.get(session.as_str()).unwrap();
 
-        HttpResponse::Ok().body(code_string.to_owned())
+        let program_string = match curr_session {
+            Session::BfvSession(_) => {
+                serde_json::to_string_pretty(&curr_session.unwrap_bfv_session().source_code).unwrap()
+            },
+            Session::ZkpSession(_) => {
+                serde_json::to_string_pretty(&curr_session.unwrap_zkp_session().source_code).unwrap()
+            }
+        };
+
+        HttpResponse::Ok().body(program_string)
     } else {
         HttpResponse::NotFound().body("Session not found.".to_owned())
     }
@@ -248,10 +255,14 @@ pub async fn get_node_data(
             }
             Session::ZkpSession(zkp_session) => {
                 if let Some(data) = zkp_session.program_data.get(nodeid) {
+                    let data_str = data
+                        .unwrap_or(sunscreen_zkp_backend::BigInt::from(0u32))
+                        .to_string();
                     DebugNodeType::Zkp(ZkpNodeType {
-                        value: data
-                            .unwrap_or(sunscreen_zkp_backend::BigInt::from(0u32))
-                            .to_string(),
+                        value: match data_str.find(|c: char| c.is_numeric() && c != '0') {
+                            Some(_) => data_str.trim_start_matches('0').to_string(),
+                            None => "0".to_string()
+                        }
                     })
                 } else {
                     return Ok(HttpResponse::NotFound().body(format!("Node {} not found", nodeid)));

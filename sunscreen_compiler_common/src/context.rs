@@ -383,7 +383,7 @@ where
                 .metadata
                 .stack_lookup
                 .data_id_lookup
-                .entry(hash.clone())
+                .entry(hash)
                 .or_insert_with(|| {
                     self.graph.metadata.stack_counter += 1;
                     self.graph.metadata.stack_counter

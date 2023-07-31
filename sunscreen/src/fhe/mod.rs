@@ -12,6 +12,8 @@ use sunscreen_runtime::{InnerPlaintext, Params};
 
 use std::cell::RefCell;
 
+use crate::ContextEnum;
+
 #[derive(Clone, Debug, Deserialize, Hash, Serialize, PartialEq, Eq)]
 /**
  * Represents a literal node's data.
@@ -168,7 +170,7 @@ thread_local! {
      * Contains the graph of a ZKP program during compilation. An
      * implementation detail and not for public consumption.
      */
-    pub static CURRENT_FHE_CTX: RefCell<Option<&'static mut FheContext>> = RefCell::new(None);
+    pub static CURRENT_FHE_CTX: RefCell<Option<&'static mut ContextEnum>> = RefCell::new(None);
 }
 
 /**
@@ -183,7 +185,9 @@ where
         let mut option = ctx.borrow_mut();
         let ctx = option
             .as_mut()
-            .expect("Called Ciphertext::new() outside of a context.");
+            .expect("Called Ciphertext::new() outside of a context.")
+            .unwrap_fhe_mut()
+            .unwrap();
 
         f(ctx)
     })

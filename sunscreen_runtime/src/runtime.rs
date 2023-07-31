@@ -1,8 +1,6 @@
-#[cfg(feature = "debugger")]
 use crate::debugger::get_session_name;
 #[cfg(feature = "debugger")]
 use crate::debugger::server::start_web_server;
-#[cfg(feature = "debugger")]
 use crate::debugger::GlobalSessionProvider;
 use crate::error::*;
 use crate::metadata::*;

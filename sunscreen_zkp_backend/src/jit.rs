@@ -2,7 +2,7 @@ use std::{any::Any, collections::HashMap, convert::Infallible, fmt::Debug, hash:
 
 use crate::{
     exec::{ExecutableZkpProgram, Operation as ExecOperation},
-    BackendField, BigInt, Error, Gadget, Result, ZkpFrom, ZkpInto,
+    BackendField, BigInt, Error, Gadget, Result,
 };
 
 use petgraph::{stable_graph::NodeIndex, visit::EdgeRef, Direction, Graph};
@@ -14,8 +14,7 @@ use sunscreen_compiler_common::{
     Operation as OperationTrait, Session,
 };
 
-#[cfg(feature = "debugger")]
-use sunscreen_compiler_common::DebugData;
+
 
 #[derive(Clone, Serialize)]
 #[serde(tag = "type", content = "content")]
@@ -384,7 +383,7 @@ where
                 for parent in parents {
                     let actual = node_outputs[&parent].clone().zkp_into();
                     if actual != x {
-                        if (cfg!(feature = "debugger")) {
+                        if cfg!(feature = "debugger") {
                             unsatisfied_constraint = Some(id);
                             node_outputs.insert(id, U::try_from(BigInt::from(1u32)).unwrap());
                         } else {
@@ -497,7 +496,7 @@ where
     }
 
     #[cfg(feature = "debugger")]
-    if (unsatisfied_constraint.is_some()) {
+    if unsatisfied_constraint.is_some() {
         return Err(Error::UnsatisfiableConstraint(
             unsatisfied_constraint.unwrap(),
         ));

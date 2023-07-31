@@ -494,10 +494,8 @@ where
     }
 
     #[cfg(feature = "debugger")]
-    if unsatisfied_constraint.is_some() {
-        return Err(Error::UnsatisfiableConstraint(
-            unsatisfied_constraint.unwrap(),
-        ));
+    if let Some(id) = unsatisfied_constraint {
+        return Err(Error::UnsatisfiableConstraint(id));
     }
 
     jit_common(

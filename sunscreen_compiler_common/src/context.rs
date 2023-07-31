@@ -145,7 +145,6 @@ where
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, Serialize)]
-//#[serde(tag = "type")]
 /**
  * Information about how one compiler graph node relates to another.
  */
@@ -383,7 +382,7 @@ where
                 .metadata
                 .stack_lookup
                 .data_id_lookup
-                .entry(hash)
+                .entry(hash.clone())
                 .or_insert_with(|| {
                     self.graph.metadata.stack_counter += 1;
                     self.graph.metadata.stack_counter

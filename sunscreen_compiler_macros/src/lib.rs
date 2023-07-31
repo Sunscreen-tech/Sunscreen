@@ -12,6 +12,7 @@ mod fhe_program_transforms;
 mod internals;
 mod type_name;
 mod zkp_program;
+mod debug_program;
 
 #[proc_macro_derive(TypeName)]
 /**

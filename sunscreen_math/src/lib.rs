@@ -68,6 +68,8 @@ pub(crate) const fn scalar_size_bits() -> usize {
     std::mem::size_of::<Scalar>() * 8
 }
 
+mod ring;
+
 /// Computes the number of windows over a [`Scalar`] type for the given
 /// `window_size` bits per window.
 #[allow(unused)]

@@ -212,16 +212,7 @@ async function isProblematic(node, session: string) {
   }
   return false;
 }
-async function updateProblematicNodes(graph, session) {
-  const newGraph = JSON.parse(JSON.stringify(graph))
-  const nodes = newGraph.nodes;
-  for (const node of nodes) {
-    if (await isProblematic(node, session)) {
-      node.type = "prob" + node.type.charAt(0).toUpperCase() + node.type.slice(1)
-    }
-  }
-  return newGraph
-}
+
 
 const App = () => {
 
@@ -235,9 +226,23 @@ const App = () => {
   const [sessionList, setSessionList] = useState<string[]>([]);
   const [session, setSession] = useState<string>("");
   const [info, setInfo] = useState<any>({id: "no node selected"});
+  const [problemNodes, setProblemNodes] = useState<number[]>([]);
 
   useEffect(
     () => {fetch("/sessions").then(j => j.json()).then(l => setSessionList(l))}, []
+  )
+
+  const updateProblematicNodes = useCallback( async (graph) => {
+    const newGraph = JSON.parse(JSON.stringify(graph))
+    const nodes = newGraph.nodes;
+    for (const node of nodes) {
+      if (await isProblematic(node, session)) {
+        node.type = "prob" + node.type.charAt(0).toUpperCase() + node.type.slice(1)
+        setProblemNodes(problemNodes.concat([node.id]))
+      }
+    }
+    return newGraph
+  }, [session, problemNodes]
   )
 
   const updateLine = useCallback(
@@ -306,7 +311,7 @@ const App = () => {
   useEffect(() => {
     const update = async () => {
       console.log("New Session:" +  session)
-      const graph = await updateProblematicNodes(dataToGraph(await fetch(`/sessions/${session}`).then(d => d.json())), session)
+      const graph = await updateProblematicNodes(dataToGraph(await fetch(`/sessions/${session}`).then(d => d.json())))
       setGraph(graph)
       setCode(await fetch(`/programs/${session}`).then(p => p.json()))
       

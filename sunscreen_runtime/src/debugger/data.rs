@@ -305,10 +305,22 @@ fn create_plaintext_from_seal_data(pt: SealPlaintext, pk: &PrivateKey) -> InnerP
     sunscreen_plaintext.inner
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Deserialize)]
 pub struct ZkpNodeType {
     // Send `BigInt` values as strings
     pub value: String,
+}
+
+impl Serialize for ZkpNodeType {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        match self.value.find(|c: char| c.is_numeric() && c != '0') {
+            Some(_) => serializer.serialize_str(self.value.trim_start_matches('0')),
+            None => serializer.serialize_str("0"),
+        }
+    }
 }
 
 #[test]

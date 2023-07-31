@@ -178,19 +178,18 @@ pub struct BigInt(
      * The wrapped value.
      */
     pub U512,
-
 );
 
 impl Serialize for BigInt {
     fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
     where
-        S: serde::Serializer {
+        S: serde::Serializer,
+    {
         let raw_str = self.to_string();
         match raw_str.find(|c: char| c.is_numeric() && c != '0') {
             Some(_) => serializer.serialize_str(raw_str.trim_start_matches('0')),
-            None => serializer.serialize_str("0")
+            None => serializer.serialize_str("0"),
         }
-        
     }
 }
 

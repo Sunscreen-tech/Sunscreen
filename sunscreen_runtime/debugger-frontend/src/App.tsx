@@ -7,9 +7,6 @@ import './App.css'
 import { UberGraph } from './UberGraph';
 import { SelectionT } from 'react-digraph';
 import { render } from 'react-dom';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-
-import { open } from 'node:fs/promises';
 
 interface CodeBlockProps {
   code: string;
@@ -115,9 +112,13 @@ type MulOp = {
   type: 'Mul'
 }
 
+type PrivateInputOp = {
+  type: 'PrivateInput'
+}
+
 type FheProgramOperation = InputCiphertextOp | InputPlaintextOp | MultiplyOp | AddOp | SubOp | RelinearizeOp | OutputCiphertextOp
 
-type ZkpProgramOperation = HiddenInputOp | PublicInputOp | ConstantInputOp | MultiplyOp | AddOp | SubOp | InvokeGadgetOp | ConstraintOp | ZkpConstantOp | MulOp
+type ZkpProgramOperation = HiddenInputOp | PublicInputOp | ConstantInputOp | MultiplyOp | AddOp | SubOp | InvokeGadgetOp | ConstraintOp | ZkpConstantOp | MulOp | PrivateInputOp
 
 type FheProgramNode = {
   operation: FheProgramOperation
@@ -178,9 +179,18 @@ const dataToGraph = (data: FheProgramGraph | ZkpProgramGraph) => {
         nodes.push({id: i, title: "", type: 'constraint', constraint: op.content})
         break;
       case 'HiddenInput': 
+        nodes.push({id: i, title: "", type: 'hidInput'})
+        break;
       case 'PublicInput':
+        nodes.push({id: i, title: "", type: 'pubInput'})
+        break;
+      case 'PrivateInput':
+        nodes.push({id: i, title: "", type: 'privInput'})
+        break;
+      case 'Constant':
       case 'ConstantInput':
-        
+        nodes.push({id: i, title: "", type: 'constantInput'})
+        break;
       default: 
         nodes.push({id: i, title: JSON.stringify(op), type: 'empty'})
         break;
@@ -203,14 +213,12 @@ async function isProblematic(node, session: string) {
         const info = await fetch(`sessions/${session}/${node.id}`).then(d => d.json())
         return info.Bfv.overflowed || info.Bfv.noise_budget <= 0
       }
-      break;
     case 'constraint':
       const info = await fetch(`sessions/${session}/${node.id}`).then(d => d.json())
-      return info.Zkp.value != 0
+      return info.Zkp != 0
     default:
       return false;
   }
-  return false;
 }
 
 
@@ -279,7 +287,6 @@ const App = () => {
       const node = selection.nodes?.values().next().value;
       console.log(node)
       if (node != null) {
-        // console.log(session)
         if (session.split('_')[0] == "fhe") {
           setInfo({
             ...selection.nodes?.values().next().value, 
@@ -289,7 +296,7 @@ const App = () => {
         } else {
           setInfo({
             ...selection.nodes?.values().next().value, 
-            ...(await fetch(`sessions/${session}/${node.id}`).then(d => d.json())).Zkp,
+            value: (await fetch(`sessions/${session}/${node.id}`).then(d => d.json())).Zkp,
             stacktrace: filterStackTrace(await fetch(`sessions/${session}/stacktrace/${node.id}`).then(d => d.json()))
           })
         }
@@ -349,11 +356,7 @@ const App = () => {
 function NodeInfo({info}) {
   if (info != null) {
     if (Object.keys(info).includes('stacktrace')) {
-      return (<div style={{fontFamily: 'sans-serif'}}>
-        {Object.keys(info).filter(k => k != "stacktrace").map((k) => (<p>{k}: {JSON.stringify(info[k])}</p>))}
-        <p>stacktrace:</p>
-        {info.stacktrace.map(c => (<p>{`${c.callee_name.split("::").at(-2)} @ ${c.callee_file}:${c.callee_lineno}`}</p>))}
-      </div>)
+      return infoToHtml(info);
     } else {
       return (<div>
         {Object.keys(info).filter(k => k != "stacktrace").map((k) => (<p>{k}: {JSON.stringify(info[k])}</p>))}
@@ -393,10 +396,18 @@ function filterStackTrace(st) {
   return filtered;
 }
 
-const excludedKeys = ['x', 'y', 'title']
+const excludedKeys = ['x', 'y', 'title', 'stacktrace']
 
 function infoToHtml(info: any) {
-  
+  const filteredKeys = Object.keys(info).filter(k => !excludedKeys.includes(k));
+  if (info.type == 'probConstraint' || info.type == 'constraint') {
+    info.value = info.value != "1"
+  }
+  return (<div style={{fontFamily: 'sans-serif'}}>
+        {filteredKeys.map((k) => (<p>{k}: {JSON.stringify(info[k])}</p>))}
+        <p>stacktrace:</p>
+        {info.stacktrace.map(c => (<p>{`${c.callee_name.split("::").at(-2)} @ ${c.callee_file}:${c.callee_lineno}`}</p>))}
+      </div>)
 }
 
 // async function getLine(filePath, lineNo) {

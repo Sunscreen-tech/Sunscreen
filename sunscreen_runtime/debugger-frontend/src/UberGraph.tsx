@@ -30,6 +30,42 @@ const GraphConfig =  {
         </symbol>
       )
     },
+    privInput: { // required to show empty nodes
+      typeText: "Private Input",
+      shapeId: "#privInput", // relates to the type property of a node
+      shape: (
+        <symbol viewBox="0 0 90 50" id="privInput" key="0">
+          <rect cx='50' cy='50' width='90' height='50'/>
+        </symbol>
+      )
+    },
+    pubInput: {
+      typeText: "Public Input",
+      shapeId: '#pubInput',
+      shape: (
+        <symbol viewBox="0 0 100 100" id="pubInput" key="0">
+          <ellipse cx='50' cy='50' width='90' height='50'/>
+        </symbol>
+      )
+    },
+    hidInput: {
+      typeText: "Hidden Input",
+      shapeId: '#hidInput',
+      shape: (
+        <symbol viewBox="0 0 100 100" id="hidInput" key="0">
+          <ellipse cx='50' cy='50' width='90' height='50'/>
+        </symbol>
+      )
+    },
+    constantInput: {
+      typeText: "Constant Input",
+      shapeId: '#constantInput',
+      shape: (
+        <symbol viewBox="0 0 90 50" id="constantInput" key="0">
+          <rect cx='50' cy='50' width='90' height='50'/>
+        </symbol>
+      )
+    },
     outputCiphertext: { // required to show empty nodes
       typeText: "Output",
       shapeId: "#outputCiphertext", // relates to the type property of a node
@@ -152,30 +188,7 @@ const GraphConfig =  {
           <svg viewBox="0 0 50 50">
             <circle cx="25" cy="25" r="12">
             </circle>
-            {/* <defs>
-              <marker id='head' orient="auto"
-                markerWidth='1.5' markerHeight='4'
-                refX='0.1' refY='2'>
-                <path d='M0,0 V4 L2,2 Z' fill="black"/>
-              </marker>
-            </defs>
-
-            <path
-              id='arrow-line'
-              marker-end='url(#head)'
-              stroke-width='1.5'
-              fill='none' stroke='black'  
-              d='M20,20 23,23'
-              />
-            <path
-              id='arrow-line'
-              marker-end='url(#head)'
-              stroke-width='1.5'
-              fill='none' stroke='black'  
-              d='M30,30 28,28'
-              /> */}
           </svg>
-          
         </symbol>
       )
     },

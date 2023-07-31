@@ -371,8 +371,7 @@ fn constraint_count(graph: &ExecutableZkpProgram) -> Result<usize> {
     Ok(count)
 }
 
-impl ZkpBackend for BulletproofsBackend
-{
+impl ZkpBackend for BulletproofsBackend {
     type Field = Scalar;
 
     fn prove(&self, graph: &ExecutableZkpProgram, inputs: &[BigInt]) -> Result<Proof> {

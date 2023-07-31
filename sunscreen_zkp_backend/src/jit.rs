@@ -80,10 +80,7 @@ pub enum Operation {
      * A constant field element.
      */
     Constant(BigInt),
-
-    
 }
-
 
 impl Hash for Operation {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
@@ -323,7 +320,6 @@ where
 
     let mut node_outputs: HashMap<NodeIndex, U> = HashMap::new();
 
-    
     #[cfg(feature = "debugger")]
     let mut unsatisfied_constraint: Option<NodeIndex> = None;
 
@@ -384,11 +380,9 @@ where
             Operation::Constraint(x) => {
                 // Constraints produce no outputs, but verify it's met.
                 let parents = query.get_unordered_operands(id)?;
-                
 
                 for parent in parents {
-                    let actual = node_outputs[&parent].clone()
-                        .zkp_into();
+                    let actual = node_outputs[&parent].clone().zkp_into();
                     if actual != x {
                         if (cfg!(feature = "debugger")) {
                             unsatisfied_constraint = Some(id);
@@ -396,7 +390,6 @@ where
                         } else {
                             return Err(Error::UnsatisfiableConstraint(id));
                         }
-                        
                     }
                 }
             }
@@ -505,9 +498,11 @@ where
 
     #[cfg(feature = "debugger")]
     if (unsatisfied_constraint.is_some()) {
-        return Err(Error::UnsatisfiableConstraint(unsatisfied_constraint.unwrap()));
+        return Err(Error::UnsatisfiableConstraint(
+            unsatisfied_constraint.unwrap(),
+        ));
     }
-    
+
     jit_common(
         prog,
         constant_inputs,

@@ -377,7 +377,7 @@ where
             Operation::Constraint(x) => {
                 // Constraints produce no outputs, but verify it's met.
                 let parents = query.get_unordered_operands(id)?;
-                
+
                 for parent in parents {
                     let actual = node_outputs[&parent].clone().zkp_into();
                     if actual != x {
@@ -385,7 +385,7 @@ where
                         {
                             unsatisfied_constraint = Some(id);
                             node_outputs.insert(id, U::try_from(BigInt::from(1u32)).unwrap());
-                        } 
+                        }
                         #[cfg(not(feature = "debugger"))]
                         return Err(Error::UnsatisfiableConstraint(id));
                     }

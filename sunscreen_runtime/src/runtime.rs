@@ -1,9 +1,12 @@
+#[cfg(feature = "debugger")]
 use crate::debugger::get_session_name;
 #[cfg(feature = "debugger")]
 use crate::debugger::server::start_web_server;
+#[cfg(feature = "debugger")]
 use crate::debugger::GlobalSessionProvider;
 use crate::error::*;
 use crate::metadata::*;
+#[cfg(feature = "debugger")]
 use crate::DebugInfo;
 use crate::ZkpProgramInput;
 use crate::{
@@ -19,6 +22,7 @@ use std::time::Instant;
 
 use log::trace;
 
+#[cfg(feature = "debugger")]
 use sunscreen_compiler_common::DebugSessionProvider;
 use sunscreen_fhe_program::FheProgramTrait;
 use sunscreen_fhe_program::SchemeType;

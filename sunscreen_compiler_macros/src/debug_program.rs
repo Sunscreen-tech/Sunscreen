@@ -10,7 +10,7 @@ use syn::{parse_macro_input, spanned::Spanned, Ident, ItemFn, Type};
 pub fn debug_program_impl(
     metadata: proc_macro::TokenStream,
     input: proc_macro::TokenStream
-) -> TokenStream {
+) -> proc_macro::TokenStream {
     let input_fn = parse_macro_input!(input as ItemFn);
     let name = &input_fn.sig.ident;
     let body = &input_fn.block;
@@ -42,5 +42,5 @@ pub fn debug_program_impl(
 
             // in add_node, update the group lookup structure
         }
-    }
+    }.into()
 }

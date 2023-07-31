@@ -93,8 +93,6 @@ where
      * The stack ID associated with the ProgramNode.
      */
     pub stack_id: u64,
-    // #[cfg(feature = "debugger")]
-    // pub index: u64,
 }
 
 impl<O: Operation> PartialEq for NodeInfo<O> {
@@ -370,7 +368,6 @@ where
     pub fn add_node(&mut self, operation: O) -> NodeIndex {
         #[cfg(feature = "debugger")]
         {
-            // Capture backtrace and insert into lookup
             // Capture backtrace and insert into lookup
             let bt = Backtrace::new();
             let mut hasher = DefaultHasher::new();

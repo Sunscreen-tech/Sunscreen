@@ -181,7 +181,6 @@ mod tests {
     }
 
     fn get_graph() -> CompilationResult<Operation> {
-        #[cfg(feature = "debugger")]
         fn make_node(operation: Operation) -> NodeInfo<Operation> {
             NodeInfo {
                 operation,

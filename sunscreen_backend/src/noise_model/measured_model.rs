@@ -380,7 +380,6 @@ impl MeasuredModel {
         } {
             Ok(v) => v,
             Err(e) => {
-                println!("Error occurred during run_program_unchecked: {:?}", e);
                 return Err(crate::Error::RuntimeError(e));
             }
         };

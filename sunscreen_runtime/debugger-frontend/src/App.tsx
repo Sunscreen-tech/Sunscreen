@@ -224,7 +224,6 @@ async function isProblematic(node, session: string) {
 
 const App = () => {
 
-  // const exGraph = dataToGraph({}, true);
   const [selectedLine, setLine] = useState<number>(0);
   const [vertSize, setVertSize] = useState<any[]>();
   const [horSize, setHorSize] = useState<any[]>();
@@ -317,14 +316,9 @@ const App = () => {
 
   useEffect(() => {
     const update = async () => {
-      console.log("New Session:" +  session)
       const graph = await updateProblematicNodes(dataToGraph(await fetch(`/sessions/${session}`).then(d => d.json())))
       setGraph(graph)
       setCode(await fetch(`/programs/${session}`).then(p => p.json()))
-      
-      // const delay = ms => new Promise(res => setTimeout(res, ms));
-      // await delay(1000)
-      // alert(session)
     }
     update()
   }, [session])
@@ -409,14 +403,3 @@ function infoToHtml(info: any) {
         {info.stacktrace.map(c => (<p>{`${c.callee_name.split("::").at(-2)} @ ${c.callee_file}:${c.callee_lineno}`}</p>))}
       </div>)
 }
-
-// async function getLine(filePath, lineNo) {
-//   const file = await open(filePath)
-//   let currLine = 0;
-//   for await (const line of file.readLines()) {
-//     currLine += 1;
-//     if (currLine === lineNo) {
-//       return line
-//     }
-//   }
-// }

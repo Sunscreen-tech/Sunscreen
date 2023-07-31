@@ -5,7 +5,6 @@
 //! (i.e. an [`FheProgram`](sunscreen_fhe_program::FheProgram)).
 
 mod array;
-#[cfg(feature = "debugger")]
 mod debugger;
 mod error;
 mod keys;
@@ -22,14 +21,13 @@ pub use crate::metadata::*;
 pub use run::*;
 pub use runtime::*;
 pub use serialization::WithContext;
-pub use sunscreen_zkp_backend::ZkpBackend;
+pub use sunscreen_zkp_backend::ZkpBackend as ZkpBackend;
 
 use seal_fhe::{Ciphertext as SealCiphertext, Plaintext as SealPlaintext};
 use serde::{Deserialize, Serialize};
 use sunscreen_zkp_backend::BigInt;
 
 #[derive(Debug, Clone, PartialEq, Hash, Serialize, Deserialize, Eq)]
-//#[serde(tag = "type")]
 /**
  * The underlying backend implementation of a plaintext (e.g. SEAL's [`Plaintext`](seal_fhe::Plaintext)).
  */
@@ -164,7 +162,6 @@ impl Plaintext {
 }
 
 #[derive(Clone, Deserialize, Serialize)]
-//#[serde(tag = "type")]
 /**
  * The underlying backend implementation of a ciphertext (e.g SEAL's [`Ciphertext`](seal_fhe::Ciphertext)).
  */

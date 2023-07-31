@@ -6,7 +6,6 @@ use crate::debugger::server::start_web_server;
 use crate::debugger::GlobalSessionProvider;
 use crate::error::*;
 use crate::metadata::*;
-#[cfg(feature = "debugger")]
 use crate::DebugInfo;
 use crate::ZkpProgramInput;
 use crate::{

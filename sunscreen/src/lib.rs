@@ -63,7 +63,7 @@ mod zkp;
  */
 pub mod types;
 
-use fhe::{FheOperation, Literal};
+use fhe::{FheOperation, Literal, FheContext};
 use petgraph::stable_graph::StableGraph;
 use serde::{Deserialize, Serialize};
 use sunscreen_runtime::{marker, Fhe, FheZkp, Zkp};
@@ -283,8 +283,8 @@ pub type ZkpApplication = Application<Zkp>;
 pub type FheZkpApplication = Application<FheZkp>;
 
 pub enum ContextEnum {
-    Fhe(CURRENT_FHE_CTX),
-    Zkp(CURRENT_ZKP_CTX),
+    Fhe(FheContext),
+    Zkp(ZkpContext),
 }
 
 impl ContextEnum {
@@ -311,6 +311,34 @@ impl ContextEnum {
                 #[cfg(feature = "debugger")]
                 context.group_stack.pop();
             }
+        }
+    }
+
+    pub fn unwrap_fhe(&self) -> Option<&FheContext> {
+        match self {
+            ContextEnum::Fhe(context) => Some(context),
+            _ => None,
+        }
+    }
+
+    pub fn unwrap_fhe_mut(&mut self) -> Option<&mut FheContext> {
+        match self {
+            ContextEnum::Fhe(context) => Some(context),
+            _ => None,
+        }
+    }
+
+    pub fn unwrap_zkp(&self) -> Option<&ZkpContext> {
+        match self {
+            ContextEnum::Zkp(context) => Some(context),
+            _ => None,
+        }
+    }
+
+    pub fn unwrap_zkp_mut(&mut self) -> Option<&mut ZkpContext> {
+        match self {
+            ContextEnum::Zkp(context) => Some(context),
+            _ => None,
         }
     }
 }

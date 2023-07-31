@@ -16,13 +16,13 @@ use seal_fhe::Modulus;
 use seal_fhe::SecretKey;
 use semver::Version;
 use serde::{Deserialize, Serialize};
-use sunscreen_zkp_backend::BigInt;
 use std::collections::{HashMap, VecDeque};
 use sunscreen_compiler_common::GraphQuery;
 use sunscreen_compiler_common::Operation as OperationTrait;
 use sunscreen_compiler_common::Type;
 use sunscreen_compiler_common::{EdgeInfo, NodeInfo};
 use sunscreen_fhe_program::Operation as FheOperation;
+use sunscreen_zkp_backend::BigInt;
 
 #[derive(Clone, Serialize)]
 pub enum DebugNodeType {

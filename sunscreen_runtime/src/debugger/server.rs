@@ -257,7 +257,7 @@ pub async fn get_node_data(
             Session::ZkpSession(zkp_session) => {
                 if let Some(data) = zkp_session.program_data.get(nodeid) {
                     DebugNodeType::Zkp(ZkpNodeType {
-                        value: data.unwrap_or(sunscreen_zkp_backend::BigInt::from(0u32))
+                        value: data.unwrap_or(sunscreen_zkp_backend::BigInt::from(0u32)),
                     })
                 } else {
                     return Ok(HttpResponse::NotFound().body(format!("Node {} not found", nodeid)));

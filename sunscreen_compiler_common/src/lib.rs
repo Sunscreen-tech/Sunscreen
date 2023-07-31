@@ -23,7 +23,6 @@ pub mod lookup;
 pub use context::*;
 pub use graph::*;
 
-
 use semver::Version;
 use serde::{
     de::{self, Error, Visitor},
@@ -31,8 +30,8 @@ use serde::{
 };
 
 use core::hash::Hash;
-use std::str::FromStr;
 use std::fmt::Debug;
+use std::str::FromStr;
 
 /**
  * Renders this object into a format that can be viewed by external

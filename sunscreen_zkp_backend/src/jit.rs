@@ -14,8 +14,6 @@ use sunscreen_compiler_common::{
     Operation as OperationTrait, Session,
 };
 
-
-
 #[derive(Clone, Serialize)]
 #[serde(tag = "type", content = "content")]
 /**

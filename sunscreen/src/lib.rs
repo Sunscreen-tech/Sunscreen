@@ -91,6 +91,9 @@ pub use zkp::{
     invoke_gadget, with_zkp_ctx, ZkpContext, ZkpContextOps, ZkpData, ZkpFrontendCompilation,
     CURRENT_ZKP_CTX,
 };
+pub use fhe::{
+    with_fhe_ctx, CURRENT_FHE_CTX
+};
 
 #[derive(Clone)]
 /**
@@ -278,3 +281,36 @@ pub type ZkpApplication = Application<Zkp>;
  * An application with FHE and ZKP programs.
  */
 pub type FheZkpApplication = Application<FheZkp>;
+
+pub enum ContextEnum {
+    Fhe(CURRENT_FHE_CTX),
+    Zkp(CURRENT_ZKP_CTX),
+}
+
+impl ContextEnum {
+    pub fn push_group(&mut self, group: Group) {
+        match self {
+            ContextEnum::Fhe(context) => {
+                #[cfg(feature = "debugger")]
+                context.group_stack.push(group);
+            }
+            ContextEnum::Zkp(context) => {
+                #[cfg(feature = "debugger")]
+                context.group_stack.push(group);
+            }
+        }
+    }
+
+    pub fn pop_group(&mut self) {
+        match self {
+            ContextEnum::Fhe(context) => {
+                #[cfg(feature = "debugger")]
+                context.group_stack.pop();
+            }
+            ContextEnum::Zkp(context) => {
+                #[cfg(feature = "debugger")]
+                context.group_stack.pop();
+            }
+        }
+    }
+}

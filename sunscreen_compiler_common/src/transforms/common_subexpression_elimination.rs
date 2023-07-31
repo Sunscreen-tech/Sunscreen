@@ -181,144 +181,26 @@ mod tests {
     }
 
     fn get_graph() -> CompilationResult<Operation> {
-        #[cfg(not(feature = "debugger"))]
-        fn make_node(operation: Operation) -> NodeInfo<Operation> {
-            NodeInfo { operation }
-        }
-
         #[cfg(feature = "debugger")]
-        fn make_node(operation: Operation, group_id: u64, stack_id: u64) -> NodeInfo<Operation> {
+        fn make_node(operation: Operation) -> NodeInfo<Operation> {
             NodeInfo {
                 operation,
-                group_id,
-                stack_id,
+                #[cfg(feature = "debugger")]
+                group_id: 0,
+                #[cfg(feature = "debugger")]
+                stack_id: 0,
             }
         }
-
         let mut fe = CompilationResult::new();
 
         // Layer 1
 
         #[cfg(feature = "debugger")]
         {
-            let group_counter = 0;
-            let stack_counter = 0;
-
-            let in_1 = fe.add_node(make_node(
-                Operation::PublicInput(NodeIndex::from(0)),
-                group_counter,
-                stack_counter,
-            ));
-
-            let in_2 = fe.add_node(make_node(
-                Operation::PublicInput(NodeIndex::from(1)),
-                group_counter,
-                stack_counter,
-            ));
-
-            let in_3 = fe.add_node(make_node(
-                Operation::PublicInput(NodeIndex::from(2)),
-                group_counter,
-                stack_counter,
-            ));
-
-            // Layer 2
-            // sub_2 gets eliminated.
-            // add_2, add_3 get eliminated
-            // mul_2, mul_3 get eliminated
-            let sub_1 = fe.add_node(make_node(Operation::Sub, group_counter, stack_counter));
-
-            let sub_2 = fe.add_node(make_node(Operation::Sub, group_counter, stack_counter));
-
-            let sub_3 = fe.add_node(make_node(Operation::Sub, group_counter, stack_counter));
-
-            let sub_4 = fe.add_node(make_node(Operation::Sub, group_counter, stack_counter));
-
-            fe.add_edge(in_1, sub_1, EdgeInfo::Left);
-            fe.add_edge(in_2, sub_1, EdgeInfo::Right);
-            fe.add_edge(in_1, sub_2, EdgeInfo::Left);
-            fe.add_edge(in_2, sub_2, EdgeInfo::Right);
-            fe.add_edge(in_1, sub_3, EdgeInfo::Right);
-            fe.add_edge(in_2, sub_3, EdgeInfo::Left);
-            fe.add_edge(in_1, sub_4, EdgeInfo::Right);
-            fe.add_edge(in_3, sub_4, EdgeInfo::Left);
-
-            let add_1 = fe.add_node(make_node(Operation::Add, group_counter, stack_counter));
-
-            let add_2 = fe.add_node(make_node(Operation::Add, group_counter, stack_counter));
-
-            let add_3 = fe.add_node(make_node(Operation::Add, group_counter, stack_counter));
-
-            let add_4 = fe.add_node(make_node(Operation::Add, group_counter, stack_counter));
-
-            fe.add_edge(in_1, add_1, EdgeInfo::Left);
-            fe.add_edge(in_2, add_1, EdgeInfo::Right);
-            fe.add_edge(in_1, add_2, EdgeInfo::Left);
-            fe.add_edge(in_2, add_2, EdgeInfo::Right);
-            fe.add_edge(in_1, add_3, EdgeInfo::Right);
-            fe.add_edge(in_2, add_3, EdgeInfo::Left);
-            fe.add_edge(in_1, add_4, EdgeInfo::Right);
-            fe.add_edge(in_3, add_4, EdgeInfo::Left);
-
-            let mul_1 = fe.add_node(make_node(Operation::Mul, group_counter, stack_counter));
-
-            let mul_2 = fe.add_node(make_node(Operation::Mul, group_counter, stack_counter));
-
-            let mul_3 = fe.add_node(make_node(Operation::Mul, group_counter, stack_counter));
-
-            let mul_4 = fe.add_node(make_node(Operation::Mul, group_counter, stack_counter));
-
-            fe.add_edge(in_1, mul_1, EdgeInfo::Left);
-            fe.add_edge(in_2, mul_1, EdgeInfo::Right);
-            fe.add_edge(in_1, mul_2, EdgeInfo::Left);
-            fe.add_edge(in_2, mul_2, EdgeInfo::Right);
-            fe.add_edge(in_1, mul_3, EdgeInfo::Right);
-            fe.add_edge(in_2, mul_3, EdgeInfo::Left);
-            fe.add_edge(in_1, mul_4, EdgeInfo::Right);
-            fe.add_edge(in_3, mul_4, EdgeInfo::Left);
-
-            let neg_1 = fe.add_node(make_node(Operation::Neg, group_counter, stack_counter));
-
-            let neg_2 = fe.add_node(make_node(Operation::Neg, group_counter, stack_counter));
-
-            let neg_3 = fe.add_node(make_node(Operation::Neg, group_counter, stack_counter));
-
-            fe.add_edge(in_1, neg_1, EdgeInfo::Unary);
-            fe.add_edge(in_1, neg_2, EdgeInfo::Unary);
-            fe.add_edge(in_2, neg_3, EdgeInfo::Unary);
-
-            // Layer 3
-            let out_1 = fe.add_node(make_node(Operation::Add, group_counter, stack_counter));
-
-            let out_2 = fe.add_node(make_node(Operation::Add, group_counter, stack_counter));
-
-            let out_3 = fe.add_node(make_node(Operation::Add, group_counter, stack_counter));
-
-            let out_4 = fe.add_node(make_node(Operation::Add, group_counter, stack_counter));
-
-            let out_5 = fe.add_node(make_node(Operation::Add, group_counter, stack_counter));
-
-            let out_6 = fe.add_node(make_node(Operation::Add, group_counter, stack_counter));
-
-            fe.add_edge(sub_1, out_1, EdgeInfo::Left);
-            fe.add_edge(add_1, out_1, EdgeInfo::Right);
-            fe.add_edge(sub_2, out_2, EdgeInfo::Left);
-            fe.add_edge(add_2, out_2, EdgeInfo::Right);
-            fe.add_edge(sub_3, out_3, EdgeInfo::Left);
-            fe.add_edge(add_3, out_3, EdgeInfo::Right);
-            fe.add_edge(sub_4, out_4, EdgeInfo::Left);
-            fe.add_edge(add_4, out_4, EdgeInfo::Right);
-            fe.add_edge(mul_1, out_5, EdgeInfo::Left);
-            fe.add_edge(mul_2, out_5, EdgeInfo::Right);
-            fe.add_edge(mul_3, out_6, EdgeInfo::Left);
-            fe.add_edge(mul_4, out_6, EdgeInfo::Right);
-        }
-
-        #[cfg(not(feature = "debugger"))]
-        {
-            // Layer 1
             let in_1 = fe.add_node(make_node(Operation::PublicInput(NodeIndex::from(0))));
+
             let in_2 = fe.add_node(make_node(Operation::PublicInput(NodeIndex::from(1))));
+
             let in_3 = fe.add_node(make_node(Operation::PublicInput(NodeIndex::from(2))));
 
             // Layer 2
@@ -326,8 +208,11 @@ mod tests {
             // add_2, add_3 get eliminated
             // mul_2, mul_3 get eliminated
             let sub_1 = fe.add_node(make_node(Operation::Sub));
+
             let sub_2 = fe.add_node(make_node(Operation::Sub));
+
             let sub_3 = fe.add_node(make_node(Operation::Sub));
+
             let sub_4 = fe.add_node(make_node(Operation::Sub));
 
             fe.add_edge(in_1, sub_1, EdgeInfo::Left);
@@ -340,8 +225,11 @@ mod tests {
             fe.add_edge(in_3, sub_4, EdgeInfo::Left);
 
             let add_1 = fe.add_node(make_node(Operation::Add));
+
             let add_2 = fe.add_node(make_node(Operation::Add));
+
             let add_3 = fe.add_node(make_node(Operation::Add));
+
             let add_4 = fe.add_node(make_node(Operation::Add));
 
             fe.add_edge(in_1, add_1, EdgeInfo::Left);
@@ -354,8 +242,11 @@ mod tests {
             fe.add_edge(in_3, add_4, EdgeInfo::Left);
 
             let mul_1 = fe.add_node(make_node(Operation::Mul));
+
             let mul_2 = fe.add_node(make_node(Operation::Mul));
+
             let mul_3 = fe.add_node(make_node(Operation::Mul));
+
             let mul_4 = fe.add_node(make_node(Operation::Mul));
 
             fe.add_edge(in_1, mul_1, EdgeInfo::Left);
@@ -368,7 +259,9 @@ mod tests {
             fe.add_edge(in_3, mul_4, EdgeInfo::Left);
 
             let neg_1 = fe.add_node(make_node(Operation::Neg));
+
             let neg_2 = fe.add_node(make_node(Operation::Neg));
+
             let neg_3 = fe.add_node(make_node(Operation::Neg));
 
             fe.add_edge(in_1, neg_1, EdgeInfo::Unary);
@@ -402,7 +295,13 @@ mod tests {
     fn get_expected() -> CompilationResult<Operation> {
         #[cfg(not(feature = "debugger"))]
         fn make_node(operation: Operation) -> NodeInfo<Operation> {
-            NodeInfo { operation }
+            NodeInfo {
+                operation,
+                #[cfg(feature = "debugger")]
+                group_id: 0,
+                #[cfg(feature = "debugger")]
+                stack_id: 0,
+            }
         }
 
         #[cfg(feature = "debugger")]
@@ -559,8 +458,11 @@ mod tests {
             // Layer 3
             // out_2 gets culled
             let out_1 = fe.add_node(make_node(Operation::Add));
+
             let out_3 = fe.add_node(make_node(Operation::Add));
+
             let out_4 = fe.add_node(make_node(Operation::Add));
+
             let out_6 = fe.add_node(make_node(Operation::Add));
 
             fe.add_edge(sub_1, out_1, EdgeInfo::Left);

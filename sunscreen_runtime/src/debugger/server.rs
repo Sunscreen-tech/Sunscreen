@@ -3,8 +3,8 @@ use actix_web::{get, http::header, web, App, HttpResponse, HttpServer, Responder
 use semver::Version;
 
 use crate::{
-    debugger::sessions::{BfvSession, Session, ZkpSession},
-    debugger::{decrypt_seal, get_mult_depth, overflow_occurred},
+    debugger::sessions::{Session},
+    debugger::{decrypt_inner_cipher, decrypt_inner_plain, get_mult_depth, overflow_occurred},
     debugger::{get_sessions, BfvNodeType, DebugNodeType, ZkpNodeType},
     Ciphertext, InnerCiphertext, InnerPlaintext, Plaintext, Runtime, SealData, Type, WithContext,
 };
@@ -188,17 +188,18 @@ pub async fn get_node_data(
                                 .unwrap();
 
                             let multiplicative_depth: u64 =
-                                get_mult_depth(stable_graph, NodeIndex::new(nodeid), 0);
+                                get_mult_depth(stable_graph, NodeIndex::new(nodeid));
 
                             let overflowed = overflow_occurred(
                                 stable_graph,
                                 NodeIndex::new(nodeid),
                                 pk.0.params.plain_modulus,
-                                &pk,
+                                pk,
                                 &bfv_session.program_data.clone(),
                             );
 
-                            let coefficients = decrypt_seal(sunscreen_ciphertext.inner, &pk.0.data);
+                            let coefficients =
+                                decrypt_inner_cipher(sunscreen_ciphertext.inner, &pk.0.data);
 
                             DebugNodeType::Bfv(BfvNodeType {
                                 // WARNING: `value` and `data_type` are nonsense values
@@ -231,12 +232,15 @@ pub async fn get_node_data(
 
                             let multiplicative_depth = 0;
 
-                            let mut coefficients: Vec<Vec<u64>> = Vec::new();
-                            let mut inner_coefficients = Vec::new();
-                            for i in 0..pt.len() {
-                                inner_coefficients.push(pt.get_coefficient(i));
-                            }
-                            coefficients.push(inner_coefficients);
+                            let overflowed = overflow_occurred(
+                                stable_graph,
+                                NodeIndex::new(nodeid),
+                                pk.0.params.plain_modulus,
+                                pk,
+                                &bfv_session.program_data.clone(),
+                            );
+
+                            let coefficients = decrypt_inner_plain(sunscreen_plaintext.inner);
 
                             DebugNodeType::Bfv(BfvNodeType {
                                 // WARNING: `value` and `data_type` contain nonsense
@@ -245,7 +249,7 @@ pub async fn get_node_data(
                                 noise_budget: None,
                                 coefficients,
                                 multiplicative_depth,
-                                overflowed: None,
+                                overflowed: Some(overflowed),
                                 noise_exceeded: None,
                             })
                         }
@@ -256,14 +260,10 @@ pub async fn get_node_data(
             }
             Session::ZkpSession(zkp_session) => {
                 if let Some(data) = zkp_session.program_data.get(nodeid) {
-                    let data_str = data
-                        .unwrap_or(sunscreen_zkp_backend::BigInt::from(0u32))
-                        .to_string();
                     DebugNodeType::Zkp(ZkpNodeType {
-                        value: match data_str.find(|c: char| c.is_numeric() && c != '0') {
-                            Some(_) => data_str.trim_start_matches('0').to_string(),
-                            None => "0".to_string(),
-                        },
+                        value: data
+                            .unwrap_or(sunscreen_zkp_backend::BigInt::from(0u32))
+                            .to_string(),
                     })
                 } else {
                     return Ok(HttpResponse::NotFound().body(format!("Node {} not found", nodeid)));

@@ -6,7 +6,7 @@ use crate::{
 };
 
 use petgraph::{stable_graph::NodeIndex, visit::EdgeRef, Direction, Graph};
-use serde::{Serialize, Deserialize};
+use serde::Serialize;
 use sunscreen_compiler_common::{
     forward_traverse, forward_traverse_mut,
     transforms::{GraphTransforms, Transform},
@@ -290,7 +290,7 @@ pub fn jit_prover<U>(
     constant_inputs: &[U],
     public_inputs: &[U],
     private_inputs: &[U],
-    session_provider: Option<&Box<dyn DebugSessionProvider<Operation, BigInt, String>>>,
+    session_provider: Option<&dyn DebugSessionProvider<Operation, BigInt, String>>,
 ) -> Result<ExecutableZkpProgram>
 where
     U: BackendField,
@@ -562,7 +562,7 @@ fn jit_common<U>(
     constant_inputs: &[U],
     public_inputs: &[U],
     node_outputs: Option<HashMap<NodeIndex, U>>,
-    #[cfg(feature = "debugger")] debug_info: Option<ZkpDebugInfo>,
+    #[cfg(feature = "debugger")] _debug_info: Option<ZkpDebugInfo>,
 ) -> Result<ExecutableZkpProgram>
 where
     U: BackendField,

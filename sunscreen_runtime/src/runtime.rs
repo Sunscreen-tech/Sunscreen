@@ -12,13 +12,13 @@ use crate::{
     SealPlaintext, TryFromPlaintext, TryIntoPlaintext, TypeNameInstance,
 };
 use std::marker::PhantomData;
-use std::sync::atomic::AtomicUsize;
 use sunscreen_zkp_backend::{BigInt, Operation as ZkpOperation};
 
 use std::time::Instant;
 
 use log::trace;
 
+#[cfg(feature = "debugger")]
 use sunscreen_compiler_common::DebugSessionProvider;
 use sunscreen_fhe_program::FheProgramTrait;
 use sunscreen_fhe_program::SchemeType;
@@ -534,31 +534,28 @@ where
         let now = Instant::now();
 
         let session_provider = if cfg!(feature = "debugger") {
-            Some(Box::new(GlobalSessionProvider::new(&get_session_name(
+            Some(GlobalSessionProvider::new(&get_session_name(
                 &program.metadata.name,
                 "zkp"
-            ))))
+            )))
         } else {
             None
         };
         #[cfg(feature = "debugger")]
-        let boxed = session_provider.unwrap() as Box<dyn DebugSessionProvider<ZkpOperation, BigInt, String>>;
-
-        let debug_session_provider = if cfg!(feature = "debugger") {
-            Some(&boxed)
-        } else {
-            None
-        };
-
+        let provider =
+            &session_provider.unwrap() as &dyn DebugSessionProvider<ZkpOperation, BigInt, String>;
         #[cfg(feature = "debugger")]
-        start_web_server();
+        let debug_session_provider = Some(provider);
+
+        #[cfg(not(feature = "debugger"))]
+        let debug_session_provider = None;
 
         let prog = backend.jit_prover(
             program,
             &constant_inputs,
             &public_inputs,
             &private_inputs,
-            debug_session_provider
+            debug_session_provider,
         )?;
 
         trace!("Prover JIT time {}s", now.elapsed().as_secs_f64());
@@ -567,6 +564,9 @@ where
 
         trace!("Starting backend prove...");
         println!("test");
+
+        #[cfg(feature = "debugger")]
+        start_web_server();
 
         Ok(backend.prove(&prog, &inputs)?)
     }

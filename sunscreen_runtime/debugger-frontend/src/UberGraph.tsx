@@ -1,9 +1,6 @@
 import { GraphView } from "react-digraph";
 import React from "react";
 
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faDownLeftAndUpRightToCenter } from '@fortawesome/free-solid-svg-icons'
-
 const GraphConfig =  {
   NodeTypes: {
     empty: { // required to show empty nodes

@@ -465,7 +465,7 @@ impl ZkpBackend for BulletproofsBackend
         constant_inputs: &[BigInt],
         public_inputs: &[BigInt],
         private_inputs: &[BigInt],
-        debug_session_provider: Option<&Box<dyn DebugSessionProvider<jit::Operation, BigInt, String>>>,
+        debug_session_provider: Option<&dyn DebugSessionProvider<jit::Operation, BigInt, String>>,
     ) -> Result<ExecutableZkpProgram> {
         let constant_inputs = constant_inputs
             .iter()
@@ -695,15 +695,14 @@ mod tests {
             &[(add_1, EdgeInfo::Unordered)],
         );
 
-        let backend: Box<dyn ZkpBackend<Field = Scalar>> =
-            Box::new(BulletproofsBackend::new());
+        let backend: Box<dyn ZkpBackend<Field = Scalar>> = Box::new(BulletproofsBackend::new());
 
         struct TestProvider {}
 
         impl DebugSessionProvider<jit::Operation, BigInt, String> for TestProvider {
             fn add_session(
                 &self,
-                session: sunscreen_compiler_common::Session<jit::Operation, BigInt, String>,
+                _session: sunscreen_compiler_common::Session<jit::Operation, BigInt, String>,
             ) {
                 unreachable!()
             }

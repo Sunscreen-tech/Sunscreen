@@ -1,10 +1,13 @@
-use crate::{debugger::get_sessions, InnerPlaintext, PrivateKey, SealData};
+#[cfg(feature = "debugger")]
+use crate::debugger::get_sessions;
+use crate::{InnerPlaintext, PrivateKey, SealData};
 use static_assertions::const_assert;
 use sunscreen_compiler_common::{GraphQuery, GraphQueryError};
 use sunscreen_fhe_program::Operation;
 use sunscreen_fhe_program::{FheProgram, FheProgramTrait, Literal, Operation::*};
 
 #[allow(unused_imports)]
+#[cfg(feature = "debugger")]
 use crate::debugger::sessions::BfvSession;
 #[allow(unused_imports)]
 use crate::WithContext;

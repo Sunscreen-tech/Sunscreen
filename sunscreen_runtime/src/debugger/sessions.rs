@@ -24,11 +24,14 @@ impl GlobalSessionProvider {
         Self {
             name: name.to_owned(),
         }
-    } 
+    }
 }
 
 impl DebugSessionProvider<FheOperation, SealData, ()> for GlobalSessionProvider {
-    fn add_session(&self, session: sunscreen_compiler_common::Session<FheOperation, SealData, ()>) {
+    fn add_session(
+        &self,
+        _session: sunscreen_compiler_common::Session<FheOperation, SealData, ()>,
+    ) {
     }
 }
 
@@ -77,13 +80,6 @@ impl Session {
         match self {
             Self::ZkpSession(s) => s,
             _ => panic!("Called unwrap_zkp_session on a non-ZKP session"),
-        }
-    }
-
-    pub fn unwrap_zkp_session_mut(&mut self) -> &mut ZkpSession {
-        match self {
-            Self::ZkpSession(s) => s,
-            _ => panic!("Called unwrap_zkp_session_mut on a non-ZKP session"),
         }
     }
 }
@@ -160,7 +156,11 @@ impl ZkpSession {
     //     }
     // }
 
-    pub fn new(graph: &CompilationResult<ZkpOperation>, data: Vec<Option<BigInt>>, source_code: &str) -> Self {
+    pub fn new(
+        graph: &CompilationResult<ZkpOperation>,
+        data: Vec<Option<BigInt>>,
+        source_code: &str,
+    ) -> Self {
         Self {
             graph: graph.clone(),
             program_data: data,

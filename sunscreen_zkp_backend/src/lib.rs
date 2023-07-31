@@ -130,7 +130,8 @@ pub trait Gadget: Any + Send + Sync {
 impl Serialize for dyn Gadget {
     fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
     where
-        S: serde::Serializer {
+        S: serde::Serializer,
+    {
         serializer.serialize_str(self.debug_name())
     }
 }
@@ -425,7 +426,7 @@ pub trait ZkpBackend {
         constant_inputs: &[BigInt],
         public_inputs: &[BigInt],
         private_inputs: &[BigInt],
-        debug_session_provider: Option<&Box<dyn DebugSessionProvider<Operation, BigInt, String>>>,
+        debug_session_provider: Option<&dyn DebugSessionProvider<Operation, BigInt, String>>,
     ) -> Result<ExecutableZkpProgram>;
 
     /**
@@ -523,7 +524,7 @@ mod tests {
         impl DebugSessionProvider<jit::Operation, BigInt, String> for TestProvider {
             fn add_session(
                 &self,
-                session: sunscreen_compiler_common::Session<jit::Operation, BigInt, String>,
+                _session: sunscreen_compiler_common::Session<jit::Operation, BigInt, String>,
             ) {
                 unreachable!()
             }

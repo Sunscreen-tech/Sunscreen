@@ -16,6 +16,7 @@ use seal_fhe::Modulus;
 use seal_fhe::SecretKey;
 use semver::Version;
 use serde::{Deserialize, Serialize};
+use sunscreen_zkp_backend::BigInt;
 use std::collections::{HashMap, VecDeque};
 use sunscreen_compiler_common::GraphQuery;
 use sunscreen_compiler_common::Operation as OperationTrait;
@@ -23,7 +24,7 @@ use sunscreen_compiler_common::Type;
 use sunscreen_compiler_common::{EdgeInfo, NodeInfo};
 use sunscreen_fhe_program::Operation as FheOperation;
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize)]
 pub enum DebugNodeType {
     Bfv(BfvNodeType),
     Zkp(ZkpNodeType),
@@ -305,22 +306,11 @@ fn create_plaintext_from_seal_data(pt: SealPlaintext, pk: &PrivateKey) -> InnerP
     sunscreen_plaintext.inner
 }
 
-#[derive(Clone, Deserialize)]
+#[derive(Clone, Serialize)]
+#[serde(transparent)]
 pub struct ZkpNodeType {
     // Send `BigInt` values as strings
-    pub value: String,
-}
-
-impl Serialize for ZkpNodeType {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        match self.value.find(|c: char| c.is_numeric() && c != '0') {
-            Some(_) => serializer.serialize_str(self.value.trim_start_matches('0')),
-            None => serializer.serialize_str("0"),
-        }
-    }
+    pub value: BigInt,
 }
 
 #[test]

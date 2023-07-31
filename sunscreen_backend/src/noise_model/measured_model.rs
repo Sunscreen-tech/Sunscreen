@@ -278,12 +278,12 @@ fn create_inputs_for_program(
         .filter(|n| {
             matches!(
                 n.operation,
-                Operation::InputCiphertext(_) | Operation::InputPlaintext(_)
+                Operation::InputCiphertext { .. } | Operation::InputPlaintext { .. }
             )
         })
         .zip(noise_targets)
         .map(|(n, target)| match n.operation {
-            Operation::InputCiphertext(_) => Ok(create_ciphertext_with_noise_level(
+            Operation::InputCiphertext { .. } => Ok(create_ciphertext_with_noise_level(
                 context,
                 public_key,
                 private_key,
@@ -291,7 +291,7 @@ fn create_inputs_for_program(
                 *target,
             )?
             .into()),
-            Operation::InputPlaintext(_) => Ok(encoder.encode_unsigned(1)?.into()),
+            Operation::InputPlaintext { .. } => Ok(encoder.encode_unsigned(1)?.into()),
             _ => unreachable!(),
         })
         .collect::<Result<Vec<SealData>>>()
@@ -373,6 +373,9 @@ impl MeasuredModel {
                 &evaluator,
                 &relin_keys.as_ref(),
                 &galois_keys.as_ref(),
+                None,
+                #[cfg(feature = "debugger")]
+                "",
             )
         }?;
 

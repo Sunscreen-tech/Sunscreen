@@ -18,7 +18,6 @@ members = [
     "sunscreen_runtime",
     "sunscreen_compiler_common",
     "sunscreen_zkp_backend",
-    "fhe-debugger"
 ]
 exclude = [
     "mdBook",

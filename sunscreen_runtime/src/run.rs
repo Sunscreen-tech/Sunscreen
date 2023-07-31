@@ -1,10 +1,23 @@
-use crate::{InnerPlaintext, SealData};
+#[cfg(feature = "debugger")]
+use crate::debugger::get_sessions;
+use crate::{InnerPlaintext, PrivateKey, SealData};
 use static_assertions::const_assert;
 use sunscreen_compiler_common::{GraphQuery, GraphQueryError};
+use sunscreen_fhe_program::Operation;
 use sunscreen_fhe_program::{FheProgram, FheProgramTrait, Literal, Operation::*};
+
+#[allow(unused_imports)]
+#[cfg(feature = "debugger")]
+use crate::debugger::sessions::BfvSession;
+#[allow(unused_imports)]
+use crate::WithContext;
+#[allow(unused_imports)]
+use sunscreen_fhe_program::{SchemeType::Bfv, SecurityLevel::TC128};
 
 use crossbeam::atomic::AtomicCell;
 use petgraph::{stable_graph::NodeIndex, Direction};
+#[cfg(test)]
+use serial_test::serial;
 
 use std::borrow::Cow;
 #[cfg(target_arch = "wasm32")]
@@ -82,6 +95,21 @@ impl From<SealError> for FheProgramRunFailure {
 }
 
 /**
+ * Stores a `SecretKey` for decryption for a given debugger session.
+ */
+pub struct DebugInfo<'a> {
+    /**
+     * The private key associated with the debugger session. Used for decryption for visualization.
+     */
+    pub private_key: &'a PrivateKey,
+
+    /**
+     * The name of the debugger session.
+     */
+    pub session_name: String,
+}
+
+/**
  * You probably should instead use [`Runtime::run()`](crate::Runtime::run).
  *
  * Run the given [`FheProgram`] to completion with the given inputs. This
@@ -103,6 +131,8 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
     evaluator: &E,
     relin_keys: &Option<&RelinearizationKeys>,
     galois_keys: &Option<&GaloisKeys>,
+    debug_info: Option<DebugInfo>,
+    #[cfg(feature = "debugger")] source_code: &str,
 ) -> Result<Vec<Ciphertext>, FheProgramRunFailure> {
     fn get_data(
         data: &[AtomicCell<Option<Arc<SealData>>>],
@@ -157,25 +187,70 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
         data.push(AtomicCell::new(None));
     }
 
+    #[cfg(feature = "debugger")]
+    if let Some(ref v) = debug_info {
+        let mut guard = get_sessions().lock().unwrap();
+        assert!(!guard.contains_key(&v.session_name));
+
+        let session = BfvSession::new(&ir.graph, v.private_key, source_code);
+        guard.insert(v.session_name.clone(), session.into());
+    }
+
+    fn set_data(
+        data: &[AtomicCell<Option<Arc<SealData>>>],
+        node_index: NodeIndex,
+        value: &Arc<SealData>,
+        session: &Option<String>,
+    ) -> Result<(), FheProgramRunFailure> {
+        // set on `data`
+        data[node_index.index()].store(Some(value.clone()));
+
+        #[cfg(feature = "debugger")]
+        if let Some(session_name) = session {
+            let mut guard = get_sessions().lock().unwrap();
+            let session: &mut BfvSession = guard
+                .get_mut(session_name)
+                .unwrap()
+                .unwrap_bfv_session_mut();
+            let node_val = get_data(data, node_index.index());
+            match Arc::try_unwrap(node_val.unwrap().clone()) {
+                Ok(val) => session.program_data[node_index.index()] = Some(val),
+                Err(arc) => {
+                    session.program_data[node_index.index()] = Some((*arc).clone());
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    let session_name = debug_info.map(|v| v.session_name);
+
     traverse(
         ir,
         |index| {
             let node = &ir.graph[index];
-            let query = GraphQuery::new(&ir.graph.0);
+            let query = GraphQuery::new(&ir.graph.graph);
 
             match &node.operation {
-                InputCiphertext(id) => {
-                    data[index.index()].store(Some(inputs[*id].clone()));
+                InputCiphertext { id } => {
+                    set_data(&data, index, &inputs[*id], &session_name).unwrap_or_else(|_| {
+                        panic!("Failed to set data for InputCiphertext {:?}", id)
+                    });
                 }
-                InputPlaintext(id) => {
-                    data[index.index()].store(Some(inputs[*id].clone()));
+                InputPlaintext { id } => {
+                    set_data(&data, index, &inputs[*id], &session_name).unwrap_or_else(|_| {
+                        panic!("Failed to set data for InputPlaintext {:?}", id)
+                    });
                 }
                 ShiftLeft => {
                     let (left, right) = query.get_binary_operands(index)?;
 
                     let a = get_ciphertext(&data, left.index())?;
                     let b = match ir.graph[right].operation {
-                        Literal(Literal::U64(v)) => v as i32,
+                        Operation::Literal {
+                            val: Literal::U64 { value: v },
+                        } => v as i32,
                         _ => panic!(
                             "Illegal right operand for ShiftLeft: {:#?}",
                             ir.graph[right].operation
@@ -189,15 +264,23 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
                             .as_ref()
                             .ok_or(FheProgramRunFailure::MissingGaloisKeys)?,
                     )?;
-
-                    data[index.index()].store(Some(Arc::new(c.into())));
+                    set_data(&data, index, &Arc::new(c.into()), &session_name).unwrap_or_else(
+                        |_| {
+                            panic!(
+                                "Failed to set data for ShiftLeft, (left: {:?}, right: {:?}",
+                                left, right
+                            )
+                        },
+                    );
                 }
                 ShiftRight => {
                     let (left, right) = query.get_binary_operands(index)?;
 
                     let a = get_ciphertext(&data, left.index())?;
                     let b = match ir.graph[right].operation {
-                        Literal(Literal::U64(v)) => v as i32,
+                        Operation::Literal {
+                            val: Literal::U64 { value: v },
+                        } => v as i32,
                         _ => panic!(
                             "Illegal right operand for ShiftLeft: {:#?}",
                             ir.graph[right].operation
@@ -211,8 +294,14 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
                             .as_ref()
                             .ok_or(FheProgramRunFailure::MissingGaloisKeys)?,
                     )?;
-
-                    data[index.index()].store(Some(Arc::new(c.into())));
+                    set_data(&data, index, &Arc::new(c.into()), &session_name).unwrap_or_else(
+                        |_| {
+                            panic!(
+                                "Failed to set data for ShiftRight, (left: {:?}, right: {:?}",
+                                left, right
+                            )
+                        },
+                    );
                 }
                 Add => {
                     let (left, right) = query.get_binary_operands(index)?;
@@ -222,7 +311,14 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
 
                     let c = evaluator.add(a, b)?;
 
-                    data[index.index()].store(Some(Arc::new(c.into())));
+                    set_data(&data, index, &Arc::new(c.into()), &session_name).unwrap_or_else(
+                        |_| {
+                            panic!(
+                                "Failed to set data for Add, (left: {:?}, right: {:?}",
+                                left, right
+                            )
+                        },
+                    );
                 }
                 AddPlaintext => {
                     let (left, right) = query.get_binary_operands(index)?;
@@ -232,7 +328,14 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
 
                     let c = evaluator.add_plain(a, b)?;
 
-                    data[index.index()].store(Some(Arc::new(c.into())));
+                    set_data(&data, index, &Arc::new(c.into()), &session_name).unwrap_or_else(
+                        |_| {
+                            panic!(
+                                "Failed to set data for AddPlaintext, (left: {:?}, right: {:?}",
+                                left, right
+                            )
+                        },
+                    );
                 }
                 Multiply => {
                     let (left, right) = query.get_binary_operands(index)?;
@@ -242,7 +345,14 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
 
                     let c = evaluator.multiply(a, b)?;
 
-                    data[index.index()].store(Some(Arc::new(c.into())));
+                    set_data(&data, index, &Arc::new(c.into()), &session_name).unwrap_or_else(
+                        |_| {
+                            panic!(
+                                "Failed to set data for Multiply, (left: {:?}, right: {:?}",
+                                left, right
+                            )
+                        },
+                    );
                 }
                 MultiplyPlaintext => {
                     let (left, right) = query.get_binary_operands(index)?;
@@ -252,7 +362,7 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
 
                     let c = evaluator.multiply_plain(a, b)?;
 
-                    data[index.index()].store(Some(Arc::new(c.into())));
+                    set_data(&data, index, &Arc::new(c.into()), &session_name).unwrap_or_else(|_| panic!("Failed to set data for MultiplyPlaintext, (left: {:?}, right: {:?}", left, right));
                 }
                 SwapRows => {
                     let galois_keys = galois_keys
@@ -265,7 +375,8 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
 
                     let y = evaluator.rotate_columns(x, galois_keys)?;
 
-                    data[index.index()].store(Some(Arc::new(y.into())));
+                    set_data(&data, index, &Arc::new(y.into()), &session_name)
+                        .unwrap_or_else(|_| panic!("Failed to set data for SwapRows {:?}", input));
                 }
                 Relinearize => {
                     let relin_keys = relin_keys
@@ -278,7 +389,9 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
 
                     let c = evaluator.relinearize(a, relin_keys)?;
 
-                    data[index.index()].store(Some(Arc::new(c.into())));
+                    set_data(&data, index, &Arc::new(c.into()), &session_name).unwrap_or_else(
+                        |_| panic!("Failed to set data for Relinearize {:?}", input),
+                    );
                 }
                 Negate => {
                     let x_id = query.get_unary_operand(index)?;
@@ -287,7 +400,8 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
 
                     let y = evaluator.negate(x)?;
 
-                    data[index.index()].store(Some(Arc::new(y.into())));
+                    set_data(&data, index, &Arc::new(y.into()), &session_name)
+                        .unwrap_or_else(|_| panic!("Failed to set data for Negate {:?}", x_id));
                 }
                 Sub => {
                     let (left, right) = query.get_binary_operands(index)?;
@@ -297,7 +411,14 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
 
                     let c = evaluator.sub(a, b)?;
 
-                    data[index.index()].store(Some(Arc::new(c.into())));
+                    set_data(&data, index, &Arc::new(c.into()), &session_name).unwrap_or_else(
+                        |_| {
+                            panic!(
+                                "Failed to set data for Sub, (left: {:?}, right: {:?}",
+                                left, right
+                            )
+                        },
+                    );
                 }
                 SubPlaintext => {
                     let (left, right) = query.get_binary_operands(index)?;
@@ -307,21 +428,36 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
 
                     let c = evaluator.sub_plain(a, b)?;
 
-                    data[index.index()].store(Some(Arc::new(c.into())));
+                    set_data(&data, index, &Arc::new(c.into()), &session_name).unwrap_or_else(
+                        |_| {
+                            panic!(
+                                "Failed to set data for SubPlaintext, (left: {:?}, right: {:?}",
+                                left, right
+                            )
+                        },
+                    );
                 }
-                Literal(x) => {
-                    if let Literal::Plaintext(p) = x {
+                Operation::Literal { val: x } => {
+                    if let Literal::Plaintext { value: p } = x {
                         let p = InnerPlaintext::from_bytes(p)
                             .map_err(|_| FheProgramRunFailure::MalformedPlaintext)?;
 
                         match p {
-                            InnerPlaintext::Seal(p) => {
+                            InnerPlaintext::Seal { value: p } => {
                                 // Plaintext literals should always have exactly one plaintext.
                                 if p.len() != 1 {
                                     return Err(FheProgramRunFailure::MalformedPlaintext);
                                 }
 
-                                data[index.index()].store(Some(Arc::new(p[0].data.clone().into())))
+                                set_data(
+                                    &data,
+                                    index,
+                                    &Arc::new(p[0].data.clone().into()),
+                                    &session_name,
+                                )
+                                .unwrap_or_else(|_| {
+                                    panic!("Failed to set data for Literal, plaintext {:?}", p)
+                                });
                             }
                         };
                     }
@@ -331,7 +467,9 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
 
                     let a = get_data(&data, input.index())?;
 
-                    data[index.index()].store(Some(a.clone()));
+                    set_data(&data, index, &a.clone(), &session_name).unwrap_or_else(|_| {
+                        panic!("Failed to set data for OutputCiphertext, input {:?}", input)
+                    });
                 }
             };
 
@@ -546,8 +684,20 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::Params;
     use seal_fhe::*;
     use sunscreen_fhe_program::{FheProgramTrait, SchemeType};
+
+    fn setup_parameters(degree: u64) -> EncryptionParameters {
+        BfvEncryptionParametersBuilder::new()
+            .set_poly_modulus_degree(degree)
+            .set_plain_modulus(PlainModulus::batching(degree, 17).unwrap())
+            .set_coefficient_modulus(
+                CoefficientModulus::bfv_default(degree, SecurityLevel::default()).unwrap(),
+            )
+            .build()
+            .unwrap()
+    }
 
     fn setup_scheme(
         degree: u64,
@@ -593,6 +743,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(feature = "debugger", serial)]
     fn simple_add() {
         let mut ir = FheProgram::new(SchemeType::Bfv);
 
@@ -603,7 +754,7 @@ mod tests {
 
         let degree = 8192;
 
-        let (_keygen, context, _public_key, _private_key, encryptor, decryptor, evaluator) =
+        let (_keygen, context, _public_key, private_key, encryptor, decryptor, evaluator) =
             setup_scheme(degree);
 
         let encoder = BFVEncoder::new(&context).unwrap();
@@ -617,9 +768,49 @@ mod tests {
         let ct_0 = encryptor.encrypt(&pt_0).unwrap();
         let ct_1 = encryptor.encrypt(&pt_1).unwrap();
 
+        #[cfg(not(feature = "debugger"))]
         let output = unsafe {
-            run_program_unchecked(&ir, &[ct_0.into(), ct_1.into()], &evaluator, &None, &None)
-                .unwrap()
+            run_program_unchecked(
+                &ir,
+                &[ct_0.into(), ct_1.into()],
+                &evaluator,
+                &None,
+                &None,
+                None,
+            )
+            .unwrap()
+        };
+
+        #[cfg(feature = "debugger")]
+        let encryption_params = setup_parameters(degree);
+
+        #[cfg(feature = "debugger")]
+        let private_key = PrivateKey(WithContext {
+            params: Params {
+                lattice_dimension: encryption_params.get_poly_modulus_degree(),
+                coeff_modulus: /* encryption_params.get_coefficient_modulus() as Vec<u64>*/ vec![128,128,128],
+                plain_modulus: 1024,
+                scheme_type: Bfv,
+                security_level: TC128
+            },
+            data: private_key,
+        });
+
+        #[cfg(feature = "debugger")]
+        let output = unsafe {
+            run_program_unchecked(
+                &ir,
+                &[ct_0.into(), ct_1.into()],
+                &evaluator,
+                &None,
+                &None,
+                Some(DebugInfo {
+                    private_key: &private_key,
+                    session_name: "simple_add".to_owned(),
+                }),
+                "empty",
+            )
+            .unwrap()
         };
 
         assert_eq!(output.len(), 1);
@@ -633,6 +824,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(feature = "debugger", serial)]
     fn simple_mul() {
         let mut ir = FheProgram::new(SchemeType::Bfv);
 
@@ -643,7 +835,7 @@ mod tests {
 
         let degree = 8192;
 
-        let (keygen, context, _public_key, _private_key, encryptor, decryptor, evaluator) =
+        let (keygen, context, _public_key, private_key, encryptor, decryptor, evaluator) =
             setup_scheme(degree);
 
         let encoder = BFVEncoder::new(&context).unwrap();
@@ -658,6 +850,7 @@ mod tests {
         let ct_0 = encryptor.encrypt(&pt_0).unwrap();
         let ct_1 = encryptor.encrypt(&pt_1).unwrap();
 
+        #[cfg(not(feature = "debugger"))]
         let output = unsafe {
             run_program_unchecked(
                 &ir,
@@ -665,6 +858,39 @@ mod tests {
                 &evaluator,
                 &Some(&relin_keys),
                 &None,
+                None,
+            )
+            .unwrap()
+        };
+
+        #[cfg(feature = "debugger")]
+        let encryption_params = setup_parameters(degree);
+
+        #[cfg(feature = "debugger")]
+        let private_key = PrivateKey(WithContext {
+            params: Params {
+                lattice_dimension: encryption_params.get_poly_modulus_degree(),
+                coeff_modulus: /* encryption_params.get_coefficient_modulus() as Vec<u64>*/ vec![128,128,128],
+                plain_modulus: 1024,
+                scheme_type: Bfv,
+                security_level: TC128
+            },
+            data: private_key,
+        });
+
+        #[cfg(feature = "debugger")]
+        let output = unsafe {
+            run_program_unchecked(
+                &ir,
+                &[ct_0.into(), ct_1.into()],
+                &evaluator,
+                &Some(&relin_keys),
+                &None,
+                Some(DebugInfo {
+                    private_key: &private_key,
+                    session_name: "simple_mul".to_owned(),
+                }),
+                "empty",
             )
             .unwrap()
         };
@@ -680,6 +906,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(feature = "debugger", serial)]
     fn can_mul_and_relinearize() {
         let mut ir = FheProgram::new(SchemeType::Bfv);
 
@@ -691,7 +918,7 @@ mod tests {
 
         let degree = 8192;
 
-        let (keygen, context, _public_key, _private_key, encryptor, decryptor, evaluator) =
+        let (keygen, context, _public_key, private_key, encryptor, decryptor, evaluator) =
             setup_scheme(degree);
 
         let encoder = BFVEncoder::new(&context).unwrap();
@@ -706,6 +933,7 @@ mod tests {
         let ct_0 = encryptor.encrypt(&pt_0).unwrap();
         let ct_1 = encryptor.encrypt(&pt_1).unwrap();
 
+        #[cfg(not(feature = "debugger"))]
         let output = unsafe {
             run_program_unchecked(
                 &ir,
@@ -713,6 +941,39 @@ mod tests {
                 &evaluator,
                 &Some(&relin_keys),
                 &None,
+                None,
+            )
+            .unwrap()
+        };
+
+        #[cfg(feature = "debugger")]
+        let encryption_params = setup_parameters(degree);
+
+        #[cfg(feature = "debugger")]
+        let private_key = PrivateKey(WithContext {
+            params: Params {
+                lattice_dimension: encryption_params.get_poly_modulus_degree(),
+                coeff_modulus: /* encryption_params.get_coefficient_modulus() as Vec<u64>*/ vec![128,128,128],
+                plain_modulus: 1024,
+                scheme_type: Bfv,
+                security_level: TC128
+            },
+            data: private_key,
+        });
+
+        #[cfg(feature = "debugger")]
+        let output = unsafe {
+            run_program_unchecked(
+                &ir,
+                &[ct_0.into(), ct_1.into()],
+                &evaluator,
+                &Some(&relin_keys),
+                &None,
+                Some(DebugInfo {
+                    private_key: &private_key,
+                    session_name: "can_mul_and_relinearize".to_owned(),
+                }),
+                "empty",
             )
             .unwrap()
         };
@@ -728,6 +989,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(feature = "debugger", serial)]
     fn add_reduction() {
         let mut ir = FheProgram::new(SchemeType::Bfv);
 
@@ -754,7 +1016,7 @@ mod tests {
 
         let degree = 8192;
 
-        let (keygen, context, _public_key, _private_key, encryptor, decryptor, evaluator) =
+        let (keygen, context, _public_key, private_key, encryptor, decryptor, evaluator) =
             setup_scheme(degree);
 
         let encoder = BFVEncoder::new(&context).unwrap();
@@ -769,6 +1031,7 @@ mod tests {
         let ct_0 = encryptor.encrypt(&pt_0).unwrap();
         let ct_1 = encryptor.encrypt(&pt_1).unwrap();
 
+        #[cfg(not(feature = "debugger"))]
         let output = unsafe {
             run_program_unchecked(
                 &ir,
@@ -776,6 +1039,39 @@ mod tests {
                 &evaluator,
                 &Some(&relin_keys),
                 &None,
+                None,
+            )
+            .unwrap()
+        };
+
+        #[cfg(feature = "debugger")]
+        let encryption_params = setup_parameters(degree);
+
+        #[cfg(feature = "debugger")]
+        let private_key = PrivateKey(WithContext {
+            params: Params {
+                lattice_dimension: encryption_params.get_poly_modulus_degree(),
+                coeff_modulus: /* encryption_params.get_coefficient_modulus() as Vec<u64>*/ vec![128,128,128],
+                plain_modulus: 1024,
+                scheme_type: Bfv,
+                security_level: TC128
+            },
+            data: private_key,
+        });
+
+        #[cfg(feature = "debugger")]
+        let output = unsafe {
+            run_program_unchecked(
+                &ir,
+                &[ct_0.into(), ct_1.into()],
+                &evaluator,
+                &Some(&relin_keys),
+                &None,
+                Some(DebugInfo {
+                    private_key: &private_key,
+                    session_name: "add_reduction".to_owned(),
+                }),
+                "empty",
             )
             .unwrap()
         };
@@ -791,11 +1087,12 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(feature = "debugger", serial)]
     fn rotate_left() {
         let mut ir = FheProgram::new(SchemeType::Bfv);
 
         let a = ir.add_input_ciphertext(0);
-        let l = ir.add_input_literal(Literal::U64(3));
+        let l = ir.add_input_literal(Literal::U64 { value: 3 });
 
         let res = ir.add_rotate_left(a, l);
 
@@ -803,7 +1100,7 @@ mod tests {
 
         let degree = 4096;
 
-        let (keygen, context, _public_key, _private_key, encryptor, decryptor, evaluator) =
+        let (keygen, context, _public_key, private_key, encryptor, decryptor, evaluator) =
             setup_scheme(degree);
 
         let encoder = BFVEncoder::new(&context).unwrap();
@@ -815,9 +1112,49 @@ mod tests {
 
         let ct_0 = encryptor.encrypt(&pt_0).unwrap();
 
+        #[cfg(not(feature = "debugger"))]
         let output = unsafe {
-            run_program_unchecked(&ir, &[ct_0.into()], &evaluator, &None, &Some(&galois_keys))
-                .unwrap()
+            run_program_unchecked(
+                &ir,
+                &[ct_0.into()],
+                &evaluator,
+                &None,
+                &Some(&galois_keys),
+                None,
+            )
+            .unwrap()
+        };
+
+        #[cfg(feature = "debugger")]
+        let encryption_params = setup_parameters(degree);
+
+        #[cfg(feature = "debugger")]
+        let private_key = PrivateKey(WithContext {
+            params: Params {
+                lattice_dimension: encryption_params.get_poly_modulus_degree(),
+                coeff_modulus: /* encryption_params.get_coefficient_modulus() as Vec<u64>*/ vec![128,128,128],
+                plain_modulus: 1024,
+                scheme_type: Bfv,
+                security_level: TC128
+            },
+            data: private_key,
+        });
+
+        #[cfg(feature = "debugger")]
+        let output = unsafe {
+            run_program_unchecked(
+                &ir,
+                &[ct_0.into()],
+                &evaluator,
+                &None,
+                &Some(&galois_keys),
+                Some(DebugInfo {
+                    private_key: &private_key,
+                    session_name: "rotate_left".to_owned(),
+                }),
+                "empty",
+            )
+            .unwrap()
         };
 
         assert_eq!(output.len(), 1);
@@ -836,11 +1173,12 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(feature = "debugger", serial)]
     fn rotate_right() {
         let mut ir = FheProgram::new(SchemeType::Bfv);
 
         let a = ir.add_input_ciphertext(0);
-        let l = ir.add_input_literal(Literal::U64(3));
+        let l = ir.add_input_literal(Literal::U64 { value: 3 });
 
         let res = ir.append_rotate_right(a, l);
 
@@ -848,7 +1186,7 @@ mod tests {
 
         let degree = 4096;
 
-        let (keygen, context, _public_key, _private_key, encryptor, decryptor, evaluator) =
+        let (keygen, context, _public_key, private_key, encryptor, decryptor, evaluator) =
             setup_scheme(degree);
 
         let encoder = BFVEncoder::new(&context).unwrap();
@@ -860,9 +1198,49 @@ mod tests {
 
         let ct_0 = encryptor.encrypt(&pt_0).unwrap();
 
+        #[cfg(not(feature = "debugger"))]
         let output = unsafe {
-            run_program_unchecked(&ir, &[ct_0.into()], &evaluator, &None, &Some(&galois_keys))
-                .unwrap()
+            run_program_unchecked(
+                &ir,
+                &[ct_0.into()],
+                &evaluator,
+                &None,
+                &Some(&galois_keys),
+                None,
+            )
+            .unwrap()
+        };
+
+        #[cfg(feature = "debugger")]
+        let encryption_params = setup_parameters(degree);
+
+        #[cfg(feature = "debugger")]
+        let private_key = PrivateKey(WithContext {
+            params: Params {
+                lattice_dimension: encryption_params.get_poly_modulus_degree(),
+                coeff_modulus: /* encryption_params.get_coefficient_modulus() as Vec<u64>*/ vec![128,128,128],
+                plain_modulus: 1024,
+                scheme_type: Bfv,
+                security_level: TC128
+            },
+            data: private_key,
+        });
+
+        #[cfg(feature = "debugger")]
+        let output = unsafe {
+            run_program_unchecked(
+                &ir,
+                &[ct_0.into()],
+                &evaluator,
+                &None,
+                &Some(&galois_keys),
+                Some(DebugInfo {
+                    private_key: &private_key,
+                    session_name: "rotate_right".to_owned(),
+                }),
+                "empty",
+            )
+            .unwrap()
         };
 
         assert_eq!(output.len(), 1);
@@ -878,5 +1256,67 @@ mod tests {
         expected.append(&mut (degree / 2..degree - 3).collect::<Vec<u64>>());
 
         assert_eq!(encoder.decode_unsigned(&o_p).unwrap(), expected);
+    }
+
+    #[cfg(feature = "debugger")]
+    #[test]
+    #[cfg_attr(feature = "debugger", serial)]
+    fn create_session() {
+        let mut ir = FheProgram::new(SchemeType::Bfv);
+
+        let a = ir.add_input_ciphertext(0);
+        let l = ir.add_input_literal(Literal::U64 { value: 3 });
+
+        let res = ir.add_rotate_left(a, l);
+
+        ir.add_output_ciphertext(res);
+
+        let degree = 4096;
+
+        let (keygen, context, _public_key, private_key, encryptor, _decryptor, evaluator) =
+            setup_scheme(degree);
+
+        let encoder = BFVEncoder::new(&context).unwrap();
+        let galois_keys = keygen.create_galois_keys().unwrap();
+
+        let a: Vec<u64> = (0..degree).collect();
+
+        let pt_0 = encoder.encode_unsigned(&a).unwrap();
+
+        let ct_0 = encryptor.encrypt(&pt_0).unwrap();
+
+        let encryption_params = setup_parameters(degree);
+
+        let private_key = PrivateKey(WithContext {
+            params: Params {
+                lattice_dimension: encryption_params.get_poly_modulus_degree(),
+                coeff_modulus: /* encryption_params.get_coefficient_modulus() as Vec<u64>*/ vec![128, 128, 128],
+                plain_modulus: 1024,
+                scheme_type: Bfv,
+                security_level: TC128
+            },
+            data: private_key,
+        });
+
+        let _output = unsafe {
+            run_program_unchecked(
+                &ir,
+                &[ct_0.into()],
+                &evaluator,
+                &None,
+                &Some(&galois_keys),
+                Some(DebugInfo {
+                    private_key: &private_key,
+                    session_name: "new_session".to_owned(),
+                }),
+                "empty",
+            )
+            .unwrap()
+        };
+
+        let session = get_sessions().lock().unwrap();
+
+        // Session names are only processed with an ID when you call `debug_fhe_program`
+        assert!(session.contains_key("new_session"));
     }
 }

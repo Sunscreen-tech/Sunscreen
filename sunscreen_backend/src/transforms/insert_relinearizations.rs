@@ -24,6 +24,8 @@ pub fn apply_insert_relinearizations(ir: &mut FheProgram) {
             operation: Operation::Relinearize,
             #[cfg(feature = "debugger")]
             group_id: node.group_id,
+            #[cfg(feature = "debugger")]
+            stack_id: node.stack_id,
         }));
 
         transforms.push(Transform::AddEdge(
@@ -46,7 +48,7 @@ pub fn apply_insert_relinearizations(ir: &mut FheProgram) {
         transforms
     };
 
-    forward_traverse_mut(&mut ir.graph.0, |query, id| {
+    forward_traverse_mut(&mut ir.graph.graph, |query, id| {
         // Id is given to us, so the node should exist. Just
         // unwrap.
         let transforms = match query.get_node(id).unwrap().operation {
@@ -97,7 +99,7 @@ mod tests {
 
         assert_eq!(ir.graph.node_count(), 9);
 
-        let query = GraphQuery::new(&ir.graph.0);
+        let query = GraphQuery::new(&ir.graph.graph);
 
         let relin_nodes = ir
             .graph

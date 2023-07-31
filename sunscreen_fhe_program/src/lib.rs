@@ -29,6 +29,7 @@ use sunscreen_compiler_common::{CompilationResult, Context, EdgeInfo, NodeInfo};
 use std::collections::HashSet;
 
 #[derive(Debug, Clone, Copy, Serialize, Hash, Deserialize, PartialEq, Eq)]
+//#[serde(tag = "type")]
 /**
  * Sunscreen supports the BFV scheme.
  */
@@ -117,6 +118,7 @@ impl TryFrom<u8> for SchemeType {
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+//#[serde(tag = "type")]
 /**
  * The type of output from an Fhe Program's graph node.
  */
@@ -145,8 +147,8 @@ pub trait OutputTypeTrait {
 impl OutputTypeTrait for NodeInfo<Operation> {
     fn output_type(&self) -> OutputType {
         match self.operation {
-            Operation::InputPlaintext(_) => OutputType::Plaintext,
-            Operation::Literal(_) => OutputType::Plaintext,
+            Operation::InputPlaintext { .. } => OutputType::Plaintext,
+            Operation::Literal { .. } => OutputType::Plaintext,
             _ => OutputType::Ciphertext,
         }
     }
@@ -291,15 +293,15 @@ impl FheProgramTrait for FheProgram {
     }
 
     fn add_input_ciphertext(&mut self, id: usize) -> NodeIndex {
-        self.add_node(Operation::InputCiphertext(id))
+        self.add_node(Operation::InputCiphertext { id })
     }
 
     fn add_input_plaintext(&mut self, id: usize) -> NodeIndex {
-        self.add_node(Operation::InputPlaintext(id))
+        self.add_node(Operation::InputPlaintext { id })
     }
 
     fn add_input_literal(&mut self, value: Literal) -> NodeIndex {
-        self.add_node(Operation::Literal(value))
+        self.add_node(Operation::Literal { val: value })
     }
 
     fn add_output_ciphertext(&mut self, x: NodeIndex) -> NodeIndex {
@@ -329,12 +331,12 @@ impl FheProgramTrait for FheProgram {
     fn num_inputs(&self) -> usize {
         self.graph
             .node_weights()
-            .filter(|n| matches!(n.operation, Operation::InputCiphertext(_)))
+            .filter(|n| matches!(n.operation, Operation::InputCiphertext { .. }))
             .count()
     }
 
     fn prune(&self, nodes: &[NodeIndex]) -> FheProgram {
-        let mut compact_graph = Graph::from(self.graph.0.clone());
+        let mut compact_graph = Graph::from(self.graph.graph.clone());
         compact_graph.reverse();
 
         let topo = toposort(&compact_graph, None).unwrap();
@@ -351,9 +353,7 @@ impl FheProgramTrait for FheProgram {
             closure_set.insert(mapped_id);
         }
 
-        while !visit.is_empty() {
-            let node = visit.pop().expect("Fatal error: prune queue was empty.");
-
+        while let Some(node) = visit.pop() {
             for edge in closure.neighbors(node) {
                 if !closure_set.contains(&edge) {
                     closure_set.insert(edge);
@@ -369,7 +369,7 @@ impl FheProgramTrait for FheProgram {
                 // Don't prune input nodes.
                 let is_input = matches!(
                     n.operation,
-                    Operation::InputPlaintext(_) | Operation::InputCiphertext(_)
+                    Operation::InputPlaintext { .. } | Operation::InputCiphertext { .. }
                 );
 
                 if closure_set.contains(&revmap[id.index()]) || is_input {
@@ -383,9 +383,20 @@ impl FheProgramTrait for FheProgram {
 
         Self {
             data: self.data,
-            graph: CompilationResult(StableGraph::from(pruned)),
+
+            #[cfg(not(feature = "debugger"))]
+            graph: CompilationResult {
+                graph: StableGraph::from(pruned),
+            },
+
             #[cfg(feature = "debugger")]
-            group_counter: self.group_counter,
+            graph: CompilationResult {
+                graph: StableGraph::from(pruned),
+                metadata: self.graph.metadata.clone(),
+            },
+
+            #[cfg(feature = "debugger")]
+            group_stack: Vec::new(),
         }
     }
 
@@ -423,8 +434,8 @@ mod tests {
 
     fn eq(a: &FheProgram, b: &FheProgram) -> bool {
         is_isomorphic_matching(
-            &Graph::from(a.graph.0.clone()),
-            &Graph::from(b.graph.0.clone()),
+            &Graph::from(a.graph.graph.clone()),
+            &Graph::from(b.graph.graph.clone()),
             |n1, n2| n1 == n2,
             |e1, e2| e1 == e2,
         )
@@ -456,17 +467,17 @@ mod tests {
 
         let ct = ir.add_input_ciphertext(0);
         let rem = ir.add_input_ciphertext(1);
-        ir.graph.0.remove_node(rem);
+        ir.graph.graph.remove_node(rem);
         let l1 = ir.add_input_literal(Literal::from(7u64));
         let rem = ir.add_input_ciphertext(1);
-        ir.graph.0.remove_node(rem);
+        ir.graph.graph.remove_node(rem);
         let add = ir.add_add(ct, l1);
         let rem = ir.add_input_ciphertext(1);
-        ir.graph.0.remove_node(rem);
+        ir.graph.graph.remove_node(rem);
         let l2 = ir.add_input_literal(Literal::from(5u64));
         ir.add_multiply(add, l2);
         let rem = ir.add_input_ciphertext(1);
-        ir.graph.0.remove_node(rem);
+        ir.graph.graph.remove_node(rem);
 
         let pruned = ir.prune(&[add]);
 

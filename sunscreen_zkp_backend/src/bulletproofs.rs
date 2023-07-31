@@ -13,11 +13,12 @@ use log::trace;
 use merlin::Transcript;
 use petgraph::stable_graph::NodeIndex;
 use serde::{Deserialize, Serialize};
-use sunscreen_compiler_common::{forward_traverse, GraphQuery};
+use sunscreen_compiler_common::{forward_traverse, DebugSessionProvider, GraphQuery};
 
 use crate::{
-    exec::Operation, jit::jit_verifier, jit_prover, BackendField, BigInt, Error,
-    ExecutableZkpProgram, Proof, Result, ZkpBackend,
+    exec::Operation,
+    jit::{self, jit_verifier},
+    jit_prover, BackendField, BigInt, Error, ExecutableZkpProgram, Proof, Result, ZkpBackend,
 };
 
 #[derive(Clone)]
@@ -157,7 +158,7 @@ impl BulletproofsCircuit {
             .collect::<Vec<usize>>();
 
         // The graph won't actually be mutated.
-        forward_traverse(&graph.0, |query, idx| {
+        forward_traverse(&graph.graph, |query, idx| {
             let node = query.get_node(idx).unwrap();
 
             // Each linear combination object in Bulletproofs has a Vec
@@ -417,12 +418,14 @@ impl ZkpBackend for BulletproofsBackend {
 
         trace!("Bulletproofs prover time {}s", now.elapsed().as_secs_f64());
 
-        Ok(Proof::Bulletproofs(Box::new(BulletproofsR1CSProof(proof))))
+        Ok(Proof::Bulletproofs {
+            value: Box::new(BulletproofsR1CSProof(proof)),
+        })
     }
 
     fn verify(&self, graph: &ExecutableZkpProgram, proof: &Proof) -> Result<()> {
         let proof = match proof {
-            Proof::Bulletproofs(x) => x,
+            Proof::Bulletproofs { value: x } => x,
             _ => {
                 return Err(Error::IncorrectProofType);
             }
@@ -461,6 +464,7 @@ impl ZkpBackend for BulletproofsBackend {
         constant_inputs: &[BigInt],
         public_inputs: &[BigInt],
         private_inputs: &[BigInt],
+        debug_session_provider: Option<&dyn DebugSessionProvider<jit::Operation, BigInt, String>>,
     ) -> Result<ExecutableZkpProgram> {
         let constant_inputs = constant_inputs
             .iter()
@@ -475,7 +479,13 @@ impl ZkpBackend for BulletproofsBackend {
             .map(Scalar::try_from)
             .collect::<Result<Vec<Scalar>>>()?;
 
-        jit_prover::<Scalar>(prog, &constant_inputs, &public_inputs, &private_inputs)
+        jit_prover::<Scalar>(
+            prog,
+            &constant_inputs,
+            &public_inputs,
+            &private_inputs,
+            debug_session_provider,
+        )
     }
 
     fn jit_verifier(
@@ -649,6 +659,14 @@ mod tests {
         let mut graph = ExecutableZkpProgram::new();
 
         let mut add_node = |op: BackendOperation, edges: &[(NodeIndex, EdgeInfo)]| {
+            #[cfg(feature = "debugger")]
+            let n = graph.add_node(NodeInfo {
+                operation: op,
+                group_id: 0,
+                stack_id: 0,
+            });
+
+            #[cfg(not(feature = "debugger"))]
             let n = graph.add_node(NodeInfo { operation: op });
 
             for (source, edge) in edges {
@@ -676,7 +694,18 @@ mod tests {
             &[(add_1, EdgeInfo::Unordered)],
         );
 
-        let backend = BulletproofsBackend::new();
+        let backend: Box<dyn ZkpBackend<Field = Scalar>> = Box::new(BulletproofsBackend::new());
+
+        struct TestProvider {}
+
+        impl DebugSessionProvider<jit::Operation, BigInt, String> for TestProvider {
+            fn add_session(
+                &self,
+                _session: sunscreen_compiler_common::Session<jit::Operation, BigInt, String>,
+            ) {
+                unreachable!()
+            }
+        }
 
         // 10 * 4 + 2 == 42
         let proof = backend

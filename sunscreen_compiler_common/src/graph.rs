@@ -505,7 +505,7 @@ where
         let mut parent_edges = self
             .edges_directed(index, Direction::Incoming)
             .map(|x| match x.weight() {
-                EdgeInfo::Ordered(arg_id) => Ok(SortableEdge(x.source(), *arg_id)),
+                EdgeInfo::Ordered { value: arg_id } => Ok(SortableEdge(x.source(), *arg_id)),
                 _ => Err(GraphQueryError::IncorrectOrderedOperandEdge),
             })
             .collect::<Result<Vec<SortableEdge>, _>>()?;
@@ -585,6 +585,10 @@ mod tests {
 
         fn is_ordered(&self) -> bool {
             false
+        }
+
+        fn is_multiplication(&self) -> bool {
+            matches!(self, Self::Mul)
         }
     }
 
@@ -743,6 +747,7 @@ mod tests {
 
         let mut visited = vec![];
 
+        let ir_clone = ir.clone();
         forward_traverse_mut(&mut ir.graph, |_, n| {
             visited.push(n);
 
@@ -752,6 +757,10 @@ mod tests {
                     GraphTransforms::new();
                 let mul = transforms.push(Transform::AddNode(NodeInfo {
                     operation: Operation::Mul,
+                    #[cfg(feature = "debugger")]
+                    group_id: ir_clone.graph.metadata.group_counter,
+                    #[cfg(feature = "debugger")]
+                    stack_id: ir_clone.graph.metadata.stack_counter,
                 }));
                 transforms.push(Transform::AddEdge(n.into(), mul.into(), EdgeInfo::Left));
                 transforms.push(Transform::AddEdge(
@@ -762,7 +771,7 @@ mod tests {
 
                 let ret = transforms.clone();
 
-                transforms.apply(&mut create_simple_dag().graph.0);
+                transforms.apply(&mut create_simple_dag().graph.graph);
 
                 Ok::<_, Infallible>(ret)
             } else {

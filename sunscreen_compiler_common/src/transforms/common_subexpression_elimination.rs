@@ -174,167 +174,216 @@ mod tests {
         fn is_ordered(&self) -> bool {
             false
         }
+
+        fn is_multiplication(&self) -> bool {
+            matches!(self, Operation::Mul)
+        }
     }
 
     fn get_graph() -> CompilationResult<Operation> {
         fn make_node(operation: Operation) -> NodeInfo<Operation> {
-            NodeInfo { operation }
+            NodeInfo {
+                operation,
+                #[cfg(feature = "debugger")]
+                group_id: 0,
+                #[cfg(feature = "debugger")]
+                stack_id: 0,
+            }
         }
-
         let mut fe = CompilationResult::new();
 
         // Layer 1
-        let in_1 = fe.add_node(make_node(Operation::PublicInput(NodeIndex::from(0))));
-        let in_2 = fe.add_node(make_node(Operation::PublicInput(NodeIndex::from(1))));
-        let in_3 = fe.add_node(make_node(Operation::PublicInput(NodeIndex::from(2))));
 
-        // Layer 2
-        // sub_2 gets eliminated.
-        // add_2, add_3 get eliminated
-        // mul_2, mul_3 get eliminated
-        let sub_1 = fe.add_node(make_node(Operation::Sub));
-        let sub_2 = fe.add_node(make_node(Operation::Sub));
-        let sub_3 = fe.add_node(make_node(Operation::Sub));
-        let sub_4 = fe.add_node(make_node(Operation::Sub));
+        #[cfg(feature = "debugger")]
+        {
+            let in_1 = fe.add_node(make_node(Operation::PublicInput(NodeIndex::from(0))));
 
-        fe.add_edge(in_1, sub_1, EdgeInfo::Left);
-        fe.add_edge(in_2, sub_1, EdgeInfo::Right);
-        fe.add_edge(in_1, sub_2, EdgeInfo::Left);
-        fe.add_edge(in_2, sub_2, EdgeInfo::Right);
-        fe.add_edge(in_1, sub_3, EdgeInfo::Right);
-        fe.add_edge(in_2, sub_3, EdgeInfo::Left);
-        fe.add_edge(in_1, sub_4, EdgeInfo::Right);
-        fe.add_edge(in_3, sub_4, EdgeInfo::Left);
+            let in_2 = fe.add_node(make_node(Operation::PublicInput(NodeIndex::from(1))));
 
-        let add_1 = fe.add_node(make_node(Operation::Add));
-        let add_2 = fe.add_node(make_node(Operation::Add));
-        let add_3 = fe.add_node(make_node(Operation::Add));
-        let add_4 = fe.add_node(make_node(Operation::Add));
+            let in_3 = fe.add_node(make_node(Operation::PublicInput(NodeIndex::from(2))));
 
-        fe.add_edge(in_1, add_1, EdgeInfo::Left);
-        fe.add_edge(in_2, add_1, EdgeInfo::Right);
-        fe.add_edge(in_1, add_2, EdgeInfo::Left);
-        fe.add_edge(in_2, add_2, EdgeInfo::Right);
-        fe.add_edge(in_1, add_3, EdgeInfo::Right);
-        fe.add_edge(in_2, add_3, EdgeInfo::Left);
-        fe.add_edge(in_1, add_4, EdgeInfo::Right);
-        fe.add_edge(in_3, add_4, EdgeInfo::Left);
+            // Layer 2
+            // sub_2 gets eliminated.
+            // add_2, add_3 get eliminated
+            // mul_2, mul_3 get eliminated
+            let sub_1 = fe.add_node(make_node(Operation::Sub));
 
-        let mul_1 = fe.add_node(make_node(Operation::Mul));
-        let mul_2 = fe.add_node(make_node(Operation::Mul));
-        let mul_3 = fe.add_node(make_node(Operation::Mul));
-        let mul_4 = fe.add_node(make_node(Operation::Mul));
+            let sub_2 = fe.add_node(make_node(Operation::Sub));
 
-        fe.add_edge(in_1, mul_1, EdgeInfo::Left);
-        fe.add_edge(in_2, mul_1, EdgeInfo::Right);
-        fe.add_edge(in_1, mul_2, EdgeInfo::Left);
-        fe.add_edge(in_2, mul_2, EdgeInfo::Right);
-        fe.add_edge(in_1, mul_3, EdgeInfo::Right);
-        fe.add_edge(in_2, mul_3, EdgeInfo::Left);
-        fe.add_edge(in_1, mul_4, EdgeInfo::Right);
-        fe.add_edge(in_3, mul_4, EdgeInfo::Left);
+            let sub_3 = fe.add_node(make_node(Operation::Sub));
 
-        let neg_1 = fe.add_node(make_node(Operation::Neg));
-        let neg_2 = fe.add_node(make_node(Operation::Neg));
-        let neg_3 = fe.add_node(make_node(Operation::Neg));
+            let sub_4 = fe.add_node(make_node(Operation::Sub));
 
-        fe.add_edge(in_1, neg_1, EdgeInfo::Unary);
-        fe.add_edge(in_1, neg_2, EdgeInfo::Unary);
-        fe.add_edge(in_2, neg_3, EdgeInfo::Unary);
+            fe.add_edge(in_1, sub_1, EdgeInfo::Left);
+            fe.add_edge(in_2, sub_1, EdgeInfo::Right);
+            fe.add_edge(in_1, sub_2, EdgeInfo::Left);
+            fe.add_edge(in_2, sub_2, EdgeInfo::Right);
+            fe.add_edge(in_1, sub_3, EdgeInfo::Right);
+            fe.add_edge(in_2, sub_3, EdgeInfo::Left);
+            fe.add_edge(in_1, sub_4, EdgeInfo::Right);
+            fe.add_edge(in_3, sub_4, EdgeInfo::Left);
 
-        // Layer 3
-        let out_1 = fe.add_node(make_node(Operation::Add));
-        let out_2 = fe.add_node(make_node(Operation::Add));
-        let out_3 = fe.add_node(make_node(Operation::Add));
-        let out_4 = fe.add_node(make_node(Operation::Add));
-        let out_5 = fe.add_node(make_node(Operation::Add));
-        let out_6 = fe.add_node(make_node(Operation::Add));
+            let add_1 = fe.add_node(make_node(Operation::Add));
 
-        fe.add_edge(sub_1, out_1, EdgeInfo::Left);
-        fe.add_edge(add_1, out_1, EdgeInfo::Right);
-        fe.add_edge(sub_2, out_2, EdgeInfo::Left);
-        fe.add_edge(add_2, out_2, EdgeInfo::Right);
-        fe.add_edge(sub_3, out_3, EdgeInfo::Left);
-        fe.add_edge(add_3, out_3, EdgeInfo::Right);
-        fe.add_edge(sub_4, out_4, EdgeInfo::Left);
-        fe.add_edge(add_4, out_4, EdgeInfo::Right);
-        fe.add_edge(mul_1, out_5, EdgeInfo::Left);
-        fe.add_edge(mul_2, out_5, EdgeInfo::Right);
-        fe.add_edge(mul_3, out_6, EdgeInfo::Left);
-        fe.add_edge(mul_4, out_6, EdgeInfo::Right);
+            let add_2 = fe.add_node(make_node(Operation::Add));
 
+            let add_3 = fe.add_node(make_node(Operation::Add));
+
+            let add_4 = fe.add_node(make_node(Operation::Add));
+
+            fe.add_edge(in_1, add_1, EdgeInfo::Left);
+            fe.add_edge(in_2, add_1, EdgeInfo::Right);
+            fe.add_edge(in_1, add_2, EdgeInfo::Left);
+            fe.add_edge(in_2, add_2, EdgeInfo::Right);
+            fe.add_edge(in_1, add_3, EdgeInfo::Right);
+            fe.add_edge(in_2, add_3, EdgeInfo::Left);
+            fe.add_edge(in_1, add_4, EdgeInfo::Right);
+            fe.add_edge(in_3, add_4, EdgeInfo::Left);
+
+            let mul_1 = fe.add_node(make_node(Operation::Mul));
+
+            let mul_2 = fe.add_node(make_node(Operation::Mul));
+
+            let mul_3 = fe.add_node(make_node(Operation::Mul));
+
+            let mul_4 = fe.add_node(make_node(Operation::Mul));
+
+            fe.add_edge(in_1, mul_1, EdgeInfo::Left);
+            fe.add_edge(in_2, mul_1, EdgeInfo::Right);
+            fe.add_edge(in_1, mul_2, EdgeInfo::Left);
+            fe.add_edge(in_2, mul_2, EdgeInfo::Right);
+            fe.add_edge(in_1, mul_3, EdgeInfo::Right);
+            fe.add_edge(in_2, mul_3, EdgeInfo::Left);
+            fe.add_edge(in_1, mul_4, EdgeInfo::Right);
+            fe.add_edge(in_3, mul_4, EdgeInfo::Left);
+
+            let neg_1 = fe.add_node(make_node(Operation::Neg));
+
+            let neg_2 = fe.add_node(make_node(Operation::Neg));
+
+            let neg_3 = fe.add_node(make_node(Operation::Neg));
+
+            fe.add_edge(in_1, neg_1, EdgeInfo::Unary);
+            fe.add_edge(in_1, neg_2, EdgeInfo::Unary);
+            fe.add_edge(in_2, neg_3, EdgeInfo::Unary);
+
+            // Layer 3
+            let out_1 = fe.add_node(make_node(Operation::Add));
+
+            let out_2 = fe.add_node(make_node(Operation::Add));
+
+            let out_3 = fe.add_node(make_node(Operation::Add));
+
+            let out_4 = fe.add_node(make_node(Operation::Add));
+
+            let out_5 = fe.add_node(make_node(Operation::Add));
+
+            let out_6 = fe.add_node(make_node(Operation::Add));
+
+            fe.add_edge(sub_1, out_1, EdgeInfo::Left);
+            fe.add_edge(add_1, out_1, EdgeInfo::Right);
+            fe.add_edge(sub_2, out_2, EdgeInfo::Left);
+            fe.add_edge(add_2, out_2, EdgeInfo::Right);
+            fe.add_edge(sub_3, out_3, EdgeInfo::Left);
+            fe.add_edge(add_3, out_3, EdgeInfo::Right);
+            fe.add_edge(sub_4, out_4, EdgeInfo::Left);
+            fe.add_edge(add_4, out_4, EdgeInfo::Right);
+            fe.add_edge(mul_1, out_5, EdgeInfo::Left);
+            fe.add_edge(mul_2, out_5, EdgeInfo::Right);
+            fe.add_edge(mul_3, out_6, EdgeInfo::Left);
+            fe.add_edge(mul_4, out_6, EdgeInfo::Right);
+        }
         fe
     }
 
     fn get_expected() -> CompilationResult<Operation> {
         fn make_node(operation: Operation) -> NodeInfo<Operation> {
-            NodeInfo { operation }
+            NodeInfo {
+                operation,
+                #[cfg(feature = "debugger")]
+                group_id: 0,
+                #[cfg(feature = "debugger")]
+                stack_id: 0,
+            }
         }
 
         let mut fe = CompilationResult::new();
 
-        // Layer 1
-        let in_1 = fe.add_node(make_node(Operation::PublicInput(NodeIndex::from(0))));
-        let in_2 = fe.add_node(make_node(Operation::PublicInput(NodeIndex::from(1))));
-        let in_3 = fe.add_node(make_node(Operation::PublicInput(NodeIndex::from(2))));
+        #[cfg(feature = "debugger")]
+        {
+            // Layer 1
+            let in_1 = fe.add_node(make_node(Operation::PublicInput(NodeIndex::from(0))));
 
-        // Layer 2
-        // sub_2 gets eliminated.
-        // add_1, add_2 get eliminated, leaving commuted add_3
-        // mul_1, mul_2 get eliminated, leaving commuted mul_3
-        let sub_1 = fe.add_node(make_node(Operation::Sub));
-        let sub_3 = fe.add_node(make_node(Operation::Sub));
-        let sub_4 = fe.add_node(make_node(Operation::Sub));
+            let in_2 = fe.add_node(make_node(Operation::PublicInput(NodeIndex::from(1))));
 
-        fe.add_edge(in_1, sub_1, EdgeInfo::Left);
-        fe.add_edge(in_2, sub_1, EdgeInfo::Right);
-        fe.add_edge(in_1, sub_3, EdgeInfo::Right);
-        fe.add_edge(in_2, sub_3, EdgeInfo::Left);
-        fe.add_edge(in_1, sub_4, EdgeInfo::Right);
-        fe.add_edge(in_3, sub_4, EdgeInfo::Left);
+            let in_3 = fe.add_node(make_node(Operation::PublicInput(NodeIndex::from(2))));
 
-        let add_1 = fe.add_node(make_node(Operation::Add));
-        let add_4 = fe.add_node(make_node(Operation::Add));
+            // Layer 2
+            // sub_2 gets eliminated.
+            // add_1, add_2 get eliminated, leaving commuted add_3
+            // mul_1, mul_2 get eliminated, leaving commuted mul_3
+            let sub_1 = fe.add_node(make_node(Operation::Sub));
 
-        // The left and right edges get permuted after CSE because
-        // add is commutative.
-        fe.add_edge(in_1, add_1, EdgeInfo::Right);
-        fe.add_edge(in_2, add_1, EdgeInfo::Left);
-        fe.add_edge(in_1, add_4, EdgeInfo::Right);
-        fe.add_edge(in_3, add_4, EdgeInfo::Left);
+            let sub_3 = fe.add_node(make_node(Operation::Sub));
 
-        let mul_1 = fe.add_node(make_node(Operation::Mul));
-        let mul_4 = fe.add_node(make_node(Operation::Mul));
+            let sub_4 = fe.add_node(make_node(Operation::Sub));
 
-        // The left and right edges get permuted after CSE because
-        // mul is commutative.
-        fe.add_edge(in_1, mul_1, EdgeInfo::Right);
-        fe.add_edge(in_2, mul_1, EdgeInfo::Left);
-        fe.add_edge(in_1, mul_4, EdgeInfo::Right);
-        fe.add_edge(in_3, mul_4, EdgeInfo::Left);
+            fe.add_edge(in_1, sub_1, EdgeInfo::Left);
+            fe.add_edge(in_2, sub_1, EdgeInfo::Right);
+            fe.add_edge(in_1, sub_3, EdgeInfo::Right);
+            fe.add_edge(in_2, sub_3, EdgeInfo::Left);
+            fe.add_edge(in_1, sub_4, EdgeInfo::Right);
+            fe.add_edge(in_3, sub_4, EdgeInfo::Left);
 
-        // neg_2 gets removed by CSE
-        let neg_1 = fe.add_node(make_node(Operation::Neg));
-        let neg_3 = fe.add_node(make_node(Operation::Neg));
+            let add_1 = fe.add_node(make_node(Operation::Add));
 
-        fe.add_edge(in_1, neg_1, EdgeInfo::Unary);
-        fe.add_edge(in_2, neg_3, EdgeInfo::Unary);
+            let add_4 = fe.add_node(make_node(Operation::Add));
 
-        // Layer 3
-        // out_2 gets culled
-        let out_1 = fe.add_node(make_node(Operation::Add));
-        let out_3 = fe.add_node(make_node(Operation::Add));
-        let out_4 = fe.add_node(make_node(Operation::Add));
-        let out_6 = fe.add_node(make_node(Operation::Add));
+            // The left and right edges get permuted after CSE because
+            // add is commutative.
+            fe.add_edge(in_1, add_1, EdgeInfo::Right);
+            fe.add_edge(in_2, add_1, EdgeInfo::Left);
+            fe.add_edge(in_1, add_4, EdgeInfo::Right);
+            fe.add_edge(in_3, add_4, EdgeInfo::Left);
 
-        fe.add_edge(sub_1, out_1, EdgeInfo::Left);
-        fe.add_edge(add_1, out_1, EdgeInfo::Right);
-        fe.add_edge(sub_3, out_3, EdgeInfo::Left);
-        fe.add_edge(add_1, out_3, EdgeInfo::Right);
-        fe.add_edge(sub_4, out_4, EdgeInfo::Left);
-        fe.add_edge(add_4, out_4, EdgeInfo::Right);
-        fe.add_edge(mul_1, out_6, EdgeInfo::Left);
-        fe.add_edge(mul_4, out_6, EdgeInfo::Right);
+            let mul_1 = fe.add_node(make_node(Operation::Mul));
+
+            let mul_4 = fe.add_node(make_node(Operation::Mul));
+
+            // The left and right edges get permuted after CSE because
+            // mul is commutative.
+            fe.add_edge(in_1, mul_1, EdgeInfo::Right);
+            fe.add_edge(in_2, mul_1, EdgeInfo::Left);
+            fe.add_edge(in_1, mul_4, EdgeInfo::Right);
+            fe.add_edge(in_3, mul_4, EdgeInfo::Left);
+
+            // neg_2 gets removed by CSE
+            let neg_1 = fe.add_node(make_node(Operation::Neg));
+
+            let neg_3 = fe.add_node(make_node(Operation::Neg));
+
+            fe.add_edge(in_1, neg_1, EdgeInfo::Unary);
+            fe.add_edge(in_2, neg_3, EdgeInfo::Unary);
+
+            // Layer 3
+            // out_2 gets culled
+            let out_1 = fe.add_node(make_node(Operation::Add));
+
+            let out_3 = fe.add_node(make_node(Operation::Add));
+
+            let out_4 = fe.add_node(make_node(Operation::Add));
+
+            let out_6 = fe.add_node(make_node(Operation::Add));
+
+            fe.add_edge(sub_1, out_1, EdgeInfo::Left);
+            fe.add_edge(add_1, out_1, EdgeInfo::Right);
+            fe.add_edge(sub_3, out_3, EdgeInfo::Left);
+            fe.add_edge(add_1, out_3, EdgeInfo::Right);
+            fe.add_edge(sub_4, out_4, EdgeInfo::Left);
+            fe.add_edge(add_4, out_4, EdgeInfo::Right);
+            fe.add_edge(mul_1, out_6, EdgeInfo::Left);
+            fe.add_edge(mul_4, out_6, EdgeInfo::Right);
+        }
 
         fe
     }
@@ -344,13 +393,13 @@ mod tests {
         let mut fe = get_graph();
         let expected = get_expected();
 
-        common_subexpression_elimination(&mut fe.0);
+        common_subexpression_elimination(&mut fe.graph);
 
         // We can't check for edge equality, since left and right
         // operands can get permuted for commutative operations.
         let equals = is_isomorphic_matching(
-            &Graph::from(fe.0),
-            &Graph::from(expected.0),
+            &Graph::from(fe.graph),
+            &Graph::from(expected.graph),
             |x, y| x == y,
             |x, y| x == y,
         );

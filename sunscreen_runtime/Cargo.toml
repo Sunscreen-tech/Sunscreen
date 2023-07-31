@@ -29,9 +29,20 @@ num_cpus = "1.13.0"
 rayon = "1.5.1"
 rlp = "0.5.1"
 serde = "1.0.147"
+serde_json = "1.0.103"
 semver = "1.0.4"
 static_assertions = "1.1.0"
 thiserror = "1.0.37"
+radix_trie = "0.2.1"
+backtrace = "0.3.67"
+actix-web = "4.3.1"
+mime = "0.3.17"
+reqwest = "0.11"
+tokio = { version = "1.29.1", features = ["rt"] }
 
 [dev-dependencies]
 serde_json = "1.0.74"
+serial_test = "2.0.0"
+
+[features]
+debugger = ["sunscreen_compiler_common/debugger", "sunscreen_zkp_backend/debugger", "sunscreen_fhe_program/debugger"]

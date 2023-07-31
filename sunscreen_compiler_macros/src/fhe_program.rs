@@ -12,6 +12,7 @@ pub fn fhe_program_impl(
     input: proc_macro::TokenStream,
 ) -> proc_macro::TokenStream {
     let input_fn = parse_macro_input!(input as ItemFn);
+    let raw_fn = input_fn.span().source_text().unwrap_or_default();
 
     let fhe_program_name = &input_fn.sig.ident;
     let vis = &input_fn.vis;
@@ -198,6 +199,10 @@ pub fn fhe_program_impl(
 
             fn chain_count(&self) -> usize {
                 self.chain_count
+            }
+
+            fn source(&self) -> &'static str {
+                #raw_fn
             }
         }
 

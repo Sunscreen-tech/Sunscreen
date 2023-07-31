@@ -1,16 +1,26 @@
-use std::marker::PhantomData;
-use std::time::Instant;
-
+use crate::debugger::get_session_name;
+#[cfg(feature = "debugger")]
+use crate::debugger::server::start_web_server;
+use crate::debugger::GlobalSessionProvider;
 use crate::error::*;
 use crate::metadata::*;
+use crate::DebugInfo;
 use crate::ZkpProgramInput;
 use crate::{
     run_program_unchecked, serialization::WithContext, Ciphertext, FheProgramInput,
     InnerCiphertext, InnerPlaintext, Plaintext, PrivateKey, PublicKey, SealCiphertext, SealData,
     SealPlaintext, TryFromPlaintext, TryIntoPlaintext, TypeNameInstance,
 };
+use std::marker::PhantomData;
+
+use sunscreen_zkp_backend::{BigInt, Operation as ZkpOperation};
+
+use std::time::Instant;
 
 use log::trace;
+
+#[cfg(feature = "debugger")]
+use sunscreen_compiler_common::DebugSessionProvider;
 use sunscreen_fhe_program::FheProgramTrait;
 use sunscreen_fhe_program::SchemeType;
 
@@ -20,7 +30,6 @@ use seal_fhe::{
 };
 
 pub use sunscreen_compiler_common::{Type, TypeName};
-use sunscreen_zkp_backend::BigInt;
 use sunscreen_zkp_backend::CompiledZkpProgram;
 use sunscreen_zkp_backend::Proof;
 use sunscreen_zkp_backend::ZkpBackend;
@@ -131,7 +140,7 @@ where
         let fhe_data = self.runtime_data.unwrap_fhe();
 
         let val = match (&fhe_data.context, &ciphertext.inner) {
-            (Context::Seal(context), InnerCiphertext::Seal(ciphertexts)) => {
+            (Context::Seal(context), InnerCiphertext::Seal { value: ciphertexts }) => {
                 let decryptor = Decryptor::new(context, &private_key.0)?;
 
                 let plaintexts = ciphertexts
@@ -158,7 +167,7 @@ where
                 P::try_from_plaintext(
                     &Plaintext {
                         data_type: P::type_name(),
-                        inner: InnerPlaintext::Seal(plaintexts),
+                        inner: InnerPlaintext::Seal { value: plaintexts },
                     },
                     &fhe_data.params,
                 )?
@@ -182,7 +191,7 @@ where
         let fhe_data = self.runtime_data.unwrap_fhe();
 
         match (&fhe_data.context, &c.inner) {
-            (Context::Seal(ctx), InnerCiphertext::Seal(ciphertexts)) => {
+            (Context::Seal(ctx), InnerCiphertext::Seal { value: ciphertexts }) => {
                 let decryptor = Decryptor::new(ctx, &private_key.0)?;
 
                 Ok(ciphertexts
@@ -258,11 +267,13 @@ where
      * Validates and runs the given FHE program. Unless you can guarantee your FHE program is valid,
      * you should use this method rather than [`run_program_unchecked`].
      */
-    pub fn run<I>(
+    fn run_impl<I>(
         &self,
         fhe_program: &CompiledFheProgram,
         mut arguments: Vec<I>,
         public_key: &PublicKey,
+        dbg_info: Option<DebugInfo>,
+        #[cfg(feature = "debugger")] source_code: &str,
     ) -> Result<Vec<Ciphertext>>
     where
         I: Into<FheProgramInput>,
@@ -324,7 +335,7 @@ where
                 for i in arguments.drain(0..) {
                     match i {
                         FheProgramInput::Ciphertext(c) => match c.inner {
-                            InnerCiphertext::Seal(mut c) => {
+                            InnerCiphertext::Seal { value: mut c } => {
                                 for j in c.drain(0..) {
                                     inputs.push(SealData::Ciphertext(j.data));
                                 }
@@ -334,7 +345,7 @@ where
                             let p = p.try_into_plaintext(&fhe_data.params)?;
 
                             match p.inner {
-                                InnerPlaintext::Seal(mut p) => {
+                                InnerPlaintext::Seal { value: mut p } => {
                                     for j in p.drain(0..) {
                                         inputs.push(SealData::Plaintext(j.data));
                                     }
@@ -354,6 +365,9 @@ where
                         &evaluator,
                         &relin_key,
                         &galois_key,
+                        dbg_info,
+                        #[cfg(feature = "debugger")]
+                        source_code,
                     )
                 }?;
 
@@ -368,21 +382,76 @@ where
                 {
                     packed_ciphertexts.push(Ciphertext {
                         data_type: fhe_program.metadata.signature.returns[i].clone(),
-                        inner: InnerCiphertext::Seal(
-                            raw_ciphertexts
+                        inner: InnerCiphertext::Seal {
+                            value: raw_ciphertexts
                                 .drain(0..*ciphertext_count)
                                 .map(|c| WithContext {
                                     params: fhe_data.params.clone(),
                                     data: c,
                                 })
                                 .collect(),
-                        ),
+                        },
                     });
                 }
 
                 Ok(packed_ciphertexts)
             }
         }
+    }
+
+    /**
+     * Used for non-debugging purposes. Calls `run_impl` without a secret key.
+     */
+    pub fn run<I>(
+        &self,
+        fhe_program: &CompiledFheProgram,
+        arguments: Vec<I>,
+        public_key: &PublicKey,
+    ) -> Result<Vec<Ciphertext>>
+    where
+        I: Into<FheProgramInput>,
+    {
+        self.run_impl(
+            fhe_program,
+            arguments,
+            public_key,
+            None,
+            #[cfg(feature = "debugger")]
+            "",
+        )
+    }
+
+    /**
+     * Used for debugging. Calls `run_impl` with a secret key.
+     */
+    #[cfg(feature = "debugger")]
+    pub fn debug_fhe_program<I>(
+        &self,
+        fhe_program: &CompiledFheProgram,
+        arguments: Vec<I>,
+        public_key: &PublicKey,
+        private_key: &PrivateKey,
+        #[cfg(feature = "debugger")] source_code: &str,
+    ) -> Result<()>
+    where
+        I: Into<FheProgramInput>,
+    {
+        let session_name = get_session_name(&fhe_program.metadata.name);
+
+        self.run_impl(
+            fhe_program,
+            arguments,
+            public_key,
+            Some(DebugInfo {
+                private_key,
+                session_name,
+            }),
+            #[cfg(feature = "debugger")]
+            source_code,
+        )?;
+        start_web_server();
+
+        Ok(())
     }
 
     /**
@@ -400,7 +469,7 @@ where
         let plaintext = val.try_into_plaintext(&fhe_data.params)?;
 
         let ciphertext = match (&fhe_data.context, plaintext.inner) {
-            (Context::Seal(context), InnerPlaintext::Seal(inner_plain)) => {
+            (Context::Seal(context), InnerPlaintext::Seal { value: inner_plain }) => {
                 let encryptor = Encryptor::with_public_key(context, &public_key.public_key.data)?;
 
                 let ciphertexts = inner_plain
@@ -419,7 +488,7 @@ where
                         is_encrypted: true,
                         ..P::type_name()
                     },
-                    inner: InnerCiphertext::Seal(ciphertexts),
+                    inner: InnerCiphertext::Seal { value: ciphertexts },
                 }
             }
         };
@@ -465,14 +534,38 @@ where
 
         let now = Instant::now();
 
-        let prog =
-            backend.jit_prover(program, &constant_inputs, &public_inputs, &private_inputs)?;
+        let session_provider = if cfg!(feature = "debugger") {
+            Some(GlobalSessionProvider::new(&get_session_name(
+                &program.metadata.name,
+            )))
+        } else {
+            None
+        };
+        #[cfg(feature = "debugger")]
+        let provider =
+            &session_provider.unwrap() as &dyn DebugSessionProvider<ZkpOperation, BigInt, String>;
+        #[cfg(feature = "debugger")]
+        let debug_session_provider = Some(provider);
+
+        #[cfg(not(feature = "debugger"))]
+        let debug_session_provider = None;
+
+        let prog = backend.jit_prover(
+            program,
+            &constant_inputs,
+            &public_inputs,
+            &private_inputs,
+            debug_session_provider,
+        )?;
 
         trace!("Prover JIT time {}s", now.elapsed().as_secs_f64());
 
         let inputs = [public_inputs, private_inputs].concat();
 
         trace!("Starting backend prove...");
+
+        #[cfg(feature = "debugger")]
+        start_web_server();
 
         Ok(backend.prove(&prog, &inputs)?)
     }

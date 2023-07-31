@@ -1,8 +1,8 @@
 use petgraph::Graph;
+#[cfg(feature = "debugger")]
+use sunscreen_compiler_common::DebugData;
 use sunscreen_runtime::CallSignature;
-use sunscreen_zkp_backend::{
-    BackendField, BigInt, CompiledZkpProgram, Gadget, Operation as JitOperation,
-};
+use sunscreen_zkp_backend::{BackendField, BigInt, Gadget, Operation as JitOperation};
 
 use crate::Result;
 
@@ -150,6 +150,10 @@ impl OperationTrait for Operation {
 
     fn is_ordered(&self) -> bool {
         matches!(self, Operation::InvokeGadget(_))
+    }
+
+    fn is_multiplication(&self) -> bool {
+        matches!(self, Operation::Mul)
     }
 }
 
@@ -397,8 +401,8 @@ where
  * Takes the parsed frontend program and turns into a format ready to be
  * run.
  */
-pub(crate) fn compile(program: &ZkpFrontendCompilation) -> CompiledZkpProgram {
-    let jit = program.0.map(
+pub(crate) fn compile(program: &ZkpFrontendCompilation) -> CompilationResult<JitOperation> {
+    let jit = program.graph.map(
         |_, n| {
             let operation = match n.operation {
                 Operation::PrivateInput(x) => JitOperation::PrivateInput(x),
@@ -418,6 +422,8 @@ pub(crate) fn compile(program: &ZkpFrontendCompilation) -> CompiledZkpProgram {
                 operation,
                 #[cfg(feature = "debugger")]
                 group_id: n.group_id,
+                #[cfg(feature = "debugger")]
+                stack_id: n.stack_id,
             }
         },
         |_, e| *e,
@@ -426,7 +432,14 @@ pub(crate) fn compile(program: &ZkpFrontendCompilation) -> CompiledZkpProgram {
     // Convert in and out of Graph to compact all the node indices.
     let jit = Graph::from(jit).into();
 
-    CompilationResult(jit)
+    #[cfg(feature = "debugger")]
+    let metadata = DebugData::new();
+
+    CompilationResult {
+        graph: jit,
+        #[cfg(feature = "debugger")]
+        metadata,
+    }
 }
 
 /**
@@ -463,7 +476,7 @@ pub fn invoke_gadget<G: Gadget>(g: G, gadget_inputs: &[NodeIndex]) -> Vec<NodeIn
         }
 
         for (i, gadget_input) in gadget_inputs.iter().enumerate() {
-            ctx.add_edge(*gadget_input, gadget, EdgeInfo::Ordered(i));
+            ctx.add_edge(*gadget_input, gadget, EdgeInfo::Ordered { value: i });
         }
     });
 

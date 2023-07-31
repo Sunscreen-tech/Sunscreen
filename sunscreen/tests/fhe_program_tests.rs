@@ -6,6 +6,8 @@ use sunscreen::{
 };
 
 use serde_json::json;
+#[cfg(feature = "debugger")]
+use sunscreen_compiler_common::DebugData;
 
 fn get_params() -> Params {
     Params {
@@ -102,7 +104,7 @@ fn capture_fhe_program_input_args() {
 
     let context = fhe_program_with_args.build(&get_params()).unwrap();
 
-    assert_eq!(context.0.node_count(), 4);
+    assert_eq!(context.graph.node_count(), 4);
 }
 
 #[test]
@@ -124,44 +126,102 @@ fn can_add() {
 
     let context = fhe_program_with_args.build(&get_params()).unwrap();
 
-    let expected = json!({
-        "nodes": [
-            { "operation": "InputCiphertext" },
-            { "operation": "InputCiphertext" },
-            { "operation": "InputCiphertext" },
-            { "operation": "Add" },
-            { "operation": "Add" }
-        ],
-        "node_holes": [],
-        "edge_property": "directed",
-        "edges": [
-            [
-                0,
-                3,
-                "Left"
-            ],
-            [
-                1,
-                3,
-                "Right"
-            ],
-            [
-                3,
-                4,
-                "Left"
-            ],
-            [
-                2,
-                4,
-                "Right"
-            ]
-        ]
-    });
+    #[cfg(not(feature = "debugger"))]
+    {
+        let expected = json!({
+            "graph": {
+                "nodes": [
+                    { "operation": "InputCiphertext" },
+                    { "operation": "InputCiphertext" },
+                    { "operation": "InputCiphertext" },
+                    { "operation": "Add" },
+                    { "operation": "Add" }
+                ],
+                "node_holes": [],
+                "edge_property": "directed",
+                "edges": [
+                    [
+                        0,
+                        3,
+                        "Left"
+                    ],
+                    [
+                        1,
+                        3,
+                        "Right"
+                    ],
+                    [
+                        3,
+                        4,
+                        "Left"
+                    ],
+                    [
+                        2,
+                        4,
+                        "Right"
+                    ]
+                ]
+            },
+        });
 
-    assert_eq!(
-        context,
-        serde_json::from_value::<FheFrontendCompilation>(expected).unwrap()
-    );
+        let expected_compilation: FheFrontendCompilation =
+            serde_json::from_value(expected).unwrap();
+        assert_eq!(context, expected_compilation);
+    }
+
+    #[cfg(feature = "debugger")]
+    {
+        let expected = json!({
+            "graph": {
+                "nodes": [
+                    { "operation": "InputCiphertext",
+                    "group_id": 0,
+                    "stack_id": 1 },
+                    { "operation": "InputCiphertext",
+                    "group_id": 0,
+                    "stack_id": 1 },
+                    { "operation": "InputCiphertext",
+                    "group_id": 0,
+                    "stack_id": 1},
+                    { "operation": "Add",
+                    "group_id": 0,
+                    "stack_id": 2 },
+                    { "operation": "Add",
+                    "group_id": 0,
+                    "stack_id": 2}
+                ],
+                "node_holes": [],
+                "edge_property": "directed",
+                "edges": [
+                    [
+                        0,
+                        3,
+                        "Left"
+                    ],
+                    [
+                        1,
+                        3,
+                        "Right"
+                    ],
+                    [
+                        3,
+                        4,
+                        "Left"
+                    ],
+                    [
+                        2,
+                        4,
+                        "Right"
+                    ]
+                ]
+            },
+            "metadata": DebugData::new(),
+        });
+
+        let expected_compilation: FheFrontendCompilation =
+            serde_json::from_value(expected).unwrap();
+        assert_eq!(context, expected_compilation);
+    }
 }
 
 #[test]
@@ -181,32 +241,73 @@ fn can_add_plaintext() {
 
     let context = fhe_program_with_args.build(&get_params()).unwrap();
 
-    let expected = json!({
-        "nodes": [
-            { "operation": "InputCiphertext" },
-            { "operation": "InputPlaintext" },
-            { "operation": "AddPlaintext" },
-        ],
-        "node_holes": [],
-        "edge_property": "directed",
-        "edges": [
-            [
-                0,
-                2,
-                "Left"
-            ],
-            [
-                1,
-                2,
-                "Right"
-            ],
-        ]
-    });
+    #[cfg(not(feature = "debugger"))]
+    {
+        let expected: serde_json::Value = json!({
+            "graph": {
+                "nodes": [
+                    { "operation": "InputCiphertext" },
+                    { "operation": "InputPlaintext" },
+                    { "operation": "AddPlaintext" },
+                ],
+                "node_holes": [],
+                "edge_property": "directed",
+                "edges": [
+                    [
+                        0,
+                        2,
+                        "Left"
+                    ],
+                    [
+                        1,
+                        2,
+                        "Right"
+                    ],
+                ]
+            }
+        });
 
-    assert_eq!(
-        context,
-        serde_json::from_value::<FheFrontendCompilation>(expected).unwrap()
-    );
+        let expected_compilation: FheFrontendCompilation =
+            serde_json::from_value(expected).unwrap();
+        assert_eq!(context, expected_compilation);
+    }
+
+    #[cfg(feature = "debugger")]
+    {
+        let expected: serde_json::Value = json!({
+            "graph": {
+                "nodes": [
+                    { "operation": "InputCiphertext",
+                    "group_id": 0,
+                    "stack_id": 1  },
+                    { "operation": "InputPlaintext",
+                    "group_id": 0,
+                    "stack_id": 2  },
+                    { "operation": "AddPlaintext",
+                    "group_id": 0,
+                    "stack_id": 3  },
+                ],
+                "node_holes": [],
+                "edge_property": "directed",
+                "edges": [
+                    [
+                        0,
+                        2,
+                        "Left"
+                    ],
+                    [
+                        1,
+                        2,
+                        "Right"
+                    ],
+                ]
+            },
+            "metadata": DebugData::new(),
+        });
+        let expected_compilation: FheFrontendCompilation =
+            serde_json::from_value(expected).unwrap();
+        assert_eq!(context, expected_compilation);
+    }
 }
 
 #[test]
@@ -228,44 +329,103 @@ fn can_mul() {
 
     let context = fhe_program_with_args.build(&get_params()).unwrap();
 
-    let expected = json!({
-        "nodes": [
-            { "operation": "InputCiphertext" },
-            { "operation": "InputCiphertext" },
-            { "operation": "InputCiphertext" },
-            { "operation": "Multiply" },
-            { "operation": "Multiply" }
-        ],
-        "node_holes": [],
-        "edge_property": "directed",
-        "edges": [
-            [
-                0,
-                3,
-                "Left"
+    #[cfg(not(feature = "debugger"))]
+    {
+        let expected: serde_json::Value = serde_json::json!({
+            "graph": {
+                "nodes": [
+                { "operation": "InputCiphertext" },
+                { "operation": "InputCiphertext" },
+                { "operation": "InputCiphertext" },
+                { "operation": "Multiply" },
+                { "operation": "Multiply" }
             ],
-            [
-                1,
-                3,
-                "Right"
-            ],
-            [
-                3,
-                4,
-                "Left"
-            ],
-            [
-                2,
-                4,
-                "Right"
+            "node_holes": [],
+            "edge_property": "directed",
+            "edges": [
+                [
+                    0,
+                    3,
+                    "Left"
+                ],
+                [
+                    1,
+                    3,
+                    "Right"
+                ],
+                [
+                    3,
+                    4,
+                    "Left"
+                ],
+                [
+                    2,
+                    4,
+                    "Right"
+                ]
             ]
-        ]
-    });
+            },
+        });
 
-    assert_eq!(
-        context,
-        serde_json::from_value::<FheFrontendCompilation>(expected).unwrap()
-    );
+        let expected_compilation: FheFrontendCompilation =
+            serde_json::from_value(expected).unwrap();
+        assert_eq!(context, expected_compilation);
+    }
+
+    #[cfg(feature = "debugger")]
+    {
+        let expected: serde_json::Value = serde_json::json!({
+            "graph": {
+                "nodes": [
+                { "operation": "InputCiphertext",
+                "group_id": 0,
+                "stack_id": 1
+                 },
+                { "operation": "InputCiphertext",
+                "group_id": 0,
+                "stack_id": 1 },
+                { "operation": "InputCiphertext",
+            "group_id": 0,
+            "stack_id": 1 },
+                { "operation": "Multiply",
+            "group_id": 0,
+            "stack_id": 2 },
+                { "operation": "Multiply",
+            "group_id": 0,
+            "stack_id": 2 }
+            ],
+            "node_holes": [],
+            "edge_property": "directed",
+            "edges": [
+                [
+                    0,
+                    3,
+                    "Left"
+                ],
+                [
+                    1,
+                    3,
+                    "Right"
+                ],
+                [
+                    3,
+                    4,
+                    "Left"
+                ],
+                [
+                    2,
+                    4,
+                    "Right"
+                ]
+            ]
+            },
+            "metadata": DebugData::new(),
+        });
+
+        let expected_compilation: FheFrontendCompilation =
+            serde_json::from_value(expected).unwrap();
+        assert_eq!(context, expected_compilation);
+    }
 }
 
 #[test]
@@ -287,51 +447,114 @@ fn can_collect_output() {
 
     let context = fhe_program_with_args.build(&get_params()).unwrap();
 
-    let expected = json!({
-        "nodes": [
-          { "operation": "InputCiphertext" },
-          { "operation": "InputCiphertext" },
-          { "operation": "Multiply" },
-          { "operation": "Add" },
-          { "operation": "Output" },
-        ],
-        "node_holes": [],
-        "edge_property": "directed",
-        "edges": [
-          [
-            1,
-            2,
-            "Left"
-          ],
-          [
-            0,
-            2,
-            "Right"
-          ],
-          [
-            0,
-            3,
-            "Left"
-          ],
-          [
-            2,
-            3,
-            "Right"
-          ],
-          [
-            3,
-            4,
-            "Unary"
-          ]
-        ]
-    });
+    #[cfg(not(feature = "debugger"))]
+    {
+        let expected: serde_json::Value = json!({
+            "graph": {
+                "nodes": [
+                    { "operation": "InputCiphertext" },
+                    { "operation": "InputCiphertext" },
+                    { "operation": "Multiply" },
+                    { "operation": "Add" },
+                    { "operation": "Output" },
+                  ],
+                  "node_holes": [],
+                  "edge_property": "directed",
+                  "edges": [
+                    [
+                      1,
+                      2,
+                      "Left"
+                    ],
+                    [
+                      0,
+                      2,
+                      "Right"
+                    ],
+                    [
+                      0,
+                      3,
+                      "Left"
+                    ],
+                    [
+                      2,
+                      3,
+                      "Right"
+                    ],
+                    [
+                      3,
+                      4,
+                      "Unary"
+                    ]
+                  ]
+            }
+        });
+        dbg!(serde_json::to_string(&context).unwrap());
 
-    dbg!(serde_json::to_string(&context).unwrap());
+        let expected_compilation: FheFrontendCompilation =
+            serde_json::from_value(expected).unwrap();
+        assert_eq!(context, expected_compilation);
+    }
 
-    assert_eq!(
-        context,
-        serde_json::from_value::<FheFrontendCompilation>(expected).unwrap()
-    );
+    #[cfg(feature = "debugger")]
+    {
+        let expected: serde_json::Value = json!({
+            "graph": {
+                "nodes": [
+                    { "operation": "InputCiphertext",
+                    "group_id": 0,
+                    "stack_id": 1  },
+                    { "operation": "InputCiphertext",
+                    "group_id": 0,
+                    "stack_id": 1 },
+                    { "operation": "Multiply",
+                    "group_id": 0,
+                    "stack_id": 2  },
+                    { "operation": "Add",
+                    "group_id": 0,
+                    "stack_id": 3  },
+                    { "operation": "Output",
+                    "group_id": 0,
+                    "stack_id": 4  },
+                  ],
+                  "node_holes": [],
+                  "edge_property": "directed",
+                  "edges": [
+                    [
+                      1,
+                      2,
+                      "Left"
+                    ],
+                    [
+                      0,
+                      2,
+                      "Right"
+                    ],
+                    [
+                      0,
+                      3,
+                      "Left"
+                    ],
+                    [
+                      2,
+                      3,
+                      "Right"
+                    ],
+                    [
+                      3,
+                      4,
+                      "Unary"
+                    ]
+                  ]
+            },
+            "metadata": DebugData::new(),
+        });
+        dbg!(serde_json::to_string(&context).unwrap());
+
+        let expected_compilation: FheFrontendCompilation =
+            serde_json::from_value(expected).unwrap();
+        assert_eq!(context, expected_compilation);
+    }
 }
 
 #[test]
@@ -356,53 +579,122 @@ fn can_collect_multiple_outputs() {
 
     let context = fhe_program_with_args.build(&get_params()).unwrap();
 
-    let expected = json!({
-          "nodes": [
-            { "operation": "InputCiphertext" },
-            { "operation": "InputCiphertext"    },
-            { "operation": "Multiply" },
-            { "operation": "Add" },
-            { "operation": "Output" },
-            { "operation": "Output" },
-          ],
-          "node_holes": [],
-          "edge_property": "directed",
-          "edges": [
-            [
-              1,
-              2,
-              "Left"
-            ],
-            [
-              0,
-              2,
-              "Right"
-            ],
-            [
-              0,
-              3,
-              "Left"
-            ],
-            [
-              2,
-              3,
-              "Right"
-            ],
-            [
-              3,
-              4,
-              "Unary"
-            ],
-            [
-              0,
-              5,
-              "Unary"
-            ]
-          ]
-    });
+    #[cfg(not(feature = "debugger"))]
+    {
+        let expected = json!({
+            "graph": {
+                "nodes": [
+                { "operation": "InputCiphertext" },
+                { "operation": "InputCiphertext"    },
+                { "operation": "Multiply" },
+                { "operation": "Add" },
+                { "operation": "Output" },
+                { "operation": "Output" },
+              ],
+              "node_holes": [],
+              "edge_property": "directed",
+              "edges": [
+                [
+                  1,
+                  2,
+                  "Left"
+                ],
+                [
+                  0,
+                  2,
+                  "Right"
+                ],
+                [
+                  0,
+                  3,
+                  "Left"
+                ],
+                [
+                  2,
+                  3,
+                  "Right"
+                ],
+                [
+                  3,
+                  4,
+                  "Unary"
+                ],
+                [
+                  0,
+                  5,
+                  "Unary"
+                ]
+              ]
+            }
+        });
+        let expected_compilation: FheFrontendCompilation =
+            serde_json::from_value(expected).unwrap();
+        assert_eq!(context, expected_compilation);
+    }
 
-    assert_eq!(
-        context,
-        serde_json::from_value::<FheFrontendCompilation>(expected).unwrap()
-    );
+    #[cfg(feature = "debugger")]
+    {
+        let expected = json!({
+            "graph": {
+                "nodes": [
+                { "operation": "InputCiphertext",
+                    "group_id": 0,
+                    "stack_id": 1 },
+                { "operation": "InputCiphertext",
+                    "group_id": 0,
+                    "stack_id": 1     },
+                { "operation": "Multiply",
+                "group_id": 0,
+                "stack_id": 2  },
+                { "operation": "Add",
+                "group_id": 0,
+                "stack_id": 3  },
+                { "operation": "Output",
+                "group_id": 0,
+                "stack_id": 4  },
+                { "operation": "Output",
+                "group_id": 0,
+                "stack_id": 4 },
+              ],
+              "node_holes": [],
+              "edge_property": "directed",
+              "edges": [
+                [
+                  1,
+                  2,
+                  "Left"
+                ],
+                [
+                  0,
+                  2,
+                  "Right"
+                ],
+                [
+                  0,
+                  3,
+                  "Left"
+                ],
+                [
+                  2,
+                  3,
+                  "Right"
+                ],
+                [
+                  3,
+                  4,
+                  "Unary"
+                ],
+                [
+                  0,
+                  5,
+                  "Unary"
+                ]
+              ]
+            },
+            "metadata": DebugData::new()
+        });
+        let expected_compilation: FheFrontendCompilation =
+            serde_json::from_value(expected).unwrap();
+        assert_eq!(context, expected_compilation);
+    }
 }

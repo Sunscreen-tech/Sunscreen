@@ -180,18 +180,18 @@ pub fn determine_params(
                     .filter(|n| {
                         matches!(
                             n.operation,
-                            Operation::InputCiphertext(_) | Operation::InputPlaintext(_)
+                            Operation::InputCiphertext { .. } | Operation::InputPlaintext { .. }
                         )
                     })
                     .map(|n| match n.operation {
-                        Operation::InputCiphertext(_) => {
+                        Operation::InputCiphertext { .. } => {
                             if chain_noise_level == 0f64 {
                                 TargetNoiseLevel::Fresh
                             } else {
                                 TargetNoiseLevel::InvariantNoise(chain_noise_level)
                             }
                         }
-                        Operation::InputPlaintext(_) => TargetNoiseLevel::NotApplicable,
+                        Operation::InputPlaintext { .. } => TargetNoiseLevel::NotApplicable,
                         _ => unreachable!(),
                     })
                     .collect::<Vec<TargetNoiseLevel>>();

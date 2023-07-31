@@ -44,6 +44,7 @@ pub struct CallSignature {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+//#[serde(tag = "type")]
 /**
  * A key type required for an Fhe Program to function correctly.
  */
@@ -191,6 +192,11 @@ pub struct FheProgramMetadata {
      * The set of keys required to run the FHE program.
      */
     pub required_keys: Vec<RequiredKeys>,
+
+    /**
+     * The name of the FHE program.
+     */
+    pub name: String,
 }
 
 #[derive(Clone, Serialize, Deserialize)]

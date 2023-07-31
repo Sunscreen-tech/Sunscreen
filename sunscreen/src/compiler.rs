@@ -8,7 +8,7 @@ use std::collections::{HashMap, HashSet};
 use std::marker::PhantomData;
 use sunscreen_fhe_program::FheProgramTrait;
 use sunscreen_runtime::{marker, CompiledFheProgram, Fhe, FheZkp, Zkp};
-use sunscreen_zkp_backend::{BackendField, CompiledZkpProgram, ZkpBackend};
+use sunscreen_zkp_backend::{BackendField, CompiledZkpProgram, ZkpBackend, ZkpProgramMetadata};
 
 #[derive(Debug, Clone)]
 enum ParamsMode {
@@ -44,6 +44,11 @@ pub trait FheProgramFn {
      * The number of times to chain this FHE program.
      */
     fn chain_count(&self) -> usize;
+
+    /**
+     * Returns the source code of this FHE program as a &str.
+     */
+    fn source(&self) -> &'static str;
 }
 
 struct FheCompilerData {
@@ -296,6 +301,7 @@ impl<T, B> GenericCompiler<T, B> {
                     params: params.clone(),
                     required_keys,
                     signature: prog.signature(),
+                    name: prog.name().to_owned(),
                 };
 
                 let compiled_program = CompiledFheProgram {
@@ -325,7 +331,15 @@ where
                 let result = prog.build()?;
                 let result = zkp::compile(&result);
 
-                Ok((prog.name().to_owned(), result))
+                Ok((
+                    prog.name().to_owned(),
+                    CompiledZkpProgram {
+                        graph: result,
+                        metadata: ZkpProgramMetadata {
+                            name: prog.name().to_string(),
+                        },
+                    },
+                ))
             })
             .collect::<Result<HashMap<_, _>>>()?;
 

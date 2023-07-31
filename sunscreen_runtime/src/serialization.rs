@@ -155,7 +155,7 @@ where
             "WithContext",
             FIELDS,
             WithContextVisitor {
-                marker: std::marker::PhantomData::default(),
+                marker: std::marker::PhantomData,
             },
         )
     }

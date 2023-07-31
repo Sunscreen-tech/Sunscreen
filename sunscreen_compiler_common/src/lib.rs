@@ -3,7 +3,6 @@
 
 //! This crate contains common types and infrastructure for Sunscreen's
 //! compilers.
-
 mod context;
 mod graph;
 /**
@@ -15,6 +14,11 @@ pub mod macros;
  * A set of generic compiler transforms.
  */
 pub mod transforms;
+
+/**
+ * Allows for lookup of stack and group information.
+ */
+pub mod lookup;
 
 pub use context::*;
 pub use graph::*;
@@ -73,6 +77,11 @@ pub trait Operation: Clone + Debug + Hash + PartialEq + Eq {
      * ordered operands.
      */
     fn is_ordered(&self) -> bool;
+
+    /**
+     * Whether or not this operation involves a multiplication.
+     */
+    fn is_multiplication(&self) -> bool;
 }
 
 /**
@@ -196,4 +205,32 @@ where
             ..inner_type
         }
     }
+}
+
+/**
+ *
+ */
+pub trait DebugSessionProvider<O: Operation, T, M> {
+    /**
+     *
+     */
+    fn add_session(&self, session: Session<O, T, M>);
+}
+
+/**
+ *
+ */
+pub struct Session<O: Operation, T, M> {
+    /**
+     *
+     */
+    pub graph: CompilationResult<O>,
+    /**
+     *
+     */
+    pub run_data: Vec<Option<T>>,
+    /**
+     *
+     */
+    pub metadata: M,
 }

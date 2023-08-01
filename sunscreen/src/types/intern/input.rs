@@ -78,16 +78,16 @@ fn can_create_inputs() {
     use petgraph::stable_graph::NodeIndex;
 
     CURRENT_PROGRAM_CTX.with(|ctx| {
-        let context = FheContext::new(Params {
+        let mut context = ContextEnum::Fhe(FheContext::new(Params {
             lattice_dimension: 0,
             coeff_modulus: vec![],
             plain_modulus: 0,
             scheme_type: SchemeType::Bfv,
             security_level: SecurityLevel::TC128,
-        });
+        }));
 
         ctx.swap(&RefCell::new(Some(unsafe {
-            transmute(&mut ContextEnum::Fhe(context.clone()))
+            transmute(&mut context)
         })));
 
         let scalar_node: FheProgramNode<Rational> = FheProgramNode::input();
@@ -124,25 +124,26 @@ fn can_create_inputs() {
 
         offset += 2 * 6 * 6;
 
-        assert_eq!(context.graph.node_count(), offset);
+        let fhe_context = context.unwrap_fhe();
+        assert_eq!(fhe_context.graph.node_count(), offset);
 
         for i in 0..2 {
             assert_eq!(
-                context.graph[NodeIndex::from(i)].operation,
+                fhe_context.graph[NodeIndex::from(i)].operation,
                 FheOperation::InputPlaintext
             );
         }
 
         for i in 2..14 {
             assert_eq!(
-                context.graph[NodeIndex::from(i)].operation,
+                fhe_context.graph[NodeIndex::from(i)].operation,
                 FheOperation::InputPlaintext
             );
         }
 
-        for i in 14..context.graph.node_count() {
+        for i in 14..fhe_context.graph.node_count() {
             assert_eq!(
-                context.graph[NodeIndex::from(i as u32)].operation,
+                fhe_context.graph[NodeIndex::from(i as u32)].operation,
                 FheOperation::InputCiphertext
             );
         }

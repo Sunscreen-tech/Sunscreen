@@ -68,7 +68,7 @@ where
 #[test]
 fn can_create_inputs() {
     use crate::{
-        fhe::{FheContext, FheOperation, CURRENT_FHE_CTX},
+        fhe::{FheContext, FheOperation, CURRENT_PROGRAM_CTX},
         types::{bfv::Rational, intern::FheProgramNode},
         Params, SchemeType, SecurityLevel,
     };
@@ -77,7 +77,7 @@ fn can_create_inputs() {
 
     use petgraph::stable_graph::NodeIndex;
 
-    CURRENT_FHE_CTX.with(|ctx| {
+    CURRENT_PROGRAM_CTX.with(|ctx| {
         let mut context = FheContext::new(Params {
             lattice_dimension: 0,
             coeff_modulus: vec![],

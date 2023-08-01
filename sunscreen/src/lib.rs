@@ -92,7 +92,7 @@ pub use zkp::{
     CURRENT_ZKP_CTX,
 };
 pub use fhe::{
-    with_fhe_ctx, CURRENT_FHE_CTX
+    with_fhe_ctx, CURRENT_PROGRAM_CTX
 };
 
 #[derive(Clone)]

@@ -134,7 +134,7 @@ pub fn fhe_program_impl(
             fn build(&self, params: &sunscreen::Params) -> sunscreen::Result<sunscreen::fhe::FheFrontendCompilation> {
                 use std::cell::RefCell;
                 use std::mem::transmute;
-                use sunscreen::{fhe::{CURRENT_FHE_CTX, FheContext}, Error, INDEX_ARENA, Result, Params, SchemeType, Value, types::{intern::{FheProgramNode, Input, Output}, NumCiphertexts, Type, TypeName, SwapRows, LaneCount, TypeNameInstance}};
+                use sunscreen::{fhe::{CURRENT_PROGRAM_CTX, FheContext}, Error, INDEX_ARENA, Result, Params, SchemeType, Value, types::{intern::{FheProgramNode, Input, Output}, NumCiphertexts, Type, TypeName, SwapRows, LaneCount, TypeNameInstance}};
 
                 if SchemeType::Bfv != params.scheme_type {
                     return Err(Error::IncorrectScheme)
@@ -143,7 +143,7 @@ pub fn fhe_program_impl(
                 // TODO: Other schemes.
                 let mut context = FheContext::new(params.clone());
 
-                CURRENT_FHE_CTX.with(|ctx| {
+                CURRENT_PROGRAM_CTX.with(|ctx| {
                     #[allow(clippy::type_complexity)]
                     #[forbid(unused_variables)]
                     let internal = | #(#fhe_program_args)* | -> #fhe_program_return

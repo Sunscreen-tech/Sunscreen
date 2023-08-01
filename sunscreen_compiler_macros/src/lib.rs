@@ -78,3 +78,14 @@ pub fn zkp_program(
 ) -> proc_macro::TokenStream {
     zkp_program::zkp_program_impl(metadata, input)
 }
+
+#[proc_macro_attribute]
+/**
+ * Allows for debugging information.
+ */
+pub fn debug_program(
+    metadata: proc_macro::TokenStream,
+    input: proc_macro::TokenStream,
+) -> proc_macro::TokenStream {
+    debug_program::debug_program_impl(metadata, input)
+}

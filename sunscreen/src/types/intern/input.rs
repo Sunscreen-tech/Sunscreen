@@ -80,7 +80,7 @@ fn can_create_inputs() {
     use petgraph::stable_graph::NodeIndex;
 
     CURRENT_PROGRAM_CTX.with(|ctx| {
-        let mut context = FheContext::new(Params {
+        let context = FheContext::new(Params {
             lattice_dimension: 0,
             coeff_modulus: vec![],
             plain_modulus: 0,

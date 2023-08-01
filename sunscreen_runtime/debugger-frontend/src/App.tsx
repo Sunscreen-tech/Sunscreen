@@ -336,6 +336,7 @@ const App = () => {
             ></CodeBlock></div>
             <div className='pane'>
               <SessionPicker sessionList={sessionList} onUpdate={updateSession}/> 
+              <div>Problem Nodes: {JSON.stringify(problemNodes)}</div>
               <NodeInfo info={info}/>
             </div>
           </ReactSplit>

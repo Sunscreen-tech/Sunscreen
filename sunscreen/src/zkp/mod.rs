@@ -151,10 +151,6 @@ impl OperationTrait for Operation {
     fn is_ordered(&self) -> bool {
         matches!(self, Operation::InvokeGadget(_))
     }
-
-    fn is_multiplication(&self) -> bool {
-        matches!(self, Operation::Mul)
-    }
 }
 
 impl Operation {

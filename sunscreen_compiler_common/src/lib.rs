@@ -78,10 +78,6 @@ pub trait Operation: Clone + Debug + Hash + PartialEq + Eq {
      */
     fn is_ordered(&self) -> bool;
 
-    /**
-     * Whether or not this operation involves a multiplication.
-     */
-    fn is_multiplication(&self) -> bool;
 }
 
 /**

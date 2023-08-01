@@ -282,6 +282,11 @@ pub type ZkpApplication = Application<Zkp>;
  */
 pub type FheZkpApplication = Application<FheZkp>;
 
+type Group = String;
+
+/**
+ * Allows for abstract interaction with a context group stack.
+ */
 pub enum ContextEnum {
     Fhe(FheContext),
     Zkp(ZkpContext),

@@ -43,9 +43,7 @@ pub struct BfvNodeType {
 /**
  * Gets the multiplicative depth of a node in the compilation graph.
  */
-pub fn get_mult_depth<O>(graph: &StableGraph<NodeInfo<O>, EdgeInfo>, start_node: NodeIndex) -> u64
-where
-    O: OperationTrait,
+pub fn get_mult_depth(graph: &StableGraph<NodeInfo<FheOperation>, EdgeInfo>, start_node: NodeIndex) -> u64
 {
     let mut queue: VecDeque<(NodeIndex, u64)> = VecDeque::new();
     let mut visited: HashMap<NodeIndex, bool> = HashMap::new();
@@ -57,12 +55,10 @@ where
     while let Some((node, depth)) = queue.pop_front() {
         visited.insert(node, true);
 
-        let curr_depth = depth
-            + graph
-                .node_weight(node)
-                .unwrap()
-                .operation
-                .is_multiplication() as u64;
+        let curr_depth = match graph.node_weight(node).unwrap().operation {
+            FheOperation::Multiply => depth + 1,
+            _ => depth 
+        };
 
         max_depth = max_depth.max(curr_depth);
 

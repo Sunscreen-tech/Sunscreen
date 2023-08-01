@@ -45,9 +45,6 @@ impl OperationTrait for Operation {
         false
     }
 
-    fn is_multiplication(&self) -> bool {
-        matches!(self, Operation::Mul)
-    }
 }
 
 /**

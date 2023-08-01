@@ -175,9 +175,6 @@ mod tests {
             false
         }
 
-        fn is_multiplication(&self) -> bool {
-            matches!(self, Operation::Mul)
-        }
     }
 
     fn get_graph() -> CompilationResult<Operation> {

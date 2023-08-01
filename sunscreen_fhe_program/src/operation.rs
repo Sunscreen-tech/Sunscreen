@@ -4,7 +4,6 @@ use sunscreen_compiler_common::Operation as OperationTrait;
 use crate::Literal;
 
 #[derive(Debug, Clone, Serialize, Hash, Deserialize, PartialEq, Eq)]
-//#[serde(tag = "type")]
 /**
  * An operation in the execution graph.
  */
@@ -150,7 +149,4 @@ impl OperationTrait for Operation {
         false
     }
 
-    fn is_multiplication(&self) -> bool {
-        matches!(self, Self::Multiply | Self::MultiplyPlaintext)
-    }
 }

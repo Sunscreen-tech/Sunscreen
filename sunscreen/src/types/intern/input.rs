@@ -1,7 +1,5 @@
+use crate::fhe::{with_fhe_ctx, FheContextOps};
 pub use crate::types::{intern::FheProgramNode, Cipher, FheType, NumCiphertexts, TypeName};
-use crate::{
-    fhe::{with_fhe_ctx, FheContextOps},
-};
 
 /**
  * Create an input node from an Fhe Program input argument.
@@ -72,7 +70,7 @@ fn can_create_inputs() {
     use crate::{
         fhe::{FheContext, FheOperation, CURRENT_PROGRAM_CTX},
         types::{bfv::Rational, intern::FheProgramNode},
-        Params, SchemeType, SecurityLevel, ContextEnum
+        ContextEnum, Params, SchemeType, SecurityLevel,
     };
     use std::cell::RefCell;
     use std::mem::transmute;

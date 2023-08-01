@@ -6,11 +6,11 @@ use sunscreen_zkp_backend::{BackendField, BigInt, Gadget, Operation as JitOperat
 
 use crate::{Result, CURRENT_PROGRAM_CTX};
 
+use std::any::Any;
 use std::collections::HashMap;
 use std::hash::Hash;
 use std::sync::Arc;
 use std::vec;
-use std::{any::Any};
 
 /**
  * An internal representation of a ZKP program specification.

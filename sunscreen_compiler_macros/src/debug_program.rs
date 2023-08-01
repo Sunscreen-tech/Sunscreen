@@ -1,8 +1,6 @@
-use crate::{
-    internals::attr::{FheProgramAttrs},
-};
+use crate::internals::attr::FheProgramAttrs;
 
-use quote::{quote};
+use quote::quote;
 
 use syn::{parse_macro_input, ItemFn};
 

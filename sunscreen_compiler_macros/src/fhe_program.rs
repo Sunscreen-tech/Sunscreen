@@ -180,7 +180,7 @@ pub fn fhe_program_impl(
                     ctx.swap(&RefCell::new(None));
                 });
 
-                Ok(context.unwrap_fhe().unwrap().graph.clone())
+                Ok(context.unwrap_fhe().graph.clone())
             }
 
             fn signature(&self) -> sunscreen::CallSignature {

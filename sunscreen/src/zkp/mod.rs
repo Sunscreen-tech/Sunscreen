@@ -10,7 +10,7 @@ use std::collections::HashMap;
 use std::hash::Hash;
 use std::sync::Arc;
 use std::vec;
-use std::{any::Any, cell::RefCell};
+use std::{any::Any};
 
 /**
  * An internal representation of a ZKP program specification.

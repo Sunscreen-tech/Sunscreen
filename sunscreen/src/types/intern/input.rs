@@ -1,7 +1,6 @@
 pub use crate::types::{intern::FheProgramNode, Cipher, FheType, NumCiphertexts, TypeName};
 use crate::{
     fhe::{with_fhe_ctx, FheContextOps},
-    ContextEnum,
 };
 
 /**
@@ -73,7 +72,7 @@ fn can_create_inputs() {
     use crate::{
         fhe::{FheContext, FheOperation, CURRENT_PROGRAM_CTX},
         types::{bfv::Rational, intern::FheProgramNode},
-        Params, SchemeType, SecurityLevel,
+        Params, SchemeType, SecurityLevel, ContextEnum
     };
     use std::cell::RefCell;
     use std::mem::transmute;

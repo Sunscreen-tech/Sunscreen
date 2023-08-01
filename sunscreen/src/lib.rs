@@ -65,7 +65,7 @@ pub mod types;
 
 use fhe::{FheContext, FheOperation, Literal};
 use petgraph::stable_graph::StableGraph;
-use seal_fhe::Context;
+
 use serde::{Deserialize, Serialize};
 use sunscreen_runtime::{marker, Fhe, FheZkp, Zkp};
 use sunscreen_zkp_backend::CompiledZkpProgram;

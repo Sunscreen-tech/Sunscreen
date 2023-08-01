@@ -1,11 +1,10 @@
 use crate::{
-    fhe_program_transforms::*,
-    internals::attr::{FheProgramAttrs, Scheme},
+    internals::attr::{FheProgramAttrs},
 };
-use proc_macro2::{Span, TokenStream};
-use quote::{quote, quote_spanned};
-use sunscreen_compiler_common::macros::{extract_fn_arguments, ExtractFnArgumentsError};
-use syn::{parse_macro_input, spanned::Spanned, Ident, ItemFn, Type};
+
+use quote::{quote};
+
+use syn::{parse_macro_input, ItemFn};
 
 pub fn debug_program_impl(
     metadata: proc_macro::TokenStream,
@@ -18,8 +17,8 @@ pub fn debug_program_impl(
     let ret = &input_fn.sig.output;
 
     // TODO: Currently hardcoded to 1
-    let group_name = &format!("{:?}_{:?}", name, 1);
-    let attr_params = parse_macro_input!(metadata as FheProgramAttrs);
+    let _group_name = &format!("{:?}_{:?}", name, 1);
+    let _attr_params = parse_macro_input!(metadata as FheProgramAttrs);
 
     // # is a special thing in macros
     // takes the variable name and fills it in

@@ -113,14 +113,14 @@ fn unshield_tx_fractional_range_proof(_c: &mut Criterion) {
     let balance_input: Vec<ZkpProgramInput> = vec![balance.into()];
 
     let proof = runtime
-        .prove(prog, tx_input.clone(), vec![], balance_input)
+        .prove(prog, balance_input, vec![], tx_input.clone())
         .unwrap();
 
     println!("Prover time {}s", prover_time.elapsed().as_secs_f64());
 
     let verifier_time = Instant::now();
 
-    runtime.verify(prog, &proof, tx_input, vec![]).unwrap();
+    runtime.verify(prog, &proof, vec![], tx_input).unwrap();
 
     println!("Verifier time {}s", verifier_time.elapsed().as_secs_f64());
 
@@ -197,7 +197,7 @@ fn private_tx_fractional_range_proof(_c: &mut Criterion) {
 
     let prover_time = Instant::now();
 
-    let proof = runtime.prove(prog, vec![], vec![], vec![a, b, c]).unwrap();
+    let proof = runtime.prove(prog, vec![a, b, c], vec![], vec![]).unwrap();
 
     println!("Prover time {}s", prover_time.elapsed().as_secs_f64());
 
@@ -260,7 +260,7 @@ fn mean_variance_fractional_range_proof(_c: &mut Criterion) {
 
     let prover_time = Instant::now();
 
-    let proof = runtime.prove(prog, vec![], vec![], vec![a, b]).unwrap();
+    let proof = runtime.prove(prog, vec![a, b], vec![], vec![]).unwrap();
 
     println!("Prover time {}s", prover_time.elapsed().as_secs_f64());
 
@@ -338,14 +338,14 @@ fn chi_sq_fractional_range_proof(_c: &mut Criterion) {
     let prover_time = Instant::now();
 
     let proof = runtime
-        .prove(prog, const_inputs.clone(), vec![], priv_inputs)
+        .prove(prog, priv_inputs, vec![], const_inputs.clone())
         .unwrap();
 
     println!("Prover time {}s", prover_time.elapsed().as_secs_f64());
 
     let verifier_time = Instant::now();
 
-    runtime.verify(prog, &proof, const_inputs, vec![]).unwrap();
+    runtime.verify(prog, &proof, vec![], const_inputs).unwrap();
 
     println!("Verifier time {}s", verifier_time.elapsed().as_secs_f64());
 

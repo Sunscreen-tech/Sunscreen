@@ -179,9 +179,10 @@ where
         let ctx = option
             .as_mut()
             .expect("Called Ciphertext::new() outside of a context.")
-            .unwrap_fhe_mut();
+            .unwrap_fhe_mut()
+            .unwrap();
 
-        f(ctx.unwrap())
+        f(ctx)
     })
 }
 

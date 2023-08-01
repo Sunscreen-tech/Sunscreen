@@ -171,7 +171,7 @@ fn parse_inner(_attr_params: ZkpProgramAttrs, input_fn: ItemFn) -> Result<TokenS
             fn build(&self) -> sunscreen::Result<sunscreen::ZkpFrontendCompilation> {
                 use std::cell::RefCell;
                 use std::mem::transmute;
-                use sunscreen::{CURRENT_PROGRAM_CTX, ZkpContext, ZkpData, Error, INDEX_ARENA, Result, types::{zkp::{ProgramNode, CreateZkpProgramInput, ConstrainEq, IntoProgramNode}, TypeName}};
+                use sunscreen::{CURRENT_PROGRAM_CTX, ZkpContext, ContextEnum, ZkpData, Error, INDEX_ARENA, Result, types::{zkp::{ProgramNode, CreateZkpProgramInput, ConstrainEq, IntoProgramNode}, TypeName}};
 
                 let mut context = ZkpContext::new(ZkpData::new());
 
@@ -179,7 +179,7 @@ fn parse_inner(_attr_params: ZkpProgramAttrs, input_fn: ItemFn) -> Result<TokenS
                     // Transmute away the lifetime to 'static. So long as we are careful with internal()
                     // panicing, this is safe because we set the context back to none before the function
                     // returns.
-                    ctx.swap(&RefCell::new(Some(unsafe { transmute(&mut context) })));
+                    ctx.swap(&RefCell::new(Some(unsafe { transmute(&mut ContextEnum::Zkp(context.clone())) })));
 
                     #[allow(clippy::type_complexity)]
                     #[forbid(unused_variables)]

@@ -65,6 +65,7 @@ pub mod types;
 
 use fhe::{FheOperation, Literal, FheContext};
 use petgraph::stable_graph::StableGraph;
+use seal_fhe::Context;
 use serde::{Deserialize, Serialize};
 use sunscreen_runtime::{marker, Fhe, FheZkp, Zkp};
 use sunscreen_zkp_backend::CompiledZkpProgram;
@@ -88,8 +89,7 @@ pub use sunscreen_runtime::{
 pub use sunscreen_zkp_backend::{BackendField, Error as ZkpError, Result as ZkpResult, ZkpBackend};
 pub use zkp::ZkpProgramFn;
 pub use zkp::{
-    invoke_gadget, with_zkp_ctx, ZkpContext, ZkpContextOps, ZkpData, ZkpFrontendCompilation,
-    CURRENT_ZKP_CTX,
+    invoke_gadget, with_zkp_ctx, ZkpContext, ZkpContextOps, ZkpData, ZkpFrontendCompilation
 };
 pub use fhe::{
     with_fhe_ctx, CURRENT_PROGRAM_CTX

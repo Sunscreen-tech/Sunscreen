@@ -184,7 +184,11 @@ impl Serialize for BigInt {
     where
         S: serde::Serializer,
     {
-        serializer.serialize_str(self.to_string().as_str())
+        let raw_str = self.to_string();
+        match raw_str.find(|c: char| c.is_numeric() && c != '0') {
+            Some(_) => serializer.serialize_str(raw_str.trim_start_matches('0')),
+            None => serializer.serialize_str("0"),
+        }
     }
 }
 

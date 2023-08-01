@@ -94,12 +94,8 @@ async fn get_session_data(session: web::Path<String>) -> impl Responder {
     if sessions.contains_key(session.as_str()) {
         let curr_session = sessions.get(session.as_str()).unwrap();
         let graph_string = match curr_session {
-            Session::BfvSession(_) => {
-                serde_json::to_string_pretty(&curr_session.unwrap_bfv_session().graph.graph)
-            }
-            Session::ZkpSession(_) => {
-                serde_json::to_string_pretty(&curr_session.unwrap_zkp_session().graph.graph)
-            }
+            Session::BfvSession(s) => serde_json::to_string_pretty(&s.graph.graph),
+            Session::ZkpSession(s) => serde_json::to_string_pretty(&s.graph.graph),
         };
 
         HttpResponse::Ok().body(graph_string.unwrap().to_owned())
@@ -117,10 +113,20 @@ async fn get_code(session: web::Path<String>) -> impl Responder {
     let sessions = get_sessions().lock().unwrap();
 
     if sessions.contains_key(session.as_str()) {
-        let curr_session = sessions.get(session.as_str()).unwrap().unwrap_bfv_session();
-        let code_string = &curr_session.source_code;
+        let curr_session = sessions.get(session.as_str()).unwrap();
 
-        HttpResponse::Ok().body(code_string.to_owned())
+        let program_string = match curr_session {
+            Session::BfvSession(_) => {
+                serde_json::to_string_pretty(&curr_session.unwrap_bfv_session().source_code)
+                    .unwrap()
+            }
+            Session::ZkpSession(_) => {
+                serde_json::to_string_pretty(&curr_session.unwrap_zkp_session().source_code)
+                    .unwrap()
+            }
+        };
+
+        HttpResponse::Ok().body(program_string)
     } else {
         HttpResponse::NotFound().body("Session not found.".to_owned())
     }
@@ -251,9 +257,7 @@ pub async fn get_node_data(
             Session::ZkpSession(zkp_session) => {
                 if let Some(data) = zkp_session.program_data.get(nodeid) {
                     DebugNodeType::Zkp(ZkpNodeType {
-                        value: data
-                            .unwrap_or(sunscreen_zkp_backend::BigInt::from(0u32))
-                            .to_string(),
+                        value: data.unwrap_or(sunscreen_zkp_backend::BigInt::from(0u32)),
                     })
                 } else {
                     return Ok(HttpResponse::NotFound().body(format!("Node {} not found", nodeid)));
@@ -284,16 +288,34 @@ pub async fn get_stack_trace(
     let sessions = get_sessions().lock().unwrap();
 
     if let Some(curr_session) = sessions.get(&session) {
-        let curr_session = curr_session.unwrap_bfv_session();
-        let stack_lookup = &curr_session.graph.metadata.stack_lookup;
+        match curr_session {
+            Session::BfvSession(curr_session) => {
+                let stack_lookup = &curr_session.graph.metadata.stack_lookup;
 
-        if let Some(node_info) = curr_session.graph.node_weight(NodeIndex::new(nodeid)) {
-            if let Some(stack_frames) = stack_lookup.id_data_lookup.get(&node_info.stack_id) {
-                let stack_frames_json = serde_json::to_string(&stack_frames).unwrap();
-                return Ok(HttpResponse::Ok().body(stack_frames_json));
-            } else {
-                return Ok(HttpResponse::NotFound()
-                    .body(format!("Stack trace for node {} not found", nodeid)));
+                if let Some(node_info) = curr_session.graph.node_weight(NodeIndex::new(nodeid)) {
+                    if let Some(stack_frames) = stack_lookup.id_data_lookup.get(&node_info.stack_id)
+                    {
+                        let stack_frames_json = serde_json::to_string(&stack_frames).unwrap();
+                        return Ok(HttpResponse::Ok().body(stack_frames_json));
+                    } else {
+                        return Ok(HttpResponse::NotFound()
+                            .body(format!("Stack trace for node {} not found", nodeid)));
+                    }
+                }
+            }
+            Session::ZkpSession(curr_session) => {
+                let stack_lookup = &curr_session.graph.metadata.stack_lookup;
+
+                if let Some(node_info) = curr_session.graph.node_weight(NodeIndex::new(nodeid)) {
+                    if let Some(stack_frames) = stack_lookup.id_data_lookup.get(&node_info.stack_id)
+                    {
+                        let stack_frames_json = serde_json::to_string(&stack_frames).unwrap();
+                        return Ok(HttpResponse::Ok().body(stack_frames_json));
+                    } else {
+                        return Ok(HttpResponse::NotFound()
+                            .body(format!("Stack trace for node {} not found", nodeid)));
+                    }
+                }
             }
         }
     }

@@ -1,4 +1,4 @@
-import React, { useCallback,  useState } from 'react';
+import React, { useCallback,  useEffect,  useState } from 'react';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { atomDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import ReactSplit, { SplitDirection } from '@devbookhq/splitter'
@@ -6,7 +6,6 @@ import './App.css'
 
 import { UberGraph } from './UberGraph';
 import { SelectionT } from 'react-digraph';
-import ReactDOM from 'react-dom';
 import { render } from 'react-dom';
 
 interface CodeBlockProps {
@@ -47,82 +46,79 @@ function CodeBlock({ code, onClickHandler, selectedLine }: CodeBlockProps) {
   );
 };
 
-const exampleCode: string = `fn sudoku_proof<F: BackendField>(
-  #[constant] constraints: [[NativeField<F>; 9]; 9],
-  board: [[NativeField<F>; 9]; 9],
-) {
-  fn assert_unique_numbers<F: BackendField>(arr: [ProgramNode<NativeField<F>>; 9]) {
-      for i in 1..=9 {
-          let mut circuit = NativeField::<F>::from(1).into_program_node();
-          for a in arr {
-              circuit = circuit * (NativeField::<F>::from(i).into_program_node() - a);
-          }
-          circuit.constrain_eq(NativeField::<F>::from(0));
-      }
-  }
-  // Proves that the board matches up with the puzzle where applicable
-  let zero = NativeField::<F>::from(0).into_program_node();
-
-  for i in 0..9 {
-      for j in 0..9 {
-          let square = board[i][j].into_program_node();
-          let constraint = constraints[i][j].into_program_node();
-          (constraint * (constraint - square)).constrain_eq(zero);
-      }
-  }
-
-  // Checks rows contain every number from 1 to 9
-  for row in board {
-      assert_unique_numbers(row);
-  }
-
-  // Checks columns contain each number from 1 to 9
-  for col in 0..9 {
-      let column = board.map(|r| r[col]);
-      assert_unique_numbers(column);
-  }
-
-  // Checks squares contain each number from 1 to 9
-  for i in 0..3 {
-      for j in 0..3 {
-          let rows = &board[(i * 3)..(i * 3 + 3)];
-
-          let square = rows.iter().map(|s| &s[(j * 3)..(j * 3 + 3)]);
-
-          let flattened_sq: [ProgramNode<NativeField<F>>; 9] = square
-              .flatten()
-              .copied()
-              .collect::<Vec<_>>()
-              .try_into()
-              .unwrap_or([zero; 9]);
-
-          assert_unique_numbers(flattened_sq);
-      }
-  }
-}`
-
 type InputCiphertextOp = {
-  kind: 'InputCiphertext';
-  data: number
+  type: 'InputCiphertext';
+  id: number
+};
+
+type InputPlaintextOp = {
+  type: 'InputCiphertext';
+  id: number
 };
 
 type MultiplyOp = {
-  kind: 'Multiply'
+  type: 'Multiply'
+  id: number
 };
 
 type AddOp = {
-  kind: 'Add'
+  type: 'Add'
+  id: number
+};
+
+type SubOp = {
+  type: 'Sub'
+  id: number
 };
 
 type RelinearizeOp = {
-  kind: 'Relinearize'
+  type: 'Relinearize'
+  id: number
 };
 
 type OutputCiphertextOp = {
-  kind: 'OutputCiphertext'
+  type: 'OutputCiphertext'
+  id: number
 };
 
-type FheProgramOperation = InputCiphertextOp | MultiplyOp | AddOp | RelinearizeOp | OutputCiphertextOp
+type HiddenInputOp = {
+  type: 'HiddenInput'
+}
+
+type PublicInputOp = {
+  type: 'PublicInput'
+}
+
+type ConstantInputOp = {
+  type: 'ConstantInput'
+}
+
+type ZkpConstantOp = {
+  type: 'Constant'
+  content: string
+}
+
+type InvokeGadgetOp = {
+  type: 'InvokeGadget',
+  content: string
+}
+
+type ConstraintOp = {
+  type: 'Constraint',
+  content: string
+}
+
+type MulOp = {
+  type: 'Mul'
+}
+
+type PrivateInputOp = {
+  type: 'PrivateInput'
+}
+
+type FheProgramOperation = InputCiphertextOp | InputPlaintextOp | MultiplyOp | AddOp | SubOp | RelinearizeOp | OutputCiphertextOp
+
+type ZkpProgramOperation = HiddenInputOp | PublicInputOp | ConstantInputOp | MultiplyOp | AddOp | SubOp | InvokeGadgetOp | ConstraintOp | ZkpConstantOp | MulOp | PrivateInputOp
 
 type FheProgramNode = {
   operation: FheProgramOperation
@@ -141,22 +137,63 @@ type FheProgram = {
   data: 'Bfv'
 }
 
-const dataToGraph = (data: FheProgramGraph, incRelin: boolean) => {
+type ZkpProgram = {
+  graph: { graph: {graph: ZkpProgramGraph}};
+  data: any
+}
+
+
+type ZkpProgramGraph = {
+  nodes: [{ operation: ZkpProgramOperation }],
+  edges: FheProgramEdge
+}
+
+const dataToGraph = (data: FheProgramGraph | ZkpProgramGraph) => {
   const nodes: any[] = [];
   const edges: any[] = [];
 
-  for (let i: number = 0; i < data.nodes  .length; ++i) {
+  for (let i: number = 0; i < data.nodes.length; ++i) {
     const op = data.nodes[i].operation
-    switch (op.kind) {
+    switch (op.type) {
       case 'InputCiphertext':
-        nodes.push({id: i, title: JSON.stringify(op.data), type: 'input'})
+        console.log('test')
+        nodes.push({id: i, title: "", type: 'inputCiphertext'})
         break
-      case 'Multiply':
-      case 'Add':
       case 'Relinearize':
+        nodes.push({id: i, title: "", type: 'relinearize'})
+        break
+      case 'Mul':
+      case 'Multiply':
+        nodes.push({id: i, title: "", type: 'multiply'})
+        break
+      case 'Add':
+        nodes.push({id: i, title: "", type: 'add'})
+        break
+      case 'Sub':
+        nodes.push({id: i, title: "", type: 'sub'})
+        break
       case 'OutputCiphertext':
+        nodes.push({id: i, title: "", type: 'outputCiphertext'})
+        break;
+      case 'Constraint':
+        nodes.push({id: i, title: "", type: 'constraint', constraint: op.content})
+        break;
+      case 'HiddenInput': 
+        nodes.push({id: i, title: "", type: 'hidInput'})
+        break;
+      case 'PublicInput':
+        nodes.push({id: i, title: "", type: 'pubInput'})
+        break;
+      case 'PrivateInput':
+        nodes.push({id: i, title: "", type: 'privInput'})
+        break;
+      case 'Constant':
+      case 'ConstantInput':
+        nodes.push({id: i, title: "", type: 'constantInput'})
+        break;
       default: 
-        nodes.push({id: i, title: JSON.stringify(data.nodes[i].operation), type: 'empty'})
+        nodes.push({id: i, title: JSON.stringify(op), type: 'empty'})
+        break;
     }
   }
   for (let i: number = 0; i < data.edges.length; ++i) {
@@ -165,19 +202,58 @@ const dataToGraph = (data: FheProgramGraph, incRelin: boolean) => {
   return {nodes: nodes, edges: edges}
 }
 
+async function isProblematic(node, session: string) {
+  switch (node.type) {
+    case 'add':
+    case 'sub':
+    case 'multiply':
+      if (session.split('_')[0] === 'zkp') {
+        return false
+      } else {
+        const info = await fetch(`sessions/${session}/${node.id}`).then(d => d.json())
+        return info.Bfv.overflowed || info.Bfv.noise_budget <= 0
+      }
+    case 'constraint':
+      const info = await fetch(`sessions/${session}/${node.id}`).then(d => d.json())
+      return info.Zkp != 0
+    default:
+      return false;
+  }
+}
+
 
 const App = () => {
-  
-  const sampleData = JSON.parse(`{"graph":{"graph":{"nodes":[{"operation":{"InputCiphertext":0}},{"operation":{"InputCiphertext":1}},{"operation":{"InputCiphertext":2}},{"operation":{"InputCiphertext":3}},{"operation":"Multiply"},{"operation":"Multiply"},{"operation":"Multiply"},{"operation":"Add"},{"operation":"OutputCiphertext"},{"operation":"OutputCiphertext"},{"operation":"Relinearize"},{"operation":"Relinearize"},{"operation":"Relinearize"}],"node_holes":[],"edge_property":"directed","edges":[[0,4,"Left"],[3,4,"Right"],[1,5,"Left"],[2,5,"Right"],[1,6,"Left"],[3,6,"Right"],[12,7,"Left"],[10,7,"Right"],[7,8,"Unary"],[11,9,"Unary"],[5,10,"Unary"],[6,11,"Unary"],[4,12,"Unary"]]}},"data":"Bfv"}`)
-  const exGraph = dataToGraph(sampleData, true);
+
   const [selectedLine, setLine] = useState<number>(0);
   const [vertSize, setVertSize] = useState<any[]>();
   const [horSize, setHorSize] = useState<any[]>();
-  const [currGraph, setGraph] = useState(exGraph);
+  const [currCode, setCode] = useState<string>("select a session");
+  const [currGraph, setGraph] = useState({nodes: [], edges: []});
   const [selected, select] = useState<SelectionT | null>(null);
+  const [sessionList, setSessionList] = useState<string[]>([]);
+  const [session, setSession] = useState<string>("");
+  const [info, setInfo] = useState<any>({id: "no node selected"});
+  const [problemNodes, setProblemNodes] = useState<number[]>([]);
+
+  useEffect(
+    () => {fetch("/sessions").then(j => j.json()).then(l => setSessionList(l))}, []
+  )
+
+  const updateProblematicNodes = useCallback( async (graph) => {
+    const newGraph = JSON.parse(JSON.stringify(graph))
+    const nodes = newGraph.nodes;
+    for (const node of nodes) {
+      if (await isProblematic(node, session)) {
+        node.type = "prob" + node.type.charAt(0).toUpperCase() + node.type.slice(1)
+        setProblemNodes(problemNodes.concat([node.id]))
+      }
+    }
+    return newGraph
+  }, [session, problemNodes]
+  )
 
   const updateLine = useCallback(
-    (lineNumber: number) => {
+    async (lineNumber: number) => {
       setLine(lineNumber)
       const graph = {
         nodes: [
@@ -200,25 +276,69 @@ const App = () => {
           { source: 1, target: 2, directed: true, arrowhead: 'normal' }
         ]
       }
-      setGraph(lineNumber !== 1 ? graph : exGraph)
-    }, [setLine, setGraph]
+      setGraph(lineNumber !== 1 ? graph : dataToGraph(await fetch(`/sessions/${session}`).then(d => d.json())))
+    }, [setLine, setGraph, session]
   )
 
   const updateSelection = useCallback(
-    (selection, e) => {select(selection); console.log(selection.nodes?.values().next().value)}, [select]
+    async (selection, e) => {
+      select(selection); 
+      const node = selection.nodes?.values().next().value;
+      console.log(node)
+      if (node != null) {
+        if (session.split('_')[0] == "fhe") {
+          setInfo({
+            ...selection.nodes?.values().next().value, 
+            ...(await fetch(`sessions/${session}/${node.id}`).then(d => d.json())).Bfv,
+            stacktrace: filterStackTrace(await fetch(`sessions/${session}/stacktrace/${node.id}`).then(d => d.json()))
+          })
+        } else {
+          setInfo({
+            ...selection.nodes?.values().next().value, 
+            value: (await fetch(`sessions/${session}/${node.id}`).then(d => d.json())).Zkp,
+            stacktrace: filterStackTrace(await fetch(`sessions/${session}/stacktrace/${node.id}`).then(d => d.json()))
+          })
+        }
+        
+      } else {
+        setInfo({id: "no node selected"})
+      }
+    }, [select, session]
   )
 
+  const updateSession = useCallback(
+    (event) => {
+      const newSession = event.target.value
+      
+      setSession(newSession)
+    }, [setSession]
+  )
+
+  useEffect(() => {
+    const update = async () => {
+      const graph = await updateProblematicNodes(dataToGraph(await fetch(`/sessions/${session}`).then(d => d.json())))
+      setGraph(graph)
+      setCode(await fetch(`/programs/${session}`).then(p => p.json()))
+    }
+    update()
+  }, [session])
+
   return (
+    
     <div className='splits'>
       <ReactSplit direction={SplitDirection.Horizontal} onResizeFinished={(p, n) => setHorSize(n)} initialSizes={horSize}>
         <div className="pane">
           <ReactSplit direction={SplitDirection.Vertical} onResizeFinished={(p, n) => setVertSize(n)} initialSizes={vertSize}>
             <div className='pane'><CodeBlock 
-            code={exampleCode} 
+            code={currCode} 
             onClickHandler={updateLine}
             selectedLine={selectedLine}
             ></CodeBlock></div>
-            <div className='pane'><NodeInfo info={selected?.nodes?.values().next().value}/></div>
+            <div className='pane'>
+              <SessionPicker sessionList={sessionList} onUpdate={updateSession}/> 
+              <div>Problem Nodes: {JSON.stringify(problemNodes)}</div>
+              <NodeInfo info={info}/>
+            </div>
           </ReactSplit>
         </div>
         <div className='pane'><UberGraph
@@ -229,10 +349,27 @@ const App = () => {
 }
 
 function NodeInfo({info}) {
-  if (info !== null) {
-    return <p>{JSON.stringify(info)}</p>
+  if (info != null) {
+    if (Object.keys(info).includes('stacktrace')) {
+      return infoToHtml(info);
+    } else {
+      return (<div>
+        {Object.keys(info).filter(k => k != "stacktrace").map((k) => (<p>{k}: {JSON.stringify(info[k])}</p>))}
+      </div>)
+    }
+    
   }
   return <p>{JSON.stringify(info)}</p>
+}
+
+function SessionPicker({sessionList, onUpdate}: {sessionList: string[], onUpdate: (string) => void}) {
+  
+  return (
+    <select onChange={onUpdate} style={{backgroundColor: 'white', fontFamily: 'monospace'}}>
+      <option value='none'>Select a session!</option>
+      {sessionList.map(s => (<option value={s}>{s}</option>))}
+    </select>
+  )
 }
 
 window.addEventListener('load', () => {
@@ -240,3 +377,30 @@ window.addEventListener('load', () => {
   const root = render(<App/>, document.getElementById('root'));
 });
 
+function filterStackTrace(st) {
+  console.log(st)
+  const re1 = RegExp("\S*/sunscreen_compiler_common/src/\S*")
+  const re2 = RegExp("\S*/sunscreen/src/\S*")
+  const re3 = RegExp("\S*/rustc/\S*")
+  const re4 = RegExp("\S*/cargo/\*")
+  const filtered = st.filter(c => !re1.test(c.callee_file))
+    .filter(c => !re2.test(c.callee_file))
+    .filter(c => !re3.test(c.callee_file))
+    .filter(c => !re4.test(c.callee_file))
+    .filter(c => c.callee_file !== 'No such file')
+  return filtered;
+}
+
+const excludedKeys = ['x', 'y', 'title', 'stacktrace']
+
+function infoToHtml(info: any) {
+  const filteredKeys = Object.keys(info).filter(k => !excludedKeys.includes(k));
+  if (info.type == 'probConstraint' || info.type == 'constraint') {
+    info.value = info.value != "1"
+  }
+  return (<div style={{fontFamily: 'sans-serif'}}>
+        {filteredKeys.map((k) => (<p>{k}: {JSON.stringify(info[k])}</p>))}
+        <p>stacktrace:</p>
+        {info.stacktrace.map(c => (<p>{`${c.callee_name.split("::").at(-2)} @ ${c.callee_file}:${c.callee_lineno}`}</p>))}
+      </div>)
+}

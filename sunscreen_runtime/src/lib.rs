@@ -12,6 +12,7 @@ mod metadata;
 mod run;
 mod runtime;
 mod serialization;
+mod zkp;
 
 use std::sync::Arc;
 

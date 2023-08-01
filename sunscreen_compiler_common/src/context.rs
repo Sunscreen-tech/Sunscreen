@@ -261,6 +261,7 @@ impl<O> Debug for CompilationResult<O>
 where
     O: Operation,
 {
+    //TODO: support for debugger feature
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "Nodes = [")?;
 

@@ -288,11 +288,21 @@ type Group = String;
  * Allows for abstract interaction with a context group stack.
  */
 pub enum ContextEnum {
+    /**
+     * An FHE context.
+     */
     Fhe(FheContext),
+
+    /**
+     * A ZKP context.
+     */
     Zkp(ZkpContext),
 }
 
 impl ContextEnum {
+    /**
+     * Pushes a group onto the group stack.
+     */
     pub fn push_group(&mut self, group: Group) {
         match self {
             ContextEnum::Fhe(context) => {
@@ -306,6 +316,9 @@ impl ContextEnum {
         }
     }
 
+    /**
+     * Pops a group from the group stack.
+     */
     pub fn pop_group(&mut self) {
         match self {
             ContextEnum::Fhe(context) => {
@@ -319,6 +332,9 @@ impl ContextEnum {
         }
     }
 
+    /**
+     * Unwraps the context as an FHE context.
+     */
     pub fn unwrap_fhe(&self) -> Option<&FheContext> {
         match self {
             ContextEnum::Fhe(context) => Some(context),
@@ -326,6 +342,9 @@ impl ContextEnum {
         }
     }
 
+    /**
+     *  Unwraps the context as a mutable FHE context.
+     */
     pub fn unwrap_fhe_mut(&mut self) -> Option<&mut FheContext> {
         match self {
             ContextEnum::Fhe(context) => Some(context),
@@ -333,6 +352,9 @@ impl ContextEnum {
         }
     }
 
+    /**
+     * Unwraps the context as a ZKP context.
+     */
     pub fn unwrap_zkp(&self) -> Option<&ZkpContext> {
         match self {
             ContextEnum::Zkp(context) => Some(context),
@@ -340,6 +362,9 @@ impl ContextEnum {
         }
     }
 
+    /**
+     * Unwraps the context as a mutable ZKP context.
+     */
     pub fn unwrap_zkp_mut(&mut self) -> Option<&mut ZkpContext> {
         match self {
             ContextEnum::Zkp(context) => Some(context),

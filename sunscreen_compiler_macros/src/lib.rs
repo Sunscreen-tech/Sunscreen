@@ -6,13 +6,13 @@
 
 extern crate proc_macro;
 
+mod debug_program;
 mod error;
 mod fhe_program;
 mod fhe_program_transforms;
 mod internals;
 mod type_name;
 mod zkp_program;
-mod debug_program;
 
 #[proc_macro_derive(TypeName)]
 /**

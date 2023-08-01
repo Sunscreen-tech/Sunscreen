@@ -174,7 +174,6 @@ mod tests {
         fn is_ordered(&self) -> bool {
             false
         }
-
     }
 
     fn get_graph() -> CompilationResult<Operation> {

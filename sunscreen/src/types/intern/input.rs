@@ -1,5 +1,8 @@
-use crate::{fhe::{with_fhe_ctx, FheContextOps}, ContextEnum};
 pub use crate::types::{intern::FheProgramNode, Cipher, FheType, NumCiphertexts, TypeName};
+use crate::{
+    fhe::{with_fhe_ctx, FheContextOps},
+    ContextEnum,
+};
 
 /**
  * Create an input node from an Fhe Program input argument.
@@ -86,7 +89,9 @@ fn can_create_inputs() {
             security_level: SecurityLevel::TC128,
         });
 
-        ctx.swap(&RefCell::new(Some(unsafe { transmute(&mut ContextEnum::Fhe(context.clone())) })));
+        ctx.swap(&RefCell::new(Some(unsafe {
+            transmute(&mut ContextEnum::Fhe(context.clone()))
+        })));
 
         let scalar_node: FheProgramNode<Rational> = FheProgramNode::input();
         let mut offset = 0;

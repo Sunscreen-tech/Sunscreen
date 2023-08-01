@@ -180,7 +180,7 @@ where
             .as_mut()
             .expect("Called Ciphertext::new() outside of a context.")
             .unwrap_fhe_mut();
-        
+
         f(ctx)
     })
 }

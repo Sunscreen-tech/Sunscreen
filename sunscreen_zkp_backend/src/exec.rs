@@ -44,7 +44,6 @@ impl OperationTrait for Operation {
     fn is_ordered(&self) -> bool {
         false
     }
-
 }
 
 /**

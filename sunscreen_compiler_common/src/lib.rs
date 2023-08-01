@@ -77,7 +77,6 @@ pub trait Operation: Clone + Debug + Hash + PartialEq + Eq {
      * ordered operands.
      */
     fn is_ordered(&self) -> bool;
-
 }
 
 /**

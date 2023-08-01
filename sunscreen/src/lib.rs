@@ -63,7 +63,7 @@ mod zkp;
  */
 pub mod types;
 
-use fhe::{FheOperation, Literal, FheContext};
+use fhe::{FheContext, FheOperation, Literal};
 use petgraph::stable_graph::StableGraph;
 use seal_fhe::Context;
 use serde::{Deserialize, Serialize};
@@ -76,6 +76,7 @@ use std::marker::PhantomData;
 
 pub use compiler::{Compiler, FheProgramFn, GenericCompiler};
 pub use error::{Error, Result};
+pub use fhe::{with_fhe_ctx, CURRENT_PROGRAM_CTX};
 pub use params::PlainModulusConstraint;
 pub use seal_fhe::Plaintext as SealPlaintext;
 pub use sunscreen_compiler_macros::*;
@@ -89,10 +90,7 @@ pub use sunscreen_runtime::{
 pub use sunscreen_zkp_backend::{BackendField, Error as ZkpError, Result as ZkpResult, ZkpBackend};
 pub use zkp::ZkpProgramFn;
 pub use zkp::{
-    invoke_gadget, with_zkp_ctx, ZkpContext, ZkpContextOps, ZkpData, ZkpFrontendCompilation
-};
-pub use fhe::{
-    with_fhe_ctx, CURRENT_PROGRAM_CTX
+    invoke_gadget, with_zkp_ctx, ZkpContext, ZkpContextOps, ZkpData, ZkpFrontendCompilation,
 };
 
 #[derive(Clone)]

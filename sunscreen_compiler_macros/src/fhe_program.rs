@@ -153,7 +153,7 @@ pub fn fhe_program_impl(
                     // Transmute away the lifetime to 'static. So long as we are careful with internal()
                     // panicing, this is safe because we set the context back to none before the funtion
                     // returns.
-                    ctx.swap(&RefCell::new(Some(unsafe { transmute(&mut ContextEnum::Fhe(context)) })));
+                    ctx.swap(&RefCell::new(Some(unsafe { transmute(&mut ContextEnum::Fhe(context.clone())) })));
 
                     #(#var_decl)*
 

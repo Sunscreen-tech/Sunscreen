@@ -8,7 +8,7 @@ fn main() {
 
     #[zkp_program(backend = "bulletproofs")]
     fn prove_sum_eq<F: BackendField>(a: NativeField<F>, b: NativeField<F>, c: NativeField<F>) {
-        (a + b).constrain_eq(c);
+        (a + b).constrain_eq(c); // not satisfied
         (b - a).constrain_eq(NativeField::<F>::from(1));
     }
 
@@ -25,7 +25,7 @@ fn main() {
     let inputs: Vec<ZkpProgramInput> = vec![
         BPField::from(1).into(),
         BPField::from(2).into(),
-        BPField::from(4).into(),
+        BPField::from(4).into(), // Problematic: 1 + 2 != 4.
     ];
 
     let _proof = runtime.prove(prog, vec![], vec![], inputs);

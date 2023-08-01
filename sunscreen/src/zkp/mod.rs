@@ -381,8 +381,7 @@ where
         let ctx = option
             .as_mut()
             .expect("Called with_zkp_ctx() outside of a context.")
-            .unwrap_zkp_mut()
-            .unwrap();
+            .unwrap_zkp_mut();
 
         f(ctx)
     })

@@ -335,40 +335,40 @@ impl ContextEnum {
     /**
      * Unwraps the context as an FHE context.
      */
-    pub fn unwrap_fhe(&self) -> Option<&FheContext> {
+    pub fn unwrap_fhe(&self) -> &FheContext {
         match self {
-            ContextEnum::Fhe(context) => Some(context),
-            _ => None,
+            ContextEnum::Fhe(context) => context,
+            _ => panic!("Given context was not an FheContext"),
         }
     }
 
     /**
      *  Unwraps the context as a mutable FHE context.
      */
-    pub fn unwrap_fhe_mut(&mut self) -> Option<&mut FheContext> {
+    pub fn unwrap_fhe_mut(&mut self) -> &mut FheContext {
         match self {
-            ContextEnum::Fhe(context) => Some(context),
-            _ => None,
+            ContextEnum::Fhe(context) => context,
+            _ => panic!("Given context was not an FheContext"),
         }
     }
 
     /**
      * Unwraps the context as a ZKP context.
      */
-    pub fn unwrap_zkp(&self) -> Option<&ZkpContext> {
+    pub fn unwrap_zkp(&self) -> &ZkpContext {
         match self {
-            ContextEnum::Zkp(context) => Some(context),
-            _ => None,
+            ContextEnum::Zkp(context) => context,
+            _ => panic!("Given context was not a ZkpContext"),
         }
     }
 
     /**
      * Unwraps the context as a mutable ZKP context.
      */
-    pub fn unwrap_zkp_mut(&mut self) -> Option<&mut ZkpContext> {
+    pub fn unwrap_zkp_mut(&mut self) -> &mut ZkpContext {
         match self {
-            ContextEnum::Zkp(context) => Some(context),
-            _ => None,
+            ContextEnum::Zkp(context) => context,
+            _ => panic!("Given context was not a ZkpContext"),
         }
     }
 }

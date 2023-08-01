@@ -141,7 +141,7 @@ pub fn fhe_program_impl(
                 }
 
                 // TODO: Other schemes.
-                let mut context = FheContext::new(params.clone());
+                let mut context = ContextEnum::Fhe(FheContext::new(params.clone()));
 
                 CURRENT_PROGRAM_CTX.with(|ctx| {
                     #[allow(clippy::type_complexity)]
@@ -153,7 +153,7 @@ pub fn fhe_program_impl(
                     // Transmute away the lifetime to 'static. So long as we are careful with internal()
                     // panicing, this is safe because we set the context back to none before the funtion
                     // returns.
-                    ctx.swap(&RefCell::new(Some(unsafe { transmute(&mut ContextEnum::Fhe(context.clone())) })));
+                    ctx.swap(&RefCell::new(Some(unsafe { transmute(&mut context) })));
 
                     #(#var_decl)*
 
@@ -180,7 +180,7 @@ pub fn fhe_program_impl(
                     ctx.swap(&RefCell::new(None));
                 });
 
-                Ok(context.clone().graph)
+                Ok(context.unwrap_fhe().unwrap().graph.clone())
             }
 
             fn signature(&self) -> sunscreen::CallSignature {

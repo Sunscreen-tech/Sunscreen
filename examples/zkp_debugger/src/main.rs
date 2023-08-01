@@ -1,9 +1,6 @@
 use std::{thread, time::Duration};
 
-use sunscreen::{
-    types::zkp::{ConstrainCmp, NativeField},
-    zkp_program, Compiler, Runtime, ZkpProgramInput,
-};
+use sunscreen::{types::zkp::NativeField, zkp_program, Compiler, Runtime, ZkpProgramInput};
 use sunscreen_zkp_backend::{bulletproofs::BulletproofsBackend, BackendField, ZkpBackend};
 
 fn main() {
@@ -11,8 +8,8 @@ fn main() {
 
     #[zkp_program(backend = "bulletproofs")]
     fn prove_sum_eq<F: BackendField>(a: NativeField<F>, b: NativeField<F>, c: NativeField<F>) {
-        (a + b).constrain_eq(c);
-        a.constrain_lt_bounded(b, 8)
+        (a + b).constrain_eq(c); // not satisfied
+        (b - a).constrain_eq(NativeField::<F>::from(1));
     }
 
     let app = Compiler::new()
@@ -28,12 +25,12 @@ fn main() {
     let inputs: Vec<ZkpProgramInput> = vec![
         BPField::from(1).into(),
         BPField::from(2).into(),
-        BPField::from(3).into(),
+        BPField::from(4).into(), // Problematic: 1 + 2 != 4.
     ];
 
-    let proof = runtime.prove(prog, vec![], vec![], inputs);
+    let _proof = runtime.prove(prog, vec![], vec![], inputs);
 
-    proof.unwrap();
+    // proof.unwrap();
 
     loop {
         thread::sleep(Duration::from_secs(1));

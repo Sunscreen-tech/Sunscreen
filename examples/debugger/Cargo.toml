@@ -8,4 +8,3 @@ edition = "2021"
 [dependencies]
 sunscreen = { path = "../../sunscreen", features = ["debugger"] }
 tokio = {version = "1", features = ["macros"]}
-actix-web = "4.3.1"

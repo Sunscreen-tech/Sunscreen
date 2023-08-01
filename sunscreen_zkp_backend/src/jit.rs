@@ -14,10 +14,8 @@ use sunscreen_compiler_common::{
     Operation as OperationTrait, Session,
 };
 
-#[cfg(feature = "debugger")]
-use sunscreen_compiler_common::DebugData;
-
 #[derive(Clone, Serialize)]
+#[serde(tag = "type", content = "content")]
 /**
  * An operation in Sunscreen's intermediate representation programs before JIT compilation.
  */
@@ -189,6 +187,11 @@ pub struct ZkpProgramMetadata {
      *
      */
     pub name: String,
+
+    /**
+     * source code
+     */
+    pub source: String,
 }
 
 /**
@@ -286,7 +289,7 @@ where
     let mut session = session_provider.as_ref().map(|_| Session {
         graph: prog.graph.clone(),
         run_data: vec![],
-        metadata: prog.metadata.name.to_owned(),
+        metadata: prog.metadata.source.to_owned(),
     });
 
     let expected_private_inputs = prog
@@ -309,6 +312,9 @@ where
     validate_zkp_program(&prog)?;
 
     let mut node_outputs: HashMap<NodeIndex, U> = HashMap::new();
+
+    #[cfg(feature = "debugger")]
+    let mut unsatisfied_constraint: Option<NodeIndex> = None;
 
     // Run the graph as a computation (not a ZKP) to compute all the
     // gadget hidden input values.
@@ -371,6 +377,12 @@ where
                 for parent in parents {
                     let actual = node_outputs[&parent].clone().zkp_into();
                     if actual != x {
+                        #[cfg(feature = "debugger")]
+                        {
+                            unsatisfied_constraint = Some(id);
+                            node_outputs.insert(id, U::try_from(BigInt::from(1u32)).unwrap());
+                        }
+                        #[cfg(not(feature = "debugger"))]
                         return Err(Error::UnsatisfiableConstraint(id));
                     }
                 }
@@ -476,6 +488,11 @@ where
 
     if let Some(v) = session_provider {
         v.add_session(session.unwrap());
+    }
+
+    #[cfg(feature = "debugger")]
+    if let Some(id) = unsatisfied_constraint {
+        return Err(Error::UnsatisfiableConstraint(id));
     }
 
     jit_common(
@@ -643,7 +660,7 @@ where
     Ok(CompilationResult {
         graph: executable_graph,
         #[cfg(feature = "debugger")]
-        metadata: DebugData::new(),
+        metadata: prog.graph.metadata,
     })
 }
 

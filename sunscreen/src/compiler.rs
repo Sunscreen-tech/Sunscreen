@@ -337,6 +337,7 @@ where
                         graph: result,
                         metadata: ZkpProgramMetadata {
                             name: prog.name().to_string(),
+                            source: prog.source().to_string(),
                         },
                     },
                 ))

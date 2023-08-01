@@ -198,11 +198,12 @@ pub fn determine_params(
 
                 let model = match MeasuredModel::new(&ir, &params, &noise_targets) {
                     Ok(v) => v,
-                    Err(_) => {
+                    Err(e) => {
                         trace!(
-                            "Failed to construct noise model for {} with lattice_dimension={}",
+                            "Failed to construct noise model for {} with lattice_dimension={}. Error={:?}",
                             program.name(),
-                            n
+                            n,
+                            e
                         );
                         continue 'params_loop;
                     }

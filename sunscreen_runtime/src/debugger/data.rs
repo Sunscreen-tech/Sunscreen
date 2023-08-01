@@ -22,8 +22,9 @@ use sunscreen_compiler_common::Operation as OperationTrait;
 use sunscreen_compiler_common::Type;
 use sunscreen_compiler_common::{EdgeInfo, NodeInfo};
 use sunscreen_fhe_program::Operation as FheOperation;
+use sunscreen_zkp_backend::BigInt;
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize)]
 pub enum DebugNodeType {
     Bfv(BfvNodeType),
     Zkp(ZkpNodeType),
@@ -303,10 +304,11 @@ fn create_plaintext_from_seal_data(pt: SealPlaintext, pk: &PrivateKey) -> InnerP
     sunscreen_plaintext.inner
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize)]
+#[serde(transparent)]
 pub struct ZkpNodeType {
     // Send `BigInt` values as strings
-    pub value: String,
+    pub value: BigInt,
 }
 
 #[test]

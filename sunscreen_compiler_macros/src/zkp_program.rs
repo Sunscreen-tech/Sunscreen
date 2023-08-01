@@ -90,6 +90,7 @@ fn parse_inner(_attr_params: ZkpProgramAttrs, input_fn: ItemFn) -> Result<TokenS
     let body = &input_fn.block;
     let inputs = &input_fn.sig.inputs;
     let ret = &input_fn.sig.output;
+    let raw_fn = &input_fn.to_token_stream().to_string();
 
     let (generic_ident, generic_bound) = get_generic_arg(&input_fn.sig.generics)?;
 
@@ -217,6 +218,8 @@ fn parse_inner(_attr_params: ZkpProgramAttrs, input_fn: ItemFn) -> Result<TokenS
             fn signature(&self) -> sunscreen::CallSignature {
                 #signature
             }
+
+            fn source(&self) -> &str { #raw_fn }
         }
 
         #[allow(non_upper_case_globals)]

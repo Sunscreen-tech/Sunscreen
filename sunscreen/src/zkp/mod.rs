@@ -1,6 +1,5 @@
 use petgraph::Graph;
-#[cfg(feature = "debugger")]
-use sunscreen_compiler_common::DebugData;
+
 use sunscreen_runtime::CallSignature;
 use sunscreen_zkp_backend::{BackendField, BigInt, Gadget, Operation as JitOperation};
 
@@ -30,6 +29,11 @@ pub trait ZkpProgramFn<F: BackendField> {
      * Gets the name of this program.
      */
     fn name(&self) -> &str;
+
+    /**
+     * Gets the source code of this program
+     */
+    fn source(&self) -> &str;
 }
 
 use std::fmt::Debug;
@@ -422,13 +426,10 @@ pub(crate) fn compile(program: &ZkpFrontendCompilation) -> CompilationResult<Jit
     // Convert in and out of Graph to compact all the node indices.
     let jit = Graph::from(jit).into();
 
-    #[cfg(feature = "debugger")]
-    let metadata = DebugData::new();
-
     CompilationResult {
         graph: jit,
         #[cfg(feature = "debugger")]
-        metadata,
+        metadata: program.metadata.to_owned(),
     }
 }
 

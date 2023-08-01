@@ -12,7 +12,6 @@ use crate::{
     SealPlaintext, TryFromPlaintext, TryIntoPlaintext, TypeNameInstance,
 };
 use std::marker::PhantomData;
-
 use sunscreen_zkp_backend::{BigInt, Operation as ZkpOperation};
 
 use std::time::Instant;
@@ -436,7 +435,7 @@ where
     where
         I: Into<FheProgramInput>,
     {
-        let session_name = get_session_name(&fhe_program.metadata.name);
+        let session_name = get_session_name(&fhe_program.metadata.name, "fhe");
 
         self.run_impl(
             fhe_program,
@@ -537,6 +536,7 @@ where
         let session_provider = if cfg!(feature = "debugger") {
             Some(GlobalSessionProvider::new(&get_session_name(
                 &program.metadata.name,
+                "zkp",
             )))
         } else {
             None
@@ -549,6 +549,9 @@ where
 
         #[cfg(not(feature = "debugger"))]
         let debug_session_provider = None;
+
+        #[cfg(feature = "debugger")]
+        start_web_server();
 
         let prog = backend.jit_prover(
             program,
@@ -563,9 +566,6 @@ where
         let inputs = [public_inputs, private_inputs].concat();
 
         trace!("Starting backend prove...");
-
-        #[cfg(feature = "debugger")]
-        start_web_server();
 
         Ok(backend.prove(&prog, &inputs)?)
     }

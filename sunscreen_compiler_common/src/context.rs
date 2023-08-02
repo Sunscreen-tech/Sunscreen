@@ -342,6 +342,10 @@ where
      * Represents the program context. Tracks groups of nodes in the compilation graph.
      */
     pub group_stack: Vec<Group>,
+
+    #[cfg(feature = "debugger")]
+    /// The next id suffix appended to a group
+    pub next_group_id: u64,
 }
 
 impl<O, D> Context<O, D>
@@ -357,6 +361,8 @@ where
             data,
             #[cfg(feature = "debugger")]
             group_stack: Vec::new(),
+            #[cfg(feature = "debugger")]
+            next_group_id: 0,
         }
     }
 

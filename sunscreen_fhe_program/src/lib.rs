@@ -395,6 +395,9 @@ impl FheProgramTrait for FheProgram {
 
             #[cfg(feature = "debugger")]
             group_stack: Vec::new(),
+
+            #[cfg(feature = "debugger")]
+            next_group_id: 0,
         }
     }
 

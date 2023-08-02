@@ -1,3 +1,4 @@
+use std::ops::{Add, Mul};
 use std::thread;
 use std::time::Duration;
 use sunscreen::{
@@ -8,9 +9,17 @@ use sunscreen::{
 };
 
 fn main() {
+    #[debug_program]
+    fn do_mad<T, U, V>(a: T, b: U, c: V) -> T
+    where
+        T: Mul<U, Output = T> + Add<V, Output = T>,
+    {
+        a * b + c
+    }
+
     #[fhe_program(scheme = "bfv")]
     fn mad(a: Cipher<Signed>, b: Signed, c: Cipher<Signed>) -> Cipher<Signed> {
-        a * b + c
+        do_mad(a, b, c)
     }
 
     #[fhe_program(scheme = "bfv")]

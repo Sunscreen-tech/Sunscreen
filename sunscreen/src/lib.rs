@@ -63,8 +63,9 @@ mod zkp;
  */
 pub mod types;
 
-use fhe::{FheOperation, Literal};
+use fhe::{FheContext, FheOperation, Literal};
 use petgraph::stable_graph::StableGraph;
+
 use serde::{Deserialize, Serialize};
 use sunscreen_runtime::{marker, Fhe, FheZkp, Zkp};
 use sunscreen_zkp_backend::CompiledZkpProgram;
@@ -75,6 +76,7 @@ use std::marker::PhantomData;
 
 pub use compiler::{Compiler, FheProgramFn, GenericCompiler};
 pub use error::{Error, Result};
+pub use fhe::{with_fhe_ctx, CURRENT_PROGRAM_CTX};
 pub use params::PlainModulusConstraint;
 pub use seal_fhe::Plaintext as SealPlaintext;
 pub use sunscreen_compiler_macros::*;
@@ -89,7 +91,6 @@ pub use sunscreen_zkp_backend::{BackendField, Error as ZkpError, Result as ZkpRe
 pub use zkp::ZkpProgramFn;
 pub use zkp::{
     invoke_gadget, with_zkp_ctx, ZkpContext, ZkpContextOps, ZkpData, ZkpFrontendCompilation,
-    CURRENT_ZKP_CTX,
 };
 
 #[derive(Clone)]
@@ -278,3 +279,94 @@ pub type ZkpApplication = Application<Zkp>;
  * An application with FHE and ZKP programs.
  */
 pub type FheZkpApplication = Application<FheZkp>;
+
+type Group = String;
+
+/**
+ * Allows for abstract interaction with a context group stack.
+ */
+pub enum ContextEnum {
+    /**
+     * An FHE context.
+     */
+    Fhe(FheContext),
+
+    /**
+     * A ZKP context.
+     */
+    Zkp(ZkpContext),
+}
+
+impl ContextEnum {
+    /**
+     * Pushes a group onto the group stack.
+     */
+    pub fn push_group(&mut self, group: Group) {
+        match self {
+            ContextEnum::Fhe(context) => {
+                #[cfg(feature = "debugger")]
+                context.group_stack.push(group);
+            }
+            ContextEnum::Zkp(context) => {
+                #[cfg(feature = "debugger")]
+                context.group_stack.push(group);
+            }
+        }
+    }
+
+    /**
+     * Pops a group from the group stack.
+     */
+    pub fn pop_group(&mut self) {
+        match self {
+            ContextEnum::Fhe(context) => {
+                #[cfg(feature = "debugger")]
+                context.group_stack.pop();
+            }
+            ContextEnum::Zkp(context) => {
+                #[cfg(feature = "debugger")]
+                context.group_stack.pop();
+            }
+        }
+    }
+
+    /**
+     * Unwraps the context as an FHE context.
+     */
+    pub fn unwrap_fhe(&self) -> &FheContext {
+        match self {
+            ContextEnum::Fhe(context) => context,
+            _ => panic!("Given context was not an FheContext"),
+        }
+    }
+
+    /**
+     *  Unwraps the context as a mutable FHE context.
+     */
+    pub fn unwrap_fhe_mut(&mut self) -> &mut FheContext {
+        match self {
+            ContextEnum::Fhe(context) => context,
+            _ => panic!("Given context was not an FheContext"),
+        }
+    }
+
+    /**
+     * Unwraps the context as a ZKP context.
+     */
+    pub fn unwrap_zkp(&self) -> &ZkpContext {
+        match self {
+            ContextEnum::Zkp(context) => context,
+            _ => panic!("Given context was not a ZkpContext"),
+        }
+    }
+
+    /**
+     * Unwraps the context as a mutable ZKP context.
+     */
+    pub fn unwrap_zkp_mut(&mut self) -> &mut ZkpContext {
+        match self {
+            ContextEnum::Zkp(context) => context,
+            _ => panic!("Given context was not a ZkpContext"),
+        }
+    }
+}

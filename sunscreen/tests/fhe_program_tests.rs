@@ -1,5 +1,5 @@
 use sunscreen::{
-    fhe::{FheFrontendCompilation, CURRENT_FHE_CTX},
+    fhe::{FheFrontendCompilation, CURRENT_PROGRAM_CTX},
     fhe_program,
     types::{bfv::Signed, Cipher, TypeName},
     CallSignature, FheProgramFn, Params, SchemeType, SecurityLevel,
@@ -48,7 +48,7 @@ fn fhe_program_gets_called() {
 fn panicing_fhe_program_clears_ctx() {
     #[fhe_program(scheme = "bfv")]
     fn panic_fhe_program() {
-        CURRENT_FHE_CTX.with(|ctx| {
+        CURRENT_PROGRAM_CTX.with(|ctx| {
             let old = ctx.take();
 
             assert!(old.is_some());
@@ -73,7 +73,7 @@ fn panicing_fhe_program_clears_ctx() {
 
     assert!(panic_result.is_err());
 
-    CURRENT_FHE_CTX.with(|ctx| {
+    CURRENT_PROGRAM_CTX.with(|ctx| {
         let old = ctx.take();
 
         assert!(old.is_none());

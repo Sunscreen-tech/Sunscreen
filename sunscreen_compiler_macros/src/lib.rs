@@ -6,6 +6,7 @@
 
 extern crate proc_macro;
 
+mod debug_program;
 mod error;
 mod fhe_program;
 mod fhe_program_transforms;
@@ -76,4 +77,15 @@ pub fn zkp_program(
     input: proc_macro::TokenStream,
 ) -> proc_macro::TokenStream {
     zkp_program::zkp_program_impl(metadata, input)
+}
+
+#[proc_macro_attribute]
+/**
+ * Allows for debugging information.
+ */
+pub fn debug_program(
+    metadata: proc_macro::TokenStream,
+    input: proc_macro::TokenStream,
+) -> proc_macro::TokenStream {
+    debug_program::debug_program_impl(metadata, input)
 }

@@ -586,10 +586,6 @@ mod tests {
         fn is_ordered(&self) -> bool {
             false
         }
-
-        fn is_multiplication(&self) -> bool {
-            matches!(self, Self::Mul)
-        }
     }
 
     type TestGraph = Context<Operation, ()>;

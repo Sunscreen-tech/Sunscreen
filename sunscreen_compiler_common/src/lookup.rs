@@ -101,7 +101,8 @@ impl Default for StackFrameLookup {
     }
 }
 
-type Group = String;
+// The first field is a group name, the second field is the source code associated with the group.
+type Group = (String, String);
 /**
  * Lookup structure for the one-to-one correspondence between grouping information and a ProgramNode's `group_id`.
  */

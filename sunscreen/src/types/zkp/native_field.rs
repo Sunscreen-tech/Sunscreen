@@ -204,7 +204,7 @@ impl<F: BackendField> ConstrainEqVarVar for NativeField<F> {
 }
 
 impl<F: BackendField> ConstrainCmpVarVar for NativeField<F> {
-    #[debug_program]
+    #[sunscreen::debug_program]
     fn constrain_le_bounded(lhs: ProgramNode<Self>, rhs: ProgramNode<Self>, bits: usize) {
         let diff = rhs - lhs;
 

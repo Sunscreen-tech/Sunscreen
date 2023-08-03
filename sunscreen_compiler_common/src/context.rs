@@ -401,7 +401,7 @@ where
                 .entry(stack_id)
                 .or_insert(stack_frames);
 
-            let group_id = *self.group_stack.last().unwrap();
+            let group_id = *self.group_stack.last().unwrap_or(&0);
 
             let idx = self.graph.add_node(NodeInfo {
                 operation,

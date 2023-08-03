@@ -1,5 +1,5 @@
 use crate::{refify, Error};
-use crypto_bigint::{AddMod, Uint};
+use crypto_bigint::Uint;
 use num::traits::{WrappingAdd, WrappingMul, WrappingNeg, WrappingSub};
 use paste::paste;
 use std::{
@@ -10,8 +10,6 @@ use std::{
 
 mod barret;
 pub use barret::*;
-
-mod montgomery;
 
 pub trait Montgomery {
     fn to_montgomery_form(&self) -> Self;
@@ -40,8 +38,6 @@ impl WrappingSemantics for u16 {}
 impl WrappingSemantics for u32 {}
 impl WrappingSemantics for u64 {}
 impl WrappingSemantics for u128 {}
-
-type Foo = Wrapping<u64>;
 
 #[repr(transparent)]
 #[derive(Clone, Copy, Debug)]
@@ -113,7 +109,7 @@ pub trait ArithmeticBackend<const N: usize> {
     const MODULUS: Uint<N>;
 
     fn add_mod(lhs: &Uint<N>, rhs: &Uint<N>) -> Uint<N> {
-        lhs.add_mod(&rhs, &Self::MODULUS)
+        lhs.add_mod(rhs, &Self::MODULUS)
     }
 
     fn mul_mod(lhs: &Uint<N>, rhs: &Uint<N>) -> Uint<N>;

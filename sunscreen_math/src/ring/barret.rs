@@ -1,10 +1,8 @@
 use std::{marker::PhantomData, ops::Not};
 
 use crypto_bigint::{
-    subtle::{ConditionallySelectable, ConstantTimeLess},
-    AddMod, CheckedAdd, CheckedMul, Limb, Uint,
+    subtle::{ConditionallySelectable, ConstantTimeLess}, Uint,
 };
-use curve25519_dalek::digest::generic_array::typenum::UInt;
 
 use super::ArithmeticBackend;
 
@@ -33,12 +31,6 @@ pub struct BarretBackend<const N: usize, C: BarretConfig<N>> {
 }
 
 impl<const N: usize, C: BarretConfig<N>> BarretBackend<N, C> {
-    pub fn new() -> Self {
-        Self {
-            _phantom: PhantomData,
-        }
-    }
-
     /// Compute x (a 2N limb value) mod C::MODULUS
     ///
     /// # Remarks
@@ -134,8 +126,7 @@ mod tests_one_limb {
             .to_u64_digits()
             .1
             .iter()
-            .copied()
-            .nth(0)
+            .copied().next()
             .unwrap_or_default();
 
         assert_eq!(c.as_limbs()[0].0, expected);

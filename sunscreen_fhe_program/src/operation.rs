@@ -151,6 +151,6 @@ impl OperationTrait for Operation {
     }
 
     fn is_multiplication(&self) -> bool {
-        matches!(self, Self::Multiply | Self::MultiplyPlaintext)
+        matches!(self, Self::Multiply)
     }
 }

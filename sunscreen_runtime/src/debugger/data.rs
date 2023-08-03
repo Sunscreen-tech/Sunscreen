@@ -90,7 +90,7 @@ pub fn overflow_occurred(
 ) -> bool {
     // Overflow only occurs at the output of an operation node
     let mut parents = graph.neighbors_directed(node, Incoming);
-    if parents.clone().count() != 1 {
+    if parents.clone().count() == 1 {
         return false;
     }
 
@@ -152,7 +152,7 @@ pub fn add_overflow_occurred(operands: [Vec<Vec<u64>>; 2], p: u64) -> bool {
         // Addition overflow
         for i in 0..c0.len() {
             let sum = c0[i] + c1[i];
-            if (c0[i] > p / 2 && c1[i] > p / 2 && sum <= p / 2)
+            if (c0[i] > p / 2 && c1[i] > p / 2 && sum <= 3 * p / 2)
                 || (c0[i] <= p / 2 && c1[i] <= p / 2 && sum > p / 2)
             {
                 return true;
@@ -315,3 +315,58 @@ pub struct ZkpNodeType {
 
 #[test]
 fn test_get_mul_depth() {}
+
+#[test]
+fn test_add_overflow() {
+    // Positive + Positive Overflow (6 + 4 > 7)
+    assert!(add_overflow_occurred(
+        [vec![vec![6, 5]], vec![vec![4, 6]]],
+        13
+    ));
+
+    // Positive + Positive Non-overflow
+    assert!(!add_overflow_occurred(
+        [vec![vec![2, 5]], vec![vec![1, 6]]],
+        23
+    ));
+
+    // Negative + Negative Overflow (6 = -3, 7 = -2, -3 + -2 = -5 < -4).
+    assert!(add_overflow_occurred(
+        [vec![vec![2, 6]], vec![vec![1, 7]]],
+        9
+    )); 
+
+    // Negative + Negative Non-overflow
+    assert!(!add_overflow_occurred(
+        [vec![vec![2, 28]], vec![vec![1, 20]]],
+        29
+    )); 
+
+    // Positive + Negative never overflows
+    assert!(!add_overflow_occurred(
+        [vec![vec![1, 28]], vec![vec![15, 14]]],
+        29
+    )); 
+
+}
+
+#[test]
+fn test_mul_overflow() {
+    // Overflow occurs during coefficient multiplication
+    assert!(mul_overflow_occurred(
+        [vec![vec![1, 5]], vec![vec![1, 5]]],
+        37
+    )); 
+
+    // Overflow occurs during addition after multiplications
+    assert!(mul_overflow_occurred(
+        [vec![vec![5, 5]], vec![vec![5, 5]]],
+        59
+    )); 
+
+    // No overflow
+    assert!(!mul_overflow_occurred(
+        [vec![vec![1, 5]], vec![vec![2, 5]]],
+        101
+    )); 
+}

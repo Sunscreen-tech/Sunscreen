@@ -14,7 +14,32 @@ fn main() {
     where
         T: Mul<U, Output = T> + Add<V, Output = T>,
     {
+        // test comment
         a * b + c
+    }
+
+    #[debug_program]
+    fn cube<T>(a: T) -> T
+    where
+        T: Mul<T, Output = T> + Copy,
+    {
+        a * a * a
+    }
+
+    #[debug_program]
+    fn square<T>(a: T) -> T
+    where
+        T: Mul<T, Output = T> + Copy,
+    {
+        simple_multiply(a, a)
+    }
+
+    #[debug_program]
+    fn simple_multiply<T>(a: T, b: T) -> T
+    where
+        T: Mul<T, Output = T> + Copy,
+    {
+        a * b
     }
 
     #[fhe_program(scheme = "bfv")]
@@ -24,12 +49,12 @@ fn main() {
 
     #[fhe_program(scheme = "bfv")]
     fn add_squares(a: Cipher<Signed>, b: Cipher<Signed>) -> Cipher<Signed> {
-        a * a + b * b
+        square(a) + square(b)
     }
 
     #[fhe_program(scheme = "bfv")]
     fn mul_cubes(a: Cipher<Signed>, b: Cipher<Signed>) -> Cipher<Signed> {
-        a * a * a * b * b * b
+        cube(a) * cube(b)
     }
 
     /*

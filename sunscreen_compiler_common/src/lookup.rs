@@ -102,7 +102,43 @@ impl Default for StackFrameLookup {
 }
 
 // The first field is a group name, the second field is the source code associated with the group.
-type Group = (String, String);
+// type Group = (String, String);
+/**
+ *
+ */
+#[derive(Clone, Serialize, Deserialize, Debug)]
+pub struct Group {
+    /** */
+    pub id: u64,
+    /** */
+    pub name: String,
+    /** */
+    pub source: String,
+    /** */
+    pub parent: u64,
+    /** */
+    pub node_ids: Vec<u64>,
+    /** */
+    pub node_inputs: Vec<u64>,
+    /** */
+    pub node_outputs: Vec<u64>,
+}
+
+impl Group {
+    /** */
+    pub fn new(id: u64, name: String, parent: u64, source: String) -> Self {
+        Self {
+            id,
+            name,
+            parent,
+            source,
+            node_ids: vec![],
+            node_inputs: vec![],
+            node_outputs: vec![],
+        }
+    }
+}
+
 /**
  * Lookup structure for the one-to-one correspondence between grouping information and a ProgramNode's `group_id`.
  */
@@ -112,11 +148,10 @@ pub struct GroupLookup {
      * Given a node's `group_id`, return the node's group.
      */
     pub id_data_lookup: HashMap<u64, Group>,
-
-    /**
-     * Given a node's group name, return its `group_id`.
-     */
-    pub data_id_lookup: HashMap<Group, u64>,
+    // /**
+    //  * Given a node's group name, return its `group_id`.
+    //  */
+    // pub data_id_lookup: HashMap<Group, u64>,
 }
 
 impl GroupLookup {
@@ -126,7 +161,6 @@ impl GroupLookup {
     pub fn new() -> Self {
         Self {
             id_data_lookup: HashMap::new(),
-            data_id_lookup: HashMap::new(),
         }
     }
 }

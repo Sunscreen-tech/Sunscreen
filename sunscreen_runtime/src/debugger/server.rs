@@ -35,6 +35,7 @@ pub fn start_web_server() {
                             .service(get_code)
                             .service(get_node_data)
                             .service(get_stack_trace)
+                            .service(get_group)
                             .service(index)
                             .service(app_css)
                             .service(main_js)
@@ -316,6 +317,45 @@ pub async fn get_stack_trace(
                             .body(format!("Stack trace for node {} not found", nodeid)));
                     }
                 }
+            }
+        }
+    }
+    Ok(HttpResponse::NotFound().body(format!("Session {} not found", session)))
+}
+
+#[cfg(feature = "debugger")]
+#[get("sessions/{session}/groups/{groupid}")]
+pub async fn get_group(
+    path_info: web::Path<(String, usize)>,
+) -> Result<HttpResponse, actix_web::Error> {
+    let (session, groupid) = path_info.into_inner();
+    let sessions = get_sessions().lock().unwrap();
+
+    if let Some(curr_session) = sessions.get(&session) {
+        match curr_session {
+            Session::BfvSession(curr_session) => {
+                let group_lookup = &curr_session.graph.metadata.group_lookup;
+
+                if let Some(group) = group_lookup
+                    .id_data_lookup
+                    .get(&groupid.try_into().unwrap())
+                {
+                    let group_json = serde_json::to_string_pretty(group).unwrap();
+                    return Ok(HttpResponse::Ok().body(group_json));
+                }
+                return Ok(HttpResponse::NotFound().body(format!("Group {} not found", groupid)));
+            }
+            Session::ZkpSession(curr_session) => {
+                let group_lookup = &curr_session.graph.metadata.group_lookup;
+
+                if let Some(group) = group_lookup
+                    .id_data_lookup
+                    .get(&groupid.try_into().unwrap())
+                {
+                    let group_json = serde_json::to_string_pretty(group).unwrap();
+                    return Ok(HttpResponse::Ok().body(group_json));
+                }
+                return Ok(HttpResponse::NotFound().body(format!("Group {} not found", groupid)));
             }
         }
     }

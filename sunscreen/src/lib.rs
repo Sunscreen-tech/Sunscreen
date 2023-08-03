@@ -299,18 +299,14 @@ impl ContextEnum {
     /**
      * Pushes a group onto the group stack.
      */
-    pub fn push_group(&mut self, group: &str) {
+    pub fn push_group(&mut self, group: &str, source: &str) {
         #[cfg(feature = "debugger")]
         match self {
             ContextEnum::Fhe(context) => {
-                let group_name: String = format!("{}_{}", group, context.next_group_id);
-
-                context.group_stack.push(group_name);
+                context.push_group(group.to_string(), source.to_string());
             }
             ContextEnum::Zkp(context) => {
-                let group_name: String = format!("{}_{}", group, context.next_group_id);
-
-                context.group_stack.push(group_name);
+                context.push_group(group.to_string(), source.to_string());
             }
         }
     }

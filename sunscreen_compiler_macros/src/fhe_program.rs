@@ -142,7 +142,7 @@ pub fn fhe_program_impl(
 
                 // TODO: Other schemes.
                 let mut context = ContextEnum::Fhe(FheContext::new(params.clone()));
-                context.push_group(#fhe_program_name_literal);
+                context.push_group(#fhe_program_name_literal, #raw_fn);
 
                 CURRENT_PROGRAM_CTX.with(|ctx| {
                     #[allow(clippy::type_complexity)]

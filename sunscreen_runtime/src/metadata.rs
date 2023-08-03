@@ -198,7 +198,7 @@ pub struct FheProgramMetadata {
     pub name: String,
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize)]
 /**
  * An FHE program with its associated metadata.
  */

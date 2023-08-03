@@ -1,15 +1,19 @@
 use std::{marker::PhantomData, ops::Not};
 
-use crypto_bigint::{Uint, CheckedMul, CheckedAdd, Limb, subtle::{ConstantTimeLess, ConditionallySelectable}, AddMod};
+use crypto_bigint::{
+    subtle::{ConditionallySelectable, ConstantTimeLess},
+    AddMod, CheckedAdd, CheckedMul, Limb, Uint,
+};
 use curve25519_dalek::digest::generic_array::typenum::UInt;
 
 use super::ArithmeticBackend;
 
 /// Contains precomputed values needed for a Barrett reduction in
 /// a ring Z_q
-/// 
+///
 /// # Remarks
-/// To support the Barrett reduction, N must have additional 
+/// This algorithm is only guaranteed to work so long as Modulus fits into a 64 * N - 1 bit
+/// value.
 pub trait BarretConfig<const N: usize> {
     /// The modulus defining the ring
     const MODULUS: Uint<N>;
@@ -25,12 +29,58 @@ pub trait BarretConfig<const N: usize> {
 }
 
 pub struct BarretBackend<const N: usize, C: BarretConfig<N>> {
-    _phantom: PhantomData<C>
+    _phantom: PhantomData<C>,
 }
 
 impl<const N: usize, C: BarretConfig<N>> BarretBackend<N, C> {
     pub fn new() -> Self {
-        Self { _phantom: PhantomData }
+        Self {
+            _phantom: PhantomData,
+        }
+    }
+
+    /// Compute x (a 2N limb value) mod C::MODULUS
+    ///
+    /// # Remarks
+    /// See https://math.stackexchange.com/questions/3455277/barrett-reduction-possible-without-overflow-and-floating-point-arithmetic
+    ///
+    /// A key observation is that x = x_lo + 2^(64*N)*x_hi and thus
+    /// x mod m = x_lo mod m + 2^(64*N)*x_hi.
+    /// This is how we derive the required values in [`BarretConfig`], but the full
+    /// derrivation is in the link.
+    ///
+    /// We have carefully chosen the terms to obviate shifting and we can simply do
+    /// mulhi with no shifting.
+    fn barret_reduce(x: (Uint<N>, Uint<N>)) -> Uint<N> {
+        let (x_lo, x_hi) = x;
+
+        fn reduce<const N: usize, C: BarretConfig<N>>(val: &mut Uint<N>) {
+            let reduced = val.wrapping_sub(&C::MODULUS);
+
+            val.conditional_assign(&reduced, val.ct_lt(&C::MODULUS).not());
+        }
+
+        // Compute `mod_hi = x_hi * T - x_hi * s * p`
+        let asp = x_hi.mul_wide(&C::S).1.wrapping_mul(&C::MODULUS);
+
+        let mod_hi = x_hi.wrapping_mul(&C::T);
+
+        let mut mod_hi = mod_hi.wrapping_sub(&asp);
+
+        reduce::<N, C>(&mut mod_hi);
+
+        // Compute `mod_lo = x_lo - x_lo * r * MODULUS`
+        let (_, q_hi) = x_lo.mul_wide(&C::R);
+
+        let mut mod_lo = x_lo.wrapping_sub(&q_hi.wrapping_mul(&C::MODULUS));
+
+        reduce::<N, C>(&mut mod_lo);
+
+        // Sum mod_lo and mod_hi
+        let mut result = mod_lo.wrapping_add(&mod_hi);
+        reduce::<N, C>(&mut result);
+
+        result
     }
 }
 
@@ -38,85 +88,144 @@ impl<const N: usize, C: BarretConfig<N>> ArithmeticBackend<N> for BarretBackend<
     const MODULUS: Uint<N> = C::MODULUS;
 
     /// Compute `lhs * rhs mod MODULUS` using a Barrett Reduction
-    /// 
+    ///
     fn mul_mod(lhs: &Uint<N>, rhs: &Uint<N>) -> Uint<N> {
-        /// Compute x (a 2N limb value) mod C::MODULUS
-        /// 
-        /// # Remarks
-        /// See https://math.stackexchange.com/questions/3455277/barrett-reduction-possible-without-overflow-and-floating-point-arithmetic
-        /// 
-        /// A key observation is that x = x_lo + 2^(64*N)*x_hi and thus
-        /// x mod m = x_lo mod m + 2^(64*N)*x_hi.
-        /// This is how we derive the required values in [`BarretConfig`], but the full
-        /// derrivation is in the link.
-        /// 
-        /// We have carefully chosen the terms to obviate shifting and we can simply do
-        /// mulhi with no shifting.
-        fn barret_reduce<const N: usize, C: BarretConfig<N>>(x: (Uint<N>, Uint<N>)) -> Uint<N> {
-            let (x_lo, x_hi) = x;
-            
-            // Compute `mod_hi = x_hi * T - x_hi * s * p`
-            let asp = x_hi
-                .mul_wide(&C::S).1
-                .wrapping_mul(&C::MODULUS);
-
-            let mod_hi = x_hi
-                .wrapping_mul(&C::T)
-                .sub_mod(&asp, &C::MODULUS);
-
-            // Compute `mod_lo = x_lo - x_lo * r * MODULUS`
-            let (q_lo, _) = x_lo.mul_wide(&C::R);
-
-            let mod_lo = x_lo.sub_mod(&q_lo.wrapping_mul(&C::MODULUS), &C::MODULUS);
-
-            // Sum mod_lo and mod_hi
-            mod_lo.add_mod(&mod_hi, &C::MODULUS)
-        }
-
-        barret_reduce::<N, C>(lhs.mul_wide(rhs))
+        Self::barret_reduce(lhs.mul_wide(rhs))
     }
 }
 
 #[cfg(test)]
-mod tests {
-    use num::FromPrimitive;
+mod tests_one_limb {
+    use num::{FromPrimitive, Num};
     use rand::RngCore;
 
     use super::*;
 
+    fn reduction_test_case<C: BarretConfig<1>>(value: &str, radix: u32) {
+        let a = num::BigInt::from_str_radix(value, radix).unwrap();
+        let m = num::BigInt::from_u64(C::MODULUS.as_words()[0]).unwrap();
+
+        let expected = &a % m;
+
+        let digits = a.to_u64_digits().1;
+
+        assert!(digits.len() <= 2);
+
+        let mut digits = digits.iter().copied();
+
+        let lo = digits.next().unwrap_or_default();
+        let hi = digits.next().unwrap_or_default();
+
+        let c = BarretBackend::<1, C>::barret_reduce((Uint::from_u64(lo), Uint::from_u64(hi)));
+
+        assert_eq!(c.as_limbs()[0].0, expected.to_u64_digits().1[0]);
+    }
+
+    fn mul_test_case<C: BarretConfig<1>>(a: u64, b: u64) {
+        let a_expect = num::BigInt::from_u64(a).unwrap();
+        let b_expect = num::BigInt::from_u64(b).unwrap();
+        let m = num::BigInt::from_u64(C::MODULUS.as_words()[0]).unwrap();
+
+        let expected = (&a_expect * &b_expect) % m;
+
+        let c = BarretBackend::<1, C>::mul_mod(&Uint::from_u64(a), &Uint::from_u64(b));
+
+        let expected = expected
+            .to_u64_digits()
+            .1
+            .iter()
+            .copied()
+            .nth(0)
+            .unwrap_or_default();
+
+        assert_eq!(c.as_limbs()[0].0, expected);
+    }
+
     #[test]
-    fn can_barret_reduce_largish_modulus() {
+    fn can_barrett_reduce_medium_modulus() {
         struct ConfigModMax;
 
         impl BarretConfig<1> for ConfigModMax {
+            const MODULUS: Uint<1> = Uint::from_words([0xDEADBEEF]);
+            const R: Uint<1> = Uint::from_u64(4937659749);
+            const S: Uint<1> = Uint::from_u64(13804116238851909409);
+            const T: Uint<1> = Uint::from_u64(2795679925);
+        }
+
+        reduction_test_case::<ConfigModMax>("FEEDF00DF00DFEED0000000000000000", 16);
+        reduction_test_case::<ConfigModMax>("0000000000000000FEEDF00DF00DFEED", 16);
+        reduction_test_case::<ConfigModMax>("FEEDF00DF00DFEEDFEEDF00DF00DFEED", 16);
+        reduction_test_case::<ConfigModMax>("28181196569800973531195304723742259160", 10);
+        reduction_test_case::<ConfigModMax>("10187240694940845278", 10);
+        reduction_test_case::<ConfigModMax>("88652594061804751057749230545767759872", 10);
+        reduction_test_case::<ConfigModMax>("88652594061804751067936471240708605150", 10);
+    }
+
+    #[test]
+    fn can_barrett_reduce_max_modulus() {
+        struct Cfg;
+
+        impl BarretConfig<1> for Cfg {
+            const MODULUS: Uint<1> = Uint::from_words([0x7FFFFFFFFFFFFFFF]);
+            const R: Uint<1> = Uint::from_u64(2);
+            const S: Uint<1> = Uint::from_u64(4);
+            const T: Uint<1> = Uint::from_u64(2);
+        }
+
+        reduction_test_case::<Cfg>("166007213496168112760377165276994937864", 10);
+    }
+
+    #[test]
+    fn can_mul_max_single_limb_modulus() {
+        struct Cfg;
+
+        impl BarretConfig<1> for Cfg {
+            const MODULUS: Uint<1> = Uint::from_words([0x7FFFFFFFFFFFFFFF]);
+            const R: Uint<1> = Uint::from_u64(2);
+            const S: Uint<1> = Uint::from_u64(4);
+            const T: Uint<1> = Uint::from_u64(2);
+        }
+
+        let mut rng = rand::thread_rng();
+
+        for _ in 0..1024 {
+            mul_test_case::<Cfg>(rng.next_u64(), rng.next_u64());
+        }
+    }
+
+    #[test]
+    fn can_mul_largish_single_limb_modulus() {
+        struct Cfg;
+
+        impl BarretConfig<1> for Cfg {
             const MODULUS: Uint<1> = Uint::from_words([(u64::MAX >> 1) + 1]);
             const R: Uint<1> = Uint::from_u64(2);
             const S: Uint<1> = Uint::from_u64(0);
             const T: Uint<1> = Uint::from_u64(0);
         }
 
-        type BackendModMax = BarretBackend::<1, ConfigModMax>;
-
-        let test_case = |a: u64, b: u64, expected: u64| {
-            let c = BackendModMax::mul_mod(&Uint::from_u64(a), &Uint::from_u64(b));
-            
-            assert_eq!(c.as_limbs()[0].0, expected);
-        };
-
-        test_case(u64::MAX >> 1, u64::MAX >> 1, 1);
-        test_case(7, 3, 21);
-        test_case(0x40000000_00000000, 0x0EADBEEF_DEADBEEF, 4611686018427387904);
-
         let mut rng = rand::thread_rng();
-        let m = num::BigInt::from_u64((u64::MAX >> 1) + 1).unwrap();
 
         for _ in 0..1024 {
-            let a = num::BigInt::from_u64(rng.next_u64()).unwrap();
-            let b = num::BigInt::from_u64(rng.next_u64()).unwrap();
+            mul_test_case::<Cfg>(rng.next_u64(), rng.next_u64());
+        }
+    }
 
-            let c = (&a * &b) % &m;
+    #[test]
+    fn can_mul_medium_single_limb_modulus() {
+        struct Cfg;
 
-            test_case(a.to_u64_digits().1[0], b.to_u64_digits().1[0], c.to_u64_digits().1[0]);
+        impl BarretConfig<1> for Cfg {
+            const MODULUS: Uint<1> = Uint::from_words([0xDEADBEEF]);
+            const R: Uint<1> = Uint::from_u64(4937659749);
+            const S: Uint<1> = Uint::from_u64(13804116238851909409);
+            const T: Uint<1> = Uint::from_u64(2795679925);
+        }
+
+        let mut rng = rand::thread_rng();
+
+        for _ in 0..1024 {
+            mul_test_case::<Cfg>(rng.next_u64(), rng.next_u64());
         }
     }
 }

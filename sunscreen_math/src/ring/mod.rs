@@ -1,10 +1,16 @@
-use std::{ops::{Add, Mul}, num::Wrapping, marker::PhantomData};
-use crypto_bigint::{Uint, AddMod};
-use num::traits::{WrappingAdd, WrappingMul, WrappingSub, WrappingNeg};
-use paste::paste;
 use crate::{refify, Error};
+use crypto_bigint::{AddMod, Uint};
+use num::traits::{WrappingAdd, WrappingMul, WrappingNeg, WrappingSub};
+use paste::paste;
+use std::{
+    marker::PhantomData,
+    num::Wrapping,
+    ops::{Add, Mul},
+};
 
 mod barret;
+pub use barret::*;
+
 mod montgomery;
 
 pub trait Montgomery {
@@ -24,7 +30,10 @@ pub trait Ring:
 {
 }
 
-pub trait WrappingSemantics: Copy + Clone + std::fmt::Debug + WrappingAdd + WrappingMul + WrappingSub + WrappingNeg {}
+pub trait WrappingSemantics:
+    Copy + Clone + std::fmt::Debug + WrappingAdd + WrappingMul + WrappingSub + WrappingNeg
+{
+}
 
 impl WrappingSemantics for u8 {}
 impl WrappingSemantics for u16 {}
@@ -36,11 +45,13 @@ type Foo = Wrapping<u64>;
 
 #[repr(transparent)]
 #[derive(Clone, Copy, Debug)]
-pub struct ZInt<T>(T) where
+pub struct ZInt<T>(T)
+where
     T: WrappingSemantics;
 
 impl<T> From<T> for ZInt<T>
-where T: WrappingSemantics
+where
+    T: WrappingSemantics,
 {
     fn from(value: T) -> Self {
         Self(value)
@@ -48,7 +59,8 @@ where T: WrappingSemantics
 }
 
 impl<T> Add<&ZInt<T>> for &ZInt<T>
-where T: WrappingSemantics
+where
+    T: WrappingSemantics,
 {
     type Output = ZInt<T>;
 
@@ -57,12 +69,13 @@ where T: WrappingSemantics
     }
 }
 
-refify!{
+refify! {
     Add, ZInt, (T, (WrappingSemantics)), T
 }
 
 impl<T> Mul<&ZInt<T>> for &ZInt<T>
-where T: WrappingSemantics
+where
+    T: WrappingSemantics,
 {
     type Output = ZInt<T>;
 
@@ -71,12 +84,13 @@ where T: WrappingSemantics
     }
 }
 
-refify!{
+refify! {
     Mul, ZInt, (T, (WrappingSemantics)), T
 }
 
 impl<T> Montgomery for ZInt<T>
-where T: WrappingSemantics
+where
+    T: WrappingSemantics,
 {
     /// For integers mod 2^{8, 16, 32, ...}, we don't actually need Montgomery
     /// arithmetic as wrapping does the modulus reduction for us. Thus, this
@@ -93,10 +107,7 @@ where T: WrappingSemantics
     }
 }
 
-impl<T> Ring for ZInt<T>
-where T: WrappingSemantics
-{}
-
+impl<T> Ring for ZInt<T> where T: WrappingSemantics {}
 
 pub trait ArithmeticBackend<const N: usize> {
     const MODULUS: Uint<N>;
@@ -108,19 +119,13 @@ pub trait ArithmeticBackend<const N: usize> {
     fn mul_mod(lhs: &Uint<N>, rhs: &Uint<N>) -> Uint<N>;
 }
 
-
-
-
 pub struct Fq<const N: usize, B: ArithmeticBackend<N>> {
     val: Uint<N>,
 
-    _phantom: PhantomData<B>
+    _phantom: PhantomData<B>,
 }
 
-impl<const N: usize, B: ArithmeticBackend<N>> Fq<N, B> {
-    
-}
-
+impl<const N: usize, B: ArithmeticBackend<N>> Fq<N, B> {}
 
 impl<const N: usize, B: ArithmeticBackend<N>> TryFrom<Uint<N>> for Fq<N, B> {
     type Error = crate::Error;
@@ -128,7 +133,7 @@ impl<const N: usize, B: ArithmeticBackend<N>> TryFrom<Uint<N>> for Fq<N, B> {
     /// Fails if value >= C::MODULUS.
     fn try_from(value: Uint<N>) -> Result<Self, Self::Error> {
         if value.ge(&B::MODULUS) {
-            return Err(Error::OutOfRange)
+            return Err(Error::OutOfRange);
         }
 
         todo!();

@@ -5,7 +5,7 @@ use crypto_bigint::Uint;
 use super::ArithmeticBackend;
 
 pub struct MontBackend<const N: usize, C: MontConfig<N>> {
-    _phantom: PhantomData<C>
+    _phantom: PhantomData<C>,
 }
 
 pub trait MontConfig<const N: usize> {

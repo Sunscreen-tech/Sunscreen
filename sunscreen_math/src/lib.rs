@@ -68,6 +68,9 @@ pub(crate) const fn scalar_size_bits() -> usize {
     std::mem::size_of::<Scalar>() * 8
 }
 
+mod error;
+pub use error::*;
+
 mod ring;
 
 /// Computes the number of windows over a [`Scalar`] type for the given
@@ -97,4 +100,35 @@ pub(crate) fn ristretto_bitwise_eq(a: RistrettoPoint, b: RistrettoPoint) -> bool
     let b: [u32; 40] = unsafe { std::mem::transmute(b) };
 
     a == b
+}
+
+#[macro_export]
+macro_rules! refify {
+    ($trait:ty, $ty:ty, ($($t:ty,($($bound:ty)+))*), $($gen_arg:ty)*) => {
+        paste! {
+            impl<$($gen_arg),*> $trait<$ty<$($gen_arg),*>> for $ty<$($gen_arg),*> where $($t: $($bound)++),*  {
+                type Output = Self;
+
+                fn [<$trait:lower>](self, rhs: Self) -> Self::Output {
+                    (&self).[<$trait:lower>](&rhs)
+                }
+            }
+
+            impl<$($gen_arg),*> $trait<&$ty<$($gen_arg),*>> for $ty<$($gen_arg),*> where $($t: $($bound)++),* {
+                type Output = Self;
+
+                fn [<$trait:lower>](self, rhs: &Self) -> Self::Output {
+                    (&self).[<$trait:lower>](rhs)
+                }
+            }
+
+            impl<$($gen_arg),*> $trait<$ty<$($gen_arg),*>> for &$ty<$($gen_arg),*> where $($t: $($bound)++),* {
+                type Output = $ty<$($gen_arg),*>;
+
+                fn [<$trait:lower>](self, rhs: $ty<$($gen_arg),*>) -> Self::Output {
+                    (self).[<$trait:lower>](&rhs)
+                }
+            }
+        }
+    };
 }

@@ -1,7 +1,7 @@
 use std::marker::PhantomData;
 
 use subtle::{Choice, ConditionallySelectable};
-use sunscreen_compiler_macros::TypeName;
+use sunscreen_compiler_macros::{debug_program, TypeName};
 use sunscreen_runtime::ZkpProgramInputTrait;
 use sunscreen_zkp_backend::{BackendField, BigInt};
 
@@ -204,24 +204,28 @@ impl<F: BackendField> ConstrainEqVarVar for NativeField<F> {
 }
 
 impl<F: BackendField> ConstrainCmpVarVar for NativeField<F> {
+    #[debug_program]
     fn constrain_le_bounded(lhs: ProgramNode<Self>, rhs: ProgramNode<Self>, bits: usize) {
         let diff = rhs - lhs;
 
         invoke_gadget(ToUInt::new(bits), &[diff.ids[0]]);
     }
 
+    #[debug_program]
     fn constrain_lt_bounded(lhs: ProgramNode<Self>, rhs: ProgramNode<Self>, bits: usize) {
         let rhs_plus_1 = rhs - NativeField::from(1u8).into_program_node();
 
         Self::constrain_le_bounded(lhs, rhs_plus_1, bits);
     }
 
+    #[debug_program]
     fn constrain_ge_bounded(lhs: ProgramNode<Self>, rhs: ProgramNode<Self>, bits: usize) {
         let diff = lhs - rhs;
 
         invoke_gadget(ToUInt::new(bits), &[diff.ids[0]]);
     }
 
+    #[debug_program]
     fn constrain_gt_bounded(lhs: ProgramNode<Self>, rhs: ProgramNode<Self>, bits: usize) {
         let rhs_plus_1 = rhs + NativeField::from(1u8).into_program_node();
 

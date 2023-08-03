@@ -1,6 +1,9 @@
 use std::{thread, time::Duration};
 
-use sunscreen::{types::zkp::NativeField, zkp_program, Compiler, Runtime, ZkpProgramInput};
+use sunscreen::{
+    types::zkp::{ConstrainCmp, NativeField},
+    zkp_program, Compiler, Runtime, ZkpProgramInput,
+};
 use sunscreen_zkp_backend::{bulletproofs::BulletproofsBackend, BackendField, ZkpBackend};
 
 fn main() {
@@ -8,7 +11,7 @@ fn main() {
 
     #[zkp_program(backend = "bulletproofs")]
     fn prove_sum_eq<F: BackendField>(a: NativeField<F>, b: NativeField<F>, c: NativeField<F>) {
-        (a + b).constrain_eq(c); // not satisfied
+        (a + b).constrain_lt_bounded(c, 8); // not satisfied
         (b - a).constrain_eq(NativeField::<F>::from(1));
     }
 

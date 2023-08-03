@@ -175,6 +175,7 @@ fn parse_inner(_attr_params: ZkpProgramAttrs, input_fn: ItemFn) -> Result<TokenS
                 use sunscreen::{CURRENT_PROGRAM_CTX, ZkpContext, ContextEnum, ZkpData, Error, INDEX_ARENA, Result, types::{zkp::{ProgramNode, CreateZkpProgramInput, ConstrainEq, IntoProgramNode}, TypeName}};
 
                 let mut context = ContextEnum::Zkp(ZkpContext::new(ZkpData::new()));
+                context.push_group(#zkp_program_name_literal, #raw_fn);
 
                 CURRENT_PROGRAM_CTX.with(|ctx| {
                     // Transmute away the lifetime to 'static. So long as we are careful with internal()

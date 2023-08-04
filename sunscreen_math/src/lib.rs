@@ -71,7 +71,7 @@ pub(crate) const fn scalar_size_bits() -> usize {
 mod error;
 pub use error::*;
 
-mod ring;
+pub mod ring;
 
 /// Computes the number of windows over a [`Scalar`] type for the given
 /// `window_size` bits per window.

@@ -1,10 +1,9 @@
 use crate::{refify, Error};
-use crypto_bigint::Uint;
+pub use crypto_bigint::Uint;
 use num::traits::{WrappingAdd, WrappingMul, WrappingNeg, WrappingSub};
 use paste::paste;
 use std::{
     marker::PhantomData,
-    num::Wrapping,
     ops::{Add, Mul},
 };
 
@@ -116,7 +115,7 @@ pub trait ArithmeticBackend<const N: usize> {
 }
 
 pub struct Fq<const N: usize, B: ArithmeticBackend<N>> {
-    val: Uint<N>,
+    _val: Uint<N>,
 
     _phantom: PhantomData<B>,
 }

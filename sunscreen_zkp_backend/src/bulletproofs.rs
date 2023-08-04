@@ -7,7 +7,7 @@ use bulletproofs::{
     r1cs::{ConstraintSystem, LinearCombination, Prover, R1CSError, R1CSProof, Verifier},
     BulletproofGens, PedersenGens,
 };
-use crypto_bigint::{Limb, UInt};
+use crypto_bigint::{Limb, Uint};
 use curve25519_dalek::scalar::Scalar;
 use log::trace;
 use merlin::Transcript;
@@ -498,14 +498,14 @@ impl ZkpBackend for BulletproofsBackend {
     }
 }
 
-fn try_uint_to_scalar<const N: usize>(x: &UInt<N>) -> Result<Scalar> {
+fn try_uint_to_scalar<const N: usize>(x: &Uint<N>) -> Result<Scalar> {
     let as_words = x.as_words();
     const LIMB_SIZE: usize = std::mem::size_of::<Limb>();
     const SCALAR_SIZE: usize = std::mem::size_of::<Scalar>();
 
     let num_scalar_words = SCALAR_SIZE / LIMB_SIZE;
 
-    // UInt<N> values are little endian. Thus, we attempt to convert the
+    // Uint<N> values are little endian. Thus, we attempt to convert the
     // lower 256 bits to a scalar and assert the upper bytes are zero.
     let (lower, upper) = as_words.split_at(num_scalar_words);
 
@@ -562,16 +562,16 @@ impl TryFrom<&BigInt> for Scalar {
     }
 }
 
-fn scalar_to_uint<const N: usize>(x: &Scalar) -> UInt<N> {
-    assert!(std::mem::size_of::<UInt<N>>() >= std::mem::size_of::<Scalar>());
+fn scalar_to_uint<const N: usize>(x: &Scalar) -> Uint<N> {
+    assert!(std::mem::size_of::<Uint<N>>() >= std::mem::size_of::<Scalar>());
 
     let mut uint_data = x.as_bytes().to_vec();
 
-    let remainder = std::mem::size_of::<UInt<N>>() - std::mem::size_of::<Scalar>();
+    let remainder = std::mem::size_of::<Uint<N>>() - std::mem::size_of::<Scalar>();
 
     uint_data.extend((0..remainder).map(|_| 0u8));
 
-    UInt::from_le_slice(&uint_data)
+    Uint::from_le_slice(&uint_data)
 }
 
 impl crate::ZkpFrom<Scalar> for BigInt {

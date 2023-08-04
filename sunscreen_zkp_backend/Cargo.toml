@@ -6,17 +6,17 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-curve25519_dalek = { package="sunscreen_curve25519", path = "../sunscreen_curve25519", default-features = false, features = ["serde"] }
-bulletproofs = { package = "sunscreen_bulletproofs", path = "../sunscreen_bulletproofs", features = ["yoloproofs"], optional = true }
-crypto-bigint = "0.4.9"
-merlin = { version = "3.0.0", optional = true}
-bumpalo = "3.11.1"
-petgraph = "0.6.2"
-sunscreen_compiler_common = { path = "../sunscreen_compiler_common" }
-serde = { version = "1.0.147", features = ["derive"] }
-thiserror = "1.0.37"
-static_assertions = "1.1.0"
-log = "0.4.17"
+curve25519_dalek = { workspace = true }
+bulletproofs = { workspace = true, features = ["yoloproofs"], optional = true }
+crypto-bigint = { workspace = true}
+merlin = { workspace = true, optional = true}
+bumpalo = { workspace = true }
+petgraph = { workspace = true }
+sunscreen_compiler_common = { workspace = true }
+serde = { workspace = true }
+thiserror = { workspace = true }
+static_assertions = { workspace = true }
+log = { workspace = true }
 
 [features]
 default = ["bulletproofs"]

@@ -239,7 +239,7 @@ dependencies = [
 name = "bigint"
 version = "0.1.0"
 dependencies = [
- "crypto-bigint 0.4.9",
+ "crypto-bigint 0.5.2",
  "sunscreen",
 ]
 
@@ -2700,8 +2700,8 @@ dependencies = [
  "bincode",
  "bumpalo",
  "criterion 0.4.0",
- "crypto-bigint 0.4.9",
- "env_logger 0.10.0",
+ "crypto-bigint 0.5.2",
+ "env_logger 0.9.3",
  "float-cmp",
  "lazy_static",
  "log",
@@ -2764,7 +2764,7 @@ dependencies = [
 
 [[package]]
 name = "sunscreen_compiler_common"
-version = "0.1.0"
+version = "0.7.0"
 dependencies = [
  "petgraph",
  "proc-macro2",
@@ -2883,7 +2883,7 @@ name = "sunscreen_zkp_backend"
 version = "0.1.0"
 dependencies = [
  "bumpalo",
- "crypto-bigint 0.4.9",
+ "crypto-bigint 0.5.2",
  "log",
  "merlin",
  "petgraph",

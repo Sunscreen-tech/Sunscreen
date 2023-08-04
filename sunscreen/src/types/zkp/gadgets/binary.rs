@@ -43,7 +43,7 @@ impl Gadget for ToUInt {
         let mut bits = vec![];
 
         for i in 0..self.n {
-            bits.push(BigInt::from(val.bit_vartime(i)));
+            bits.push(BigInt::from(val.bit_vartime(i) as u8));
         }
 
         Ok(bits)

@@ -1,4 +1,4 @@
-use crypto_bigint::{UInt, U256, U64};
+use crypto_bigint::{Uint, U256, U64};
 use lazy_static::lazy_static;
 use paste::paste;
 use proptest::prelude::{prop::num::u64::ANY, prop_assert_eq, proptest, ProptestConfig};
@@ -108,11 +108,11 @@ op_proptest! {
     mul
 }
 
-fn run_with<const L: usize, O1, O2, F>(a: UInt<L>, b: UInt<L>, op: F, fhe_op: O1, fhe_op_plain: O2)
+fn run_with<const L: usize, O1, O2, F>(a: Uint<L>, b: Uint<L>, op: F, fhe_op: O1, fhe_op_plain: O2)
 where
     O1: AsRef<str>,
     O2: AsRef<str>,
-    F: Fn(&UInt<L>, &UInt<L>) -> UInt<L>,
+    F: Fn(&Uint<L>, &Uint<L>) -> Uint<L>,
 {
     let FheApp { app, rt, pk, sk } = &*FHE_APP;
     let a_u = Unsigned::from(a);

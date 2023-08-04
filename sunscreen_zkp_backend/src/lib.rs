@@ -19,10 +19,10 @@ use std::{
     ops::{Add, Deref, Mul, Neg, Sub},
 };
 
-pub use crypto_bigint::UInt;
+pub use crypto_bigint::Uint;
 use crypto_bigint::{
     subtle::{Choice, ConditionallySelectable},
-    Limb, U512,
+    Limb, NonZero, U512,
 };
 pub use error::*;
 pub use exec::ExecutableZkpProgram;
@@ -259,15 +259,15 @@ impl BigInt {
             panic!("Cannot compute log2(0).");
         }
 
-        let bitlen = self.limbs().len() * std::mem::size_of::<Limb>() * 8;
+        let bitlen = self.as_limbs().len() * std::mem::size_of::<Limb>() * 8;
 
         for i in 0..bitlen {
             let i = bitlen - 1 - i;
             let bit_val = self.bit_vartime(i);
 
-            if bit_val == 1 && log2 == 0 {
+            if bit_val && log2 == 0 {
                 log2 = i as u32;
-            } else if bit_val == 1 {
+            } else if bit_val {
                 log2 += 1;
             }
         }
@@ -328,8 +328,10 @@ impl BigInt {
             panic!("Cannot have a finite field of zero size.");
         }
 
+        let p = NonZero::from_uint(p.0);
+
         let mut cur_power = self.0;
-        let mut result = UInt::ONE;
+        let mut result = Uint::ONE;
 
         let power_count = 8 * 8 * std::mem::size_of::<Limb>();
 
@@ -338,10 +340,10 @@ impl BigInt {
             let bit = x.bit_vartime(i) as u8;
             let bit = Choice::from(bit);
 
-            let v = UInt::conditional_select(&UInt::ONE, &cur_power, bit);
+            let v = Uint::conditional_select(&Uint::ONE, &cur_power, bit);
 
-            result = result.wrapping_mul(&v).reduce(p).unwrap();
-            cur_power = cur_power.wrapping_mul(&cur_power).reduce(p).unwrap();
+            result = result.wrapping_mul(&v).rem(&p);
+            cur_power = cur_power.wrapping_mul(&cur_power).rem(&p);
         }
 
         BigInt::from(result)
@@ -483,8 +485,9 @@ mod tests {
     fn inverse_works() {
         let test_case = |x: BigInt, p: BigInt| {
             let x_inv = x.inverse_fp(&p);
+            let p = NonZero::from_uint(p.0);
 
-            assert_eq!(x_inv.wrapping_mul(&x).reduce(&p).unwrap(), UInt::ONE);
+            assert_eq!(x_inv.wrapping_mul(&x).rem(&p), Uint::ONE);
         };
 
         test_case(BigInt::from(7u16), BigInt::from(11u16));

@@ -1,5 +1,6 @@
 use std::marker::PhantomData;
 
+use crypto_bigint::NonZero;
 use subtle::{Choice, ConditionallySelectable};
 use sunscreen_compiler_macros::TypeName;
 use sunscreen_zkp_backend::{BigInt, FieldSpec};
@@ -90,10 +91,12 @@ impl<F: FieldSpec> From<u64> for Field<F> {
     fn from(x: u64) -> Self {
         assert!(F::FIELD_MODULUS != BigInt::ZERO);
 
+        let m = NonZero::from_uint(*F::FIELD_MODULUS);
+
         // unwrap is okay here as we've ensured FIELD_MODULUS is
         // non-zero.
         Self {
-            val: BigInt::from(BigInt::from(x).reduce(&F::FIELD_MODULUS).unwrap()),
+            val: BigInt::from(BigInt::from(x).rem(&m)),
             _phantom: PhantomData,
         }
     }
@@ -126,6 +129,8 @@ impl<F: FieldSpec> From<i64> for Field<F> {
             "Converting i64::MIN to NativeField currently unsupported."
         );
 
+        let modulus = NonZero::from_uint(*F::FIELD_MODULUS);
+
         // Shr on i64 is an arithmetic shift, so we need to mask
         // the LSB so we don't get 255 for negative values.
         let is_negative = Choice::from(((x >> 63) & 0x1) as u8);
@@ -134,7 +139,7 @@ impl<F: FieldSpec> From<i64> for Field<F> {
 
         // unwrap is okay here as we've ensured FIELD_MODULUS is
         // non-zero.
-        let abs_val = BigInt::from(abs_val.reduce(&F::FIELD_MODULUS).unwrap());
+        let abs_val = BigInt::from(abs_val.rem(&modulus));
 
         let neg = BigInt::from(F::FIELD_MODULUS.wrapping_sub(&abs_val));
 

@@ -313,11 +313,6 @@ where
     }
 }
 
-/**
- * Program groups are given names as strings.
- */
-// pub type Group = String;
-
 #[derive(Debug, Clone, Serialize)]
 /**
  * A compilation context. This stores the current parse graph.

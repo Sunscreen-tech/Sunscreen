@@ -94,22 +94,27 @@ mod tests_one_limb {
 
     use super::*;
 
-    fn reduction_test_case<C: BarretConfig<1>>(value: &str, radix: u32) {
-        let a = num::BigInt::from_str_radix(value, radix).unwrap();
-        let m = num::BigInt::from_u64(C::MODULUS.as_words()[0]).unwrap();
+    fn reduction_test_case<const N: usize, C: BarretConfig<N>>(a: &num::BigInt) {
+        let bytes = bytemuck::cast_slice(C::MODULUS.as_words().as_slice());
+        let m = num::BigInt::from_bytes_le(num::bigint::Sign::Plus, bytes);
 
-        let expected = &a % m;
+        let expected = a % m;
 
-        let digits = a.to_u64_digits().1;
+        let mut lo_limbs = [0u64; N];
+        let mut hi_limbs = [0u64; N];
 
-        assert!(digits.len() <= 2);
+        let a_digits = a.to_u64_digits().1;
+        assert!(a_digits.len() <= 2 * N);
 
-        let mut digits = digits.iter().copied();
+        for i in 0..a_digits.len() {
+            if i < N {
+                lo_limbs[i] = a_digits[i];
+            } else {
+                hi_limbs[i - N] = a_digits[i];
+            }
+        }
 
-        let lo = digits.next().unwrap_or_default();
-        let hi = digits.next().unwrap_or_default();
-
-        let c = BarretBackend::<1, C>::barret_reduce((Uint::from_u64(lo), Uint::from_u64(hi)));
+        let c = BarretBackend::<N, C>::barret_reduce((Uint::from(lo_limbs), Uint::from(hi_limbs)));
 
         assert_eq!(c.as_limbs()[0].0, expected.to_u64_digits().1[0]);
     }
@@ -145,13 +150,27 @@ mod tests_one_limb {
             const T: Uint<1> = Uint::from_u64(2795679925);
         }
 
-        reduction_test_case::<ConfigModMax>("FEEDF00DF00DFEED0000000000000000", 16);
-        reduction_test_case::<ConfigModMax>("0000000000000000FEEDF00DF00DFEED", 16);
-        reduction_test_case::<ConfigModMax>("FEEDF00DF00DFEEDFEEDF00DF00DFEED", 16);
-        reduction_test_case::<ConfigModMax>("28181196569800973531195304723742259160", 10);
-        reduction_test_case::<ConfigModMax>("10187240694940845278", 10);
-        reduction_test_case::<ConfigModMax>("88652594061804751057749230545767759872", 10);
-        reduction_test_case::<ConfigModMax>("88652594061804751067936471240708605150", 10);
+        reduction_test_case::<1, ConfigModMax>(
+            &num::BigInt::from_str_radix("FEEDF00DF00DFEED0000000000000000", 16).unwrap(),
+        );
+        reduction_test_case::<1, ConfigModMax>(
+            &num::BigInt::from_str_radix("0000000000000000FEEDF00DF00DFEED", 16).unwrap(),
+        );
+        reduction_test_case::<1, ConfigModMax>(
+            &num::BigInt::from_str_radix("FEEDF00DF00DFEEDFEEDF00DF00DFEED", 16).unwrap(),
+        );
+        reduction_test_case::<1, ConfigModMax>(
+            &num::BigInt::from_str_radix("28181196569800973531195304723742259160", 10).unwrap(),
+        );
+        reduction_test_case::<1, ConfigModMax>(
+            &num::BigInt::from_str_radix("10187240694940845278", 10).unwrap(),
+        );
+        reduction_test_case::<1, ConfigModMax>(
+            &num::BigInt::from_str_radix("88652594061804751057749230545767759872", 10).unwrap(),
+        );
+        reduction_test_case::<1, ConfigModMax>(
+            &num::BigInt::from_str_radix("88652594061804751067936471240708605150", 10).unwrap(),
+        );
     }
 
     #[test]
@@ -165,7 +184,9 @@ mod tests_one_limb {
             const T: Uint<1> = Uint::from_u64(2);
         }
 
-        reduction_test_case::<Cfg>("166007213496168112760377165276994937864", 10);
+        reduction_test_case::<1, Cfg>(
+            &num::BigInt::from_str_radix("166007213496168112760377165276994937864", 10).unwrap(),
+        );
     }
 
     #[test]
@@ -221,39 +242,6 @@ mod tests_one_limb {
             mul_test_case::<Cfg>(rng.next_u64(), rng.next_u64());
         }
     }
-}
-
-#[cfg(test)]
-mod tests_multi_limb {
-    use crypto_bigint::Limb;
-    use rand::RngCore;
-
-    use super::*;
-
-    fn reduction_test_case<const N: usize, C: BarretConfig<N>>(a: &num::BigInt) {
-        let bytes = bytemuck::cast_slice(C::MODULUS.as_words().as_slice());
-        let m = num::BigInt::from_bytes_le(num::bigint::Sign::Plus, bytes);
-
-        let expected = a % m;
-
-        let mut lo_limbs = [0u64; N];
-        let mut hi_limbs = [0u64; N];
-
-        let a_digits = a.to_u64_digits().1;
-        assert!(a_digits.len() <= 2 * N);
-
-        for i in 0..a_digits.len() {
-            if i < N {
-                lo_limbs[i] = a_digits[i];
-            } else {
-                hi_limbs[i - N] = a_digits[i];
-            }
-        }
-
-        let c = BarretBackend::<N, C>::barret_reduce((Uint::from(lo_limbs), Uint::from(hi_limbs)));
-
-        assert_eq!(c.as_limbs()[0].0, expected.to_u64_digits().1[0]);
-    }
 
     #[test]
     fn can_reduce_small_modulus() {
@@ -294,6 +282,47 @@ mod tests_multi_limb {
             rng.fill_bytes(&mut a);
 
             reduction_test_case::<2, Cfg>(&num::BigInt::from_bytes_le(num::bigint::Sign::Plus, &a));
+        }
+    }
+
+    #[test]
+    fn can_reduce_four_limb_modulus() {
+        struct Cfg;
+
+        impl BarretConfig<4> for Cfg {
+            const MODULUS: Uint<4> = Uint::from_words([
+                10537575945477046273,
+                8290779189319837369,
+                10376796201822627897,
+                67108853
+            ]);
+            const R: Uint<4> = Uint::from_words([
+                274877949695,
+                0,
+                0,
+                0,
+              ]);
+            const S: Uint<4> = Uint::from_words([
+                17065718219400984673,
+                13508189557008452037,
+                15201331298792071191,
+                16510503732814411433,
+              ]);
+            const T: Uint<4> = Uint::from_words([
+                15118537517300422913,
+                3049910490619295959,
+                6133016479610977896,
+                60064853,
+              ]);
+        }
+
+        let mut rng = rand::thread_rng();
+
+        for _ in 0..1024 {
+            let mut a = vec![0; 8 * 8];
+            rng.fill_bytes(&mut a);
+
+            reduction_test_case::<4, Cfg>(&num::BigInt::from_bytes_le(num::bigint::Sign::Plus, &a));
         }
     }
 }

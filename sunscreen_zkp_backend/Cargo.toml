@@ -6,8 +6,8 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-curve25519_dalek = { workspace = true }
-bulletproofs = { workspace = true, features = ["yoloproofs"], optional = true }
+curve25519-dalek = { workspace = true }
+bulletproofs = { workspace = true, optional = true }
 crypto-bigint = { workspace = true}
 merlin = { workspace = true, optional = true}
 bumpalo = { workspace = true }

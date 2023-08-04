@@ -10,7 +10,7 @@ bytemuck = { workspace = true, optional = true }
 lazy_static = { workspace = true }
 metal = { workspace = true, optional = true }
 rand = { workspace = true }
-curve25519_dalek = { workspace = true }
+curve25519-dalek = { workspace = true }
 rayon = { workspace = true }
 ocl = { workspace = true, optional = true }
 futures = { workspace = true, optional = true }

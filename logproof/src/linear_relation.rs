@@ -1529,7 +1529,7 @@ mod test {
                     coeffs: leading_zeros_removed
                         .iter()
                         .map(|y| Fp::<MontBackend<Q, N>, N>::from(*y))
-                        .collect::<Vec<Fp<MontBackend<Q, N>, N>>>(),
+                        .collect(),
                 }
             })
             .collect()
@@ -1600,36 +1600,35 @@ mod test {
 
         // Convert all components into their polynomial representations in the
         // fields we use in this package.
-        let m: DensePolynomial<Fp<MontBackend<F, N>, N>> = DensePolynomial {
+        let m = DensePolynomial {
             coeffs: strip_trailing_value(
                 (0..plaintext.len())
-                    .map(|i| Fp::<MontBackend<F, N>, N>::from(plaintext.get_coefficient(i)))
-                    .collect::<Vec<Fp<MontBackend<F, N>, N>>>(),
-                Fp::<MontBackend<F, N>, N>::zero(),
+                    .map(|i| Fp::from(plaintext.get_coefficient(i)))
+                    .collect(),
+                Fp::zero(),
             ),
         };
 
-        let u: DensePolynomial<Fp<MontBackend<F, N>, N>> =
-            convert_to_polynomial(u.clone()).pop().unwrap();
+        let u = convert_to_polynomial(u.clone()).pop().unwrap();
 
         let mut es = convert_to_polynomial(e);
         let e_1 = es.remove(0);
         let e_2 = es.remove(0);
 
-        let mut cs: Vec<DensePolynomial<Fp<MontBackend<F, N>, N>>> =
+        let mut cs =
             convert_to_polynomial(PolynomialArray::new_from_ciphertext(&ctx, &ciphertext).unwrap());
         let c_0 = cs.remove(0);
         let c_1 = cs.remove(0);
 
-        let mut pk: Vec<DensePolynomial<Fp<MontBackend<F, N>, N>>> =
+        let mut pk =
             convert_to_polynomial(PolynomialArray::new_from_public_key(&ctx, &public_key).unwrap());
         let p_0 = pk.remove(0);
         let p_1 = pk.remove(0);
 
-        let r: DensePolynomial<Fp<MontBackend<F, N>, N>> = DensePolynomial {
+        let r = DensePolynomial {
             coeffs: (0..round.len())
-                .map(|i| Fp::<MontBackend<F, N>, N>::from(round.get_coefficient(i)))
-                .collect::<Vec<Fp<MontBackend<F, N>, N>>>(),
+                .map(|i| Fp::from(round.get_coefficient(i)))
+                .collect(),
         };
 
         // Delta is the constant polynomial with floor (q/t) as it's DC compopnent.
@@ -1647,7 +1646,7 @@ mod test {
         let one = make_poly(&[1]);
         let zero = make_poly(&[]);
 
-        let a: Matrix<DensePolynomial<Fp<MontBackend<F, N>, N>>> = MatrixPoly::from([
+        let a = MatrixPoly::from([
             [
                 delta.clone(),
                 one.clone(),
@@ -1664,7 +1663,7 @@ mod test {
             ],
         ]);
 
-        let s: Matrix<DensePolynomial<Fp<MontBackend<F, N>, N>>> = MatrixPoly::from([
+        let s = MatrixPoly::from([
             [m.clone()],
             [r.clone()],
             [u.clone()],
@@ -1676,7 +1675,7 @@ mod test {
         let mut divisor_coefficients = vec![0; (degree + 1) as usize];
         divisor_coefficients[0] = 1;
         divisor_coefficients[degree as usize] = 1;
-        let divisor: DensePolynomial<Fp<MontBackend<F, N>, N>> = make_poly(&divisor_coefficients);
+        let divisor = make_poly(&divisor_coefficients);
 
         // We do this without the polynomial division and then perform that at
         // the end.

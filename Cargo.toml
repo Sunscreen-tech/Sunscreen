@@ -46,5 +46,9 @@ naga = { version = "0.11.0", features = ["wgsl-in"]}
 wgpu-core = { version = "0.15.1", features = ["vulkan", "wgsl"] }
 find_cuda_helper = "0.2.0"
 criterion = "0.4.0"
+darling = "0.20.3"
+proc-macro2 = "1.0.66"
+quote = "1.0.32"
+syn = { version = "2.0.28", features = ["full"] }
 
 sunscreen_math_macros = { version = "0.7.0", path = "./sunscreen_math_macros" }

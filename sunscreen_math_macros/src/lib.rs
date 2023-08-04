@@ -50,7 +50,7 @@ pub fn derive_barrett_config(input: proc_macro::TokenStream) -> TokenStream {
     let Opts { num_limbs, modulus } = if let Ok(o) = opts {
         o
     } else {
-        return quote! {compile_error!("You must specify #[barret_config(modulus = \"1234\", num_limbs = 2)]. Modulus requires either a hex value beginning in '0x' or decimal value. Limbs must be a positive an integer.")}.into()
+        return quote! {compile_error!("You must specify #[barret_config(modulus = \"1234\", num_limbs = 2)]. Modulus requires either a hex value beginning in '0x' or decimal value. Limbs must be a positive an integer.")}.into();
     };
 
     let modulus = match get_modulus(&modulus) {

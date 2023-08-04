@@ -25,3 +25,26 @@ exclude = ["mdBook", "rust-playground", "examples/allowlist_zkp"]
 [profile.release]
 split-debuginfo = "packed"
 debug = true
+
+[workspace.dependencies]
+bytemuck = "1.13.0"
+lazy_static = "1.4.0"
+metal = "0.24.0"
+rand = "0.8.5"
+curve25519_dalek = { package = "sunscreen_curve25519", path = "./sunscreen_curve25519", features = ["serde", "u64_backend", "alloc"], default-features = false }
+rayon = "1.6.1"
+ocl = "0.19.4"
+futures = "0.3.26"
+tokio = { version = "1.25.0", features = ["rt"] }
+wgpu = "0.15.1"
+cust = "0.3.2"
+num = "0.4.1"
+crypto-bigint = "0.5.2"
+paste = "1.0.14"
+thiserror = "1.0.44"
+naga = { version = "0.11.0", features = ["wgsl-in"]}
+wgpu-core = { version = "0.15.1", features = ["vulkan", "wgsl"] }
+find_cuda_helper = "0.2.0"
+criterion = "0.4.0"
+
+sunscreen_math_macros = { version = "0.7.0", path = "./sunscreen_math_macros" }

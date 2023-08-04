@@ -6,32 +6,32 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-bytemuck = { version = "1.13.0", optional = true }
-lazy_static = "1.4.0"
-metal = { version = "0.24.0", optional = true }
-rand = "0.8.5"
-curve25519_dalek = { package = "sunscreen_curve25519", path = "../sunscreen_curve25519", features = ["serde", "u64_backend", "alloc"], default-features = false }
-rayon = "1.6.1"
-ocl = { version = "0.19.4", optional = true }
-futures = { version = "0.3.26", optional = true }
-tokio = { version = "1.25.0", features = ["rt"], optional = true }
-wgpu = { version = "0.15.1", optional = true }
-cust = { version = "0.3.2", optional = true }
-num = "0.4.1"
-crypto-bigint = "0.5.2"
-paste = "1.0.14"
-thiserror = "1.0.44"
-sunscreen_math_macros = { version = "0.7.0", path = "../sunscreen_math_macros" }
+bytemuck = { workspace = true, optional = true }
+lazy_static = { workspace = true }
+metal = { workspace = true, optional = true }
+rand = { workspace = true }
+curve25519_dalek = { workspace = true }
+rayon = { workspace = true }
+ocl = { workspace = true, optional = true }
+futures = { workspace = true, optional = true }
+tokio = { workspace = true, optional = true }
+wgpu = { workspace = true, optional = true }
+cust = { workspace = true, optional = true }
+num = { workspace = true }
+crypto-bigint = { workspace = true }
+paste = { workspace = true }
+thiserror = {workspace = true }
+sunscreen_math_macros = { workspace = true }
 
 [build-dependencies]
-naga = { version = "0.11.0", optional = true, features = ["wgsl-in"]}
-wgpu-core = { version = "0.15.1", optional = true, features = ["vulkan", "wgsl"] }
-ocl = { version = "0.19.4", optional = true }
-find_cuda_helper = { version = "0.2.0", optional = true }
+naga = { workspace = true, optional = true }
+wgpu-core = { workspace = true, optional = true }
+ocl = { workspace = true, optional = true }
+find_cuda_helper = { workspace = true, optional = true }
 
 [dev-dependencies]
-bytemuck = { version = "1.13.0" }
-criterion = "0.4.0"
+bytemuck = { workspace = true }
+criterion = { workspace = true }
 
 [features]
 default = []

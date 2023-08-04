@@ -1,4 +1,9 @@
 #![cfg_attr(feature = "nightly-features", feature(test))]
+#![deny(missing_docs)]
+#![deny(rustdoc::broken_intra_doc_links)]
+
+//! This crate contains a set of math structures and operations for working with
+//! FHE and ZKPs.
 
 #[cfg(feature = "metal")]
 mod metal_impl;
@@ -51,6 +56,7 @@ pub type RistrettoPointVec = PinaRistrettoPointVec;
 pub type RistrettoPointVec = GpuRistrettoPointVec;
 
 #[cfg(not(feature = "gpu"))]
+/// A vector of [`RistrettoPoint`]s that supports batched operations.
 pub type RistrettoPointVec = CpuRistrettoPointVec;
 
 #[cfg(feature = "pina")]
@@ -60,6 +66,7 @@ pub type ScalarVec = PinaScalarVec;
 pub type ScalarVec = GpuScalarVec;
 
 #[cfg(not(feature = "gpu"))]
+/// A vector of [`Scalar`]s that supports batched operations.
 pub type ScalarVec = CpuScalarVec;
 
 /// Returns the size of [`Scalar`] in bits.
@@ -71,6 +78,7 @@ pub(crate) const fn scalar_size_bits() -> usize {
 mod error;
 pub use error::*;
 
+/// Traits and types for performing arithmetic over rings.
 pub mod ring;
 
 /// Computes the number of windows over a [`Scalar`] type for the given
@@ -103,9 +111,54 @@ pub(crate) fn ristretto_bitwise_eq(a: RistrettoPoint, b: RistrettoPoint) -> bool
 }
 
 #[macro_export]
+/// This trait auto impls all combinations of borrowed and owned for binary std::ops traits.
+/// To use this, you must impl `std::ops::Op<&T, Output=T> for &T` and this macro will auto
+/// create the other traits to call your impl by borrowing the rhs or self as appropriate.
+///
+/// The arguments are as follows:
+/// $trait:ty: The binary Ops trait you're trying to implement.
+/// $ty:ty: the type for which you wish to derive the borrowed and owned variants.
+/// ($($t:ty,($($bound:ty)+))*): The bounds on generics for $ty
+/// $($gen_arg:ty)*): The generics on $ty
+///
+/// Example
+/// ```rust
+/// use num::traits::{WrappingAdd, WrappingMul, WrappingNeg, WrappingSub};
+/// use std::ops::Add;
+/// use sunscreen_math::refify;
+///
+/// pub trait WrappingSemantics:     
+///     Copy + Clone + std::fmt::Debug + WrappingAdd + WrappingMul + WrappingSub + WrappingNeg
+/// {
+/// }
+///
+/// impl WrappingSemantics for u64 {}
+///
+/// #[repr(transparent)]
+/// #[derive(Clone, Copy, Debug)]
+/// pub struct ZInt<T>(T)
+/// where
+///     T: WrappingSemantics;
+///
+/// impl<T> Add<&ZInt<T>> for &ZInt<T>
+/// where
+/// T: WrappingSemantics,
+/// {
+///     type Output = ZInt<T>;
+///
+///     fn add(self, rhs: &ZInt<T>) -> Self::Output {
+///         ZInt(self.0.wrapping_add(&rhs.0))
+///     }
+/// }
+///
+/// // Now if a is ZInt<T>, we can a + a, &a + a, a + &a, and &a + &a.
+/// refify! {
+/// Add, ZInt, (T, (WrappingSemantics)), T
+/// }
+/// ```
 macro_rules! refify {
     ($trait:ty, $ty:ty, ($($t:ty,($($bound:ty)+))*), $($gen_arg:ty)*) => {
-        paste! {
+        paste::paste! {
             impl<$($gen_arg),*> $trait<$ty<$($gen_arg),*>> for $ty<$($gen_arg),*> where $($t: $($bound)++),*  {
                 type Output = Self;
 

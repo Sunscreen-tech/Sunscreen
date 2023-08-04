@@ -1,21 +1,15 @@
 use crate::{refify, Error};
 pub use crypto_bigint::Uint;
 use num::traits::{WrappingAdd, WrappingMul, WrappingNeg, WrappingSub};
-use paste::paste;
 use std::{
     marker::PhantomData,
     ops::{Add, Mul},
 };
 
-mod barret;
-pub use barret::*;
+mod barrett;
+pub use barrett::*;
 
-pub trait Montgomery {
-    fn to_montgomery_form(&self) -> Self;
-
-    fn to_standard_form(&self) -> Self;
-}
-
+/// The set of operations one can perform on a ring.
 pub trait Ring:
     std::fmt::Debug
     + Clone
@@ -23,10 +17,11 @@ pub trait Ring:
     + for<'a> Mul<&'a Self, Output = Self>
     + Add<Self, Output = Self>
     + for<'a> Add<&'a Self, Output = Self>
-    + Montgomery
 {
 }
 
+/// Declares the given type as performing wrapping arithmetic (rather than e.g. panicking
+/// on overflow).
 pub trait WrappingSemantics:
     Copy + Clone + std::fmt::Debug + WrappingAdd + WrappingMul + WrappingSub + WrappingNeg
 {
@@ -40,6 +35,12 @@ impl WrappingSemantics for u128 {}
 
 #[repr(transparent)]
 #[derive(Clone, Copy, Debug)]
+/// A ring of integers modulo a power of 2. Said modulus is defined by T's bit width.
+///
+/// # Remarks
+/// Reduction modulo 2**n over an n-bit integer is trivial - just do wrapping arithmetic
+/// and allow values to overflow. This type simply exposes operations on the underlying
+/// integer type with wrapping semantics.
 pub struct ZInt<T>(T)
 where
     T: WrappingSemantics;
@@ -83,37 +84,23 @@ refify! {
     Mul, ZInt, (T, (WrappingSemantics)), T
 }
 
-impl<T> Montgomery for ZInt<T>
-where
-    T: WrappingSemantics,
-{
-    /// For integers mod 2^{8, 16, 32, ...}, we don't actually need Montgomery
-    /// arithmetic as wrapping does the modulus reduction for us. Thus, this
-    /// method is a no-op.
-    fn to_montgomery_form(&self) -> Self {
-        *self
-    }
-
-    /// For integers mod 2^{8, 16, 32, ...}, we don't actually need Montgomery
-    /// arithmetic as wrapping does the modulus reduction for us. Thus, this
-    /// method is a no-op.
-    fn to_standard_form(&self) -> Self {
-        *self
-    }
-}
-
 impl<T> Ring for ZInt<T> where T: WrappingSemantics {}
 
+/// A backend for performing arithmetic over the ring Zq. `q` needn't be prime.
 pub trait ArithmeticBackend<const N: usize> {
+    /// The modulus q defining the integer ring.
     const MODULUS: Uint<N>;
 
+    /// Add lhs and rhs and reduce the value modulo [`ArithmeticBackend::MODULUS`].
     fn add_mod(lhs: &Uint<N>, rhs: &Uint<N>) -> Uint<N> {
         lhs.add_mod(rhs, &Self::MODULUS)
     }
 
+    /// Multiply lhs and rhs and reduce the value modulo [`ArithmeticBackend::MODULUS`].
     fn mul_mod(lhs: &Uint<N>, rhs: &Uint<N>) -> Uint<N>;
 }
 
+/// A ring of integers mod q.
 pub struct Fq<const N: usize, B: ArithmeticBackend<N>> {
     _val: Uint<N>,
 

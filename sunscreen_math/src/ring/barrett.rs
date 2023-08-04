@@ -27,6 +27,8 @@ pub trait BarrettConfig<const N: usize> {
     const T: Uint<N>;
 }
 
+/// A [`Ring`](super::Ring) backend that uses a Barrett reduction to reduce by
+/// the ring modulus.
 pub struct BarrettBackend<const N: usize, C: BarrettConfig<N>> {
     _phantom: PhantomData<C>,
 }
@@ -40,7 +42,7 @@ impl<const N: usize, C: BarrettConfig<N>> BarrettBackend<N, C> {
     /// A key observation is that x = x_lo + 2^(64*N)*x_hi and thus
     /// x mod m = x_lo mod m + 2^(64*N)*x_hi.
     /// This is how we derive the required values in [`BarretConfig`], but the full
-    /// derrivation is in the link.
+    /// derivation is in the link.
     ///
     /// We have carefully chosen the terms to obviate shifting and we can simply do
     /// mulhi with no shifting.

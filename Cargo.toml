@@ -64,17 +64,32 @@ bincode = "1.3.3"
 float-cmp = "0.9.0"
 proptest = "1.1.0"
 merlin = "3.0.0"
-
+ark-poly = "0.4.0"
+ark-ff = "0.4.0"
+bitvec = "1.0.1"
+sha3 = "0.10.5"
+digest = "0.10.5"
+link-cplusplus = "1.0.9"
+cmake = "0.1.46"
+bindgen = "0.61.0"
+once_cell = "1.18.0"
+num_cpus = "1.16.0"
+rlp = "0.5.2"
+fs_extra = "1.2.0"
+reqwest = { version = "0.11.10", features = ["blocking"] }
+rand_distr = "0.4.3"
 
 curve25519-dalek = { path = "./sunscreen_curve25519", package = "sunscreen_curve25519" }
 bulletproofs = { path = "./sunscreen_bulletproofs", package = "sunscreen_bulletproofs" }
 
-sunscreen = { version = "0.7", path = "./sunscreen" }
+emsdk = { version = "^0.1", path = "./emsdk" }
+sunscreen = { version = "0.7", path = "./sunscreen", features = ["bulletproofs"] }
 sunscreen_compiler_macros = { version = "0.7", path = "./sunscreen_compiler_macros" }
 sunscreen_backend = { version = "0.7", path = "./sunscreen_backend" }
 sunscreen_zkp_backend = { path = "./sunscreen_zkp_backend" }
 sunscreen_fhe_program = { version = "0.7", path = "./sunscreen_fhe_program" }
 sunscreen_runtime = { version = "0.7", path = "./sunscreen_runtime" }
 sunscreen_compiler_common = { version = "0.7.0", path = "./sunscreen_compiler_common" }
+sunscreen_math = { version = "0.7.0", path = "./sunscreen_math" }
 sunscreen_math_macros = { version = "0.7.0", path = "./sunscreen_math_macros" }
 seal_fhe = { version = "0.7.0", path = "./seal_fhe" }

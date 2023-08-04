@@ -17,21 +17,21 @@ readme = "crates-io.md"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-bincode = "1.3.3"
-crossbeam = "0.8.1"
-log = "0.4.14"
-seal_fhe = { version = "0.7", path = "../seal_fhe" }
-sunscreen_fhe_program = { version = "0.7", path = "../sunscreen_fhe_program"  }
-sunscreen_compiler_common = { path = "../sunscreen_compiler_common" }
-sunscreen_zkp_backend = { path = "../sunscreen_zkp_backend" }
-petgraph = "0.6.0"
-num_cpus = "1.13.0"
-rayon = "1.5.1"
-rlp = "0.5.1"
-serde = "1.0.147"
-semver = "1.0.4"
-static_assertions = "1.1.0"
-thiserror = "1.0.37"
+bincode = { workspace = true }
+crossbeam = { workspace = true }
+log = { workspace = true }
+seal_fhe = { workspace = true }
+sunscreen_fhe_program = { workspace = true }
+sunscreen_compiler_common = { workspace = true }
+sunscreen_zkp_backend = { workspace = true }
+petgraph = { workspace = true }
+num_cpus = { workspace = true }
+rayon = { workspace = true }
+rlp = { workspace = true }
+serde = { workspace = true }
+semver = { workspace = true }
+static_assertions = { workspace = true }
+thiserror = { workspace = true }
 
 [dev-dependencies]
-serde_json = "1.0.74"
+serde_json = { workspace = true }

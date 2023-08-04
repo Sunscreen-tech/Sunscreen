@@ -1,7 +1,8 @@
 use std::{marker::PhantomData, ops::Not};
 
 use crypto_bigint::{
-    subtle::{ConditionallySelectable, ConstantTimeLess}, Uint,
+    subtle::{ConditionallySelectable, ConstantTimeLess},
+    Uint,
 };
 
 use super::ArithmeticBackend;
@@ -126,7 +127,8 @@ mod tests_one_limb {
             .to_u64_digits()
             .1
             .iter()
-            .copied().next()
+            .copied()
+            .next()
             .unwrap_or_default();
 
         assert_eq!(c.as_limbs()[0].0, expected);
@@ -217,6 +219,81 @@ mod tests_one_limb {
 
         for _ in 0..1024 {
             mul_test_case::<Cfg>(rng.next_u64(), rng.next_u64());
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests_multi_limb {
+    use crypto_bigint::Limb;
+    use rand::RngCore;
+
+    use super::*;
+
+    fn reduction_test_case<const N: usize, C: BarretConfig<N>>(a: &num::BigInt) {
+        let bytes = bytemuck::cast_slice(C::MODULUS.as_words().as_slice());
+        let m = num::BigInt::from_bytes_le(num::bigint::Sign::Plus, bytes);
+
+        let expected = a % m;
+
+        let mut lo_limbs = [0u64; N];
+        let mut hi_limbs = [0u64; N];
+
+        let a_digits = a.to_u64_digits().1;
+        assert!(a_digits.len() <= 2 * N);
+
+        for i in 0..a_digits.len() {
+            if i < N {
+                lo_limbs[i] = a_digits[i];
+            } else {
+                hi_limbs[i - N] = a_digits[i];
+            }
+        }
+
+        let c = BarretBackend::<N, C>::barret_reduce((Uint::from(lo_limbs), Uint::from(hi_limbs)));
+
+        assert_eq!(c.as_limbs()[0].0, expected.to_u64_digits().1[0]);
+    }
+
+    #[test]
+    fn can_reduce_small_modulus() {
+        struct Cfg;
+
+        impl BarretConfig<2> for Cfg {
+            const MODULUS: Uint<2> = Uint::from_words([u64::MAX, 0]);
+            const R: Uint<2> = Uint::from_words([1, 1]);
+            const S: Uint<2> = Uint::from_words([1, 1]);
+            const T: Uint<2> = Uint::from_words([1, 0]);
+        }
+
+        let mut rng = rand::thread_rng();
+
+        for _ in 0..1024 {
+            let mut a = vec![0; 8 * 4];
+            rng.fill_bytes(&mut a);
+
+            reduction_test_case::<2, Cfg>(&num::BigInt::from_bytes_le(num::bigint::Sign::Plus, &a));
+        }
+    }
+
+    #[test]
+    fn can_reduce_big_modulus() {
+        struct Cfg;
+
+        impl BarretConfig<2> for Cfg {
+            const MODULUS: Uint<2> = Uint::from_words([u64::MAX, 0x7FFFFFFFFFFFFFFF]);
+            const R: Uint<2> = Uint::from_words([2, 0]);
+            const S: Uint<2> = Uint::from_words([4, 0]);
+            const T: Uint<2> = Uint::from_words([2, 0]);
+        }
+
+        let mut rng = rand::thread_rng();
+
+        for _ in 0..1024 {
+            let mut a = vec![0; 8 * 4];
+            rng.fill_bytes(&mut a);
+
+            reduction_test_case::<2, Cfg>(&num::BigInt::from_bytes_le(num::bigint::Sign::Plus, &a));
         }
     }
 }

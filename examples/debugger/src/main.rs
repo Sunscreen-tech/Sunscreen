@@ -9,7 +9,7 @@ use sunscreen::{
 };
 
 fn main() {
-    #[debug_program]
+    #[debug]
     fn do_mad<T, U, V>(a: T, b: U, c: V) -> T
     where
         T: Mul<U, Output = T> + Add<V, Output = T>,
@@ -18,7 +18,7 @@ fn main() {
         a * b + c
     }
 
-    #[debug_program]
+    #[debug]
     fn cube<T>(a: T) -> T
     where
         T: Mul<T, Output = T> + Copy,
@@ -26,7 +26,7 @@ fn main() {
         a * a * a
     }
 
-    #[debug_program]
+    #[debug]
     fn square<T>(a: T) -> T
     where
         T: Mul<T, Output = T> + Copy,
@@ -34,7 +34,7 @@ fn main() {
         simple_multiply(a, a)
     }
 
-    #[debug_program]
+    #[debug]
     fn simple_multiply<T>(a: T, b: T) -> T
     where
         T: Mul<T, Output = T> + Copy,

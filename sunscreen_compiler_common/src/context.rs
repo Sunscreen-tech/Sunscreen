@@ -489,7 +489,7 @@ where
 
     #[cfg(feature = "debugger")]
     /**
-     *
+     * Pushes a group onto the program context.
      */
     pub fn push_group(&mut self, name: String, source: String) {
         let parent = *self.group_stack.last().unwrap_or(&0);

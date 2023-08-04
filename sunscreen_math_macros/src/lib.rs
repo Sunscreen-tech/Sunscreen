@@ -34,7 +34,7 @@ fn emit_limbs(x: &BigInt, num_limbs: usize) -> TokenStream2 {
     let mut full_limbs = vec![0; num_limbs];
 
     full_limbs[..limbs.len()].copy_from_slice(&limbs[..]);
-    
+
     let limbs = full_limbs.iter().map(|x| quote! {#x}).collect::<Vec<_>>();
 
     quote! {

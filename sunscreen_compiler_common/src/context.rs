@@ -487,7 +487,7 @@ where
      * Pushes a group onto the program context.
      */
     pub fn push_group(&mut self, name: String, source: String) {
-        let parent = *self.group_stack.last().unwrap_or(&0);
+        let parent = self.group_stack.last().cloned();
         let group = Group::new(
             self.next_group_id,
             format!("{}_{}", name, self.next_group_id),

@@ -115,7 +115,7 @@ pub struct Group {
     /** */
     pub source: String,
     /** */
-    pub parent: u64,
+    pub parent: Option<u64>,
     /** */
     pub node_ids: Vec<u64>,
     /** */
@@ -126,7 +126,7 @@ pub struct Group {
 
 impl Group {
     /** */
-    pub fn new(id: u64, name: String, parent: u64, source: String) -> Self {
+    pub fn new(id: u64, name: String, parent: Option<u64>, source: String) -> Self {
         Self {
             id,
             name,

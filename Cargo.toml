@@ -15,6 +15,7 @@ members = [
     "sunscreen_curve25519",
     "sunscreen_fhe_program",
     "sunscreen_math",
+    "sunscreen_math_macros",
     "sunscreen_runtime",
     "sunscreen_compiler_common",
     "sunscreen_zkp_backend",

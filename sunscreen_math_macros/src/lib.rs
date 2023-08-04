@@ -1,10 +1,9 @@
 use darling::FromDeriveInput;
-use num::{BigInt, Num, FromPrimitive};
+use num::{BigInt, FromPrimitive, Num};
 use proc_macro::TokenStream;
 use proc_macro2::TokenStream as TokenStream2;
-use syn::{parse_macro_input, DeriveInput};
 use quote::quote;
-
+use syn::{parse_macro_input, DeriveInput};
 
 #[derive(FromDeriveInput, Debug)]
 #[darling(attributes(barrett_config), forward_attrs(allow, doc, cfg))]
@@ -17,9 +16,11 @@ fn get_modulus(m: &str) -> Result<BigInt, String> {
     let result = if m.starts_with("0x") {
         let (_, hex) = m.split_at(2);
 
-        BigInt::from_str_radix(hex, 16).map_err(|_| "Failed to parse modulus as hexadecimal value".to_owned())?
+        BigInt::from_str_radix(hex, 16)
+            .map_err(|_| "Failed to parse modulus as hexadecimal value".to_owned())?
     } else {
-        BigInt::from_str_radix(m, 10).map_err(|_| "Failed to parse modulus as decimal value".to_owned())?
+        BigInt::from_str_radix(m, 10)
+            .map_err(|_| "Failed to parse modulus as decimal value".to_owned())?
     };
 
     Ok(result)
@@ -47,16 +48,16 @@ fn emit_limbs(x: &BigInt, num_limbs: usize) -> TokenStream2 {
 pub fn derive_barrett_config(input: proc_macro::TokenStream) -> TokenStream {
     let input = parse_macro_input!(input);
     let opts = Opts::from_derive_input(&input);
-    
-    let Opts {num_limbs, modulus} = if let Err(_) = opts {
+
+    let Opts { num_limbs, modulus } = if let Err(_) = opts {
         return quote! {compile_error!("You must specify #[barret_config(modulus = \"1234\", num_limbs = 2)]. Modulus requires either a hex value beginning in '0x' or decimal value. Limbs must be a positive an integer.")}.into();
     } else {
         opts.unwrap()
     };
 
     let modulus = match get_modulus(&modulus) {
-        Err(s) => { return quote! { compile_error!(#s) }.into() }
-        Ok(m) => m
+        Err(s) => return quote! { compile_error!(#s) }.into(),
+        Ok(m) => m,
     };
 
     let DeriveInput { ident, .. } = input;

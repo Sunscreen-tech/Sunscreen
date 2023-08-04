@@ -148,10 +148,6 @@ pub struct GroupLookup {
      * Given a node's `group_id`, return the node's group.
      */
     pub id_data_lookup: HashMap<u64, Group>,
-    // /**
-    //  * Given a node's group name, return its `group_id`.
-    //  */
-    // pub data_id_lookup: HashMap<Group, u64>,
 }
 
 impl GroupLookup {
@@ -162,6 +158,22 @@ impl GroupLookup {
         Self {
             id_data_lookup: HashMap::new(),
         }
+    }
+
+    /**
+     * Gets the child group nodes of a group.
+     */
+    pub fn children_of(&self, id: u64) -> Vec<u64> {
+        self.id_data_lookup
+            .values()
+            .filter_map(|x| {
+                if x.parent == Some(id) {
+                    Some(x.id)
+                } else {
+                    None
+                }
+            })
+            .collect()
     }
 }
 

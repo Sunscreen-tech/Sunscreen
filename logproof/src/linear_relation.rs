@@ -1124,7 +1124,7 @@ mod test {
     };
 
     use crate::{
-        fields::{FqSeal128_8192, SealQ128_2048, SealQ128_4096, SealQ128_8192},
+        fields::{FqSeal128_8192, SealQ128_1024, SealQ128_2048, SealQ128_4096, SealQ128_8192},
         linear_algebra::ScalarRem,
         math::{div_rem_bigint, make_poly, next_higher_power_of_two, Rem, Zero},
         LogProofGenerators,
@@ -1537,13 +1537,14 @@ mod test {
 
     fn full_knowledge_proof<F, const N: usize>(
         degree: u64,
+        plain_modulus: u64,
     ) -> LatticeProblem<Fp<MontBackend<F, N>, N>>
     where
         F: MontConfig<N>,
     {
         let degree = degree;
 
-        let plain_modulus = PlainModulus::raw(1032193).unwrap();
+        let plain_modulus = PlainModulus::raw(plain_modulus).unwrap();
         let coeff_modulus = CoefficientModulus::bfv_default(degree, SecurityLevel::TC128).unwrap();
 
         // Calculate the data coefficient modulus, which for fields with more
@@ -1582,8 +1583,8 @@ mod test {
         // Generate plaintext data
         let mut data = vec![];
 
-        for i in 0..encoder.get_slot_count() {
-            data.push(i as u64);
+        for i in 0..(encoder.get_slot_count() as u64) {
+            data.push(i % plain_modulus.value());
         }
 
         let plaintext = encoder.encode_unsigned(&data).unwrap();
@@ -1761,11 +1762,11 @@ mod test {
         LatticeProblem { a, s, t, f, b }
     }
 
-    fn zero_knowledge_proof<F, const N: usize>(degree: u64)
+    fn zero_knowledge_proof<F, const N: usize>(degree: u64, plain_modulus: u64)
     where
         F: MontConfig<N>,
     {
-        let LatticeProblem { a, s, t, f, b } = full_knowledge_proof::<F, N>(degree);
+        let LatticeProblem { a, s, t, f, b } = full_knowledge_proof::<F, N>(degree, plain_modulus);
 
         let pk = ProverKnowledge::new(&a, &s, &t, &b, &f);
 
@@ -1791,20 +1792,22 @@ mod test {
     // in comparison to the zero knowledge proof) before running the zero
     // knowledge proof.
     #[test]
-    fn zero_knowledge_bfv_proof_2048() {
-        zero_knowledge_proof::<SealQ128_2048, 1>(2048);
+    fn zero_knowledge_bfv_proof_1024() {
+        zero_knowledge_proof::<SealQ128_1024, 1>(1024, 12289);
     }
 
-    // This will run the full knowledge proof (which is a trivial amount of time
-    // in comparison to the zero knowledge proof) before running the zero
-    // knowledge proof.
     #[test]
-    fn zero_knowledge_bfv_proof_4096() {
-        zero_knowledge_proof::<SealQ128_4096, 2>(4096);
+    fn full_knowledge_bfv_proof_2048() {
+        full_knowledge_proof::<SealQ128_2048, 1>(2048, 1032193);
+    }
+
+    #[test]
+    fn full_knowledge_bfv_proof_4096() {
+        full_knowledge_proof::<SealQ128_4096, 2>(4096, 1032193);
     }
 
     #[test]
     fn full_knowledge_bfv_proof_8192() {
-        full_knowledge_proof::<SealQ128_8192, 3>(8192);
+        full_knowledge_proof::<SealQ128_8192, 3>(8192, 1032193);
     }
 }

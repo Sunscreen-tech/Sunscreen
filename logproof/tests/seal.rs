@@ -10,20 +10,9 @@ use logproof::{
     fields::{FpRistretto, SealQ128_1024, SealQ128_2048, SealQ128_4096, SealQ128_8192},
     linear_algebra::Matrix,
     math::{div_rem_bigint, make_poly, next_higher_power_of_two, Rem, Zero},
-    Bounds, InnerProductVerifierKnowledge, LogProof, LogProofGenerators, LogProofProverKnowledge,
-    LogProofTranscript,
+    InnerProductVerifierKnowledge, LatticeProblem, LogProof, LogProofGenerators,
+    LogProofProverKnowledge, LogProofTranscript,
 };
-
-struct LatticeProblem<Q>
-where
-    Q: Field + Clone,
-{
-    a: Matrix<DensePolynomial<Q>>,
-    s: Matrix<DensePolynomial<Q>>,
-    t: Matrix<DensePolynomial<Q>>,
-    f: DensePolynomial<Q>,
-    b: Matrix<Bounds>,
-}
 
 /**
  * Remove an element trailing in a vector. This can be helpful for types

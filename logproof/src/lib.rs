@@ -48,7 +48,7 @@ pub mod linear_algebra;
  */
 mod linear_relation;
 pub use linear_relation::{
-    Bounds, LogProof, ProverKnowledge as LogProofProverKnowledge,
+    Bounds, LatticeProblem, LogProof, ProverKnowledge as LogProofProverKnowledge,
     VerifierKnowledge as LogProofVerifierKnowledge,
 };
 

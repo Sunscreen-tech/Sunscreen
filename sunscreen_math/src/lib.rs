@@ -51,12 +51,10 @@ pub use cuda_impl::{GpuRistrettoPointVec, GpuScalarVec};
 
 #[cfg(feature = "pina")]
 /// A vector of [`RistrettoPoint`]s that supports batched operations.
-
 pub type RistrettoPointVec = PinaRistrettoPointVec;
 
 #[cfg(all(feature = "gpu", not(feature = "pina")))]
 /// A vector of [`RistrettoPoint`]s that supports batched operations.
-
 pub type RistrettoPointVec = GpuRistrettoPointVec;
 
 #[cfg(not(feature = "gpu"))]
@@ -65,12 +63,10 @@ pub type RistrettoPointVec = CpuRistrettoPointVec;
 
 #[cfg(feature = "pina")]
 /// A vector of [`Scalar`]s that supports batched operations.
-
 pub type ScalarVec = PinaScalarVec;
 
 #[cfg(all(feature = "gpu", not(feature = "pina")))]
 /// A vector of [`Scalar`]s that supports batched operations.
-
 pub type ScalarVec = GpuScalarVec;
 
 #[cfg(not(feature = "gpu"))]

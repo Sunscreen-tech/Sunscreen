@@ -1,4 +1,4 @@
-use crypto_bigint::UInt;
+use crypto_bigint::{NonZero, Uint};
 use subtle::{ConditionallySelectable, ConstantTimeEq, ConstantTimeGreater};
 use sunscreen_zkp_backend::{BigInt, Error as ZkpError, Gadget};
 
@@ -93,34 +93,33 @@ impl Gadget for SignedModulus {
             return Err(ZkpError::gadget_error("Divide by zero."));
         }
 
+        let m = NonZero::from_uint(m.0);
+
         // As per docs, when shift amount is constant, time is constant.
         // See https://docs.rs/crypto-bigint/latest/crypto_bigint/struct.UInt.html#method.shr_vartime
         let fm_2 = self.field_modulus.shr_vartime(2);
 
         let is_neg = x.ct_gt(&fm_2);
-        let (q_pos, r_pos) = x.div_rem(&m).unwrap();
+        let (q_pos, r_pos) = x.div_rem(&m);
 
         // If x is negative, this produces abs(x)
         let pos_x = self.field_modulus.wrapping_sub(&x);
 
         // Now we reduce mod m then subtract from m to get x mod m where x < 0.
         // Unwrap is okay here because we've already checked for m == 0.
-        let r_neg = m
-            .wrapping_sub(&pos_x.reduce(&m).unwrap())
-            .reduce(&m)
-            .unwrap();
+        let r_neg = m.wrapping_sub(&pos_x.rem(&m)).rem(&m);
 
         // q should round towards -Inf, so r != 0, subtract one.
         let correction =
-            UInt::conditional_select(&UInt::ONE, &UInt::ZERO, r_neg.ct_eq(&BigInt::ZERO));
+            Uint::conditional_select(&Uint::ONE, &Uint::ZERO, r_neg.ct_eq(&BigInt::ZERO));
 
         let q_neg = self
             .field_modulus
             .wrapping_sub(&pos_x.wrapping_div(&m).wrapping_add(&correction));
 
-        let q = UInt::conditional_select(&q_pos, &q_neg, is_neg);
+        let q = Uint::conditional_select(&q_pos, &q_neg, is_neg);
 
-        let r = UInt::conditional_select(&r_pos, &r_neg, is_neg);
+        let r = Uint::conditional_select(&r_pos, &r_neg, is_neg);
 
         Ok(vec![BigInt::from(q), BigInt::from(r)])
     }
@@ -197,6 +196,10 @@ mod tests {
         let m = BigInt::from(22u32);
         let field_modulus = <BulletproofsBackend as ZkpBackend>::Field::FIELD_MODULUS;
 
+        assert_ne!(field_modulus, BigInt::ZERO);
+
+        let nz_field_modulus = NonZero::from_uint(field_modulus.0);
+
         let gadget = SignedModulus::new(field_modulus, 16);
 
         let test_case = |x: BigInt| {
@@ -206,12 +209,7 @@ mod tests {
             let r = outputs[1];
 
             assert_eq!(
-                BigInt::from(
-                    m.wrapping_mul(&q)
-                        .wrapping_add(&r)
-                        .reduce(&field_modulus)
-                        .unwrap()
-                ),
+                BigInt::from(m.wrapping_mul(&q).wrapping_add(&r).rem(&nz_field_modulus)),
                 x
             );
             assert!(r < m);

@@ -1,4 +1,4 @@
-use crypto_bigint::UInt;
+use crypto_bigint::Uint;
 
 /**
  * Tags types (e.g. u64, f64, etc) so they can be used as literals
@@ -8,4 +8,4 @@ pub trait FheLiteral {}
 impl FheLiteral for f64 {}
 impl FheLiteral for u64 {}
 impl FheLiteral for i64 {}
-impl<const LIMBS: usize> FheLiteral for UInt<LIMBS> {} // is this true?
+impl<const LIMBS: usize> FheLiteral for Uint<LIMBS> {} // is this true?

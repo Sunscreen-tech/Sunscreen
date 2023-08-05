@@ -227,8 +227,8 @@ version = "0.1.0"
 dependencies = [
  "ark-ff",
  "ark-poly",
- "crypto-bigint 0.4.9",
- "env_logger 0.10.0",
+ "crypto-bigint",
+ "env_logger",
  "rand",
  "rand_distr",
  "sunscreen",
@@ -239,7 +239,7 @@ dependencies = [
 name = "bigint"
 version = "0.1.0"
 dependencies = [
- "crypto-bigint 0.4.9",
+ "crypto-bigint",
  "sunscreen",
 ]
 
@@ -380,7 +380,7 @@ dependencies = [
 name = "cannonical_norm_noise_model"
 version = "0.1.0"
 dependencies = [
- "env_logger 0.9.3",
+ "env_logger",
  "log",
  "rayon",
  "seal_fhe",
@@ -420,7 +420,7 @@ checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
 name = "chi_sq"
 version = "0.1.0"
 dependencies = [
- "env_logger 0.9.3",
+ "env_logger",
  "sunscreen",
 ]
 
@@ -715,16 +715,6 @@ dependencies = [
 
 [[package]]
 name = "crypto-bigint"
-version = "0.4.9"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ef2b4b23cddf68b89b8f8069890e8c270d54e2d5fe1b143820234805e4cb17ef"
-dependencies = [
- "rand_core",
- "subtle",
-]
-
-[[package]]
-name = "crypto-bigint"
 version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cf4c2f4e1afd912bc40bfd6fed5d9dc1f288e0ba01bfcc835cc5bc3eb13efe15"
@@ -933,19 +923,6 @@ checksum = "a12e6657c4c97ebab115a42dcee77225f7f482cdd841cf7088c657a42e9e00e7"
 dependencies = [
  "atty",
  "humantime",
- "log",
- "regex",
- "termcolor",
-]
-
-[[package]]
-name = "env_logger"
-version = "0.10.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "85cdab6a89accf66733ad5a1693a4dcced6aeff64602b634530dd73c1f3ee9f0"
-dependencies = [
- "humantime",
- "is-terminal",
  "log",
  "regex",
  "termcolor",
@@ -1326,15 +1303,6 @@ dependencies = [
 
 [[package]]
 name = "hermit-abi"
-version = "0.2.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ee512640fe35acbfb4bb779db6f0d80704c2cacfa2e39b601ef3e3f47d1ae4c7"
-dependencies = [
- "libc",
-]
-
-[[package]]
-name = "hermit-abi"
 version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fed44880c466736ef9a5c5b5facefb5ed0785676d0c02d612db14e54f0d84286"
@@ -1481,18 +1449,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "12b6ee2129af8d4fb011108c73d99a1b83a85977f23b82460c0ae2e25bb4b57f"
 
 [[package]]
-name = "is-terminal"
-version = "0.4.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "adcf93614601c8129ddf72e2d5633df827ba6551541c6d8c59520a371475be1f"
-dependencies = [
- "hermit-abi 0.3.1",
- "io-lifetimes",
- "rustix",
- "windows-sys 0.48.0",
-]
-
-[[package]]
 name = "itertools"
 version = "0.10.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1578,9 +1534,9 @@ checksum = "f7012b1bbb0719e1097c47611d3898568c546d597c2e74d66f6087edd5233ff4"
 
 [[package]]
 name = "link-cplusplus"
-version = "1.0.8"
+version = "1.0.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ecd207c9c713c34f95a097a5b029ac2ce6010530c7b49d7fea24d977dede04f5"
+checksum = "9d240c6f7e1ba3a28b0249f774e6a9dd0175054b52dfbb61b16eb8505c3785c9"
 dependencies = [
  "cc",
 ]
@@ -1869,11 +1825,11 @@ dependencies = [
 
 [[package]]
 name = "num_cpus"
-version = "1.15.0"
+version = "1.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0fac9e2da13b5eb447a6ce3d392f23a29d8694bff781bf03a16cd9ac8697593b"
+checksum = "4161fcb6d602d4d2081af7c3a45852d875a03dd337a6bfdd6e06407b61342a43"
 dependencies = [
- "hermit-abi 0.2.6",
+ "hermit-abi 0.3.1",
  "libc",
 ]
 
@@ -2700,8 +2656,8 @@ dependencies = [
  "bincode",
  "bumpalo",
  "criterion 0.4.0",
- "crypto-bigint 0.4.9",
- "env_logger 0.10.0",
+ "crypto-bigint",
+ "env_logger",
  "float-cmp",
  "lazy_static",
  "log",
@@ -2730,7 +2686,7 @@ name = "sunscreen_backend"
 version = "0.7.0"
 dependencies = [
  "crossbeam",
- "env_logger 0.9.3",
+ "env_logger",
  "log",
  "num",
  "petgraph",
@@ -2764,7 +2720,7 @@ dependencies = [
 
 [[package]]
 name = "sunscreen_compiler_common"
-version = "0.1.0"
+version = "0.7.0"
 dependencies = [
  "petgraph",
  "proc-macro2",
@@ -2820,11 +2776,11 @@ dependencies = [
 
 [[package]]
 name = "sunscreen_math"
-version = "0.1.0"
+version = "0.7.0"
 dependencies = [
  "bytemuck",
  "criterion 0.4.0",
- "crypto-bigint 0.5.2",
+ "crypto-bigint",
  "cust",
  "find_cuda_helper",
  "futures 0.3.28",
@@ -2883,7 +2839,7 @@ name = "sunscreen_zkp_backend"
 version = "0.1.0"
 dependencies = [
  "bumpalo",
- "crypto-bigint 0.4.9",
+ "crypto-bigint",
  "log",
  "merlin",
  "petgraph",

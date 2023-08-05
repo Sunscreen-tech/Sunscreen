@@ -6,13 +6,13 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-ark-ff = "0.4.0-alpha.4"
-ark-poly = "0.4.0-alpha.4"
-crypto-bigint = "0.4.9"
-rand = "0.8.5"
-rand_distr = "0.4.3"
-sunscreen = { path = "../../sunscreen" }
-sunscreen_zkp_backend = { path = "../../sunscreen_zkp_backend" }
+ark-ff = { workspace = true }
+ark-poly = { workspace = true }
+crypto-bigint = { workspace = true }
+rand = { workspace = true }
+rand_distr = { workspace = true }
+sunscreen = { workspace = true }
+sunscreen_zkp_backend = { workspace = true }
 
 [dev-dependencies]
-env_logger = "0.10.0"
+env_logger = { workspace = true }

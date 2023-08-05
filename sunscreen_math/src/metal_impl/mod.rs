@@ -172,7 +172,7 @@ where
      * Returns the length in [`Self::Item`].
      */
     fn len(&self) -> usize;
-    
+
     /// Whether or not the vector has no values.
     fn is_empty(&self) -> bool {
         self.len() == 0

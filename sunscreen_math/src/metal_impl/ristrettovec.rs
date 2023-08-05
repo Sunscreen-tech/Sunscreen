@@ -12,7 +12,6 @@ use crate::metal_impl::GpuScalarVec;
 
 use super::{GpuVec, GpuVecIter, IntoGpuVecIter, Runtime};
 
-
 /// A vector of [`RistrettoPoint`]s that supports batching operations.
 ///
 /// # Remarks

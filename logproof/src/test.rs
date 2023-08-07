@@ -4,9 +4,10 @@
  */
 use ark_ff::{BigInt, Field, Fp, MontBackend, MontConfig};
 use ark_poly::univariate::DensePolynomial;
+use crypto_bigint::{NonZero, Uint};
 use seal_fhe::{Modulus, PolynomialArray};
 
-use crate::{linear_algebra::Matrix, math::make_poly};
+use crate::{fields::FpRistretto, linear_algebra::Matrix, math::make_poly};
 
 /**
  * All information for a problem of the form `AS = T` in `Z_q[X]/f`. Useful for
@@ -155,4 +156,18 @@ where
             }
         })
         .collect()
+}
+
+/**
+ * Calculate the $\Delta$ parameter (floor(q/t)) for the BFV encryption scheme.
+ * This is a public parameter in the BFV scheme.
+ */
+pub fn bfv_delta<const N: usize>(coeff_modulus: FpRistretto, plaintext_modulus: u64) -> BigInt<N> {
+    let coeff_modulus = Uint::from(MontConfig::into_bigint(coeff_modulus).0);
+    let plain_modulus_bigint = NonZero::new(Uint::from(plaintext_modulus)).unwrap();
+
+    let delta_dc = coeff_modulus.div_rem(&plain_modulus_bigint).0;
+
+    let limbs = delta_dc.as_limbs().map(|l| l.0);
+    BigInt::<N>(limbs[0..N].try_into().unwrap())
 }

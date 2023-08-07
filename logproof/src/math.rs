@@ -653,49 +653,6 @@ where
     }
 }
 
-/**
- * Computes the quotient and remainder of a / b.
- */
-pub fn div_rem_bigint<const N: usize>(a: BigInt<N>, b: BigInt<N>) -> (BigInt<N>, BigInt<N>) {
-    let mut rem = a;
-    let mut div = BigInt::zero();
-
-    let mut leading_b = 0;
-
-    if b == BigInt::zero() {
-        panic!("Divide by zero.");
-    }
-
-    // Find the position of the leading 1 in b.
-    for i in 0..64 * N {
-        let i = 64 * N - 1 - i;
-
-        if b.get_bit(i) {
-            leading_b = i;
-            break;
-        }
-    }
-
-    for i in leading_b..N * 64 {
-        let i = 64 * N as u32 - 1 - i as u32;
-
-        let mut b_shift = b;
-        b_shift.muln(i);
-
-        let mut pow = BigInt::<N>::one();
-        pow.muln(i);
-
-        if b_shift <= rem {
-            rem.sub_with_borrow(&b_shift);
-            div.add_with_carry(&pow);
-        }
-
-        b_shift.div2();
-    }
-
-    (div, rem)
-}
-
 #[cfg(test)]
 mod test {
     use crate::fields::{FpRistretto, FqSeal128_8192};

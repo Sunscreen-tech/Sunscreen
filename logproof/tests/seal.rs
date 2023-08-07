@@ -1,4 +1,4 @@
-use ark_ff::{BigInt, Fp, MontBackend, MontConfig};
+use ark_ff::{Fp, MontBackend, MontConfig};
 use ark_poly::univariate::DensePolynomial;
 use merlin::Transcript;
 use seal_fhe::{
@@ -9,8 +9,10 @@ use seal_fhe::{
 use logproof::{
     fields::{FpRistretto, SealQ128_1024, SealQ128_2048, SealQ128_4096, SealQ128_8192},
     linear_algebra::Matrix,
-    math::{div_rem_bigint, make_poly, next_higher_power_of_two, Rem, Zero},
-    test::{convert_to_polynomial, convert_to_smallint, strip_trailing_value, LatticeProblem},
+    math::{make_poly, next_higher_power_of_two, Rem, Zero},
+    test::{
+        bfv_delta, convert_to_polynomial, convert_to_smallint, strip_trailing_value, LatticeProblem,
+    },
     InnerProductVerifierKnowledge, LogProof, LogProofGenerators, LogProofProverKnowledge,
     LogProofTranscript,
 };
@@ -120,10 +122,7 @@ where
     };
 
     // Delta is the constant polynomial with floor (q/t) as it's DC compopnent.
-    let modulus_bigint = MontConfig::into_bigint(data_modulus);
-    let modulus_bigint_lowered = BigInt::<N>(modulus_bigint.0[0..N].try_into().unwrap());
-    let plain_modulus_bigint = BigInt::<N>::from(plain_modulus.value());
-    let delta_dc = div_rem_bigint(modulus_bigint_lowered, plain_modulus_bigint).0;
+    let delta_dc = bfv_delta(data_modulus, plain_modulus.value());
     let delta_dc = Fp::from(delta_dc);
 
     let delta = DensePolynomial {

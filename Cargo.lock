@@ -1575,6 +1575,7 @@ dependencies = [
  "bincode",
  "bitvec",
  "criterion 0.4.0",
+ "crypto-bigint",
  "digest 0.10.7",
  "merlin",
  "once_cell",

@@ -17,12 +17,12 @@ rand = { workspace = true }
 rayon = { workspace = true }
 serde = { workspace = true }
 sunscreen_math = { workspace = true }
+seal_fhe = { workspace = true }
 
 [dev-dependencies]
 bincode = { workspace = true }
 criterion = { workspace = true }
 once_cell = { workspace = true }
-seal_fhe = { path = "../seal_fhe" }
 
 [features]
 default = []

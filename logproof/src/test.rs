@@ -166,8 +166,8 @@ pub fn bfv_delta<const N: usize>(coeff_modulus: FpRistretto, plaintext_modulus: 
     let coeff_modulus = Uint::from(MontConfig::into_bigint(coeff_modulus).0);
     let plain_modulus_bigint = NonZero::new(Uint::from(plaintext_modulus)).unwrap();
 
-    let delta_dc = coeff_modulus.div_rem(&plain_modulus_bigint).0;
+    let delta = coeff_modulus.div_rem(&plain_modulus_bigint).0;
 
-    let limbs = delta_dc.as_limbs().map(|l| l.0);
+    let limbs = delta.as_limbs().map(|l| l.into());
     BigInt::<N>(limbs[0..N].try_into().unwrap())
 }

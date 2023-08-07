@@ -331,45 +331,6 @@ pub async fn get_stack_trace(
     Ok(HttpResponse::NotFound().body(format!("Session {} not found", session)))
 }
 
-// #[cfg(feature = "debugger")]
-// #[get("sessions/{session}/groups/{groupid}")]
-// pub async fn get_group(
-//     path_info: web::Path<(String, usize)>,
-// ) -> Result<HttpResponse, actix_web::Error> {
-//     let (session, groupid) = path_info.into_inner();
-//     let sessions = get_sessions().lock().unwrap();
-
-//     if let Some(curr_session) = sessions.get(&session) {
-//         match curr_session {
-//             Session::BfvSession(curr_session) => {
-//                 let group_lookup = &curr_session.graph.metadata.group_lookup;
-
-//                 if let Some(group) = group_lookup
-//                     .id_data_lookup
-//                     .get(&groupid.try_into().unwrap())
-//                 {
-//                     let group_json = serde_json::to_string_pretty(group).unwrap();
-//                     return Ok(HttpResponse::Ok().body(group_json));
-//                 }
-//                 return Ok(HttpResponse::NotFound().body(format!("Group {} not found", groupid)));
-//             }
-//             Session::ZkpSession(curr_session) => {
-//                 let group_lookup = &curr_session.graph.metadata.group_lookup;
-
-//                 if let Some(group) = group_lookup
-//                     .id_data_lookup
-//                     .get(&groupid.try_into().unwrap())
-//                 {
-//                     let group_json = serde_json::to_string_pretty(group).unwrap();
-//                     return Ok(HttpResponse::Ok().body(group_json));
-//                 }
-//                 return Ok(HttpResponse::NotFound().body(format!("Group {} not found", groupid)));
-//             }
-//         }
-//     }
-//     Ok(HttpResponse::NotFound().body(format!("Session {} not found", session)))
-// }
-
 #[cfg(feature = "debugger")]
 #[get("sessions/{session}/groups/{groupid}")]
 pub async fn get_group(
@@ -583,40 +544,36 @@ fn fhe_is_problematic(s: &BfvSession, n: usize) -> bool {
     let pk = &s.private_key;
     let runtime = Runtime::new_fhe(&pk.0.params).unwrap();
     let stable_graph = &s.graph.graph;
-    if let Some(data) = s.program_data.get(n).unwrap() {
-        if let SealData::Ciphertext(ct) = data {
-            let with_context = WithContext {
-                params: pk.0.params.clone(),
-                data: ct.clone(),
-            };
+    if let Some(SealData::Ciphertext(ct)) = s.program_data.get(n).unwrap() {
+        let with_context = WithContext {
+            params: pk.0.params.clone(),
+            data: ct.clone(),
+        };
 
-            let sunscreen_ciphertext = Ciphertext {
-                // WARNING: this is garbage data, so we can't return a decrypted Ciphertext whose value makes sense
-                data_type: Type {
-                    is_encrypted: true,
-                    name: "ciphertext".to_owned(),
-                    version: Version::new(1, 1, 1),
-                },
+        let sunscreen_ciphertext = Ciphertext {
+            // WARNING: this is garbage data, so we can't return a decrypted Ciphertext whose value makes sense
+            data_type: Type {
+                is_encrypted: true,
+                name: "ciphertext".to_owned(),
+                version: Version::new(1, 1, 1),
+            },
 
-                inner: InnerCiphertext::Seal {
-                    value: vec![with_context],
-                },
-            };
+            inner: InnerCiphertext::Seal {
+                value: vec![with_context],
+            },
+        };
 
-            runtime
-                .measure_noise_budget(&sunscreen_ciphertext, pk)
-                .unwrap()
-                == 0
-                || overflow_occurred(
-                    stable_graph,
-                    NodeIndex::new(n),
-                    pk.0.params.plain_modulus,
-                    pk,
-                    &s.program_data.clone(),
-                )
-        } else {
-            false
-        }
+        runtime
+            .measure_noise_budget(&sunscreen_ciphertext, pk)
+            .unwrap()
+            == 0
+            || overflow_occurred(
+                stable_graph,
+                NodeIndex::new(n),
+                pk.0.params.plain_modulus,
+                pk,
+                &s.program_data.clone(),
+            )
     } else {
         false
     }

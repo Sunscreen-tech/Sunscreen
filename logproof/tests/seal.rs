@@ -36,7 +36,6 @@ where
  * advantage here over using a polynomial in its normal field is that the
  * polynomial can be moved to a new field without modulus switching.
  */
-#[allow(unused)]
 fn convert_to_smallint(coeff_modulus: &[Modulus], poly_array: PolynomialArray) -> Vec<Vec<i64>> {
     let first_coefficient = coeff_modulus[0].value();
 

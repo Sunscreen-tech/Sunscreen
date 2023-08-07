@@ -40,7 +40,8 @@ use crate::{
 type MatrixPoly<Q> = Matrix<DensePolynomial<Q>>;
 
 /**
- * Problem of the form A*S = T in Z[X]/f
+ * All information for a Problem of the form `AS = T` in `Z_q[X]/f`. Useful for
+ * demonstrating full knowledge proofs before performing zero knowledge proogs.
  */
 #[allow(unused)]
 pub struct LatticeProblem<Q>

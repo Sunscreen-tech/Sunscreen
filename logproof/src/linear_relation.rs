@@ -40,31 +40,6 @@ use crate::{
 type MatrixPoly<Q> = Matrix<DensePolynomial<Q>>;
 
 /**
- * All information for a Problem of the form `AS = T` in `Z_q[X]/f`. Useful for
- * demonstrating full knowledge proofs before performing zero knowledge proogs.
- */
-#[allow(unused)]
-pub struct LatticeProblem<Q>
-where
-    Q: Field + Clone,
-{
-    /// Public A
-    pub a: MatrixPoly<Q>,
-
-    /// Private message and encryption components S
-    pub s: MatrixPoly<Q>,
-
-    /// Result of A * S
-    pub t: MatrixPoly<Q>,
-
-    /// Polynomial divisor
-    pub f: DensePolynomial<Q>,
-
-    /// Bounds on elements in S
-    pub b: Matrix<Bounds>,
-}
-
-/**
  * Bounds on the coefficients in the secret S
  */
 pub type Bounds = Vec<u64>;
@@ -1151,6 +1126,7 @@ mod test {
         fields::FqSeal128_8192,
         linear_algebra::ScalarRem,
         math::{make_poly, next_higher_power_of_two, Zero},
+        test::LatticeProblem,
         LogProofGenerators,
     };
 

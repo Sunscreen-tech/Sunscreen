@@ -48,7 +48,7 @@ pub mod linear_algebra;
  */
 mod linear_relation;
 pub use linear_relation::{
-    Bounds, LatticeProblem, LogProof, ProverKnowledge as LogProofProverKnowledge,
+    Bounds, LogProof, ProverKnowledge as LogProofProverKnowledge,
     VerifierKnowledge as LogProofVerifierKnowledge,
 };
 
@@ -64,3 +64,8 @@ pub mod math;
 mod transcript;
 
 pub use transcript::LogProofTranscript;
+
+/**
+ * Components that are helpful for testing but should not be used in production.
+ */
+pub mod test;

@@ -10,8 +10,9 @@ use logproof::{
     fields::{FpRistretto, SealQ128_1024, SealQ128_2048, SealQ128_4096, SealQ128_8192},
     linear_algebra::Matrix,
     math::{div_rem_bigint, make_poly, next_higher_power_of_two, Rem, Zero},
-    InnerProductVerifierKnowledge, LatticeProblem, LogProof, LogProofGenerators,
-    LogProofProverKnowledge, LogProofTranscript,
+    test::LatticeProblem,
+    InnerProductVerifierKnowledge, LogProof, LogProofGenerators, LogProofProverKnowledge,
+    LogProofTranscript,
 };
 
 /**

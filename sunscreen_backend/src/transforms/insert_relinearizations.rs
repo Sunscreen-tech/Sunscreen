@@ -68,7 +68,7 @@ pub fn apply_insert_relinearizations(ir: &mut FheProgram) {
     #[cfg(feature = "debugger")]
     {
         let mut group_updates: Vec<(u64, u64)> = vec![];
-        for i in ir.graph.node_indices().into_iter() {
+        for i in ir.graph.node_indices() {
             group_updates.push((
                 ir.graph.node_weight(i).unwrap().group_id,
                 i.index().try_into().unwrap(),
@@ -85,7 +85,7 @@ fn group_insert_recursive(g: &u64, i: u64, ir: &mut FheProgram) {
         .metadata
         .group_lookup
         .id_data_lookup
-        .get_mut(&g)
+        .get_mut(g)
         .unwrap()
         .node_ids
         .insert(i);
@@ -94,7 +94,7 @@ fn group_insert_recursive(g: &u64, i: u64, ir: &mut FheProgram) {
         .metadata
         .group_lookup
         .id_data_lookup
-        .get(&g)
+        .get(g)
         .unwrap()
         .parent
     {

@@ -519,7 +519,7 @@ pub async fn get_group(
                             != curr_group.id
                         {
                             for g in &child_groups {
-                                if lookup.id_data_lookup.get(g).unwrap().node_ids.contains(&n) {
+                                if lookup.id_data_lookup.get(g).unwrap().node_ids.contains(n) {
                                     idx = NodeIndex::new((*g).try_into().unwrap());
                                 }
                             }
@@ -584,39 +584,38 @@ fn fhe_is_problematic(s: &BfvSession, n: usize) -> bool {
     let runtime = Runtime::new_fhe(&pk.0.params).unwrap();
     let stable_graph = &s.graph.graph;
     if let Some(data) = s.program_data.get(n).unwrap() {
-        match data {
-            SealData::Ciphertext(ct) => {
-                let with_context = WithContext {
-                    params: pk.0.params.clone(),
-                    data: ct.clone(),
-                };
+        if let SealData::Ciphertext(ct) = data {
+            let with_context = WithContext {
+                params: pk.0.params.clone(),
+                data: ct.clone(),
+            };
 
-                let sunscreen_ciphertext = Ciphertext {
-                    // WARNING: this is garbage data, so we can't return a decrypted Ciphertext whose value makes sense
-                    data_type: Type {
-                        is_encrypted: true,
-                        name: "ciphertext".to_owned(),
-                        version: Version::new(1, 1, 1),
-                    },
+            let sunscreen_ciphertext = Ciphertext {
+                // WARNING: this is garbage data, so we can't return a decrypted Ciphertext whose value makes sense
+                data_type: Type {
+                    is_encrypted: true,
+                    name: "ciphertext".to_owned(),
+                    version: Version::new(1, 1, 1),
+                },
 
-                    inner: InnerCiphertext::Seal {
-                        value: vec![with_context],
-                    },
-                };
+                inner: InnerCiphertext::Seal {
+                    value: vec![with_context],
+                },
+            };
 
-                runtime
-                    .measure_noise_budget(&sunscreen_ciphertext, pk)
-                    .unwrap()
-                    <= 0
-                    || overflow_occurred(
-                        stable_graph,
-                        NodeIndex::new(n),
-                        pk.0.params.plain_modulus,
-                        pk,
-                        &s.program_data.clone(),
-                    )
-            }
-            _ => false,
+            runtime
+                .measure_noise_budget(&sunscreen_ciphertext, pk)
+                .unwrap()
+                == 0
+                || overflow_occurred(
+                    stable_graph,
+                    NodeIndex::new(n),
+                    pk.0.params.plain_modulus,
+                    pk,
+                    &s.program_data.clone(),
+                )
+        } else {
+            false
         }
     } else {
         false

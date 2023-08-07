@@ -30,6 +30,10 @@ jobs:
           rust-playground/target
           rust-playground/ui/frontend/node_modules
         key: ${{ runner.os }}-playground-${{ hashFiles('rust-playground/Cargo.lock') }}-${{ hashFiles('rust-playground/ui/frontend/yarn.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-playground-${{ hashFiles('rust-playground/Cargo.lock') }}-${{ hashFiles('rust-playground/ui/frontend/yarn.lock') }}
+          ${{ runner.os }}-playground-${{ hashFiles('rust-playground/Cargo.lock') }}-
+          ${{ runner.os }}-playground-
     - name: Install frontend UI dependencies
       run: yarn install
       working-directory: ./rust-playground/ui/frontend

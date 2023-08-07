@@ -26,6 +26,9 @@ jobs:
           ~/.cargo/git/db/
           mdBook/target
         key: ${{ runner.os }}-cargo-mdBook-${{ hashFiles('mdBook/Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-cargo-mdBook-
+          ${{ runner.os }}-cargo-
     - name: Copy site to S3
       run: aws s3 cp src/* s3://sunscreen-site
       working-directory: ./website

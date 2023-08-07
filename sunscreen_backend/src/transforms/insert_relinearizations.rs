@@ -64,6 +64,42 @@ pub fn apply_insert_relinearizations(ir: &mut FheProgram) {
         Ok::<_, Infallible>(transforms)
     })
     .unwrap();
+
+    #[cfg(feature = "debugger")]
+    {
+        let mut group_updates: Vec<(u64, u64)> = vec![];
+        for i in ir.graph.node_indices().into_iter() {
+            group_updates.push((
+                ir.graph.node_weight(i).unwrap().group_id,
+                i.index().try_into().unwrap(),
+            ));
+        }
+        for (g, i) in group_updates {
+            group_insert_recursive(&g, i, ir);
+        }
+    }
+}
+#[cfg(feature = "debugger")]
+fn group_insert_recursive(g: &u64, i: u64, ir: &mut FheProgram) {
+    ir.graph
+        .metadata
+        .group_lookup
+        .id_data_lookup
+        .get_mut(&g)
+        .unwrap()
+        .node_ids
+        .insert(i);
+    if let Some(p) = ir
+        .graph
+        .metadata
+        .group_lookup
+        .id_data_lookup
+        .get(&g)
+        .unwrap()
+        .parent
+    {
+        group_insert_recursive(&p, i, ir)
+    }
 }
 
 #[cfg(test)]

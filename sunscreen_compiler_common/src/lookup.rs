@@ -1,6 +1,6 @@
 use backtrace::{Backtrace, BacktraceFrame, SymbolName};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::Path;
 
 /**
@@ -117,7 +117,7 @@ pub struct Group {
     /** */
     pub parent: Option<u64>,
     /** */
-    pub node_ids: Vec<u64>,
+    pub node_ids: HashSet<u64>,
     /** */
     pub node_inputs: Vec<u64>,
     /** */
@@ -132,7 +132,7 @@ impl Group {
             name,
             parent,
             source,
-            node_ids: vec![],
+            node_ids: HashSet::new(),
             node_inputs: vec![],
             node_outputs: vec![],
         }

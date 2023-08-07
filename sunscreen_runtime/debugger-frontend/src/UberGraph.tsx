@@ -200,6 +200,24 @@ const GraphConfig =  {
           <circle cx="50" cy="50" r="45" fill='pink'></circle>
         </symbol>
       )
+    },
+    group: {
+      typeText: "Group",
+      shapeId: "#group", // relates to the type property of a node
+      shape: (
+        <symbol viewBox="0 0 100 100" id="group" key="0">
+          <circle cx="50" cy="50" r="45"></circle>
+        </symbol>
+      )
+    },
+    probGroup: {
+      typeText: "Group",
+      shapeId: "#probGroup", // relates to the type property of a node
+      shape: (
+        <symbol viewBox="0 0 100 100" id="probGroup" key="0">
+          <circle cx="50" cy="50" r="45" fill='pink'></circle>
+        </symbol>
+      )
     }
   },
   NodeSubtypes: {},

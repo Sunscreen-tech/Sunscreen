@@ -71,7 +71,7 @@ fn main() {
         .with_params(&Params {
             lattice_dimension: 4096,
             coeff_modulus: [68719403009, 68719230977, 137438822401].to_vec(),
-            plain_modulus: 64,
+            plain_modulus: 256,
             scheme_type: Bfv,
             security_level: TC128,
         })

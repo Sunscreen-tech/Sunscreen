@@ -1,4 +1,4 @@
-import React, { useCallback,  useEffect,  useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { atomDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import ReactSplit, { SplitDirection } from '@devbookhq/splitter'
@@ -27,7 +27,7 @@ function CodeBlock({ code, onClickHandler, selectedLine }: CodeBlockProps) {
       } :
       {
         onClick: () => onSelectLine(lineNumber),
-        style: {backgroundColor: "saddlebrown"}
+        style: { backgroundColor: "saddlebrown" }
       }
   }, [onSelectLine, selectedLine]);
 
@@ -39,7 +39,7 @@ function CodeBlock({ code, onClickHandler, selectedLine }: CodeBlockProps) {
       wrapLines={true}
       useInlineStyles={true}
       lineProps={lineProps}
-      lineNumberStyle={{minWidth: 10}}
+      lineNumberStyle={{ minWidth: 10 }}
     >
       {code}
     </SyntaxHighlighter>
@@ -124,29 +124,123 @@ type FheProgramNode = {
   operation: FheProgramOperation
 }
 
-type EdgeType = 'Left' | 'Right' | 'Unary'
-type FheProgramEdge = [number, number, EdgeType]
+type GraphEdge = [number, number, any]
 
-type FheProgramGraph = {
-  nodes: FheProgramNode[];
-  edges: FheProgramEdge[]
-}
 
 type FheProgram = {
-  graph: { graph: { graph: FheProgramGraph }};
+  graph: { graph: { graph: FheProgramGraph } };
   data: 'Bfv'
 }
 
 type ZkpProgram = {
-  graph: { graph: {graph: ZkpProgramGraph}};
+  graph: { graph: { graph: ZkpProgramGraph } };
   data: any
 }
 
+type FheProgramGraph = {
+  nodes: [{ operation: FheProgramOperation }],
+  edges: GraphEdge
+}
 
 type ZkpProgramGraph = {
   nodes: [{ operation: ZkpProgramOperation }],
-  edges: FheProgramEdge
+  edges: GraphEdge
 }
+
+type DisplayGraph = {
+  nodes: [DisplayNode],
+  edges: null | GraphEdge,
+  node_holes: number[],
+}
+
+type FheOperationNode = { type: "FheOperation", id: number, op: FheProgramOperation, problematic: boolean }
+type GraphNode = { type: "Group", id: number, problematic: boolean, title: string }
+type ZkpOperationNode = { type: "Zkpoperation", id: number, op: ZkpProgramOperation, problematic: boolean }
+
+type DisplayNode = GraphNode | FheOperationNode | ZkpOperationNode
+
+function groupToGraph(groupData: DisplayGraph) {
+  const nodes: any[] = [];
+  const edges: any[] = [];
+
+  for (let i = 0; i < groupData.nodes.length; ++i) {
+    const node = groupData.nodes[i];
+    switch (node.type) {
+      case "Group":
+        if (node.problematic) {
+          nodes.push({ id: i + groupData.node_holes.length, title: node.title, type: 'probGroup', group_id: node.id })
+        } else {
+          nodes.push({ id: i + groupData.node_holes.length, title: node.title, type: 'group', groupId: node.id })
+        }
+        break;
+      default:
+        const op = node.op
+        switch (op.type) {
+          case 'InputCiphertext':
+            console.log('test')
+            nodes.push({ id: node.id, title: "", type: 'inputCiphertext' })
+            break
+          case 'Relinearize':
+            nodes.push({ id: node.id, title: "", type: 'relinearize' })
+            break
+          case 'Mul':
+          case 'Multiply':
+            if (node.problematic) {
+              nodes.push({ id: node.id, title: "", type: 'probMultiply' })
+            } else {
+              nodes.push({ id: node.id, title: "", type: 'multiply' })
+            }
+            
+            break
+          case 'Add':
+            if (node.problematic) {
+              nodes.push({ id: node.id, title: "", type: 'probAdd' })
+            } else {
+              nodes.push({ id: node.id, title: "", type: 'add' })
+            }            
+            break
+          case 'Sub':
+            if (node.problematic) {
+              nodes.push({ id: node.id, title: "", type: 'probSub' })
+            } else {
+              nodes.push({ id: node.id, title: "", type: 'sub' })
+            }            
+            break
+          case 'OutputCiphertext':
+            nodes.push({ id: node.id, title: "", type: 'outputCiphertext' })
+            break;
+          case 'Constraint':
+            nodes.push({ id: node.id, title: "", type: 'constraint', constraint: op.content })
+            break;
+          case 'HiddenInput':
+            nodes.push({ id: node.id, title: "", type: 'hidInput' })
+            break;
+          case 'PublicInput':
+            nodes.push({ id: node.id, title: "", type: 'pubInput' })
+            break;
+          case 'PrivateInput':
+            nodes.push({ id: node.id, title: "", type: 'privInput' })
+            break;
+          case 'Constant':
+          case 'ConstantInput':
+            nodes.push({ id: node.id, title: "", type: 'constantInput' })
+            break;
+          default:
+            nodes.push({ id: node.id, title: JSON.stringify(op), type: 'empty' })
+            break;
+        }
+    }
+    for (let i = 0; i < groupData.edges.length; i++) {
+      const edge = groupData.edges[i];
+      // console.log(edge);
+      if (edge !== null) {
+        edges.push({ source: edge[0], target: edge[1], type: edge[2] });
+      }
+    }
+  }
+  return { nodes: nodes, edges: edges }
+}
+
 
 const dataToGraph = (data: FheProgramGraph | ZkpProgramGraph) => {
   const nodes: any[] = [];
@@ -157,49 +251,49 @@ const dataToGraph = (data: FheProgramGraph | ZkpProgramGraph) => {
     switch (op.type) {
       case 'InputCiphertext':
         console.log('test')
-        nodes.push({id: i, title: "", type: 'inputCiphertext'})
+        nodes.push({ id: i, title: "", type: 'inputCiphertext' })
         break
       case 'Relinearize':
-        nodes.push({id: i, title: "", type: 'relinearize'})
+        nodes.push({ id: i, title: "", type: 'relinearize' })
         break
       case 'Mul':
       case 'Multiply':
-        nodes.push({id: i, title: "", type: 'multiply'})
+        nodes.push({ id: i, title: "", type: 'multiply' })
         break
       case 'Add':
-        nodes.push({id: i, title: "", type: 'add'})
+        nodes.push({ id: i, title: "", type: 'add' })
         break
       case 'Sub':
-        nodes.push({id: i, title: "", type: 'sub'})
+        nodes.push({ id: i, title: "", type: 'sub' })
         break
       case 'OutputCiphertext':
-        nodes.push({id: i, title: "", type: 'outputCiphertext'})
+        nodes.push({ id: i, title: "", type: 'outputCiphertext' })
         break;
       case 'Constraint':
-        nodes.push({id: i, title: "", type: 'constraint', constraint: op.content})
+        nodes.push({ id: i, title: "", type: 'constraint', constraint: op.content })
         break;
-      case 'HiddenInput': 
-        nodes.push({id: i, title: "", type: 'hidInput'})
+      case 'HiddenInput':
+        nodes.push({ id: i, title: "", type: 'hidInput' })
         break;
       case 'PublicInput':
-        nodes.push({id: i, title: "", type: 'pubInput'})
+        nodes.push({ id: i, title: "", type: 'pubInput' })
         break;
       case 'PrivateInput':
-        nodes.push({id: i, title: "", type: 'privInput'})
+        nodes.push({ id: i, title: "", type: 'privInput' })
         break;
       case 'Constant':
       case 'ConstantInput':
-        nodes.push({id: i, title: "", type: 'constantInput'})
+        nodes.push({ id: i, title: "", type: 'constantInput' })
         break;
-      default: 
-        nodes.push({id: i, title: JSON.stringify(op), type: 'empty'})
+      default:
+        nodes.push({ id: i, title: JSON.stringify(op), type: 'empty' })
         break;
     }
   }
   for (let i: number = 0; i < data.edges.length; ++i) {
-    edges.push({source: data.edges[i][0], target: data.edges[i][1], type: data.edges[i][2]})
+    edges.push({ source: data.edges[i][0], target: data.edges[i][1], type: data.edges[i][2] })
   }
-  return {nodes: nodes, edges: edges}
+  return { nodes: nodes, edges: edges }
 }
 
 async function isProblematic(node, session: string) {
@@ -228,18 +322,19 @@ const App = () => {
   const [vertSize, setVertSize] = useState<any[]>();
   const [horSize, setHorSize] = useState<any[]>();
   const [currCode, setCode] = useState<string>("select a session");
-  const [currGraph, setGraph] = useState({nodes: [], edges: []});
+  const [currGraph, setGraph] = useState({ nodes: [], edges: [] });
   const [selected, select] = useState<SelectionT | null>(null);
   const [sessionList, setSessionList] = useState<string[]>([]);
   const [session, setSession] = useState<string>("");
-  const [info, setInfo] = useState<any>({id: "no node selected"});
+  const [info, setInfo] = useState<any>({ id: "no node selected" });
   const [problemNodes, setProblemNodes] = useState<number[]>([]);
+  const [groupStack, setGroupStack] = useState<number[]>([]);
 
   useEffect(
-    () => {fetch("/sessions").then(j => j.json()).then(l => setSessionList(l))}, []
+    () => { fetch("/sessions").then(j => j.json()).then(l => setSessionList(l)) }, []
   )
 
-  const updateProblematicNodes = useCallback( async (graph) => {
+  const updateProblematicNodes = useCallback(async (graph) => {
     const newGraph = JSON.parse(JSON.stringify(graph))
     const nodes = newGraph.nodes;
     for (const node of nodes) {
@@ -252,56 +347,64 @@ const App = () => {
   }, [session, problemNodes]
   )
 
+  const pushGroup = (id: number) => {
+    setGroupStack(groupStack.concat([id]));
+  }
+
   const updateLine = useCallback(
     async (lineNumber: number) => {
-      setLine(lineNumber)
-      const graph = {
-        nodes: [
-          {
-            id: 1, 
-            title: `line ${lineNumber}`, 
-            type: 'empty', 
-            x: -10, 
-            y: 0
-          },
-          {
-            id: 2, 
-            title: `test_func`, 
-            type: 'problematic', 
-            x: 0, 
-            y: 0
-          }
-        ], 
-        edges: [
-          { source: 1, target: 2, directed: true, arrowhead: 'normal' }
-        ]
-      }
-      setGraph(lineNumber !== 1 ? graph : dataToGraph(await fetch(`/sessions/${session}`).then(d => d.json())))
+    //   setLine(lineNumber)
+    //   const graph = {
+    //     nodes: [
+    //       {
+    //         id: 1,
+    //         title: `line ${lineNumber}`,
+    //         type: 'empty',
+    //         x: -10,
+    //         y: 0
+    //       },
+    //       {
+    //         id: 2,
+    //         title: `test_func`,
+    //         type: 'problematic',
+    //         x: 0,
+    //         y: 0
+    //       }
+    //     ],
+    //     edges: [
+    //       { source: 1, target: 2, directed: true, arrowhead: 'normal' }
+    //     ]
+    //   }
+    //   setGraph(lineNumber !== 1 ? graph : dataToGraph(await fetch(`/sessions/${session}`).then(d => d.json())))
     }, [setLine, setGraph, session]
   )
 
   const updateSelection = useCallback(
     async (selection, e) => {
-      select(selection); 
+      select(selection);
       const node = selection.nodes?.values().next().value;
       console.log(node)
+
       if (node != null) {
-        if (session.split('_')[0] == "fhe") {
-          setInfo({
-            ...selection.nodes?.values().next().value, 
-            ...(await fetch(`sessions/${session}/${node.id}`).then(d => d.json())).Bfv,
-            stacktrace: filterStackTrace(await fetch(`sessions/${session}/stacktrace/${node.id}`).then(d => d.json()))
-          })
+        if (node.type == 'group' || node.type == 'probGroup') {
+          setInfo({type: 'group', groupId: node.groupId})
         } else {
-          setInfo({
-            ...selection.nodes?.values().next().value, 
-            value: (await fetch(`sessions/${session}/${node.id}`).then(d => d.json())).Zkp,
-            stacktrace: filterStackTrace(await fetch(`sessions/${session}/stacktrace/${node.id}`).then(d => d.json()))
-          })
+          if (session.split('_')[0] == "fhe") {
+            setInfo({
+              ...selection.nodes?.values().next().value,
+              ...(await fetch(`sessions/${session}/${node.id}`).then(d => d.json())).Bfv,
+              stacktrace: filterStackTrace(await fetch(`sessions/${session}/stacktrace/${node.id}`).then(d => d.json()))
+            })
+          } else {
+            setInfo({
+              ...selection.nodes?.values().next().value,
+              value: (await fetch(`sessions/${session}/${node.id}`).then(d => d.json())).Zkp,
+              stacktrace: filterStackTrace(await fetch(`sessions/${session}/stacktrace/${node.id}`).then(d => d.json()))
+            })
+          }
         }
-        
       } else {
-        setInfo({id: "no node selected"})
+        setInfo({ id: "no node selected" })
       }
     }, [select, session]
   )
@@ -309,35 +412,46 @@ const App = () => {
   const updateSession = useCallback(
     (event) => {
       const newSession = event.target.value
-      
+
       setSession(newSession)
     }, [setSession]
   )
 
   useEffect(() => {
+    setGroupStack([0]);
     const update = async () => {
-      const graph = await updateProblematicNodes(dataToGraph(await fetch(`/sessions/${session}`).then(d => d.json())))
-      setGraph(graph)
+      // const graph = await updateProblematicNodes(dataToGraph(await fetch(`/sessions/${session}`).then(d => d.json())))
+      // setGraph(graph)
       setCode(await fetch(`/programs/${session}`).then(p => p.json()))
     }
     update()
   }, [session])
 
+  useEffect(() => {
+      async function update() {
+        const newGraph = groupToGraph(await fetch(`/sessions/${session}/groups/${groupStack.at(-1)}`).then(j => j.json()))
+        console.log(newGraph);
+        setGraph(newGraph)
+      }
+      update()
+    }, [groupStack]
+  )
+
   return (
-    
+
     <div className='splits'>
       <ReactSplit direction={SplitDirection.Horizontal} onResizeFinished={(p, n) => setHorSize(n)} initialSizes={horSize}>
         <div className="pane">
           <ReactSplit direction={SplitDirection.Vertical} onResizeFinished={(p, n) => setVertSize(n)} initialSizes={vertSize}>
-            <div className='pane'><CodeBlock 
-            code={currCode} 
-            onClickHandler={updateLine}
-            selectedLine={selectedLine}
+            <div className='pane'><CodeBlock
+              code={currCode}
+              onClickHandler={updateLine}
+              selectedLine={selectedLine}
             ></CodeBlock></div>
             <div className='pane'>
-              <SessionPicker sessionList={sessionList} onUpdate={updateSession}/> 
+              <SessionPicker sessionList={sessionList} onUpdate={updateSession} />
               <div>Problem Nodes: {JSON.stringify(problemNodes)}</div>
-              <NodeInfo info={info}/>
+              <NodeInfo info={info} pushGroup={pushGroup} />
             </div>
           </ReactSplit>
         </div>
@@ -348,24 +462,31 @@ const App = () => {
   );
 }
 
-function NodeInfo({info}) {
+function NodeInfo({ info, pushGroup }) {
   if (info != null) {
-    if (Object.keys(info).includes('stacktrace')) {
+    if (Object.keys(info).includes('groupId')) {
+      return (
+        <div>
+          <p>Group:</p>
+          <button style={{backgroundColor: 'white'}} onClick={() => pushGroup(info.groupId)}>Step Into Group</button>
+        </div>
+      )
+    } else if (Object.keys(info).includes('stacktrace')) {
       return infoToHtml(info);
     } else {
       return (<div>
         {Object.keys(info).filter(k => k != "stacktrace").map((k) => (<p>{k}: {JSON.stringify(info[k])}</p>))}
       </div>)
     }
-    
+
   }
   return <p>{JSON.stringify(info)}</p>
 }
 
-function SessionPicker({sessionList, onUpdate}: {sessionList: string[], onUpdate: (string) => void}) {
-  
+function SessionPicker({ sessionList, onUpdate }: { sessionList: string[], onUpdate: (string) => void }) {
+
   return (
-    <select onChange={onUpdate} style={{backgroundColor: 'white', fontFamily: 'monospace'}}>
+    <select onChange={onUpdate} style={{ backgroundColor: 'white', fontFamily: 'monospace' }}>
       <option value='none'>Select a session!</option>
       {sessionList.map(s => (<option value={s}>{s}</option>))}
     </select>
@@ -374,7 +495,7 @@ function SessionPicker({sessionList, onUpdate}: {sessionList: string[], onUpdate
 
 window.addEventListener('load', () => {
   alert()
-  const root = render(<App/>, document.getElementById('root'));
+  const root = render(<App />, document.getElementById('root'));
 });
 
 function filterStackTrace(st) {
@@ -398,9 +519,9 @@ function infoToHtml(info: any) {
   if (info.type == 'probConstraint' || info.type == 'constraint') {
     info.value = info.value != "1"
   }
-  return (<div style={{fontFamily: 'sans-serif'}}>
-        {filteredKeys.map((k) => (<p>{k}: {JSON.stringify(info[k])}</p>))}
-        <p>stacktrace:</p>
-        {info.stacktrace.map(c => (<p>{`${c.callee_name.split("::").at(-2)} @ ${c.callee_file}:${c.callee_lineno}`}</p>))}
-      </div>)
+  return (<div style={{ fontFamily: 'sans-serif' }}>
+    {filteredKeys.map((k) => (<p>{k}: {JSON.stringify(info[k])}</p>))}
+    <p>stacktrace:</p>
+    {info.stacktrace.map(c => (<p>{`${c.callee_name.split("::").at(-2)} @ ${c.callee_file}:${c.callee_lineno}`}</p>))}
+  </div>)
 }

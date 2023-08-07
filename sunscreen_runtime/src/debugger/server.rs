@@ -1,6 +1,8 @@
 use actix_web::{get, http::header, web, App, HttpResponse, HttpServer, Responder};
 
 use semver::Version;
+use serde::Serialize;
+use sunscreen_compiler_common::EdgeInfo;
 
 use crate::{
     debugger::sessions::Session,
@@ -11,8 +13,14 @@ use crate::{
 use petgraph::stable_graph::NodeIndex;
 use std::sync::OnceLock;
 use std::thread;
+use sunscreen_fhe_program::Operation as FheOperation;
+use sunscreen_zkp_backend::Operation as ZkpOperation;
+
+use std::collections::HashMap;
 
 use tokio::runtime::Builder;
+
+use super::BfvSession;
 
 static SERVER: OnceLock<()> = OnceLock::new();
 
@@ -323,6 +331,45 @@ pub async fn get_stack_trace(
     Ok(HttpResponse::NotFound().body(format!("Session {} not found", session)))
 }
 
+// #[cfg(feature = "debugger")]
+// #[get("sessions/{session}/groups/{groupid}")]
+// pub async fn get_group(
+//     path_info: web::Path<(String, usize)>,
+// ) -> Result<HttpResponse, actix_web::Error> {
+//     let (session, groupid) = path_info.into_inner();
+//     let sessions = get_sessions().lock().unwrap();
+
+//     if let Some(curr_session) = sessions.get(&session) {
+//         match curr_session {
+//             Session::BfvSession(curr_session) => {
+//                 let group_lookup = &curr_session.graph.metadata.group_lookup;
+
+//                 if let Some(group) = group_lookup
+//                     .id_data_lookup
+//                     .get(&groupid.try_into().unwrap())
+//                 {
+//                     let group_json = serde_json::to_string_pretty(group).unwrap();
+//                     return Ok(HttpResponse::Ok().body(group_json));
+//                 }
+//                 return Ok(HttpResponse::NotFound().body(format!("Group {} not found", groupid)));
+//             }
+//             Session::ZkpSession(curr_session) => {
+//                 let group_lookup = &curr_session.graph.metadata.group_lookup;
+
+//                 if let Some(group) = group_lookup
+//                     .id_data_lookup
+//                     .get(&groupid.try_into().unwrap())
+//                 {
+//                     let group_json = serde_json::to_string_pretty(group).unwrap();
+//                     return Ok(HttpResponse::Ok().body(group_json));
+//                 }
+//                 return Ok(HttpResponse::NotFound().body(format!("Group {} not found", groupid)));
+//             }
+//         }
+//     }
+//     Ok(HttpResponse::NotFound().body(format!("Session {} not found", session)))
+// }
+
 #[cfg(feature = "debugger")]
 #[get("sessions/{session}/groups/{groupid}")]
 pub async fn get_group(
@@ -333,31 +380,272 @@ pub async fn get_group(
 
     if let Some(curr_session) = sessions.get(&session) {
         match curr_session {
-            Session::BfvSession(curr_session) => {
-                let group_lookup = &curr_session.graph.metadata.group_lookup;
+            Session::BfvSession(s) => {
+                let lookup = &s.graph.metadata.group_lookup;
 
-                if let Some(group) = group_lookup
-                    .id_data_lookup
-                    .get(&groupid.try_into().unwrap())
-                {
-                    let group_json = serde_json::to_string_pretty(group).unwrap();
-                    return Ok(HttpResponse::Ok().body(group_json));
+                if let Some(curr_group) = lookup.id_data_lookup.get(&groupid.try_into().unwrap()) {
+                    let child_groups = lookup.children_of(groupid.try_into().unwrap());
+
+                    let mut graph = s.graph.filter_map(
+                        |idx, n| {
+                            if n.group_id == u64::try_from(groupid).unwrap() {
+                                Some(DisplayNodeInfo::FheOperation {
+                                    id: idx.index().try_into().unwrap(),
+                                    op: n.operation.clone(),
+                                    problematic: fhe_is_problematic(s, idx.index()),
+                                })
+                            } else {
+                                None
+                            }
+                        },
+                        |_, e| Some(DisplayEdgeInfo::NodeEdge(*e)),
+                    );
+
+                    let group_graph_map = child_groups
+                        .iter()
+                        .map(|g| {
+                            (
+                                *g,
+                                graph.add_node(DisplayNodeInfo::Group {
+                                    id: *g,
+                                    problematic: lookup
+                                        .id_data_lookup
+                                        .get(g)
+                                        .unwrap()
+                                        .node_ids
+                                        .iter()
+                                        .any(|i| {
+                                            fhe_is_problematic(s, usize::try_from(*i).unwrap())
+                                        }),
+                                    title: lookup.id_data_lookup.get(g).unwrap().name.to_owned(),
+                                }),
+                            )
+                        })
+                        .collect::<HashMap<u64, NodeIndex>>();
+
+                    for n in &curr_group.node_ids {
+                        println!("{}", n);
+                        let mut idx = NodeIndex::new((*n).try_into().unwrap());
+                        if s.graph
+                            .node_weight(NodeIndex::new((*n).try_into().unwrap()))
+                            .unwrap()
+                            .group_id
+                            != curr_group.id
+                        {
+                            for g in &child_groups {
+                                if lookup.id_data_lookup.get(g).unwrap().node_ids.contains(n) {
+                                    idx = *group_graph_map.get(g).unwrap();
+                                }
+                            }
+                        };
+                        for e in s.graph.neighbors_directed(
+                            NodeIndex::new((*n).try_into().unwrap()),
+                            petgraph::Direction::Outgoing,
+                        ) {
+                            if s.graph.node_weight(e).unwrap().group_id
+                                == u64::try_from(groupid).unwrap()
+                                && &u64::try_from(idx.index()).unwrap() != n
+                            {
+                                println!("{:?} -> {:?}", idx, e);
+                                graph.add_edge(idx, e, DisplayEdgeInfo::GroupEdge);
+                            } else {
+                                for g in &child_groups {
+                                    if lookup
+                                        .id_data_lookup
+                                        .get(g)
+                                        .unwrap()
+                                        .node_ids
+                                        .contains(&e.index().try_into().unwrap())
+                                    {
+                                        graph.add_edge(
+                                            idx,
+                                            *group_graph_map.get(g).unwrap(),
+                                            DisplayEdgeInfo::GroupEdge,
+                                        );
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    let serialized_graph = serde_json::to_string_pretty(&graph).unwrap();
+                    return Ok(HttpResponse::Ok().body(serialized_graph));
+                } else {
+                    return Ok(
+                        HttpResponse::NotFound().body(format!("group {} not found", groupid))
+                    );
                 }
-                return Ok(HttpResponse::NotFound().body(format!("Group {} not found", groupid)));
             }
-            Session::ZkpSession(curr_session) => {
-                let group_lookup = &curr_session.graph.metadata.group_lookup;
+            Session::ZkpSession(s) => {
+                let lookup = &s.graph.metadata.group_lookup;
 
-                if let Some(group) = group_lookup
-                    .id_data_lookup
-                    .get(&groupid.try_into().unwrap())
-                {
-                    let group_json = serde_json::to_string_pretty(group).unwrap();
-                    return Ok(HttpResponse::Ok().body(group_json));
+                if let Some(curr_group) = lookup.id_data_lookup.get(&groupid.try_into().unwrap()) {
+                    let child_groups = lookup.children_of(groupid.try_into().unwrap());
+
+                    let mut graph = s.graph.filter_map(
+                        |idx, n| {
+                            if n.group_id == u64::try_from(groupid).unwrap() {
+                                Some(DisplayNodeInfo::ZkpOperation {
+                                    id: idx.index().try_into().unwrap(),
+                                    op: n.operation.clone(),
+                                    problematic: false,
+                                })
+                            } else {
+                                None
+                            }
+                        },
+                        |_, e| Some(DisplayEdgeInfo::NodeEdge(*e)),
+                    );
+
+                    let group_graph_map = child_groups
+                        .iter()
+                        .map(|g| {
+                            (
+                                *g,
+                                graph.add_node(DisplayNodeInfo::Group {
+                                    id: *g,
+                                    problematic: false,
+                                    title: lookup.id_data_lookup.get(g).unwrap().name.to_owned(),
+                                }),
+                            )
+                        })
+                        .collect::<HashMap<u64, NodeIndex>>();
+
+                    for n in &curr_group.node_ids {
+                        let mut idx = NodeIndex::new((*n).try_into().unwrap());
+                        if s.graph
+                            .node_weight(NodeIndex::new((*n).try_into().unwrap()))
+                            .unwrap()
+                            .group_id
+                            != curr_group.id
+                        {
+                            for g in &child_groups {
+                                if lookup.id_data_lookup.get(g).unwrap().node_ids.contains(&n) {
+                                    idx = NodeIndex::new((*g).try_into().unwrap());
+                                }
+                            }
+                        };
+                        for e in s.graph.neighbors_directed(
+                            NodeIndex::new((*n).try_into().unwrap()),
+                            petgraph::Direction::Outgoing,
+                        ) {
+                            for g in &child_groups {
+                                if lookup
+                                    .id_data_lookup
+                                    .get(g)
+                                    .unwrap()
+                                    .node_ids
+                                    .contains(&e.index().try_into().unwrap())
+                                {
+                                    graph.add_edge(
+                                        idx,
+                                        *group_graph_map.get(g).unwrap(),
+                                        DisplayEdgeInfo::GroupEdge,
+                                    );
+                                }
+                            }
+                        }
+                        for e in s.graph.neighbors_directed(
+                            NodeIndex::new((*n).try_into().unwrap()),
+                            petgraph::Direction::Incoming,
+                        ) {
+                            for g in &child_groups {
+                                if lookup
+                                    .id_data_lookup
+                                    .get(g)
+                                    .unwrap()
+                                    .node_ids
+                                    .contains(&e.index().try_into().unwrap())
+                                {
+                                    graph.add_edge(
+                                        *group_graph_map.get(g).unwrap(),
+                                        idx,
+                                        DisplayEdgeInfo::GroupEdge,
+                                    );
+                                }
+                            }
+                        }
+                    }
+
+                    let serialized_graph = serde_json::to_string_pretty(&graph).unwrap();
+                    return Ok(HttpResponse::Ok().body(serialized_graph));
+                } else {
+                    return Ok(
+                        HttpResponse::NotFound().body(format!("group {} not found", groupid))
+                    );
                 }
-                return Ok(HttpResponse::NotFound().body(format!("Group {} not found", groupid)));
             }
         }
     }
     Ok(HttpResponse::NotFound().body(format!("Session {} not found", session)))
+}
+
+fn fhe_is_problematic(s: &BfvSession, n: usize) -> bool {
+    let pk = &s.private_key;
+    let runtime = Runtime::new_fhe(&pk.0.params).unwrap();
+    let stable_graph = &s.graph.graph;
+    if let Some(data) = s.program_data.get(n).unwrap() {
+        match data {
+            SealData::Ciphertext(ct) => {
+                let with_context = WithContext {
+                    params: pk.0.params.clone(),
+                    data: ct.clone(),
+                };
+
+                let sunscreen_ciphertext = Ciphertext {
+                    // WARNING: this is garbage data, so we can't return a decrypted Ciphertext whose value makes sense
+                    data_type: Type {
+                        is_encrypted: true,
+                        name: "ciphertext".to_owned(),
+                        version: Version::new(1, 1, 1),
+                    },
+
+                    inner: InnerCiphertext::Seal {
+                        value: vec![with_context],
+                    },
+                };
+
+                runtime
+                    .measure_noise_budget(&sunscreen_ciphertext, pk)
+                    .unwrap()
+                    <= 0
+                    || overflow_occurred(
+                        stable_graph,
+                        NodeIndex::new(n),
+                        pk.0.params.plain_modulus,
+                        pk,
+                        &s.program_data.clone(),
+                    )
+            }
+            _ => false,
+        }
+    } else {
+        false
+    }
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(tag = "type")]
+enum DisplayNodeInfo {
+    Group {
+        id: u64,
+        problematic: bool,
+        title: String,
+    },
+    FheOperation {
+        id: u64,
+        op: FheOperation,
+        problematic: bool,
+    },
+    ZkpOperation {
+        id: u64,
+        op: ZkpOperation,
+        problematic: bool,
+    },
+}
+
+#[derive(Debug, Serialize)]
+#[serde(tag = "type", content = "edge_type")]
+enum DisplayEdgeInfo {
+    NodeEdge(EdgeInfo),
+    GroupEdge,
 }

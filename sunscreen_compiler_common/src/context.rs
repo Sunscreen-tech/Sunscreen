@@ -69,7 +69,7 @@ impl Default for DebugData {
     }
 }
 
-#[derive(Clone, Deserialize, Serialize, Debug, Eq)]
+#[derive(Clone, Deserialize, Serialize, Debug, Eq, Copy)]
 /**
  * Information about a node in the compilation graph.
  */
@@ -412,7 +412,7 @@ where
                     .id_data_lookup
                     .get_mut(i)
                     .unwrap();
-                group.node_ids.push(idx.index().try_into().unwrap())
+                group.node_ids.insert(idx.index().try_into().unwrap());
             }
 
             idx

@@ -23,8 +23,7 @@ pub fn debug_impl(
         fn #name #generics(#inputs) #ret #where_clause {
             use std::cell::RefCell;
             use std::mem::transmute;
-            use sunscreen::{CURRENT_PROGRAM_CTX};
-            CURRENT_PROGRAM_CTX.with(|ctx| {
+            sunscreen::CURRENT_PROGRAM_CTX.with(|ctx| {
                 let option = &mut *ctx.borrow_mut();
                 option.as_mut().unwrap().push_group(&#fn_name, &#raw_fn);
             });
@@ -33,7 +32,7 @@ pub fn debug_impl(
                 #body
             };
 
-            CURRENT_PROGRAM_CTX.with(|ctx| {
+            sunscreen::CURRENT_PROGRAM_CTX.with(|ctx| {
                 let option = &mut *ctx.borrow_mut();
                 option.as_mut().unwrap().pop_group();
             });

@@ -1,3 +1,5 @@
+use std::{thread, time::Duration};
+
 use sunscreen::{
     types::zkp::NativeField, zkp_program, BackendField, Compiler, Runtime, ZkpProgramInput,
 };
@@ -49,6 +51,10 @@ fn main() {
     let verify = runtime.verify(prog, &proof, cons, vec![]);
 
     assert!(verify.is_ok());
+
+    loop {
+        thread::sleep(Duration::from_millis(5000));
+    }
 }
 
 #[zkp_program(backend = "bulletproofs")]
@@ -56,25 +62,38 @@ fn sudoku_proof<F: BackendField>(
     #[constant] constraints: [[NativeField<F>; 9]; 9],
     board: [[NativeField<F>; 9]; 9],
 ) {
+    #[sunscreen::debug]
     fn assert_unique_numbers<F: BackendField>(arr: [ProgramNode<NativeField<F>>; 9]) {
-        for i in 1..=9 {
-            let mut circuit = NativeField::<F>::from(1).into_program_node();
-            for a in arr {
-                circuit = circuit * (NativeField::<F>::from(i).into_program_node() - a);
-            }
-            circuit.constrain_eq(NativeField::<F>::from(0));
-        }
-    }
-    // Proves that the board matches up with the puzzle where applicable
-    let zero = NativeField::<F>::from(0).into_program_node();
 
-    for i in 0..9 {
-        for j in 0..9 {
-            let square = board[i][j].into_program_node();
-            let constraint = constraints[i][j].into_program_node();
-            (constraint * (constraint - square)).constrain_eq(zero);
+        for i in 1..=9 {
+            assert_contains(arr, NativeField::<F>::from(i));
         }
     }
+
+    #[sunscreen::debug]
+    fn assert_contains<F: BackendField>(arr: [ProgramNode<NativeField<F>>; 9], i: NativeField<F>) {
+        let mut circuit = NativeField::<F>::from(1).into_program_node();
+        for a in arr {
+            circuit = circuit * (i.into_program_node() - a);
+        }
+        circuit.constrain_eq(NativeField::<F>::from(0));
+    }
+
+    let zero = NativeField::<F>::from(0).into_program_node();
+    #[sunscreen::debug]
+    fn verify_matches<F: BackendField>(constraints: [[ProgramNode<NativeField<F>>; 9]; 9], board: [[ProgramNode<NativeField<F>>; 9]; 9]) {
+        let zero = NativeField::<F>::from(0).into_program_node();
+        for i in 0..9 {
+            for j in 0..9 {
+                let square = board[i][j].into_program_node();
+                let constraint = constraints[i][j].into_program_node();
+                (constraint * (constraint - square)).constrain_eq(zero);
+            }
+        }
+    }
+
+    // Proves that the board matches up with the puzzle where applicable
+    verify_matches(constraints, board);
 
     // Checks rows contain every number from 1 to 9
     for row in board {

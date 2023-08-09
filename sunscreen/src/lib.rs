@@ -323,7 +323,7 @@ impl ContextEnum {
             ContextEnum::Zkp(context) => {
                 #[cfg(feature = "debugger")]
                 context.group_stack.pop();
-            }
+            }   
         }
     }
 

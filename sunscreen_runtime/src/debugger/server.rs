@@ -14,13 +14,13 @@ use petgraph::stable_graph::NodeIndex;
 use std::sync::OnceLock;
 use std::thread;
 use sunscreen_fhe_program::Operation as FheOperation;
-use sunscreen_zkp_backend::Operation as ZkpOperation;
+use sunscreen_zkp_backend::{Operation as ZkpOperation, BigInt};
 
 use std::collections::HashMap;
 
 use tokio::runtime::Builder;
 
-use super::BfvSession;
+use super::{BfvSession, ZkpSession};
 
 static SERVER: OnceLock<()> = OnceLock::new();
 
@@ -448,7 +448,7 @@ pub async fn get_group(
                                 Some(DisplayNodeInfo::ZkpOperation {
                                     id: idx.index().try_into().unwrap(),
                                     op: n.operation.clone(),
-                                    problematic: false,
+                                    problematic: zkp_is_problematic(s, idx.index()),
                                 })
                             } else {
                                 None
@@ -464,7 +464,15 @@ pub async fn get_group(
                                 *g,
                                 graph.add_node(DisplayNodeInfo::Group {
                                     id: *g,
-                                    problematic: false,
+                                    problematic: lookup
+                                    .id_data_lookup
+                                    .get(g)
+                                    .unwrap()
+                                    .node_ids
+                                    .iter()
+                                    .any(|i| {
+                                        zkp_is_problematic(s, usize::try_from(*i).unwrap())
+                                    }),
                                     title: lookup.id_data_lookup.get(g).unwrap().name.to_owned(),
                                 }),
                             )
@@ -481,7 +489,7 @@ pub async fn get_group(
                         {
                             for g in &child_groups {
                                 if lookup.id_data_lookup.get(g).unwrap().node_ids.contains(n) {
-                                    idx = NodeIndex::new((*g).try_into().unwrap());
+                                    idx = *group_graph_map.get(g).unwrap();
                                 }
                             }
                         };
@@ -577,6 +585,10 @@ fn fhe_is_problematic(s: &BfvSession, n: usize) -> bool {
     } else {
         false
     }
+}
+
+fn zkp_is_problematic(s: &ZkpSession, n: usize) -> bool {
+    matches!(s.graph.node_weight(NodeIndex::new(n)).unwrap().operation, ZkpOperation::Constraint(_)) && s.program_data.get(n).unwrap().unwrap_or(BigInt::from(0u32)) != BigInt::from(0u32)
 }
 
 #[derive(Debug, Clone, Serialize)]

@@ -168,7 +168,7 @@ function groupToGraph(groupData: DisplayGraph) {
     switch (node.type) {
       case "Group":
         if (node.problematic) {
-          nodes.push({ id: i + groupData.node_holes.length, title: node.title, type: 'probGroup', group_id: node.id })
+          nodes.push({ id: i + groupData.node_holes.length, title: node.title, type: 'probGroup', groupId: node.id })
         } else {
           nodes.push({ id: i + groupData.node_holes.length, title: node.title, type: 'group', groupId: node.id })
         }
@@ -210,7 +210,11 @@ function groupToGraph(groupData: DisplayGraph) {
             nodes.push({ id: node.id, title: "", type: 'outputCiphertext' })
             break;
           case 'Constraint':
-            nodes.push({ id: node.id, title: "", type: 'constraint', constraint: op.content })
+            if (node.problematic) {
+              nodes.push({ id: node.id, title: "", type: 'probConstraint', constraint: op.content })            
+            } else {
+              nodes.push({ id: node.id, title: "", type: 'constraint', constraint: op.content })
+            }
             break;
           case 'HiddenInput':
             nodes.push({ id: node.id, title: "", type: 'hidInput' })
@@ -467,7 +471,7 @@ function NodeInfo({ info, pushGroup }) {
     if (Object.keys(info).includes('groupId')) {
       return (
         <div>
-          <p>Group:</p>
+          <p>{`Group: ${info.groupId}`}</p>
           <button style={{backgroundColor: 'white'}} onClick={() => pushGroup(info.groupId)}>Step Into Group</button>
         </div>
       )

@@ -4,5 +4,5 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-sunscreen = { path = "../../sunscreen" }
-sunscreen_zkp_backend = { path = "../../sunscreen_zkp_backend" }
+sunscreen = { path = "../../sunscreen", features = ["debugger"]}
+sunscreen_zkp_backend = { path = "../../sunscreen_zkp_backend", features = ["debugger"] }

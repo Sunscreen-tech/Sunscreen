@@ -332,20 +332,19 @@ fn test_add_overflow() {
     assert!(add_overflow_occurred(
         [vec![vec![2, 6]], vec![vec![1, 7]]],
         9
-    )); 
+    ));
 
     // Negative + Negative Non-overflow
     assert!(!add_overflow_occurred(
         [vec![vec![2, 28]], vec![vec![1, 20]]],
         29
-    )); 
+    ));
 
     // Positive + Negative never overflows
     assert!(!add_overflow_occurred(
         [vec![vec![1, 28]], vec![vec![15, 14]]],
         29
-    )); 
-
+    ));
 }
 
 #[test]
@@ -354,17 +353,17 @@ fn test_mul_overflow() {
     assert!(mul_overflow_occurred(
         [vec![vec![1, 5]], vec![vec![1, 5]]],
         37
-    )); 
+    ));
 
     // Overflow occurs during addition after multiplications
     assert!(mul_overflow_occurred(
         [vec![vec![5, 5]], vec![vec![5, 5]]],
         59
-    )); 
+    ));
 
     // No overflow
     assert!(!mul_overflow_occurred(
         [vec![vec![1, 5]], vec![vec![2, 5]]],
         101
-    )); 
+    ));
 }

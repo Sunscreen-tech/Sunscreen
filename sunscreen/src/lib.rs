@@ -299,7 +299,7 @@ impl ContextEnum {
     /**
      * Pushes a group onto the group stack.
      */
-    pub fn push_group(&mut self, _group: &str, _source: &str) {
+    pub fn push_group(&mut self, group: &str, source: &str) {
         #[cfg(feature = "debugger")]
         match self {
             ContextEnum::Fhe(context) => {
@@ -316,11 +316,11 @@ impl ContextEnum {
      */
     pub fn pop_group(&mut self) {
         match self {
-            ContextEnum::Fhe(_context) => {
+            ContextEnum::Fhe(context) => {
                 #[cfg(feature = "debugger")]
                 context.group_stack.pop();
             }
-            ContextEnum::Zkp(_context) => {
+            ContextEnum::Zkp(context) => {
                 #[cfg(feature = "debugger")]
                 context.group_stack.pop();
             }

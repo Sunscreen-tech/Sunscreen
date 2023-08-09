@@ -64,7 +64,6 @@ fn sudoku_proof<F: BackendField>(
 ) {
     #[sunscreen::debug]
     fn assert_unique_numbers<F: BackendField>(arr: [ProgramNode<NativeField<F>>; 9]) {
-
         for i in 1..=9 {
             assert_contains(arr, NativeField::<F>::from(i));
         }
@@ -81,7 +80,10 @@ fn sudoku_proof<F: BackendField>(
 
     let zero = NativeField::<F>::from(0).into_program_node();
     #[sunscreen::debug]
-    fn verify_matches<F: BackendField>(constraints: [[ProgramNode<NativeField<F>>; 9]; 9], board: [[ProgramNode<NativeField<F>>; 9]; 9]) {
+    fn verify_matches<F: BackendField>(
+        constraints: [[ProgramNode<NativeField<F>>; 9]; 9],
+        board: [[ProgramNode<NativeField<F>>; 9]; 9],
+    ) {
         let zero = NativeField::<F>::from(0).into_program_node();
         for i in 0..9 {
             for j in 0..9 {

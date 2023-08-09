@@ -14,7 +14,7 @@ use petgraph::stable_graph::NodeIndex;
 use std::sync::OnceLock;
 use std::thread;
 use sunscreen_fhe_program::Operation as FheOperation;
-use sunscreen_zkp_backend::{Operation as ZkpOperation, BigInt};
+use sunscreen_zkp_backend::{BigInt, Operation as ZkpOperation};
 
 use std::collections::HashMap;
 
@@ -465,14 +465,14 @@ pub async fn get_group(
                                 graph.add_node(DisplayNodeInfo::Group {
                                     id: *g,
                                     problematic: lookup
-                                    .id_data_lookup
-                                    .get(g)
-                                    .unwrap()
-                                    .node_ids
-                                    .iter()
-                                    .any(|i| {
-                                        zkp_is_problematic(s, usize::try_from(*i).unwrap())
-                                    }),
+                                        .id_data_lookup
+                                        .get(g)
+                                        .unwrap()
+                                        .node_ids
+                                        .iter()
+                                        .any(|i| {
+                                            zkp_is_problematic(s, usize::try_from(*i).unwrap())
+                                        }),
                                     title: lookup.id_data_lookup.get(g).unwrap().name.to_owned(),
                                 }),
                             )
@@ -588,7 +588,10 @@ fn fhe_is_problematic(s: &BfvSession, n: usize) -> bool {
 }
 
 fn zkp_is_problematic(s: &ZkpSession, n: usize) -> bool {
-    matches!(s.graph.node_weight(NodeIndex::new(n)).unwrap().operation, ZkpOperation::Constraint(_)) && s.program_data.get(n).unwrap().unwrap_or(BigInt::from(0u32)) != BigInt::from(0u32)
+    matches!(
+        s.graph.node_weight(NodeIndex::new(n)).unwrap().operation,
+        ZkpOperation::Constraint(_)
+    ) && s.program_data.get(n).unwrap().unwrap_or(BigInt::from(0u32)) != BigInt::from(0u32)
 }
 
 #[derive(Debug, Clone, Serialize)]

@@ -145,7 +145,6 @@ where
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, Serialize)]
-//#[serde(tag = "type")]
 /**
  * Information about how one compiler graph node relates to another.
  */
@@ -261,7 +260,6 @@ impl<O> Debug for CompilationResult<O>
 where
     O: Operation,
 {
-    //TODO: support for debugger feature
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "Nodes = [")?;
 

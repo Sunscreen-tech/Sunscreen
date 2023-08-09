@@ -12,6 +12,8 @@ use sunscreen_runtime::{InnerPlaintext, Params};
 
 use std::cell::RefCell;
 
+use crate::ContextEnum;
+
 #[derive(Clone, Debug, Deserialize, Hash, Serialize, PartialEq, Eq)]
 /**
  * Represents a literal node's data.
@@ -140,10 +142,6 @@ impl OperationTrait for FheOperation {
     fn is_ordered(&self) -> bool {
         false
     }
-
-    fn is_multiplication(&self) -> bool {
-        matches!(self, FheOperation::Multiply)
-    }
 }
 
 /**
@@ -162,10 +160,10 @@ pub type FheFrontendCompilation = CompilationResult<FheOperation>;
 
 thread_local! {
     /**
-     * Contains the graph of a ZKP program during compilation. An
+     * Contains the graph of an FHE/ZKP program during compilation. An
      * implementation detail and not for public consumption.
      */
-    pub static CURRENT_FHE_CTX: RefCell<Option<&'static mut FheContext>> = RefCell::new(None);
+    pub static CURRENT_PROGRAM_CTX: RefCell<Option<&'static mut ContextEnum>> = RefCell::new(None);
 }
 
 /**
@@ -176,11 +174,12 @@ pub fn with_fhe_ctx<F, R>(f: F) -> R
 where
     F: FnOnce(&mut FheContext) -> R,
 {
-    CURRENT_FHE_CTX.with(|ctx| {
+    CURRENT_PROGRAM_CTX.with(|ctx| {
         let mut option = ctx.borrow_mut();
         let ctx = option
             .as_mut()
-            .expect("Called Ciphertext::new() outside of a context.");
+            .expect("Called Ciphertext::new() outside of a context.")
+            .unwrap_fhe_mut();
 
         f(ctx)
     })

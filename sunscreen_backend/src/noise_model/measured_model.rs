@@ -366,7 +366,7 @@ impl MeasuredModel {
 
         // We validated the fhe_program, so it's safe to call
         // run_program_unchecked
-        let outputs = match unsafe {
+        let outputs = unsafe {
             run_program_unchecked(
                 ir,
                 &inputs,
@@ -377,12 +377,7 @@ impl MeasuredModel {
                 #[cfg(feature = "debugger")]
                 "",
             )
-        } {
-            Ok(v) => v,
-            Err(e) => {
-                return Err(crate::Error::RuntimeError(e));
-            }
-        };
+        }?;
 
         let mut noise_levels = vec![];
 

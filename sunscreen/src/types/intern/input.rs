@@ -68,23 +68,23 @@ where
 #[test]
 fn can_create_inputs() {
     use crate::{
-        fhe::{FheContext, FheOperation, CURRENT_FHE_CTX},
+        fhe::{FheContext, FheOperation, CURRENT_PROGRAM_CTX},
         types::{bfv::Rational, intern::FheProgramNode},
-        Params, SchemeType, SecurityLevel,
+        ContextEnum, Params, SchemeType, SecurityLevel,
     };
     use std::cell::RefCell;
     use std::mem::transmute;
 
     use petgraph::stable_graph::NodeIndex;
 
-    CURRENT_FHE_CTX.with(|ctx| {
-        let mut context = FheContext::new(Params {
+    CURRENT_PROGRAM_CTX.with(|ctx| {
+        let mut context = ContextEnum::Fhe(FheContext::new(Params {
             lattice_dimension: 0,
             coeff_modulus: vec![],
             plain_modulus: 0,
             scheme_type: SchemeType::Bfv,
             security_level: SecurityLevel::TC128,
-        });
+        }));
 
         ctx.swap(&RefCell::new(Some(unsafe { transmute(&mut context) })));
 
@@ -122,25 +122,26 @@ fn can_create_inputs() {
 
         offset += 2 * 6 * 6;
 
-        assert_eq!(context.graph.node_count(), offset);
+        let fhe_context = context.unwrap_fhe();
+        assert_eq!(fhe_context.graph.node_count(), offset);
 
         for i in 0..2 {
             assert_eq!(
-                context.graph[NodeIndex::from(i)].operation,
+                fhe_context.graph[NodeIndex::from(i)].operation,
                 FheOperation::InputPlaintext
             );
         }
 
         for i in 2..14 {
             assert_eq!(
-                context.graph[NodeIndex::from(i)].operation,
+                fhe_context.graph[NodeIndex::from(i)].operation,
                 FheOperation::InputPlaintext
             );
         }
 
-        for i in 14..context.graph.node_count() {
+        for i in 14..fhe_context.graph.node_count() {
             assert_eq!(
-                context.graph[NodeIndex::from(i as u32)].operation,
+                fhe_context.graph[NodeIndex::from(i as u32)].operation,
                 FheOperation::InputCiphertext
             );
         }

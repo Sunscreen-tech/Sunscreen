@@ -3,13 +3,13 @@ use petgraph::Graph;
 use sunscreen_runtime::CallSignature;
 use sunscreen_zkp_backend::{BackendField, BigInt, Gadget, Operation as JitOperation};
 
-use crate::Result;
+use crate::{Result, CURRENT_PROGRAM_CTX};
 
+use std::any::Any;
 use std::collections::HashMap;
 use std::hash::Hash;
 use std::sync::Arc;
 use std::vec;
-use std::{any::Any, cell::RefCell};
 
 /**
  * An internal representation of a ZKP program specification.
@@ -155,10 +155,6 @@ impl OperationTrait for Operation {
     fn is_ordered(&self) -> bool {
         matches!(self, Operation::InvokeGadget(_))
     }
-
-    fn is_multiplication(&self) -> bool {
-        matches!(self, Operation::Mul)
-    }
 }
 
 impl Operation {
@@ -195,6 +191,7 @@ impl Operation {
  * An implementation detail of a ZKP program. During compilation, it
  * tracks how many public and private inputs have been added.
  */
+#[derive(Clone)]
 pub struct ZkpData {
     next_public_input: usize,
     next_private_input: usize,
@@ -375,14 +372,6 @@ impl Render for Operation {
     }
 }
 
-thread_local! {
-    /**
-     * Contains the graph of a ZKP program during compilation. An
-     * implementation detail and not for public consumption.
-     */
-    pub static CURRENT_ZKP_CTX: RefCell<Option<&'static mut ZkpContext>> = RefCell::new(None);
-}
-
 /**
  * Runs the specified closure, injecting the current
  * [`fhe_program`](crate::fhe_program) context.
@@ -391,11 +380,12 @@ pub fn with_zkp_ctx<F, R>(f: F) -> R
 where
     F: FnOnce(&mut ZkpContext) -> R,
 {
-    CURRENT_ZKP_CTX.with(|ctx| {
+    CURRENT_PROGRAM_CTX.with(|ctx| {
         let mut option = ctx.borrow_mut();
         let ctx = option
             .as_mut()
-            .expect("Called with_zkp_ctx() outside of a context.");
+            .expect("Called with_zkp_ctx() outside of a context.")
+            .unwrap_zkp_mut();
 
         f(ctx)
     })

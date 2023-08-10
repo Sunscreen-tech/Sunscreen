@@ -88,7 +88,7 @@ pub fn overflow_occurred(
 ) -> bool {
     // Overflow only occurs at the output of an operation node
     let mut parents = graph.neighbors_directed(node, Incoming);
-    if parents.clone().count() != 1 {
+    if parents.clone().count() == 1 {
         return false;
     }
 
@@ -145,12 +145,12 @@ pub fn overflow_occurred(
     }
 }
 
-pub fn add_overflow_occurred(operands: [Vec<Vec<u64>>; 2], p: u64) -> bool {
+fn add_overflow_occurred(operands: [Vec<Vec<u64>>; 2], p: u64) -> bool {
     for (c0, c1) in operands[0].iter().zip(operands[1].iter()) {
         // Addition overflow
         for i in 0..c0.len() {
             let sum = c0[i] + c1[i];
-            if (c0[i] > p / 2 && c1[i] > p / 2 && sum <= p / 2)
+            if (c0[i] > p / 2 && c1[i] > p / 2 && sum <= 3 * p / 2)
                 || (c0[i] <= p / 2 && c1[i] <= p / 2 && sum > p / 2)
             {
                 return true;
@@ -160,7 +160,7 @@ pub fn add_overflow_occurred(operands: [Vec<Vec<u64>>; 2], p: u64) -> bool {
     false
 }
 
-pub fn sub_overflow_occurred(operands: [Vec<Vec<u64>>; 2], p: u64) -> bool {
+fn sub_overflow_occurred(operands: [Vec<Vec<u64>>; 2], p: u64) -> bool {
     let negated_coeffs = operands[1]
         .iter()
         .map(|vec| vec.iter().map(|x| p - x).collect())
@@ -169,7 +169,7 @@ pub fn sub_overflow_occurred(operands: [Vec<Vec<u64>>; 2], p: u64) -> bool {
     add_overflow_occurred(new_operands, p)
 }
 
-pub fn mul_overflow_occurred(operands: [Vec<Vec<u64>>; 2], p: u64) -> bool {
+fn mul_overflow_occurred(operands: [Vec<Vec<u64>>; 2], p: u64) -> bool {
     for (poly1, poly2) in operands[0].iter().zip(&operands[1]) {
         let product = polynomial_mult(poly1, poly2);
         let product_mod = polynomial_mult_mod(poly1, poly2, p);
@@ -313,3 +313,71 @@ pub struct ZkpNodeType {
 
 #[test]
 fn test_get_mul_depth() {}
+
+/**
+ * If the plaintext modulus is p, our representatives are [-p/2, p/2].
+ *
+ * We check the cases where we add two positive numbers and the result exceeds p/2, and
+ * when we add two negative numbers and the result goes below -p/2.
+ *
+ * Negative numbers are represented by uints that satisfy p/2 < x < p.
+ */
+#[test]
+fn test_add_overflow() {
+    // Positive + Positive Overflow (6 + 4 > 7)
+    assert!(add_overflow_occurred(
+        [vec![vec![6, 5]], vec![vec![4, 6]]],
+        13
+    ));
+
+    // Positive + Positive Non-overflow
+    assert!(!add_overflow_occurred(
+        [vec![vec![2, 5]], vec![vec![1, 6]]],
+        23
+    ));
+
+    // Negative numbers are represented by uints x where p / 2 < x < p.
+    // Negative + Negative Overflow (6 = -3, 7 = -2, -3 + -2 = -5 < -4).
+    assert!(add_overflow_occurred(
+        [vec![vec![2, 6]], vec![vec![1, 7]]],
+        9
+    ));
+
+    // Negative + Negative Non-overflow
+    assert!(!add_overflow_occurred(
+        [vec![vec![2, 28]], vec![vec![1, 20]]],
+        29
+    ));
+
+    // Positive + Negative never overflows
+    assert!(!add_overflow_occurred(
+        [vec![vec![1, 28]], vec![vec![15, 14]]],
+        29
+    ));
+}
+
+/**
+ * Multiplication of polynomials is convolution of the coefficients, we test that the overflow
+ * function correctly detects overflows during both the multiplication and the addition steps of
+ * the convolution.
+ */
+#[test]
+fn test_mul_overflow() {
+    // Overflow occurs during coefficient multiplication
+    assert!(mul_overflow_occurred(
+        [vec![vec![1, 5]], vec![vec![1, 5]]],
+        37
+    ));
+
+    // Overflow occurs during addition after multiplications
+    assert!(mul_overflow_occurred(
+        [vec![vec![5, 5]], vec![vec![5, 5]]],
+        59
+    ));
+
+    // No overflow
+    assert!(!mul_overflow_occurred(
+        [vec![vec![1, 5]], vec![vec![2, 5]]],
+        101
+    ));
+}

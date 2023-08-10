@@ -1,4 +1,4 @@
-import React, { useCallback,  useEffect,  useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { atomDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import ReactSplit, { SplitDirection } from '@devbookhq/splitter'
@@ -27,7 +27,7 @@ function CodeBlock({ code, onClickHandler, selectedLine }: CodeBlockProps) {
       } :
       {
         onClick: () => onSelectLine(lineNumber),
-        style: {backgroundColor: "saddlebrown"}
+        style: { backgroundColor: "saddlebrown" }
       }
   }, [onSelectLine, selectedLine]);
 
@@ -39,7 +39,7 @@ function CodeBlock({ code, onClickHandler, selectedLine }: CodeBlockProps) {
       wrapLines={true}
       useInlineStyles={true}
       lineProps={lineProps}
-      lineNumberStyle={{minWidth: 10}}
+      lineNumberStyle={{ minWidth: 10 }}
     >
       {code}
     </SyntaxHighlighter>
@@ -133,12 +133,12 @@ type FheProgramGraph = {
 }
 
 type FheProgram = {
-  graph: { graph: { graph: FheProgramGraph }};
+  graph: { graph: { graph: FheProgramGraph } };
   data: 'Bfv'
 }
 
 type ZkpProgram = {
-  graph: { graph: {graph: ZkpProgramGraph}};
+  graph: { graph: { graph: ZkpProgramGraph } };
   data: any
 }
 
@@ -157,49 +157,49 @@ const dataToGraph = (data: FheProgramGraph | ZkpProgramGraph) => {
     switch (op.type) {
       case 'InputCiphertext':
         console.log('test')
-        nodes.push({id: i, title: "", type: 'inputCiphertext'})
+        nodes.push({ id: i, title: "", type: 'inputCiphertext' })
         break
       case 'Relinearize':
-        nodes.push({id: i, title: "", type: 'relinearize'})
+        nodes.push({ id: i, title: "", type: 'relinearize' })
         break
       case 'Mul':
       case 'Multiply':
-        nodes.push({id: i, title: "", type: 'multiply'})
+        nodes.push({ id: i, title: "", type: 'multiply' })
         break
       case 'Add':
-        nodes.push({id: i, title: "", type: 'add'})
+        nodes.push({ id: i, title: "", type: 'add' })
         break
       case 'Sub':
-        nodes.push({id: i, title: "", type: 'sub'})
+        nodes.push({ id: i, title: "", type: 'sub' })
         break
       case 'OutputCiphertext':
-        nodes.push({id: i, title: "", type: 'outputCiphertext'})
+        nodes.push({ id: i, title: "", type: 'outputCiphertext' })
         break;
       case 'Constraint':
-        nodes.push({id: i, title: "", type: 'constraint', constraint: op.content})
+        nodes.push({ id: i, title: "", type: 'constraint', constraint: op.content })
         break;
-      case 'HiddenInput': 
-        nodes.push({id: i, title: "", type: 'hidInput'})
+      case 'HiddenInput':
+        nodes.push({ id: i, title: "", type: 'hidInput' })
         break;
       case 'PublicInput':
-        nodes.push({id: i, title: "", type: 'pubInput'})
+        nodes.push({ id: i, title: "", type: 'pubInput' })
         break;
       case 'PrivateInput':
-        nodes.push({id: i, title: "", type: 'privInput'})
+        nodes.push({ id: i, title: "", type: 'privInput' })
         break;
       case 'Constant':
       case 'ConstantInput':
-        nodes.push({id: i, title: "", type: 'constantInput'})
+        nodes.push({ id: i, title: "", type: 'constantInput' })
         break;
-      default: 
-        nodes.push({id: i, title: JSON.stringify(op), type: 'empty'})
+      default:
+        nodes.push({ id: i, title: JSON.stringify(op), type: 'empty' })
         break;
     }
   }
   for (let i: number = 0; i < data.edges.length; ++i) {
-    edges.push({source: data.edges[i][0], target: data.edges[i][1], type: data.edges[i][2]})
+    edges.push({ source: data.edges[i][0], target: data.edges[i][1], type: data.edges[i][2] })
   }
-  return {nodes: nodes, edges: edges}
+  return { nodes: nodes, edges: edges }
 }
 
 async function isProblematic(node, session: string) {
@@ -228,18 +228,18 @@ const App = () => {
   const [vertSize, setVertSize] = useState<any[]>();
   const [horSize, setHorSize] = useState<any[]>();
   const [currCode, setCode] = useState<string>("select a session");
-  const [currGraph, setGraph] = useState({nodes: [], edges: []});
+  const [currGraph, setGraph] = useState({ nodes: [], edges: [] });
   const [selected, select] = useState<SelectionT | null>(null);
   const [sessionList, setSessionList] = useState<string[]>([]);
   const [session, setSession] = useState<string>("");
-  const [info, setInfo] = useState<any>({id: "no node selected"});
+  const [info, setInfo] = useState<any>({ id: "no node selected" });
   const [problemNodes, setProblemNodes] = useState<number[]>([]);
 
   useEffect(
-    () => {fetch("/sessions").then(j => j.json()).then(l => setSessionList(l))}, []
+    () => { fetch("/sessions").then(j => j.json()).then(l => setSessionList(l)) }, []
   )
 
-  const updateProblematicNodes = useCallback( async (graph) => {
+  const setProblematicNodes = async (graph) => {
     const newGraph = JSON.parse(JSON.stringify(graph))
     const nodes = newGraph.nodes;
     for (const node of nodes) {
@@ -248,9 +248,9 @@ const App = () => {
         setProblemNodes(problemNodes.concat([node.id]))
       }
     }
-    return newGraph
-  }, [session, problemNodes]
-  )
+    setGraph(newGraph)
+  }
+  
 
   const updateLine = useCallback(
     async (lineNumber: number) => {
@@ -258,86 +258,89 @@ const App = () => {
       const graph = {
         nodes: [
           {
-            id: 1, 
-            title: `line ${lineNumber}`, 
-            type: 'empty', 
-            x: -10, 
+            id: 1,
+            title: `line ${lineNumber}`,
+            type: 'empty',
+            x: -10,
             y: 0
           },
           {
-            id: 2, 
-            title: `test_func`, 
-            type: 'problematic', 
-            x: 0, 
+            id: 2,
+            title: `test_func`,
+            type: 'problematic',
+            x: 0,
             y: 0
           }
-        ], 
+        ],
         edges: [
           { source: 1, target: 2, directed: true, arrowhead: 'normal' }
         ]
       }
       setGraph(lineNumber !== 1 ? graph : dataToGraph(await fetch(`/sessions/${session}`).then(d => d.json())))
-    }, [setLine, setGraph, session]
+    }, [session]
   )
 
   const updateSelection = useCallback(
     async (selection, e) => {
-      select(selection); 
+      select(selection);
       const node = selection.nodes?.values().next().value;
       console.log(node)
       if (node != null) {
         if (session.split('_')[0] == "fhe") {
           setInfo({
-            ...selection.nodes?.values().next().value, 
+            ...selection.nodes?.values().next().value,
             ...(await fetch(`sessions/${session}/${node.id}`).then(d => d.json())).Bfv,
             stacktrace: filterStackTrace(await fetch(`sessions/${session}/stacktrace/${node.id}`).then(d => d.json()))
           })
         } else {
           setInfo({
-            ...selection.nodes?.values().next().value, 
+            ...selection.nodes?.values().next().value,
             value: (await fetch(`sessions/${session}/${node.id}`).then(d => d.json())).Zkp,
             stacktrace: filterStackTrace(await fetch(`sessions/${session}/stacktrace/${node.id}`).then(d => d.json()))
           })
         }
-        
+
       } else {
-        setInfo({id: "no node selected"})
+        setInfo({ id: "no node selected" })
       }
-    }, [select, session]
+    }, [session]
   )
 
-  const updateSession = useCallback(
-    (event) => {
-      const newSession = event.target.value
-      
-      setSession(newSession)
-    }, [setSession]
-  )
+  const updateSession = (event) => {
+    const newSession = event.target.value
+    setSession(newSession)
+  }
 
   useEffect(() => {
     const update = async () => {
-      const graph = await updateProblematicNodes(dataToGraph(await fetch(`/sessions/${session}`).then(d => d.json())))
+      const graph = dataToGraph(await fetch(`/sessions/${session}`).then(d => d.json()))
       setGraph(graph)
       setCode(await fetch(`/programs/${session}`).then(p => p.json()))
+      return graph
     }
     update()
   }, [session])
 
+  useEffect(() => {
+      setProblematicNodes(currGraph)
+    }, [currGraph]
+  )
+
   return (
-    
+
     <div className='splits'>
       <ReactSplit direction={SplitDirection.Horizontal} onResizeFinished={(p, n) => setHorSize(n)} initialSizes={horSize}>
         <div className="pane">
           <ReactSplit direction={SplitDirection.Vertical} onResizeFinished={(p, n) => setVertSize(n)} initialSizes={vertSize}>
-            <div className='pane'><CodeBlock 
-            code={currCode} 
-            onClickHandler={updateLine}
-            selectedLine={selectedLine}
+            <div className='pane'><CodeBlock
+              code={currCode}
+              onClickHandler={updateLine}
+              selectedLine={selectedLine}
             ></CodeBlock></div>
             <div className='pane'>
-              <SessionPicker sessionList={sessionList} onUpdate={updateSession}/> 
+              <SessionPicker sessionList={sessionList} onUpdate={updateSession} />
               <div>Problem Nodes: {JSON.stringify(problemNodes)}</div>
-              <NodeInfo info={info}/>
+              <NodeInfo info={info} />
             </div>
           </ReactSplit>
         </div>
@@ -348,7 +351,7 @@ const App = () => {
   );
 }
 
-function NodeInfo({info}) {
+function NodeInfo({ info }) {
   if (info != null) {
     if (Object.keys(info).includes('stacktrace')) {
       return infoToHtml(info);
@@ -357,15 +360,15 @@ function NodeInfo({info}) {
         {Object.keys(info).filter(k => k != "stacktrace").map((k) => (<p>{k}: {JSON.stringify(info[k])}</p>))}
       </div>)
     }
-    
+
   }
   return <p>{JSON.stringify(info)}</p>
 }
 
-function SessionPicker({sessionList, onUpdate}: {sessionList: string[], onUpdate: (string) => void}) {
-  
+function SessionPicker({ sessionList, onUpdate }: { sessionList: string[], onUpdate: (string) => void }) {
+
   return (
-    <select onChange={onUpdate} style={{backgroundColor: 'white', fontFamily: 'monospace'}}>
+    <select onChange={onUpdate} style={{ backgroundColor: 'white', fontFamily: 'monospace' }}>
       <option value='none'>Select a session!</option>
       {sessionList.map(s => (<option value={s}>{s}</option>))}
     </select>
@@ -374,7 +377,7 @@ function SessionPicker({sessionList, onUpdate}: {sessionList: string[], onUpdate
 
 window.addEventListener('load', () => {
   alert()
-  const root = render(<App/>, document.getElementById('root'));
+  const root = render(<App />, document.getElementById('root'));
 });
 
 function filterStackTrace(st) {
@@ -398,9 +401,9 @@ function infoToHtml(info: any) {
   if (info.type == 'probConstraint' || info.type == 'constraint') {
     info.value = info.value != "1"
   }
-  return (<div style={{fontFamily: 'sans-serif'}}>
-        {filteredKeys.map((k) => (<p>{k}: {JSON.stringify(info[k])}</p>))}
-        <p>stacktrace:</p>
-        {info.stacktrace.map(c => (<p>{`${c.callee_name.split("::").at(-2)} @ ${c.callee_file}:${c.callee_lineno}`}</p>))}
-      </div>)
+  return (<div style={{ fontFamily: 'sans-serif' }}>
+    {filteredKeys.map((k) => (<p>{k}: {JSON.stringify(info[k])}</p>))}
+    <p>stacktrace:</p>
+    {info.stacktrace.map(c => (<p>{`${c.callee_name.split("::").at(-2)} @ ${c.callee_file}:${c.callee_lineno}`}</p>))}
+  </div>)
 }

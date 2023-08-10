@@ -105,10 +105,7 @@ impl BfvSession {
     /**
      * Constructs a new `FheDebugInfo`.
      */
-    pub fn new(
-        graph: &CompilationResult<FheOperation>,
-        private_key: &PrivateKey,
-    ) -> Self {
+    pub fn new(graph: &CompilationResult<FheOperation>, private_key: &PrivateKey) -> Self {
         Self {
             graph: graph.clone(),
             program_data: vec![None; graph.node_count()],

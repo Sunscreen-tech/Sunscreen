@@ -355,31 +355,15 @@ const App = () => {
     setGroupStack(groupStack.concat([id]));
   }
 
+  const popGroup = () => {
+    if (groupStack.length != 1) {
+      setGroupStack(groupStack.slice(0, -1));
+    }
+  }
+
   const updateLine = useCallback(
     async (lineNumber: number) => {
-    //   setLine(lineNumber)
-    //   const graph = {
-    //     nodes: [
-    //       {
-    //         id: 1,
-    //         title: `line ${lineNumber}`,
-    //         type: 'empty',
-    //         x: -10,
-    //         y: 0
-    //       },
-    //       {
-    //         id: 2,
-    //         title: `test_func`,
-    //         type: 'problematic',
-    //         x: 0,
-    //         y: 0
-    //       }
-    //     ],
-    //     edges: [
-    //       { source: 1, target: 2, directed: true, arrowhead: 'normal' }
-    //     ]
-    //   }
-    //   setGraph(lineNumber !== 1 ? graph : dataToGraph(await fetch(`/sessions/${session}`).then(d => d.json())))
+
     }, [setLine, setGraph, session]
   )
 
@@ -455,7 +439,7 @@ const App = () => {
             <div className='pane'>
               <SessionPicker sessionList={sessionList} onUpdate={updateSession} />
               <div>Problem Nodes: {JSON.stringify(problemNodes)}</div>
-              <NodeInfo info={info} pushGroup={pushGroup} />
+              <NodeInfo info={info} pushGroup={pushGroup} popGroup={popGroup} />
             </div>
           </ReactSplit>
         </div>
@@ -466,7 +450,7 @@ const App = () => {
   );
 }
 
-function NodeInfo({ info, pushGroup }) {
+function NodeInfo({ info, pushGroup, popGroup }) {
   if (info != null) {
     if (Object.keys(info).includes('groupId')) {
       return (
@@ -478,11 +462,16 @@ function NodeInfo({ info, pushGroup }) {
     } else if (Object.keys(info).includes('stacktrace')) {
       return infoToHtml(info);
     } else {
+      if (Object.keys(info).includes('id') && info.id == "no node selected") {
+        return <div>
+          <p>No node selected</p>
+          <button style={{backgroundColor: 'white'}} onClick={() => popGroup()}>Step Out of Group</button>
+        </div>
+      }
       return (<div>
         {Object.keys(info).filter(k => k != "stacktrace").map((k) => (<p>{k}: {JSON.stringify(info[k])}</p>))}
       </div>)
     }
-
   }
   return <p>{JSON.stringify(info)}</p>
 }

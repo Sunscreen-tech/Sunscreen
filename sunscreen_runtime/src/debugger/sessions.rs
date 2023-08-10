@@ -105,7 +105,6 @@ pub struct BfvSession {
      * The source code of the BFV program.
      */
     pub source_code: &str,
-
 }
 impl BfvSession {
     /**
@@ -114,13 +113,13 @@ impl BfvSession {
     pub fn new(
         graph: &CompilationResult<FheOperation>,
         private_key: &PrivateKey,
-        source_code: &str
+        source_code: &str,
     ) -> Self {
         Self {
             graph: graph.clone(),
             program_data: vec![None; graph.node_count()],
             private_key: private_key.clone(),
-            source_code: source_code
+            source_code: source_code,
         }
     }
 }
@@ -145,7 +144,6 @@ pub struct ZkpSession {
 }
 
 impl ZkpSession {
-
     pub fn new(
         graph: &CompilationResult<ZkpOperation>,
         data: Vec<Option<BigInt>>,

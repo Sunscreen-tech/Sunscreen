@@ -134,10 +134,8 @@ async fn get_code(path_info: web::Path<(String, u64)>) -> impl Responder {
                     .group_lookup
                     .id_data_lookup
                     .get(&groupid)
-                    .expect(&format!(
-                        "Couldn't find source code corresponding to group {:?} in session {:?}",
-                        groupid, session
-                    ))
+                    .unwrap_or_else(|| panic!("Couldn't find source code corresponding to group {:?} in session {:?}",
+                        groupid, session))
                     .source;
 
                 serde_json::to_string_pretty(source_code).unwrap()
@@ -150,10 +148,8 @@ async fn get_code(path_info: web::Path<(String, u64)>) -> impl Responder {
                     .group_lookup
                     .id_data_lookup
                     .get(&groupid)
-                    .expect(&format!(
-                        "Couldn't find source code corresponding to group {:?} in session {:?}",
-                        groupid, session
-                    ))
+                    .unwrap_or_else(|| panic!("Couldn't find source code corresponding to group {:?} in session {:?}",
+                        groupid, session))
                     .source;
                 serde_json::to_string_pretty(source_code).unwrap()
             }

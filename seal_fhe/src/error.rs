@@ -53,7 +53,7 @@ pub enum Error {
 
     /// User failed to set a coefficient modulus.
     #[error("Cannot reduce the modulus from a set size of 1 to 0")]
-    CoefficientModulusSingletonSetDrop,
+    ModulusChainTooSmall,
 
     /// Serialization failed.
     #[error("Serialization failed {0}")]

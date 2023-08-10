@@ -17,7 +17,7 @@ use logproof::{
     LogProofTranscript,
 };
 
-fn full_knowledge_proof<F, const N: usize>(
+fn test_seal_linear_relation<F, const N: usize>(
     degree: u64,
     plain_modulus: u64,
 ) -> LatticeProblem<Fp<MontBackend<F, N>, N>>
@@ -247,7 +247,7 @@ fn zero_knowledge_proof<F, const N: usize>(degree: u64, plain_modulus: u64)
 where
     F: MontConfig<N>,
 {
-    let LatticeProblem { a, s, t, f, b } = full_knowledge_proof::<F, N>(degree, plain_modulus);
+    let LatticeProblem { a, s, t, f, b } = test_seal_linear_relation::<F, N>(degree, plain_modulus);
 
     let pk = LogProofProverKnowledge::new(&a, &s, &t, &b, &f);
 
@@ -279,15 +279,15 @@ fn zero_knowledge_bfv_proof_1024() {
 
 #[test]
 fn full_knowledge_bfv_proof_2048() {
-    full_knowledge_proof::<SealQ128_2048, 1>(2048, 1032193);
+    test_seal_linear_relation::<SealQ128_2048, 1>(2048, 1032193);
 }
 
 #[test]
 fn full_knowledge_bfv_proof_4096() {
-    full_knowledge_proof::<SealQ128_4096, 2>(4096, 1032193);
+    test_seal_linear_relation::<SealQ128_4096, 2>(4096, 1032193);
 }
 
 #[test]
 fn full_knowledge_bfv_proof_8192() {
-    full_knowledge_proof::<SealQ128_8192, 3>(8192, 1032193);
+    test_seal_linear_relation::<SealQ128_8192, 3>(8192, 1032193);
 }

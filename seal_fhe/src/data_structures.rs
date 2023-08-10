@@ -272,7 +272,7 @@ impl PolynomialArray {
      */
     pub fn drop_modulus(&self) -> Result<Self> {
         if self.coeff_modulus_size() == 1 {
-            return Err(Error::CoefficientModulusSingletonSetDrop);
+            return Err(Error::ModulusChainTooSmall);
         }
 
         let mut handle: *mut c_void = null_mut();

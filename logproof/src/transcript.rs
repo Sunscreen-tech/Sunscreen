@@ -16,6 +16,9 @@ use crate::{
     math::{FieldModulus, ModSwitch},
 };
 
+/**
+ * Additional operations on Transcripts to perform SDLP proofs.
+ */
 pub trait LogProofTranscript {
     /**
      * Append the given Ristretto point to the transcript.

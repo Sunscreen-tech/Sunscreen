@@ -176,6 +176,7 @@ fn main() {
         .allowlist_function("SEALContext_.*")
         .allowlist_function("SecretKey_.*")
         .allowlist_function("Serialization_.*")
+        .allowlist_function("PolynomialArray_.*")
         .allowlist_function("ValCheck_.*");
 
     let bindings = builder.generate().unwrap();

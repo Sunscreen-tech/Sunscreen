@@ -45,6 +45,7 @@ mod serialization {
 
 mod bfv_evaluator;
 mod context;
+mod data_structures;
 mod encoder;
 mod encryption_parameters;
 mod encryptor_decryptor;
@@ -57,6 +58,7 @@ mod plaintext_ciphertext;
 
 pub use bfv_evaluator::BFVEvaluator;
 pub use context::Context;
+pub use data_structures::PolynomialArray;
 pub use encoder::{BFVEncoder, BFVScalarEncoder};
 pub use encryption_parameters::*;
 pub use encryptor_decryptor::{Decryptor, Encryptor};

@@ -38,7 +38,11 @@ use crate::{
 };
 
 type MatrixPoly<Q> = Matrix<DensePolynomial<Q>>;
-type Bounds = Vec<u64>;
+
+/**
+ * Bounds on the coefficients in the secret S
+ */
+pub type Bounds = Vec<u64>;
 
 impl Zero for Bounds {
     // The empty vector could be seen as no bounds. Also follows the field
@@ -1122,21 +1126,11 @@ mod test {
         fields::FqSeal128_8192,
         linear_algebra::ScalarRem,
         math::{make_poly, next_higher_power_of_two, Zero},
+        test::LatticeProblem,
         LogProofGenerators,
     };
 
     use super::*;
-
-    struct LatticeProblem<Q>
-    where
-        Q: Field + Zero + Clone + FftField,
-    {
-        a: MatrixPoly<Q>,
-        s: MatrixPoly<Q>,
-        t: MatrixPoly<Q>,
-        f: DensePolynomial<Q>,
-        b: Matrix<Bounds>,
-    }
 
     fn test_lattice<Q>(k: usize) -> LatticeProblem<Q>
     where

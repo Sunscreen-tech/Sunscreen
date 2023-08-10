@@ -16,7 +16,7 @@ use sunscreen_fhe_program::SchemeType;
 
 use seal_fhe::{
     BFVEvaluator, BfvEncryptionParametersBuilder, Context as SealContext, Decryptor, Encryptor,
-    KeyGenerator, Modulus,
+    KeyGenerator, Modulus, PolynomialArray,
 };
 
 pub use sunscreen_compiler_common::{Type, TypeName};
@@ -44,6 +44,42 @@ pub mod marker {
      * perform ZKP operations.
      */
     pub trait Zkp {}
+}
+
+/**
+ * Components needed to perform BFV encryption. Specifically, BFV is defined by the following equation in SEAL:
+ *
+ * 1. $\Delta m + r + p_0 u + e_1 = c_0$
+ * 2. $p_1 u + e_2 = c_1$
+ *
+ * where
+ * - $\Delta$ is the floored ratio of the coefficient and plaintext modulus
+ *   (floor(q/t)).
+ * - $m$ is the message encoded as a SEAL plaintext.
+ * - $r$ is the remainder from the delta calculation that SEAL adds to the
+ *   ciphertext to handle rounding.
+ * - $p_i$ is the $i$th component of the public key, starting at index 0.
+ * - $u$ is a randomly sampled ternary polynomial (coefficients are sampled from
+ *   {-1, 0, 1} mod q).
+ * - $e_i$ is the $i$th component of the noise added to the ciphertext, starting
+ *   at index 1. These values are sampled from a centered binomial distribution
+ *   with a standard deviation of 3.2.
+ * - $c_i$ is the $i$th component of the ciphertext, starting at index 0.
+ *
+ * Note that the indices used here match the SEAL/manual and the original paper,
+ * where $p_i$ is used with the error term $e_{i + 1}$ and where $e_0$ does not
+ * exist.
+ *
+ * Since the ciphertext can contain more that one ciphertext underneath, each of
+ * the components is returned as a vector of the components matching the number
+ * of ciphertexts.
+ */
+#[allow(unused)]
+pub struct BFVEncryptionComponents {
+    ciphertext: Ciphertext,
+    u: Vec<PolynomialArray>,
+    e: Vec<PolynomialArray>,
+    r: Vec<Plaintext>,
 }
 
 /**
@@ -395,17 +431,93 @@ where
     where
         P: TryIntoPlaintext + TypeName,
     {
+        self.encrypt_return_components_switched(val, public_key, false)
+            .map(|x| x.ciphertext)
+    }
+
+    #[allow(dead_code)]
+    /**
+     * Encrypts the given [`FheType`](crate::FheType) using the given public
+     * key, and the components used in encrypting the data.
+     *
+     * Returns [`Error::ParameterMismatch`] if the plaintext is incompatible
+     * with this runtime's scheme.
+     */
+    fn encrypt_return_components<P>(
+        &self,
+        val: P,
+        public_key: &PublicKey,
+    ) -> Result<BFVEncryptionComponents>
+    where
+        P: TryIntoPlaintext + TypeName,
+    {
+        self.encrypt_return_components_switched(val, public_key, true)
+    }
+    /**
+     * Encrypts the given [`FheType`](crate::FheType) using the given public
+     * key, returning the encrypted value along with the components added to the
+     * message. See `BFVEncryptionComponents` for the pieces returned.
+     *
+     * Note that this will disable the special modulus!
+     *
+     * Returns [`Error::ParameterMismatch`] if the plaintext is incompatible with this runtime's
+     * scheme.
+     */
+    fn encrypt_return_components_switched<P>(
+        &self,
+        val: P,
+        public_key: &PublicKey,
+        export_components: bool,
+    ) -> Result<BFVEncryptionComponents>
+    where
+        P: TryIntoPlaintext + TypeName,
+    {
         let fhe_data = self.runtime_data.unwrap_fhe();
 
         let plaintext = val.try_into_plaintext(&fhe_data.params)?;
 
-        let ciphertext = match (&fhe_data.context, plaintext.inner) {
+        let (ciphertext, u, e, r) = match (&fhe_data.context, plaintext.inner) {
             (Context::Seal(context), InnerPlaintext::Seal(inner_plain)) => {
                 let encryptor = Encryptor::with_public_key(context, &public_key.public_key.data)?;
 
+                let capacity = if export_components {
+                    inner_plain.len()
+                } else {
+                    0
+                };
+                let mut us = Vec::with_capacity(capacity);
+                let mut es = Vec::with_capacity(capacity);
+                let mut rs = Vec::with_capacity(capacity);
+
                 let ciphertexts = inner_plain
                     .iter()
-                    .map(|p| encryptor.encrypt(p).map_err(Error::SealError))
+                    .map(|p| {
+                        let ciphertext = if export_components {
+                            encryptor.encrypt(p).map_err(Error::SealError)
+                        } else {
+                            let (ciphertext, u, e, r) = encryptor
+                                .encrypt_return_components(p)
+                                .map_err(Error::SealError)?;
+
+                            let r_context = WithContext {
+                                params: fhe_data.params.clone(),
+                                data: r,
+                            };
+
+                            let r = Plaintext {
+                                data_type: P::type_name(),
+                                inner: InnerPlaintext::Seal(vec![r_context]),
+                            };
+
+                            us.push(u);
+                            es.push(e);
+                            rs.push(r);
+
+                            Ok(ciphertext)
+                        }?;
+
+                        Ok(ciphertext)
+                    })
                     .collect::<Result<Vec<SealCiphertext>>>()?
                     .drain(0..)
                     .map(|c| WithContext {
@@ -414,17 +526,27 @@ where
                     })
                     .collect();
 
-                Ciphertext {
-                    data_type: Type {
-                        is_encrypted: true,
-                        ..P::type_name()
+                (
+                    Ciphertext {
+                        data_type: Type {
+                            is_encrypted: true,
+                            ..P::type_name()
+                        },
+                        inner: InnerCiphertext::Seal(ciphertexts),
                     },
-                    inner: InnerCiphertext::Seal(ciphertexts),
-                }
+                    us,
+                    es,
+                    rs,
+                )
             }
         };
 
-        Ok(ciphertext)
+        Ok(BFVEncryptionComponents {
+            ciphertext,
+            u,
+            e,
+            r,
+        })
     }
 }
 

@@ -26,6 +26,9 @@ jobs:
           ~/.cargo/git/db/
           mdBook/target
         key: ${{ runner.os }}-cargo-mdBook-${{ hashFiles('mdBook/Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-cargo-mdBook-
+          ${{ runner.os }}-cargo-
     - name: Build mdBook
       run: cargo build --release
       working-directory: ./mdBook

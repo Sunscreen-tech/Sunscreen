@@ -385,7 +385,6 @@ pub async fn get_group(
                         .collect::<HashMap<u64, NodeIndex>>();
 
                     for n in &curr_group.node_ids {
-                        println!("{}", n);
                         let mut idx = NodeIndex::new((*n).try_into().unwrap());
                         if s.graph
                             .node_weight(NodeIndex::new((*n).try_into().unwrap()))
@@ -407,7 +406,6 @@ pub async fn get_group(
                                 == u64::try_from(groupid).unwrap()
                                 && &u64::try_from(idx.index()).unwrap() != n
                             {
-                                println!("{:?} -> {:?}", idx, e);
                                 graph.add_edge(idx, e, DisplayEdgeInfo::GroupEdge);
                             } else {
                                 for g in &child_groups {

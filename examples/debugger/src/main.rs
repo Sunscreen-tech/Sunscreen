@@ -95,7 +95,6 @@ fn main() {
             args1,
             &public,
             &private,
-            mad.source(),
         )
         .unwrap();
 
@@ -107,7 +106,6 @@ fn main() {
             args2,
             &public,
             &private,
-            add_squares.source(),
         )
         .unwrap();
 
@@ -119,7 +117,6 @@ fn main() {
             args3,
             &public,
             &private,
-            mad.source(),
         )
         .unwrap();
 
@@ -131,7 +128,6 @@ fn main() {
             args4,
             &public,
             &private,
-            mul_cubes.source(),
         )
         .unwrap();
 

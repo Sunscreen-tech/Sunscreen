@@ -272,7 +272,6 @@ where
         mut arguments: Vec<I>,
         public_key: &PublicKey,
         dbg_info: Option<DebugInfo>,
-        #[cfg(feature = "debugger")] source_code: &str,
     ) -> Result<Vec<Ciphertext>>
     where
         I: Into<FheProgramInput>,
@@ -365,8 +364,6 @@ where
                         &relin_key,
                         &galois_key,
                         dbg_info,
-                        #[cfg(feature = "debugger")]
-                        source_code,
                     )
                 }?;
 
@@ -410,14 +407,7 @@ where
     where
         I: Into<FheProgramInput>,
     {
-        self.run_impl(
-            fhe_program,
-            arguments,
-            public_key,
-            None,
-            #[cfg(feature = "debugger")]
-            "",
-        )
+        self.run_impl(fhe_program, arguments, public_key, None)
     }
 
     /**
@@ -430,7 +420,6 @@ where
         arguments: Vec<I>,
         public_key: &PublicKey,
         private_key: &PrivateKey,
-        #[cfg(feature = "debugger")] source_code: &str,
     ) -> Result<()>
     where
         I: Into<FheProgramInput>,
@@ -445,8 +434,6 @@ where
                 private_key,
                 session_name,
             }),
-            #[cfg(feature = "debugger")]
-            source_code,
         )?;
         start_web_server();
 

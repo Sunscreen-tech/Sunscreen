@@ -374,8 +374,6 @@ impl MeasuredModel {
                 &relin_keys.as_ref(),
                 &galois_keys.as_ref(),
                 None,
-                #[cfg(feature = "debugger")]
-                "",
             )
         }?;
 

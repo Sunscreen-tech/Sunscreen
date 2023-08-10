@@ -102,9 +102,10 @@ pub struct BfvSession {
     pub private_key: PrivateKey,
 
     /**
-     * The source code of the FHE program.
+     * The source code of the BFV program.
      */
-    pub source_code: String,
+    pub source_code: &str,
+
 }
 impl BfvSession {
     /**
@@ -113,13 +114,13 @@ impl BfvSession {
     pub fn new(
         graph: &CompilationResult<FheOperation>,
         private_key: &PrivateKey,
-        source_code: &str,
+        source_code: &str
     ) -> Self {
         Self {
             graph: graph.clone(),
             program_data: vec![None; graph.node_count()],
             private_key: private_key.clone(),
-            source_code: source_code.to_owned(),
+            source_code: source_code
         }
     }
 }
@@ -135,7 +136,6 @@ pub struct ZkpSession {
     /**
      * The values of operands in the compilation graph.
      */
-    // TODO: figure out how to refactor this
     pub program_data: Vec<Option<BigInt>>,
 
     /**
@@ -145,16 +145,6 @@ pub struct ZkpSession {
 }
 
 impl ZkpSession {
-    /**
-     * Constructs a new `ZkpDebugInfo`.
-     */
-    // pub fn new(graph: &CompilationResult<ZkpOperation>, source_code: &str) -> Self {
-    //     Self {
-    //         graph: graph.clone(),
-    //         program_data: vec![None; graph.node_count()],
-    //         source_code: source_code.to_owned(),
-    //     }
-    // }
 
     pub fn new(
         graph: &CompilationResult<ZkpOperation>,

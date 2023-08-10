@@ -117,8 +117,9 @@ async fn get_session_data(session: web::Path<String>) -> impl Responder {
  * Gets the Rust code of a function.
  */
 #[cfg(feature = "debugger")]
-#[get("programs/{session}")]
-async fn get_code(session: web::Path<String>) -> impl Responder {
+#[get("programs/{session}/{groupid}")]
+async fn get_code(path_info: web::Path<(String, u64)>) -> impl Responder {
+    let (session, groupid) = path_info.into_inner();
     let sessions = get_sessions().lock().unwrap();
 
     if sessions.contains_key(session.as_str()) {
@@ -126,12 +127,35 @@ async fn get_code(session: web::Path<String>) -> impl Responder {
 
         let program_string = match curr_session {
             Session::BfvSession(_) => {
-                serde_json::to_string_pretty(&curr_session.unwrap_bfv_session().source_code)
-                    .unwrap()
+                let source_code = &curr_session
+                    .unwrap_bfv_session()
+                    .graph
+                    .metadata
+                    .group_lookup
+                    .id_data_lookup
+                    .get(&groupid)
+                    .expect(&format!(
+                        "Couldn't find source code corresponding to group {:?} in session {:?}",
+                        groupid, session
+                    ))
+                    .source;
+
+                serde_json::to_string_pretty(source_code).unwrap()
             }
             Session::ZkpSession(_) => {
-                serde_json::to_string_pretty(&curr_session.unwrap_zkp_session().source_code)
-                    .unwrap()
+                let source_code = &curr_session
+                    .unwrap_zkp_session()
+                    .graph
+                    .metadata
+                    .group_lookup
+                    .id_data_lookup
+                    .get(&groupid)
+                    .expect(&format!(
+                        "Couldn't find source code corresponding to group {:?} in session {:?}",
+                        groupid, session
+                    ))
+                    .source;
+                serde_json::to_string_pretty(source_code).unwrap()
             }
         };
 

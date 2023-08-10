@@ -101,8 +101,6 @@ impl Default for StackFrameLookup {
     }
 }
 
-// The first field is a group name, the second field is the source code associated with the group.
-// type Group = (String, String);
 /**
  *
  */

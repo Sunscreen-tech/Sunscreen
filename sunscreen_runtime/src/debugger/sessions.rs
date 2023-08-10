@@ -100,11 +100,6 @@ pub struct BfvSession {
      * Used for decryption of ciphertexts for visualization.
      */
     pub private_key: PrivateKey,
-
-    /**
-     * The source code of the BFV program.
-     */
-    pub source_code: &str,
 }
 impl BfvSession {
     /**
@@ -113,13 +108,11 @@ impl BfvSession {
     pub fn new(
         graph: &CompilationResult<FheOperation>,
         private_key: &PrivateKey,
-        source_code: &str,
     ) -> Self {
         Self {
             graph: graph.clone(),
             program_data: vec![None; graph.node_count()],
             private_key: private_key.clone(),
-            source_code: source_code,
         }
     }
 }

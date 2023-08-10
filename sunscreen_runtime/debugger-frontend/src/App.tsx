@@ -347,9 +347,9 @@ const App = () => {
         setProblemNodes(problemNodes.concat([node.id]))
       }
     }
-    return newGraph
-  }, [session, problemNodes]
-  )
+    setGraph(newGraph)
+  }
+  
 
   const pushGroup = (id: number) => {
     setGroupStack(groupStack.concat([id]));
@@ -363,7 +363,6 @@ const App = () => {
 
   const updateLine = useCallback(
     async (lineNumber: number) => {
-
     }, [setLine, setGraph, session]
   )
 
@@ -391,10 +390,11 @@ const App = () => {
             })
           }
         }
+
       } else {
         setInfo({ id: "no node selected" })
       }
-    }, [select, session]
+    }, [session]
   )
 
   const updateSession = useCallback(
@@ -408,9 +408,8 @@ const App = () => {
   useEffect(() => {
     setGroupStack([0]);
     const update = async () => {
-      // const graph = await updateProblematicNodes(dataToGraph(await fetch(`/sessions/${session}`).then(d => d.json())))
-      // setGraph(graph)
       setCode(await fetch(`/programs/${session}`).then(p => p.json()))
+      return graph
     }
     update()
   }, [session])

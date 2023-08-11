@@ -85,6 +85,12 @@ pub use error::*;
 /// Traits and types for performing arithmetic over rings.
 pub mod ring;
 
+/// Traits and types for performing arithmetic with polynomials.
+pub mod poly;
+
+mod misc_traits;
+pub use misc_traits::*;
+
 /// Computes the number of windows over a [`Scalar`] type for the given
 /// `window_size` bits per window.
 #[allow(unused)]

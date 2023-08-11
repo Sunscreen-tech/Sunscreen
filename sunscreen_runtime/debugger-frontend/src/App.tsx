@@ -331,7 +331,6 @@ const App = () => {
   const [sessionList, setSessionList] = useState<string[]>([]);
   const [session, setSession] = useState<string>("");
   const [info, setInfo] = useState<any>({ id: "no node selected" });
-  const [problemNodes, setProblemNodes] = useState<number[]>([]);
   const [groupStack, setGroupStack] = useState<number[]>([]);
 
   useEffect(
@@ -420,7 +419,6 @@ const App = () => {
             ></CodeBlock></div>
             <div className='pane'>
               <SessionPicker sessionList={sessionList} onUpdate={updateSession} />
-              <div>Problem Nodes: {JSON.stringify(problemNodes)}</div>
               <NodeInfo info={info} pushGroup={pushGroup} popGroup={popGroup} />
             </div>
           </ReactSplit>

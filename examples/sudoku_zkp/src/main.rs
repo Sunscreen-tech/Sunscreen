@@ -49,7 +49,6 @@ fn main() {
     let verify = runtime.verify(prog, &proof, cons, vec![]);
 
     assert!(verify.is_ok());
-
 }
 
 #[zkp_program(backend = "bulletproofs")]

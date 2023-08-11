@@ -64,13 +64,50 @@ pub fn apply_insert_relinearizations(ir: &mut FheProgram) {
         Ok::<_, Infallible>(transforms)
     })
     .unwrap();
+
+    #[cfg(feature = "debugger")]
+    {
+        let mut group_updates: Vec<(u64, u64)> = vec![];
+        for i in ir.graph.node_indices() {
+            group_updates.push((
+                ir.graph.node_weight(i).unwrap().group_id,
+                i.index().try_into().unwrap(),
+            ));
+        }
+        for (g, i) in group_updates {
+            group_insert_recursive(&g, i, ir);
+        }
+    }
+}
+
+#[cfg(feature = "debugger")]
+fn group_insert_recursive(g: &u64, i: u64, ir: &mut FheProgram) {
+    ir.graph
+        .metadata
+        .group_lookup
+        .id_data_lookup
+        .get_mut(g)
+        .unwrap()
+        .node_ids
+        .insert(i);
+    if let Some(p) = ir
+        .graph
+        .metadata
+        .group_lookup
+        .id_data_lookup
+        .get(g)
+        .unwrap()
+        .parent
+    {
+        group_insert_recursive(&p, i, ir)
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use petgraph::stable_graph::NodeIndex;
-    use sunscreen_compiler_common::GraphQuery;
+    use sunscreen_compiler_common::{lookup::Group, GraphQuery};
     use sunscreen_fhe_program::{
         FheProgramTrait, Literal as FheProgramLiteral, Operation, SchemeType,
     };
@@ -85,6 +122,13 @@ mod tests {
         let mul = ir.add_multiply(add, l2);
         let add_2 = ir.add_add(mul, l2);
         ir.add_multiply(add_2, ct);
+
+        #[cfg(feature = "debugger")]
+        ir.graph
+            .metadata
+            .group_lookup
+            .id_data_lookup
+            .insert(0, Group::new(0, "test".to_owned(), None, "".to_owned()));
 
         ir
     }

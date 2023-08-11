@@ -9,7 +9,6 @@ fn main() {
     #[zkp_program(backend = "bulletproofs")]
     fn prove_sum_eq<F: BackendField>(a: NativeField<F>, b: NativeField<F>, c: NativeField<F>) {
         (a + b).constrain_eq(c); // not satisfied
-        (b - a).constrain_eq(NativeField::<F>::from(1));
     }
 
     let app = Compiler::new()

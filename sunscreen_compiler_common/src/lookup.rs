@@ -1,6 +1,6 @@
 use backtrace::{Backtrace, BacktraceFrame, SymbolName};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::Path;
 
 /**
@@ -101,7 +101,42 @@ impl Default for StackFrameLookup {
     }
 }
 
-type Group = String;
+/**
+ *
+ */
+#[derive(Clone, Serialize, Deserialize, Debug)]
+pub struct Group {
+    /** */
+    pub id: u64,
+    /** */
+    pub name: String,
+    /** */
+    pub source: String,
+    /** */
+    pub parent: Option<u64>,
+    /** */
+    pub node_ids: HashSet<u64>,
+    /** */
+    pub node_inputs: Vec<u64>,
+    /** */
+    pub node_outputs: Vec<u64>,
+}
+
+impl Group {
+    /** */
+    pub fn new(id: u64, name: String, parent: Option<u64>, source: String) -> Self {
+        Self {
+            id,
+            name,
+            parent,
+            source,
+            node_ids: HashSet::new(),
+            node_inputs: vec![],
+            node_outputs: vec![],
+        }
+    }
+}
+
 /**
  * Lookup structure for the one-to-one correspondence between grouping information and a ProgramNode's `group_id`.
  */
@@ -111,11 +146,6 @@ pub struct GroupLookup {
      * Given a node's `group_id`, return the node's group.
      */
     pub id_data_lookup: HashMap<u64, Group>,
-
-    /**
-     * Given a node's group name, return its `group_id`.
-     */
-    pub data_id_lookup: HashMap<Group, u64>,
 }
 
 impl GroupLookup {
@@ -125,8 +155,23 @@ impl GroupLookup {
     pub fn new() -> Self {
         Self {
             id_data_lookup: HashMap::new(),
-            data_id_lookup: HashMap::new(),
         }
+    }
+
+    /**
+     * Gets the child group nodes of a group.
+     */
+    pub fn children_of(&self, id: u64) -> Vec<u64> {
+        self.id_data_lookup
+            .values()
+            .filter_map(|x| {
+                if x.parent == Some(id) {
+                    Some(x.id)
+                } else {
+                    None
+                }
+            })
+            .collect()
     }
 }
 

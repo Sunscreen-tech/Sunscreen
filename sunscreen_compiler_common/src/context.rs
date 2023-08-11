@@ -10,7 +10,7 @@ use crate::{Operation, Render};
 use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "debugger")]
-use crate::lookup::{GroupLookup, StackFrameLookup};
+use crate::lookup::{Group, GroupLookup, StackFrameLookup};
 
 #[cfg(feature = "debugger")]
 use backtrace::Backtrace;
@@ -69,7 +69,7 @@ impl Default for DebugData {
     }
 }
 
-#[derive(Clone, Deserialize, Serialize, Debug, Eq)]
+#[derive(Clone, Deserialize, Serialize, Debug, Eq, Copy)]
 /**
  * Information about a node in the compilation graph.
  */
@@ -313,12 +313,7 @@ where
     }
 }
 
-/**
- * Program groups are given names as strings.
- */
-pub type Group = String;
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize)]
 /**
  * A compilation context. This stores the current parse graph.
  */
@@ -341,7 +336,11 @@ where
     /**
      * Represents the program context. Tracks groups of nodes in the compilation graph.
      */
-    pub group_stack: Vec<Group>,
+    pub group_stack: Vec<u64>,
+
+    #[cfg(feature = "debugger")]
+    /// The next id suffix appended to a group
+    pub next_group_id: u64,
 }
 
 impl<O, D> Context<O, D>
@@ -357,6 +356,8 @@ where
             data,
             #[cfg(feature = "debugger")]
             group_stack: Vec::new(),
+            #[cfg(feature = "debugger")]
+            next_group_id: 0,
         }
     }
 
@@ -388,8 +389,6 @@ where
                     self.graph.metadata.stack_counter
                 });
 
-            let group_id = self.graph.metadata.group_counter;
-
             self.graph
                 .metadata
                 .stack_lookup
@@ -397,11 +396,26 @@ where
                 .entry(stack_id)
                 .or_insert(stack_frames);
 
-            self.graph.add_node(NodeInfo {
+            let group_id = *self.group_stack.last().unwrap_or(&0);
+
+            let idx = self.graph.add_node(NodeInfo {
                 operation,
                 group_id,
                 stack_id,
-            })
+            });
+
+            for i in &self.group_stack {
+                let group = self
+                    .graph
+                    .metadata
+                    .group_lookup
+                    .id_data_lookup
+                    .get_mut(i)
+                    .unwrap();
+                group.node_ids.insert(idx.index().try_into().unwrap());
+            }
+
+            idx
         }
         #[cfg(not(feature = "debugger"))]
         {
@@ -421,8 +435,8 @@ where
     ) -> NodeIndex {
         let node = self.add_node(operation);
 
-        self.graph.add_edge(left, node, EdgeInfo::Left);
-        self.graph.add_edge(right, node, EdgeInfo::Right);
+        self.add_edge(left, node, EdgeInfo::Left);
+        self.add_edge(right, node, EdgeInfo::Right);
 
         node
     }
@@ -434,7 +448,7 @@ where
     pub fn add_unary_operation(&mut self, operation: O, parent: NodeIndex) -> NodeIndex {
         let node = self.add_node(operation);
 
-        self.graph.add_edge(parent, node, EdgeInfo::Unary);
+        self.add_edge(parent, node, EdgeInfo::Unary);
 
         node
     }
@@ -444,5 +458,48 @@ where
      */
     pub fn add_edge(&mut self, from: NodeIndex, to: NodeIndex, edge: EdgeInfo) {
         self.graph.add_edge(from, to, edge);
+
+        #[cfg(feature = "debugger")]
+        {
+            let group_lookup = &mut self.graph.metadata.group_lookup;
+            let from_index: u64 = from.index().try_into().unwrap();
+            let to_index: u64 = to.index().try_into().unwrap();
+
+            let group_from_id = &self.graph.graph.node_weight(from).unwrap().group_id;
+            let group_to_id = &self.graph.graph.node_weight(to).unwrap().group_id;
+
+            if let Some(group_from) = group_lookup.id_data_lookup.get_mut(group_from_id) {
+                if !group_from.node_ids.contains(&to_index) {
+                    group_from.node_outputs.push(to_index);
+                }
+            }
+
+            if let Some(group_to) = group_lookup.id_data_lookup.get_mut(group_to_id) {
+                if !group_to.node_ids.contains(&from_index) {
+                    group_to.node_inputs.push(from_index);
+                }
+            }
+        }
+    }
+
+    #[cfg(feature = "debugger")]
+    /**
+     * Pushes a group onto the program context.
+     */
+    pub fn push_group(&mut self, name: String, source: String) {
+        let parent = self.group_stack.last().cloned();
+        let group = Group::new(
+            self.next_group_id,
+            format!("{}_{}", name, self.next_group_id),
+            parent,
+            source,
+        );
+        self.group_stack.push(self.next_group_id);
+        self.graph
+            .metadata
+            .group_lookup
+            .id_data_lookup
+            .insert(self.next_group_id, group);
+        self.next_group_id += 1;
     }
 }

@@ -280,8 +280,6 @@ pub type ZkpApplication = Application<Zkp>;
  */
 pub type FheZkpApplication = Application<FheZkp>;
 
-type Group = String;
-
 /**
  * Allows for abstract interaction with a context group stack.
  */
@@ -301,15 +299,14 @@ impl ContextEnum {
     /**
      * Pushes a group onto the group stack.
      */
-    pub fn push_group(&mut self, group: Group) {
+    pub fn push_group(&mut self, group: &str, source: &str) {
+        #[cfg(feature = "debugger")]
         match self {
             ContextEnum::Fhe(context) => {
-                #[cfg(feature = "debugger")]
-                context.group_stack.push(group);
+                context.push_group(group.to_string(), source.to_string());
             }
             ContextEnum::Zkp(context) => {
-                #[cfg(feature = "debugger")]
-                context.group_stack.push(group);
+                context.push_group(group.to_string(), source.to_string());
             }
         }
     }

@@ -132,7 +132,6 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
     relin_keys: &Option<&RelinearizationKeys>,
     galois_keys: &Option<&GaloisKeys>,
     debug_info: Option<DebugInfo>,
-    #[cfg(feature = "debugger")] source_code: &str,
 ) -> Result<Vec<Ciphertext>, FheProgramRunFailure> {
     fn get_data(
         data: &[AtomicCell<Option<Arc<SealData>>>],
@@ -192,7 +191,7 @@ pub unsafe fn run_program_unchecked<E: Evaluator + Sync + Send>(
         let mut guard = get_sessions().lock().unwrap();
         assert!(!guard.contains_key(&v.session_name));
 
-        let session = BfvSession::new(&ir.graph, v.private_key, source_code);
+        let session = BfvSession::new(&ir.graph, v.private_key);
         guard.insert(v.session_name.clone(), session.into());
     }
 
@@ -808,7 +807,6 @@ mod tests {
                     private_key: &private_key,
                     session_name: "simple_add".to_owned(),
                 }),
-                "empty",
             )
             .unwrap()
         };
@@ -890,7 +888,6 @@ mod tests {
                     private_key: &private_key,
                     session_name: "simple_mul".to_owned(),
                 }),
-                "empty",
             )
             .unwrap()
         };
@@ -973,7 +970,6 @@ mod tests {
                     private_key: &private_key,
                     session_name: "can_mul_and_relinearize".to_owned(),
                 }),
-                "empty",
             )
             .unwrap()
         };
@@ -1071,7 +1067,6 @@ mod tests {
                     private_key: &private_key,
                     session_name: "add_reduction".to_owned(),
                 }),
-                "empty",
             )
             .unwrap()
         };
@@ -1152,7 +1147,6 @@ mod tests {
                     private_key: &private_key,
                     session_name: "rotate_left".to_owned(),
                 }),
-                "empty",
             )
             .unwrap()
         };
@@ -1238,7 +1232,6 @@ mod tests {
                     private_key: &private_key,
                     session_name: "rotate_right".to_owned(),
                 }),
-                "empty",
             )
             .unwrap()
         };
@@ -1309,7 +1302,6 @@ mod tests {
                     private_key: &private_key,
                     session_name: "new_session".to_owned(),
                 }),
-                "empty",
             )
             .unwrap()
         };

@@ -204,24 +204,28 @@ impl<F: BackendField> ConstrainEqVarVar for NativeField<F> {
 }
 
 impl<F: BackendField> ConstrainCmpVarVar for NativeField<F> {
+    #[sunscreen::debug]
     fn constrain_le_bounded(lhs: ProgramNode<Self>, rhs: ProgramNode<Self>, bits: usize) {
         let diff = rhs - lhs;
 
         invoke_gadget(ToUInt::new(bits), &[diff.ids[0]]);
     }
 
+    #[sunscreen::debug]
     fn constrain_lt_bounded(lhs: ProgramNode<Self>, rhs: ProgramNode<Self>, bits: usize) {
         let rhs_plus_1 = rhs - NativeField::from(1u8).into_program_node();
 
         Self::constrain_le_bounded(lhs, rhs_plus_1, bits);
     }
 
+    #[sunscreen::debug]
     fn constrain_ge_bounded(lhs: ProgramNode<Self>, rhs: ProgramNode<Self>, bits: usize) {
         let diff = lhs - rhs;
 
         invoke_gadget(ToUInt::new(bits), &[diff.ids[0]]);
     }
 
+    #[sunscreen::debug]
     fn constrain_gt_bounded(lhs: ProgramNode<Self>, rhs: ProgramNode<Self>, bits: usize) {
         let rhs_plus_1 = rhs + NativeField::from(1u8).into_program_node();
 

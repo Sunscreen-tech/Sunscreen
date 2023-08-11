@@ -14,11 +14,11 @@ use crate::{
 use std::marker::PhantomData;
 use sunscreen_zkp_backend::{BigInt, Operation as ZkpOperation};
 
-use std::time::Instant;
 #[cfg(feature = "debugger")]
 use std::thread;
 #[cfg(feature = "debugger")]
 use std::time::Duration;
+use std::time::Instant;
 
 use log::trace;
 

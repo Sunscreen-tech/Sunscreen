@@ -79,6 +79,7 @@ pub fn apply_insert_relinearizations(ir: &mut FheProgram) {
         }
     }
 }
+
 #[cfg(feature = "debugger")]
 fn group_insert_recursive(g: &u64, i: u64, ir: &mut FheProgram) {
     ir.graph

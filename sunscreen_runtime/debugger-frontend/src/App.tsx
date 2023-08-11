@@ -338,19 +338,6 @@ const App = () => {
     () => { fetch("/sessions").then(j => j.json()).then(l => setSessionList(l)) }, []
   )
 
-  const updateProblematicNodes = useCallback(async (graph) => {
-    const newGraph = JSON.parse(JSON.stringify(graph))
-    const nodes = newGraph.nodes;
-    for (const node of nodes) {
-      if (await isProblematic(node, session)) {
-        node.type = "prob" + node.type.charAt(0).toUpperCase() + node.type.slice(1)
-        setProblemNodes(problemNodes.concat([node.id]))
-      }
-    }
-    setGraph(newGraph)
-  }
-  
-
   const pushGroup = (id: number) => {
     setGroupStack(groupStack.concat([id]));
   }
@@ -407,11 +394,6 @@ const App = () => {
 
   useEffect(() => {
     setGroupStack([0]);
-    const update = async () => {
-      setCode(await fetch(`/programs/${session}`).then(p => p.json()))
-      return graph
-    }
-    update()
   }, [session])
 
   useEffect(() => {
@@ -419,6 +401,7 @@ const App = () => {
         const newGraph = groupToGraph(await fetch(`/sessions/${session}/groups/${groupStack.at(-1)}`).then(j => j.json()))
         console.log(newGraph);
         setGraph(newGraph)
+        setCode(await fetch(`/programs/${session}/${groupStack.at(-1)}`).then(j => j.json()))
       }
       update()
     }, [groupStack]

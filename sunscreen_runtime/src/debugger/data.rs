@@ -88,7 +88,7 @@ pub fn overflow_occurred(
 ) -> bool {
     // Overflow only occurs at the output of an operation node
     let mut parents = graph.neighbors_directed(node, Incoming);
-    if parents.clone().count() == 1 {
+    if parents.clone().count() != 2 {
         return false;
     }
 

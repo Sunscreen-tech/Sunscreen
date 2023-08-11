@@ -432,7 +432,14 @@ pub async fn get_group(
                         ) {
                             if s.graph.node_weight(e).unwrap().group_id
                                 == u64::try_from(groupid).unwrap()
-                                && &u64::try_from(idx.index()).unwrap() != n
+                                && matches!(
+                                    graph.node_weight(idx).unwrap(),
+                                    DisplayNodeInfo::Group {
+                                        id: _,
+                                        problematic: _,
+                                        title: _
+                                    }
+                                )
                             {
                                 graph.add_edge(idx, e, DisplayEdgeInfo::GroupEdge);
                             } else {
@@ -523,44 +530,37 @@ pub async fn get_group(
                             NodeIndex::new((*n).try_into().unwrap()),
                             petgraph::Direction::Outgoing,
                         ) {
-                            for g in &child_groups {
-                                if lookup
-                                    .id_data_lookup
-                                    .get(g)
-                                    .unwrap()
-                                    .node_ids
-                                    .contains(&e.index().try_into().unwrap())
-                                {
-                                    graph.add_edge(
-                                        idx,
-                                        *group_graph_map.get(g).unwrap(),
-                                        DisplayEdgeInfo::GroupEdge,
-                                    );
-                                }
-                            }
-                        }
-                        for e in s.graph.neighbors_directed(
-                            NodeIndex::new((*n).try_into().unwrap()),
-                            petgraph::Direction::Incoming,
-                        ) {
-                            for g in &child_groups {
-                                if lookup
-                                    .id_data_lookup
-                                    .get(g)
-                                    .unwrap()
-                                    .node_ids
-                                    .contains(&e.index().try_into().unwrap())
-                                {
-                                    graph.add_edge(
-                                        *group_graph_map.get(g).unwrap(),
-                                        idx,
-                                        DisplayEdgeInfo::GroupEdge,
-                                    );
+                            if s.graph.node_weight(e).unwrap().group_id
+                                == u64::try_from(groupid).unwrap()
+                                && matches!(
+                                    graph.node_weight(idx).unwrap(),
+                                    DisplayNodeInfo::Group {
+                                        id: _,
+                                        problematic: _,
+                                        title: _
+                                    }
+                                )
+                            {
+                                graph.add_edge(idx, e, DisplayEdgeInfo::GroupEdge);
+                            } else {
+                                for g in &child_groups {
+                                    if lookup
+                                        .id_data_lookup
+                                        .get(g)
+                                        .unwrap()
+                                        .node_ids
+                                        .contains(&e.index().try_into().unwrap())
+                                    {
+                                        graph.add_edge(
+                                            idx,
+                                            *group_graph_map.get(g).unwrap(),
+                                            DisplayEdgeInfo::GroupEdge,
+                                        );
+                                    }
                                 }
                             }
                         }
                     }
-
                     let serialized_graph = serde_json::to_string_pretty(&graph).unwrap();
                     return Ok(HttpResponse::Ok().body(serialized_graph));
                 } else {

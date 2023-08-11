@@ -453,8 +453,7 @@
                     "test",
                     "--no-run",
                     "--lib",
-                    "--package=sunscreen_backend",
-                    "--features=debugger"
+                    "--package=sunscreen_backend"
                 ],
                 "filter": {
                     "name": "sunscreen_backend",

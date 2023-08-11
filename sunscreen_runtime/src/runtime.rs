@@ -15,6 +15,10 @@ use std::marker::PhantomData;
 use sunscreen_zkp_backend::{BigInt, Operation as ZkpOperation};
 
 use std::time::Instant;
+#[cfg(feature = "debugger")]
+use std::thread;
+#[cfg(feature = "debugger")]
+use std::time::Duration;
 
 use log::trace;
 
@@ -677,6 +681,18 @@ impl GenericRuntime<(), ()> {
             _phantom_t: PhantomData,
             zkp_backend: zkp_backend.clone(),
         })
+    }
+}
+
+#[cfg(feature = "debugger")]
+impl<T, B> GenericRuntime<T, B> {
+    /**
+     * Waits for the debugger.
+     */
+    pub fn wait_for_debugger(&self) {
+        loop {
+            thread::sleep(Duration::from_secs(1));
+        }
     }
 }
 

@@ -1,6 +1,4 @@
 use std::ops::{Add, Mul};
-use std::thread;
-use std::time::Duration;
 use sunscreen::{
     types::{bfv::Signed, Cipher},
     SchemeType::Bfv,
@@ -144,7 +142,5 @@ fn main() {
             )
             .unwrap();
     */
-    loop {
-        thread::sleep(Duration::from_secs(1));
-    }
+    runtime.wait_for_debugger();
 }

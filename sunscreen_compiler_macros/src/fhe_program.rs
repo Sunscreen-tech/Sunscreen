@@ -209,7 +209,7 @@ impl<'a> FheProgram<'a> {
                 fn build(&self, params: &sunscreen::Params) -> sunscreen::Result<sunscreen::fhe::FheFrontendCompilation> {
                     use std::cell::RefCell;
                     use std::mem::transmute;
-                    use sunscreen::{fhe::{CURRENT_FHE_CTX, FheContext}, Error, INDEX_ARENA, Result, Params, SchemeType, Value, types::{intern::{FheProgramNode, Input, Output, Coerce}, NumCiphertexts, Type, TypeName, SwapRows, LaneCount, TypeNameInstance}};
+                    use sunscreen::{fhe::{CURRENT_PROGRAM_CTX, FheContext}, ContextEnum, Error, INDEX_ARENA, Result, Params, SchemeType, Value, types::{intern::{FheProgramNode, Input, Output, Coerce}, NumCiphertexts, Type, TypeName, SwapRows, LaneCount, TypeNameInstance}};
 
                     if SchemeType::Bfv != params.scheme_type {
                         return Err(Error::IncorrectScheme)

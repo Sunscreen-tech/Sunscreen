@@ -1,6 +1,6 @@
 use petgraph::stable_graph::node_index;
 use sunscreen::{
-    fhe::{FheFrontendCompilation, FheOperation, Literal, CURRENT_FHE_CTX},
+    fhe::{FheFrontendCompilation, FheOperation, Literal, CURRENT_PROGRAM_CTX},
     fhe_program, fhe_var,
     types::{bfv::Signed, Cipher, TypeName},
     CallSignature, FheProgramFn, Params, SchemeType, SecurityLevel,

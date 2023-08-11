@@ -15,7 +15,7 @@
 #include "seal/c/memorypoolhandle.h"
 #include "seal/c/modulus.h"
 #include "seal/c/plaintext.h"
-// #include "seal/c/polyarray.h"
+#include "seal/c/polyarray.h"
 #include "seal/c/publickey.h"
 #include "seal/c/relinkeys.h"
 #include "seal/c/sealcontext.h"

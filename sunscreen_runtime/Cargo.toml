@@ -32,9 +32,14 @@ serde = { workspace = true }
 semver = { workspace = true }
 static_assertions = { workspace = true }
 thiserror = { workspace = true }
+actix-web = { workspace = true }
+serde_json = { workspace = true }
+tokio = { workspace = true }
+mime = { workspace = true }
 
 [dev-dependencies]
 serde_json = { workspace = true }
+serial_test = "2.0.0"
 
 
 [features]

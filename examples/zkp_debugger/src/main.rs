@@ -26,7 +26,7 @@ fn main() {
         BulletproofsField::from(4).into(), // Problematic: 1 + 2 != 4.
     ];
 
-    let _proof = runtime.prove(prog, vec![], vec![], inputs);
+    let _proof = runtime.prove(prog, inputs, vec![], vec![]);
 
     // proof.unwrap();
 

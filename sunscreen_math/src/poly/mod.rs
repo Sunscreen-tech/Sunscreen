@@ -94,11 +94,11 @@ mod tests {
         type R = Zq<1, BarrettBackend<1, Cfg>>;
         type TestPoly = Polynomial<Zq<1, BarrettBackend<1, Cfg>>>;
 
-        let a = TestPoly::new(&vec![R::from(1), R::from(2), R::from(3)]);
+        let a = TestPoly::new(&[R::from(1), R::from(2), R::from(3)]);
 
-        let b = TestPoly::new(&vec![R::from(4), R::from(1)]);
+        let b = TestPoly::new(&[R::from(4), R::from(1)]);
 
-        let expected = TestPoly::new(&vec![R::ZERO, R::from(3), R::from(3)]);
+        let expected = TestPoly::new(&[R::ZERO, R::from(3), R::from(3)]);
 
         assert_eq!(a + b, expected);
     }
@@ -112,11 +112,11 @@ mod tests {
         type R = Zq<1, BarrettBackend<1, Cfg>>;
         type TestPoly = Polynomial<Zq<1, BarrettBackend<1, Cfg>>>;
 
-        let a = TestPoly::new(&vec![R::from(1), R::from(2), R::from(3)]);
+        let a = TestPoly::new(&[R::from(1), R::from(2), R::from(3)]);
 
-        let b = TestPoly::new(&vec![R::from(4), R::from(1)]);
+        let b = TestPoly::new(&[R::from(4), R::from(1)]);
 
-        let expected = TestPoly::new(&vec![R::from(4), R::from(4), R::from(4), R::from(3)]);
+        let expected = TestPoly::new(&[R::from(4), R::from(4), R::from(4), R::from(3)]);
 
         assert_eq!(a * b, expected);
     }

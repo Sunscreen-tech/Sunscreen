@@ -181,7 +181,7 @@ impl<const N: usize, B: ArithmeticBackend<N>> std::fmt::Debug for Zq<N, B> {
 impl<const N: usize, B: ArithmeticBackend<N>> Clone for Zq<N, B> {
     fn clone(&self) -> Self {
         Self {
-            val: self.val.clone(),
+            val: self.val,
             _phantom: PhantomData,
         }
     }

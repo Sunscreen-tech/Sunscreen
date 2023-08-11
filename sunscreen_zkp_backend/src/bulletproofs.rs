@@ -16,8 +16,8 @@ use serde::{Deserialize, Serialize};
 use sunscreen_compiler_common::{forward_traverse, DebugSessionProvider, GraphQuery};
 
 use crate::{
-    exec::Operation, jit::jit_verifier, jit_prover, BigInt, Error, ExecutableZkpProgram, FieldSpec,
-    Proof, Result, ZkpBackend, jit
+    exec::Operation, jit, jit::jit_verifier, jit_prover, BigInt, Error, ExecutableZkpProgram,
+    FieldSpec, Proof, Result, ZkpBackend,
 };
 
 #[derive(Clone)]

@@ -536,7 +536,7 @@ where
         let plaintext = val.try_into_plaintext(&fhe_data.params)?;
 
         let (ciphertext, u, e, r) = match (&fhe_data.context, plaintext.inner) {
-            (Context::Seal(context), InnerPlaintext::Seal{value: inner_plain}) => {
+            (Context::Seal(context), InnerPlaintext::Seal { value: inner_plain }) => {
                 let encryptor = Encryptor::with_public_key(context, &public_key.public_key.data)?;
 
                 let capacity = if export_components {
@@ -565,7 +565,9 @@ where
 
                             let r = Plaintext {
                                 data_type: P::type_name(),
-                                inner: InnerPlaintext::Seal{value: vec![r_context]},
+                                inner: InnerPlaintext::Seal {
+                                    value: vec![r_context],
+                                },
                             };
 
                             us.push(u);
@@ -591,7 +593,7 @@ where
                             is_encrypted: true,
                             ..P::type_name()
                         },
-                        inner: InnerCiphertext::Seal{value: ciphertexts},
+                        inner: InnerCiphertext::Seal { value: ciphertexts },
                     },
                     us,
                     es,

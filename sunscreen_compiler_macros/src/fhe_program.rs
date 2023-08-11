@@ -281,7 +281,7 @@ impl<'a> FheProgram<'a> {
                 fn chain_count(&self) -> usize {
                     self.chain_count
                 }
-                
+
                 fn source(&self) -> &'static str {
                     #raw_fn
                 }

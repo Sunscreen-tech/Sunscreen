@@ -380,7 +380,8 @@ where
                         #[cfg(feature = "debugger")]
                         {
                             unsatisfied_constraint = Some(id);
-                            node_outputs.insert(id, U::BackendField::try_from(BigInt::from(1u32)).unwrap());
+                            node_outputs
+                                .insert(id, U::BackendField::try_from(BigInt::from(1u32)).unwrap());
                         }
                         #[cfg(not(feature = "debugger"))]
                         return Err(Error::UnsatisfiableConstraint(id));
@@ -549,8 +550,7 @@ fn jit_common<U>(
     constant_inputs: &[U::BackendField],
     public_inputs: &[U::BackendField],
     node_outputs: Option<HashMap<NodeIndex, U::BackendField>>,
-    #[cfg(feature = "debugger")] 
-    _debug_info: Option<ZkpDebugInfo>,
+    #[cfg(feature = "debugger")] _debug_info: Option<ZkpDebugInfo>,
 ) -> Result<ExecutableZkpProgram>
 where
     U: FieldSpec,

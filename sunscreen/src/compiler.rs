@@ -7,8 +7,8 @@ use crate::{
 use std::collections::{HashMap, HashSet};
 use std::marker::PhantomData;
 use sunscreen_fhe_program::FheProgramTrait;
-use sunscreen_runtime::{marker, CompiledFheProgram, Fhe, FheZkp, Zkp, FheRuntime};
-use sunscreen_zkp_backend::{FieldSpec, CompiledZkpProgram, ZkpBackend, ZkpProgramMetadata};
+use sunscreen_runtime::{marker, CompiledFheProgram, Fhe, FheRuntime, FheZkp, Zkp};
+use sunscreen_zkp_backend::{CompiledZkpProgram, FieldSpec, ZkpBackend, ZkpProgramMetadata};
 
 #[derive(Debug, Clone)]
 enum ParamsMode {

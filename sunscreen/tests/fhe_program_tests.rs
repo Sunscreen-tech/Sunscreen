@@ -1,6 +1,7 @@
+use petgraph::stable_graph::node_index;
 use sunscreen::{
-    fhe::{FheFrontendCompilation, CURRENT_PROGRAM_CTX},
-    fhe_program,
+    fhe::{FheFrontendCompilation, FheOperation, Literal, CURRENT_FHE_CTX},
+    fhe_program, fhe_var,
     types::{bfv::Signed, Cipher, TypeName},
     CallSignature, FheProgramFn, Params, SchemeType, SecurityLevel,
 };
@@ -429,6 +430,48 @@ fn can_mul() {
 }
 
 #[test]
+fn can_insert_literals() {
+    #[fhe_program(scheme = "bfv")]
+    fn fhe_program_sum(xs: [Cipher<Signed>; 2]) -> Cipher<Signed> {
+        let mut sum = fhe_var!(0);
+        for x in xs {
+            sum = sum + x;
+        }
+        sum
+    }
+
+    let arg_type_name = <[Cipher<Signed>; 2]>::type_name();
+    let ret_type_name = Cipher::<Signed>::type_name();
+
+    let expected_signature = CallSignature {
+        arguments: vec![arg_type_name],
+        returns: vec![ret_type_name],
+        num_ciphertexts: vec![1],
+    };
+    assert_eq!(fhe_program_sum.signature(), expected_signature);
+    assert_eq!(fhe_program_sum.scheme_type(), SchemeType::Bfv);
+
+    let context = fhe_program_sum.build(&get_params()).unwrap();
+
+    assert_eq!(context.node_count(), 6);
+    assert_eq!(
+        context[node_index(0)].operation,
+        FheOperation::InputCiphertext
+    );
+    assert_eq!(
+        context[node_index(1)].operation,
+        FheOperation::InputCiphertext
+    );
+    assert!(matches!(
+        context[node_index(2)].operation,
+        FheOperation::Literal(Literal::Plaintext(_))
+    ));
+    assert_eq!(context[node_index(3)].operation, FheOperation::AddPlaintext);
+    assert_eq!(context[node_index(4)].operation, FheOperation::Add);
+    assert_eq!(context[node_index(5)].operation, FheOperation::Output);
+}
+
+#[test]
 fn can_collect_output() {
     #[fhe_program(scheme = "bfv")]
     fn fhe_program_with_args(a: Cipher<Signed>, b: Cipher<Signed>) -> Cipher<Signed> {
@@ -696,5 +739,23 @@ fn can_collect_multiple_outputs() {
         let expected_compilation: FheFrontendCompilation =
             serde_json::from_value(expected).unwrap();
         assert_eq!(context, expected_compilation);
+    }
+}
+
+#[test]
+fn coercion_supports_arbitrarily_nested_outputs() {
+    // This test just tests compilation is valid
+    #[fhe_program(scheme = "bfv")]
+    fn fhe_program_just_cipher(
+        a: Cipher<Signed>,
+    ) -> ([Cipher<Signed>; 2], [[Cipher<Signed>; 3]; 2]) {
+        ([a; 2], [[a; 3]; 2])
+    }
+
+    #[fhe_program(scheme = "bfv")]
+    fn fhe_program_var(a: Cipher<Signed>) -> ([Cipher<Signed>; 2], [[Cipher<Signed>; 3]; 2]) {
+        let mut sum = fhe_var!(0);
+        sum = sum + a;
+        ([sum; 2], [[sum; 3]; 2])
     }
 }

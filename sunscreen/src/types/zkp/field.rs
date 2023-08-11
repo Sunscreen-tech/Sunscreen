@@ -1,9 +1,9 @@
 use std::marker::PhantomData;
 
+use crypto_bigint::NonZero;
 use subtle::{Choice, ConditionallySelectable};
 use sunscreen_compiler_macros::TypeName;
-use sunscreen_runtime::ZkpProgramInputTrait;
-use sunscreen_zkp_backend::{BackendField, BigInt};
+use sunscreen_zkp_backend::{BigInt, FieldSpec};
 
 use crate::{
     invoke_gadget,
@@ -25,10 +25,10 @@ use super::{gadgets::SignedModulus, ConstrainCmpVarVar, SubVar};
 // https://github.com/rust-lang/rust/issues/104264
 #[derive(Debug, Clone, TypeName)]
 /**
- * The native field type in the underlying backend proof system. For
- * example, in Bulletproofs, this is [`Scalar`](https://docs.rs/curve25519-dalek-ng/4.1.1/curve25519_dalek_ng/scalar/struct.Scalar.html).
+ * A field Z/pZ whose modulus depends on [`FieldSpec`] `F`. The generic parameter
+ * decouples ZKP programs and primitives from any particular R1CS proof system.
  */
-pub struct NativeField<F: BackendField> {
+pub struct Field<F: FieldSpec> {
     /**
      * The native field's value.
      */
@@ -37,10 +37,18 @@ pub struct NativeField<F: BackendField> {
     _phantom: PhantomData<F>,
 }
 
-// Can't #[derive()] due to PhantomData.
-impl<F: BackendField> Copy for NativeField<F> {}
+#[cfg(feature = "bulletproofs")]
+/// A convenient type alias for the `Field` of the bulletproofs backend.
+///
+/// This is equivalent to `Field::<BulletproofsBackend as ZkpBackend>::Field`, or
+/// [`Field::<Scalar>`].
+pub type BulletproofsField =
+    Field<<sunscreen_zkp_backend::bulletproofs::BulletproofsBackend as sunscreen_zkp_backend::ZkpBackend>::Field>;
 
-impl<F: BackendField> NativeField<F> {
+// Can't #[derive()] due to PhantomData.
+impl<F: FieldSpec> Copy for Field<F> {}
+
+impl<F: FieldSpec> Field<F> {
     /**
      * Converts a big-endian hex string into a native field.
      */
@@ -52,7 +60,7 @@ impl<F: BackendField> NativeField<F> {
     }
 }
 
-impl<F: BackendField> From<BigInt> for NativeField<F> {
+impl<F: FieldSpec> From<BigInt> for Field<F> {
     fn from(val: BigInt) -> Self {
         Self {
             val,
@@ -61,56 +69,58 @@ impl<F: BackendField> From<BigInt> for NativeField<F> {
     }
 }
 
-impl<F: BackendField> From<u8> for NativeField<F> {
+impl<F: FieldSpec> From<u8> for Field<F> {
     fn from(x: u8) -> Self {
         (u64::from(x)).into()
     }
 }
 
-impl<F: BackendField> From<u16> for NativeField<F> {
+impl<F: FieldSpec> From<u16> for Field<F> {
     fn from(x: u16) -> Self {
         (u64::from(x)).into()
     }
 }
 
-impl<F: BackendField> From<u32> for NativeField<F> {
+impl<F: FieldSpec> From<u32> for Field<F> {
     fn from(x: u32) -> Self {
         (u64::from(x)).into()
     }
 }
 
-impl<F: BackendField> From<u64> for NativeField<F> {
+impl<F: FieldSpec> From<u64> for Field<F> {
     fn from(x: u64) -> Self {
         assert!(F::FIELD_MODULUS != BigInt::ZERO);
+
+        let m = NonZero::from_uint(*F::FIELD_MODULUS);
 
         // unwrap is okay here as we've ensured FIELD_MODULUS is
         // non-zero.
         Self {
-            val: BigInt::from(BigInt::from(x).reduce(&F::FIELD_MODULUS).unwrap()),
+            val: BigInt::from(BigInt::from(x).rem(&m)),
             _phantom: PhantomData,
         }
     }
 }
 
-impl<F: BackendField> From<i8> for NativeField<F> {
+impl<F: FieldSpec> From<i8> for Field<F> {
     fn from(x: i8) -> Self {
         (i64::from(x)).into()
     }
 }
 
-impl<F: BackendField> From<i16> for NativeField<F> {
+impl<F: FieldSpec> From<i16> for Field<F> {
     fn from(x: i16) -> Self {
         (i64::from(x)).into()
     }
 }
 
-impl<F: BackendField> From<i32> for NativeField<F> {
+impl<F: FieldSpec> From<i32> for Field<F> {
     fn from(x: i32) -> Self {
         (i64::from(x)).into()
     }
 }
 
-impl<F: BackendField> From<i64> for NativeField<F> {
+impl<F: FieldSpec> From<i64> for Field<F> {
     fn from(x: i64) -> Self {
         assert!(F::FIELD_MODULUS != BigInt::ZERO);
         assert_ne!(
@@ -118,6 +128,8 @@ impl<F: BackendField> From<i64> for NativeField<F> {
             i64::MIN,
             "Converting i64::MIN to NativeField currently unsupported."
         );
+
+        let modulus = NonZero::from_uint(*F::FIELD_MODULUS);
 
         // Shr on i64 is an arithmetic shift, so we need to mask
         // the LSB so we don't get 255 for negative values.
@@ -127,7 +139,7 @@ impl<F: BackendField> From<i64> for NativeField<F> {
 
         // unwrap is okay here as we've ensured FIELD_MODULUS is
         // non-zero.
-        let abs_val = BigInt::from(abs_val.reduce(&F::FIELD_MODULUS).unwrap());
+        let abs_val = BigInt::from(abs_val.rem(&modulus));
 
         let neg = BigInt::from(F::FIELD_MODULUS.wrapping_sub(&abs_val));
 
@@ -138,20 +150,17 @@ impl<F: BackendField> From<i64> for NativeField<F> {
     }
 }
 
-impl<F: BackendField> NumFieldElements for NativeField<F> {
+impl<F: FieldSpec> NumFieldElements for Field<F> {
     const NUM_NATIVE_FIELD_ELEMENTS: usize = 1;
 }
 
-impl<F: BackendField> ToNativeFields for NativeField<F> {
+impl<F: FieldSpec> ToNativeFields for Field<F> {
     fn to_native_fields(&self) -> Vec<BigInt> {
         vec![self.val]
     }
 }
 
-impl<F: BackendField> ZkpType for NativeField<F> {}
-impl<F: BackendField> ZkpProgramInputTrait for NativeField<F> {}
-
-impl<F: BackendField> AddVar for NativeField<F> {
+impl<F: FieldSpec> AddVar for Field<F> {
     fn add(lhs: ProgramNode<Self>, rhs: ProgramNode<Self>) -> ProgramNode<Self> {
         with_zkp_ctx(|ctx| {
             let o = ctx.add_addition(lhs.ids[0], rhs.ids[0]);
@@ -161,7 +170,7 @@ impl<F: BackendField> AddVar for NativeField<F> {
     }
 }
 
-impl<F: BackendField> SubVar for NativeField<F> {
+impl<F: FieldSpec> SubVar for Field<F> {
     fn sub(lhs: ProgramNode<Self>, rhs: ProgramNode<Self>) -> ProgramNode<Self> {
         with_zkp_ctx(|ctx| {
             let o = ctx.add_subtraction(lhs.ids[0], rhs.ids[0]);
@@ -171,7 +180,7 @@ impl<F: BackendField> SubVar for NativeField<F> {
     }
 }
 
-impl<F: BackendField> MulVar for NativeField<F> {
+impl<F: FieldSpec> MulVar for Field<F> {
     fn mul(lhs: ProgramNode<Self>, rhs: ProgramNode<Self>) -> ProgramNode<Self> {
         with_zkp_ctx(|ctx| {
             let o = ctx.add_multiplication(lhs.ids[0], rhs.ids[0]);
@@ -181,7 +190,7 @@ impl<F: BackendField> MulVar for NativeField<F> {
     }
 }
 
-impl<F: BackendField> NegVar for NativeField<F> {
+impl<F: FieldSpec> NegVar for Field<F> {
     fn neg(lhs: ProgramNode<Self>) -> ProgramNode<Self> {
         with_zkp_ctx(|ctx| {
             let o = ctx.add_negate(lhs.ids[0]);
@@ -191,7 +200,7 @@ impl<F: BackendField> NegVar for NativeField<F> {
     }
 }
 
-impl<F: BackendField> ConstrainEqVarVar for NativeField<F> {
+impl<F: FieldSpec> ConstrainEqVarVar for Field<F> {
     fn constrain_eq(lhs: ProgramNode<Self>, rhs: ProgramNode<Self>) -> ProgramNode<Self> {
         with_zkp_ctx(|ctx| {
             let sub = ctx.add_subtraction(lhs.ids[0], rhs.ids[0]);
@@ -203,7 +212,7 @@ impl<F: BackendField> ConstrainEqVarVar for NativeField<F> {
     }
 }
 
-impl<F: BackendField> ConstrainCmpVarVar for NativeField<F> {
+impl<F: FieldSpec> ConstrainCmpVarVar for Field<F> {
     #[sunscreen::debug]
     fn constrain_le_bounded(lhs: ProgramNode<Self>, rhs: ProgramNode<Self>, bits: usize) {
         let diff = rhs - lhs;
@@ -213,7 +222,7 @@ impl<F: BackendField> ConstrainCmpVarVar for NativeField<F> {
 
     #[sunscreen::debug]
     fn constrain_lt_bounded(lhs: ProgramNode<Self>, rhs: ProgramNode<Self>, bits: usize) {
-        let rhs_plus_1 = rhs - NativeField::from(1u8).into_program_node();
+        let rhs_plus_1 = rhs - Field::from(1u8).into_program_node();
 
         Self::constrain_le_bounded(lhs, rhs_plus_1, bits);
     }
@@ -227,14 +236,14 @@ impl<F: BackendField> ConstrainCmpVarVar for NativeField<F> {
 
     #[sunscreen::debug]
     fn constrain_gt_bounded(lhs: ProgramNode<Self>, rhs: ProgramNode<Self>, bits: usize) {
-        let rhs_plus_1 = rhs + NativeField::from(1u8).into_program_node();
+        let rhs_plus_1 = rhs + Field::from(1u8).into_program_node();
 
         Self::constrain_ge_bounded(lhs, rhs_plus_1, bits);
     }
 }
 
-impl<F: BackendField> IntoProgramNode for NativeField<F> {
-    type Output = NativeField<F>;
+impl<F: FieldSpec> IntoProgramNode for Field<F> {
+    type Output = Field<F>;
 
     fn into_program_node(self) -> ProgramNode<Self> {
         with_zkp_ctx(|ctx| ProgramNode::new(&[ctx.add_constant(&self.val)]))
@@ -244,7 +253,7 @@ impl<F: BackendField> IntoProgramNode for NativeField<F> {
 /**
  * A trait for doing modular arithmetic.
  */
-pub trait Mod<F: BackendField>
+pub trait Mod<F: FieldSpec>
 where
     Self: ZkpType,
 {
@@ -276,15 +285,15 @@ where
      */
     fn signed_reduce(
         lhs: ProgramNode<Self>,
-        m: ProgramNode<NativeField<F>>,
+        m: ProgramNode<Field<F>>,
         remainder_bits: usize,
     ) -> ProgramNode<Self>;
 }
 
-impl<F: BackendField> Mod<F> for NativeField<F> {
+impl<F: FieldSpec> Mod<F> for Field<F> {
     fn signed_reduce(
         lhs: ProgramNode<Self>,
-        m: ProgramNode<NativeField<F>>,
+        m: ProgramNode<Field<F>>,
         remainder_bits: usize,
     ) -> ProgramNode<Self> {
         let outputs = invoke_gadget(
@@ -299,16 +308,16 @@ impl<F: BackendField> Mod<F> for NativeField<F> {
 /**
  * Methods for decomposing values into binary.
  */
-pub trait ToBinary<F: BackendField> {
+pub trait ToBinary<F: FieldSpec> {
     /**
      * Decompose this value into unsigned N-bit binary. If the value
      * is too large, the proof will fail to validate.
      */
-    fn to_unsigned<const N: usize>(&self) -> [ProgramNode<NativeField<F>>; N];
+    fn to_unsigned<const N: usize>(&self) -> [ProgramNode<Field<F>>; N];
 }
 
-impl<F: BackendField> ToBinary<F> for ProgramNode<NativeField<F>> {
-    fn to_unsigned<const N: usize>(&self) -> [ProgramNode<NativeField<F>>; N] {
+impl<F: FieldSpec> ToBinary<F> for ProgramNode<Field<F>> {
+    fn to_unsigned<const N: usize>(&self) -> [ProgramNode<Field<F>>; N] {
         let bits = invoke_gadget(ToUInt::new(N), self.ids);
 
         let mut vals = [*self; N];
@@ -328,7 +337,10 @@ mod tests {
     use curve25519_dalek::scalar::Scalar;
     use sunscreen_compiler_macros::zkp_program;
     use sunscreen_runtime::{Runtime, ZkpProgramInput};
-    use sunscreen_zkp_backend::{bulletproofs::BulletproofsBackend, ZkpBackend, ZkpInto};
+    use sunscreen_zkp_backend::{
+        bulletproofs::{BulletproofsBackend, BulletproofsFieldSpec},
+        ZkpBackend, ZkpInto,
+    };
 
     use crate::{types::zkp::ConstrainCmp, Compiler};
 
@@ -336,14 +348,14 @@ mod tests {
 
     #[test]
     fn can_encode_negative_number() {
-        let x = NativeField::<Scalar>::from(-1);
+        let x = Field::<BulletproofsFieldSpec>::from(-1);
 
         assert_eq!(
             x.val,
-            BigInt::from(Scalar::FIELD_MODULUS.wrapping_sub(&BigInt::ONE))
+            BigInt::from(BulletproofsFieldSpec::FIELD_MODULUS.wrapping_sub(&BigInt::ONE))
         );
 
-        let x = NativeField::<Scalar>::from(1i64);
+        let x = Field::<BulletproofsFieldSpec>::from(1i64);
 
         assert_eq!(x.val, BigInt::ONE);
     }
@@ -397,17 +409,19 @@ mod tests {
         }
     }
 
-    impl BackendField for TestField {
+    impl FieldSpec for TestField {
+        type BackendField = Scalar;
+
         const FIELD_MODULUS: BigInt = BigInt::from_u32(7);
     }
 
     #[test]
     fn can_wrap_number() {
-        let x = NativeField::<TestField>::from(22i64);
+        let x = Field::<TestField>::from(22i64);
 
         assert_eq!(x.val, BigInt::ONE);
 
-        let x = NativeField::<TestField>::from(-22i64);
+        let x = Field::<TestField>::from(-22i64);
 
         assert_eq!(
             x.val,
@@ -417,23 +431,23 @@ mod tests {
 
     #[test]
     fn can_encode_unsigned_value() {
-        let x = NativeField::<TestField>::from(6u64);
+        let x = Field::<TestField>::from(6u64);
 
         assert_eq!(x.val, BigInt::from(6u64));
 
-        let x = NativeField::<TestField>::from(7u64);
+        let x = Field::<TestField>::from(7u64);
 
         assert_eq!(x.val, BigInt::ZERO);
 
-        let x = NativeField::<TestField>::from(22u64);
+        let x = Field::<TestField>::from(22u64);
 
         assert_eq!(x.val, BigInt::ONE);
     }
 
     #[test]
     fn can_compare_le_bounded() {
-        #[zkp_program(backend = "bulletproofs")]
-        fn le<F: BackendField>(x: NativeField<F>, y: NativeField<F>) {
+        #[zkp_program]
+        fn le<F: FieldSpec>(x: Field<F>, y: Field<F>) {
             x.constrain_le_bounded(y, 16);
         }
 
@@ -443,18 +457,18 @@ mod tests {
             .compile()
             .unwrap();
 
-        let runtime = Runtime::new_zkp(&BulletproofsBackend::new()).unwrap();
+        let runtime = Runtime::new_zkp(BulletproofsBackend::new()).unwrap();
 
         let program = app.get_zkp_program(le).unwrap();
 
         let test_case = |x: i64, y: i64, expect_pass: bool| {
-            type BpField = NativeField<<BulletproofsBackend as ZkpBackend>::Field>;
+            type BpField = Field<<BulletproofsBackend as ZkpBackend>::Field>;
 
             let result = runtime.prove(
                 program,
-                vec![],
-                vec![],
                 vec![BpField::from(x), BpField::from(y)],
+                vec![],
+                vec![],
             );
 
             let proof = if expect_pass {
@@ -481,8 +495,8 @@ mod tests {
 
     #[test]
     fn can_compare_lt_bounded() {
-        #[zkp_program(backend = "bulletproofs")]
-        fn le<F: BackendField>(x: NativeField<F>, y: NativeField<F>) {
+        #[zkp_program]
+        fn le<F: FieldSpec>(x: Field<F>, y: Field<F>) {
             x.constrain_lt_bounded(y, 16);
         }
 
@@ -492,18 +506,18 @@ mod tests {
             .compile()
             .unwrap();
 
-        let runtime = Runtime::new_zkp(&BulletproofsBackend::new()).unwrap();
+        let runtime = Runtime::new_zkp(BulletproofsBackend::new()).unwrap();
 
         let program = app.get_zkp_program(le).unwrap();
 
         let test_case = |x: i64, y: i64, expect_pass: bool| {
-            type BpField = NativeField<<BulletproofsBackend as ZkpBackend>::Field>;
+            type BpField = Field<<BulletproofsBackend as ZkpBackend>::Field>;
 
             let result = runtime.prove(
                 program,
-                vec![],
-                vec![],
                 vec![BpField::from(x), BpField::from(y)],
+                vec![],
+                vec![],
             );
 
             let proof = if expect_pass {
@@ -530,8 +544,8 @@ mod tests {
 
     #[test]
     fn can_compare_ge_bounded() {
-        #[zkp_program(backend = "bulletproofs")]
-        fn le<F: BackendField>(x: NativeField<F>, y: NativeField<F>) {
+        #[zkp_program]
+        fn le<F: FieldSpec>(x: Field<F>, y: Field<F>) {
             x.constrain_ge_bounded(y, 16);
         }
 
@@ -541,18 +555,18 @@ mod tests {
             .compile()
             .unwrap();
 
-        let runtime = Runtime::new_zkp(&BulletproofsBackend::new()).unwrap();
+        let runtime = Runtime::new_zkp(BulletproofsBackend::new()).unwrap();
 
         let program = app.get_zkp_program(le).unwrap();
 
         let test_case = |x: i64, y: i64, expect_pass: bool| {
-            type BpField = NativeField<<BulletproofsBackend as ZkpBackend>::Field>;
+            type BpField = Field<<BulletproofsBackend as ZkpBackend>::Field>;
 
             let result = runtime.prove(
                 program,
-                vec![],
-                vec![],
                 vec![BpField::from(x), BpField::from(y)],
+                vec![],
+                vec![],
             );
 
             let proof = if expect_pass {
@@ -579,8 +593,8 @@ mod tests {
 
     #[test]
     fn can_compare_gt_bounded() {
-        #[zkp_program(backend = "bulletproofs")]
-        fn le<F: BackendField>(x: NativeField<F>, y: NativeField<F>) {
+        #[zkp_program]
+        fn le<F: FieldSpec>(x: Field<F>, y: Field<F>) {
             x.constrain_gt_bounded(y, 16);
         }
 
@@ -590,18 +604,18 @@ mod tests {
             .compile()
             .unwrap();
 
-        let runtime = Runtime::new_zkp(&BulletproofsBackend::new()).unwrap();
+        let runtime = Runtime::new_zkp(BulletproofsBackend::new()).unwrap();
 
         let program = app.get_zkp_program(le).unwrap();
 
         let test_case = |x: i64, y: i64, expect_pass: bool| {
-            type BpField = NativeField<<BulletproofsBackend as ZkpBackend>::Field>;
+            type BpField = Field<<BulletproofsBackend as ZkpBackend>::Field>;
 
             let result = runtime.prove(
                 program,
-                vec![],
-                vec![],
                 vec![BpField::from(x), BpField::from(y)],
+                vec![],
+                vec![],
             );
 
             let proof = if expect_pass {

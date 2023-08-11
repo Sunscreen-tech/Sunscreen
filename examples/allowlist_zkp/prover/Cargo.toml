@@ -1,0 +1,10 @@
+[package]
+name = "prover"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow = { workspace = true }
+bincode = { workspace = true }
+sunscreen = { workspace = true }
+zkp = { path = "../zkp" }

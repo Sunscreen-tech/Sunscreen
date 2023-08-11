@@ -1,22 +1,67 @@
 use sunscreen::{
-    types::zkp::NativeField, zkp_program, BackendField, Compiler, Runtime, ZkpProgramInput,
+    bulletproofs::BulletproofsBackend,
+    types::zkp::{BulletproofsField, Field},
+    zkp_program, zkp_var, Error, FieldSpec, ZkpProgramFnExt,
 };
-use sunscreen_zkp_backend::{bulletproofs::BulletproofsBackend, ZkpBackend};
 
-type BPField = NativeField<<BulletproofsBackend as ZkpBackend>::Field>;
+#[zkp_program]
+fn sudoku_proof<F: FieldSpec>(solution: [[Field<F>; 9]; 9], #[public] board: [[Field<F>; 9]; 9]) {
+    let zero = zkp_var!(0);
 
-fn main() {
-    let app = Compiler::new()
-        .zkp_backend::<BulletproofsBackend>()
-        .zkp_program(sudoku_proof)
-        .compile()
-        .unwrap();
+    let assert_unique_numbers = |squares| {
+        for i in 1..=9 {
+            let mut circuit = zkp_var!(1);
+            for s in squares {
+                circuit = circuit * (zkp_var!(i) - s);
+            }
+            circuit.constrain_eq(zero);
+        }
+    };
 
-    let prog = app.get_zkp_program(sudoku_proof).unwrap();
+    // Checks rows contain every number from 1 to 9
+    for row in solution {
+        assert_unique_numbers(row);
+    }
 
-    let runtime = Runtime::new_zkp(&BulletproofsBackend::new()).unwrap();
+    // Checks columns contain each number from 1 to 9
+    for col in 0..9 {
+        let column = solution.map(|r| r[col]);
+        assert_unique_numbers(column);
+    }
 
-    let ex_puzzle = [
+    // Checks squares contain each number from 1 to 9
+    for i in 0..3 {
+        for j in 0..3 {
+            let rows = &solution[(i * 3)..(i * 3 + 3)];
+
+            let square = rows.iter().map(|s| &s[(j * 3)..(j * 3 + 3)]);
+
+            let flattened_sq = square
+                .flatten()
+                .copied()
+                .collect::<Vec<_>>()
+                .try_into()
+                .unwrap_or([zero; 9]);
+
+            assert_unique_numbers(flattened_sq);
+        }
+    }
+
+    // Proves that the solution matches up with the puzzle where applicable
+    for i in 0..9 {
+        for j in 0..9 {
+            let square = solution[i][j];
+            let constraint = board[i][j];
+            (constraint * (constraint - square)).constrain_eq(zero);
+        }
+    }
+}
+
+fn main() -> Result<(), Error> {
+    let prog = sudoku_proof.compile::<BulletproofsBackend>()?;
+    let runtime = sudoku_proof.runtime::<BulletproofsBackend>()?;
+
+    let ex_board = [
         [0, 7, 0, 0, 2, 0, 0, 4, 6],
         [0, 6, 0, 0, 0, 0, 8, 9, 0],
         [2, 0, 0, 8, 0, 0, 7, 1, 5],
@@ -40,85 +85,15 @@ fn main() {
         [4, 3, 2, 5, 8, 6, 9, 7, 1],
     ];
 
-    let board: Vec<ZkpProgramInput> = vec![ex_sol.map(|a| a.map(BPField::from)).into()];
+    let solution = ex_sol.map(|a| a.map(BulletproofsField::from));
 
-    let cons: Vec<ZkpProgramInput> = vec![ex_puzzle.map(|a| a.map(BPField::from)).into()];
+    let board = ex_board.map(|a| a.map(BulletproofsField::from));
 
-    let proof = runtime.prove(prog, cons.clone(), vec![], board).unwrap();
+    let proof = runtime.prove(&prog, vec![solution], vec![board], vec![])?;
 
-    let verify = runtime.verify(prog, &proof, cons, vec![]);
+    runtime.verify(&prog, &proof, vec![board], vec![])?;
 
-    assert!(verify.is_ok());
-}
-
-#[zkp_program(backend = "bulletproofs")]
-fn sudoku_proof<F: BackendField>(
-    #[constant] constraints: [[NativeField<F>; 9]; 9],
-    board: [[NativeField<F>; 9]; 9],
-) {
-    #[sunscreen::debug]
-    fn assert_unique_numbers<F: BackendField>(arr: [ProgramNode<NativeField<F>>; 9]) {
-        for i in 1..=9 {
-            assert_contains(arr, NativeField::<F>::from(i));
-        }
-    }
-
-    #[sunscreen::debug]
-    fn assert_contains<F: BackendField>(arr: [ProgramNode<NativeField<F>>; 9], i: NativeField<F>) {
-        let mut circuit = NativeField::<F>::from(1).into_program_node();
-        for a in arr {
-            circuit = circuit * (i.into_program_node() - a);
-        }
-        circuit.constrain_eq(NativeField::<F>::from(0));
-    }
-
-    let zero = NativeField::<F>::from(0).into_program_node();
-    #[sunscreen::debug]
-    fn verify_matches<F: BackendField>(
-        constraints: [[ProgramNode<NativeField<F>>; 9]; 9],
-        board: [[ProgramNode<NativeField<F>>; 9]; 9],
-    ) {
-        let zero = NativeField::<F>::from(0).into_program_node();
-        for i in 0..9 {
-            for j in 0..9 {
-                let square = board[i][j].into_program_node();
-                let constraint = constraints[i][j].into_program_node();
-                (constraint * (constraint - square)).constrain_eq(zero);
-            }
-        }
-    }
-
-    // Proves that the board matches up with the puzzle where applicable
-    verify_matches(constraints, board);
-
-    // Checks rows contain every number from 1 to 9
-    for row in board {
-        assert_unique_numbers(row);
-    }
-
-    // Checks columns contain each number from 1 to 9
-    for col in 0..9 {
-        let column = board.map(|r| r[col]);
-        assert_unique_numbers(column);
-    }
-
-    // Checks squares contain each number from 1 to 9
-    for i in 0..3 {
-        for j in 0..3 {
-            let rows = &board[(i * 3)..(i * 3 + 3)];
-
-            let square = rows.iter().map(|s| &s[(j * 3)..(j * 3 + 3)]);
-
-            let flattened_sq: [ProgramNode<NativeField<F>>; 9] = square
-                .flatten()
-                .copied()
-                .collect::<Vec<_>>()
-                .try_into()
-                .unwrap_or([zero; 9]);
-
-            assert_unique_numbers(flattened_sq);
-        }
-    }
+    Ok(())
 }
 
 #[cfg(test)]
@@ -126,18 +101,16 @@ mod tests {
     use super::*;
 
     #[test]
+    fn main_works() -> Result<(), Error> {
+        main()
+    }
+
+    #[test]
     fn valid_example() {
-        let app = Compiler::new()
-            .zkp_backend::<BulletproofsBackend>()
-            .zkp_program(sudoku_proof)
-            .compile()
-            .unwrap();
+        let prog = sudoku_proof.compile::<BulletproofsBackend>().unwrap();
+        let runtime = sudoku_proof.runtime::<BulletproofsBackend>().unwrap();
 
-        let prog = app.get_zkp_program(sudoku_proof).unwrap();
-
-        let runtime = Runtime::new_zkp(&BulletproofsBackend::new()).unwrap();
-
-        let ex_puzzle = [
+        let ex_board = [
             [0, 7, 0, 0, 2, 0, 0, 4, 6],
             [0, 6, 0, 0, 0, 0, 8, 9, 0],
             [2, 0, 0, 8, 0, 0, 7, 1, 5],
@@ -161,30 +134,24 @@ mod tests {
             [4, 3, 2, 5, 8, 6, 9, 7, 1],
         ];
 
-        let board: Vec<ZkpProgramInput> = vec![ex_sol.map(|a| a.map(BPField::from)).into()];
+        let solution = ex_sol.map(|a| a.map(BulletproofsField::from));
+        let board = ex_board.map(|a| a.map(BulletproofsField::from));
 
-        let cons: Vec<ZkpProgramInput> = vec![ex_puzzle.map(|a| a.map(BPField::from)).into()];
+        let proof = runtime
+            .prove(&prog, vec![solution], vec![board], vec![])
+            .unwrap();
 
-        let proof = runtime.prove(prog, cons.clone(), vec![], board).unwrap();
-
-        let verify = runtime.verify(prog, &proof, cons, vec![]);
+        let verify = runtime.verify(&prog, &proof, vec![board], vec![]);
 
         assert!(verify.is_ok());
     }
 
     #[test]
     fn bad_solution() {
-        let app = Compiler::new()
-            .zkp_backend::<BulletproofsBackend>()
-            .zkp_program(sudoku_proof)
-            .compile()
-            .unwrap();
+        let prog = sudoku_proof.compile::<BulletproofsBackend>().unwrap();
+        let runtime = sudoku_proof.runtime::<BulletproofsBackend>().unwrap();
 
-        let prog = app.get_zkp_program(sudoku_proof).unwrap();
-
-        let runtime = Runtime::new_zkp(&BulletproofsBackend::new()).unwrap();
-
-        let ex_puzzle = [
+        let ex_board = [
             [0, 7, 0, 0, 2, 0, 0, 4, 6],
             [0, 6, 0, 0, 0, 0, 8, 9, 0],
             [2, 0, 0, 8, 0, 0, 7, 1, 5],
@@ -208,28 +175,21 @@ mod tests {
             [4, 3, 2, 5, 8, 6, 9, 7, 1],
         ];
 
-        let board: Vec<ZkpProgramInput> = vec![ex_sol.map(|a| a.map(BPField::from)).into()];
+        let solution = ex_sol.map(|a| a.map(BulletproofsField::from));
 
-        let cons: Vec<ZkpProgramInput> = vec![ex_puzzle.map(|a| a.map(BPField::from)).into()];
+        let board = ex_board.map(|a| a.map(BulletproofsField::from));
 
-        let proof = runtime.prove(prog, cons, vec![], board);
+        let proof = runtime.prove(&prog, vec![solution], vec![board], vec![]);
 
         assert!(proof.is_err());
     }
 
     #[test]
     fn out_of_bounds_input() {
-        let app = Compiler::new()
-            .zkp_backend::<BulletproofsBackend>()
-            .zkp_program(sudoku_proof)
-            .compile()
-            .unwrap();
+        let prog = sudoku_proof.compile::<BulletproofsBackend>().unwrap();
+        let runtime = sudoku_proof.runtime::<BulletproofsBackend>().unwrap();
 
-        let prog = app.get_zkp_program(sudoku_proof).unwrap();
-
-        let runtime = Runtime::new_zkp(&BulletproofsBackend::new()).unwrap();
-
-        let ex_puzzle = [[0; 9]; 9];
+        let ex_board = [[0; 9]; 9];
 
         let ex_sol = [
             [8, 7, 5, 9, 2, 1, 3, 4, 10],
@@ -243,11 +203,11 @@ mod tests {
             [4, 3, 2, 5, 8, 6, 9, 7, 1],
         ];
 
-        let board: Vec<ZkpProgramInput> = vec![ex_sol.map(|a| a.map(BPField::from)).into()];
+        let solution = ex_sol.map(|a| a.map(BulletproofsField::from));
 
-        let cons: Vec<ZkpProgramInput> = vec![ex_puzzle.map(|a| a.map(BPField::from)).into()];
+        let board = ex_board.map(|a| a.map(BulletproofsField::from));
 
-        let proof = runtime.prove(prog, cons, vec![], board);
+        let proof = runtime.prove(&prog, vec![solution], vec![board], vec![]);
 
         assert!(proof.is_err());
     }

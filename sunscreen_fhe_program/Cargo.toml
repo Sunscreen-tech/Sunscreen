@@ -17,15 +17,15 @@ readme = "crates-io.md"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-petgraph = { version = "0.6.0", features = ["serde-1"] }
-serde = { version = "1.0.147", features = ["derive"] }
-seal_fhe = { version = "0.7", path = "../seal_fhe" }
-static_assertions = "1.1.0"
-sunscreen_compiler_common = { path = "../sunscreen_compiler_common" }
-thiserror = "1.0.37"
+petgraph = { workspace = true }
+serde = { workspace = true }
+seal_fhe = { workspace = true }
+static_assertions = { workspace = true }
+sunscreen_compiler_common = { workspace = true }
+thiserror = { workspace = true }
 
 [dev-dependencies]
-serde_json = "1.0.74"
+serde_json = { workspace = true }
 
 [features]
 default = []

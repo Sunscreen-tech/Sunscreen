@@ -6,5 +6,5 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-sunscreen = { path = "../../sunscreen" }
-crypto-bigint = "0.4.9"
+sunscreen = { workspace = true }
+crypto-bigint = { workspace = true }

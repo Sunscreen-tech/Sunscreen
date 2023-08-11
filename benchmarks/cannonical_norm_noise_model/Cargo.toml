@@ -6,10 +6,10 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-sunscreen_backend = { path = "../../sunscreen_backend" }
-seal_fhe = { path = "../../seal_fhe" }
-sunscreen_runtime = { path = "../../sunscreen_runtime" }
-sunscreen_fhe_program = { path = "../../sunscreen_fhe_program" }
-rayon = "1.5.3"
-env_logger = "0.9.0"
-log = "0.4.17"
+sunscreen_backend = { workspace = true }
+seal_fhe = { workspace = true }
+sunscreen_runtime = { workspace = true }
+sunscreen_fhe_program = { workspace = true }
+rayon = { workspace = true }
+env_logger = { workspace = true }
+log = { workspace = true }

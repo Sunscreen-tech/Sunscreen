@@ -1,21 +1,20 @@
 [package]
 name = "sunscreen_compiler_common"
-version = "0.1.0"
+version = "0.7.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-petgraph = { version = "0.6.2", features = ["serde-1"] }
-proc-macro2 = "1.0.47"
-quote = "1.0.21"
-semver = "1.0.14"
-serde = { version = "1.0.147", features = ["derive"] }
-syn = { version = "2.0.16", features = ["full"] }
-thiserror = "1.0.37"
-static_assertions = "1.1.0"
-radix_trie = { version = "0.2.1", features = ["serde"] }
-backtrace = "0.3.67"
+backtrace = { workspace = true }
+petgraph = { workspace = true }
+proc-macro2 = { workspace = true }
+quote = { workspace = true }
+semver = { workspace = true }
+serde = { workspace = true }
+syn = { workspace = true }
+thiserror = { workspace = true }
+static_assertions = { workspace = true }
 
 [features]
 debugger = []

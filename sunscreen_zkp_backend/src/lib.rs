@@ -19,10 +19,10 @@ use std::{
     ops::{Add, Deref, Mul, Neg, Sub},
 };
 
-pub use crypto_bigint::UInt;
+pub use crypto_bigint::Uint;
 use crypto_bigint::{
     subtle::{Choice, ConditionallySelectable},
-    Limb, U512,
+    Limb, NonZero, U512,
 };
 pub use error::*;
 pub use exec::ExecutableZkpProgram;
@@ -67,7 +67,7 @@ compile_error!("This crate currently requires a little endian target architectur
  *
  * We instead ask the prover to simply provide the binary decomposition
  * and prove that it's correct. To do this, we create a gadget. Its
- * [`compute_inputs`](Gadget::compute_inputs) method directly computes the
+ * [`compute_hidden_inputs`](Gadget::compute_hidden_inputs) method directly computes the
  * decomposition with shifting and masking. Then, the
  * [`gen_circuit`](Gadget::gen_circuit) method defined a circuit that proves
  * the following:
@@ -107,7 +107,7 @@ pub trait Gadget: Any + Send + Sync {
      *
      * Implementors should ensure this function runs in constant time.
      */
-    fn compute_inputs(&self, gadget_inputs: &[BigInt]) -> Result<Vec<BigInt>>;
+    fn compute_hidden_inputs(&self, gadget_inputs: &[BigInt]) -> Result<Vec<BigInt>>;
 
     /**
      * Returns the expected number of gadget inputs.
@@ -287,15 +287,15 @@ impl BigInt {
             panic!("Cannot compute log2(0).");
         }
 
-        let bitlen = self.limbs().len() * std::mem::size_of::<Limb>() * 8;
+        let bitlen = self.as_limbs().len() * std::mem::size_of::<Limb>() * 8;
 
         for i in 0..bitlen {
             let i = bitlen - 1 - i;
             let bit_val = self.bit_vartime(i);
 
-            if bit_val == 1 && log2 == 0 {
+            if bit_val && log2 == 0 {
                 log2 = i as u32;
-            } else if bit_val == 1 {
+            } else if bit_val {
                 log2 += 1;
             }
         }
@@ -356,8 +356,10 @@ impl BigInt {
             panic!("Cannot have a finite field of zero size.");
         }
 
+        let p = NonZero::from_uint(p.0);
+
         let mut cur_power = self.0;
-        let mut result = UInt::ONE;
+        let mut result = Uint::ONE;
 
         let power_count = 8 * 8 * std::mem::size_of::<Limb>();
 
@@ -366,10 +368,10 @@ impl BigInt {
             let bit = x.bit_vartime(i) as u8;
             let bit = Choice::from(bit);
 
-            let v = UInt::conditional_select(&UInt::ONE, &cur_power, bit);
+            let v = Uint::conditional_select(&Uint::ONE, &cur_power, bit);
 
-            result = result.wrapping_mul(&v).reduce(p).unwrap();
-            cur_power = cur_power.wrapping_mul(&cur_power).reduce(p).unwrap();
+            result = result.wrapping_mul(&v).rem(&p);
+            cur_power = cur_power.wrapping_mul(&cur_power).rem(&p);
         }
 
         BigInt::from(result)
@@ -394,7 +396,7 @@ pub trait ZkpBackend {
     /**
      * The field this backend uses in computation.
      */
-    type Field: BackendField;
+    type Field: FieldSpec;
 
     /**
      * Create a proof for the given executable Sunscreen
@@ -421,9 +423,9 @@ pub trait ZkpBackend {
     fn jit_prover(
         &self,
         prog: &CompiledZkpProgram,
-        constant_inputs: &[BigInt],
-        public_inputs: &[BigInt],
         private_inputs: &[BigInt],
+        public_inputs: &[BigInt],
+        constant_inputs: &[BigInt],
         debug_session_provider: Option<&dyn DebugSessionProvider<Operation, BigInt, String>>,
     ) -> Result<ExecutableZkpProgram>;
 
@@ -439,8 +441,8 @@ pub trait ZkpBackend {
     fn jit_verifier(
         &self,
         prog: &CompiledZkpProgram,
-        constant_inputs: &[BigInt],
         public_inputs: &[BigInt],
+        constant_inputs: &[BigInt],
     ) -> Result<ExecutableZkpProgram>;
 }
 
@@ -449,18 +451,17 @@ pub trait ZkpBackend {
  * ZKP backend. E.g. Bulletproofs uses Ristretto `Scalar`
  * values.
  */
-pub trait BackendField:
-    Add<Self, Output = Self>
-    + Sub<Self, Output = Self>
-    + Mul<Self, Output = Self>
-    + Neg<Output = Self>
-    + Clone // Breaks object safety due to +Sized.
-    + TryFrom<BigInt, Error = Error>
-    + ZkpInto<BigInt>
-{
-    /**
-     * The modulus of the proof system's `BackendField` type.
-     */
+pub trait FieldSpec: Clone {
+    /// The underlying field type used in a backend.
+    type BackendField: Add<Self::BackendField, Output = Self::BackendField>
+        + Sub<Self::BackendField, Output = Self::BackendField>
+        + Mul<Self::BackendField, Output = Self::BackendField>
+        + Neg<Output = Self::BackendField>
+        + Clone // Breaks object safety due to +Sized.
+        + TryFrom<BigInt, Error = Error>
+        + ZkpInto<BigInt>;
+
+    /// The modulus defining the [`FieldSpec::BackendField`] type.
     const FIELD_MODULUS: BigInt;
 }
 
@@ -513,8 +514,9 @@ mod tests {
     fn inverse_works() {
         let test_case = |x: BigInt, p: BigInt| {
             let x_inv = x.inverse_fp(&p);
+            let p = NonZero::from_uint(p.0);
 
-            assert_eq!(x_inv.wrapping_mul(&x).reduce(&p).unwrap(), UInt::ONE);
+            assert_eq!(x_inv.wrapping_mul(&x).rem(&p), Uint::ONE);
         };
 
         struct TestProvider {}

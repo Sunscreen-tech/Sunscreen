@@ -20,6 +20,21 @@ pub fn rand256() -> [u8; 32] {
 }
 
 /**
+ * Finds the next highest power of two. If the value is a power of two, then this function will return the following power of two. For example:
+ *
+ * input `is_power_of_two` `next_power_of_two` `next_higher_power_of_two`
+ *     0        no                  1                      1
+ *     1     yes (2^0)              1                      2
+ *     2     yes (2^1)              2                      4
+ *     3        no                  4                      4
+ */
+pub fn next_higher_power_of_two(x: u64) -> u64 {
+    let offset = if x.is_power_of_two() { 1 } else { 0 };
+
+    (x + offset).next_power_of_two()
+}
+
+/**
  * A wrapper trait for getting the zero element of a field.
  */
 pub trait Zero {
@@ -264,10 +279,20 @@ pub fn print_polynomial<F: Field>(p: &DensePolynomial<F>) {
 
 #[allow(unused)]
 /**
- * For debugging. Makes a polynomial with the given u64 coefficients in converted to field Fp.
+ * For debugging. Makes a polynomial with the given i64 coefficients in converted to field Fp.
  */
-pub fn make_poly<F: Field + From<u64>>(coeffs: &[u64]) -> DensePolynomial<F> {
-    let coeffs = coeffs.iter().map(|x| F::from(*x)).collect();
+pub fn make_poly<F: Field + From<u64>>(coeffs: &[i64]) -> DensePolynomial<F> {
+    let zero = F::zero();
+    let coeffs = coeffs
+        .iter()
+        .map(|x| {
+            if *x >= 0 {
+                F::from(*x as u64)
+            } else {
+                zero - F::from(x.unsigned_abs())
+            }
+        })
+        .collect();
 
     DensePolynomial { coeffs }
 }
@@ -283,6 +308,14 @@ pub trait Log2 {
      * When the given value is zero.
      */
     fn log2(x: &Self) -> u64;
+
+    /**
+     * Compute the ceiling of the log2 of the given value.
+     *
+     * # Panics
+     * When the given value is zero.
+     */
+    fn ceil_log2(x: &Self) -> u64;
 }
 
 impl Log2 for u64 {
@@ -302,6 +335,15 @@ impl Log2 for u64 {
 
         panic!("Value was zero.");
     }
+
+    fn ceil_log2(x: &Self) -> u64 {
+        let ceil_factor = if x.is_power_of_two() { 0 } else { 1 };
+        Self::log2(x) + ceil_factor
+    }
+}
+
+fn is_power_of_two_bigint<const N: usize>(b: &BigInt<N>) -> bool {
+    b.as_ref().iter().map(|u| u.count_ones()).sum::<u32>() == 1
 }
 
 impl<const N: usize> Log2 for BigInt<N> {
@@ -318,6 +360,12 @@ impl<const N: usize> Log2 for BigInt<N> {
         }
 
         panic!("Value was zero.");
+    }
+
+    fn ceil_log2(x: &Self) -> u64 {
+        let ceil_factor = if is_power_of_two_bigint(x) { 0 } else { 1 };
+
+        Self::log2(x) + ceil_factor
     }
 }
 
@@ -533,7 +581,8 @@ where
     Self: Sized,
 {
     /**
-     * Decompose the coefficients into binary 2's complement values.
+     * Decompose the coefficients into binary 2's complement values. If the
+     * input is zero, then an empty vector is returned.
      *
      */
     fn twos_complement_coeffs(b: usize) -> Vec<Self>;
@@ -541,6 +590,10 @@ where
 
 impl TwosComplementCoeffs for Scalar {
     fn twos_complement_coeffs(b: usize) -> Vec<Self> {
+        if b == 0 {
+            return Vec::new();
+        }
+
         let mut results = Vec::with_capacity(b);
 
         let mut cur_power = Scalar::one();
@@ -578,11 +631,11 @@ where
     F: MontConfig<N>,
 {
     fn twos_complement_coeffs(b: usize) -> Vec<Self> {
-        let mut results = vec![];
-
         if b == 0 {
-            return results;
+            return Vec::new();
         }
+
+        let mut results = Vec::with_capacity(b);
 
         let mut cur_power = Self::one();
         let two = Self::from(2);
@@ -659,14 +712,9 @@ mod test {
     #[test]
     fn modulus_in_standard_form() {
         let m = FqSeal128_8192::field_modulus();
-        // 0x3fffff5_9001c92abc42a839_730ec3bf0a9c26b9_923cfd7defdc4001
-        // == 421249101157150430150591791601812858371395928330411389778873040897
-        let expected = BigInt::new([
-            0x923cfd7defdc4001,
-            0x730ec3bf0a9c26b9,
-            0x9001c92abc42a839,
-            0x3fffff5,
-        ]);
+        // [0x1b9f30440ff08001, 0x25d3e81a62469512, 0x3fffffaa0018]
+        // == 23945240908173643396739775218143152511335532357255169
+        let expected = BigInt::new([0x1b9f30440ff08001, 0x25d3e81a62469512, 0x3fffffaa0018]);
 
         assert_eq!(m, expected);
     }
@@ -675,15 +723,10 @@ mod test {
     fn field_modulus_div_2_in_standard_form() {
         let m = FqSeal128_8192::field_modulus_div_2();
 
-        // 421249101157150430150591791601812858371395928330411389778873040897 / 2
-        // = 210624550578575215075295895800906429185697964165205694889436520448
-        // = 0x1fffffa_c800e4955e21541c_b98761df854e135c_c91e7ebef7ee2000
-        let expected = BigInt::new([
-            0xc91e7ebef7ee2000,
-            0xb98761df854e135c,
-            0xc800e4955e21541c,
-            0x1fffffa,
-        ]);
+        // 23945240908173643396739775218143152511335532357255169 / 2
+        // = 11972620454086821698369887609071576255667766178627584
+        // = [0xdcf982207f84000, 0x12e9f40d31234a89, 0x1fffffd5000c]
+        let expected = BigInt::new([0xdcf982207f84000, 0x12e9f40d31234a89, 0x1fffffd5000c]);
 
         assert_eq!(m, expected);
     }
@@ -787,5 +830,70 @@ mod test {
         assert_encoding(i8::MIN);
         assert_encoding(i8::MAX);
         assert_encoding(42);
+    }
+
+    #[test]
+    fn big_int_pow_two() {
+        let options = [
+            (1u64, true),
+            (2, true),
+            (4, true),
+            (5, false),
+            (19, false),
+            (8192, true),
+            (8193, false),
+        ];
+
+        for (value, expected) in options {
+            println!("{:?}, {:?}", value, expected);
+            let b: BigInt<1> = BigInt::from(value);
+            assert_eq!(is_power_of_two_bigint(&b), expected);
+        }
+
+        // Testing higher limbs
+        // value is 1 << 68
+        let b: BigInt<2> = BigInt!("295147905179352825856");
+        assert!(is_power_of_two_bigint(&b));
+
+        let b: BigInt<2> = BigInt!("295147905179352825857");
+        assert!(!is_power_of_two_bigint(&b));
+    }
+
+    #[test]
+    fn ceil_log2_u64() {
+        let options = [1u64, 2, 4, 5, 19, 8192, 8193];
+
+        for value in options {
+            let f = value as f64;
+            let expected = f.log2().ceil() as u64;
+
+            let calculated = Log2::ceil_log2(&value);
+
+            assert_eq!(calculated, expected);
+        }
+    }
+
+    #[test]
+    fn ceil_log2_bitint() {
+        let options = [1u64, 2, 4, 5, 19, 8192, 8193];
+
+        for value in options {
+            let f = value as f64;
+            let expected = f.log2().ceil() as u64;
+
+            let b: BigInt<1> = BigInt::from(value);
+            let calculated = Log2::ceil_log2(&b);
+
+            assert_eq!(calculated, expected);
+        }
+    }
+
+    #[test]
+    fn test_next_higher_power_of_two() {
+        assert_eq!(next_higher_power_of_two(0), 1);
+        assert_eq!(next_higher_power_of_two(1), 2);
+        assert_eq!(next_higher_power_of_two(2), 4);
+        assert_eq!(next_higher_power_of_two(3), 4);
+        assert_eq!(next_higher_power_of_two(4), 8);
     }
 }

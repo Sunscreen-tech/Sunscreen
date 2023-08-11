@@ -26,6 +26,9 @@ jobs:
           ~/.cargo/git/db/
           target/
         key: ${{ runner.os }}-cargo-build-${{ hashFiles('Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-cargo-build-
+          ${{ runner.os }}-cargo
     - uses: actions/cache@v3
       with:
         path: |
@@ -35,6 +38,9 @@ jobs:
           ~/.cargo/git/db/
           mdBook/target
         key: ${{ runner.os }}-cargo-mdBook-${{ hashFiles('mdBook/Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-cargo-mdBook-
+          ${{ runner.os }}-cargo-
     # Checks are ordered from fastest to slowest so your build fails quickly on invalid PRs
     # We do everything in release mode so tests run quickly and steps cache each other.
     # Check the submitted change meets style guidelines
@@ -42,18 +48,10 @@ jobs:
       run: cargo fmt --check
     # Build and run the tests
     - name: Build and run tests
-      run: cargo test --verbose --release
-    # Run our non-interactive examples and assert the complete without error
-    - name: Verify examples (amm)
-      run: cargo run --release --bin amm
-    - name: Verify examples (chi_sq)
-      run: cargo run --release --bin chi_sq
-    - name: Verify examples (simple_multiply)
-      run: cargo run --release --bin simple_multiply
-    - name: Verify examples (dot_prod)
-      run: cargo run --release --bin dot_prod
-    - name: Verify examples (pir)
-      run: cargo run --release --bin pir
+      run: cargo test --workspace --verbose --release
+    - name: Verify examples outside of workspace (allowlist_zkp)
+      run: cargo test --workspace --verbose
+      working-directory: ./examples/allowlist_zkp
     - name: Build sunscreen and bincode
       run: cargo build --release --package sunscreen --package bincode
     - name: Build mdBook
@@ -78,6 +76,9 @@ jobs:
           ~/.cargo/git/db/
           target/
         key: ${{ runner.os }}-cargo-clippy-${{ hashFiles('Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-cargo-clippy-
+          ${{ runner.os }}-cargo-
     # Check the submitted change passes the clippy linter
     - name: Cargo clippy
       run: cargo clippy --release --all-targets -- --deny warnings
@@ -97,6 +98,9 @@ jobs:
           ~/.cargo/git/db/
           target/
         key: ${{ runner.os }}-cargo-doc-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-cargo-doc-
+          ${{ runner.os }}-cargo-
     # Cursory check to ensure your CL contains valid Rust code
     - name: Cargo check
       run: cargo check --release

@@ -2,6 +2,7 @@ use std::ffi::c_void;
 use std::ptr::null_mut;
 
 use crate::bindgen;
+use crate::data_structures::PolynomialArray;
 use crate::error::*;
 use crate::{Ciphertext, Context, Plaintext, PublicKey, SecretKey};
 
@@ -102,6 +103,9 @@ impl Encryptor {
      * * `plainext` - The plaintext to encrypt.
      */
     pub fn encrypt(&self, plaintext: &Plaintext) -> Result<Ciphertext> {
+        // We don't call the encrypt_return_components because the return
+        // components are allocated on the SEAL global memory pool. By calling
+        // the regular encrypt function, we skip that allocation.
         let ciphertext = Ciphertext::new()?;
 
         convert_seal_error(unsafe {
@@ -114,6 +118,46 @@ impl Encryptor {
         })?;
 
         Ok(ciphertext)
+    }
+
+    /**
+     *
+     * Encrypts a plaintext with the public key and returns the ciphertext as a
+     * serializable object. Also returns the u and e values used in encrypting
+     * the value.
+     *
+     * The encryption parameters for the resulting ciphertext correspond to:
+     * 1) in BFV, the highest (data) level in the modulus switching chain,
+     * 2) in CKKS, the encryption parameters of the plaintext.
+     * Dynamic memory allocations in the process are allocated from the memory
+     * pool pointed to by the given MemoryPoolHandle.
+     *
+     * * `plainext` - The plaintext to encrypt.
+     * * `disable_special_modulus` - Whether to disable the special modulus switching
+     */
+    pub fn encrypt_return_components(
+        &self,
+        plaintext: &Plaintext,
+    ) -> Result<(Ciphertext, PolynomialArray, PolynomialArray, Plaintext)> {
+        let ciphertext = Ciphertext::new()?;
+        let u_destination = PolynomialArray::new()?;
+        let e_destination = PolynomialArray::new()?;
+        let fix_destination = Plaintext::new()?;
+
+        convert_seal_error(unsafe {
+            bindgen::Encryptor_EncryptReturnComponents(
+                self.handle,
+                plaintext.get_handle(),
+                true,
+                ciphertext.get_handle(),
+                u_destination.get_handle(),
+                e_destination.get_handle(),
+                fix_destination.get_handle(),
+                null_mut(),
+            )
+        })?;
+
+        Ok((ciphertext, u_destination, e_destination, fix_destination))
     }
 }
 
@@ -383,6 +427,45 @@ mod tests {
         let decrypted = decryptor.decrypt(&ciphertext).unwrap();
 
         let data_2 = encoder.decode_signed(&decrypted).unwrap();
+
+        assert_eq!(data, data_2);
+    }
+
+    #[test]
+    fn can_encrypt_and_decrypt_from_return_components() {
+        let params = BfvEncryptionParametersBuilder::new()
+            .set_poly_modulus_degree(8192)
+            .set_coefficient_modulus(
+                CoefficientModulus::create(8192, &[50, 30, 30, 50, 50]).unwrap(),
+            )
+            .set_plain_modulus(PlainModulus::batching(8192, 20).unwrap())
+            .build()
+            .unwrap();
+
+        let ctx = Context::new(&params, false, SecurityLevel::TC128).unwrap();
+        let gen = KeyGenerator::new(&ctx).unwrap();
+
+        let encoder = BFVEncoder::new(&ctx).unwrap();
+
+        let mut data = vec![];
+
+        for i in 0..encoder.get_slot_count() {
+            data.push(i as u64);
+        }
+
+        let plaintext = encoder.encode_unsigned(&data).unwrap();
+
+        let public_key = gen.create_public_key();
+        let secret_key = gen.secret_key();
+
+        let encryptor =
+            Encryptor::with_public_and_secret_key(&ctx, &public_key, &secret_key).unwrap();
+        let decryptor = Decryptor::new(&ctx, &secret_key).unwrap();
+
+        let ciphertext = encryptor.encrypt_return_components(&plaintext).unwrap().0;
+        let decrypted = decryptor.decrypt(&ciphertext).unwrap();
+
+        let data_2 = encoder.decode_unsigned(&decrypted).unwrap();
 
         assert_eq!(data, data_2);
     }

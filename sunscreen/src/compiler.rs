@@ -26,7 +26,9 @@ pub trait FheProgramFn {
     fn signature(&self) -> CallSignature;
 
     /**
-     * Compile the `#[fhe_program]`.
+     * Build the `#[fhe_program]` into a compiled frontend.
+     *
+     * You should not have to call this function directly.
      */
     fn build(&self, params: &Params) -> Result<FheFrontendCompilation>;
 
@@ -50,6 +52,91 @@ pub trait FheProgramFn {
      */
     fn source(&self) -> &'static str;
 }
+
+/// An extension of [`FheProgramFn`], providing helpers and convenience methods.
+pub trait FheProgramFnExt: FheProgramFn {
+    /// Compile the `#[fhe_program]` into a [runnable][sunscreen_runtime::GenericRuntime::run]
+    /// [`CompiledFheProgram`].
+    ///
+    /// This is a convenient way to compile just a single FHE program.
+    /// ```rust
+    /// use sunscreen::{fhe_program, types::{bfv::Signed, Cipher}, FheProgramFnExt};
+    ///
+    /// #[fhe_program(scheme = "bfv")]
+    /// fn multiply(a: Cipher<Signed>, b: Cipher<Signed>) -> Cipher<Signed> {
+    ///     a * b
+    /// }
+    /// # fn main() -> Result<(), sunscreen::Error> {
+    /// let multiply_prog = multiply.compile()?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    ///
+    /// It is shorthand for:
+    /// ```rust
+    /// use sunscreen::{fhe_program, types::{bfv::Signed, Cipher}, Compiler};
+    ///
+    /// #[fhe_program(scheme = "bfv")]
+    /// fn multiply(a: Cipher<Signed>, b: Cipher<Signed>) -> Cipher<Signed> {
+    ///     a * b
+    /// }
+    /// # fn main() -> Result<(), sunscreen::Error> {
+    /// let app = Compiler::new().fhe_program(multiply).compile()?;
+    /// let multiply_prog = app.get_fhe_program(multiply).unwrap();
+    /// # Ok(())
+    /// # }
+    /// ```
+    fn compile(&self) -> Result<CompiledFheProgram>
+    where
+        Self: AsRef<str> + Sized + Clone + 'static,
+    {
+        Ok(Compiler::new()
+            .fhe_program(self.clone())
+            .compile()?
+            .take_fhe_program(self)
+            .unwrap())
+    }
+
+    /// Make a new [`FheRuntime`] with parameters suitable to run this `#[fhe_program]`.
+    ///
+    /// This is a convenient way to run a single FHE program.
+    /// ```rust
+    /// use sunscreen::{fhe_program, types::{bfv::Signed, Cipher}, FheProgramFnExt};
+    ///
+    /// #[fhe_program(scheme = "bfv")]
+    /// fn multiply(a: Cipher<Signed>, b: Cipher<Signed>) -> Cipher<Signed> {
+    ///     a * b
+    /// }
+    /// # fn main() -> Result<(), sunscreen::Error> {
+    /// let runtime = multiply.runtime()?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    ///
+    /// It is shorthand for:
+    /// ```rust
+    /// use sunscreen::{fhe_program, types::{bfv::Signed, Cipher}, Compiler, FheRuntime};
+    ///
+    /// #[fhe_program(scheme = "bfv")]
+    /// fn multiply(a: Cipher<Signed>, b: Cipher<Signed>) -> Cipher<Signed> {
+    ///     a * b
+    /// }
+    /// # fn main() -> Result<(), sunscreen::Error> {
+    /// let app = Compiler::new().fhe_program(multiply).compile()?;
+    /// let runtime = FheRuntime::new(app.params());
+    /// # Ok(())
+    /// # }
+    /// ```
+    fn runtime(&self) -> Result<FheRuntime>
+    where
+        Self: AsRef<str> + Sized + Clone + 'static,
+    {
+        let app = Compiler::new().fhe_program(self.clone()).compile()?;
+        Ok(FheRuntime::new(app.params())?)
+    }
+}
+
+impl<T: ?Sized> FheProgramFnExt for T where T: FheProgramFn {}
 
 struct FheCompilerData {
     fhe_program_fns: Vec<Box<dyn FheProgramFn>>,
@@ -83,7 +170,7 @@ impl<B> Default for ZkpCompilerData<B> {
 
 struct ZkpCompilerData<B> {
     // In practice, B should always be BoxZkpFn<Field = F>> where
-    // F: BackendField.
+    // F: FieldSpec.
     zkp_program_fns: Vec<B>,
 }
 
@@ -319,7 +406,7 @@ impl<T, B> GenericCompiler<T, B> {
 
 impl<T, B> GenericCompiler<T, BoxZkpFn<B>>
 where
-    B: BackendField,
+    B: FieldSpec,
 {
     fn compile_zkp(&self) -> Result<HashMap<String, CompiledZkpProgram>> {
         let zkp_data = self.data.zkp_data();
@@ -404,7 +491,7 @@ impl FheCompiler {
 
 impl<B> ZkpCompiler<B>
 where
-    B: BackendField,
+    B: FieldSpec,
 {
     /**
      * Add the given FHE program for compilation.
@@ -454,7 +541,7 @@ where
 
 impl<B> FheZkpCompiler<B>
 where
-    B: BackendField,
+    B: FieldSpec,
 {
     /**
      * Add the given FHE program for compilation.
@@ -575,7 +662,7 @@ mod tests {
     use super::*;
 
     // Needed to make the fhe_program macro work.
-    use crate::{self as sunscreen, types::zkp::NativeField};
+    use crate::{self as sunscreen, types::zkp::Field};
 
     #[test]
     fn raw_compiler_has_correct_type() {
@@ -606,8 +693,8 @@ mod tests {
 
     #[test]
     fn fhe_zkp_program_yields_fhezkp_compiler() {
-        #[zkp_program(backend = "bulletproofs")]
-        fn kitty<F: BackendField>() {}
+        #[zkp_program]
+        fn kitty<F: FieldSpec>() {}
 
         #[fhe_program(scheme = "bfv")]
         fn doggie() {}
@@ -634,8 +721,8 @@ mod tests {
 
     #[test]
     fn compiling_zkp_program_yields_zkp_application() {
-        #[zkp_program(backend = "bulletproofs")]
-        fn kitty<F: BackendField>() {}
+        #[zkp_program]
+        fn kitty<F: FieldSpec>() {}
 
         let app = GenericCompiler::new()
             .zkp_backend::<BulletproofsBackend>()
@@ -648,8 +735,8 @@ mod tests {
 
     #[test]
     fn compiling_fhe_and_zkp_program_yields_fhezkp_application() {
-        #[zkp_program(backend = "bulletproofs")]
-        fn kitty<F: BackendField>(_a: NativeField<F>) {}
+        #[zkp_program]
+        fn kitty<F: FieldSpec>(_a: Field<F>) {}
 
         #[fhe_program(scheme = "bfv")]
         fn doggie() {}

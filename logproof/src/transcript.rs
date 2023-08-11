@@ -16,6 +16,9 @@ use crate::{
     math::{FieldModulus, ModSwitch},
 };
 
+/**
+ * Additional operations on Transcripts to perform SDLP proofs.
+ */
 pub trait LogProofTranscript {
     /**
      * Append the given Ristretto point to the transcript.
@@ -186,6 +189,15 @@ impl LogProofTranscript for merlin::Transcript {
         let hash = hasher.finalize_fixed();
 
         self.append_message(b"a+t", &hash);
-        self.append_u64(b"b", vk.b());
+
+        // Note that Merlin/STROBE uses little endian for its encoding, so we do
+        // the same here.
+        let b_message: Vec<u8> = vk
+            .b()
+            .as_slice()
+            .iter()
+            .flat_map(|x| x.iter().flat_map(|y| y.to_le_bytes()).collect::<Vec<u8>>())
+            .collect();
+        self.append_message(b"b", &b_message);
     }
 }

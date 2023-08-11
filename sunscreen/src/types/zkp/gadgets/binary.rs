@@ -26,7 +26,7 @@ impl ToUInt {
 }
 
 impl Gadget for ToUInt {
-    fn compute_inputs(&self, gadget_inputs: &[BigInt]) -> ZkpResult<Vec<BigInt>> {
+    fn compute_hidden_inputs(&self, gadget_inputs: &[BigInt]) -> ZkpResult<Vec<BigInt>> {
         let val = gadget_inputs[0];
 
         if self.n == 0 {
@@ -43,7 +43,7 @@ impl Gadget for ToUInt {
         let mut bits = vec![];
 
         for i in 0..self.n {
-            bits.push(BigInt::from(val.bit_vartime(i)));
+            bits.push(BigInt::from(val.bit_vartime(i) as u8));
         }
 
         Ok(bits)
@@ -112,7 +112,7 @@ impl Gadget for ToUInt {
 pub struct AssertBinary;
 
 impl Gadget for AssertBinary {
-    fn compute_inputs(&self, gadget_inputs: &[BigInt]) -> ZkpResult<Vec<BigInt>> {
+    fn compute_hidden_inputs(&self, gadget_inputs: &[BigInt]) -> ZkpResult<Vec<BigInt>> {
         let val = gadget_inputs[0];
 
         if val != BigInt::ONE && val != BigInt::ZERO {
@@ -155,9 +155,9 @@ impl Gadget for AssertBinary {
 mod tests {
     use sunscreen_runtime::{Runtime, ZkpProgramInput};
     use sunscreen_zkp_backend::bulletproofs::BulletproofsBackend;
-    use sunscreen_zkp_backend::{BackendField, ZkpBackend};
+    use sunscreen_zkp_backend::{FieldSpec, ZkpBackend};
 
-    use crate::types::zkp::{NativeField, ToBinary};
+    use crate::types::zkp::{Field, ToBinary};
     use crate::{self as sunscreen, invoke_gadget};
     use crate::{zkp_program, Compiler};
 
@@ -166,8 +166,8 @@ mod tests {
     #[test]
     fn can_assert_binary() {
         // Prove we know the value that decomposes into 0b101010
-        #[zkp_program(backend = "bulletproofs")]
-        fn test<F: BackendField>(a: NativeField<F>) {
+        #[zkp_program]
+        fn test<F: FieldSpec>(a: Field<F>) {
             invoke_gadget(AssertBinary, a.ids);
         }
 
@@ -177,14 +177,14 @@ mod tests {
             .compile()
             .unwrap();
 
-        let runtime = Runtime::new_zkp(&BulletproofsBackend::new()).unwrap();
+        let runtime = Runtime::new_zkp(BulletproofsBackend::new()).unwrap();
 
         let prog = app.get_zkp_program(test).unwrap();
 
-        type BPField = NativeField<<BulletproofsBackend as ZkpBackend>::Field>;
+        type BPField = Field<<BulletproofsBackend as ZkpBackend>::Field>;
 
         let test_proof = |x: u8, expect_pass: bool| {
-            let result = runtime.prove(prog, vec![], vec![], vec![BPField::from(x)]);
+            let result = runtime.prove(prog, vec![BPField::from(x)], vec![], vec![]);
 
             let proof = if expect_pass {
                 result.unwrap()
@@ -206,12 +206,12 @@ mod tests {
     #[test]
     fn can_convert_to_binary() {
         // Prove we know the value that decomposes into 0b101010
-        #[zkp_program(backend = "bulletproofs")]
-        fn test<F: BackendField>(a: NativeField<F>) {
+        #[zkp_program]
+        fn test<F: FieldSpec>(a: Field<F>) {
             let bits = a.to_unsigned::<6>();
 
             for (bit, expected) in bits.iter().zip([0u8, 1u8, 0u8, 1u8, 0u8, 1u8]) {
-                bit.constrain_eq(NativeField::from(expected));
+                bit.constrain_eq(Field::from(expected));
             }
         }
 
@@ -221,14 +221,14 @@ mod tests {
             .compile()
             .unwrap();
 
-        let runtime = Runtime::new_zkp(&BulletproofsBackend::new()).unwrap();
+        let runtime = Runtime::new_zkp(BulletproofsBackend::new()).unwrap();
 
         let prog = app.get_zkp_program(test).unwrap();
 
-        type BPField = NativeField<<BulletproofsBackend as ZkpBackend>::Field>;
+        type BPField = Field<<BulletproofsBackend as ZkpBackend>::Field>;
 
         let proof = runtime
-            .prove(prog, vec![], vec![], vec![BPField::from(42u8)])
+            .prove(prog, vec![BPField::from(42u8)], vec![], vec![])
             .unwrap();
 
         runtime

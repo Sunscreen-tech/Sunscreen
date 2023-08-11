@@ -7,13 +7,19 @@ use std::{
     vec::IntoIter,
 };
 
+/// A vector of [`RistrettoPoint`]s that supports batching operations.
+///
+/// # Remarks
+/// This implementation performs calculations in parallel on the CPU.
 pub struct CpuRistrettoPointVec(Vec<RistrettoPoint>);
 
 impl CpuRistrettoPointVec {
+    /// Creates a [`CpuRistrettoPointVec`].
     pub fn new(data: &[RistrettoPoint]) -> Self {
         Self(data.to_owned())
     }
 
+    /// Produce an iterator over [`RistrettoPoint`]s.
     pub fn iter(&self) -> Iter<'_, RistrettoPoint> {
         self.0.iter()
     }
@@ -144,17 +150,24 @@ impl Mul<&Scalar> for &CpuRistrettoPointVec {
     }
 }
 
+/// A vector of [`Scalar`]s that supports batching operations.
+///
+/// # Remarks
+/// This implementation performs calculations in parallel on the CPU.
 pub struct CpuScalarVec(Vec<Scalar>);
 
 impl CpuScalarVec {
+    /// Create a new [`CpuScalarVec`].
     pub fn new(data: &[Scalar]) -> Self {
         Self(data.to_owned())
     }
 
+    /// Create an iterator over [`Scalar`] values.
     pub fn iter(&self) -> Iter<'_, Scalar> {
         self.0.iter()
     }
 
+    /// Inverts each [`Scalar`] in the vector.
     pub fn invert(&self) -> Self {
         Self(self.par_iter().map(|x| x.invert()).collect())
     }

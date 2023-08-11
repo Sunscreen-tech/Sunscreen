@@ -1,5 +1,3 @@
-use std::{thread, time::Duration};
-
 use sunscreen::{
     types::zkp::NativeField, zkp_program, BackendField, Compiler, Runtime, ZkpProgramInput,
 };
@@ -52,9 +50,6 @@ fn main() {
 
     assert!(verify.is_ok());
 
-    loop {
-        thread::sleep(Duration::from_millis(5000));
-    }
 }
 
 #[zkp_program(backend = "bulletproofs")]

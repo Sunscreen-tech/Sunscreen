@@ -1,9 +1,6 @@
 use std::{thread, time::Duration};
 
-use sunscreen::{
-    types::zkp::NativeField,
-    zkp_program, Compiler, Runtime, ZkpProgramInput,
-};
+use sunscreen::{types::zkp::NativeField, zkp_program, Compiler, Runtime, ZkpProgramInput};
 use sunscreen_zkp_backend::{bulletproofs::BulletproofsBackend, BackendField, ZkpBackend};
 
 fn main() {

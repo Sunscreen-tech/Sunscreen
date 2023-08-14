@@ -1,4 +1,5 @@
-use std::time::Instant;
+use std::sync::Mutex;
+use std::time::{Duration, Instant};
 
 use ark_ff::{FftField, Field};
 use ark_poly::univariate::DensePolynomial;
@@ -11,8 +12,36 @@ use logproof::{
     InnerProductVerifierKnowledge, LogProof, LogProofGenerators, LogProofProverKnowledge,
 };
 use merlin::Transcript;
+use once_cell::sync::Lazy;
+
+// Change these two lines to change how much time is spent sleeping between
+// benchmarks to cool down the machine.
+const THERMAL_THROTTLE: bool = true;
+const THERMAL_THROTTLE_TIME: u64 = 30;
 
 type MatrixPoly<Q> = Matrix<DensePolynomial<Q>>;
+
+static RESULTS: Lazy<Mutex<String>> = Lazy::new(|| {
+    Mutex::new(
+        "Degree, Ciphertexts, Setup Time [s], Prover Time [s], Verifier Time [s], Prover Size [B]\n"
+            .to_string(),
+    )
+});
+
+fn append_result(
+    degree: u64,
+    ciphertexts: usize,
+    setup_time: f64,
+    prover_time: f64,
+    verifier_time: f64,
+    prover_size: usize,
+) {
+    let new_row = format!(
+        "{degree}, {ciphertexts}, {setup_time}, {prover_time}, {verifier_time}, {prover_size}\n"
+    );
+    let mut r = RESULTS.lock().unwrap();
+    (*r).push_str(&new_row);
+}
 
 fn f<F: Field>(degree: usize) -> DensePolynomial<F> {
     let mut coeffs = Vec::with_capacity(degree + 1);
@@ -41,10 +70,12 @@ where
     // Really wish we had `generic_const_exprs` in stable...
     assert_eq!(2 * CT, CT2);
 
-    // Uncomment below 2 lines if you're on a machine that has cooling issues and
-    // thermally throttles CPU e.g. M1 Macbook Air.
-    //println!("Sleeping for 120s to prevent thermal throttling of successive benchmarks...");
-    //std::thread::sleep(Duration::from_secs(120));
+    if THERMAL_THROTTLE {
+        println!(
+        "Sleeping for {THERMAL_THROTTLE_TIME} seconds to prevent thermal throttling of successive benchmarks..."
+    );
+        std::thread::sleep(Duration::from_secs(THERMAL_THROTTLE_TIME));
+    }
 
     // Secret key
     // a = random in q
@@ -55,7 +86,22 @@ where
 
     println!("Generating data...");
 
-    let coeffs = (0..POLY_DEGREE).map(|x| x % 2).collect::<Vec<u64>>();
+    let coeffs = (0..POLY_DEGREE)
+        .map(|x| (x % 2) as i64)
+        .collect::<Vec<i64>>();
+
+    // We set the bounds on the coefficients to either be zero if the
+    // coefficient is zero or BIT_SIZE. Once could choose tighter bounds on
+    // coefficients but performance gains are not seen until the sum of the
+    // bounds drops by orders of magnitude. At 1024 with 1 ciphertext the
+    // verifier performance increase is approximately 75%, but 4096 with 3
+    // ciphertexts has a verifier performance increase of only about 10% when
+    // the bound is set to 2 for non-zero coefficients.
+    let coeff_bounds = coeffs
+        .clone()
+        .into_iter()
+        .map(|x| if x == 0 { 0 } else { BIT_SIZE })
+        .collect::<Vec<u64>>();
 
     let delta = make_poly::<Q>(&[1234]);
     let p_0 = make_poly::<Q>(&coeffs);
@@ -87,31 +133,43 @@ where
     let t = &a * &s;
     let t = t.scalar_rem(&f);
 
+    let b = Matrix::from(vec![coeff_bounds; a.cols]);
+
     let mut transcript = Transcript::new(b"test");
 
-    let pk = LogProofProverKnowledge::new(&a, &s, &t, BIT_SIZE, &f);
+    let pk = LogProofProverKnowledge::new(&a, &s, &t, &b, &f);
 
     let now = Instant::now();
     let gens = LogProofGenerators::new(pk.vk.l() as usize);
     let u = InnerProductVerifierKnowledge::get_u();
-    println!("Setup time {}s", now.elapsed().as_secs_f64());
+    let setup_time = now.elapsed().as_secs_f64();
 
     let now = Instant::now();
-
     let proof = LogProof::create(&mut transcript, &pk, &gens.g, &gens.h, &u);
-
-    println!("Prover time {}s", now.elapsed().as_secs_f64());
-    println!("Proof size {}B", bincode::serialize(&proof).unwrap().len());
+    let prover_time = now.elapsed().as_secs_f64();
+    let prover_size = bincode::serialize(&proof).unwrap().len();
 
     let mut transcript = Transcript::new(b"test");
 
     let now = Instant::now();
-
     proof
         .verify(&mut transcript, &pk.vk, &gens.g, &gens.h, &u)
         .unwrap();
+    let verifier_time = now.elapsed().as_secs_f64();
 
-    println!("Verifier time {}s", now.elapsed().as_secs_f64());
+    println!("Setup time: {setup_time}");
+    println!("Prover time: {prover_time}");
+    println!("Verifier time: {verifier_time}");
+    println!("Prover size: {prover_size}");
+
+    append_result(
+        POLY_DEGREE,
+        CT,
+        setup_time,
+        prover_time,
+        verifier_time,
+        prover_size,
+    );
 }
 
 fn params_1024_3ct(_: &mut Criterion) {
@@ -159,6 +217,11 @@ fn params_4096_1ct(_: &mut Criterion) {
     bfv_benchmark::<FqSeal128_4096, 4096, 1, 2>();
 }
 
+fn print_results(_: &mut Criterion) {
+    println!("Printing out results as a csv table\n");
+    println!("{}", *RESULTS.lock().unwrap());
+}
+
 criterion_group!(
     benches,
     params_1024_1ct,
@@ -169,7 +232,8 @@ criterion_group!(
     params_2048_3ct,
     params_4096_1ct,
     params_4096_2ct,
-    params_4096_3ct
+    params_4096_3ct,
+    print_results
 );
 
 criterion_main!(benches);

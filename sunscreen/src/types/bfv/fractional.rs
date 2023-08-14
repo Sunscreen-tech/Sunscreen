@@ -5,9 +5,9 @@ use crate::{
     types::{
         ops::{
             GraphCipherAdd, GraphCipherConstAdd, GraphCipherConstDiv, GraphCipherConstMul,
-            GraphCipherConstSub, GraphCipherMul, GraphCipherNeg, GraphCipherPlainAdd,
-            GraphCipherPlainMul, GraphCipherPlainSub, GraphCipherSub, GraphConstCipherSub,
-            GraphPlainCipherSub,
+            GraphCipherConstSub, GraphCipherInsert, GraphCipherMul, GraphCipherNeg,
+            GraphCipherPlainAdd, GraphCipherPlainMul, GraphCipherPlainSub, GraphCipherSub,
+            GraphConstCipherSub, GraphPlainCipherSub,
         },
         Cipher,
     },
@@ -236,6 +236,20 @@ impl<const INT_BITS: usize> GraphCipherPlainAdd for Fractional<INT_BITS> {
     }
 }
 
+impl<const INT_BITS: usize> GraphCipherInsert for Fractional<INT_BITS> {
+    type Lit = f64;
+    type Val = Self;
+
+    fn graph_cipher_insert(lit: Self::Lit) -> FheProgramNode<Self::Val> {
+        with_fhe_ctx(|ctx| {
+            let lit = Self::from(lit).try_into_plaintext(&ctx.data).unwrap();
+            let lit = ctx.add_plaintext_literal(lit.inner);
+
+            FheProgramNode::new(&[lit])
+        })
+    }
+}
+
 impl<const INT_BITS: usize> GraphCipherConstAdd for Fractional<INT_BITS> {
     type Left = Fractional<INT_BITS>;
     type Right = f64;
@@ -244,12 +258,9 @@ impl<const INT_BITS: usize> GraphCipherConstAdd for Fractional<INT_BITS> {
         a: FheProgramNode<Cipher<Self::Left>>,
         b: Self::Right,
     ) -> FheProgramNode<Cipher<Self::Left>> {
+        let lit = Self::graph_cipher_insert(b);
         with_fhe_ctx(|ctx| {
-            let b = Self::from(b).try_into_plaintext(&ctx.data).unwrap();
-
-            let lit = ctx.add_plaintext_literal(b.inner);
-            let n = ctx.add_addition_plaintext(a.ids[0], lit);
-
+            let n = ctx.add_addition_plaintext(a.ids[0], lit.ids[0]);
             FheProgramNode::new(&[n])
         })
     }
@@ -312,12 +323,9 @@ impl<const INT_BITS: usize> GraphCipherConstSub for Fractional<INT_BITS> {
         a: FheProgramNode<Cipher<Self::Left>>,
         b: Self::Right,
     ) -> FheProgramNode<Cipher<Self::Left>> {
+        let lit = Self::graph_cipher_insert(b);
         with_fhe_ctx(|ctx| {
-            let b = Self::from(b).try_into_plaintext(&ctx.data).unwrap();
-
-            let lit = ctx.add_plaintext_literal(b.inner);
-            let n = ctx.add_subtraction_plaintext(a.ids[0], lit);
-
+            let n = ctx.add_subtraction_plaintext(a.ids[0], lit.ids[0]);
             FheProgramNode::new(&[n])
         })
     }
@@ -331,11 +339,9 @@ impl<const INT_BITS: usize> GraphConstCipherSub for Fractional<INT_BITS> {
         a: Self::Left,
         b: FheProgramNode<Cipher<Self::Right>>,
     ) -> FheProgramNode<Cipher<Self::Right>> {
+        let lit = Self::graph_cipher_insert(a);
         with_fhe_ctx(|ctx| {
-            let a = Self::from(a).try_into_plaintext(&ctx.data).unwrap();
-
-            let lit = ctx.add_plaintext_literal(a.inner);
-            let n = ctx.add_subtraction_plaintext(b.ids[0], lit);
+            let n = ctx.add_subtraction_plaintext(b.ids[0], lit.ids[0]);
             let n = ctx.add_negate(n);
 
             FheProgramNode::new(&[n])
@@ -383,12 +389,9 @@ impl<const INT_BITS: usize> GraphCipherConstMul for Fractional<INT_BITS> {
         a: FheProgramNode<Cipher<Self::Left>>,
         b: Self::Right,
     ) -> FheProgramNode<Cipher<Self::Left>> {
+        let lit = Self::graph_cipher_insert(b);
         with_fhe_ctx(|ctx| {
-            let b = Self::from(b).try_into_plaintext(&ctx.data).unwrap();
-            let lit = ctx.add_plaintext_literal(b.inner);
-
-            let n = ctx.add_multiplication_plaintext(a.ids[0], lit);
-
+            let n = ctx.add_multiplication_plaintext(a.ids[0], lit.ids[0]);
             FheProgramNode::new(&[n])
         })
     }
@@ -402,16 +405,9 @@ impl<const INT_BITS: usize> GraphCipherConstDiv for Fractional<INT_BITS> {
         a: FheProgramNode<Cipher<Self::Left>>,
         b: f64,
     ) -> FheProgramNode<Cipher<Self::Left>> {
+        let lit = Self::graph_cipher_insert(1. / b);
         with_fhe_ctx(|ctx| {
-            let b = Self::try_from(1. / b)
-                .unwrap()
-                .try_into_plaintext(&ctx.data)
-                .unwrap();
-
-            let lit = ctx.add_plaintext_literal(b.inner);
-
-            let n = ctx.add_multiplication_plaintext(a.ids[0], lit);
-
+            let n = ctx.add_multiplication_plaintext(a.ids[0], lit.ids[0]);
             FheProgramNode::new(&[n])
         })
     }

@@ -2,20 +2,20 @@ use std::time::Instant;
 
 use criterion::{criterion_group, criterion_main, Criterion};
 use sunscreen::{
-    types::zkp::{ConstrainCmp, IntoProgramNode, NativeField, ProgramNode},
+    types::zkp::{ConstrainCmp, Field, IntoProgramNode, ProgramNode},
     *,
 };
 use sunscreen_zkp_backend::{bulletproofs::BulletproofsBackend, BigInt};
 
-type BPField = NativeField<<BulletproofsBackend as ZkpBackend>::Field>;
+type BPField = Field<<BulletproofsBackend as ZkpBackend>::Field>;
 
-fn to_field_element<F: BackendField>(
-    bits: &[ProgramNode<NativeField<F>>],
+fn to_field_element<F: FieldSpec>(
+    bits: &[ProgramNode<Field<F>>],
     twos_complement: bool,
-) -> ProgramNode<NativeField<F>> {
+) -> ProgramNode<Field<F>> {
     let powers = (0..bits.len())
         .map(|x| {
-            let power = NativeField::<F>::from(BigInt::from(BigInt::ONE.shl_vartime(x)));
+            let power = Field::<F>::from(BigInt::from(BigInt::ONE.shl_vartime(x)));
 
             let msb = bits.len() - 1;
 
@@ -26,7 +26,7 @@ fn to_field_element<F: BackendField>(
             }
         })
         .collect::<Vec<_>>();
-    let mut val = NativeField::from(0u8).into_program_node();
+    let mut val = Field::from(0u8).into_program_node();
 
     for (i, bit) in bits.iter().enumerate() {
         val = val + *bit * powers[i];
@@ -35,9 +35,7 @@ fn to_field_element<F: BackendField>(
     val
 }
 
-fn get_coeffs<F: BackendField>(
-    x: &[[ProgramNode<NativeField<F>>; 8]],
-) -> Vec<ProgramNode<NativeField<F>>> {
+fn get_coeffs<F: FieldSpec>(x: &[[ProgramNode<Field<F>>; 8]]) -> Vec<ProgramNode<Field<F>>> {
     x.iter().map(|x| to_field_element(x, true)).collect()
 }
 
@@ -48,7 +46,7 @@ fn encode(val: i8) -> [BPField; 8] {
     let as_u8 = val.to_le_bytes()[0];
 
     (0..8)
-        .map(|x| NativeField::from((as_u8 >> x) & 0x1))
+        .map(|x| Field::from((as_u8 >> x) & 0x1))
         .collect::<Vec<_>>()
         .try_into()
         .unwrap()
@@ -80,14 +78,11 @@ fn make_fractional_value(bits: &[i8]) -> [[BPField; 8]; 64] {
 /// the number of decimal places in the fractional amount. This is
 /// basically free, so we don't need to time it here.
 fn unshield_tx_fractional_range_proof(_c: &mut Criterion) {
-    #[zkp_program(backend = "bulletproofs")]
+    #[zkp_program]
     /**
      * Proves the 0 < a <= b and a == c
      */
-    fn in_range<F: BackendField>(
-        balance: [[NativeField<F>; 8]; 64],
-        #[constant] unshielded: NativeField<F>,
-    ) {
+    fn in_range<F: FieldSpec>(balance: [[Field<F>; 8]; 64], #[constant] unshielded: Field<F>) {
         println!("Running unshield proof...");
 
         let balance_coeffs = get_coeffs(&balance);
@@ -110,7 +105,7 @@ fn unshield_tx_fractional_range_proof(_c: &mut Criterion) {
     // 3 * 1 + 2 * 2 = 7
     let balance = make_fractional_value(&[3, 2]);
 
-    let runtime = Runtime::new_zkp(&BulletproofsBackend::new()).unwrap();
+    let runtime = Runtime::new_zkp(BulletproofsBackend::new()).unwrap();
 
     let prover_time = Instant::now();
 
@@ -118,14 +113,14 @@ fn unshield_tx_fractional_range_proof(_c: &mut Criterion) {
     let balance_input: Vec<ZkpProgramInput> = vec![balance.into()];
 
     let proof = runtime
-        .prove(prog, tx_input.clone(), vec![], balance_input)
+        .prove(prog, balance_input, vec![], tx_input.clone())
         .unwrap();
 
     println!("Prover time {}s", prover_time.elapsed().as_secs_f64());
 
     let verifier_time = Instant::now();
 
-    runtime.verify(prog, &proof, tx_input, vec![]).unwrap();
+    runtime.verify(prog, &proof, vec![], tx_input).unwrap();
 
     println!("Verifier time {}s", verifier_time.elapsed().as_secs_f64());
 
@@ -153,14 +148,14 @@ fn unshield_tx_fractional_range_proof(_c: &mut Criterion) {
 /// in the SDLP, which reduces the number of circuit inputs. However, this proof is
 /// orders of magnitude faster than the SDLP so 🤷‍♀️.
 fn private_tx_fractional_range_proof(_c: &mut Criterion) {
-    #[zkp_program(backend = "bulletproofs")]
+    #[zkp_program]
     /**
      * Proves the 0 < a <= b and a == c
      */
-    fn in_range<F: BackendField>(
-        a: [[NativeField<F>; 8]; 64],
-        b: [[NativeField<F>; 8]; 64],
-        c: [[NativeField<F>; 8]; 64],
+    fn in_range<F: FieldSpec>(
+        a: [[Field<F>; 8]; 64],
+        b: [[Field<F>; 8]; 64],
+        c: [[Field<F>; 8]; 64],
     ) {
         println!("Running private_tx_fractional_range_proof...");
 
@@ -172,7 +167,7 @@ fn private_tx_fractional_range_proof(_c: &mut Criterion) {
         let b_val = to_field_element(&b_coeffs, false);
         let c_val = to_field_element(&c_coeffs, false);
 
-        a_val.constrain_gt_bounded(NativeField::<F>::from(0).into_program_node(), 8);
+        a_val.constrain_gt_bounded(Field::<F>::from(0).into_program_node(), 8);
         a_val.constrain_le_bounded(b_val, 8);
         a_val.constrain_eq(c_val);
     }
@@ -198,11 +193,11 @@ fn private_tx_fractional_range_proof(_c: &mut Criterion) {
     // 1 * 1 + 1 * 2 + 1 * 4  = 7
     let c = make_fractional_value(&[1, 1, 1]);
 
-    let runtime = Runtime::new_zkp(&BulletproofsBackend::new()).unwrap();
+    let runtime = Runtime::new_zkp(BulletproofsBackend::new()).unwrap();
 
     let prover_time = Instant::now();
 
-    let proof = runtime.prove(prog, vec![], vec![], vec![a, b, c]).unwrap();
+    let proof = runtime.prove(prog, vec![a, b, c], vec![], vec![]).unwrap();
 
     println!("Prover time {}s", prover_time.elapsed().as_secs_f64());
 
@@ -228,11 +223,11 @@ fn private_tx_fractional_range_proof(_c: &mut Criterion) {
 /// * a is the submitted value under a given user's key.
 /// * b is the maximum value encrypted under the same user's key.
 fn mean_variance_fractional_range_proof(_c: &mut Criterion) {
-    #[zkp_program(backend = "bulletproofs")]
+    #[zkp_program]
     /**
      * Proves the 0 < a <= b and a == c
      */
-    fn in_range<F: BackendField>(a: [[NativeField<F>; 8]; 64], b: [[NativeField<F>; 8]; 64]) {
+    fn in_range<F: FieldSpec>(a: [[Field<F>; 8]; 64], b: [[Field<F>; 8]; 64]) {
         println!("Running mean_variance_fractional_range_proof...");
 
         let a_coeffs = get_coeffs(&a);
@@ -241,7 +236,7 @@ fn mean_variance_fractional_range_proof(_c: &mut Criterion) {
         let a_val = to_field_element(&a_coeffs, false);
         let b_val = to_field_element(&b_coeffs, false);
 
-        a_val.constrain_ge_bounded(NativeField::<F>::from(0).into_program_node(), 8);
+        a_val.constrain_ge_bounded(Field::<F>::from(0).into_program_node(), 8);
         a_val.constrain_le_bounded(b_val, 8);
     }
 
@@ -261,11 +256,11 @@ fn mean_variance_fractional_range_proof(_c: &mut Criterion) {
     // 4 * 1 + 16 * 2 = 36
     let b = make_fractional_value(&[4, 16]);
 
-    let runtime = Runtime::new_zkp(&BulletproofsBackend::new()).unwrap();
+    let runtime = Runtime::new_zkp(BulletproofsBackend::new()).unwrap();
 
     let prover_time = Instant::now();
 
-    let proof = runtime.prove(prog, vec![], vec![], vec![a, b]).unwrap();
+    let proof = runtime.prove(prog, vec![a, b], vec![], vec![]).unwrap();
 
     println!("Prover time {}s", prover_time.elapsed().as_secs_f64());
 
@@ -291,15 +286,15 @@ fn mean_variance_fractional_range_proof(_c: &mut Criterion) {
 ///
 /// * a_0, a_1, a_2 are submitted value under a given user's key.
 fn chi_sq_fractional_range_proof(_c: &mut Criterion) {
-    #[zkp_program(backend = "bulletproofs")]
+    #[zkp_program]
     /**
      * Proves the 0 < a <= b and a == c
      */
-    fn in_range<F: BackendField>(
-        a_0: [[NativeField<F>; 8]; 64],
-        a_1: [[NativeField<F>; 8]; 64],
-        a_2: [[NativeField<F>; 8]; 64],
-        #[constant] n: NativeField<F>,
+    fn in_range<F: FieldSpec>(
+        a_0: [[Field<F>; 8]; 64],
+        a_1: [[Field<F>; 8]; 64],
+        a_2: [[Field<F>; 8]; 64],
+        #[constant] n: Field<F>,
     ) {
         println!("Running chi_sq_fractional_range_proof...");
 
@@ -338,19 +333,19 @@ fn chi_sq_fractional_range_proof(_c: &mut Criterion) {
     let priv_inputs: Vec<ZkpProgramInput> = vec![a_0.into(), a_1.into(), a_2.into()];
     let const_inputs: Vec<ZkpProgramInput> = vec![n.into()];
 
-    let runtime = Runtime::new_zkp(&BulletproofsBackend::new()).unwrap();
+    let runtime = Runtime::new_zkp(BulletproofsBackend::new()).unwrap();
 
     let prover_time = Instant::now();
 
     let proof = runtime
-        .prove(prog, const_inputs.clone(), vec![], priv_inputs)
+        .prove(prog, priv_inputs, vec![], const_inputs.clone())
         .unwrap();
 
     println!("Prover time {}s", prover_time.elapsed().as_secs_f64());
 
     let verifier_time = Instant::now();
 
-    runtime.verify(prog, &proof, const_inputs, vec![]).unwrap();
+    runtime.verify(prog, &proof, vec![], const_inputs).unwrap();
 
     println!("Verifier time {}s", verifier_time.elapsed().as_secs_f64());
 

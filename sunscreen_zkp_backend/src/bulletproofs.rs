@@ -7,7 +7,7 @@ use bulletproofs::{
     r1cs::{ConstraintSystem, LinearCombination, Prover, R1CSError, R1CSProof, Verifier},
     BulletproofGens, PedersenGens,
 };
-use crypto_bigint::{Limb, UInt};
+use crypto_bigint::{Limb, Uint};
 use curve25519_dalek::scalar::Scalar;
 use log::trace;
 use merlin::Transcript;
@@ -16,9 +16,8 @@ use serde::{Deserialize, Serialize};
 use sunscreen_compiler_common::{forward_traverse, DebugSessionProvider, GraphQuery};
 
 use crate::{
-    exec::Operation,
-    jit::{self, jit_verifier},
-    jit_prover, BackendField, BigInt, Error, ExecutableZkpProgram, Proof, Result, ZkpBackend,
+    exec::Operation, jit, jit::jit_verifier, jit_prover, BigInt, Error, ExecutableZkpProgram,
+    FieldSpec, Proof, Result, ZkpBackend,
 };
 
 #[derive(Clone)]
@@ -100,7 +99,7 @@ impl Neg for Node {
 /**
  * A Bulletproofs R1CS circuit.
  */
-pub struct BulletproofsCircuit {
+struct BulletproofsCircuit {
     nodes: Vec<Option<Node>>,
 }
 
@@ -315,7 +314,7 @@ impl BulletproofsCircuit {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 /**
  * A Bulletproofs backend.
  */
@@ -372,7 +371,7 @@ fn constraint_count(graph: &ExecutableZkpProgram) -> Result<usize> {
 }
 
 impl ZkpBackend for BulletproofsBackend {
-    type Field = Scalar;
+    type Field = BulletproofsFieldSpec;
 
     fn prove(&self, graph: &ExecutableZkpProgram, inputs: &[BigInt]) -> Result<Proof> {
         let expected_input_count = graph
@@ -479,7 +478,7 @@ impl ZkpBackend for BulletproofsBackend {
             .map(Scalar::try_from)
             .collect::<Result<Vec<Scalar>>>()?;
 
-        jit_prover::<Scalar>(
+        jit_prover::<BulletproofsFieldSpec>(
             prog,
             &constant_inputs,
             &public_inputs,
@@ -504,18 +503,18 @@ impl ZkpBackend for BulletproofsBackend {
             .map(Scalar::try_from)
             .collect::<Result<Vec<Scalar>>>()?;
 
-        jit_verifier(prog, &constant_inputs, &public_inputs)
+        jit_verifier::<BulletproofsFieldSpec>(prog, &constant_inputs, &public_inputs)
     }
 }
 
-fn try_uint_to_scalar<const N: usize>(x: &UInt<N>) -> Result<Scalar> {
+fn try_uint_to_scalar<const N: usize>(x: &Uint<N>) -> Result<Scalar> {
     let as_words = x.as_words();
     const LIMB_SIZE: usize = std::mem::size_of::<Limb>();
     const SCALAR_SIZE: usize = std::mem::size_of::<Scalar>();
 
     let num_scalar_words = SCALAR_SIZE / LIMB_SIZE;
 
-    // UInt<N> values are little endian. Thus, we attempt to convert the
+    // Uint<N> values are little endian. Thus, we attempt to convert the
     // lower 256 bits to a scalar and assert the upper bytes are zero.
     let (lower, upper) = as_words.split_at(num_scalar_words);
 
@@ -536,7 +535,13 @@ fn try_uint_to_scalar<const N: usize>(x: &UInt<N>) -> Result<Scalar> {
     scalar.ok_or_else(|| Error::out_of_range(&x.to_string()))
 }
 
-impl BackendField for Scalar {
+#[derive(Debug, Copy, Clone)]
+/// The specification for a field in the Bulletproofs proof system.
+pub struct BulletproofsFieldSpec {}
+
+impl FieldSpec for BulletproofsFieldSpec {
+    type BackendField = Scalar;
+
     // 2^252+27742317777372353535851937790883648493,
     const FIELD_MODULUS: BigInt = BigInt::from_words([
         6346243789798364141,
@@ -566,16 +571,16 @@ impl TryFrom<&BigInt> for Scalar {
     }
 }
 
-fn scalar_to_uint<const N: usize>(x: &Scalar) -> UInt<N> {
-    assert!(std::mem::size_of::<UInt<N>>() >= std::mem::size_of::<Scalar>());
+fn scalar_to_uint<const N: usize>(x: &Scalar) -> Uint<N> {
+    assert!(std::mem::size_of::<Uint<N>>() >= std::mem::size_of::<Scalar>());
 
     let mut uint_data = x.as_bytes().to_vec();
 
-    let remainder = std::mem::size_of::<UInt<N>>() - std::mem::size_of::<Scalar>();
+    let remainder = std::mem::size_of::<Uint<N>>() - std::mem::size_of::<Scalar>();
 
     uint_data.extend((0..remainder).map(|_| 0u8));
 
-    UInt::from_le_slice(&uint_data)
+    Uint::from_le_slice(&uint_data)
 }
 
 impl crate::ZkpFrom<Scalar> for BigInt {
@@ -641,7 +646,7 @@ mod tests {
 
     #[test]
     fn barely_too_bit_u512_to_scalar_fails() {
-        let l = Scalar::FIELD_MODULUS;
+        let l = BulletproofsFieldSpec::FIELD_MODULUS;
 
         assert!(Scalar::try_from(l).is_err());
 
@@ -694,7 +699,7 @@ mod tests {
             &[(add_1, EdgeInfo::Unordered)],
         );
 
-        let backend: Box<dyn ZkpBackend<Field = Scalar>> = Box::new(BulletproofsBackend::new());
+        let backend = BulletproofsBackend::new();
 
         struct TestProvider {}
 

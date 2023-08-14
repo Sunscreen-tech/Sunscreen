@@ -1,0 +1,7 @@
+[workspace]
+members = ["zkp", "prover", "verifier"]
+
+[workspace.dependencies]
+anyhow = "1.0"
+bincode = "1.3.3"
+sunscreen = { path = "../../sunscreen", features = ["bulletproofs"] }

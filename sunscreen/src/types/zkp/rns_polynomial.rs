@@ -1,7 +1,6 @@
 use petgraph::stable_graph::NodeIndex;
 use sunscreen_compiler_macros::TypeName;
-use sunscreen_runtime::ZkpProgramInputTrait;
-use sunscreen_zkp_backend::{BackendField, BigInt};
+use sunscreen_zkp_backend::{BigInt, FieldSpec};
 
 use crate::{
     types::zkp::{Coerce, ProgramNode},
@@ -9,7 +8,7 @@ use crate::{
     zkp::ZkpContextOps,
 };
 
-use super::{AddVar, Mod, MulVar, NativeField, NumFieldElements, ToNativeFields, ZkpType};
+use super::{AddVar, Field, Mod, MulVar, NumFieldElements, ToNativeFields};
 
 use crate as sunscreen;
 
@@ -25,14 +24,14 @@ use crate as sunscreen;
  * Operations *do* reduce modulo X^N+1.
  */
 #[derive(Debug, Clone, TypeName)]
-pub struct RnsRingPolynomial<F: BackendField, const N: usize, const R: usize> {
-    data: Box<[[NativeField<F>; N]; R]>,
+pub struct RnsRingPolynomial<F: FieldSpec, const N: usize, const R: usize> {
+    data: Box<[[Field<F>; N]; R]>,
 }
 
-impl<F: BackendField, T, const N: usize, const R: usize> From<[[T; N]; R]>
+impl<F: FieldSpec, T, const N: usize, const R: usize> From<[[T; N]; R]>
     for RnsRingPolynomial<F, N, R>
 where
-    T: Into<NativeField<F>> + std::fmt::Debug,
+    T: Into<Field<F>> + std::fmt::Debug,
 {
     fn from(x: [[T; N]; R]) -> Self {
         Self {
@@ -41,37 +40,31 @@ where
     }
 }
 
-impl<F: BackendField, const N: usize, const R: usize> NumFieldElements
-    for RnsRingPolynomial<F, N, R>
-{
+impl<F: FieldSpec, const N: usize, const R: usize> NumFieldElements for RnsRingPolynomial<F, N, R> {
     const NUM_NATIVE_FIELD_ELEMENTS: usize = N * R;
 }
 
-impl<F: BackendField, const N: usize, const R: usize> ToNativeFields
-    for RnsRingPolynomial<F, N, R>
-{
+impl<F: FieldSpec, const N: usize, const R: usize> ToNativeFields for RnsRingPolynomial<F, N, R> {
     fn to_native_fields(&self) -> Vec<BigInt> {
         self.data.into_iter().flatten().map(|x| x.val).collect()
     }
 }
 
-impl<F: BackendField, const N: usize, const R: usize> ZkpType for RnsRingPolynomial<F, N, R> {}
-
 /**
  * Returns the RNS residues for each coefficient. The coefficient index
  * is the leading dimension for efficient NTT transforms.
  */
-pub trait ToResidues<F: BackendField, const N: usize, const R: usize> {
+pub trait ToResidues<F: FieldSpec, const N: usize, const R: usize> {
     /**
      * Return the residues.
      */
-    fn residues(&self) -> [[ProgramNode<NativeField<F>>; N]; R];
+    fn residues(&self) -> [[ProgramNode<Field<F>>; N]; R];
 }
 
-impl<F: BackendField, const N: usize, const R: usize> ToResidues<F, N, R>
+impl<F: FieldSpec, const N: usize, const R: usize> ToResidues<F, N, R>
     for ProgramNode<RnsRingPolynomial<F, N, R>>
 {
-    fn residues(&self) -> [[ProgramNode<NativeField<F>>; N]; R] {
+    fn residues(&self) -> [[ProgramNode<Field<F>>; N]; R] {
         let mut program_nodes = [[ProgramNode::new(&[]); N]; R];
 
         for i in 0..N * R {
@@ -85,7 +78,7 @@ impl<F: BackendField, const N: usize, const R: usize> ToResidues<F, N, R>
     }
 }
 
-impl<F: BackendField, const N: usize, const R: usize> AddVar for RnsRingPolynomial<F, N, R> {
+impl<F: FieldSpec, const N: usize, const R: usize> AddVar for RnsRingPolynomial<F, N, R> {
     fn add(lhs: ProgramNode<Self>, rhs: ProgramNode<Self>) -> ProgramNode<Self> {
         let mut node_indices = vec![];
 
@@ -99,12 +92,7 @@ impl<F: BackendField, const N: usize, const R: usize> AddVar for RnsRingPolynomi
     }
 }
 
-impl<F: BackendField, const N: usize, const R: usize> ZkpProgramInputTrait
-    for RnsRingPolynomial<F, N, R>
-{
-}
-
-impl<F: BackendField, const N: usize, const R: usize> MulVar for RnsRingPolynomial<F, N, R> {
+impl<F: FieldSpec, const N: usize, const R: usize> MulVar for RnsRingPolynomial<F, N, R> {
     fn mul(lhs: ProgramNode<Self>, rhs: ProgramNode<Self>) -> ProgramNode<Self> {
         let left = lhs.residues();
         let right = rhs.residues();
@@ -145,17 +133,17 @@ impl<F: BackendField, const N: usize, const R: usize> MulVar for RnsRingPolynomi
 /**
  * For scaling an algebraic structure (e.g. polynomial.)
  */
-pub trait Scale<F: BackendField> {
+pub trait Scale<F: FieldSpec> {
     /**
      * Return a structure scaled by `x`.
      */
-    fn scale(self, x: ProgramNode<NativeField<F>>) -> Self;
+    fn scale(self, x: ProgramNode<Field<F>>) -> Self;
 }
 
-impl<F: BackendField, const D: usize, const R: usize> Scale<F>
+impl<F: FieldSpec, const D: usize, const R: usize> Scale<F>
     for ProgramNode<RnsRingPolynomial<F, D, R>>
 {
-    fn scale(self, x: ProgramNode<NativeField<F>>) -> Self {
+    fn scale(self, x: ProgramNode<Field<F>>) -> Self {
         let mut output = vec![NodeIndex::from(0); D * R];
 
         with_zkp_ctx(|ctx| {
@@ -168,10 +156,10 @@ impl<F: BackendField, const D: usize, const R: usize> Scale<F>
     }
 }
 
-impl<F: BackendField, const D: usize, const R: usize> Mod<F> for RnsRingPolynomial<F, D, R> {
+impl<F: FieldSpec, const D: usize, const R: usize> Mod<F> for RnsRingPolynomial<F, D, R> {
     fn signed_reduce(
         lhs: ProgramNode<Self>,
-        m: ProgramNode<NativeField<F>>,
+        m: ProgramNode<Field<F>>,
         remainder_bits: usize,
     ) -> ProgramNode<Self> {
         let residues = lhs.residues();
@@ -180,7 +168,7 @@ impl<F: BackendField, const D: usize, const R: usize> Mod<F> for RnsRingPolynomi
 
         for r in residues.iter().take(R) {
             for j in r {
-                outputs.push(NativeField::signed_reduce(*j, m, remainder_bits).ids[0]);
+                outputs.push(Field::signed_reduce(*j, m, remainder_bits).ids[0]);
             }
         }
 
@@ -192,17 +180,17 @@ impl<F: BackendField, const D: usize, const R: usize> Mod<F> for RnsRingPolynomi
 mod tests {
     use sunscreen_runtime::{Runtime, ZkpProgramInput};
     use sunscreen_zkp_backend::bulletproofs::BulletproofsBackend;
-    use sunscreen_zkp_backend::{BackendField, ZkpBackend};
+    use sunscreen_zkp_backend::{FieldSpec, ZkpBackend};
 
     use crate as sunscreen;
     use crate::types::zkp::rns_polynomial::{RnsRingPolynomial, ToResidues};
-    use crate::types::zkp::{NativeField, Scale};
+    use crate::types::zkp::{Field, Scale};
     use crate::{zkp_program, Compiler};
 
     #[test]
     fn can_prove_added_polynomials() {
-        #[zkp_program(backend = "bulletproofs")]
-        fn add_poly<F: BackendField>(
+        #[zkp_program]
+        fn add_poly<F: FieldSpec>(
             #[constant] a: RnsRingPolynomial<F, 8, 2>,
             #[constant] b: RnsRingPolynomial<F, 8, 2>,
         ) {
@@ -217,7 +205,7 @@ mod tests {
 
             for i in 0..residues.len() {
                 for j in 0..residues[i].len() {
-                    residues[i][j].constrain_eq(NativeField::from(expected[i][j]));
+                    residues[i][j].constrain_eq(Field::from(expected[i][j]));
                 }
             }
         }
@@ -228,7 +216,7 @@ mod tests {
             .compile()
             .unwrap();
 
-        let runtime = Runtime::new_zkp(&BulletproofsBackend::new()).unwrap();
+        let runtime = Runtime::new_zkp(BulletproofsBackend::new()).unwrap();
 
         let program = app.get_zkp_program(add_poly).unwrap();
 
@@ -241,11 +229,11 @@ mod tests {
         ]);
 
         let proof = runtime
-            .prove(program, vec![a.clone(), a.clone()], vec![], vec![])
+            .prove(program, vec![], vec![], vec![a.clone(), a.clone()])
             .unwrap();
 
         runtime
-            .verify(program, &proof, vec![a.clone(), a.clone()], vec![])
+            .verify(program, &proof, vec![], vec![a.clone(), a.clone()])
             .unwrap();
 
         let b =
@@ -258,8 +246,8 @@ mod tests {
 
     #[test]
     fn can_prove_multiply_polynomials() {
-        #[zkp_program(backend = "bulletproofs")]
-        fn add_poly<F: BackendField>(
+        #[zkp_program]
+        fn add_poly<F: FieldSpec>(
             #[constant] a: RnsRingPolynomial<F, 8, 2>,
             #[constant] b: RnsRingPolynomial<F, 8, 2>,
         ) {
@@ -274,7 +262,7 @@ mod tests {
 
             for i in 0..residues.len() {
                 for j in 0..residues[i].len() {
-                    residues[i][j].constrain_eq(NativeField::from(expected[i][j]));
+                    residues[i][j].constrain_eq(Field::from(expected[i][j]));
                 }
             }
         }
@@ -285,7 +273,7 @@ mod tests {
             .compile()
             .unwrap();
 
-        let runtime = Runtime::new_zkp(&BulletproofsBackend::new()).unwrap();
+        let runtime = Runtime::new_zkp(BulletproofsBackend::new()).unwrap();
 
         let program = app.get_zkp_program(add_poly).unwrap();
 
@@ -295,11 +283,11 @@ mod tests {
         let a = BpPoly::from([[1u8, 2, 3, 4, 5, 6, 7, 8], [9, 10, 11, 12, 13, 14, 15, 16]]);
 
         let proof = runtime
-            .prove(program, vec![a.clone(), a.clone()], vec![], vec![])
+            .prove(program, vec![], vec![], vec![a.clone(), a.clone()])
             .unwrap();
 
         runtime
-            .verify(program, &proof, vec![a.clone(), a.clone()], vec![])
+            .verify(program, &proof, vec![], vec![a.clone(), a.clone()])
             .unwrap();
 
         let b = BpPoly::from([[0u8, 2, 3, 4, 5, 6, 7, 8], [9, 10, 11, 12, 13, 14, 15, 16]]);
@@ -311,10 +299,10 @@ mod tests {
 
     #[test]
     fn can_scale_polynomial() {
-        #[zkp_program(backend = "bulletproofs")]
-        fn scale_poly<F: BackendField>(
+        #[zkp_program]
+        fn scale_poly<F: FieldSpec>(
             #[constant] a: RnsRingPolynomial<F, 8, 2>,
-            #[constant] b: NativeField<F>,
+            #[constant] b: Field<F>,
         ) {
             let c = a.scale(b);
 
@@ -327,7 +315,7 @@ mod tests {
 
             for i in 0..residues.len() {
                 for j in 0..residues[i].len() {
-                    residues[i][j].constrain_eq(NativeField::from(expected[i][j]));
+                    residues[i][j].constrain_eq(Field::from(expected[i][j]));
                 }
             }
         }
@@ -338,7 +326,7 @@ mod tests {
             .compile()
             .unwrap();
 
-        let runtime = Runtime::new_zkp(&BulletproofsBackend::new()).unwrap();
+        let runtime = Runtime::new_zkp(BulletproofsBackend::new()).unwrap();
 
         let program = app.get_zkp_program(scale_poly).unwrap();
 
@@ -350,16 +338,16 @@ mod tests {
             [9, 10, 11, 12, 13, 14, 15, 16],
         ]);
 
-        type BpField = NativeField<<BulletproofsBackend as ZkpBackend>::Field>;
+        type BpField = Field<<BulletproofsBackend as ZkpBackend>::Field>;
 
         let b = BpField::from(2u8);
 
         let const_args: Vec<ZkpProgramInput> = vec![a.into(), b.into()];
 
         let proof = runtime
-            .prove(program, const_args.clone(), vec![], vec![])
+            .prove(program, vec![], vec![], const_args.clone())
             .unwrap();
 
-        runtime.verify(program, &proof, const_args, vec![]).unwrap();
+        runtime.verify(program, &proof, vec![], const_args).unwrap();
     }
 }

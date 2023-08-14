@@ -5,7 +5,7 @@
 use sunscreen::{
     fhe_program,
     types::{bfv::Batched, Cipher, LaneCount, SwapRows},
-    Compiler, FheProgramInput, FheRuntime, PlainModulusConstraint,
+    Compiler, Error, FheProgramInput, FheRuntime, PlainModulusConstraint,
 };
 
 use std::ops::*;
@@ -112,7 +112,7 @@ fn is_power_of_2(value: usize) -> bool {
  * Creates a math vector and returns it represented as both a [`Vec`] and a
  * [`Batched`] type.
  */
-fn make_vector<const LENDIV2: usize>() -> Result<(Vec<i64>, Batched<LENDIV2>), sunscreen::Error> {
+fn make_vector<const LENDIV2: usize>() -> Result<(Vec<i64>, Batched<LENDIV2>), Error> {
     if !is_power_of_2(LENDIV2) {
         panic!("Vector length not a power of 2");
     }
@@ -129,7 +129,7 @@ fn make_vector<const LENDIV2: usize>() -> Result<(Vec<i64>, Batched<LENDIV2>), s
     Ok((a, batched))
 }
 
-fn main() -> Result<(), sunscreen::Error> {
+fn main() -> Result<(), Error> {
     let (a_vec, a_batched) = make_vector::<VECLENDIV2>()?;
 
     // Run our naive implementation of dot product we know to be correct.
@@ -185,4 +185,14 @@ fn main() -> Result<(), sunscreen::Error> {
     );
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn main_works() -> Result<(), Error> {
+        main()
+    }
 }

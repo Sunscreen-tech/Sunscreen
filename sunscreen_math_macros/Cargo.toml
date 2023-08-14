@@ -1,0 +1,28 @@
+[package]
+name = "sunscreen_math_macros"
+version = "0.7.0"
+edition = "2021"
+
+authors = ["Sunscreen LLC"]
+rust-version = "1.56.0"
+license = "AGPL-3.0-only"
+description = "This crate contains macros that support the Sunscreen compiler.."
+homepage = "https://sunscreen.tech"
+repository = "https://github.com/Sunscreen-tech/Sunscreen"
+documentation = "https://docs.sunscreen.tech"
+keywords = ["FHE", "BFV", "lattice", "cryptography"]
+categories = ["cryptography"]
+readme = "crates-io.md"
+
+[lib]
+proc-macro = true
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+bytemuck = { workspace = true }
+num = { workspace = true }
+darling = { workspace = true }
+proc-macro2 = { workspace = true }
+quote = { workspace = true }
+syn = { workspace = true }

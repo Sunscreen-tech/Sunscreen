@@ -1,9 +1,10 @@
 use petgraph::Graph;
+use sunscreen_runtime::{CallSignature, ZkpRuntime};
+use sunscreen_zkp_backend::{
+    BigInt, CompiledZkpProgram, FieldSpec, Gadget, Operation as JitOperation, ZkpBackend,
+};
 
-use sunscreen_runtime::CallSignature;
-use sunscreen_zkp_backend::{BackendField, BigInt, Gadget, Operation as JitOperation};
-
-use crate::{Result, CURRENT_PROGRAM_CTX};
+use crate::{Compiler, Result, CURRENT_PROGRAM_CTX};
 
 use std::any::Any;
 use std::collections::HashMap;
@@ -14,7 +15,7 @@ use std::vec;
 /**
  * An internal representation of a ZKP program specification.
  */
-pub trait ZkpProgramFn<F: BackendField> {
+pub trait ZkpProgramFn<F: FieldSpec> {
     /**
      * Create a circuit from this specification.
      */
@@ -34,6 +35,139 @@ pub trait ZkpProgramFn<F: BackendField> {
      * Gets the source code of this program
      */
     fn source(&self) -> &str;
+}
+
+/// An extension of [`ZkpProgramFn`], providing helpers and convenience methods.
+pub trait ZkpProgramFnExt {
+    /// Compile this `#[zkp_program]`.
+    ///
+    /// This is a convenient way to compile just a single ZKP program.
+    /// ```rust
+    /// use sunscreen::{
+    ///     bulletproofs::BulletproofsBackend,
+    ///     zkp_program, types::zkp::{BulletproofsField, Field},
+    ///     FieldSpec, ZkpRuntime, ZkpProgramFnExt
+    /// };
+    ///
+    /// #[zkp_program]
+    /// fn is_eq<F: FieldSpec>(a: Field<F>, b: Field<F>) {
+    ///     a.constrain_eq(b)
+    /// }
+    /// # fn main() -> Result<(), sunscreen::Error> {
+    /// let is_eq_prog = is_eq.compile::<BulletproofsBackend>()?;
+    /// let a = BulletproofsField::from(64);
+    /// let b = BulletproofsField::from(64);
+    /// let runtime = ZkpRuntime::new(BulletproofsBackend::new())?;
+    /// runtime.prove(&is_eq_prog, vec![a, b], vec![], vec![])?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    ///
+    /// It is shorthand for:
+    /// ```rust
+    /// use sunscreen::{
+    ///     bulletproofs::BulletproofsBackend,
+    ///     types::zkp::{BulletproofsField, Field},
+    ///     zkp_program, zkp_var, FieldSpec, Compiler, Error, ZkpRuntime,
+    /// };
+    ///
+    /// #[zkp_program]
+    /// fn is_eq<F: FieldSpec>(a: Field<F>, b: Field<F>) {
+    ///     a.constrain_eq(b)
+    /// }
+    /// # fn main() -> Result<(), sunscreen::Error> {
+    /// let app = Compiler::new()
+    ///     .zkp_backend::<BulletproofsBackend>()
+    ///     .zkp_program(is_eq)
+    ///     .compile()?;
+    /// let is_eq_prog = app.get_zkp_program(is_eq).unwrap();
+    /// let a = BulletproofsField::from(64);
+    /// let b = BulletproofsField::from(64);
+    /// let runtime = ZkpRuntime::new(BulletproofsBackend::new())?;
+    /// runtime.prove(&is_eq_prog, vec![a, b], vec![], vec![])?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    fn compile<B: ZkpBackend>(&self) -> Result<CompiledZkpProgram>
+    where
+        Self: ZkpProgramFn<B::Field>,
+        Self: Sized + Clone + AsRef<str> + 'static,
+    {
+        Ok(Compiler::new()
+            .zkp_backend::<B>()
+            .zkp_program(self.clone())
+            .compile()?
+            .take_zkp_program(self)
+            .unwrap())
+    }
+
+    /// Create a new `ZkpRuntime` with the given backend.
+    ///
+    /// This is identical to [`ZkpRuntime::new`], but is offered in this extension trait for
+    /// convenience.
+    ///
+    /// ```rust
+    /// use sunscreen::{
+    ///     bulletproofs::BulletproofsBackend,
+    ///     zkp_program, types::zkp::{BulletproofsField, Field},
+    ///     FieldSpec, ZkpProgramFnExt
+    /// };
+    ///
+    /// #[zkp_program]
+    /// fn is_eq<F: FieldSpec>(a: Field<F>, b: Field<F>) {
+    ///     a.constrain_eq(b)
+    /// }
+    /// # fn main() -> Result<(), sunscreen::Error> {
+    /// let is_eq_prog = is_eq.compile::<BulletproofsBackend>()?;
+    /// let runtime = is_eq.runtime_with(BulletproofsBackend::new())?;
+    /// let a = BulletproofsField::from(64);
+    /// let b = BulletproofsField::from(64);
+    /// runtime.prove(&is_eq_prog, vec![a, b], vec![], vec![])?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    fn runtime_with<B: ZkpBackend>(&self, backend: B) -> Result<ZkpRuntime<B>>
+    where
+        B: 'static,
+        Self: ZkpProgramFn<B::Field>,
+        Self: Sized + Clone + AsRef<str> + 'static,
+    {
+        Ok(ZkpRuntime::new(backend)?)
+    }
+
+    /// Create a new `ZkpRuntime`, with backend specified by type.
+    ///
+    /// This is similar to [`ZkpRuntime::new`], but always creates the backend value
+    /// via the [`Default`] impl.
+    ///
+    /// ```rust
+    /// use sunscreen::{
+    ///     bulletproofs::BulletproofsBackend,
+    ///     zkp_program, types::zkp::{BulletproofsField, Field},
+    ///     FieldSpec, ZkpProgramFnExt
+    /// };
+    ///
+    /// #[zkp_program]
+    /// fn is_eq<F: FieldSpec>(a: Field<F>, b: Field<F>) {
+    ///     a.constrain_eq(b)
+    /// }
+    /// # fn main() -> Result<(), sunscreen::Error> {
+    /// let is_eq_prog = is_eq.compile::<BulletproofsBackend>()?;
+    /// let runtime = is_eq.runtime::<BulletproofsBackend>()?;
+    /// let a = BulletproofsField::from(64);
+    /// let b = BulletproofsField::from(64);
+    /// runtime.prove(&is_eq_prog, vec![a, b], vec![], vec![])?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    fn runtime<B: ZkpBackend + Default>(&self) -> Result<ZkpRuntime<B>>
+    where
+        B: 'static,
+        Self: ZkpProgramFn<B::Field>,
+        Self: Sized + Clone + AsRef<str> + 'static,
+    {
+        self.runtime_with(B::default())
+    }
 }
 
 use std::fmt::Debug;
@@ -374,7 +508,7 @@ impl Render for Operation {
 
 /**
  * Runs the specified closure, injecting the current
- * [`fhe_program`](crate::fhe_program) context.
+ * [`zkp_program`](crate::zkp_program) context.
  */
 pub fn with_zkp_ctx<F, R>(f: F) -> R
 where

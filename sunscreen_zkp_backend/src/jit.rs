@@ -2,7 +2,7 @@ use std::{any::Any, collections::HashMap, convert::Infallible, fmt::Debug, hash:
 
 use crate::{
     exec::{ExecutableZkpProgram, Operation as ExecOperation},
-    BackendField, BigInt, Error, Gadget, Result,
+    BigInt, Error, FieldSpec, Gadget, Result, ZkpInto,
 };
 
 use petgraph::{stable_graph::NodeIndex, visit::EdgeRef, Direction, Graph};
@@ -277,13 +277,13 @@ fn validate_zkp_program(prog: &CompiledZkpProgram) -> Result<()> {
  */
 pub fn jit_prover<U>(
     prog: &CompiledZkpProgram,
-    constant_inputs: &[U],
-    public_inputs: &[U],
-    private_inputs: &[U],
+    constant_inputs: &[U::BackendField],
+    public_inputs: &[U::BackendField],
+    private_inputs: &[U::BackendField],
     session_provider: Option<&dyn DebugSessionProvider<Operation, BigInt, String>>,
 ) -> Result<ExecutableZkpProgram>
 where
-    U: BackendField,
+    U: FieldSpec,
 {
     let mut prog = prog.clone();
     let mut session = session_provider.as_ref().map(|_| Session {
@@ -307,11 +307,11 @@ where
     }
 
     verify_constant_inputs(&prog, constant_inputs)?;
-    constrain_public_inputs(&mut prog, public_inputs)?;
+    constrain_public_inputs::<U>(&mut prog, public_inputs)?;
 
     validate_zkp_program(&prog)?;
 
-    let mut node_outputs: HashMap<NodeIndex, U> = HashMap::new();
+    let mut node_outputs: HashMap<NodeIndex, U::BackendField> = HashMap::new();
 
     #[cfg(feature = "debugger")]
     let mut unsatisfied_constraint: Option<NodeIndex> = None;
@@ -380,7 +380,8 @@ where
                         #[cfg(feature = "debugger")]
                         {
                             unsatisfied_constraint = Some(id);
-                            node_outputs.insert(id, U::try_from(BigInt::from(1u32)).unwrap());
+                            node_outputs
+                                .insert(id, U::BackendField::try_from(BigInt::from(1u32)).unwrap());
                         }
                         #[cfg(not(feature = "debugger"))]
                         return Err(Error::UnsatisfiableConstraint(id));
@@ -388,7 +389,7 @@ where
                 }
             }
             Operation::Constant(x) => {
-                node_outputs.insert(id, U::try_from(x)?);
+                node_outputs.insert(id, U::BackendField::try_from(x)?);
             }
             Operation::InvokeGadget(ref g) => {
                 // Have the gadget tell us what the values are for the
@@ -400,7 +401,7 @@ where
                     .map(|x| node_outputs[x].clone().zkp_into())
                     .collect::<Vec<BigInt>>();
 
-                let hidden_inputs = g.compute_inputs(&args)?;
+                let hidden_inputs = g.compute_hidden_inputs(&args)?;
 
                 let mut next_nodes = query
                     .edges_directed(id, Direction::Outgoing)
@@ -495,7 +496,7 @@ where
         return Err(Error::UnsatisfiableConstraint(id));
     }
 
-    jit_common(
+    jit_common::<U>(
         prog,
         constant_inputs,
         public_inputs,
@@ -514,19 +515,19 @@ where
  */
 pub fn jit_verifier<U>(
     prog: &CompiledZkpProgram,
-    constant_inputs: &[U],
-    public_inputs: &[U],
+    constant_inputs: &[U::BackendField],
+    public_inputs: &[U::BackendField],
 ) -> Result<ExecutableZkpProgram>
 where
-    U: BackendField,
+    U: FieldSpec,
 {
     let mut prog = prog.clone();
 
     validate_zkp_program(&prog)?;
     verify_constant_inputs(&prog, constant_inputs)?;
-    constrain_public_inputs(&mut prog, public_inputs)?;
+    constrain_public_inputs::<U>(&mut prog, public_inputs)?;
 
-    jit_common(
+    jit_common::<U>(
         prog,
         constant_inputs,
         public_inputs,
@@ -546,13 +547,13 @@ pub struct ZkpDebugInfo {
  */
 fn jit_common<U>(
     mut prog: CompiledZkpProgram,
-    constant_inputs: &[U],
-    public_inputs: &[U],
-    node_outputs: Option<HashMap<NodeIndex, U>>,
+    constant_inputs: &[U::BackendField],
+    public_inputs: &[U::BackendField],
+    node_outputs: Option<HashMap<NodeIndex, U::BackendField>>,
     #[cfg(feature = "debugger")] _debug_info: Option<ZkpDebugInfo>,
 ) -> Result<ExecutableZkpProgram>
 where
-    U: BackendField,
+    U: FieldSpec,
 {
     // Remove Gadgets, as we should have already extracted their outputs.
     for n in prog
@@ -682,9 +683,12 @@ fn verify_constant_inputs<U>(prog: &CompiledZkpProgram, constant_inputs: &[U]) -
     Ok(())
 }
 
-fn constrain_public_inputs<U>(prog: &mut CompiledZkpProgram, public_inputs: &[U]) -> Result<()>
+fn constrain_public_inputs<U>(
+    prog: &mut CompiledZkpProgram,
+    public_inputs: &[U::BackendField],
+) -> Result<()>
 where
-    U: BackendField,
+    U: FieldSpec,
 {
     let mut arg_indices = prog
         .graph

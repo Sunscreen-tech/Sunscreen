@@ -386,32 +386,24 @@ where
             return Err(GraphQueryError::IncorrectBinaryOperandEdges);
         }
 
-        let left = parent_edges
-            .iter()
-            .filter_map(|e| {
-                if matches!(e.weight(), EdgeInfo::Left) {
-                    Some(e.source())
-                } else {
-                    None
-                }
-            })
-            .next();
+        let left = parent_edges.iter().find_map(|e| {
+            if matches!(e.weight(), EdgeInfo::Left) {
+                Some(e.source())
+            } else {
+                None
+            }
+        });
 
-        let right = parent_edges
-            .iter()
-            .filter_map(|e| {
-                if matches!(e.weight(), EdgeInfo::Right) {
-                    Some(e.source())
-                } else {
-                    None
-                }
-            })
-            .next();
+        let right = parent_edges.iter().find_map(|e| {
+            if matches!(e.weight(), EdgeInfo::Right) {
+                Some(e.source())
+            } else {
+                None
+            }
+        });
 
-        Ok((
-            left.ok_or(GraphQueryError::IncorrectBinaryOperandEdges)?,
-            right.ok_or(GraphQueryError::IncorrectBinaryOperandEdges)?,
-        ))
+        left.zip(right)
+            .ok_or(GraphQueryError::IncorrectBinaryOperandEdges)
     }
 
     /**

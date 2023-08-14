@@ -81,3 +81,13 @@ fn main() -> Result<(), Error> {
 
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn main_works() -> Result<(), Error> {
+        main()
+    }
+}

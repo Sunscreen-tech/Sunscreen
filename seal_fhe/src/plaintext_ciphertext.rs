@@ -272,6 +272,18 @@ impl Plaintext {
 
         size as usize
     }
+
+    /**
+     * Returns whether the plaintext is in NTT form.
+     */
+    pub fn is_ntt_form(&self) -> bool {
+        let mut result = false;
+
+        convert_seal_error(unsafe { bindgen::Plaintext_IsNTTForm(self.handle, &mut result) })
+            .expect("Fatal error in Plaintext::is_ntt_form().");
+
+        result
+    }
 }
 
 impl Drop for Plaintext {
@@ -350,6 +362,70 @@ impl Ciphertext {
         convert_seal_error(unsafe { bindgen::Ciphertext_Size(self.handle, &mut size) }).unwrap();
 
         size
+    }
+
+    /**
+     * Returns the number of components in the coefficient modulus.
+     */
+    pub fn coeff_modulus_size(&self) -> u64 {
+        let mut size: u64 = 0;
+
+        convert_seal_error(unsafe { bindgen::Ciphertext_CoeffModulusSize(self.handle, &mut size) })
+            .unwrap();
+
+        size
+    }
+
+    /**
+     * Returns the value at a specific point in the coefficient array. This is
+     * not publically exported as it leaks the encoding of the array.
+     */
+    #[allow(dead_code)]
+    pub(crate) fn get_data(&self, index: usize) -> Result<u64> {
+        let mut value: u64 = 0;
+
+        convert_seal_error(unsafe {
+            bindgen::Ciphertext_GetDataAt1(self.handle, index as u64, &mut value)
+        })?;
+
+        Ok(value)
+    }
+
+    /**
+     * Returns the coefficient in the form the ciphertext is currently in (NTT
+     * form or not). For BFV, this will be the coefficient in the residual
+     * number system (RNS) format.
+     */
+    pub fn get_coefficient(&self, poly_index: usize, coeff_index: usize) -> Result<Vec<u64>> {
+        let size = self.coeff_modulus_size();
+        let mut data: Vec<u64> = Vec::with_capacity(size as usize);
+
+        convert_seal_error(unsafe {
+            let data_ptr = data.as_mut_ptr();
+
+            bindgen::Ciphertext_GetDataAt2(
+                self.handle,
+                poly_index as u64,
+                coeff_index as u64,
+                data_ptr,
+            )
+        })?;
+
+        unsafe { data.set_len(size as usize) };
+
+        Ok(data.clone())
+    }
+
+    /**
+     * Returns whether the ciphertext is in NTT form.
+     */
+    pub fn is_ntt_form(&self) -> bool {
+        let mut result = false;
+
+        convert_seal_error(unsafe { bindgen::Ciphertext_IsNTTForm(self.handle, &mut result) })
+            .expect("Fatal error in Plaintext::is_ntt_form().");
+
+        result
     }
 }
 

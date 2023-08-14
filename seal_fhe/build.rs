@@ -34,6 +34,13 @@ fn compile_native(profile: &str, out_path: &Path) {
         "OFF"
     };
 
+    let forbid_transparent_ciphertexts =
+        if std::env::var("CARGO_FEATURE_TRANSPARENT_CIPHERTEXTS").is_ok() {
+            "OFF"
+        } else {
+            "ON"
+        };
+
     let mut builder = Config::new("SEAL");
 
     builder
@@ -52,7 +59,11 @@ fn compile_native(profile: &str, out_path: &Path) {
         .define("SEAL_USE_INTRIN", "ON")
         .define("SEAL_USE_MSGSL", "OFF")
         .define("SEAL_USE_ZLIB", "ON")
-        .define("SEAL_USE_ZSTD", "ON");
+        .define("SEAL_USE_ZSTD", "ON")
+        .define(
+            "SEAL_THROW_ON_TRANSPARENT_CIPHERTEXT",
+            forbid_transparent_ciphertexts,
+        );
 
     setup_macos_cross_compile(&mut builder);
 
@@ -165,6 +176,7 @@ fn main() {
         .allowlist_function("SEALContext_.*")
         .allowlist_function("SecretKey_.*")
         .allowlist_function("Serialization_.*")
+        .allowlist_function("PolynomialArray_.*")
         .allowlist_function("ValCheck_.*");
 
     let bindings = builder.generate().unwrap();

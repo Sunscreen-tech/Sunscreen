@@ -12,6 +12,11 @@ use crate::metal_impl::GpuScalarVec;
 
 use super::{GpuVec, GpuVecIter, IntoGpuVecIter, Runtime};
 
+/// A vector of [`RistrettoPoint`]s that supports batching operations.
+///
+/// # Remarks
+/// This implementation performs calculations in parallel on the GPU using
+/// Apple's Metal API.
 pub struct GpuRistrettoPointVec {
     data: Buffer,
     len: usize,
@@ -97,6 +102,7 @@ impl GpuRistrettoPointVec {
         field_vec
     }
 
+    /// Create an iterator over the [`RistrettoPoint`]s in the vector.
     pub fn iter(&self) -> GpuVecIter<Self> {
         <Self as GpuVec>::iter(self)
     }

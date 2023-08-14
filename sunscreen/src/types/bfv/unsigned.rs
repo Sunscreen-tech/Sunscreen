@@ -1,6 +1,6 @@
 use std::ops::*;
 
-use crypto_bigint::{nlimbs, UInt, Wrapping};
+use crypto_bigint::{nlimbs, Uint, Wrapping};
 use paste::paste;
 use seal_fhe::Plaintext as SealPlaintext;
 
@@ -9,6 +9,7 @@ use sunscreen_runtime::{
 };
 
 use crate as sunscreen;
+use crate::types::ops::GraphCipherInsert;
 use crate::{
     fhe::{with_fhe_ctx, FheContextOps},
     types::{
@@ -30,7 +31,7 @@ use crate::{
  * A single unsigned integer.
  */
 pub struct Unsigned<const LIMBS: usize> {
-    val: UInt<LIMBS>,
+    val: Uint<LIMBS>,
 }
 
 impl<const LIMBS: usize> NumCiphertexts for Unsigned<LIMBS> {
@@ -49,7 +50,7 @@ impl<const LIMBS: usize> std::fmt::Display for Unsigned<LIMBS> {
 
 impl<const LIMBS: usize> Default for Unsigned<LIMBS> {
     fn default() -> Self {
-        Self::from(UInt::ZERO)
+        Self::from(Uint::ZERO)
     }
 }
 
@@ -92,24 +93,24 @@ impl<const LIMBS: usize> TryFromPlaintext for Unsigned<LIMBS> {
                     return Err(sunscreen_runtime::Error::IncorrectCiphertextCount);
                 }
 
-                let bits = usize::min(std::mem::size_of::<UInt<LIMBS>>() * 8, p[0].len());
+                let bits = usize::min(std::mem::size_of::<Uint<LIMBS>>() * 8, p[0].len());
 
                 let negative_cutoff = (params.plain_modulus + 1) / 2;
 
-                let mut val = UInt::ZERO;
+                let mut val = Uint::ZERO;
                 for i in 0..bits {
                     let coeff = p[0].get_coefficient(i);
                     if coeff < negative_cutoff {
                         val = wrapping_add(
                             val,
-                            wrapping_mul(UInt::from_u8(0x1) << i, UInt::from_u64(coeff)),
+                            wrapping_mul(Uint::from_u8(0x1) << i, Uint::from_u64(coeff)),
                         );
                     } else {
                         val = wrapping_sub(
                             val,
                             wrapping_mul(
-                                UInt::from_u8(0x1) << i,
-                                UInt::from_u64(params.plain_modulus - coeff),
+                                Uint::from_u8(0x1) << i,
+                                Uint::from_u64(params.plain_modulus - coeff),
                             ),
                         );
                     }
@@ -123,8 +124,8 @@ impl<const LIMBS: usize> TryFromPlaintext for Unsigned<LIMBS> {
     }
 }
 
-impl<const LIMBS: usize> From<UInt<LIMBS>> for Unsigned<LIMBS> {
-    fn from(val: UInt<LIMBS>) -> Self {
+impl<const LIMBS: usize> From<Uint<LIMBS>> for Unsigned<LIMBS> {
+    fn from(val: Uint<LIMBS>) -> Self {
         Self { val }
     }
 }
@@ -132,24 +133,24 @@ impl<const LIMBS: usize> From<UInt<LIMBS>> for Unsigned<LIMBS> {
 impl<const LIMBS: usize> From<u64> for Unsigned<LIMBS> {
     fn from(n: u64) -> Self {
         Self {
-            val: UInt::from_u64(n),
+            val: Uint::from_u64(n),
         }
     }
 }
 
-impl<const LIMBS: usize> From<Unsigned<LIMBS>> for UInt<LIMBS> {
+impl<const LIMBS: usize> From<Unsigned<LIMBS>> for Uint<LIMBS> {
     fn from(unsigned: Unsigned<LIMBS>) -> Self {
         unsigned.val
     }
 }
 
-fn wrapping_add<const LIMBS: usize>(lhs: UInt<LIMBS>, rhs: UInt<LIMBS>) -> UInt<LIMBS> {
+fn wrapping_add<const LIMBS: usize>(lhs: Uint<LIMBS>, rhs: Uint<LIMBS>) -> Uint<LIMBS> {
     (Wrapping(lhs) + Wrapping(rhs)).0
 }
-fn wrapping_mul<const LIMBS: usize>(lhs: UInt<LIMBS>, rhs: UInt<LIMBS>) -> UInt<LIMBS> {
+fn wrapping_mul<const LIMBS: usize>(lhs: Uint<LIMBS>, rhs: Uint<LIMBS>) -> Uint<LIMBS> {
     (Wrapping(lhs) * Wrapping(rhs)).0
 }
-fn wrapping_sub<const LIMBS: usize>(lhs: UInt<LIMBS>, rhs: UInt<LIMBS>) -> UInt<LIMBS> {
+fn wrapping_sub<const LIMBS: usize>(lhs: Uint<LIMBS>, rhs: Uint<LIMBS>) -> Uint<LIMBS> {
     (Wrapping(lhs) - Wrapping(rhs)).0
 }
 
@@ -167,17 +168,17 @@ macro_rules! impl_std_op {
                     }
                 }
 
-                impl<const LIMBS: usize> $op<UInt<LIMBS>> for Unsigned<LIMBS> {
+                impl<const LIMBS: usize> $op<Uint<LIMBS>> for Unsigned<LIMBS> {
                     type Output = Self;
 
-                    fn [<$op:lower>](self, rhs: UInt<LIMBS>) -> Self::Output {
+                    fn [<$op:lower>](self, rhs: Uint<LIMBS>) -> Self::Output {
                         Self {
                             val: self.val.[<wrapping_ $op:lower>](&rhs),
                         }
                     }
                 }
 
-                impl<const LIMBS: usize> $op<Unsigned<LIMBS>> for UInt<LIMBS> {
+                impl<const LIMBS: usize> $op<Unsigned<LIMBS>> for Uint<LIMBS> {
                     type Output = Unsigned<LIMBS>;
 
                     fn [<$op:lower>](self, rhs: Self::Output) -> Self::Output {
@@ -192,7 +193,7 @@ macro_rules! impl_std_op {
 
                     fn [<$op:lower>](self, rhs: u64) -> Self::Output {
                         Self {
-                            val: self.val.[<wrapping_ $op:lower>](&UInt::from_u64(rhs)),
+                            val: self.val.[<wrapping_ $op:lower>](&Uint::from_u64(rhs)),
                         }
                     }
                 }
@@ -202,7 +203,7 @@ macro_rules! impl_std_op {
 
                     fn [<$op:lower>](self, rhs: Self::Output) -> Self::Output {
                         Self::Output {
-                            val: UInt::from_u64(self).[<wrapping_ $op:lower>](&rhs.val),
+                            val: Uint::from_u64(self).[<wrapping_ $op:lower>](&rhs.val),
                         }
                     }
                 }
@@ -253,17 +254,15 @@ macro_rules! impl_graph_cipher_op {
 
                 impl<const LIMBS: usize> [<GraphCipherConst $op>] for Unsigned<LIMBS> {
                     type Left = Self;
-                    type Right = UInt<LIMBS>;
+                    type Right = Uint<LIMBS>;
 
                     fn [<graph_cipher_const_ $op:lower>](
                         a: FheProgramNode<Cipher<Self::Left>>,
-                        b: UInt<LIMBS>,
+                        b: Uint<LIMBS>,
                     ) -> FheProgramNode<Cipher<Self::Left>> {
+                        let lit = Self::graph_cipher_insert(b);
                         with_fhe_ctx(|ctx| {
-                            let b = Self::from(b).try_into_plaintext(&ctx.data).unwrap();
-
-                            let lit = ctx.add_plaintext_literal(b.inner);
-                            let [<$op:lower>] = ctx.[<add_ $op_noun _plaintext>](a.ids[0], lit);
+                            let [<$op:lower>] = ctx.[<add_ $op_noun _plaintext>](a.ids[0], lit.ids[0]);
 
                             FheProgramNode::new(&[[<$op:lower>]])
                         })
@@ -280,19 +279,31 @@ impl_graph_cipher_op! {
     (Mul, multiplication)
 }
 
+impl<const LIMBS: usize> GraphCipherInsert for Unsigned<LIMBS> {
+    type Lit = Uint<LIMBS>;
+    type Val = Self;
+
+    fn graph_cipher_insert(lit: Self::Lit) -> FheProgramNode<Self::Val> {
+        with_fhe_ctx(|ctx| {
+            let lit = Self::from(lit).try_into_plaintext(&ctx.data).unwrap();
+            let lit = ctx.add_plaintext_literal(lit.inner);
+
+            FheProgramNode::new(&[lit])
+        })
+    }
+}
+
 impl<const LIMBS: usize> GraphConstCipherSub for Unsigned<LIMBS> {
-    type Left = UInt<LIMBS>;
+    type Left = Uint<LIMBS>;
     type Right = Self;
 
     fn graph_const_cipher_sub(
-        a: UInt<LIMBS>,
+        a: Uint<LIMBS>,
         b: FheProgramNode<Cipher<Self::Right>>,
     ) -> FheProgramNode<Cipher<Self::Right>> {
+        let lit = Self::graph_cipher_insert(a);
         with_fhe_ctx(|ctx| {
-            let a = Self::from(a).try_into_plaintext(&ctx.data).unwrap();
-
-            let lit = ctx.add_plaintext_literal(a.inner);
-            let n = ctx.add_subtraction_plaintext(b.ids[0], lit);
+            let n = ctx.add_subtraction_plaintext(b.ids[0], lit.ids[0]);
             let n = ctx.add_negate(n);
 
             FheProgramNode::new(&[n])

@@ -1,4 +1,4 @@
-use crypto_bigint::UInt;
+use crypto_bigint::{NonZero, Uint};
 use subtle::{ConditionallySelectable, ConstantTimeEq, ConstantTimeGreater};
 use sunscreen_zkp_backend::{BigInt, Error as ZkpError, Gadget};
 
@@ -82,7 +82,7 @@ impl Gadget for SignedModulus {
         2
     }
 
-    fn compute_inputs(
+    fn compute_hidden_inputs(
         &self,
         gadget_inputs: &[sunscreen_zkp_backend::BigInt],
     ) -> ZkpResult<Vec<sunscreen_zkp_backend::BigInt>> {
@@ -93,34 +93,33 @@ impl Gadget for SignedModulus {
             return Err(ZkpError::gadget_error("Divide by zero."));
         }
 
+        let m = NonZero::from_uint(m.0);
+
         // As per docs, when shift amount is constant, time is constant.
         // See https://docs.rs/crypto-bigint/latest/crypto_bigint/struct.UInt.html#method.shr_vartime
         let fm_2 = self.field_modulus.shr_vartime(2);
 
         let is_neg = x.ct_gt(&fm_2);
-        let (q_pos, r_pos) = x.div_rem(&m).unwrap();
+        let (q_pos, r_pos) = x.div_rem(&m);
 
         // If x is negative, this produces abs(x)
         let pos_x = self.field_modulus.wrapping_sub(&x);
 
         // Now we reduce mod m then subtract from m to get x mod m where x < 0.
         // Unwrap is okay here because we've already checked for m == 0.
-        let r_neg = m
-            .wrapping_sub(&pos_x.reduce(&m).unwrap())
-            .reduce(&m)
-            .unwrap();
+        let r_neg = m.wrapping_sub(&pos_x.rem(&m)).rem(&m);
 
         // q should round towards -Inf, so r != 0, subtract one.
         let correction =
-            UInt::conditional_select(&UInt::ONE, &UInt::ZERO, r_neg.ct_eq(&BigInt::ZERO));
+            Uint::conditional_select(&Uint::ONE, &Uint::ZERO, r_neg.ct_eq(&BigInt::ZERO));
 
         let q_neg = self
             .field_modulus
             .wrapping_sub(&pos_x.wrapping_div(&m).wrapping_add(&correction));
 
-        let q = UInt::conditional_select(&q_pos, &q_neg, is_neg);
+        let q = Uint::conditional_select(&q_pos, &q_neg, is_neg);
 
-        let r = UInt::conditional_select(&r_pos, &r_neg, is_neg);
+        let r = Uint::conditional_select(&r_pos, &r_neg, is_neg);
 
         Ok(vec![BigInt::from(q), BigInt::from(r)])
     }
@@ -144,7 +143,7 @@ impl Inverse {
 }
 
 impl Gadget for Inverse {
-    fn compute_inputs(&self, gadget_inputs: &[BigInt]) -> ZkpResult<Vec<BigInt>> {
+    fn compute_hidden_inputs(&self, gadget_inputs: &[BigInt]) -> ZkpResult<Vec<BigInt>> {
         let x = gadget_inputs[0];
 
         if x == BigInt::ZERO {
@@ -183,35 +182,34 @@ impl Gadget for Inverse {
 #[cfg(test)]
 mod tests {
     use sunscreen_compiler_macros::zkp_program;
-    use sunscreen_runtime::{Runtime, ZkpBackend, ZkpProgramInput};
-    use sunscreen_zkp_backend::bulletproofs::BulletproofsBackend;
-    use sunscreen_zkp_backend::BackendField;
+    use sunscreen_runtime::{Runtime, ZkpProgramInput};
+    use sunscreen_zkp_backend::FieldSpec;
+    use sunscreen_zkp_backend::{bulletproofs::BulletproofsBackend, ZkpBackend};
 
-    use crate::types::zkp::NativeField;
+    use crate::types::zkp::Field;
     use crate::{self as sunscreen, invoke_gadget, Compiler};
 
     use super::*;
 
     #[test]
-    fn compute_inputs_is_correct() {
+    fn compute_hidden_inputs_is_correct() {
         let m = BigInt::from(22u32);
         let field_modulus = <BulletproofsBackend as ZkpBackend>::Field::FIELD_MODULUS;
+
+        assert_ne!(field_modulus, BigInt::ZERO);
+
+        let nz_field_modulus = NonZero::from_uint(field_modulus.0);
 
         let gadget = SignedModulus::new(field_modulus, 16);
 
         let test_case = |x: BigInt| {
-            let outputs = gadget.compute_inputs(&[x, m]).unwrap();
+            let outputs = gadget.compute_hidden_inputs(&[x, m]).unwrap();
 
             let q = outputs[0];
             let r = outputs[1];
 
             assert_eq!(
-                BigInt::from(
-                    m.wrapping_mul(&q)
-                        .wrapping_add(&r)
-                        .reduce(&field_modulus)
-                        .unwrap()
-                ),
+                BigInt::from(m.wrapping_mul(&q).wrapping_add(&r).rem(&nz_field_modulus)),
                 x
             );
             assert!(r < m);
@@ -225,23 +223,23 @@ mod tests {
 
     #[test]
     fn modulus_gadget_works() {
-        #[zkp_program(backend = "bulletproofs")]
-        fn div_rem<F: BackendField>(
-            x: NativeField<F>,
-            m: NativeField<F>,
-            expected_q: NativeField<F>,
-            expected_r: NativeField<F>,
+        #[zkp_program]
+        fn div_rem<F: FieldSpec>(
+            x: Field<F>,
+            m: Field<F>,
+            expected_q: Field<F>,
+            expected_r: Field<F>,
         ) {
             let outs = invoke_gadget(
                 SignedModulus::new(F::FIELD_MODULUS, 16),
                 &[x.ids[0], m.ids[0]],
             );
 
-            let q = ProgramNode::<NativeField<F>>::new(&[outs[0]]);
-            let r = ProgramNode::<NativeField<F>>::new(&[outs[1]]);
+            let q = ProgramNode::<Field<F>>::new(&[outs[0]]);
+            let r = ProgramNode::<Field<F>>::new(&[outs[1]]);
 
-            (q - expected_q).constrain_eq(NativeField::from(0u32));
-            (r - expected_r).constrain_eq(NativeField::from(0u32));
+            (q - expected_q).constrain_eq(Field::from(0u32));
+            (r - expected_r).constrain_eq(Field::from(0u32));
         }
 
         let app = Compiler::new()
@@ -250,23 +248,23 @@ mod tests {
             .compile()
             .unwrap();
 
-        let runtime = Runtime::new_zkp(&BulletproofsBackend::new()).unwrap();
+        let runtime = Runtime::new_zkp(BulletproofsBackend::new()).unwrap();
 
         let prog = app.get_zkp_program(div_rem).unwrap();
 
-        type BpField = NativeField<<BulletproofsBackend as ZkpBackend>::Field>;
+        type BpField = Field<<BulletproofsBackend as ZkpBackend>::Field>;
 
         let test_case = |x: i64, m: i64, expected_q: i64, expected_r: i64, expect_success: bool| {
             let result = runtime.prove(
                 prog,
-                vec![],
-                vec![],
                 vec![
                     BpField::from(x),
                     BpField::from(m),
                     BpField::from(expected_q),
                     BpField::from(expected_r),
                 ],
+                vec![],
+                vec![],
             );
 
             let proof = if expect_success {

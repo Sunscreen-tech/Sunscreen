@@ -67,6 +67,25 @@
         {
             "type": "lldb",
             "request": "launch",
+            "name": "Debug integration test 'features'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=features",
+                    "--package=sunscreen"
+                ],
+                "filter": {
+                    "name": "features",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
             "name": "Debug integration test 'fhe_program_tests'",
             "cargo": {
                 "args": [
@@ -1037,6 +1056,43 @@
                 ],
                 "filter": {
                     "name": "mean_variance",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'ordering_zkp'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=ordering_zkp",
+                    "--package=ordering_zkp"
+                ],
+                "filter": {
+                    "name": "ordering_zkp",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'ordering_zkp'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=ordering_zkp",
+                    "--package=ordering_zkp"
+                ],
+                "filter": {
+                    "name": "ordering_zkp",
                     "kind": "bin"
                 }
             },

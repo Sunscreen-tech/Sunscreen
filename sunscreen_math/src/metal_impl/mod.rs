@@ -173,10 +173,12 @@ where
      */
     fn len(&self) -> usize;
 
+    /// Whether or not the vector has no values.
     fn is_empty(&self) -> bool {
         self.len() == 0
     }
 
+    /// The length in bytes of the vector.
     fn len_bytes(&self) -> usize {
         self.len() * size_of::<Self::Item>()
     }
@@ -211,8 +213,10 @@ where
         slice::from_raw_parts(self.get_buffer().contents() as *const u32, byte_len)
     }
 
+    /// Returns the item at `index`
     fn get(&self, index: usize) -> Self::Item;
 
+    /// Create an iterator over the items in the vector
     fn iter(&self) -> GpuVecIter<Self> {
         GpuVecIter {
             index: 0,
@@ -220,6 +224,7 @@ where
         }
     }
 
+    /// Consume the vector and create an interator over the items in the vector.
     fn into_iter(self) -> IntoGpuVecIter<Self> {
         IntoGpuVecIter {
             index: 0,

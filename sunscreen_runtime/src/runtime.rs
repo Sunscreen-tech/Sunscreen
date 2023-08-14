@@ -29,7 +29,7 @@ use sunscreen_fhe_program::SchemeType;
 
 use seal_fhe::{
     BFVEvaluator, BfvEncryptionParametersBuilder, Context as SealContext, Decryptor, Encryptor,
-    KeyGenerator, Modulus,
+    KeyGenerator, Modulus, PolynomialArray,
 };
 
 pub use sunscreen_compiler_common::{Type, TypeName};
@@ -56,6 +56,42 @@ pub mod marker {
      * perform ZKP operations.
      */
     pub trait Zkp {}
+}
+
+/**
+ * Components needed to perform BFV encryption. Specifically, BFV is defined by the following equation in SEAL:
+ *
+ * 1. $\Delta m + r + p_0 u + e_1 = c_0$
+ * 2. $p_1 u + e_2 = c_1$
+ *
+ * where
+ * - $\Delta$ is the floored ratio of the coefficient and plaintext modulus
+ *   (floor(q/t)).
+ * - $m$ is the message encoded as a SEAL plaintext.
+ * - $r$ is the remainder from the delta calculation that SEAL adds to the
+ *   ciphertext to handle rounding.
+ * - $p_i$ is the $i$th component of the public key, starting at index 0.
+ * - $u$ is a randomly sampled ternary polynomial (coefficients are sampled from
+ *   {-1, 0, 1} mod q).
+ * - $e_i$ is the $i$th component of the noise added to the ciphertext, starting
+ *   at index 1. These values are sampled from a centered binomial distribution
+ *   with a standard deviation of 3.2.
+ * - $c_i$ is the $i$th component of the ciphertext, starting at index 0.
+ *
+ * Note that the indices used here match the SEAL/manual and the original paper,
+ * where $p_i$ is used with the error term $e_{i + 1}$ and where $e_0$ does not
+ * exist.
+ *
+ * Since the ciphertext can contain more that one ciphertext underneath, each of
+ * the components is returned as a vector of the components matching the number
+ * of ciphertexts.
+ */
+#[allow(unused)]
+pub struct BFVEncryptionComponents {
+    ciphertext: Ciphertext,
+    u: Vec<PolynomialArray>,
+    e: Vec<PolynomialArray>,
+    r: Vec<Plaintext>,
 }
 
 /**
@@ -454,17 +490,95 @@ where
     where
         P: TryIntoPlaintext + TypeName,
     {
+        self.encrypt_return_components_switched(val, public_key, false)
+            .map(|x| x.ciphertext)
+    }
+
+    #[allow(dead_code)]
+    /**
+     * Encrypts the given [`FheType`](crate::FheType) using the given public
+     * key, and the components used in encrypting the data.
+     *
+     * Returns [`Error::ParameterMismatch`] if the plaintext is incompatible
+     * with this runtime's scheme.
+     */
+    fn encrypt_return_components<P>(
+        &self,
+        val: P,
+        public_key: &PublicKey,
+    ) -> Result<BFVEncryptionComponents>
+    where
+        P: TryIntoPlaintext + TypeName,
+    {
+        self.encrypt_return_components_switched(val, public_key, true)
+    }
+    /**
+     * Encrypts the given [`FheType`](crate::FheType) using the given public
+     * key, returning the encrypted value along with the components added to the
+     * message. See `BFVEncryptionComponents` for the pieces returned.
+     *
+     * Note that this will disable the special modulus!
+     *
+     * Returns [`Error::ParameterMismatch`] if the plaintext is incompatible with this runtime's
+     * scheme.
+     */
+    fn encrypt_return_components_switched<P>(
+        &self,
+        val: P,
+        public_key: &PublicKey,
+        export_components: bool,
+    ) -> Result<BFVEncryptionComponents>
+    where
+        P: TryIntoPlaintext + TypeName,
+    {
         let fhe_data = self.runtime_data.unwrap_fhe();
 
         let plaintext = val.try_into_plaintext(&fhe_data.params)?;
 
-        let ciphertext = match (&fhe_data.context, plaintext.inner) {
+        let (ciphertext, u, e, r) = match (&fhe_data.context, plaintext.inner) {
             (Context::Seal(context), InnerPlaintext::Seal { value: inner_plain }) => {
                 let encryptor = Encryptor::with_public_key(context, &public_key.public_key.data)?;
 
+                let capacity = if export_components {
+                    inner_plain.len()
+                } else {
+                    0
+                };
+                let mut us = Vec::with_capacity(capacity);
+                let mut es = Vec::with_capacity(capacity);
+                let mut rs = Vec::with_capacity(capacity);
+
                 let ciphertexts = inner_plain
                     .iter()
-                    .map(|p| encryptor.encrypt(p).map_err(Error::SealError))
+                    .map(|p| {
+                        let ciphertext = if export_components {
+                            encryptor.encrypt(p).map_err(Error::SealError)
+                        } else {
+                            let (ciphertext, u, e, r) = encryptor
+                                .encrypt_return_components(p)
+                                .map_err(Error::SealError)?;
+
+                            let r_context = WithContext {
+                                params: fhe_data.params.clone(),
+                                data: r,
+                            };
+
+                            let r = Plaintext {
+                                data_type: P::type_name(),
+                                inner: InnerPlaintext::Seal {
+                                    value: vec![r_context],
+                                },
+                            };
+
+                            us.push(u);
+                            es.push(e);
+                            rs.push(r);
+
+                            Ok(ciphertext)
+                        }?;
+
+                        Ok(ciphertext)
+                    })
                     .collect::<Result<Vec<SealCiphertext>>>()?
                     .drain(0..)
                     .map(|c| WithContext {
@@ -473,17 +587,27 @@ where
                     })
                     .collect();
 
-                Ciphertext {
-                    data_type: Type {
-                        is_encrypted: true,
-                        ..P::type_name()
+                (
+                    Ciphertext {
+                        data_type: Type {
+                            is_encrypted: true,
+                            ..P::type_name()
+                        },
+                        inner: InnerCiphertext::Seal { value: ciphertexts },
                     },
-                    inner: InnerCiphertext::Seal { value: ciphertexts },
-                }
+                    us,
+                    es,
+                    rs,
+                )
             }
         };
 
-        Ok(ciphertext)
+        Ok(BFVEncryptionComponents {
+            ciphertext,
+            u,
+            e,
+            r,
+        })
     }
 }
 
@@ -498,14 +622,14 @@ where
     pub fn prove<I>(
         &self,
         program: &CompiledZkpProgram,
-        constant_inputs: Vec<I>,
-        public_inputs: Vec<I>,
         private_inputs: Vec<I>,
+        public_inputs: Vec<I>,
+        constant_inputs: Vec<I>,
     ) -> Result<Proof>
     where
         I: Into<ZkpProgramInput>,
     {
-        let constant_inputs = constant_inputs
+        let private_inputs = private_inputs
             .into_iter()
             .flat_map(|x| I::into(x).0.to_native_fields())
             .collect::<Vec<BigInt>>();
@@ -513,7 +637,7 @@ where
             .into_iter()
             .flat_map(|x| I::into(x).0.to_native_fields())
             .collect::<Vec<BigInt>>();
-        let private_inputs = private_inputs
+        let constant_inputs = constant_inputs
             .into_iter()
             .flat_map(|x| I::into(x).0.to_native_fields())
             .collect::<Vec<BigInt>>();
@@ -561,6 +685,28 @@ where
         Ok(backend.prove(&prog, &inputs)?)
     }
 
+    /// Create a proof builder.
+    ///
+    /// This provides a wrapper around calling [`Self::prove`], and can be convenient when you
+    /// have ZKP program arguments of different types. Instead of casting them all to
+    /// `ZkpProgramInput`, you can add them one by one:
+    ///
+    /// ```rust,ignore
+    /// let runtime = ZkpRuntime::new(&backend)?;
+    /// let x = NativeField::from(1);
+    /// let ys = [NativeField::from(2), NativeField::from(3)];
+    /// let proof = runtime.proof_builder(&program)
+    ///     .private_input(x)
+    ///     .private_input(ys)
+    ///     .prove()?;
+    /// ```
+    pub fn proof_builder<'r, 'p>(
+        &'r self,
+        program: &'p CompiledZkpProgram,
+    ) -> ProofBuilder<'r, 'p, T, B> {
+        ProofBuilder::new(self, program)
+    }
+
     /**
      * Verify that the given `proof` satisfies the given `program`.
      */
@@ -568,8 +714,8 @@ where
         &self,
         program: &CompiledZkpProgram,
         proof: &Proof,
-        constant_inputs: Vec<I>,
         public_inputs: Vec<I>,
+        constant_inputs: Vec<I>,
     ) -> Result<()>
     where
         I: Into<ZkpProgramInput>,
@@ -595,6 +741,29 @@ where
         trace!("Starting backend verify...");
 
         Ok(backend.verify(&prog, proof)?)
+    }
+
+    /// Create a verification builder.
+    ///
+    /// This provides a wrapper around calling [`Self::verify`], and can be convenient when you
+    /// have ZKP program arguments of different types. Instead of casting them all to
+    /// `ZkpProgramInput`, you can add them one by one:
+    ///
+    /// ```rust,ignore
+    /// let runtime = ZkpRuntime::new(&backend)?;
+    /// let x = NativeField::from(1);
+    /// let ys = [NativeField::from(2), NativeField::from(3)];
+    /// runtime.verification_builder(&program)
+    ///     .proof(&proof)
+    ///     .constant_input(x)
+    ///     .public_input(ys)
+    ///     .verify()?;
+    /// ```
+    pub fn verification_builder<'r, 'p>(
+        &'r self,
+        program: &'p CompiledZkpProgram,
+    ) -> VerificationBuilder<'r, 'p, '_, T, B> {
+        VerificationBuilder::new(self, program)
     }
 }
 
@@ -653,14 +822,14 @@ impl GenericRuntime<(), ()> {
     /**
      * Creates a new Runtime supporting only ZKP operations
      */
-    pub fn new_zkp<B>(backend: &B) -> Result<ZkpRuntime<B>>
+    pub fn new_zkp<B>(backend: B) -> Result<ZkpRuntime<B>>
     where
-        B: ZkpBackend + Clone + 'static,
+        B: ZkpBackend + 'static,
     {
         Ok(GenericRuntime {
             runtime_data: RuntimeData::Zkp(Self::make_zkp_runtime_data()),
             _phantom_t: PhantomData,
-            zkp_backend: backend.clone(),
+            zkp_backend: backend,
         })
     }
 
@@ -736,9 +905,9 @@ impl<B> ZkpRuntime<B> {
     /**
      * Create a new [`ZkpRuntime`].
      */
-    pub fn new(backend: &B) -> Result<Self>
+    pub fn new(backend: B) -> Result<Self>
     where
-        B: ZkpBackend + Clone + 'static,
+        B: ZkpBackend + 'static,
     {
         Runtime::new_zkp(backend)
     }
@@ -756,3 +925,186 @@ impl<B> ZkpRuntime<B> {
  *   can do both.
  */
 pub type Runtime = GenericRuntime<(), ()>;
+
+/// A builder for creating a proof.
+///
+/// This is offered as a convenience for building the arguments necessary for the
+/// [`prove`][GenericRuntime::prove] function.
+pub struct ProofBuilder<'r, 'p, T: marker::Zkp, B: ZkpBackend> {
+    runtime: &'r GenericRuntime<T, B>,
+    program: &'p CompiledZkpProgram,
+    constant_inputs: Vec<ZkpProgramInput>,
+    public_inputs: Vec<ZkpProgramInput>,
+    private_inputs: Vec<ZkpProgramInput>,
+}
+
+impl<'r, 'p, T: marker::Zkp, B: ZkpBackend> ProofBuilder<'r, 'p, T, B> {
+    /// Create a new `ProofBuilder`. It's typically more convenient to create a proof builder
+    /// via [`runtime.proof_builder()`][GenericRuntime::proof_builder].
+    pub fn new(runtime: &'r GenericRuntime<T, B>, program: &'p CompiledZkpProgram) -> Self
+    where
+        T: marker::Zkp,
+        B: ZkpBackend,
+    {
+        Self {
+            runtime,
+            program,
+            constant_inputs: vec![],
+            public_inputs: vec![],
+            private_inputs: vec![],
+        }
+    }
+
+    /// Add a constant input to the proof builder.
+    pub fn constant_input(mut self, input: impl Into<ZkpProgramInput>) -> Self {
+        self.constant_inputs.push(input.into());
+        self
+    }
+
+    /// Add multiple constant inputs to the proof builder.
+    pub fn constant_inputs<I>(mut self, inputs: I) -> Self
+    where
+        I: IntoIterator<Item = T>,
+        ZkpProgramInput: From<T>,
+    {
+        self.constant_inputs
+            .extend(inputs.into_iter().map(ZkpProgramInput::from));
+        self
+    }
+
+    /// Add a public input to the proof builder.
+    pub fn public_input(mut self, input: impl Into<ZkpProgramInput>) -> Self {
+        self.public_inputs.push(input.into());
+        self
+    }
+
+    /// Add multiple public inputs to the proof builder.
+    pub fn public_inputs<I>(mut self, inputs: I) -> Self
+    where
+        I: IntoIterator<Item = T>,
+        ZkpProgramInput: From<T>,
+    {
+        self.public_inputs
+            .extend(inputs.into_iter().map(ZkpProgramInput::from));
+        self
+    }
+
+    /// Add a private input to the proof builder.
+    pub fn private_input(mut self, input: impl Into<ZkpProgramInput>) -> Self {
+        self.private_inputs.push(input.into());
+        self
+    }
+
+    /// Add multiple private inputs to the proof builder.
+    pub fn private_inputs<I>(mut self, inputs: I) -> Self
+    where
+        I: IntoIterator<Item = T>,
+        ZkpProgramInput: From<T>,
+    {
+        self.private_inputs
+            .extend(inputs.into_iter().map(ZkpProgramInput::from));
+        self
+    }
+
+    /// Generate a proof; see [`runtime.prove()`][GenericRuntime::prove].
+    pub fn prove(self) -> Result<Proof> {
+        self.runtime.prove(
+            self.program,
+            self.private_inputs,
+            self.public_inputs,
+            self.constant_inputs,
+        )
+    }
+}
+
+/// A builder for verifying a proof.
+///
+/// This is offered as a convenience for building the arguments necessary for the
+/// [`verify`][GenericRuntime::verify] function.
+pub struct VerificationBuilder<'r, 'p, 'a, T: marker::Zkp, B: ZkpBackend> {
+    runtime: &'r GenericRuntime<T, B>,
+    program: &'p CompiledZkpProgram,
+    proof: Option<&'a Proof>,
+    constant_inputs: Vec<ZkpProgramInput>,
+    public_inputs: Vec<ZkpProgramInput>,
+}
+
+impl<'r, 'p, 'a, T: marker::Zkp, B: ZkpBackend> VerificationBuilder<'r, 'p, 'a, T, B> {
+    /// Create a new `VerificationBuilder`. It's typically more convenient to create a
+    /// verification builder via
+    /// [`runtime.verification_builder()`][GenericRuntime::verification_builder].
+    pub fn new(runtime: &'r GenericRuntime<T, B>, program: &'p CompiledZkpProgram) -> Self
+    where
+        T: marker::Zkp,
+        B: ZkpBackend,
+    {
+        Self {
+            runtime,
+            program,
+            proof: None,
+            public_inputs: vec![],
+            constant_inputs: vec![],
+        }
+    }
+
+    /// Add the proof to verify.
+    pub fn proof(mut self, proof: &'a Proof) -> Self {
+        self.proof = Some(proof);
+        self
+    }
+
+    /// Add a constant input to the verification builder.
+    pub fn constant_input(mut self, input: impl Into<ZkpProgramInput>) -> Self {
+        self.constant_inputs.push(input.into());
+        self
+    }
+
+    /// Add multiple constant inputs to the verification builder.
+    pub fn constant_inputs<I>(mut self, inputs: I) -> Self
+    where
+        I: IntoIterator<Item = T>,
+        ZkpProgramInput: From<T>,
+    {
+        self.constant_inputs
+            .extend(inputs.into_iter().map(ZkpProgramInput::from));
+        self
+    }
+
+    /// Add a public input to the verification builder.
+    pub fn public_input(mut self, input: impl Into<ZkpProgramInput>) -> Self {
+        self.public_inputs.push(input.into());
+        self
+    }
+
+    /// Add multiple public inputs to the verification builder.
+    pub fn public_inputs<I>(mut self, inputs: I) -> Self
+    where
+        I: IntoIterator<Item = T>,
+        ZkpProgramInput: From<T>,
+    {
+        self.public_inputs
+            .extend(inputs.into_iter().map(ZkpProgramInput::from));
+        self
+    }
+
+    /// Verify that `self.proof` satisfies `self.program`; see
+    /// [`runtime.verify()`][GenericRuntime::verify].
+    ///
+    /// # Remarks
+    /// Will error if the underlying `verify` call errors, or if a proof has not yet been
+    /// supplied to the builder. That is, you must call [`Self::proof`] before calling this
+    /// function.
+    pub fn verify(self) -> Result<()> {
+        let proof = self.proof.ok_or_else(|| {
+            Error::zkp_builder_error(
+                "You must supply a proof to the verification builder before calling `verify`",
+            )
+        })?;
+        self.runtime.verify(
+            self.program,
+            proof,
+            self.public_inputs,
+            self.constant_inputs,
+        )
+    }
+}

@@ -35,7 +35,10 @@ pub fn zkp_program_impl(
 
 fn get_generic_arg(generics: &Generics) -> Result<(Ident, Path)> {
     if generics.type_params().count() != 1 {
-        return Err(Error::compile_error(generics.span(), "ZKP programs must take 1 generic argument with bound sunscreen::BackendField.sunscreen::BackendField"));
+        return Err(Error::compile_error(
+            generics.span(),
+            "ZKP programs must take 1 generic argument with bound sunscreen::BackendField",
+        ));
     }
 
     if generics.lifetimes().count() > 0 {
@@ -104,33 +107,63 @@ fn parse_inner(_attr_params: ZkpProgramAttrs, input_fn: ItemFn) -> Result<TokenS
         }
     };
 
+    let mut public_seen = false;
+    let mut constant_seen = false;
     let unwrapped_inputs = match extract_fn_arguments(inputs) {
         Ok(args) => {
             args.iter().map(|a| {
                 let mut arg_kind = ArgumentKind::Private;
 
-                match a.0.len() {
-                    0 => {},
-                    1 => {
-                        let ident = a.0[0].path().get_ident();
+                match &a.0[..] {
+                    [] => {
+                        if public_seen || constant_seen {
+                            return Err(Error::compile_error(a.2.span(),
+                                "private arguments must be specified before #[public] and #[constant] arguments"
+                            ));
+                        }
+                    },
+                    [attr] => {
+                        let ident = attr.path().get_ident();
 
                         match ident.map(|x| x.to_string()).as_deref() {
-                            Some("public") => arg_kind = ArgumentKind::Public,
-                            Some("constant") => arg_kind = ArgumentKind::Constant,
+                            Some("private") => {
+                                if public_seen || constant_seen {
+                                    return Err(Error::compile_error(attr.path().span(),
+                                        "#[private] arguments must be specified before #[public] and #[constant] arguments"
+                                    ));
+                                }
+                            },
+                            Some("public") => {
+                                if constant_seen {
+                                    return Err(Error::compile_error(attr.path().span(),
+                                        "#[public] arguments must be specified before #[constant] arguments "
+                                    ));
+                                }
+                                arg_kind = ArgumentKind::Public;
+                                public_seen = true;
+                            },
+                            Some("constant") => {
+                                arg_kind = ArgumentKind::Constant;
+                                constant_seen = true;
+                            },
                             _ => {
-                                return Err(Error::compile_error(a.0[0].path().span(), &format!("Expected #[public] or #[constant], found {}", a.0[0].path().to_token_stream())));
+                                return Err(Error::compile_error(attr.path().span(), &format!(
+                                    "Expected #[private], #[public] or #[constant], found {}",
+                                    attr.path().to_token_stream()
+                                )));
                             }
                         }
                     },
-                    _ => {
-                        return Err(Error::compile_error(a.1.span(), "ZKP program arguments may only have one attribute (#[public] or #[constant])."));
+                    [_, attr, ..] => {
+                        return Err(Error::compile_error(attr.span(), "ZKP program arguments may only have one attribute (#[private], #[public] or #[constant])."));
                     }
                 };
 
                 Ok((arg_kind, a.1, a.2))
             }).collect::<Result<Vec<(ArgumentKind, &Type, &Ident)>>>()?
         },
-        Err(ExtractFnArgumentsError::ContainsSelf(s)) => Err(Error::compile_error(s, "ZKP programs must not contain self"))?,
+        Err(ExtractFnArgumentsError::ContainsSelf(s)) => Err(Error::compile_error(s, "ZKP programs must not contain `self`"))?,
+        Err(ExtractFnArgumentsError::ContainsMut(s)) => Err(Error::compile_error(s, "ZKP program arguments cannot be `mut`"))?,
         Err(ExtractFnArgumentsError::IllegalPat(s)) => Err(Error::compile_error(s, "Expected Identifier"))?,
         Err(ExtractFnArgumentsError::IllegalType(s)) => Err(Error::compile_error(s, "ZKP program arguments must be an array or named struct type"))?,
     };
@@ -222,6 +255,8 @@ fn parse_inner(_attr_params: ZkpProgramAttrs, input_fn: ItemFn) -> Result<TokenS
 
             fn source(&self) -> &str { #raw_fn }
         }
+
+        impl sunscreen::ZkpProgramFnExt for #zkp_program_struct_name {}
 
         #[allow(non_upper_case_globals)]
         #vis const #zkp_program_name: #zkp_program_struct_name = #zkp_program_struct_name;

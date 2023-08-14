@@ -160,7 +160,7 @@ pub type FheFrontendCompilation = CompilationResult<FheOperation>;
 
 thread_local! {
     /**
-     * Contains the graph of an FHE/ZKP program during compilation. An
+     * Contains the graph of an FHE program during compilation. An
      * implementation detail and not for public consumption.
      */
     pub static CURRENT_PROGRAM_CTX: RefCell<Option<&'static mut ContextEnum>> = RefCell::new(None);

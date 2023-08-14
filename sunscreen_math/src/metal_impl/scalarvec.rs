@@ -31,6 +31,7 @@ impl Clone for GpuScalarVec {
 }
 
 impl GpuScalarVec {
+    /// Create a new vector of [`Scalar`] values.
     pub fn new(x: &[Scalar]) -> Self {
         assert_eq!(size_of::<Scalar>(), u32::BITS as usize);
 
@@ -58,10 +59,12 @@ impl GpuScalarVec {
         res
     }
 
+    /// Create an iterator over [`Scalar`] values
     pub fn iter(&self) -> GpuVecIter<Self> {
         <Self as GpuVec>::iter(self)
     }
 
+    /// Invert each [`Scalar`] in the vector.
     pub fn invert(&self) -> Self {
         GpuScalarVec {
             data: self.unary_gpu_kernel("scalar_invert"),

@@ -1,5 +1,8 @@
 # Types
-Sunscreen supports a number of data types for different scenarios. Each of these data types is located in the `sunscreen_compiler::types::bfv` module.
+Sunscreen supports a number of data types for different scenarios. Each of these
+data types is located in the
+[`sunscreen::types::bfv`](https://docs.rs/sunscreen/latest/sunscreen/types/bfv/index.html)
+module.
 
 All types `T` support `+`, `-`, `*` operations on plaintext, ciphertext, and literals. Note that at least one of the operands must be a ciphertext.
 

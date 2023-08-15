@@ -4,8 +4,7 @@ use sunscreen_zkp_backend::{BigInt, FieldSpec};
 
 use crate::{
     types::zkp::{Coerce, ProgramNode},
-    with_zkp_ctx,
-    zkp::ZkpContextOps,
+    zkp::{with_zkp_ctx, ZkpContextOps},
 };
 
 use super::{AddVar, Field, Mod, MulVar, NumFieldElements, ToNativeFields};

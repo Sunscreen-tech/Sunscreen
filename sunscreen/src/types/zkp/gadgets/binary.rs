@@ -1,6 +1,6 @@
-use sunscreen_zkp_backend::{BigInt, Gadget};
+use sunscreen_zkp_backend::{BigInt, Error as ZkpError, Gadget, Result as ZkpResult};
 
-use crate::{invoke_gadget, with_zkp_ctx, zkp::ZkpContextOps, ZkpError, ZkpResult};
+use crate::zkp::{invoke_gadget, with_zkp_ctx, ZkpContextOps};
 
 /**
  * Expands a field element into N-bit unsigned binary.

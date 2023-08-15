@@ -38,28 +38,14 @@
 
 mod compiler;
 mod error;
-/**
- * This module contains types used internally when compiling
- * [`fhe_program`]s.
- */
-pub mod fhe;
 mod params;
-mod zkp;
 
-/**
- * This module contains types used during [`fhe_program`] construction.
- *
- * * The [`crate::types::bfv`] module contains data types used for
- * BFV [`fhe_program`] inputs and outputs.
- * * The [`crate::types::intern`] module contains implementation details needed
- * for [`fhe_program`] construction. You shouldn't need to use these, as the `#[fhe_program]`
- * macro will automatically insert them for you as needed.
- *
- * The root of the module contains:
- * * [`Cipher`](crate::types::Cipher) is a parameterized type used to
- * denote an [`fhe_program`] input parameter as encrypted.
- */
+/// This module contains types used internally when compiling [`fhe_program`]s.
+pub mod fhe;
+/// This module contains types used when writing and compiling FHE and ZKP programs.
 pub mod types;
+/// This module contains types used internally when compiling [`zkp_program`]s.
+pub mod zkp;
 
 use fhe::{FheOperation, Literal};
 use petgraph::stable_graph::StableGraph;
@@ -88,11 +74,7 @@ pub use sunscreen_zkp_backend::bulletproofs;
 pub use sunscreen_zkp_backend::{
     Error as ZkpError, FieldSpec, Proof, Result as ZkpResult, ZkpBackend,
 };
-pub use zkp::{
-    invoke_gadget, with_zkp_ctx, ZkpContext, ZkpContextOps, ZkpData, ZkpFrontendCompilation,
-    CURRENT_ZKP_CTX,
-};
-pub use zkp::{ZkpProgramFn, ZkpProgramFnExt};
+pub use zkp::{invoke_gadget, ZkpProgramFn, ZkpProgramFnExt};
 
 #[derive(Clone)]
 /**
@@ -283,10 +265,7 @@ pub struct FrontendCompilation {
 }
 
 thread_local! {
-    /**
-     * An arena containing slices of indicies. An implementation detail of the
-     * [`fhe_program`] macro.
-     */
+    /// An arena containing slices of indicies. An implementation detail of FHE/ZKP programs.
     pub static INDEX_ARENA: RefCell<bumpalo::Bump> = RefCell::new(bumpalo::Bump::new());
 }
 

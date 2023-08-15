@@ -1,8 +1,8 @@
 use crypto_bigint::{NonZero, Uint};
 use subtle::{ConditionallySelectable, ConstantTimeEq, ConstantTimeGreater};
-use sunscreen_zkp_backend::{BigInt, Error as ZkpError, Gadget};
+use sunscreen_zkp_backend::{BigInt, Error as ZkpError, Gadget, Result as ZkpResult};
 
-use crate::{invoke_gadget, with_zkp_ctx, zkp::ZkpContextOps, ZkpResult};
+use crate::zkp::{invoke_gadget, with_zkp_ctx, ZkpContextOps};
 
 use super::ToUInt;
 

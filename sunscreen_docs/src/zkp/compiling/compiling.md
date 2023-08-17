@@ -1,7 +1,7 @@
 # Compiling
 
 After you've defined a ZKP program, you'll need to compile it. The simplest way,
-as we saw in the [first example](/getting_started/example.md), is to just call
+as we saw in the [first example](../getting_started/example.md), is to just call
 `.compile()` on the program:
 
 ```rust

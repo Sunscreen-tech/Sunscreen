@@ -508,5 +508,5 @@ addition of coefficients.
     implementations for `T`, not `ProgramNode<T>`, which gets around this restriction.
 
 [^mult-const]: In fact, polynomial multiplication was the motivation example for
-    [constant inputs](/advanced/constant_inputs.md); it drops the number of
+    [constant inputs](../advanced/constant_inputs.md); it drops the number of
     constraints from \\(N^2\\) to \\(N\\).

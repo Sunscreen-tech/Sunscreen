@@ -1,6 +1,6 @@
 # Plaintext modulus
 
-FHE uses some [funky math](/intro/why.md). At the lowest level, plaintexts are polynomials where the coefficient of each term is an integer modulo the *plaintext modulus*. The plaintext modulus parameter impacts [correctness](/advanced/carryless_arithmetic.md#overflow) and performance &mdash; overflow occurs when the plaintext modulus is too small, but increasing it can negatively impact performance. Sunscreen balances these two considerations by setting a default plaintext modulus that prevents overflow in most applications while maintaining good performance.[^1] However, you may at times wish to change it.
+FHE uses some [funky math](../../intro/why.md). At the lowest level, plaintexts are polynomials where the coefficient of each term is an integer modulo the *plaintext modulus*. The plaintext modulus parameter impacts [correctness](../carryless_arithmetic.md#overflow) and performance &mdash; overflow occurs when the plaintext modulus is too small, but increasing it can negatively impact performance. Sunscreen balances these two considerations by setting a default plaintext modulus that prevents overflow in most applications while maintaining good performance.[^1] However, you may at times wish to change it.
 
 [^1]: The default is `64^3 = 262,144`, which allows multiplying any 4 canonical (i.e. all 1s and 0s) 64-bit input values without overflow.
 

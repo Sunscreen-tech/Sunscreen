@@ -18,7 +18,7 @@
   - [How to write an FHE program](./fhe_programs/writing_an_fhe_program/writing_an_fhe_program.md)
     - [Factoring FHE programs](./fhe_programs/factoring_fhe_programs.md)
     - [Limitations](./fhe_programs/writing_an_fhe_program/limitations.md)
-  - [Troubleshooting](./troubleshooting.md)
+  - [Troubleshooting](./fhe_programs/troubleshooting.md)
 - [Runtime](./fhe_programs/runtime/runtime.md)
   - [Key generation](./fhe_programs/runtime/key_generation.md)
   - [Encryption](./fhe_programs/runtime/encryption.md)

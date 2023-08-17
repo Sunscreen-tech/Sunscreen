@@ -32,8 +32,8 @@ pub trait ZkpProgramFnExt {
     /// ```rust
     /// use sunscreen::{
     ///     bulletproofs::BulletproofsBackend,
-    ///     zkp_program, types::zkp::{BulletproofsField, Field},
-    ///     FieldSpec, ZkpRuntime, ZkpProgramFnExt
+    ///     zkp_program, types::zkp::{BulletproofsField, Field, FieldSpec},
+    ///     ZkpRuntime, ZkpProgramFnExt
     /// };
     ///
     /// #[zkp_program]
@@ -54,8 +54,8 @@ pub trait ZkpProgramFnExt {
     /// ```rust
     /// use sunscreen::{
     ///     bulletproofs::BulletproofsBackend,
-    ///     types::zkp::{BulletproofsField, Field},
-    ///     zkp_program, zkp_var, FieldSpec, Compiler, Error, ZkpRuntime,
+    ///     types::zkp::{BulletproofsField, Field, FieldSpec},
+    ///     zkp_program, zkp_var, Compiler, Error, ZkpRuntime,
     /// };
     ///
     /// #[zkp_program]
@@ -96,8 +96,8 @@ pub trait ZkpProgramFnExt {
     /// ```rust
     /// use sunscreen::{
     ///     bulletproofs::BulletproofsBackend,
-    ///     zkp_program, types::zkp::{BulletproofsField, Field},
-    ///     FieldSpec, ZkpProgramFnExt
+    ///     zkp_program, types::zkp::{BulletproofsField, Field, FieldSpec},
+    ///     ZkpProgramFnExt
     /// };
     ///
     /// #[zkp_program]
@@ -130,8 +130,8 @@ pub trait ZkpProgramFnExt {
     /// ```rust
     /// use sunscreen::{
     ///     bulletproofs::BulletproofsBackend,
-    ///     zkp_program, types::zkp::{BulletproofsField, Field},
-    ///     FieldSpec, ZkpProgramFnExt
+    ///     zkp_program, types::zkp::{BulletproofsField, Field, FieldSpec},
+    ///     ZkpProgramFnExt
     /// };
     ///
     /// #[zkp_program]

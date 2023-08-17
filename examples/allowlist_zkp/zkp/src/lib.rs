@@ -1,6 +1,9 @@
 use std::array;
 
-use sunscreen::{types::zkp::Field, zkp_program, zkp_var, FieldSpec};
+use sunscreen::{
+    types::zkp::{Field, FieldSpec},
+    zkp_program, zkp_var,
+};
 
 /// A ZKP proving a private entry is equal to one of the values in a list.
 #[zkp_program]

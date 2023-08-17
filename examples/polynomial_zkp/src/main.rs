@@ -3,11 +3,11 @@ use std::array;
 use sunscreen::{
     bulletproofs::BulletproofsBackend,
     types::zkp::{
-        AddVar, BigInt, BulletproofsField, Coerce, Field, MulVar, NumFieldElements, ProgramNode,
-        SubVar, ToNativeFields,
+        AddVar, BigInt, BulletproofsField, Coerce, Field, FieldSpec, MulVar, NumFieldElements,
+        ProgramNode, SubVar, ToNativeFields,
     },
     zkp::{with_zkp_ctx, ZkpContextOps},
-    zkp_program, zkp_var, Compiler, Error, FieldSpec, TypeName, ZkpBackend, ZkpRuntime,
+    zkp_program, zkp_var, Compiler, Error, TypeName, ZkpBackend, ZkpRuntime,
 };
 
 /// A quotient polynomial over native field elements.

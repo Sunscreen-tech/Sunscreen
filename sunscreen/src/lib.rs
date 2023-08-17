@@ -71,9 +71,7 @@ pub use sunscreen_runtime::{
 };
 #[cfg(feature = "bulletproofs")]
 pub use sunscreen_zkp_backend::bulletproofs;
-pub use sunscreen_zkp_backend::{
-    Error as ZkpError, FieldSpec, Proof, Result as ZkpResult, ZkpBackend,
-};
+pub use sunscreen_zkp_backend::{Error as ZkpError, Proof, Result as ZkpResult, ZkpBackend};
 pub use zkp::{invoke_gadget, ZkpProgramFn, ZkpProgramFnExt};
 
 #[derive(Clone)]

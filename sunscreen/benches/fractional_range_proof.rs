@@ -2,7 +2,7 @@ use std::time::Instant;
 
 use criterion::{criterion_group, criterion_main, Criterion};
 use sunscreen::{
-    types::zkp::{ConstrainCmp, Field, IntoProgramNode, ProgramNode},
+    types::zkp::{ConstrainCmp, Field, FieldSpec, IntoProgramNode, ProgramNode},
     *,
 };
 use sunscreen_zkp_backend::{bulletproofs::BulletproofsBackend, BigInt};

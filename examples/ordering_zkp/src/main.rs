@@ -1,7 +1,7 @@
 use sunscreen::{
     bulletproofs::BulletproofsBackend,
-    types::zkp::{BulletproofsField, ConstrainCmp, Field},
-    zkp_program, Compiler, Error, FieldSpec, ZkpRuntime,
+    types::zkp::{BulletproofsField, ConstrainCmp, Field, FieldSpec},
+    zkp_program, Compiler, Error, ZkpRuntime,
 };
 
 #[zkp_program]

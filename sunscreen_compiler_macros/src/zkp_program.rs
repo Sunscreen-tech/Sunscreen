@@ -201,10 +201,10 @@ fn parse_inner(_attr_params: ZkpProgramAttrs, input_fn: ItemFn) -> Result<TokenS
         }
 
         impl <#generic_ident: #generic_bound> sunscreen::ZkpProgramFn<#generic_ident> for #zkp_program_struct_name {
-            fn build(&self) -> sunscreen::Result<sunscreen::ZkpFrontendCompilation> {
+            fn build(&self) -> sunscreen::Result<sunscreen::zkp::ZkpFrontendCompilation> {
                 use std::cell::RefCell;
                 use std::mem::transmute;
-                use sunscreen::{CURRENT_ZKP_CTX, ZkpContext, ZkpData, Error, INDEX_ARENA, Result, types::{zkp::{ProgramNode, CreateZkpProgramInput, ConstrainEq, IntoProgramNode}, TypeName}};
+                use sunscreen::{Error, INDEX_ARENA, Result, types::{zkp::{ProgramNode, CreateZkpProgramInput, ConstrainEq, IntoProgramNode}, TypeName}, zkp::{CURRENT_ZKP_CTX, ZkpContext, ZkpData}};
 
                 let mut context = ZkpContext::new(ZkpData::new());
 

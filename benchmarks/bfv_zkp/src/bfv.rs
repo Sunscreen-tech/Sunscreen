@@ -8,9 +8,9 @@
 use ark_ff::{BigInt, BigInteger, Fp, FpConfig, MontBackend, MontConfig, PrimeField};
 use ark_poly::univariate::DensePolynomial;
 use sunscreen::{
-    types::zkp::{Field, Mod, RnsRingPolynomial, Scale, ToBinary, ToResidues},
-    zkp_program, Application, Compiler, FieldSpec, Runtime, ZkpApplication, ZkpBackend,
-    ZkpProgramInput, ZkpRuntime,
+    types::zkp::{Field, FieldSpec, Mod, RnsRingPolynomial, Scale, ToBinary, ToResidues},
+    zkp_program, Application, Compiler, Runtime, ZkpApplication, ZkpBackend, ZkpProgramInput,
+    ZkpRuntime,
 };
 use sunscreen_zkp_backend::{bulletproofs::BulletproofsBackend, BigInt as ZkpBigInt, Proof};
 

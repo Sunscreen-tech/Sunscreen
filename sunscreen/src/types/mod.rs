@@ -204,7 +204,7 @@ macro_rules! fhe_var {
 /// Creates new ZKP variables from literals.
 ///
 /// ```
-/// # use sunscreen::{zkp_var, zkp_program, FieldSpec, types::zkp::Field};
+/// # use sunscreen::{zkp_var, zkp_program, types::zkp::{Field, FieldSpec}};
 /// #[zkp_program]
 /// fn equals_ten<F: FieldSpec>(a: Field<F>) {
 ///     let ten = zkp_var!(10);
@@ -215,7 +215,7 @@ macro_rules! fhe_var {
 /// You can also create arrays of variables:
 ///
 /// ```
-/// # use sunscreen::{zkp_var, zkp_program, FieldSpec, types::zkp::Field};
+/// # use sunscreen::{zkp_var, zkp_program, types::zkp::{Field, FieldSpec}};
 /// #[zkp_program]
 /// fn equals_ten<F: FieldSpec>(a: Field<F>) {
 ///     let tens = zkp_var![10, 10, 10];

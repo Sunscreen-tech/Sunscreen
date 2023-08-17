@@ -11,7 +11,7 @@ pub use petgraph::stable_graph::NodeIndex;
 pub use program_node::*;
 pub use rns_polynomial::*;
 use sunscreen_compiler_common::TypeName;
-pub use sunscreen_zkp_backend::{BigInt, Gadget};
+pub use sunscreen_zkp_backend::{BigInt, FieldSpec, Gadget};
 
 pub use sunscreen_runtime::{ToNativeFields, ZkpProgramInputTrait};
 

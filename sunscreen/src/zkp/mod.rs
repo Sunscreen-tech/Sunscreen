@@ -12,23 +12,15 @@ use std::sync::Arc;
 use std::vec;
 use std::{any::Any, cell::RefCell};
 
-/**
- * An internal representation of a ZKP program specification.
- */
+/// An internal representation of a ZKP program specification.
 pub trait ZkpProgramFn<F: FieldSpec> {
-    /**
-     * Create a circuit from this specification.
-     */
+    /// Create a circuit from this specification.
     fn build(&self) -> Result<ZkpFrontendCompilation>;
 
-    /**
-     * Gets the call signature for this program.
-     */
+    /// Gets the call signature for this program.
     fn signature(&self) -> CallSignature;
 
-    /**
-     * Gets the name of this program.
-     */
+    /// Gets the name of this program.
     fn name(&self) -> &str;
 }
 
@@ -40,8 +32,8 @@ pub trait ZkpProgramFnExt {
     /// ```rust
     /// use sunscreen::{
     ///     bulletproofs::BulletproofsBackend,
-    ///     zkp_program, types::zkp::{BulletproofsField, Field},
-    ///     FieldSpec, ZkpRuntime, ZkpProgramFnExt
+    ///     zkp_program, types::zkp::{BulletproofsField, Field, FieldSpec},
+    ///     ZkpRuntime, ZkpProgramFnExt
     /// };
     ///
     /// #[zkp_program]
@@ -62,8 +54,8 @@ pub trait ZkpProgramFnExt {
     /// ```rust
     /// use sunscreen::{
     ///     bulletproofs::BulletproofsBackend,
-    ///     types::zkp::{BulletproofsField, Field},
-    ///     zkp_program, zkp_var, FieldSpec, Compiler, Error, ZkpRuntime,
+    ///     types::zkp::{BulletproofsField, Field, FieldSpec},
+    ///     zkp_program, zkp_var, Compiler, Error, ZkpRuntime,
     /// };
     ///
     /// #[zkp_program]
@@ -104,8 +96,8 @@ pub trait ZkpProgramFnExt {
     /// ```rust
     /// use sunscreen::{
     ///     bulletproofs::BulletproofsBackend,
-    ///     zkp_program, types::zkp::{BulletproofsField, Field},
-    ///     FieldSpec, ZkpProgramFnExt
+    ///     zkp_program, types::zkp::{BulletproofsField, Field, FieldSpec},
+    ///     ZkpProgramFnExt
     /// };
     ///
     /// #[zkp_program]
@@ -138,8 +130,8 @@ pub trait ZkpProgramFnExt {
     /// ```rust
     /// use sunscreen::{
     ///     bulletproofs::BulletproofsBackend,
-    ///     zkp_program, types::zkp::{BulletproofsField, Field},
-    ///     FieldSpec, ZkpProgramFnExt
+    ///     zkp_program, types::zkp::{BulletproofsField, Field, FieldSpec},
+    ///     ZkpProgramFnExt
     /// };
     ///
     /// #[zkp_program]
@@ -173,17 +165,29 @@ use sunscreen_compiler_common::{
 };
 
 #[derive(Clone)]
+/// Represents an operation occuring in the frontend AST of the ZKP program
 pub enum Operation {
+    /// Loads a private input by its positional index.
     PrivateInput(usize),
+    /// Loads a public input by its positional index.
     PublicInput(usize),
+    /// Loads a constant input by its positional index.
     ConstantInput(usize),
+    /// Loads a hidden input by its positional index.
     HiddenInput(usize),
+    /// An equality constraint to the provided `BigInt` value.
     Constraint(BigInt),
+    /// A constant value.
     Constant(BigInt),
+    /// An invoked gadget (which will generate more of the circuit on the backend).
     InvokeGadget(Arc<dyn Gadget>),
+    /// Addition.
     Add,
+    /// Subtraction.
     Sub,
+    /// Multiplication.
     Mul,
+    /// Negation.
     Neg,
 }
 
@@ -287,30 +291,37 @@ impl OperationTrait for Operation {
 }
 
 impl Operation {
+    /// Whether or not this operation is addition.
     pub fn is_add(&self) -> bool {
         matches!(self, Operation::Add)
     }
 
+    /// Whether or not this operation is subtraction.
     pub fn is_sub(&self) -> bool {
         matches!(self, Operation::Sub)
     }
 
+    /// Whether or not this operation is multiplication.
     pub fn is_mul(&self) -> bool {
         matches!(self, Operation::Mul)
     }
 
+    /// Whether or not this operation is negation.
     pub fn is_neg(&self) -> bool {
         matches!(self, Operation::Neg)
     }
 
+    /// Whether or not this operation is a private input.
     pub fn is_private_input(&self) -> bool {
         matches!(self, Operation::PrivateInput(_))
     }
 
+    /// Whether or not this operation is a public input.
     pub fn is_public_input(&self) -> bool {
         matches!(self, Operation::PublicInput(_))
     }
 
+    /// Whether or not this operation is a hidden input.
     pub fn is_hidden_input(&self) -> bool {
         matches!(self, Operation::HiddenInput(_))
     }

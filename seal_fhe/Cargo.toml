@@ -36,3 +36,4 @@ serde_json = { workspace = true }
 [features]
 hexl = []
 transparent-ciphertexts = []
+deterministic = []

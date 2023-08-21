@@ -382,6 +382,8 @@ impl Drop for Decryptor {
 #[cfg(test)]
 mod tests {
     use crate::*;
+
+    #[cfg(feature = "deterministic")]
     use std::hash::{Hash, Hasher};
 
     #[test]

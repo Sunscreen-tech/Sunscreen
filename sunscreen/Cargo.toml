@@ -57,6 +57,7 @@ serde_json = { workspace = true }
 bulletproofs = ["sunscreen_zkp_backend/bulletproofs"]
 hexl = ["seal_fhe/hexl"]
 transparent-ciphertexts = ["seal_fhe/transparent-ciphertexts"]
+deterministic = ["seal_fhe/deterministic", "sunscreen_runtime/deterministic"]
 
 [[bench]]
 name = "fractional_range_proof"

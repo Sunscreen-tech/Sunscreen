@@ -383,9 +383,6 @@ impl Drop for Decryptor {
 mod tests {
     use crate::*;
 
-    #[cfg(feature = "deterministic")]
-    use std::hash::{Hash, Hasher};
-
     #[test]
     fn can_create_encryptor_from_public_key() {
         let params = BfvEncryptionParametersBuilder::new()
@@ -568,56 +565,64 @@ mod tests {
     }
 
     #[cfg(feature = "deterministic")]
-    #[test]
-    fn encrypt_deterministic() {
+    mod deterministic {
         use std::collections::hash_map::DefaultHasher;
+        use std::hash::{Hash, Hasher};
 
-        let params = BfvEncryptionParametersBuilder::new()
-            .set_poly_modulus_degree(8192)
-            .set_coefficient_modulus(
-                CoefficientModulus::create(8192, &[50, 30, 30, 50, 50]).unwrap(),
-            )
-            .set_plain_modulus(PlainModulus::batching(8192, 20).unwrap())
-            .build()
-            .unwrap();
+        use crate::*;
 
-        let ctx = Context::new(&params, false, SecurityLevel::TC128).unwrap();
+        #[test]
+        fn encrypt_deterministic() {
+            let params = BfvEncryptionParametersBuilder::new()
+                .set_poly_modulus_degree(8192)
+                .set_coefficient_modulus(
+                    CoefficientModulus::create(8192, &[50, 30, 30, 50, 50]).unwrap(),
+                )
+                .set_plain_modulus(PlainModulus::batching(8192, 20).unwrap())
+                .build()
+                .unwrap();
 
-        let encoder = BFVEncoder::new(&ctx).unwrap();
+            let ctx = Context::new(&params, false, SecurityLevel::TC128).unwrap();
 
-        let mut data = vec![];
+            let encoder = BFVEncoder::new(&ctx).unwrap();
 
-        for i in 0..encoder.get_slot_count() {
-            data.push(i as u64);
+            let mut data = vec![];
+
+            for i in 0..encoder.get_slot_count() {
+                data.push(i as u64);
+            }
+
+            let plaintext = encoder.encode_unsigned(&data).unwrap();
+
+            let public_key_bytes = include_bytes!("../tests/data/public_key.bin");
+            let secret_key_bytes = include_bytes!("../tests/data/secret_key.bin");
+
+            let public_key = PublicKey::from_bytes(&ctx, public_key_bytes).unwrap();
+            let secret_key = SecretKey::from_bytes(&ctx, secret_key_bytes).unwrap();
+
+            let encryptor =
+                Encryptor::with_public_and_secret_key(&ctx, &public_key, &secret_key).unwrap();
+            let decryptor = Decryptor::new(&ctx, &secret_key).unwrap();
+
+            let ciphertext = encryptor
+                .encrypt_deterministic(&plaintext, &[0, 0, 0, 0, 0, 0, 0, 0])
+                .unwrap();
+            let decrypted = decryptor.decrypt(&ciphertext).unwrap();
+
+            let data_2 = encoder.decode_unsigned(&decrypted).unwrap();
+
+            assert_eq!(data, data_2);
+
+            let cipher_bytes = ciphertext.as_bytes().unwrap();
+
+            let mut s = DefaultHasher::new();
+            cipher_bytes.hash(&mut s);
+            let hash = s.finish();
+
+            assert_eq!(hash, 14319785560025809101);
         }
-
-        let plaintext = encoder.encode_unsigned(&data).unwrap();
-
-        let public_key_bytes = include_bytes!("../tests/data/public_key.bin");
-        let secret_key_bytes = include_bytes!("../tests/data/secret_key.bin");
-
-        let public_key = PublicKey::from_bytes(&ctx, public_key_bytes).unwrap();
-        let secret_key = SecretKey::from_bytes(&ctx, secret_key_bytes).unwrap();
-
-        let encryptor =
-            Encryptor::with_public_and_secret_key(&ctx, &public_key, &secret_key).unwrap();
-        let decryptor = Decryptor::new(&ctx, &secret_key).unwrap();
-
-        let ciphertext = encryptor
-            .encrypt_deterministic(&plaintext, &[0, 0, 0, 0, 0, 0, 0, 0])
-            .unwrap();
-        let decrypted = decryptor.decrypt(&ciphertext).unwrap();
-
-        let data_2 = encoder.decode_unsigned(&decrypted).unwrap();
-
-        assert_eq!(data, data_2);
-
-        let cipher_bytes = ciphertext.as_bytes().unwrap();
-
-        let mut s = DefaultHasher::new();
-        cipher_bytes.hash(&mut s);
-        let hash = s.finish();
-
-        assert_eq!(hash, 14319785560025809101);
     }
+
+    #[cfg(feature = "deterministic")]
+    pub use deterministic::*;
 }

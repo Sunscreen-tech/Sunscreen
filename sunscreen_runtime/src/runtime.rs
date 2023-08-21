@@ -25,6 +25,42 @@ use sunscreen_zkp_backend::CompiledZkpProgram;
 use sunscreen_zkp_backend::Proof;
 use sunscreen_zkp_backend::ZkpBackend;
 
+#[cfg(feature = "deterministic")]
+fn encrypt_function(
+    encryptor: &Encryptor,
+    val: &seal_fhe::Plaintext,
+    seed: Option<&[u64; 8]>,
+) -> Result<(
+    seal_fhe::Ciphertext,
+    PolynomialArray,
+    PolynomialArray,
+    seal_fhe::Plaintext,
+)> {
+    let result = if let Some(seed) = seed {
+        encryptor.encrypt_return_components_deterministic(val, seed)
+    } else {
+        encryptor.encrypt_return_components(val)
+    };
+
+    result.map_err(Error::SealError)
+}
+
+#[cfg(not(feature = "deterministic"))]
+fn encrypt_function(
+    encryptor: &Encryptor,
+    val: &seal_fhe::Plaintext,
+    _seed: Option<&[u64; 8]>,
+) -> Result<(
+    seal_fhe::Ciphertext,
+    PolynomialArray,
+    PolynomialArray,
+    seal_fhe::Plaintext,
+)> {
+    encryptor
+        .encrypt_return_components(val)
+        .map_err(Error::SealError)
+}
+
 enum Context {
     Seal(SealContext),
 }
@@ -431,7 +467,31 @@ where
     where
         P: TryIntoPlaintext + TypeName,
     {
-        self.encrypt_return_components_switched(val, public_key, false)
+        self.encrypt_return_components_switched(val, public_key, false, None)
+            .map(|x| x.ciphertext)
+    }
+
+    /**
+     * DO NOT USE THIS FUNCTION IN PRODUCTION: IT PRODUCES DETERMINISTIC
+     * ENCRYPTIONS. IT IS INHERENTLY INSECURE, AND ONLY MEANT FOR TESTING OR
+     * DEMONSTRATION PURPOSES.
+     *
+     * Encrypts the given [`FheType`](crate::FheType) using the given public key.
+     *
+     * Returns [`Error::ParameterMismatch`] if the plaintext is incompatible with this runtime's
+     * scheme.
+     */
+    #[cfg(feature = "deterministic")]
+    pub fn encrypt_deterministic<P>(
+        &self,
+        val: P,
+        public_key: &PublicKey,
+        seed: &[u64; 8],
+    ) -> Result<Ciphertext>
+    where
+        P: TryIntoPlaintext + TypeName,
+    {
+        self.encrypt_return_components_switched(val, public_key, false, Some(seed))
             .map(|x| x.ciphertext)
     }
 
@@ -451,8 +511,33 @@ where
     where
         P: TryIntoPlaintext + TypeName,
     {
-        self.encrypt_return_components_switched(val, public_key, true)
+        self.encrypt_return_components_switched(val, public_key, true, None)
     }
+
+    /**
+     * DO NOT USE THIS FUNCTION IN PRODUCTION: IT PRODUCES DETERMINISTIC
+     * ENCRYPTIONS. IT IS INHERENTLY INSECURE, AND ONLY MEANT FOR TESTING OR
+     * DEMONSTRATION PURPOSES.
+     *
+     * Encrypts the given [`FheType`](crate::FheType) using the given public key.
+     *
+     * Returns [`Error::ParameterMismatch`] if the plaintext is incompatible with this runtime's
+     * scheme.
+     */
+    #[cfg(feature = "deterministic")]
+    #[allow(dead_code)]
+    fn encrypt_return_components_deterministic<P>(
+        &self,
+        val: P,
+        public_key: &PublicKey,
+        seed: &[u64; 8],
+    ) -> Result<BFVEncryptionComponents>
+    where
+        P: TryIntoPlaintext + TypeName,
+    {
+        self.encrypt_return_components_switched(val, public_key, true, Some(seed))
+    }
+
     /**
      * Encrypts the given [`FheType`](crate::FheType) using the given public
      * key, returning the encrypted value along with the components added to the
@@ -468,6 +553,7 @@ where
         val: P,
         public_key: &PublicKey,
         export_components: bool,
+        seed: Option<&[u64; 8]>,
     ) -> Result<BFVEncryptionComponents>
     where
         P: TryIntoPlaintext + TypeName,
@@ -495,9 +581,7 @@ where
                         let ciphertext = if export_components {
                             encryptor.encrypt(p).map_err(Error::SealError)
                         } else {
-                            let (ciphertext, u, e, r) = encryptor
-                                .encrypt_return_components(p)
-                                .map_err(Error::SealError)?;
+                            let (ciphertext, u, e, r) = encrypt_function(&encryptor, p, seed)?;
 
                             let r_context = WithContext {
                                 params: fhe_data.params.clone(),

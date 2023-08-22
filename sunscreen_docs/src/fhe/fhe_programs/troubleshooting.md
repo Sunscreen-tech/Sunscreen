@@ -1,19 +1,19 @@
 # Troubleshooting
 ## How do I debug my algorithm?
-You can write your algorithm [in a generic way](/fhe_programs/plaintext_execution.md), run it without FHE, and single step through it.
+You can write your algorithm [in a generic way](./factoring_fhe_programs.md), run it without FHE, and single step through it.
 You can also compare results executing with and without FHE.
 
 Another technique that can be helpful is to call the `render()` method on your compiled `FheProgram`. This returns a `String` containing the compiled execution graph in [DOT](https://www.graphviz.org/doc/info/lang.html) format. You can write this to a file and render it with [Graphviz](https://graphviz.org/), a standard graph rendering library.
 
 ## My FHE program yields the wrong answer. I'm certain the algorithm is correct.
 Your issue might be one of 2 things:
-1. You exceeded the [noise budget](/advanced/noise_margin.md). You can check the noise budget remaining on a ciphertext (this requires the private key) by calling (`runtime.measure_noise_budget(&ciphertext, &private_key)`). If this value is `0`, you exceeded the noise budget and your value is corrupted. The most common scenario where you will encounter this issue is when [chaining](#i-need-to-use-the-output-of-one-fhe-program-as-the-input-to-another-ie-chain-program-executions) multiple FHE program executions.
-2. Overflow. [Try increasing the plaintext modulus](/advanced/plain_modulus/choosing_plain_modulus.md). Due to [carryless arithmetic](/advanced/carryless_arithmetic.md), understanding overflow can be a bit tricky. Usually, overflow occurs when your plaintext modulus is too small and a digit wraps. Values can also overflow during multiplication due to running out of digits. However, this is very rare in FHE.
+1. You exceeded the [noise budget](../advanced/noise_margin.md). You can check the noise budget remaining on a ciphertext (this requires the private key) by calling (`runtime.measure_noise_budget(&ciphertext, &private_key)`). If this value is `0`, you exceeded the noise budget and your value is corrupted. The most common scenario where you will encounter this issue is when [chaining](#i-need-to-use-the-output-of-one-fhe-program-as-the-input-to-another-ie-chain-program-executions) multiple FHE program executions.
+2. Overflow. [Try increasing the plaintext modulus](../advanced/plain_modulus/choosing_plain_modulus.md). Due to [carryless arithmetic](../advanced/carryless_arithmetic.md), understanding overflow can be a bit tricky. Usually, overflow occurs when your plaintext modulus is too small and a digit wraps. Values can also overflow during multiplication due to running out of digits. However, this is very rare in FHE.
 
 ## I need to use the output of one FHE program as the input to another (i.e. chain program executions).
 We will likely improve the experience in the future, but you can do this today as follows:
 
-1. Compile all your FHE programs with an increased [`noise_margin`](/advanced/noise_margin.md#changing-the-noise-margin) and look at their `metadata.params.lattice_dimension` values.
+1. Compile all your FHE programs with an increased [`noise_margin`](../advanced/noise_margin.md#changing-the-noise-margin) and look at their `metadata.params.lattice_dimension` values.
 2. Change your application so the that the program with the largest lattice dimension (program `x`) compiles as it does in step 1, while the remaining programs call `.with_params(&x.metadata.params)` during compilation. This causes the remaining programs to use the same parameters verbatim.
 
 The `noise_margin` you chose in step 1 determines how many times you can chain together program executions.

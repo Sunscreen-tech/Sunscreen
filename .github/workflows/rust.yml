@@ -53,7 +53,7 @@ jobs:
       run: cargo test --workspace --verbose
       working-directory: ./examples/allowlist_zkp
     - name: Build sunscreen and bincode
-      run: cargo build --release --package sunscreen --package bincode
+      run: cargo build --release --features bulletproofs --package sunscreen --package bincode
     - name: Build mdBook
       run: cargo build --release
       working-directory: ./mdBook

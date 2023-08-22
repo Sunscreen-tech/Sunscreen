@@ -1,5 +1,5 @@
 [book]
-authors = ["Rick Weber", "Ravital Solomon"]
+authors = ["Rick Weber", "Ravital Solomon", "Sam Tay"]
 language = "en"
 multilingual = false
 src = "src"
@@ -7,6 +7,9 @@ title = "Sunscreen Documentation"
 
 [output.html]
 mathjax-support = true
+
+[output.html.fold]
+enable = true
 
 [rust]
 edition = "2021"

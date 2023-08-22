@@ -2,7 +2,7 @@
 
 When learning arithmetic in grade school, you learned the base 10 system where digits range from 0-9. Whenever adding digits exceeds 9, you have to carry the 1. However, this is not the only way to do arithmetic; we can instead omit the carry and allow digits to exceed 9!
 
-Why would we want to do this? FHE operations actually add and multiply [polynomials](/intro/why.md) under the hood. If we treat each coefficient of the polynomial as a digit and use carryless arithmetic, we can trick them into behaving like numbers. This results in more efficient data types.
+Why would we want to do this? FHE operations actually add and multiply [polynomials](../intro/why.md) under the hood. If we treat each coefficient of the polynomial as a digit and use carryless arithmetic, we can trick them into behaving like numbers. This results in more efficient data types.
 
 ## Addition
 Let's start with a simple carryless addition example. Adding 99 + 43 without propagating carries gives us:
@@ -35,7 +35,7 @@ We can easily extend this reasoning to base 2 (binary). Under carryless arithmet
 
 Again `-1 2 1` equals `1`, as does `0 0 1`; the representation is not unique.
 
-[^1]: `p` is the [plain modulus](/advanced/plain_modulus/plain_modulus.md)
+[^1]: `p` is the [plain modulus](../advanced/plain_modulus/plain_modulus.md)
 
 
 ### Adding polynomials

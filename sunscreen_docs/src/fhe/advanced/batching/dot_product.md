@@ -86,7 +86,7 @@ c = c + c.swapRows()
 
 ## Implement algorithm
 
-We're going to write this algorithm [generically](/fhe_programs/factoring_fhe_programs.md) so we can reuse the code for `Batched` types with different `LANES` type arguments:
+We're going to write this algorithm [generically](../../fhe_programs/factoring_fhe_programs.md) so we can reuse the code for `Batched` types with different `LANES` type arguments:
 
 ```rust
 use sunscreen_compiler::{

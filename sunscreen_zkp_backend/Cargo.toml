@@ -1,6 +1,6 @@
 [package]
 name = "sunscreen_zkp_backend"
-version = "0.1.0"
+version = "0.8.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -8,8 +8,8 @@ edition = "2021"
 [dependencies]
 curve25519-dalek = { workspace = true }
 bulletproofs = { workspace = true, optional = true }
-crypto-bigint = { workspace = true}
-merlin = { workspace = true, optional = true}
+crypto-bigint = { workspace = true }
+merlin = { workspace = true, optional = true }
 bumpalo = { workspace = true }
 petgraph = { workspace = true }
 sunscreen_compiler_common = { workspace = true }
@@ -20,7 +20,4 @@ log = { workspace = true }
 
 [features]
 default = ["bulletproofs"]
-bulletproofs = [
-    "dep:bulletproofs",
-    "dep:merlin"
-]
+bulletproofs = ["dep:bulletproofs", "dep:merlin"]

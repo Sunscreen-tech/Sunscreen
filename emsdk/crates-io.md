@@ -1,1 +1,1 @@
-TODO
+This crate is a component of the [Sunscreen compiler](https://crates.io/crates/sunscreen).

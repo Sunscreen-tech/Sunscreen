@@ -21,6 +21,10 @@ readme = "crates-io.md"
 [package.metadata.playground]
 features = ["bulletproofs"]
 
+# Build docs.rs with these features
+[package.metadata.docs.rs]
+features = ["bulletproofs"]
+
 [dependencies]
 bumpalo = { workspace = true }
 crypto-bigint = { workspace = true }

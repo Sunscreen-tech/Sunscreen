@@ -1,6 +1,6 @@
 [package]
 name = "seal_fhe"
-version = "0.7.0"
+version = "0.8.0"
 edition = "2021"
 
 authors = ["Sunscreen LLC"]
@@ -23,7 +23,7 @@ thiserror = { workspace = true }
 static_assertions = { workspace = true }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-link-cplusplus= { workspace = true }
+link-cplusplus = { workspace = true }
 
 [build-dependencies]
 cmake = { workspace = true }

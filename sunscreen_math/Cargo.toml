@@ -1,6 +1,6 @@
 [package]
 name = "sunscreen_math"
-version = "0.7.0"
+version = "0.8.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -20,7 +20,7 @@ cust = { workspace = true, optional = true }
 num = { workspace = true }
 crypto-bigint = { workspace = true }
 paste = { workspace = true }
-thiserror = {workspace = true }
+thiserror = { workspace = true }
 sunscreen_math_macros = { workspace = true }
 
 [build-dependencies]
@@ -38,7 +38,15 @@ default = []
 nightly-features = []
 cuda = ["dep:find_cuda_helper", "dep:cust", "gpu"]
 metal = ["dep:metal", "gpu"]
-webgpu = ["dep:wgpu", "dep:tokio", "dep:futures", "dep:naga", "dep:wgpu-core", "dep:bytemuck", "gpu"]
+webgpu = [
+  "dep:wgpu",
+  "dep:tokio",
+  "dep:futures",
+  "dep:naga",
+  "dep:wgpu-core",
+  "dep:bytemuck",
+  "gpu",
+]
 opencl = ["dep:ocl", "gpu"]
 gpu = []
 pina = []

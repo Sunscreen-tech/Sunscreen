@@ -8,7 +8,7 @@
 	url = https://github.com/emscripten-core/emsdk.git
 [submodule "mdBook"]
 	path = mdBook
-	url = https://github.com/rickwebiii/mdBook.git
+	url = https://github.com/Sunscreen-tech/mdBook.git
 [submodule "rust-playground"]
 	path = rust-playground
 	url = https://github.com/Sunscreen-tech/rust-playground.git

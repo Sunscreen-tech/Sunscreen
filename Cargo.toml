@@ -78,12 +78,12 @@ fs_extra = "1.2.0"
 reqwest = { version = "0.11.10", features = ["blocking"] }
 rand_distr = "0.4.3"
 
-curve25519-dalek = { package = "sunscreen_curve25519", path = "./sunscreen_curve25519", features = [
+curve25519-dalek = { version = "0.8.0", package = "sunscreen_curve25519", path = "./sunscreen_curve25519", features = [
     "serde",
     "u64_backend",
     "alloc",
 ], default-features = false }
-bulletproofs = { path = "./sunscreen_bulletproofs", package = "sunscreen_bulletproofs", features = [
+bulletproofs = { version = "0.8.0", path = "./sunscreen_bulletproofs", package = "sunscreen_bulletproofs", features = [
     "yoloproofs",
 ] }
 emsdk = { version = "^0.1", path = "./emsdk" }

@@ -3,7 +3,7 @@ name = "sunscreen_backend"
 version = "0.8.0"
 edition = "2021"
 
-authors = ["Sunscreen LLC"]
+authors = ["Sunscreen"]
 rust-version = "1.56.0"
 license = "AGPL-3.0-only"
 description = "The backend for the Sunscreen compiler."

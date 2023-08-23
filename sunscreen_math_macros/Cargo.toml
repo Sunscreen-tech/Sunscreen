@@ -3,7 +3,7 @@ name = "sunscreen_math_macros"
 version = "0.8.0"
 edition = "2021"
 
-authors = ["Sunscreen LLC"]
+authors = ["Sunscreen"]
 rust-version = "1.56.0"
 license = "AGPL-3.0-only"
 description = "This crate contains macros that support the Sunscreen compiler."

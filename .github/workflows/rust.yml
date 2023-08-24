@@ -48,7 +48,7 @@ jobs:
       run: cargo fmt --check
     # Build and run the tests
     - name: Build and run tests
-      run: cargo test --workspace --verbose --release
+      run: cargo test --workspace --verbose --release --features deterministic
     - name: Verify examples outside of workspace (allowlist_zkp)
       run: cargo test --workspace --verbose
       working-directory: ./examples/allowlist_zkp

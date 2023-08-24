@@ -619,7 +619,14 @@ mod tests {
             cipher_bytes.hash(&mut s);
             let hash = s.finish();
 
-            assert_eq!(hash, 14319785560025809101);
+            assert_eq!(
+                hash,
+                if cfg!(target_os = "macos") {
+                    14319785560025809101
+                } else {
+                    9942548233613012008
+                }
+            );
         }
     }
 

@@ -3,7 +3,7 @@ use num::{BigInt, FromPrimitive, Num};
 use proc_macro::TokenStream;
 use proc_macro2::TokenStream as TokenStream2;
 use quote::quote;
-use syn::{parse_macro_input, DeriveInput};
+use syn::{parse_macro_input, DeriveInput, ImplItem, ItemImpl, Type, Path};
 
 #[derive(FromDeriveInput, Debug)]
 #[darling(attributes(barrett_config), forward_attrs(allow, doc, cfg))]
@@ -91,5 +91,85 @@ pub fn derive_barrett_config(input: proc_macro::TokenStream) -> TokenStream {
             const S: #sunscreen_path::Uint<#num_limbs> = #sunscreen_path::Uint::from_words(#s_limbs);
             const T: #sunscreen_path::Uint<#num_limbs> = #sunscreen_path::Uint::from_words(#t_limbs);
         }
+    }.into()
+}
+
+#[proc_macro_attribute]
+/// This trait auto impls all combinations of borrowed and owned for binary std::ops traits.
+/// To use this, you must impl `std::ops::Op<&T, Output=T> for &T` and this macro will auto
+/// create the other traits to call your impl by borrowing the rhs or self as appropriate.
+///
+/// The arguments are as follows:
+/// $trait:ty: The binary Ops trait you're trying to implement.
+/// $ty:ty: the type for which you wish to derive the borrowed and owned variants.
+/// ($($t:ty,($($bound:ty)+))*): The bounds on generics for $ty
+/// $($gen_arg:ty)*): The generics on $ty
+///
+/// Example
+/// ```rust
+/// use num::traits::{WrappingAdd, WrappingMul, WrappingNeg, WrappingSub};
+/// use std::ops::Add;
+/// use sunscreen_math::refify;
+///
+/// pub trait WrappingSemantics:     
+///     Copy + Clone + std::fmt::Debug + WrappingAdd + WrappingMul + WrappingSub + WrappingNeg
+/// {
+/// }
+///
+/// impl WrappingSemantics for u64 {}
+///
+/// #[repr(transparent)]
+/// #[derive(Clone, Copy, Debug)]
+/// pub struct ZInt<T>(T)
+/// where
+///     T: WrappingSemantics;
+///
+/// impl<T> Add<&ZInt<T>> for &ZInt<T>
+/// where
+/// T: WrappingSemantics,
+/// {
+///     type Output = ZInt<T>;
+///
+///     fn add(self, rhs: &ZInt<T>) -> Self::Output {
+///         ZInt(self.0.wrapping_add(&rhs.0))
+///     }
+/// }
+///
+/// // Now if a is ZInt<T>, we can a + a, &a + a, a + &a, and &a + &a.
+/// refify! {
+/// Add, ZInt, (T, (WrappingSemantics)), T
+/// }
+/// ```
+pub fn refify_binary_op(
+    attr: TokenStream,
+    input: proc_macro::TokenStream,
+) -> proc_macro::TokenStream {
+    let input = parse_macro_input!(input as ItemImpl);
+    let generics = &input.generics;
+    let self_type = &input.self_ty;
+    let trait_name = &input.trait_;
+
+    if !matches!(**self_type, Type::Reference(_)) {
+        return quote! { compile_error!("You must use refify_binary_op on an impl of &T") }.into();
+    }
+
+    let trait_path = if let Some((_, path, _)) = trait_name {
+        path
+    } else {
+        return quote! { compile_error!("Use refify_binary_op on trait impls") }.into()
+    };
+
+    let trait_args = if let gen_args = trait_path.segments.iter().last().unwrap().arguments {
+        if gen_args.is_empty() {
+            return quote! { compile_error!("refify_binary_op requires a generic reference type as the first trait type argument.") }.into();
+        }
+
+        if gen_args
+    } else {
+        return quote! { compile_error!("refify_binary_op requires a binary operation trait with one type argument") }.into();
+    };
+
+    quote! {
+        #trait_path
     }.into()
 }

@@ -1,7 +1,8 @@
-use crate::{refify, Error, One, Zero};
+use crate::{Error, One, Zero};
 use crypto_bigint::NonZero;
 pub use crypto_bigint::Uint;
 use num::traits::{WrappingAdd, WrappingMul, WrappingNeg, WrappingSub};
+use sunscreen_math_macros::refify;
 use std::{
     marker::PhantomData,
     ops::{Add, Mul},
@@ -89,6 +90,7 @@ where
     }
 }
 
+#[refify_binary_op]
 impl<T> Add<&ZInt<T>> for &ZInt<T>
 where
     T: WrappingSemantics,
@@ -100,10 +102,7 @@ where
     }
 }
 
-refify! {
-    Add, ZInt, (T, (WrappingSemantics)), T
-}
-
+#[refify_binary_op]
 impl<T> Mul<&ZInt<T>> for &ZInt<T>
 where
     T: WrappingSemantics,
@@ -113,10 +112,6 @@ where
     fn mul(self, rhs: &ZInt<T>) -> Self::Output {
         self.0.wrapping_mul(&rhs.0).into()
     }
-}
-
-refify! {
-    Mul, ZInt, (T, (WrappingSemantics)), T
 }
 
 impl<T> Zero for ZInt<T>
@@ -187,6 +182,7 @@ impl<const N: usize, B: ArithmeticBackend<N>> Clone for Zq<N, B> {
     }
 }
 
+/*
 impl<const N: usize, B: ArithmeticBackend<N>> Add<Zq<N, B>> for Zq<N, B> {
     type Output = Zq<N, B>;
 
@@ -210,7 +206,7 @@ impl<const N: usize, B: ArithmeticBackend<N>> Add<Zq<N, B>> for &Zq<N, B> {
         self.add(&rhs)
     }
 }
-
+ 
 impl<const N: usize, B: ArithmeticBackend<N>> Add<&Zq<N, B>> for &Zq<N, B> {
     type Output = Zq<N, B>;
 
@@ -220,7 +216,22 @@ impl<const N: usize, B: ArithmeticBackend<N>> Add<&Zq<N, B>> for &Zq<N, B> {
             _phantom: PhantomData,
         }
     }
+}*/
+
+impl<const N: usize, B> Add<&Zq<N, B>> for &Zq<N, B>
+where B: ArithmeticBackend<N>
+{
+    type Output = Zq<N, B>;
+
+    fn add(self, rhs: &Zq<N, B>) -> Self::Output {
+        Self::Output {
+            val: B::add_mod(&self.val, &rhs.val),
+            _phantom: PhantomData,
+        }
+    }
 }
+
+//refify! { Add, Zq, ((B, ArithmeticBackend<N>)), const N: usize, B}
 
 impl<const N: usize, B: ArithmeticBackend<N>> Mul<Zq<N, B>> for Zq<N, B> {
     type Output = Zq<N, B>;

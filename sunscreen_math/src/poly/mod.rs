@@ -1,6 +1,8 @@
 use std::ops::{Add, Mul};
 
-use crate::{refify, ring::Ring};
+use sunscreen_math_macros::refify;
+
+use crate::{ring::Ring};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 /// A polynomial over the ring `T`.
@@ -19,13 +21,15 @@ impl<T> Polynomial<T>
 where
     T: Ring,
 {
-    fn new(coeffs: &[T]) -> Self {
+    /// Construct a new polynomial with the given coefficients.
+    pub fn new(coeffs: &[T]) -> Self {
         Self {
             coeffs: coeffs.to_owned(),
         }
     }
 }
 
+#[refify_binary_op]
 impl<T> Add<&Polynomial<T>> for &Polynomial<T>
 where
     T: Ring,
@@ -48,8 +52,7 @@ where
     }
 }
 
-refify! { Add, Polynomial, (T, (Ring)), T}
-
+#[refify_binary_op]
 impl<T> Mul<&Polynomial<T>> for &Polynomial<T>
 where
     T: Ring,
@@ -71,8 +74,6 @@ where
         Polynomial { coeffs: out_coeffs }
     }
 }
-
-refify! { Mul, Polynomial, (T, (Ring)), T}
 
 #[cfg(test)]
 mod tests {

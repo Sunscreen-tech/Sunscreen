@@ -90,3 +90,7 @@ pub trait FromBytes {
     where
         Self: Sized;
 }
+
+extern "C" fn __cxa_allocate_exception() {
+    panic!();
+}

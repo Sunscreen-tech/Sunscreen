@@ -139,3 +139,20 @@ node http-server /git/repo/root/dir
 Open Chrome and navigate to `http://localhost:8080/index.html`. Hit F12 to open the debugger. Chrome should find your source maps allowing you to navigate the stack, set breakpoints, step, continue, etc. all with real source code. Unfortunately, you can't see variables.
 
 You can also use the `log` crate to print information to the debug console. If you go this route, use `simple-logger` as the logger backend; don't use a WASM-specific crate (e.g. `wasm-logger`) for this because emscripten already routes stdout and stderr to the console.
+
+
+# WASM32
+## macOS
+Install clang using Homebrew. The one in Apple's build tools doesn't support WASM32
+
+```bash
+brew install llvm
+```
+
+Set the CXX environment variable to homebrew's clang
+
+```bash
+export CXX=/opt/homebrew/opt/llvm/bin/clang
+export CC=/opt/homebrew/opt/llvm/bin/clang
+export AR=/opt/homebrew/opt/llvm/bin/llvm-ar
+```

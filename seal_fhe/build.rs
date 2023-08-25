@@ -34,6 +34,12 @@ fn compile_native(profile: &str, out_path: &Path) {
         "OFF"
     };
 
+    println!("cargo:rerun-if-env-changed=CXX");
+    println!("cargo:rerun-if-env-changed=CC");
+    println!("cargo:rerun-if-env-changed=AR");
+
+    let target = std::env::var("TARGET").expect("Failed to get target");
+
     let forbid_transparent_ciphertexts =
         if std::env::var("CARGO_FEATURE_TRANSPARENT_CIPHERTEXTS").is_ok() {
             "OFF"
@@ -41,12 +47,29 @@ fn compile_native(profile: &str, out_path: &Path) {
             "ON"
         };
 
+    let base_cxx_flags = if target == "wasm32-wasi" {
+        let wasi_sysroot = PathBuf::from("./wasi-sysroot").canonicalize().unwrap();
+
+        println!("cargo:rustc-link-search={}/lib/wasm32-wasi", wasi_sysroot.to_str().unwrap());
+        println!("cargo:rustc-link-lib=c++");
+        println!("cargo:rustc-link-lib=c++abi");
+        println!("cargo:rustc-link-lib=c");
+
+        format!("--no-standard-libraries --sysroot={} -D_WASI_EMULATED_PROCESS_CLOCKS -DEMSCRIPTEN -Wl,--export-all", wasi_sysroot.to_str().unwrap())
+    } else {
+        "".to_owned()
+    };
+
+    let release_cxx_flags = format!("{base_cxx_flags} -DNDEBUG -O3");
+
     let mut builder = Config::new("SEAL");
 
     builder
         .define("CMAKE_BUILD_TYPE", profile)
-        .define("CMAKE_CXX_FLAGS_RELEASE", "-DNDEBUG -O3")
-        .define("CMAKE_C_FLAGS_RELEASE", "-DNDEBUG -O3")
+        .define("CMAKE_CXX_FLAGS_RELEASE", &release_cxx_flags)
+        .define("CMAKE_C_FLAGS_RELEASE", &release_cxx_flags)
+        .define("CMAKE_CXX_FLAGS_DEBUG", &base_cxx_flags)
+        .define("CMAKE_C_FLAGS_DEBUG", &base_cxx_flags)
         .define("SEAL_USE_GAUSSIAN_NOISE", "ON")
         .define("SEAL_BUILD_STATIC_SEAL_C", "ON")
         .define("SEAL_USE_INTEL_HEXL", hexl)
@@ -58,12 +81,20 @@ fn compile_native(profile: &str, out_path: &Path) {
         .define("SEAL_USE_CXX17", "ON")
         .define("SEAL_USE_INTRIN", "ON")
         .define("SEAL_USE_MSGSL", "OFF")
-        .define("SEAL_USE_ZLIB", "ON")
+        .define("SEAL_USE_ZLIB", "OFF")
         .define("SEAL_USE_ZSTD", "ON")
+        .define("CMAKE_CXX_COMPILER_WORKS", "TRUE")
+        .define("CMAKE_C_COMPILER_WORKS", "TRUE")
         .define(
             "SEAL_THROW_ON_TRANSPARENT_CIPHERTEXT",
             forbid_transparent_ciphertexts,
-        );
+        )
+        .define("CMAKE_VERBOSE_MAKEFILE", "ON")
+        ;
+
+    if let Ok(ar) = std::env::var("AR") {
+        builder.define("CMAKE_AR", ar);
+    };
 
     setup_macos_cross_compile(&mut builder);
 
@@ -141,7 +172,7 @@ fn main() {
         .clang_arg("-xc++")
         .clang_arg("-std=c++17");
 
-    if target == "wasm32-unknown-emscripten" {
+    if target == "wasm32-unknown-emscripten" || target == "wasm32-wasi" {
         // Bindgen appears to be broken under wasm. Just generate bindings with
         // the host's target.
         builder = builder

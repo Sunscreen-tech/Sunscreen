@@ -633,8 +633,6 @@ dependencies = [
  "num-traits 0.2.15",
  "once_cell",
  "oorandom",
- "plotters",
- "rayon",
  "regex",
  "serde",
  "serde_derive",

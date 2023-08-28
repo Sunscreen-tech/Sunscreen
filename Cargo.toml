@@ -44,7 +44,7 @@ thiserror = "1.0.44"
 naga = { version = "0.13.0", features = ["wgsl-in"] }
 wgpu-core = { version = "0.17.0", features = ["vulkan", "wgsl"] }
 find_cuda_helper = "0.2.0"
-criterion = "0.5.1"
+criterion = {version = "0.5.1", default-features = false }
 darling = "0.20.3"
 proc-macro2 = "1.0.66"
 quote = "1.0.32"

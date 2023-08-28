@@ -109,3 +109,27 @@ jobs:
       env:
         RUSTDOCFLAGS: -D warnings
       run: cargo doc --release --no-deps
+  emscripten:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: 'recursive'
+    - uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cargo/bin/
+          ~/.cargo/registry/index/
+          ~/.cargo/registry/cache/
+          ~/.cargo/git/db/
+          target/
+        key: ${{ runner.os }}-cargo-doc-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-cargo-doc-
+          ${{ runner.os }}-cargo-
+    - name: Emsdk install
+      run: emsdk/emsdk/emsdk install 3.1.3
+    - name: Emsdk activate
+      run: emsdk/emsdk/emsdk activate 3.1.3
+    - name: Emsdk environment
+      run: source emsdk/emsdk/emsdk_env.sh; cargo build --bin amm

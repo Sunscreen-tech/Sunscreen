@@ -137,5 +137,3 @@ jobs:
       run: rustup target add wasm32-unknown-emscripten
     - name: Build AMM target for Emscripten
       run: source emsdk/emsdk/emsdk_env.sh; cargo build --bin amm --target wasm32-unknown-emscripten --release
-    - name: Run AMM
-      run: ls target/wasm32-unknown-emscripten/release

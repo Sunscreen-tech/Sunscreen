@@ -127,7 +127,7 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-cargo-doc-
           ${{ runner.os }}-cargo-
-    - name: Install gcc-multilib
+    - name: Install gcc-multilib (32-bit headers)
       run: sudo apt-get install gcc-multilib
     - name: Emsdk install
       run: emsdk/emsdk/emsdk install 3.1.3
@@ -135,5 +135,7 @@ jobs:
       run: emsdk/emsdk/emsdk activate 3.1.3
     - name: Add Rust wasm32-unknown-emscripten target
       run: rustup target add wasm32-unknown-emscripten
-    - name: Build AMM for emscripten
-      run: source emsdk/emsdk/emsdk_env.sh; cargo build --bin amm --target wasm32-unknown-emscripten
+    - name: Build all targers for emscripten
+      run: source emsdk/emsdk/emsdk_env.sh; cargo build --all --target wasm32-unknown-emscripten --release
+    - name: Run AMM
+      run: node target/wasm32-unknown-emscripten/release/amm.js

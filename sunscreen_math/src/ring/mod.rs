@@ -182,42 +182,7 @@ impl<const N: usize, B: ArithmeticBackend<N>> Clone for Zq<N, B> {
     }
 }
 
-/*
-impl<const N: usize, B: ArithmeticBackend<N>> Add<Zq<N, B>> for Zq<N, B> {
-    type Output = Zq<N, B>;
-
-    fn add(self, rhs: Zq<N, B>) -> Self::Output {
-        (&self).add(&rhs)
-    }
-}
-
-impl<const N: usize, B: ArithmeticBackend<N>> Add<&Zq<N, B>> for Zq<N, B> {
-    type Output = Zq<N, B>;
-
-    fn add(self, rhs: &Zq<N, B>) -> Self::Output {
-        (&self).add(rhs)
-    }
-}
-
-impl<const N: usize, B: ArithmeticBackend<N>> Add<Zq<N, B>> for &Zq<N, B> {
-    type Output = Zq<N, B>;
-
-    fn add(self, rhs: Zq<N, B>) -> Self::Output {
-        self.add(&rhs)
-    }
-}
-
-impl<const N: usize, B: ArithmeticBackend<N>> Add<&Zq<N, B>> for &Zq<N, B> {
-    type Output = Zq<N, B>;
-
-    fn add(self, rhs: &Zq<N, B>) -> Self::Output {
-        Self::Output {
-            val: B::add_mod(&self.val, &rhs.val),
-            _phantom: PhantomData,
-        }
-    }
-}*/
-
+#[refify_binary_op]
 impl<const N: usize, B> Add<&Zq<N, B>> for &Zq<N, B>
 where
     B: ArithmeticBackend<N>,
@@ -232,32 +197,7 @@ where
     }
 }
 
-//refify! { Add, Zq, ((B, ArithmeticBackend<N>)), const N: usize, B}
-
-impl<const N: usize, B: ArithmeticBackend<N>> Mul<Zq<N, B>> for Zq<N, B> {
-    type Output = Zq<N, B>;
-
-    fn mul(self, rhs: Zq<N, B>) -> Self::Output {
-        (&self).mul(&rhs)
-    }
-}
-
-impl<const N: usize, B: ArithmeticBackend<N>> Mul<&Zq<N, B>> for Zq<N, B> {
-    type Output = Zq<N, B>;
-
-    fn mul(self, rhs: &Zq<N, B>) -> Self::Output {
-        (&self).mul(rhs)
-    }
-}
-
-impl<const N: usize, B: ArithmeticBackend<N>> Mul<Zq<N, B>> for &Zq<N, B> {
-    type Output = Zq<N, B>;
-
-    fn mul(self, rhs: Zq<N, B>) -> Self::Output {
-        self.mul(&rhs)
-    }
-}
-
+#[refify_binary_op]
 impl<const N: usize, B: ArithmeticBackend<N>> Mul<&Zq<N, B>> for &Zq<N, B> {
     type Output = Zq<N, B>;
 

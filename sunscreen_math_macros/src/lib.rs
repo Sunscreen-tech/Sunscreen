@@ -4,8 +4,8 @@ use proc_macro::TokenStream;
 use proc_macro2::TokenStream as TokenStream2;
 use quote::{quote, quote_spanned};
 use syn::{
-    parse_macro_input, spanned::Spanned, DeriveInput, GenericArgument, ImplItem, ItemImpl, Path,
-    PathArguments, Type, PathSegment, punctuated::Punctuated,
+    parse_macro_input, punctuated::Punctuated, spanned::Spanned, DeriveInput, GenericArgument,
+    ImplItem, ItemImpl, Path, PathArguments, PathSegment, Type,
 };
 
 #[derive(FromDeriveInput, Debug)]
@@ -161,7 +161,10 @@ pub fn refify_binary_op(
     let self_type = if let Type::Reference(self_type) = *self_type.clone() {
         *self_type.elem
     } else {
-        return make_error(self_type, "You must use refify_binary_op on an `impl OpTrait<&MyType> for &MyType`")
+        return make_error(
+            self_type,
+            "You must use refify_binary_op on an `impl OpTrait<&MyType> for &MyType`",
+        );
     };
 
     let trait_path = if let Some((_, path, _)) = trait_name {
@@ -172,7 +175,7 @@ pub fn refify_binary_op(
 
     // Get the non-reference type argument to the trait.
     let gen_args = &trait_path.segments.iter().last().unwrap().arguments;
-     
+
     let mut trait_path_segments = vec![];
 
     for (i, p) in trait_path.segments.iter().enumerate() {
@@ -212,23 +215,38 @@ pub fn refify_binary_op(
                     return make_error(t, "refify_binary_op doesn't allow mutable or bounded lifetime references as trait arguments.");
                 }
             } else {
-                return make_error(t, "refify_binary_op requires you implement the `Op<&T> for &T` variant.");
+                return make_error(
+                    t,
+                    "refify_binary_op requires you implement the `Op<&T> for &T` variant.",
+                );
             }
         } else {
-            return make_error(&args.args[0], "refify_binary_op requires a type argument to op trait");
+            return make_error(
+                &args.args[0],
+                "refify_binary_op requires a type argument to op trait",
+            );
         }
     } else {
-        return make_error(gen_args, "refify_binary_op requires angle bracket generics on the operation");
+        return make_error(
+            gen_args,
+            "refify_binary_op requires angle bracket generics on the operation",
+        );
     };
 
     if impl_items.len() != 2 {
-        return make_error(input, "refify_binary_op requires an associated output type and a single fn implementation.")
+        return make_error(
+            input,
+            "refify_binary_op requires an associated output type and a single fn implementation.",
+        );
     }
 
     let associated_type = if let ImplItem::Type(t) = &impl_items[0] {
         t
     } else {
-        return make_error(&impl_items[0], "expected an associated type for the trait impl");
+        return make_error(
+            &impl_items[0],
+            "expected an associated type for the trait impl",
+        );
     };
 
     let fn_ident = if let ImplItem::Fn(op_fn) = &impl_items[1] {
@@ -241,7 +259,8 @@ pub fn refify_binary_op(
         impl #generics #trait_path<#trait_arg> for #self_type #where_clause {
             #associated_type
 
-            fn #fn_ident(self, rhs: #trait_arg) {
+            #[inline(always)]
+            fn #fn_ident(self, rhs: #trait_arg) -> Self::Output {
                 (&self).#fn_ident (&rhs)
             }
         }
@@ -249,7 +268,8 @@ pub fn refify_binary_op(
         impl #generics #trait_path<&#trait_arg> for #self_type #where_clause {
             #associated_type
 
-            fn #fn_ident(self, rhs: &#trait_arg) {
+            #[inline(always)]
+            fn #fn_ident(self, rhs: &#trait_arg) -> Self::Output {
                 (&self).#fn_ident (rhs)
             }
         }
@@ -257,7 +277,8 @@ pub fn refify_binary_op(
         impl #generics #trait_path<#trait_arg> for &#self_type #where_clause {
             #associated_type
 
-            fn #fn_ident(self, rhs: #trait_arg) {
+            #[inline(always)]
+            fn #fn_ident(self, rhs: #trait_arg) -> Self::Output {
                 self.#fn_ident (&rhs)
             }
         }

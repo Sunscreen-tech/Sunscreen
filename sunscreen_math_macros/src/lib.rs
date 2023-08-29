@@ -1,4 +1,4 @@
-use darling::{FromDeriveInput};
+use darling::FromDeriveInput;
 use num::{BigInt, FromPrimitive, Num};
 use proc_macro::TokenStream;
 use proc_macro2::TokenStream as TokenStream2;
@@ -98,7 +98,7 @@ pub fn derive_barrett_config(input: proc_macro::TokenStream) -> TokenStream {
 }
 
 #[proc_macro_attribute]
-/// This trait auto impls all combinations of borrowed and owned for binary `std::ops` 
+/// This trait auto impls all combinations of borrowed and owned for binary `std::ops`
 /// traits.
 /// To use this, you must impl `std::ops::Op<&T> for &T` and this macro will auto
 /// create the other traits to call your impl by borrowing the rhs or self as appropriate.

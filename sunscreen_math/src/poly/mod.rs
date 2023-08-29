@@ -1,8 +1,8 @@
 use std::ops::{Add, Mul};
 
-use sunscreen_math_macros::refify;
+use sunscreen_math_macros::refify_binary_op;
 
-use crate::{ring::Ring};
+use crate::ring::Ring;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 /// A polynomial over the ring `T`.

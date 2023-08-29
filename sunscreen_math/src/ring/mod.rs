@@ -2,11 +2,11 @@ use crate::{Error, One, Zero};
 use crypto_bigint::NonZero;
 pub use crypto_bigint::Uint;
 use num::traits::{WrappingAdd, WrappingMul, WrappingNeg, WrappingSub};
-use sunscreen_math_macros::refify;
 use std::{
     marker::PhantomData,
     ops::{Add, Mul},
 };
+use sunscreen_math_macros::refify_binary_op;
 
 mod barrett;
 pub use barrett::*;
@@ -206,7 +206,7 @@ impl<const N: usize, B: ArithmeticBackend<N>> Add<Zq<N, B>> for &Zq<N, B> {
         self.add(&rhs)
     }
 }
- 
+
 impl<const N: usize, B: ArithmeticBackend<N>> Add<&Zq<N, B>> for &Zq<N, B> {
     type Output = Zq<N, B>;
 
@@ -219,7 +219,8 @@ impl<const N: usize, B: ArithmeticBackend<N>> Add<&Zq<N, B>> for &Zq<N, B> {
 }*/
 
 impl<const N: usize, B> Add<&Zq<N, B>> for &Zq<N, B>
-where B: ArithmeticBackend<N>
+where
+    B: ArithmeticBackend<N>,
 {
     type Output = Zq<N, B>;
 

@@ -1,25 +1,26 @@
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
-use ark_ff::{FftField, Field};
-use ark_poly::univariate::DensePolynomial;
 use criterion::{criterion_group, criterion_main, Criterion};
+use logproof::Bounds;
 use logproof::{
     crypto::CryptoHash,
-    fields::{FpRistretto, FqSeal128_1024, FqSeal128_2048, FqSeal128_4096},
-    linear_algebra::{Matrix, ScalarRem},
-    math::{make_poly, FieldModulus, ModSwitch, SmartMul, Zero},
+    linear_algebra::Matrix,
+    math::{make_poly, ModSwitch},
+    rings::{ZqRistretto, ZqSeal128_1024, ZqSeal128_2048, ZqSeal128_4096},
     InnerProductVerifierKnowledge, LogProof, LogProofGenerators, LogProofProverKnowledge,
 };
 use merlin::Transcript;
 use once_cell::sync::Lazy;
+use sunscreen_math::poly::Polynomial;
+use sunscreen_math::ring::{Ring, RingModulus};
 
 // Change these two lines to change how much time is spent sleeping between
 // benchmarks to cool down the machine.
 const THERMAL_THROTTLE: bool = true;
 const THERMAL_THROTTLE_TIME: u64 = 30;
 
-type MatrixPoly<Q> = Matrix<DensePolynomial<Q>>;
+type MatrixPoly<Q> = Matrix<Polynomial<Q>>;
 
 static RESULTS: Lazy<Mutex<String>> = Lazy::new(|| {
     Mutex::new(
@@ -43,29 +44,22 @@ fn append_result(
     (*r).push_str(&new_row);
 }
 
-fn f<F: Field>(degree: usize) -> DensePolynomial<F> {
+fn f<R: Ring>(degree: usize) -> Polynomial<R> {
     let mut coeffs = Vec::with_capacity(degree + 1);
-    coeffs.push(F::ONE);
+    coeffs.push(R::one());
 
     for _ in 0..degree - 1 {
-        coeffs.push(F::ZERO);
+        coeffs.push(R::zero());
     }
 
-    coeffs.push(F::ONE);
+    coeffs.push(R::one());
 
-    DensePolynomial { coeffs }
+    Polynomial { coeffs }
 }
 
-fn bfv_benchmark<Q, const POLY_DEGREE: u64, const CT: usize, const CT2: usize>()
+fn bfv_benchmark<R, const POLY_DEGREE: u64, const CT: usize, const CT2: usize>()
 where
-    Q: Field
-        + CryptoHash
-        + FieldModulus<4>
-        + ModSwitch<FpRistretto>
-        + Zero
-        + Clone
-        + SmartMul<Q, Output = Q>
-        + FftField,
+    R: Ring + CryptoHash + RingModulus<4> + ModSwitch<ZqRistretto> + Clone + From<u64> + Ord,
 {
     // Really wish we had `generic_const_exprs` in stable...
     assert_eq!(2 * CT, CT2);
@@ -97,14 +91,16 @@ where
     // verifier performance increase is approximately 75%, but 4096 with 3
     // ciphertexts has a verifier performance increase of only about 10% when
     // the bound is set to 2 for non-zero coefficients.
-    let coeff_bounds = coeffs
-        .clone()
-        .into_iter()
-        .map(|x| if x == 0 { 0 } else { BIT_SIZE })
-        .collect::<Vec<u64>>();
+    let coeff_bounds = Bounds(
+        coeffs
+            .clone()
+            .into_iter()
+            .map(|x| if x == 0 { 0 } else { BIT_SIZE })
+            .collect::<Vec<u64>>(),
+    );
 
-    let delta = make_poly::<Q>(&[1234]);
-    let p_0 = make_poly::<Q>(&coeffs);
+    let delta = make_poly::<R>(&[1234]);
+    let p_0 = make_poly::<R>(&coeffs);
     let p_1 = p_0.clone();
 
     let one = make_poly(&[1]);
@@ -117,7 +113,7 @@ where
         a.push([zero.clone(), p_1.clone(), zero.clone(), one.clone()]);
     }
 
-    let a: [[DensePolynomial<Q>; 4]; CT2] = a.try_into().unwrap();
+    let a: [[Polynomial<R>; 4]; CT2] = a.try_into().unwrap();
 
     let a = MatrixPoly::from(a);
 
@@ -128,10 +124,10 @@ where
 
     let s = MatrixPoly::from([[m], [u], [e_1], [e_2]]);
 
-    let f = f::<Q>(POLY_DEGREE as usize);
+    let f = f::<R>(POLY_DEGREE as usize);
 
     let t = &a * &s;
-    let t = t.scalar_rem(&f);
+    let t = t.map(|x| x.vartime_div_rem_restricted_rhs(&f).1);
 
     let b = Matrix::from(vec![coeff_bounds; a.cols]);
 
@@ -174,47 +170,47 @@ where
 
 fn params_1024_3ct(_: &mut Criterion) {
     println!("n=1024, ct=3");
-    bfv_benchmark::<FqSeal128_1024, 1024, 3, 6>();
+    bfv_benchmark::<ZqSeal128_1024, 1024, 3, 6>();
 }
 
 fn params_1024_2ct(_: &mut Criterion) {
     println!("n=1024, ct=2");
-    bfv_benchmark::<FqSeal128_1024, 1024, 2, 4>();
+    bfv_benchmark::<ZqSeal128_1024, 1024, 2, 4>();
 }
 
 fn params_1024_1ct(_: &mut Criterion) {
     println!("n=1024, ct=1");
-    bfv_benchmark::<FqSeal128_1024, 1024, 1, 2>();
+    bfv_benchmark::<ZqSeal128_1024, 1024, 1, 2>();
 }
 
 fn params_2048_3ct(_: &mut Criterion) {
     println!("n=2048, ct=3");
-    bfv_benchmark::<FqSeal128_2048, 2048, 3, 6>();
+    bfv_benchmark::<ZqSeal128_2048, 2048, 3, 6>();
 }
 
 fn params_2048_2ct(_: &mut Criterion) {
     println!("n=2048, ct=2");
-    bfv_benchmark::<FqSeal128_2048, 2048, 2, 4>();
+    bfv_benchmark::<ZqSeal128_2048, 2048, 2, 4>();
 }
 
 fn params_2048_1ct(_: &mut Criterion) {
     println!("n=2048, ct=1");
-    bfv_benchmark::<FqSeal128_2048, 2048, 1, 2>();
+    bfv_benchmark::<ZqSeal128_2048, 2048, 1, 2>();
 }
 
 fn params_4096_3ct(_: &mut Criterion) {
     println!("n=4096, ct=3");
-    bfv_benchmark::<FqSeal128_4096, 4096, 3, 6>();
+    bfv_benchmark::<ZqSeal128_4096, 4096, 3, 6>();
 }
 
 fn params_4096_2ct(_: &mut Criterion) {
     println!("n=4096, ct=2");
-    bfv_benchmark::<FqSeal128_4096, 4096, 2, 4>();
+    bfv_benchmark::<ZqSeal128_4096, 4096, 2, 4>();
 }
 
 fn params_4096_1ct(_: &mut Criterion) {
     println!("n=4096, ct=1");
-    bfv_benchmark::<FqSeal128_4096, 4096, 1, 2>();
+    bfv_benchmark::<ZqSeal128_4096, 4096, 1, 2>();
 }
 
 fn print_results(_: &mut Criterion) {

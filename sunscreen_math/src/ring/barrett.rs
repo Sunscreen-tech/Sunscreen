@@ -5,7 +5,9 @@ use crypto_bigint::{
     Uint,
 };
 
-use super::ArithmeticBackend;
+use crate::field::FieldConfig;
+
+use super::{ArithmeticBackend, FieldBackend};
 
 /// Contains precomputed values needed for a Barrett reduction in
 /// a ring Z_q
@@ -13,9 +15,12 @@ use super::ArithmeticBackend;
 /// # Remarks
 /// This algorithm is only guaranteed to work so long as Modulus fits into a 64 * N - 1 bit
 /// value.
-pub trait BarrettConfig<const N: usize> {
-    /// The modulus defining the ring
+pub trait BarrettConfig<const N: usize>: Sync + Send {
+    /// The modulus defining the ring.
     const MODULUS: Uint<N>;
+
+    /// The modulus divided by 2.
+    const MODULUS_DIV_2: Uint<N>;
 
     /// floor(2**(64*N) / MODULUS)
     const R: Uint<N>;
@@ -32,6 +37,8 @@ pub trait BarrettConfig<const N: usize> {
 pub struct BarrettBackend<const N: usize, C: BarrettConfig<N>> {
     _phantom: PhantomData<C>,
 }
+
+impl<const N: usize, C: BarrettConfig<N> + FieldConfig> FieldBackend for BarrettBackend<N, C> {}
 
 impl<const N: usize, C: BarrettConfig<N>> BarrettBackend<N, C> {
     /// Compute x (a 2N limb value) mod C::MODULUS
@@ -82,16 +89,25 @@ impl<const N: usize, C: BarrettConfig<N>> BarrettBackend<N, C> {
 impl<const N: usize, C: BarrettConfig<N>> ArithmeticBackend<N> for BarrettBackend<N, C> {
     const MODULUS: Uint<N> = C::MODULUS;
 
+    const MODULUS_DIV_2: Uint<N> = C::MODULUS_DIV_2;
+
     const ZERO: Uint<N> = Uint::ZERO;
 
     const ONE: Uint<N> = Uint::ONE;
 
     /// Compute `lhs * rhs mod MODULUS` using a Barrett Reduction
+    #[inline(always)]
     fn mul_mod(lhs: &Uint<N>, rhs: &Uint<N>) -> Uint<N> {
         Self::barrett_reduce(lhs.mul_wide(rhs))
     }
 
+    #[inline(always)]
     fn encode(val: &Uint<N>) -> Uint<N> {
+        *val
+    }
+
+    #[inline(always)]
+    fn decode(val: &Uint<N>) -> Uint<N> {
         *val
     }
 }
@@ -103,7 +119,7 @@ mod tests_one_limb {
     use sunscreen_math_macros::BarrettConfig as DeriveBarrettConfig;
 
     // Work around derive macro using sunscreen_math path
-    use crate as sunscreen_math;
+    use crate::{self as sunscreen_math, field::Field, ring::Zq, One};
 
     use super::*;
 
@@ -282,6 +298,22 @@ mod tests_one_limb {
             rng.fill_bytes(&mut a);
 
             reduction_test_case::<4, Cfg>(&num::BigInt::from_bytes_le(num::bigint::Sign::Plus, &a));
+        }
+    }
+
+    #[test]
+    fn can_inverse_field() {
+        #[derive(DeriveBarrettConfig)]
+        #[barrett_config(modulus = "19", num_limbs = 1, is_field = true)]
+        struct Cfg;
+
+        type Z = Zq<1, BarrettBackend<1, Cfg>>;
+
+        for i in 1..19u64 {
+            let x = Z::from(i);
+            let x_inv = x.inverse();
+
+            assert_eq!(x * x_inv, Z::one());
         }
     }
 }

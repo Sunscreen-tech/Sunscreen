@@ -1,4 +1,3 @@
-use ark_ff::Field;
 use curve25519_dalek::{
     ristretto::{CompressedRistretto, RistrettoPoint},
     scalar::Scalar,
@@ -7,13 +6,14 @@ use digest::{Digest, FixedOutput};
 
 use rayon::prelude::*;
 use sha3::Sha3_256;
+use sunscreen_math::ring::{Ring, RingModulus};
 
 use crate::{
     crypto::CryptoHash,
-    fields::FpRistretto,
     inner_product::{self},
     linear_relation::{self},
-    math::{FieldModulus, ModSwitch},
+    math::ModSwitch,
+    rings::ZqRistretto,
 };
 
 /**
@@ -75,7 +75,7 @@ pub trait LogProofTranscript {
      */
     fn append_linear_relation_knowledge<Q>(&mut self, vk: &linear_relation::VerifierKnowledge<Q>)
     where
-        Q: Field + CryptoHash + ModSwitch<FpRistretto> + FieldModulus<4>;
+        Q: Ring + CryptoHash + ModSwitch<ZqRistretto> + RingModulus<4> + Ord;
 }
 
 impl LogProofTranscript for merlin::Transcript {
@@ -175,7 +175,7 @@ impl LogProofTranscript for merlin::Transcript {
 
     fn append_linear_relation_knowledge<Q>(&mut self, vk: &linear_relation::VerifierKnowledge<Q>)
     where
-        Q: Field + CryptoHash + ModSwitch<FpRistretto> + FieldModulus<4>,
+        Q: Ring + CryptoHash + ModSwitch<ZqRistretto> + RingModulus<4> + Ord,
     {
         self.append_u64(b"m", vk.a.rows as u64);
         self.append_u64(b"k", vk.a.cols as u64);

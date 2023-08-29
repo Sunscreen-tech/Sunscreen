@@ -55,7 +55,7 @@ pub use linear_relation::{
 /**
  * A collection of fields Z_q you can use in our log proofs.
  */
-pub mod fields;
+pub mod rings;
 
 /**
  * A collection of operations on algebraic structures.

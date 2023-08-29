@@ -21,6 +21,9 @@ mod cuda_impl;
 /// CPU implementation
 mod test_impl;
 
+/// Traits for working with fields
+pub mod field;
+
 mod cpu;
 pub use cpu::{CpuRistrettoPointVec, CpuScalarVec};
 
@@ -119,3 +122,5 @@ pub(crate) fn ristretto_bitwise_eq(a: RistrettoPoint, b: RistrettoPoint) -> bool
 
     a == b
 }
+
+pub use sunscreen_math_macros::{refify_binary_op, BarrettConfig};

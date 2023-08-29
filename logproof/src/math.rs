@@ -1,12 +1,14 @@
 use std::{borrow::Borrow, ops::Mul};
 
-use ark_ff::{BigInt, BigInteger, FftField, Field, Fp, MontBackend, MontConfig, Zero as ArkZero};
-use ark_poly::univariate::DensePolynomial;
+use crypto_bigint::Uint;
 use curve25519_dalek::{ristretto::RistrettoPoint, scalar::Scalar, traits::VartimeMultiscalarMul};
 use rand::Rng;
 use rayon::prelude::{IndexedParallelIterator, IntoParallelRefIterator, ParallelIterator};
-
-use crate::fields::extend_bigint;
+use sunscreen_math::{
+    poly::Polynomial,
+    ring::{ArithmeticBackend, Ring, Zq},
+    One, Zero,
+};
 
 /**
  * Creates a random 256-bit value.
@@ -35,118 +37,41 @@ pub fn next_higher_power_of_two(x: u64) -> u64 {
 }
 
 /**
- * A wrapper trait for getting the zero element of a field.
- */
-pub trait Zero {
-    /**
-     * Returns the zero element.
-     */
-    fn zero() -> Self;
-}
-
-impl Zero for Scalar {
-    fn zero() -> Self {
-        Self::zero()
-    }
-}
-
-impl<F: Field> Zero for DensePolynomial<F> {
-    fn zero() -> Self {
-        <Self as ArkZero>::zero()
-    }
-}
-
-/**
- * A trait for getting the one element of a field.
- */
-pub trait One {
-    /**
-     * Returns the one element.
-     */
-    fn one() -> Self;
-}
-
-impl One for Scalar {
-    fn one() -> Self {
-        Self::one()
-    }
-}
-
-impl<F: Field> One for DensePolynomial<F> {
-    fn one() -> Self {
-        Self {
-            coeffs: vec![F::one()],
-        }
-    }
-}
-
-/**
  * Methods for switching elements between finite fields.
  */
-pub trait ModSwitch<F> {
-    /**
-     * Treat the input value as unsigned in the current field and produce
-     * the same unsigned value in the field `F`.
-     */
-    fn mod_switch_unsigned(&self) -> F;
+pub trait ModSwitch<R> {
+    /// Treat the input value as unsigned in the current [`Ring`] and produce
+    /// the same unsigned value in the [`Ring`] `R`.
+    ///
+    /// # Panics
+    /// If [`self`] doesn't fit in the returned ring `R`.
+    fn mod_switch_unsigned(&self) -> R;
 
-    /**
-     * Treat the input value as signed in the current field
-     * (i.e. [-q/2, q/2]) and produce the same signed value in `F`
-     * (i.e. [-p/2, p/2]).
-     */
-    fn mod_switch_signed(&self) -> F;
+    /// Treat the input value as signed in the current field
+    /// (i.e. [-q/2, q/2]) and produce the same signed value in `F`
+    /// (i.e. [-p/2, p/2]).
+    fn mod_switch_signed(&self) -> R;
 }
 
-impl<F1: Field, F2: Field> ModSwitch<DensePolynomial<F2>> for DensePolynomial<F1>
+impl<R1, R2> ModSwitch<Polynomial<R2>> for Polynomial<R1>
 where
-    F1: Field + ModSwitch<F2>,
-    F2: Field,
+    R1: Ring + ModSwitch<R2>,
+    R2: Ring,
 {
-    fn mod_switch_unsigned(&self) -> DensePolynomial<F2> {
+    fn mod_switch_unsigned(&self) -> Polynomial<R2> {
         let new_coeffs = self
             .coeffs
             .iter()
             .map(|x| x.mod_switch_unsigned())
             .collect();
 
-        DensePolynomial { coeffs: new_coeffs }
+        Polynomial { coeffs: new_coeffs }
     }
 
-    fn mod_switch_signed(&self) -> DensePolynomial<F2> {
+    fn mod_switch_signed(&self) -> Polynomial<R2> {
         let new_coeffs = self.coeffs.iter().map(|x| x.mod_switch_signed()).collect();
 
-        DensePolynomial { coeffs: new_coeffs }
-    }
-}
-
-/**
- * For Z_q fields, returns q.
- */
-pub trait FieldModulus<const N: usize> {
-    /**
-     * The modulus of the field.
-     */
-    fn field_modulus() -> BigInt<N>;
-
-    /**
-     * The modulus of the field divided by 2.
-     */
-    fn field_modulus_div_2() -> BigInt<N>;
-}
-
-impl<F: MontConfig<M>, const M: usize, const N: usize> FieldModulus<N>
-    for Fp<MontBackend<F, M>, M>
-{
-    fn field_modulus() -> BigInt<N> {
-        extend_bigint(&F::MODULUS)
-    }
-
-    fn field_modulus_div_2() -> BigInt<N> {
-        let mut a = F::MODULUS;
-        a.div2();
-
-        extend_bigint(&a)
+        Polynomial { coeffs: new_coeffs }
     }
 }
 
@@ -165,115 +90,16 @@ pub trait InfinityNorm {
     fn infinity_norm(&self) -> Self::Output;
 }
 
-impl<F: Field> InfinityNorm for DensePolynomial<F> {
-    type Output = F;
+impl<R> InfinityNorm for Polynomial<R>
+where
+    R: Ring + Ord,
+{
+    type Output = R;
 
     fn infinity_norm(&self) -> Self::Output {
         self.coeffs
             .iter()
-            .fold(F::zero(), |max, x| if x > &max { *x } else { max })
-    }
-}
-
-/**
- * This unfortunate trait exists because ark_poly's DensePolynomial
- * multiplication algorithm relies on an FFT, which isn't possible for
- * all fields. This trait abstracts this issue away, using `naive_mul`
- * when an FFT isn't possible
- */
-pub trait SmartMul<Rhs> {
-    /**
-     * The type that results from the multiplication.
-     */
-    type Output;
-
-    /**
-     * Multiplies 2 values together and returns the result.
-     */
-    fn smart_mul(self, rhs: Rhs) -> Self::Output;
-}
-
-impl<Rhs, F> SmartMul<Rhs> for DensePolynomial<F>
-where
-    F: Field + FftField,
-    Rhs: Borrow<Self>,
-{
-    type Output = DensePolynomial<F>;
-
-    fn smart_mul(self, rhs: Rhs) -> Self::Output {
-        (&self).smart_mul(rhs)
-    }
-}
-
-impl<Rhs, F> SmartMul<Rhs> for &DensePolynomial<F>
-where
-    F: Field + FftField,
-    Rhs: Borrow<DensePolynomial<F>>,
-{
-    type Output = DensePolynomial<F>;
-
-    fn smart_mul(self, rhs: Rhs) -> Self::Output {
-        let rhs = rhs.borrow();
-
-        // TODO: Use FFT polynomial multiplcation if possible.
-        self.naive_mul(rhs)
-    }
-}
-
-impl<F, Rhs, const N: usize> SmartMul<Rhs> for Fp<MontBackend<F, N>, N>
-where
-    F: MontConfig<N>,
-    Rhs: Borrow<Fp<MontBackend<F, N>, N>>,
-{
-    type Output = Fp<MontBackend<F, N>, N>;
-
-    fn smart_mul(self, rhs: Rhs) -> Self::Output {
-        (&self).smart_mul(rhs)
-    }
-}
-
-impl<F, Rhs, const N: usize> SmartMul<Rhs> for &Fp<MontBackend<F, N>, N>
-where
-    F: MontConfig<N>,
-    Rhs: Borrow<Fp<MontBackend<F, N>, N>>,
-{
-    type Output = Fp<MontBackend<F, N>, N>;
-
-    fn smart_mul(self, rhs: Rhs) -> Self::Output {
-        let rhs = rhs.borrow();
-
-        *self * rhs
-    }
-}
-
-/**
- * For debugging. Prints a Polynomial to stdout. Coefficients are in
- * hexadecimal.
- */
-pub fn print_polynomial<F: Field>(p: &DensePolynomial<F>) {
-    for (i, coef) in p.coeffs.iter().enumerate() {
-        let coef_str = coef.to_string();
-
-        let val = coef_str
-            .split('(')
-            .last()
-            .unwrap()
-            .split(')')
-            .next()
-            .unwrap()
-            .trim_start_matches('0');
-
-        let val = if val.is_empty() { "0" } else { val };
-
-        if i == 0 {
-            print!("{}", val);
-        } else {
-            print!("{} * x^{}", val, i);
-        }
-
-        if i < p.coeffs.len() - 1 {
-            print!(" + ")
-        }
+            .fold(R::zero(), |max, x| if x > &max { x.clone() } else { max })
     }
 }
 
@@ -281,20 +107,20 @@ pub fn print_polynomial<F: Field>(p: &DensePolynomial<F>) {
 /**
  * For debugging. Makes a polynomial with the given i64 coefficients in converted to field Fp.
  */
-pub fn make_poly<F: Field + From<u64>>(coeffs: &[i64]) -> DensePolynomial<F> {
-    let zero = F::zero();
+pub fn make_poly<R: Ring + From<u64>>(coeffs: &[i64]) -> Polynomial<R> {
+    let zero = R::zero();
     let coeffs = coeffs
         .iter()
         .map(|x| {
             if *x >= 0 {
-                F::from(*x as u64)
+                R::from(*x as u64)
             } else {
-                zero - F::from(x.unsigned_abs())
+                zero.clone() - R::from(x.unsigned_abs())
             }
         })
         .collect();
 
-    DensePolynomial { coeffs }
+    Polynomial { coeffs }
 }
 
 /**
@@ -342,21 +168,21 @@ impl Log2 for u64 {
     }
 }
 
-fn is_power_of_two_bigint<const N: usize>(b: &BigInt<N>) -> bool {
-    b.as_ref().iter().map(|u| u.count_ones()).sum::<u32>() == 1
+fn is_power_of_two_bigint<const N: usize>(b: &Uint<N>) -> bool {
+    b.as_limbs().iter().map(|u| u.0.count_ones()).sum::<u32>() == 1
 }
 
-impl<const N: usize> Log2 for BigInt<N> {
+impl<const N: usize> Log2 for Uint<N> {
     fn log2(x: &Self) -> u64 {
-        for i in 0..x.0.len() {
-            let i = x.0.len() - i - 1;
-            let limb = x.0[i];
+        for i in 0..x.as_limbs().len() {
+            let i = x.as_limbs().len() - i - 1;
+            let limb = x.as_limbs()[i];
 
-            if limb == 0 {
+            if limb.0 == 0 {
                 continue;
             }
 
-            return Log2::log2(&limb) + (i as u64) * 64;
+            return Log2::log2(&limb.0) + (i as u64) * 64;
         }
 
         panic!("Value was zero.");
@@ -366,6 +192,16 @@ impl<const N: usize> Log2 for BigInt<N> {
         let ceil_factor = if is_power_of_two_bigint(x) { 0 } else { 1 };
 
         Self::log2(x) + ceil_factor
+    }
+}
+
+impl<const N: usize, B: ArithmeticBackend<N>> Log2 for Zq<N, B> {
+    fn log2(x: &Self) -> u64 {
+        Uint::<N>::log2(&x.val)
+    }
+
+    fn ceil_log2(x: &Self) -> u64 {
+        Uint::<N>::ceil_log2(&x.val)
     }
 }
 
@@ -389,32 +225,6 @@ pub trait Rem<Rhs = Self> {
      * see [`std::ops::Rem::rem`].
      */
     fn rem(self, rhs: Rhs) -> Self::Output;
-}
-
-impl<F: Field, Rhs> Rem<Rhs> for DensePolynomial<F>
-where
-    Rhs: Borrow<DensePolynomial<F>>,
-{
-    type Output = DensePolynomial<F>;
-
-    fn rem(self, rhs: Rhs) -> Self::Output {
-        (&self).rem(rhs)
-    }
-}
-
-impl<F: Field, Rhs> Rem<Rhs> for &DensePolynomial<F>
-where
-    Rhs: Borrow<DensePolynomial<F>>,
-{
-    type Output = DensePolynomial<F>;
-
-    fn rem(self, rhs: Rhs) -> Self::Output {
-        let rhs: &DensePolynomial<F> = rhs.borrow();
-
-        let div: DensePolynomial<F> = self / rhs;
-
-        self - &(rhs.naive_mul(&div))
-    }
 }
 
 /**
@@ -538,9 +348,9 @@ impl Powers for Scalar {
     }
 }
 
-impl<F, const N: usize> Powers for Fp<MontBackend<F, N>, N>
+impl<B, const N: usize> Powers for Zq<N, B>
 where
-    F: MontConfig<N>,
+    B: ArithmeticBackend<N>,
 {
     fn powers(&self, d: usize) -> Vec<Self> {
         let mut x = Self::one();
@@ -549,7 +359,7 @@ where
         for _ in 0..d {
             result.push(x);
 
-            x *= *self;
+            x = x * *self;
         }
 
         result
@@ -626,9 +436,9 @@ pub fn parallel_multiscalar_multiplication(s: &[Scalar], p: &[RistrettoPoint]) -
     msm
 }
 
-impl<F, const N: usize> TwosComplementCoeffs for Fp<MontBackend<F, N>, N>
+impl<B, const N: usize> TwosComplementCoeffs for Zq<N, B>
 where
-    F: MontConfig<N>,
+    B: ArithmeticBackend<N>,
 {
     fn twos_complement_coeffs(b: usize) -> Vec<Self> {
         if b == 0 {
@@ -642,7 +452,7 @@ where
 
         for _ in 0..b {
             results.push(cur_power);
-            cur_power *= two;
+            cur_power = cur_power * two;
         }
 
         let last = results.len() - 1;
@@ -655,29 +465,30 @@ where
 
 #[cfg(test)]
 mod test {
-    use crate::fields::{FpRistretto, FqSeal128_8192};
-    use ark_poly::Polynomial;
+    use sunscreen_math::ring::RingModulus;
+
+    use crate::rings::{ZqRistretto, ZqSeal128_8192};
 
     use super::*;
 
     #[test]
     fn can_mod_switch_polynomial() {
-        let a: DensePolynomial<FqSeal128_8192> = DensePolynomial {
+        let a = Polynomial::<ZqSeal128_8192> {
             coeffs: vec![
-                FqSeal128_8192::from(1),
-                FqSeal128_8192::from(2),
-                FqSeal128_8192::from(3),
+                ZqSeal128_8192::from(1),
+                ZqSeal128_8192::from(2),
+                ZqSeal128_8192::from(3),
             ],
         };
 
-        let b: DensePolynomial<FpRistretto> = a.mod_switch_unsigned();
+        let b: Polynomial<ZqRistretto> = a.mod_switch_unsigned();
 
         assert_eq!(
             b.coeffs,
             vec![
-                FpRistretto::from(1),
-                FpRistretto::from(2),
-                FpRistretto::from(3)
+                ZqRistretto::from(1),
+                ZqRistretto::from(2),
+                ZqRistretto::from(3)
             ]
         );
     }
@@ -696,7 +507,7 @@ mod test {
 
     #[test]
     fn can_compute_log2_bigint() {
-        let a = BigInt::new([1, 2, 3, 4]);
+        let a = Uint::from_words([1, 2, 3, 4]);
 
         assert_eq!(Log2::log2(&a), 194);
     }
@@ -704,50 +515,31 @@ mod test {
     #[test]
     #[should_panic]
     fn log_2_panic_on_zero_bigint() {
-        let a = BigInt::new([0, 0, 0, 0]);
+        let a = Uint::from_words([0, 0, 0, 0]);
 
         Log2::log2(&a);
     }
 
     #[test]
     fn modulus_in_standard_form() {
-        let m = FqSeal128_8192::field_modulus();
+        let m = ZqSeal128_8192::field_modulus();
         // [0x1b9f30440ff08001, 0x25d3e81a62469512, 0x3fffffaa0018]
         // == 23945240908173643396739775218143152511335532357255169
-        let expected = BigInt::new([0x1b9f30440ff08001, 0x25d3e81a62469512, 0x3fffffaa0018]);
+        let expected = Uint::from_words([0x1b9f30440ff08001, 0x25d3e81a62469512, 0x3fffffaa0018]);
 
         assert_eq!(m, expected);
     }
 
     #[test]
     fn field_modulus_div_2_in_standard_form() {
-        let m = FqSeal128_8192::field_modulus_div_2();
+        let m = ZqSeal128_8192::field_modulus_div_2();
 
         // 23945240908173643396739775218143152511335532357255169 / 2
-        // = 11972620454086821698369887609071576255667766178627584
-        // = [0xdcf982207f84000, 0x12e9f40d31234a89, 0x1fffffd5000c]
-        let expected = BigInt::new([0xdcf982207f84000, 0x12e9f40d31234a89, 0x1fffffd5000c]);
+        // = 11972620154086821698369887609071576255667766178627584
+        // = [[0xdcf982207f84000, 0x12e9f40d31234a89, 0x1fffffd5000c]
+        let expected = Uint::from_words([0xdcf982207f84000, 0x12e9f40d31234a89, 0x1fffffd5000c]);
 
         assert_eq!(m, expected);
-    }
-
-    #[test]
-    fn can_poly_rem() {
-        type Fp = FqSeal128_8192;
-
-        let f = make_poly::<Fp>(&[1, 0, 0, 0, 1]);
-
-        let a = make_poly::<Fp>(&[1, 2, 3, 4, 5, 6, 7, 8, 9]);
-
-        let r = (&a).rem(&f);
-
-        let div = &a / &f;
-
-        let val = &(f.naive_mul(&div)) + &r;
-
-        assert_eq!(r.degree(), 3);
-        assert_eq!(f.degree(), 4);
-        assert_eq!(a, val);
     }
 
     #[test]
@@ -767,7 +559,7 @@ mod test {
 
     #[test]
     fn can_pad() {
-        type Fq = FqSeal128_8192;
+        type Fq = ZqSeal128_8192;
 
         let a = [Fq::from(1), Fq::from(2), Fq::from(3)];
 
@@ -792,33 +584,33 @@ mod test {
 
     #[test]
     fn can_twos_complement_coeffs() {
-        type Fp = FpRistretto;
+        type Zq = ZqRistretto;
 
-        let coeffs = Fp::twos_complement_coeffs(8);
+        let coeffs = Zq::twos_complement_coeffs(8);
 
         assert_eq!(
             coeffs,
             vec![
-                Fp::from(1),
-                Fp::from(2),
-                Fp::from(4),
-                Fp::from(8),
-                Fp::from(16),
-                Fp::from(32),
-                Fp::from(64),
-                -Fp::from(128),
+                Zq::from(1),
+                Zq::from(2),
+                Zq::from(4),
+                Zq::from(8),
+                Zq::from(16),
+                Zq::from(32),
+                Zq::from(64),
+                -Zq::from(128),
             ]
         );
 
         let assert_encoding = |val: i8| {
-            let expected = Fp::from(val);
+            let expected = Zq::from(val as i64);
 
             let bits: u8 = unsafe { std::mem::transmute(val) };
-            let mut actual = <Fp as Zero>::zero();
+            let mut actual = <Zq as Zero>::zero();
 
             for (i, c) in coeffs.iter().enumerate() {
                 let bit = ((0x1 << i) & bits) >> i;
-                actual += Fp::from(bit) * c;
+                actual = actual + Zq::from(bit as u64) * c;
             }
 
             assert_eq!(actual, expected);
@@ -846,16 +638,16 @@ mod test {
 
         for (value, expected) in options {
             println!("{:?}, {:?}", value, expected);
-            let b: BigInt<1> = BigInt::from(value);
+            let b: Uint<1> = Uint::from(value);
             assert_eq!(is_power_of_two_bigint(&b), expected);
         }
 
         // Testing higher limbs
         // value is 1 << 68
-        let b: BigInt<2> = BigInt!("295147905179352825856");
+        let b: Uint<2> = Uint::from_words([0x0, 0x10]);
         assert!(is_power_of_two_bigint(&b));
 
-        let b: BigInt<2> = BigInt!("295147905179352825857");
+        let b: Uint<2> = Uint::from_words([0x1, 0x10]);
         assert!(!is_power_of_two_bigint(&b));
     }
 
@@ -881,7 +673,7 @@ mod test {
             let f = value as f64;
             let expected = f.log2().ceil() as u64;
 
-            let b: BigInt<1> = BigInt::from(value);
+            let b: Uint<1> = Uint::from(value);
             let calculated = Log2::ceil_log2(&b);
 
             assert_eq!(calculated, expected);

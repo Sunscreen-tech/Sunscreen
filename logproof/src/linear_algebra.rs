@@ -1,15 +1,18 @@
-use ark_ff::Field;
-use ark_poly::{univariate::DensePolynomial, Polynomial};
 use bitvec::slice::BitSlice;
+
 use curve25519_dalek::scalar::Scalar;
 use digest::Digest;
 use rayon::prelude::*;
 use std::borrow::Borrow;
 use std::ops::{Add, Div, Index, IndexMut, Mul, Sub};
+use sunscreen_math::field::Field;
+use sunscreen_math::poly::Polynomial;
+use sunscreen_math::ring::{ArithmeticBackend, FieldBackend, Ring, Zq};
+use sunscreen_math::{refify_binary_op, One, Zero};
 
 use crate::crypto::CryptoHash;
-use crate::fields::{FieldFrom, FpRistretto};
-use crate::math::{ModSwitch, One, Rem, SmartMul, Tensor, Zero};
+use crate::math::{ModSwitch, Tensor};
+use crate::rings::{FieldFrom, ZqRistretto};
 
 #[derive(Debug, Clone, PartialEq)]
 /**
@@ -91,6 +94,19 @@ where
     pub fn as_slice(&self) -> &[T] {
         &self.data
     }
+
+    /// Create a new matrix with the same dimensions by applying the map `f`
+    /// to each element.
+    pub fn map<F>(&self, f: F) -> Self
+    where
+        F: Fn(&T) -> T,
+    {
+        Self {
+            data: self.data.iter().map(f).collect(),
+            rows: self.rows,
+            cols: self.cols,
+        }
+    }
 }
 
 impl<T> Index<(usize, usize)> for Matrix<T>
@@ -120,28 +136,16 @@ where
 /**
  * A matrix of polynomials over the field `F`.
  */
-pub type PolynomialMatrix<F> = Matrix<DensePolynomial<F>>;
+pub type PolynomialMatrix<F> = Matrix<Polynomial<F>>;
 
-impl<F, Rhs> Sub<Rhs> for PolynomialMatrix<F>
+#[refify_binary_op]
+impl<R> Sub<&PolynomialMatrix<R>> for &PolynomialMatrix<R>
 where
-    Rhs: Borrow<PolynomialMatrix<F>>,
-    F: Field,
+    R: Ring,
 {
-    type Output = PolynomialMatrix<F>;
+    type Output = PolynomialMatrix<R>;
 
-    fn sub(self, rhs: Rhs) -> Self::Output {
-        &self - rhs
-    }
-}
-
-impl<F, Rhs> Sub<Rhs> for &PolynomialMatrix<F>
-where
-    Rhs: Borrow<PolynomialMatrix<F>>,
-    F: Field,
-{
-    type Output = PolynomialMatrix<F>;
-
-    fn sub(self, rhs: Rhs) -> Self::Output {
+    fn sub(self, rhs: &PolynomialMatrix<R>) -> Self::Output {
         let rhs = rhs.borrow();
 
         assert_eq!(self.rows, rhs.rows);
@@ -159,26 +163,14 @@ where
     }
 }
 
-impl<F, Rhs> Add<Rhs> for Matrix<F>
+#[refify_binary_op]
+impl<R> Add<&Matrix<R>> for &Matrix<R>
 where
-    Rhs: Borrow<Self>,
-    F: Add<F, Output = F> + Zero + Clone,
+    R: Add<Output = R> + Zero + Clone,
 {
-    type Output = Matrix<F>;
+    type Output = Matrix<R>;
 
-    fn add(self, rhs: Rhs) -> Self::Output {
-        &self + rhs
-    }
-}
-
-impl<F, Rhs> Add<Rhs> for &Matrix<F>
-where
-    Rhs: Borrow<Matrix<F>>,
-    F: Add<Output = F> + Zero + Clone,
-{
-    type Output = Matrix<F>;
-
-    fn add(self, rhs: Rhs) -> Self::Output {
+    fn add(self, rhs: &Matrix<R>) -> Self::Output {
         let rhs = rhs.borrow();
 
         assert_eq!(self.rows, rhs.rows);
@@ -196,22 +188,30 @@ where
     }
 }
 
-impl<F> PolynomialMatrix<F>
+impl<const N: usize, B> PolynomialMatrix<Zq<N, B>>
 where
-    F: Field + Zero,
+    B: ArithmeticBackend<N> + FieldBackend,
 {
     /**
      * For a matrix of polynomials, divides each polynomial coefficient
      * of each matrix element by x.
+     *
+     * # Remarks
+     * Requires the value be defined over a [`Field`].
+     *
+     * # Panics
+     * If `x` is zero.
      */
-    pub fn scalar_div_q(&self, x: &F) -> Self {
+    pub fn scalar_div_q(&self, x: &Zq<N, B>) -> Self {
+        let x_inv = x.inverse();
+
         let data = self
             .data
             .iter()
             .map(|y| {
-                let coeffs = y.coeffs.iter().map(|c| *c / x).collect();
+                let coeffs = y.coeffs.iter().map(|c| c * x_inv).collect();
 
-                DensePolynomial { coeffs }
+                Polynomial { coeffs }
             })
             .collect();
 
@@ -226,14 +226,14 @@ where
      * For a matrix of polynomials, multiplies each polynomial coefficient
      * of each matrix element by x.
      */
-    pub fn scalar_mul_q(&self, x: &F) -> Self {
+    pub fn scalar_mul_q(&self, x: &Zq<N, B>) -> Self {
         let data = self
             .data
             .iter()
             .map(|y| {
                 let coeffs = y.coeffs.iter().map(|c| *c * x).collect();
 
-                DensePolynomial { coeffs }
+                Polynomial { coeffs }
             })
             .collect();
 
@@ -248,7 +248,7 @@ where
      * Evaluates each polynomial in the matrix at `point`, returning a
      * matrix of the evaluations for each element.
      */
-    pub fn evaluate(&self, point: &F) -> Matrix<F> {
+    pub fn evaluate(&self, point: &Zq<N, B>) -> Matrix<Zq<N, B>> {
         let data = self.data.iter().map(|x| x.evaluate(point)).collect();
 
         Matrix {
@@ -259,48 +259,27 @@ where
     }
 }
 
-impl<F, Rhs> Div<Rhs> for PolynomialMatrix<F>
+#[refify_binary_op]
+impl<R> Div<&Polynomial<R>> for &PolynomialMatrix<R>
 where
-    Rhs: Borrow<DensePolynomial<F>>,
-    F: Field,
+    R: Ring,
 {
-    type Output = PolynomialMatrix<F>;
+    type Output = PolynomialMatrix<R>;
 
-    fn div(self, rhs: Rhs) -> Self::Output {
-        &self / rhs
-    }
-}
-
-impl<F, Rhs> Div<Rhs> for &PolynomialMatrix<F>
-where
-    Rhs: Borrow<DensePolynomial<F>>,
-    F: Field,
-{
-    type Output = PolynomialMatrix<F>;
-
-    fn div(self, rhs: Rhs) -> Self::Output {
+    fn div(self, rhs: &Polynomial<R>) -> Self::Output {
         let rhs = rhs.borrow();
 
-        let data = self.data.par_iter().map(|x| x / rhs).collect();
+        let data = self
+            .data
+            .par_iter()
+            .map(|x| x.vartime_div_rem_restricted_rhs(rhs).0)
+            .collect();
 
         Self::Output {
             rows: self.rows,
             cols: self.cols,
             data,
         }
-    }
-}
-
-impl<F, Rhs> Mul<Rhs> for Matrix<F>
-where
-    Rhs: Borrow<Matrix<F>>,
-    F: Zero + Clone + Add<F, Output = F> + Sync + Send,
-    for<'a> &'a F: SmartMul<&'a F, Output = F>,
-{
-    type Output = Matrix<F>;
-
-    fn mul(self, rhs: Rhs) -> Self::Output {
-        &self * rhs
     }
 }
 
@@ -389,17 +368,14 @@ where
     }
 }
 
-impl<F, Rhs> Mul<Rhs> for &Matrix<F>
+#[refify_binary_op]
+impl<R> Mul<&Matrix<R>> for &Matrix<R>
 where
-    Rhs: Borrow<Matrix<F>>,
-    F: Zero + Clone + Add<F, Output = F> + Sync + Send,
-    for<'a> &'a F: SmartMul<&'a F, Output = F>,
+    R: Ring,
 {
-    type Output = Matrix<F>;
+    type Output = Matrix<R>;
 
-    fn mul(self, rhs: Rhs) -> Self::Output {
-        let rhs = rhs.borrow();
-
+    fn mul(self, rhs: &Matrix<R>) -> Self::Output {
         assert_eq!(self.cols, rhs.rows);
 
         let mut c = Matrix::new(self.rows, rhs.cols);
@@ -409,13 +385,13 @@ where
         row_cols.par_iter_mut().enumerate().for_each(|(i, c_elem)| {
             let row = i / c.cols;
             let col = i % c.cols;
-            let mut val = F::zero();
+            let mut val = R::zero();
 
             for k in 0..self.cols {
                 let a_i = &self[(row, k)];
                 let b_i = &rhs[(k, col)];
 
-                val = val + a_i.smart_mul(b_i);
+                val = val + a_i.clone() * b_i;
             }
 
             c_elem[0] = val;
@@ -467,33 +443,18 @@ pub trait ScalarMul<Rhs> {
     fn scalar_mul(self, rhs: Rhs) -> Self::Output;
 }
 
-impl<T, Rhs> ScalarMul<Rhs> for Matrix<T>
+#[refify_binary_op]
+impl<T> ScalarMul<&T> for &Matrix<T>
 where
     T: Zero + Clone + Sync + Send,
-    for<'a> &'a T: SmartMul<&'a T, Output = T>,
-    Rhs: Borrow<T>,
-{
-    type Output = Self;
-
-    fn scalar_mul(self, rhs: Rhs) -> Self::Output {
-        (&self).scalar_mul(rhs)
-    }
-}
-
-impl<T, Rhs> ScalarMul<Rhs> for &Matrix<T>
-where
-    T: Zero + Clone + Sync + Send,
-    for<'a> &'a T: SmartMul<&'a T, Output = T>,
-    Rhs: Borrow<T>,
+    for<'a> &'a T: Mul<&'a T, Output = T>,
 {
     type Output = Matrix<T>;
 
-    fn scalar_mul(self, rhs: Rhs) -> Self::Output {
-        let rhs = rhs.borrow();
-
+    fn scalar_mul(self, rhs: &T) -> Self::Output {
         let data = (0..self.data.len())
             .into_par_iter()
-            .map(|i| self.data[i].smart_mul(rhs))
+            .map(|i| &self.data[i] * rhs)
             .collect();
 
         Self::Output {
@@ -544,40 +505,6 @@ pub trait ScalarRem<Rhs = Self> {
      * as the modulus.
      */
     fn scalar_rem(self, rhs: Rhs) -> Self::Output;
-}
-
-impl<T, Rhs> ScalarRem<Rhs> for Matrix<T>
-where
-    T: Zero + Clone,
-    for<'a> &'a T: crate::math::Rem<&'a T, Output = T>,
-    Rhs: Borrow<T>,
-{
-    type Output = Self;
-
-    fn scalar_rem(self, rhs: Rhs) -> Self::Output {
-        (&self).scalar_rem(rhs)
-    }
-}
-
-impl<T, Rhs> ScalarRem<Rhs> for &Matrix<T>
-where
-    T: Zero + Clone,
-    for<'a> &'a T: crate::math::Rem<&'a T, Output = T>,
-    Rhs: Borrow<T>,
-{
-    type Output = Matrix<T>;
-
-    fn scalar_rem(self, rhs: Rhs) -> Self::Output {
-        let rhs = rhs.borrow();
-
-        let data = self.data.iter().map(|x| x.rem(rhs)).collect();
-
-        Self::Output {
-            rows: self.rows,
-            cols: self.cols,
-            data,
-        }
-    }
 }
 
 impl<T> CryptoHash for Matrix<T>
@@ -718,22 +645,22 @@ where
     }
 }
 
-impl<Rhs> InnerProduct<Rhs> for Vec<FpRistretto>
+impl<Rhs> InnerProduct<Rhs> for Vec<ZqRistretto>
 where
-    Rhs: Borrow<[FpRistretto]>,
+    Rhs: Borrow<[ZqRistretto]>,
 {
-    type Output = FpRistretto;
+    type Output = ZqRistretto;
 
     fn inner_product(&self, rhs: Rhs) -> Self::Output {
         self.as_slice().inner_product(rhs)
     }
 }
 
-impl<Rhs> InnerProduct<Rhs> for [FpRistretto]
+impl<Rhs> InnerProduct<Rhs> for [ZqRistretto]
 where
-    Rhs: Borrow<[FpRistretto]>,
+    Rhs: Borrow<[ZqRistretto]>,
 {
-    type Output = FpRistretto;
+    type Output = ZqRistretto;
 
     fn inner_product(&self, rhs: Rhs) -> Self::Output {
         let rhs = rhs.borrow();
@@ -742,8 +669,8 @@ where
         self.par_iter()
             .zip(rhs.par_iter())
             .map(|(a, b)| a * b)
-            .fold(FpRistretto::zero, |s, p| s + p)
-            .reduce(FpRistretto::zero, |a, b| a + b)
+            .fold(ZqRistretto::zero, |s, p| s + p)
+            .reduce(ZqRistretto::zero, |a, b| a + b)
     }
 }
 
@@ -783,10 +710,10 @@ impl InnerProduct<&Matrix<Scalar>> for Matrix<Scalar> {
     }
 }
 
-impl InnerProduct<&Matrix<FpRistretto>> for Matrix<FpRistretto> {
-    type Output = FpRistretto;
+impl InnerProduct<&Matrix<ZqRistretto>> for Matrix<ZqRistretto> {
+    type Output = ZqRistretto;
 
-    fn inner_product(&self, rhs: &Matrix<FpRistretto>) -> Self::Output {
+    fn inner_product(&self, rhs: &Matrix<ZqRistretto>) -> Self::Output {
         assert_eq!(self.cols, 1);
         assert_eq!(rhs.cols, 1);
         assert_eq!(self.rows, rhs.rows);
@@ -842,17 +769,17 @@ pub trait HadamardProduct<Rhs> {
     fn hadamard_product(&self, rhs: Rhs) -> Self::Output;
 }
 
-impl<F> HadamardProduct<&BitSlice> for &[F]
+impl<R> HadamardProduct<&BitSlice> for &[R]
 where
-    for<'a> F: Mul<&'a F, Output = F> + Field,
+    for<'a> R: Mul<&'a R, Output = R> + Ring,
 {
-    type Output = Vec<F>;
+    type Output = Vec<R>;
 
     fn hadamard_product(&self, rhs: &BitSlice) -> Self::Output {
         self.iter()
             .zip(rhs.iter())
             .map(|(x, y)| {
-                let y = if *y { F::one() } else { F::zero() };
+                let y = if *y { R::one() } else { R::zero() };
 
                 y * x
             })
@@ -860,34 +787,14 @@ where
     }
 }
 
-#[allow(unused)]
-/**
- * Pretty print the given matrix. Handy for debugging.
- */
-impl<F: Field> std::fmt::Display for &Matrix<DensePolynomial<F>> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        writeln!(f, "Matrix [")?;
-        for i in 0..self.rows {
-            writeln!(f, "\t[")?;
-            for j in 0..self.cols {
-                crate::math::print_polynomial(&self[(i, j)]);
-                write!(f, ", ")?;
-            }
-            writeln!(f, "]")?;
-        }
-        writeln!(f, "]")
-    }
-}
-
 #[cfg(test)]
 mod tests {
-    use crate::fields::{extend_bigint, FpRistretto, FqSeal128_8192};
+    use crate::rings::{ZqRistretto, ZqSeal128_8192};
 
     use super::*;
-    use ark_ff::{FpConfig, MontBackend};
-    use ark_poly::univariate::DensePolynomial;
     use bitvec::vec::BitVec;
     use sha3::Sha3_256;
+    use sunscreen_math::ring::extend_bigint;
 
     #[test]
     fn can_multiply_poly_matrix() {
@@ -904,10 +811,10 @@ mod tests {
             let mut coeffs = vec![];
 
             for j in 1..5 {
-                coeffs.push(FpRistretto::from((i * j) as u32));
+                coeffs.push(ZqRistretto::try_from((i * j) as u64).unwrap());
             }
 
-            polys.push(DensePolynomial { coeffs });
+            polys.push(Polynomial { coeffs });
         }
 
         let mut cur_poly = polys.drain(0..);
@@ -921,8 +828,8 @@ mod tests {
             }
         }
 
-        let two_x = DensePolynomial {
-            coeffs: vec![FpRistretto::zero(), FpRistretto::from(2)],
+        let two_x = Polynomial {
+            coeffs: vec![ZqRistretto::zero(), ZqRistretto::from(2)],
         };
 
         // Create a matrix with 0 + 2x on the diagonal.
@@ -938,7 +845,7 @@ mod tests {
 
         for i in 0..c.rows {
             for j in 0..c.cols {
-                let expected = a[(i, j)].naive_mul(&two_x);
+                let expected = a[(i, j)].clone() * &two_x;
                 let actual = &c[(i, j)];
 
                 assert_eq!(&expected, actual);
@@ -948,7 +855,7 @@ mod tests {
 
     #[test]
     fn can_multiply_matrix() {
-        type Fp = FpRistretto;
+        type Fp = ZqRistretto;
 
         let a = Matrix::from([
             [Fp::from(1), Fp::from(2), Fp::from(3)],
@@ -968,32 +875,29 @@ mod tests {
 
     #[test]
     fn can_mod_switch_matrix() {
-        let mut a: Matrix<FqSeal128_8192> = Matrix::new(3, 3);
+        let mut a: Matrix<ZqSeal128_8192> = Matrix::new(3, 3);
 
         for i in 0..a.rows {
             for j in 0..a.cols {
-                a[(i, j)] = FqSeal128_8192::from((i + j) as u32);
+                a[(i, j)] = ZqSeal128_8192::try_from((i + j) as u64).unwrap();
             }
         }
 
-        let b: Matrix<FpRistretto> = a.mod_switch_signed();
+        let b: Matrix<ZqRistretto> = a.mod_switch_signed();
 
         assert_eq!(a.rows, b.rows);
         assert_eq!(a.cols, b.cols);
 
         for i in 0..a.rows {
             for j in 0..a.cols {
-                assert_eq!(
-                    extend_bigint(&MontBackend::into_bigint(a[(i, j)])),
-                    MontBackend::into_bigint(b[(i, j)])
-                );
+                assert_eq!(extend_bigint(&a[(i, j)].val), b[(i, j)].val);
             }
         }
     }
 
     #[test]
     fn can_make_matrix_from_2d_array() {
-        type Fp = FpRistretto;
+        type Fp = ZqRistretto;
 
         let a = Matrix::from([
             [Fp::from(1), Fp::from(2), Fp::from(3)],
@@ -1012,9 +916,9 @@ mod tests {
 
     #[test]
     fn can_sub_poly_matrix() {
-        type Fp = FpRistretto;
+        type Fp = ZqRistretto;
 
-        let base_poly = DensePolynomial {
+        let base_poly = Polynomial {
             coeffs: vec![Fp::from(1), Fp::from(2), Fp::from(3)],
         };
 
@@ -1040,9 +944,9 @@ mod tests {
 
     #[test]
     fn can_add_poly_matrix() {
-        type Fp = FpRistretto;
+        type Fp = ZqRistretto;
 
-        let base_poly = DensePolynomial {
+        let base_poly = Polynomial {
             coeffs: vec![Fp::from(1), Fp::from(2), Fp::from(3)],
         };
 
@@ -1068,9 +972,9 @@ mod tests {
 
     #[test]
     fn can_hash_poly_matrix() {
-        type Fp = FpRistretto;
+        type Fp = ZqRistretto;
 
-        let base_poly = DensePolynomial {
+        let base_poly = Polynomial {
             coeffs: vec![Fp::from(1), Fp::from(2), Fp::from(3)],
         };
 
@@ -1109,9 +1013,9 @@ mod tests {
 
     #[test]
     fn can_evaluate_poly_matrix() {
-        type Fp = FpRistretto;
+        type Fp = ZqRistretto;
 
-        let base_poly = DensePolynomial {
+        let base_poly = Polynomial {
             coeffs: vec![Fp::from(1), Fp::from(2), Fp::from(3)],
         };
 
@@ -1132,7 +1036,7 @@ mod tests {
 
     #[test]
     fn can_inner_product_bitslice() {
-        type Fp = FpRistretto;
+        type Fp = ZqRistretto;
 
         let mut a: BitVec = BitVec::with_capacity(4);
         a.push(false);
@@ -1147,7 +1051,7 @@ mod tests {
 
     #[test]
     fn test_kronecker_product() {
-        type Fp = FpRistretto;
+        type Fp = ZqRistretto;
 
         let a_values = [[1, 2, 3], [4, 5, 6], [7, 8, 9]];
 

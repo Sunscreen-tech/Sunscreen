@@ -1,5 +1,3 @@
-use ark_ff::{Fp, MontBackend, MontConfig};
-use ark_poly::univariate::DensePolynomial;
 use merlin::Transcript;
 use seal_fhe::{
     BFVEncoder, BfvEncryptionParametersBuilder, CoefficientModulus, Context, Decryptor, Encryptor,
@@ -7,22 +5,27 @@ use seal_fhe::{
 };
 
 use logproof::{
-    fields::{FpRistretto, SealQ128_1024, SealQ128_2048, SealQ128_4096, SealQ128_8192},
     linear_algebra::Matrix,
-    math::{make_poly, next_higher_power_of_two, Rem, Zero},
+    math::{make_poly, next_higher_power_of_two},
+    rings::{SealQ128_1024, SealQ128_2048, SealQ128_4096, SealQ128_8192, ZqRistretto},
     test::{
         bfv_delta, convert_to_polynomial, convert_to_smallint, strip_trailing_value, LatticeProblem,
     },
-    InnerProductVerifierKnowledge, LogProof, LogProofGenerators, LogProofProverKnowledge,
+    Bounds, InnerProductVerifierKnowledge, LogProof, LogProofGenerators, LogProofProverKnowledge,
     LogProofTranscript,
 };
+use sunscreen_math::{
+    poly::Polynomial,
+    ring::{BarrettBackend, BarrettConfig, Zq},
+    Zero,
+};
 
-fn test_seal_linear_relation<F, const N: usize>(
+fn test_seal_linear_relation<B, const N: usize>(
     degree: u64,
     plain_modulus: u64,
-) -> LatticeProblem<Fp<MontBackend<F, N>, N>>
+) -> LatticeProblem<Zq<N, BarrettBackend<N, B>>>
 where
-    F: MontConfig<N>,
+    B: BarrettConfig<N>,
 {
     let degree = degree;
 
@@ -32,13 +35,13 @@ where
     // Calculate the data coefficient modulus, which for fields with more
     // that one modulus in the coefficient modulus set is equal to the
     // product of all but the last moduli in the set.
-    let mut data_modulus = FpRistretto::from(1);
+    let mut data_modulus = ZqRistretto::from(1);
 
     if coeff_modulus.len() == 1 {
-        data_modulus *= FpRistretto::from(coeff_modulus[0].value());
+        data_modulus = data_modulus * ZqRistretto::from(coeff_modulus[0].value());
     } else {
         for modulus in coeff_modulus.iter().take(coeff_modulus.len() - 1) {
-            data_modulus *= FpRistretto::from(modulus.value());
+            data_modulus = data_modulus * ZqRistretto::from(modulus.value());
         }
     }
 
@@ -84,12 +87,12 @@ where
 
     // Convert all components into their polynomial representations in the
     // fields we use in this package.
-    let m = DensePolynomial {
+    let m = Polynomial {
         coeffs: strip_trailing_value(
             (0..plaintext.len())
-                .map(|i| Fp::from(plaintext.get_coefficient(i)))
-                .collect::<Vec<Fp<MontBackend<F, N>, N>>>(),
-            Fp::zero(),
+                .map(|i| Zq::from(plaintext.get_coefficient(i)))
+                .collect::<Vec<_>>(),
+            Zq::zero(),
         ),
     };
 
@@ -114,18 +117,18 @@ where
     let r_coeffs = (0..r_exported.len())
         .map(|i| r_exported.get_coefficient(i))
         .collect::<Vec<u64>>();
-    let r = DensePolynomial {
+    let r = Polynomial {
         coeffs: r_coeffs
             .iter()
-            .map(|r_i| Fp::from(*r_i))
-            .collect::<Vec<Fp<MontBackend<F, N>, N>>>(),
+            .map(|r_i| Zq::from(*r_i))
+            .collect::<Vec<_>>(),
     };
 
     // Delta is the constant polynomial with floor (q/t) as it's DC compopnent.
     let delta_dc = bfv_delta(data_modulus, plain_modulus.value());
-    let delta_dc = Fp::from(delta_dc);
+    let delta_dc = Zq::try_from(delta_dc).unwrap();
 
-    let delta = DensePolynomial {
+    let delta = Polynomial {
         coeffs: vec![delta_dc],
     };
 
@@ -133,7 +136,7 @@ where
     let one = make_poly(&[1]);
     let zero = make_poly(&[]);
 
-    let a = Matrix::<DensePolynomial<Fp<MontBackend<F, N>, N>>>::from([
+    let a = Matrix::<Polynomial<_>>::from([
         [
             delta.clone(),
             one.clone(),
@@ -150,7 +153,7 @@ where
         ],
     ]);
 
-    let s = Matrix::<DensePolynomial<Fp<MontBackend<F, N>, N>>>::from([
+    let s = Matrix::<Polynomial<_>>::from([
         [m.clone()],
         [r.clone()],
         [u.clone()],
@@ -169,16 +172,18 @@ where
     let mut t = &a * &s;
 
     // Divide back to a polynomial of at max degree `degree`
-    let t_0 = Rem::rem(&t[(0, 0)], &f);
-    let t_1 = Rem::rem(&t[(1, 0)], &f);
+    let t_0 = t[(0, 0)].vartime_div_rem_restricted_rhs(&f).1;
+    let t_1 = t[(1, 0)].vartime_div_rem_restricted_rhs(&f).1;
     t[(0, 0)] = t_0;
     t[(1, 0)] = t_1;
 
     // Test that our equations match the matrix result.
-    let t_0_from_eq =
-        Rem::rem(delta.naive_mul(&m), &f) + r.clone() + Rem::rem(p_0.naive_mul(&u), &f) + e_1;
+    let t_0_from_eq = (delta * &m).vartime_div_rem_restricted_rhs(&f).1
+        + r.clone()
+        + (p_0 * &u).vartime_div_rem_restricted_rhs(&f).1
+        + e_1;
 
-    let t_1_from_eq = Rem::rem(p_1.naive_mul(&u), &f) + e_2;
+    let t_1_from_eq = (p_1 * &u).vartime_div_rem_restricted_rhs(&f).1 + e_2;
 
     // Assertions that the SEAL ciphertext matches our calculated one. We
     // use panics here to avoid the large printout from assert_eq.
@@ -201,10 +206,7 @@ where
 
     // Assert that the equations are equal when written up as a matrix (this
     // should trivially pass if the above assertions pass)
-    assert_eq!(
-        t,
-        Matrix::<DensePolynomial<Fp<MontBackend<F, N>, N>>>::from([[c_0], [c_1]])
-    );
+    assert_eq!(t, Matrix::<Polynomial<_>>::from([[c_0], [c_1]]));
 
     // Calculate bounds for the zero knowledge proof
     let m_coeffs = (0..degree as usize)
@@ -226,28 +228,30 @@ where
     let s_components_bounds = s_components
         .into_iter()
         .map(|v| {
-            v.into_iter()
-                .map(|x| {
-                    if x == 0 {
-                        0
-                    } else {
-                        next_higher_power_of_two(x.unsigned_abs())
-                    }
-                })
-                .collect::<Vec<u64>>()
+            Bounds(
+                v.into_iter()
+                    .map(|x| {
+                        if x == 0 {
+                            0
+                        } else {
+                            next_higher_power_of_two(x.unsigned_abs())
+                        }
+                    })
+                    .collect::<Vec<u64>>(),
+            )
         })
-        .collect::<Vec<Vec<u64>>>();
+        .collect::<Vec<Bounds>>();
 
-    let b: Matrix<Vec<u64>> = Matrix::from(s_components_bounds);
+    let b: Matrix<Bounds> = Matrix::from(s_components_bounds);
 
     LatticeProblem { a, s, t, f, b }
 }
 
-fn zero_knowledge_proof<F, const N: usize>(degree: u64, plain_modulus: u64)
+fn zero_knowledge_proof<B, const N: usize>(degree: u64, plain_modulus: u64)
 where
-    F: MontConfig<N>,
+    B: BarrettConfig<N>,
 {
-    let LatticeProblem { a, s, t, f, b } = test_seal_linear_relation::<F, N>(degree, plain_modulus);
+    let LatticeProblem { a, s, t, f, b } = test_seal_linear_relation::<B, N>(degree, plain_modulus);
 
     let pk = LogProofProverKnowledge::new(&a, &s, &t, &b, &f);
 

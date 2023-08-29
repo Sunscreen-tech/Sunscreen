@@ -1095,6 +1095,43 @@
         {
             "type": "lldb",
             "request": "launch",
+            "name": "Debug executable 'polynomial_zkp'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=polynomial_zkp",
+                    "--package=polynomial_zkp"
+                ],
+                "filter": {
+                    "name": "polynomial_zkp",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'polynomial_zkp'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=polynomial_zkp",
+                    "--package=polynomial_zkp"
+                ],
+                "filter": {
+                    "name": "polynomial_zkp",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
             "name": "Debug executable 'simple_multiply'",
             "cargo": {
                 "args": [
@@ -1180,6 +1217,25 @@
                 "filter": {
                     "name": "logproof",
                     "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'seal'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=seal",
+                    "--package=logproof"
+                ],
+                "filter": {
+                    "name": "seal",
+                    "kind": "test"
                 }
             },
             "args": [],

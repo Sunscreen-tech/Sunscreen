@@ -98,21 +98,23 @@ pub fn derive_barrett_config(input: proc_macro::TokenStream) -> TokenStream {
 }
 
 #[proc_macro_attribute]
-/// This trait auto impls all combinations of borrowed and owned for binary std::ops traits.
-/// To use this, you must impl `std::ops::Op<&T, Output=T> for &T` and this macro will auto
+/// This trait auto impls all combinations of borrowed and owned for binary `std::ops` 
+/// traits.
+/// To use this, you must impl `std::ops::Op<&T> for &T` and this macro will auto
 /// create the other traits to call your impl by borrowing the rhs or self as appropriate.
 ///
-/// The arguments are as follows:
-/// $trait:ty: The binary Ops trait you're trying to implement.
-/// $ty:ty: the type for which you wish to derive the borrowed and owned variants.
-/// ($($t:ty,($($bound:ty)+))*): The bounds on generics for $ty
-/// $($gen_arg:ty)*): The generics on $ty
+/// # Limitations:
+/// `refify_binary_op` supports binary operations that look like those in std::ops.
+/// Namely, the trait must:
+/// * Accept a single generic argument for the `Rhs` type.
+/// * Have an associated type for its output.
+/// * Require you implement a single method.
 ///
-/// Example
+/// # Example
 /// ```rust
 /// use num::traits::{WrappingAdd, WrappingMul, WrappingNeg, WrappingSub};
 /// use std::ops::Add;
-/// use sunscreen_math::refify;
+/// use sunscreen_math_macros::refify_binary_op;
 ///
 /// pub trait WrappingSemantics:     
 ///     Copy + Clone + std::fmt::Debug + WrappingAdd + WrappingMul + WrappingSub + WrappingNeg
@@ -127,6 +129,12 @@ pub fn derive_barrett_config(input: proc_macro::TokenStream) -> TokenStream {
 /// where
 ///     T: WrappingSemantics;
 ///
+/// // #[refify_binary_op] attribute goes on impl `Op<&T> for &T` and will generate
+/// // trait impls for
+/// // * `impl Op<T> for T`
+/// // * `impl Op<&T> for T`
+/// // * `impl Op<T> for &T`
+/// #[refify_binary_op]
 /// impl<T> Add<&ZInt<T>> for &ZInt<T>
 /// where
 /// T: WrappingSemantics,
@@ -136,11 +144,6 @@ pub fn derive_barrett_config(input: proc_macro::TokenStream) -> TokenStream {
 ///     fn add(self, rhs: &ZInt<T>) -> Self::Output {
 ///         ZInt(self.0.wrapping_add(&rhs.0))
 ///     }
-/// }
-///
-/// // Now if a is ZInt<T>, we can a + a, &a + a, a + &a, and &a + &a.
-/// refify! {
-/// Add, ZInt, (T, (WrappingSemantics)), T
 /// }
 /// ```
 pub fn refify_binary_op(

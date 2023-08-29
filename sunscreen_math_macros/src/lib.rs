@@ -1,4 +1,4 @@
-use darling::{FromDeriveInput, FromMeta};
+use darling::{FromDeriveInput};
 use num::{BigInt, FromPrimitive, Num};
 use proc_macro::TokenStream;
 use proc_macro2::TokenStream as TokenStream2;
@@ -144,7 +144,7 @@ pub fn derive_barrett_config(input: proc_macro::TokenStream) -> TokenStream {
 /// }
 /// ```
 pub fn refify_binary_op(
-    attr: TokenStream,
+    _attr: TokenStream,
     input: proc_macro::TokenStream,
 ) -> proc_macro::TokenStream {
     let input = parse_macro_input!(input as ItemImpl);

@@ -82,10 +82,17 @@ impl<const N: usize, C: BarrettConfig<N>> BarrettBackend<N, C> {
 impl<const N: usize, C: BarrettConfig<N>> ArithmeticBackend<N> for BarrettBackend<N, C> {
     const MODULUS: Uint<N> = C::MODULUS;
 
+    const ZERO: Uint<N> = Uint::ZERO;
+
+    const ONE: Uint<N> = Uint::ONE;
+
     /// Compute `lhs * rhs mod MODULUS` using a Barrett Reduction
-    ///
     fn mul_mod(lhs: &Uint<N>, rhs: &Uint<N>) -> Uint<N> {
         Self::barrett_reduce(lhs.mul_wide(rhs))
+    }
+
+    fn encode(val: &Uint<N>) -> Uint<N> {
+        *val
     }
 }
 

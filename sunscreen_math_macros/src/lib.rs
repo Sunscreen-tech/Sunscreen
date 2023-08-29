@@ -2,8 +2,11 @@ use darling::FromDeriveInput;
 use num::{BigInt, FromPrimitive, Num};
 use proc_macro::TokenStream;
 use proc_macro2::TokenStream as TokenStream2;
-use quote::quote;
-use syn::{parse_macro_input, DeriveInput};
+use quote::{quote, quote_spanned};
+use syn::{
+    parse_macro_input, punctuated::Punctuated, spanned::Spanned, DeriveInput, GenericArgument,
+    ImplItem, ItemImpl, Path, PathArguments, PathSegment, Type,
+};
 
 #[derive(FromDeriveInput, Debug)]
 #[darling(attributes(barrett_config), forward_attrs(allow, doc, cfg))]
@@ -92,4 +95,198 @@ pub fn derive_barrett_config(input: proc_macro::TokenStream) -> TokenStream {
             const T: #sunscreen_path::Uint<#num_limbs> = #sunscreen_path::Uint::from_words(#t_limbs);
         }
     }.into()
+}
+
+#[proc_macro_attribute]
+/// This trait auto impls all combinations of borrowed and owned for binary `std::ops`
+/// traits.
+/// To use this, you must impl `std::ops::Op<&T> for &T` and this macro will auto
+/// create the other traits to call your impl by borrowing the rhs or self as appropriate.
+///
+/// # Limitations:
+/// `refify_binary_op` supports binary operations that look like those in std::ops.
+/// Namely, the trait must:
+/// * Accept a single generic argument for the `Rhs` type.
+/// * Have an associated type for its output.
+/// * Require you implement a single method.
+///
+/// # Example
+/// ```rust
+/// use num::traits::{WrappingAdd, WrappingMul, WrappingNeg, WrappingSub};
+/// use std::ops::Add;
+/// use sunscreen_math_macros::refify_binary_op;
+///
+/// pub trait WrappingSemantics:     
+///     Copy + Clone + std::fmt::Debug + WrappingAdd + WrappingMul + WrappingSub + WrappingNeg
+/// {
+/// }
+///
+/// impl WrappingSemantics for u64 {}
+///
+/// #[repr(transparent)]
+/// #[derive(Clone, Copy, Debug)]
+/// pub struct ZInt<T>(T)
+/// where
+///     T: WrappingSemantics;
+///
+/// // #[refify_binary_op] attribute goes on impl `Op<&T> for &T` and will generate
+/// // trait impls for
+/// // * `impl Op<T> for T`
+/// // * `impl Op<&T> for T`
+/// // * `impl Op<T> for &T`
+/// #[refify_binary_op]
+/// impl<T> Add<&ZInt<T>> for &ZInt<T>
+/// where
+/// T: WrappingSemantics,
+/// {
+///     type Output = ZInt<T>;
+///
+///     fn add(self, rhs: &ZInt<T>) -> Self::Output {
+///         ZInt(self.0.wrapping_add(&rhs.0))
+///     }
+/// }
+/// ```
+pub fn refify_binary_op(
+    _attr: TokenStream,
+    input: proc_macro::TokenStream,
+) -> proc_macro::TokenStream {
+    let input = parse_macro_input!(input as ItemImpl);
+    let generics = &input.generics;
+    let self_type = &input.self_ty;
+    let trait_name = &input.trait_;
+    let impl_items = &input.items;
+    let where_clause = &generics.where_clause;
+
+    fn make_error<S: Spanned>(spanned: S, err: &str) -> TokenStream {
+        quote_spanned! { spanned.span() => compile_error!(#err) }.into()
+    }
+
+    let self_type = if let Type::Reference(self_type) = *self_type.clone() {
+        *self_type.elem
+    } else {
+        return make_error(
+            self_type,
+            "You must use refify_binary_op on an `impl OpTrait<&MyType> for &MyType`",
+        );
+    };
+
+    let trait_path = if let Some((_, path, _)) = trait_name {
+        path
+    } else {
+        return make_error(input, "Use refify_binary_op on trait impls");
+    };
+
+    // Get the non-reference type argument to the trait.
+    let gen_args = &trait_path.segments.iter().last().unwrap().arguments;
+
+    let mut trait_path_segments = vec![];
+
+    for (i, p) in trait_path.segments.iter().enumerate() {
+        // Strip the arguments from the last path segment.
+        if i == trait_path.segments.len() - 1 {
+            let p = p.clone();
+
+            trait_path_segments.push(PathSegment {
+                arguments: PathArguments::None,
+                ..p
+            })
+        } else {
+            trait_path_segments.push(p.clone());
+        }
+    }
+
+    let trait_path_segments = Punctuated::from_iter(trait_path_segments);
+
+    let trait_path = Path {
+        segments: trait_path_segments.clone(),
+        ..trait_path.clone()
+    };
+
+    let trait_arg = if let PathArguments::AngleBracketed(args) = gen_args {
+        if args.args.len() != 1 {
+            return make_error(
+                args,
+                "refify_binary_op requires a single generic argument on the trait being impl'd",
+            );
+        }
+
+        if let GenericArgument::Type(t) = &args.args[0] {
+            if let Type::Reference(t) = t {
+                if let (None, None) = (&t.lifetime, t.mutability) {
+                    *t.elem.clone()
+                } else {
+                    return make_error(t, "refify_binary_op doesn't allow mutable or bounded lifetime references as trait arguments.");
+                }
+            } else {
+                return make_error(
+                    t,
+                    "refify_binary_op requires you implement the `Op<&T> for &T` variant.",
+                );
+            }
+        } else {
+            return make_error(
+                &args.args[0],
+                "refify_binary_op requires a type argument to op trait",
+            );
+        }
+    } else {
+        return make_error(
+            gen_args,
+            "refify_binary_op requires angle bracket generics on the operation",
+        );
+    };
+
+    if impl_items.len() != 2 {
+        return make_error(
+            input,
+            "refify_binary_op requires an associated output type and a single fn implementation.",
+        );
+    }
+
+    let associated_type = if let ImplItem::Type(t) = &impl_items[0] {
+        t
+    } else {
+        return make_error(
+            &impl_items[0],
+            "expected an associated type for the trait impl",
+        );
+    };
+
+    let fn_ident = if let ImplItem::Fn(op_fn) = &impl_items[1] {
+        &op_fn.sig.ident
+    } else {
+        return make_error(&impl_items[1], "expected op fn");
+    };
+
+    quote_spanned! {input.span()=>
+        impl #generics #trait_path<#trait_arg> for #self_type #where_clause {
+            #associated_type
+
+            #[inline(always)]
+            fn #fn_ident(self, rhs: #trait_arg) -> Self::Output {
+                (&self).#fn_ident (&rhs)
+            }
+        }
+
+        impl #generics #trait_path<&#trait_arg> for #self_type #where_clause {
+            #associated_type
+
+            #[inline(always)]
+            fn #fn_ident(self, rhs: &#trait_arg) -> Self::Output {
+                (&self).#fn_ident (rhs)
+            }
+        }
+
+        impl #generics #trait_path<#trait_arg> for &#self_type #where_clause {
+            #associated_type
+
+            #[inline(always)]
+            fn #fn_ident(self, rhs: #trait_arg) -> Self::Output {
+                self.#fn_ident (&rhs)
+            }
+        }
+
+        #input
+    }
+    .into()
 }

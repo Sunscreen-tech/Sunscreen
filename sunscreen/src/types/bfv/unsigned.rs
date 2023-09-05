@@ -191,7 +191,7 @@ macro_rules! impl_std_op {
 
                     fn [<$op:lower>](self, rhs: u64) -> Self::Output {
                         Self {
-                            val: self.val.[<wrapping_ $op:lower>](&Uint::from_u64(rhs)),
+                            val: self.val.[<wrapping_ $op:lower>](&Uint::<LIMBS>::from_u64(rhs)),
                         }
                     }
                 }

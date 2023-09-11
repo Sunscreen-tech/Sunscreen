@@ -1,6 +1,6 @@
 [package]
 name = "sunscreen_fhe_program"
-version = "0.8.0"
+version = "0.8.1"
 edition = "2021"
 
 authors = ["Sunscreen"]
@@ -26,4 +26,3 @@ thiserror = { workspace = true }
 
 [dev-dependencies]
 serde_json = { workspace = true }
-

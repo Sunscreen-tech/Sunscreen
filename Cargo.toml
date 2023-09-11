@@ -44,7 +44,7 @@ thiserror = "1.0.44"
 naga = { version = "0.13.0", features = ["wgsl-in"] }
 wgpu-core = { version = "0.17.0", features = ["vulkan", "wgsl"] }
 find_cuda_helper = "0.2.0"
-criterion = {version = "0.5.1", default-features = false }
+criterion = { version = "0.5.1", default-features = false }
 darling = "0.20.3"
 proc-macro2 = "1.0.66"
 quote = "1.0.32"
@@ -78,24 +78,24 @@ fs_extra = "1.2.0"
 reqwest = { version = "0.11.10", features = ["blocking"] }
 rand_distr = "0.4.3"
 
-curve25519-dalek = { version = "0.8.0", package = "sunscreen_curve25519", path = "./sunscreen_curve25519", features = [
+curve25519-dalek = { version = "0.8.1", package = "sunscreen_curve25519", path = "./sunscreen_curve25519", features = [
     "serde",
     "u64_backend",
     "alloc",
 ], default-features = false }
-bulletproofs = { version = "0.8.0", path = "./sunscreen_bulletproofs", package = "sunscreen_bulletproofs", features = [
+bulletproofs = { version = "0.8.1", path = "./sunscreen_bulletproofs", package = "sunscreen_bulletproofs", features = [
     "yoloproofs",
 ] }
 emsdk = { version = "^0.1", path = "./emsdk" }
-sunscreen = { version = "0.8.0", path = "./sunscreen", features = [
+sunscreen = { version = "0.8.1", path = "./sunscreen", features = [
     "bulletproofs",
 ] }
-sunscreen_compiler_macros = { version = "0.8.0", path = "./sunscreen_compiler_macros" }
-sunscreen_backend = { version = "0.8.0", path = "./sunscreen_backend" }
-sunscreen_zkp_backend = { version = "0.8.0", path = "./sunscreen_zkp_backend" }
-sunscreen_fhe_program = { version = "0.8.0", path = "./sunscreen_fhe_program" }
-sunscreen_runtime = { version = "0.8.0", path = "./sunscreen_runtime" }
-sunscreen_compiler_common = { version = "0.8.0", path = "./sunscreen_compiler_common" }
-sunscreen_math = { version = "0.8.0", path = "./sunscreen_math" }
-sunscreen_math_macros = { version = "0.8.0", path = "./sunscreen_math_macros" }
-seal_fhe = { version = "0.8.0", path = "./seal_fhe" }
+sunscreen_compiler_macros = { version = "0.8.1", path = "./sunscreen_compiler_macros" }
+sunscreen_backend = { version = "0.8.1", path = "./sunscreen_backend" }
+sunscreen_zkp_backend = { version = "0.8.1", path = "./sunscreen_zkp_backend" }
+sunscreen_fhe_program = { version = "0.8.1", path = "./sunscreen_fhe_program" }
+sunscreen_runtime = { version = "0.8.1", path = "./sunscreen_runtime" }
+sunscreen_compiler_common = { version = "0.8.1", path = "./sunscreen_compiler_common" }
+sunscreen_math = { version = "0.8.1", path = "./sunscreen_math" }
+sunscreen_math_macros = { version = "0.8.1", path = "./sunscreen_math_macros" }
+seal_fhe = { version = "0.8.1", path = "./seal_fhe" }

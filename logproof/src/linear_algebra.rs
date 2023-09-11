@@ -23,7 +23,7 @@ use crate::rings::{FieldFrom, ZqRistretto};
  * [`Clone`], [`Zero`].
  *
  * To actually multiply matrices, `T` should also implement
- * [`Add`] and [`SmartMul`].
+ * [`Add`] and [`Mul`].
  */
 pub struct Matrix<T>
 where

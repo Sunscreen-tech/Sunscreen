@@ -159,7 +159,7 @@ impl EncryptionParameters {
         };
 
         let mut borrowed_modulus = Vec::with_capacity(len as usize);
-        let borrowed_modulus_ptr = borrowed_modulus.as_mut_ptr() as *mut *mut c_void;
+        let borrowed_modulus_ptr = borrowed_modulus.as_mut_ptr();
 
         unsafe {
             convert_seal_error(bindgen::EncParams_GetCoeffModulus(

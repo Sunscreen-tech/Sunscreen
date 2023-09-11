@@ -176,7 +176,7 @@ impl CoefficientModulus {
         let length = bit_sizes.len() as u64;
 
         let mut coefficients: Vec<*mut c_void> = Vec::with_capacity(bit_sizes.len());
-        let coefficients_ptr = coefficients.as_mut_ptr() as *mut *mut c_void;
+        let coefficients_ptr = coefficients.as_mut_ptr();
 
         convert_seal_error(unsafe {
             bindgen::CoeffModulus_Create1(degree, length, bit_sizes.as_mut_ptr(), coefficients_ptr)
@@ -208,7 +208,7 @@ impl CoefficientModulus {
         })?;
 
         let mut coefficients: Vec<*mut c_void> = Vec::with_capacity(len as usize);
-        let coefficients_ptr = coefficients.as_mut_ptr() as *mut *mut c_void;
+        let coefficients_ptr = coefficients.as_mut_ptr();
 
         convert_seal_error(unsafe {
             bindgen::CoeffModulus_BFVDefault(

@@ -138,7 +138,7 @@ where
         for i in 0..iter_count {
             // Normally, we would compute the scale factor as coeff_i(rem) * coeff_i(rhs)^-1,
             // but inverse isn't defined for rings. Since we leverage the fact that the
-            // leading coefficient
+            // leading coefficient is always 1, we don't have this problem.
             let scale = rem.coeffs[lhs_degree - i].clone();
 
             for j in 0..=rhs_degree {

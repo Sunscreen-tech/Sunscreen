@@ -97,11 +97,12 @@ where
 
     /// Create a new matrix with the same dimensions by applying the map `f`
     /// to each element.
-    pub fn map<F>(&self, f: F) -> Self
+    pub fn map<F, V>(&self, f: F) -> Matrix<V>
     where
-        F: Fn(&T) -> T,
+        F: Fn(&T) -> V,
+        V: Zero + Clone,
     {
-        Self {
+        Matrix {
             data: self.data.iter().map(f).collect(),
             rows: self.rows,
             cols: self.cols,

@@ -97,7 +97,7 @@ dependencies = [
  "ark-std",
  "derivative",
  "digest 0.10.7",
- "itertools",
+ "itertools 0.10.5",
  "num-bigint",
  "num-traits 0.2.16",
  "paste",
@@ -604,7 +604,7 @@ dependencies = [
  "clap 2.34.0",
  "criterion-plot 0.4.5",
  "csv",
- "itertools",
+ "itertools 0.10.5",
  "lazy_static",
  "num-traits 0.2.16",
  "oorandom",
@@ -631,7 +631,7 @@ dependencies = [
  "clap 4.4.2",
  "criterion-plot 0.5.0",
  "is-terminal",
- "itertools",
+ "itertools 0.10.5",
  "num-traits 0.2.16",
  "once_cell",
  "oorandom",
@@ -650,7 +650,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2673cc8207403546f45f5fd319a974b1e6983ad1a3ee7e6041650013be041876"
 dependencies = [
  "cast",
- "itertools",
+ "itertools 0.10.5",
 ]
 
 [[package]]
@@ -660,7 +660,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6b50826342786a51a89e2da3a28f1c32b06e387201bc2d19791f622c673706b1"
 dependencies = [
  "cast",
- "itertools",
+ "itertools 0.10.5",
 ]
 
 [[package]]
@@ -977,6 +977,70 @@ name = "fastrand"
 version = "2.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6999dc1837253364c2ebb0704ba97994bd874e8f195d665c50b7548f6ea92764"
+
+[[package]]
+name = "fhe"
+version = "0.1.0-beta.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5aef15eddbefba260567c16119f091de44328fe2bcf46205e4b6a624b30f120e"
+dependencies = [
+ "fhe-math",
+ "fhe-traits",
+ "fhe-util",
+ "itertools 0.11.0",
+ "ndarray",
+ "num-bigint",
+ "num-traits 0.2.16",
+ "protobuf",
+ "rand",
+ "rand_chacha",
+ "thiserror",
+ "zeroize",
+ "zeroize_derive",
+]
+
+[[package]]
+name = "fhe-math"
+version = "0.1.0-beta.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8591d2c1d85529bee180708db40763c67f422224952230b1e816041e97627ee6"
+dependencies = [
+ "crypto-bigint",
+ "fhe-traits",
+ "fhe-util",
+ "itertools 0.11.0",
+ "ndarray",
+ "num-bigint",
+ "num-bigint-dig",
+ "num-traits 0.2.16",
+ "protobuf",
+ "rand",
+ "rand_chacha",
+ "sha2 0.10.7",
+ "thiserror",
+ "zeroize",
+]
+
+[[package]]
+name = "fhe-traits"
+version = "0.1.0-beta.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cd3c7f26ded30f5b9952833745afb0b3db381f2fd32dfa245db6e98143010c06"
+dependencies = [
+ "rand",
+]
+
+[[package]]
+name = "fhe-util"
+version = "0.1.0-beta.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "187f8a2fdb58c80acf4e7104c915376c63bbc89bbacdf4ffa3a1d711550c82c0"
+dependencies = [
+ "itertools 0.11.0",
+ "num-bigint-dig",
+ "num-traits 0.2.16",
+ "rand",
+]
 
 [[package]]
 name = "find_cuda_helper"
@@ -1512,6 +1576,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "itertools"
+version = "0.11.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b1c173a5686ce8bfa551b3563d0c2170bf24ca44da99c7ca4bfdab5418c3fe57"
+dependencies = [
+ "either",
+]
+
+[[package]]
 name = "itoa"
 version = "1.0.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1551,6 +1624,9 @@ name = "lazy_static"
 version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e2abad23fbc42b3700f2f279844dc832adb2b2eb069b2df918f455c4e18cc646"
+dependencies = [
+ "spin",
+]
 
 [[package]]
 name = "lazycell"
@@ -1655,6 +1731,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "62bb907fe88d54d8d9ce32a3cceab4218ed2f6b7d35617cafe9adf84e43919cb"
 dependencies = [
  "libc",
+]
+
+[[package]]
+name = "matrixmultiply"
+version = "0.3.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "090126dc04f95dc0d1c1c91f61bdd474b3930ca064c1edc8a849da2c6cbe1e77"
+dependencies = [
+ "autocfg",
+ "rawpointer",
 ]
 
 [[package]]
@@ -1784,6 +1870,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "ndarray"
+version = "0.15.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "adb12d4e967ec485a5f71c6311fe28158e9d6f4bc4a447b474184d0f91a8fa32"
+dependencies = [
+ "matrixmultiply",
+ "num-complex",
+ "num-integer",
+ "num-traits 0.2.16",
+ "rawpointer",
+]
+
+[[package]]
 name = "nodrop"
 version = "0.1.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1822,6 +1921,23 @@ dependencies = [
  "autocfg",
  "num-integer",
  "num-traits 0.2.16",
+]
+
+[[package]]
+name = "num-bigint-dig"
+version = "0.8.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "dc84195820f291c7697304f3cbdadd1cb7199c0efc917ff5eafd71225c136151"
+dependencies = [
+ "byteorder",
+ "lazy_static",
+ "libm 0.2.7",
+ "num-integer",
+ "num-iter",
+ "num-traits 0.2.16",
+ "rand",
+ "serde",
+ "smallvec",
 ]
 
 [[package]]
@@ -2206,6 +2322,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "protobuf"
+version = "3.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b55bad9126f378a853655831eb7363b7b01b81d19f8cb1218861086ca4a1a61e"
+dependencies = [
+ "once_cell",
+ "protobuf-support",
+ "thiserror",
+]
+
+[[package]]
+name = "protobuf-support"
+version = "3.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a5d4d7b8601c814cfb36bcebb79f0e61e45e1e93640cf778837833bbed05c372"
+dependencies = [
+ "thiserror",
+]
+
+[[package]]
 name = "quick-error"
 version = "1.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2296,6 +2432,12 @@ name = "raw-window-handle"
 version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f2ff9a1f06a88b01621b7ae906ef0211290d1c8a168a15542486a8f61c0833b9"
+
+[[package]]
+name = "rawpointer"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "60a357793950651c4ed0f3f52338f53b2f809f32d83a07f72909fa13e4c6c1e3"
 
 [[package]]
 name = "rayon"
@@ -2608,6 +2750,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "sha2"
+version = "0.10.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "479fb9d862239e610720565ca91403019f2f00410f1864c5aa7479b950a76ed8"
+dependencies = [
+ "cfg-if",
+ "cpufeatures",
+ "digest 0.10.7",
+]
+
+[[package]]
 name = "sha3"
 version = "0.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2687,6 +2840,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "spin"
+version = "0.5.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6e63cff320ae2c57904679ba7cb63280a3dc4613885beafb148ee7bf9aa9042d"
+
+[[package]]
 name = "spirv"
 version = "0.2.0+1.5.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2736,6 +2895,8 @@ dependencies = [
  "criterion 0.5.1",
  "crypto-bigint",
  "env_logger",
+ "fhe",
+ "fhe-traits",
  "float-cmp",
  "lazy_static",
  "log",
@@ -2743,6 +2904,7 @@ dependencies = [
  "paste",
  "petgraph",
  "proptest",
+ "rand",
  "seal_fhe",
  "serde",
  "serde_json",
@@ -2834,7 +2996,7 @@ dependencies = [
  "rand",
  "rand_core",
  "serde",
- "sha2",
+ "sha2 0.9.9",
  "subtle-ng",
  "zeroize",
 ]

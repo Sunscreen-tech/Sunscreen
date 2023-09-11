@@ -46,16 +46,19 @@ thiserror = { workspace = true }
 
 [dev-dependencies]
 bincode = { workspace = true }
-curve25519-dalek = { workspace = true }
 bulletproofs = { workspace = true }
 criterion = { workspace = true }
+curve25519-dalek = { workspace = true }
 env_logger = { workspace = true }
+fhe = { workspace = true }
+fhe-traits = { workspace = true }
 float-cmp = { workspace = true }
 lazy_static = { workspace = true }
 proptest = { workspace = true }
+rand = { workspace = true }
+serde_json = { workspace = true }
 sunscreen_zkp_backend = { workspace = true, features = ["bulletproofs"] }
 sunscreen_compiler_common = { workspace = true }
-serde_json = { workspace = true }
 
 [features]
 bulletproofs = ["sunscreen_zkp_backend/bulletproofs"]
@@ -65,6 +68,10 @@ deterministic = ["seal_fhe/deterministic", "sunscreen_runtime/deterministic"]
 
 [[bench]]
 name = "fractional_range_proof"
+harness = false
+
+[[bench]]
+name = "libs"
 harness = false
 
 [[bench]]

@@ -257,11 +257,10 @@ where
             (Context::Seal(ctx), InnerCiphertext::Seal(ciphertexts)) => {
                 let decryptor = Decryptor::new(ctx, &private_key.0)?;
 
-                Ok(ciphertexts
-                    .iter()
-                    .fold(Ok(u32::MAX), |min: Result<u32>, c| {
-                        Ok(u32::min(min?, decryptor.invariant_noise_budget(&c.data)?))
-                    })?)
+                Ok(ciphertexts.iter().try_fold(u32::MAX, |min, c| {
+                    let m = u32::min(min, decryptor.invariant_noise_budget(&c.data)?);
+                    Ok::<_, seal_fhe::Error>(m)
+                })?)
             }
         }
     }

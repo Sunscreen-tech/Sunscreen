@@ -1629,7 +1629,7 @@ checksum = "b5e6163cb8c49088c2c36f57875e58ccd8c87c7427f7fbd50ea6710b2f3f2e8f"
 
 [[package]]
 name = "logproof"
-version = "0.8.0"
+version = "0.8.1"
 dependencies = [
  "ark-ff",
  "ark-poly",
@@ -2501,7 +2501,7 @@ checksum = "94143f37725109f92c262ed2cf5e59bce7498c01bcc1502d7b9afe439a4e9f49"
 
 [[package]]
 name = "seal_fhe"
-version = "0.8.0"
+version = "0.8.1"
 dependencies = [
  "bindgen",
  "cmake",
@@ -2730,7 +2730,7 @@ dependencies = [
 
 [[package]]
 name = "sunscreen"
-version = "0.8.0"
+version = "0.8.1"
 dependencies = [
  "bincode",
  "bumpalo",
@@ -2762,7 +2762,7 @@ dependencies = [
 
 [[package]]
 name = "sunscreen_backend"
-version = "0.8.0"
+version = "0.8.1"
 dependencies = [
  "crossbeam",
  "env_logger",
@@ -2777,7 +2777,7 @@ dependencies = [
 
 [[package]]
 name = "sunscreen_bulletproofs"
-version = "0.8.0"
+version = "0.8.1"
 dependencies = [
  "bincode",
  "byteorder",
@@ -2799,7 +2799,7 @@ dependencies = [
 
 [[package]]
 name = "sunscreen_compiler_common"
-version = "0.8.0"
+version = "0.8.1"
 dependencies = [
  "petgraph",
  "proc-macro2",
@@ -2813,7 +2813,7 @@ dependencies = [
 
 [[package]]
 name = "sunscreen_compiler_macros"
-version = "0.8.0"
+version = "0.8.1"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2825,7 +2825,7 @@ dependencies = [
 
 [[package]]
 name = "sunscreen_curve25519"
-version = "0.8.0"
+version = "0.8.1"
 dependencies = [
  "bincode",
  "byteorder",
@@ -2842,7 +2842,7 @@ dependencies = [
 
 [[package]]
 name = "sunscreen_fhe_program"
-version = "0.8.0"
+version = "0.8.1"
 dependencies = [
  "petgraph",
  "seal_fhe",
@@ -2855,7 +2855,7 @@ dependencies = [
 
 [[package]]
 name = "sunscreen_math"
-version = "0.8.0"
+version = "0.8.1"
 dependencies = [
  "bytemuck",
  "criterion 0.5.1",
@@ -2881,7 +2881,7 @@ dependencies = [
 
 [[package]]
 name = "sunscreen_math_macros"
-version = "0.8.0"
+version = "0.8.1"
 dependencies = [
  "bytemuck",
  "darling",
@@ -2893,7 +2893,7 @@ dependencies = [
 
 [[package]]
 name = "sunscreen_runtime"
-version = "0.8.0"
+version = "0.8.1"
 dependencies = [
  "bincode",
  "crossbeam",
@@ -2915,7 +2915,7 @@ dependencies = [
 
 [[package]]
 name = "sunscreen_zkp_backend"
-version = "0.8.0"
+version = "0.8.1"
 dependencies = [
  "bumpalo",
  "crypto-bigint",

@@ -620,7 +620,7 @@ pub fn parallel_multiscalar_multiplication(s: &[Scalar], p: &[RistrettoPoint]) -
         .par_iter()
         .chunks(16384)
         .zip(p.par_iter().chunks(16384))
-        .map(|(s, p)| RistrettoPoint::vartime_multiscalar_mul(s.into_iter(), p.into_iter()))
+        .map(|(s, p)| RistrettoPoint::vartime_multiscalar_mul(s, p))
         .reduce(RistrettoPoint::default, |x, p| x + p);
 
     msm
@@ -769,7 +769,7 @@ mod test {
     fn can_pad() {
         type Fq = FqSeal128_8192;
 
-        let a = vec![Fq::from(1), Fq::from(2), Fq::from(3)];
+        let a = [Fq::from(1), Fq::from(2), Fq::from(3)];
 
         let b = a.pad_to_power_of_2();
 

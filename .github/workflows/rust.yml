@@ -11,7 +11,7 @@ env:
 
 jobs:
   build:
-    runs-on: Beefmaster
+    runs-on: linux-8core
 
     steps:
     - uses: actions/checkout@v3
@@ -110,7 +110,7 @@ jobs:
         RUSTDOCFLAGS: -D warnings
       run: cargo doc --release --no-deps
   emscripten:
-    runs-on: Beefmaster
+    runs-on: linux-8core
     steps:
     - uses: actions/checkout@v3
       with:

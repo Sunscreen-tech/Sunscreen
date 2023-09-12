@@ -13,6 +13,7 @@ use syn::{
 struct Opts {
     modulus: String,
     num_limbs: usize,
+    is_field: Option<bool>,
 }
 
 fn get_modulus(m: &str) -> Result<BigInt, String> {
@@ -46,11 +47,32 @@ fn emit_limbs(x: &BigInt, num_limbs: usize) -> TokenStream2 {
 }
 
 #[proc_macro_derive(BarrettConfig, attributes(barrett_config))]
+/// Derive the config for a ring over Z_q using Barrett reductions for
+/// multiplication modulo q.
+///
+/// # Remarks
+/// You must specify the `#[barret_config]` attribute after deriving this
+/// trait.
+///
+/// `#[barrett_config]` accepts `modulus`, `num_limbs`, and `is_field` as
+/// arguments.
+/// * `modulus` (required) - The modulus `q` defining the finite ring. This
+/// must be a string literal containing either a decimal or hex number. Hex
+/// values are prefixed with `0x`.
+/// * `num_limbs` (required) - The number of 64-bit bigint limbs desired to
+/// represent Z_q.
+/// * is_field (optional) - If `q` is prime, you may set this to true to
+/// define `Z_q` as a field. This additionally allows you to compute
+/// inverses.
 pub fn derive_barrett_config(input: proc_macro::TokenStream) -> TokenStream {
     let input = parse_macro_input!(input);
     let opts = Opts::from_derive_input(&input);
 
-    let Opts { num_limbs, modulus } = if let Ok(o) = opts {
+    let Opts {
+        num_limbs,
+        modulus,
+        is_field,
+    } = if let Ok(o) = opts {
         o
     } else {
         return quote! {compile_error!("You must specify #[barret_config(modulus = \"1234\", num_limbs = 2)]. Modulus requires either a hex value beginning in '0x' or decimal value. Limbs must be a positive an integer.")}.into();
@@ -60,6 +82,8 @@ pub fn derive_barrett_config(input: proc_macro::TokenStream) -> TokenStream {
         Err(s) => return quote! { compile_error!(#s) }.into(),
         Ok(m) => m,
     };
+
+    let is_field = is_field.unwrap_or_default();
 
     let DeriveInput { ident, .. } = input;
 
@@ -85,15 +109,30 @@ pub fn derive_barrett_config(input: proc_macro::TokenStream) -> TokenStream {
     let s_limbs = emit_limbs(&s, num_limbs);
     let t_limbs = emit_limbs(&t, num_limbs);
 
-    let sunscreen_path = quote! { sunscreen_math::ring };
+    let ring_path = quote! { sunscreen_math::ring };
+    let field_path = quote! { sunscreen_math::field };
 
-    quote! {
-        impl #sunscreen_path::BarrettConfig<#num_limbs> for #ident {
-            const MODULUS: #sunscreen_path::Uint<#num_limbs> = #sunscreen_path::Uint::from_words(#mod_limbs);
-            const R: #sunscreen_path::Uint<#num_limbs> = #sunscreen_path::Uint::from_words(#r_limbs);
-            const S: #sunscreen_path::Uint<#num_limbs> = #sunscreen_path::Uint::from_words(#s_limbs);
-            const T: #sunscreen_path::Uint<#num_limbs> = #sunscreen_path::Uint::from_words(#t_limbs);
+    let modulus_div_2 = modulus / 2;
+    let mod_div_2_limbs = emit_limbs(&modulus_div_2, num_limbs);
+
+    let impl_field_trait = if is_field {
+        quote_spanned! {ident.span()=>
+            impl #field_path::FieldConfig for #ident {}
         }
+    } else {
+        quote! {}
+    };
+
+    quote_spanned! {ident.span()=>
+        impl #ring_path::BarrettConfig<#num_limbs> for #ident {
+            const MODULUS: #ring_path::Uint<#num_limbs> = #ring_path::Uint::from_words(#mod_limbs);
+            const MODULUS_DIV_2: #ring_path::Uint<#num_limbs> = #ring_path::Uint::from_words(#mod_div_2_limbs);
+            const R: #ring_path::Uint<#num_limbs> = #ring_path::Uint::from_words(#r_limbs);
+            const S: #ring_path::Uint<#num_limbs> = #ring_path::Uint::from_words(#s_limbs);
+            const T: #ring_path::Uint<#num_limbs> = #ring_path::Uint::from_words(#t_limbs);
+        }
+
+        #impl_field_trait
     }.into()
 }
 

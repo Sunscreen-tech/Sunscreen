@@ -1631,10 +1631,9 @@ checksum = "b5e6163cb8c49088c2c36f57875e58ccd8c87c7427f7fbd50ea6710b2f3f2e8f"
 name = "logproof"
 version = "0.8.1"
 dependencies = [
- "ark-ff",
- "ark-poly",
  "bincode",
  "bitvec",
+ "bytemuck",
  "criterion 0.5.1",
  "crypto-bigint",
  "digest 0.10.7",
@@ -2871,6 +2870,7 @@ dependencies = [
  "paste",
  "rand",
  "rayon",
+ "subtle",
  "sunscreen_curve25519",
  "sunscreen_math_macros",
  "thiserror",

@@ -2,12 +2,14 @@
  * Types and functions for testing logproof setups. Not meant to be used in
  * production, only for testing.
  */
-use ark_ff::{BigInt, Field, Fp, MontBackend, MontConfig};
-use ark_poly::univariate::DensePolynomial;
 use crypto_bigint::{NonZero, Uint};
 use seal_fhe::{Modulus, PolynomialArray};
+use sunscreen_math::{
+    poly::Polynomial,
+    ring::{ArithmeticBackend, Ring, Zq},
+};
 
-use crate::{fields::FpRistretto, linear_algebra::Matrix, math::make_poly};
+use crate::{linear_algebra::Matrix, math::make_poly, rings::ZqRistretto, Bounds};
 
 /**
  * All information for a problem of the form `AS = T` in `Z_q[X]/f`. Useful for
@@ -17,22 +19,22 @@ use crate::{fields::FpRistretto, linear_algebra::Matrix, math::make_poly};
  */
 pub struct LatticeProblem<Q>
 where
-    Q: Field,
+    Q: Ring,
 {
     /// Public A
-    pub a: Matrix<DensePolynomial<Q>>,
+    pub a: Matrix<Polynomial<Q>>,
 
     /// Private message and encryption components S
-    pub s: Matrix<DensePolynomial<Q>>,
+    pub s: Matrix<Polynomial<Q>>,
 
     /// Result of A * S
-    pub t: Matrix<DensePolynomial<Q>>,
+    pub t: Matrix<Polynomial<Q>>,
 
     /// Polynomial divisor
-    pub f: DensePolynomial<Q>,
+    pub f: Polynomial<Q>,
 
     /// Bounds on elements in S
-    pub b: Matrix<Vec<u64>>,
+    pub b: Matrix<Bounds>,
 }
 
 /**
@@ -112,25 +114,25 @@ pub fn convert_to_small_coeffs(
 pub fn convert_to_polynomial_by_small_coeffs<Q>(
     coeff_modulus: &[Modulus],
     poly_array: PolynomialArray,
-) -> Vec<DensePolynomial<Q>>
+) -> Vec<Polynomial<Q>>
 where
-    Q: Field,
+    Q: Ring + From<u64>,
 {
     convert_to_small_coeffs(coeff_modulus, poly_array)
         .into_iter()
         .map(|v| make_poly(&v))
-        .collect::<Vec<DensePolynomial<Q>>>()
+        .collect::<Vec<Polynomial<Q>>>()
 }
 
 /**
  * Converts a `PolynomialArray` into a vector of `DensePolynomial`
  * regardless of the magnitude of the coefficients.
  */
-pub fn convert_to_polynomial<Q, const N: usize>(
+pub fn convert_to_polynomial<B, const N: usize>(
     poly_array: PolynomialArray,
-) -> Vec<DensePolynomial<Fp<MontBackend<Q, N>, N>>>
+) -> Vec<Polynomial<Zq<N, B>>>
 where
-    Q: MontConfig<N>,
+    B: ArithmeticBackend<N>,
 {
     let chunk_size = poly_array.coeff_modulus_size() as usize;
 
@@ -141,18 +143,18 @@ where
         // SEAL sometimes encodes a multiprecision integer with more limbs
         // than needed. The trailing limbs can be safely removed since they
         // are 0.
-        .map(|x| BigInt::<N>(x[0..N].try_into().unwrap()))
-        .collect::<Vec<BigInt<N>>>();
+        .map(|x| Uint::<N>::from_words(x[0..N].try_into().unwrap()))
+        .collect::<Vec<_>>();
 
     bigint_values
         .chunks(poly_array.poly_modulus_degree() as usize)
         .map(|x| {
-            let leading_zeros_removed = strip_trailing_value(x.to_vec(), BigInt::<N>::zero());
-            DensePolynomial {
+            let leading_zeros_removed = strip_trailing_value(x.to_vec(), Uint::<N>::ZERO);
+            Polynomial {
                 coeffs: leading_zeros_removed
                     .iter()
-                    .map(|y| Fp::<MontBackend<Q, N>, N>::from(*y))
-                    .collect::<Vec<Fp<MontBackend<Q, N>, N>>>(),
+                    .map(|y| Zq::try_from(*y).unwrap())
+                    .collect::<Vec<_>>(),
             }
         })
         .collect()
@@ -161,13 +163,16 @@ where
 /**
  * Calculate the $\Delta$ parameter (floor(q/t)) for the BFV encryption scheme.
  * This is a public parameter in the BFV scheme.
+ *
+ * # Remarks
+ * Since Zq is technically a [`Ring`], division may not be defined.
+ * We calculate `q/t` using integer division.
  */
-pub fn bfv_delta<const N: usize>(coeff_modulus: FpRistretto, plaintext_modulus: u64) -> BigInt<N> {
-    let coeff_modulus = Uint::from(MontConfig::into_bigint(coeff_modulus).0);
+pub fn bfv_delta<const N: usize>(coeff_modulus: ZqRistretto, plaintext_modulus: u64) -> Uint<N> {
     let plain_modulus_bigint = NonZero::new(Uint::from(plaintext_modulus)).unwrap();
 
-    let delta = coeff_modulus.div_rem(&plain_modulus_bigint).0;
+    let delta = coeff_modulus.into_bigint().div_rem(&plain_modulus_bigint).0;
 
     let limbs = delta.as_limbs().map(|l| l.into());
-    BigInt::<N>(limbs[0..N].try_into().unwrap())
+    Uint::<N>::from_words(limbs[0..N].try_into().unwrap())
 }

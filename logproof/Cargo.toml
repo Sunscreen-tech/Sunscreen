@@ -6,9 +6,8 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-ark-poly = { workspace = true }
-ark-ff = { workspace = true }
 bitvec = { workspace = true }
+bytemuck = { workspace = true }
 crypto-bigint = { workspace = true }
 curve25519-dalek = { workspace = true }
 merlin = { workspace = true }

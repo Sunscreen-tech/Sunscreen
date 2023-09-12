@@ -14,48 +14,58 @@
 */
 use std::{cmp::max, iter::zip, ops::Mul, time::Instant};
 
-use ark_ff::{BigInt, BigInteger, FftField, Field, Fp, FpConfig, MontBackend, MontConfig};
-use ark_poly::{univariate::DensePolynomial, Polynomial};
 use bitvec::{slice::BitSlice, vec::BitVec};
+use crypto_bigint::Uint;
 use curve25519_dalek::{ristretto::RistrettoPoint, scalar::Scalar, traits::Identity};
 use merlin::Transcript;
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
-use sunscreen_math::{RistrettoPointVec, ScalarVec};
+use sunscreen_math::{
+    poly::Polynomial,
+    ring::{ArithmeticBackend, Ring, RingModulus, Zq},
+    RistrettoPointVec, ScalarVec, Zero,
+};
 
 use crate::{
     assertions::linear_relation,
     crypto::CryptoHash,
-    fields::{FieldFrom, FieldInto, FpRistretto},
     inner_product::{self, InnerProductProof},
-    linear_algebra::{InnerProduct, Matrix, ScalarMul, ScalarRem},
+    linear_algebra::{InnerProduct, Matrix, ScalarMul},
     math::{
-        parallel_multiscalar_multiplication, rand256, FieldModulus, InfinityNorm, Log2, ModSwitch,
-        Powers, SmartMul, Tensor, TwosComplementCoeffs, Zero,
+        parallel_multiscalar_multiplication, rand256, InfinityNorm, Log2, ModSwitch, Powers,
+        Tensor, TwosComplementCoeffs,
     },
+    rings::{FieldFrom, FieldInto, ZqRistretto},
     transcript::LogProofTranscript,
     ProofError,
 };
 
-type MatrixPoly<Q> = Matrix<DensePolynomial<Q>>;
+type MatrixPoly<Q> = Matrix<Polynomial<Q>>;
 
 /**
  * Bounds on the coefficients in the secret S
  */
-pub type Bounds = Vec<u64>;
+#[derive(Clone, Debug)]
+pub struct Bounds(pub Vec<u64>);
 
 impl Zero for Bounds {
     // The empty vector could be seen as no bounds. Also follows the field
     // properties.  Although realistically this would be indexed by the
     // dimension d.
     fn zero() -> Self {
-        Vec::new()
+        Bounds(Vec::new())
+    }
+
+    fn vartime_is_zero(&self) -> bool {
+        self.0.is_empty()
     }
 }
 
-impl Zero for u64 {
-    fn zero() -> Self {
-        0
+impl std::ops::Deref for Bounds {
+    type Target = [u64];
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
     }
 }
 
@@ -65,19 +75,19 @@ impl Zero for u64 {
  */
 pub struct VerifierKnowledge<Q>
 where
-    Q: Field + CryptoHash + ModSwitch<FpRistretto> + FieldModulus<4>,
+    Q: Ring + CryptoHash + ModSwitch<ZqRistretto> + RingModulus<4> + Ord,
 {
     /**
      * The linear transform matrix A. `AS=T` should describe a series
      * of RLWE/SIS instances (one per column of s and t) to ensure hardness
      * in retrieving `S`.
      */
-    pub a: Matrix<DensePolynomial<Q>>,
+    pub a: Matrix<Polynomial<Q>>,
 
     /**
      * The result of `AS`.
      */
-    pub t: Matrix<DensePolynomial<Q>>,
+    pub t: Matrix<Polynomial<Q>>,
 
     /**
      * A bound on each coefficient in the secret matrix S
@@ -90,23 +100,23 @@ where
      * # Remarks
      * For FHE, this is usually `x^d+1` where `d` is a power of 2.
      */
-    pub f: DensePolynomial<Q>,
+    pub f: Polynomial<Q>,
 }
 
 impl<Q> VerifierKnowledge<Q>
 where
-    Q: Field + CryptoHash + ModSwitch<FpRistretto> + FieldModulus<4>,
+    Q: Ring + CryptoHash + ModSwitch<ZqRistretto> + RingModulus<4> + Ord,
 {
     /**
      * Constructs [`VerifierKnowledge`] from the given public information.
      */
     pub fn new(
-        a: Matrix<DensePolynomial<Q>>,
-        t: Matrix<DensePolynomial<Q>>,
-        f: DensePolynomial<Q>,
+        a: Matrix<Polynomial<Q>>,
+        t: Matrix<Polynomial<Q>>,
+        f: Polynomial<Q>,
         bounds: Matrix<Bounds>,
     ) -> Self {
-        let d = f.degree() as u64;
+        let d = f.vartime_degree() as u64;
 
         assert_eq!(a.cols, bounds.rows);
         assert_eq!(t.cols, bounds.cols);
@@ -149,10 +159,12 @@ where
         // the original paper we should get an undefined value. Here we say that
         // a zero bound produces a zero `b` value from the paper. This is later
         // used to ignore coefficients that have a bound of zero.
-        fn calculate_bound(v: &[u64]) -> Vec<u64> {
-            v.iter()
-                .map(|b| if *b > 0 { Log2::ceil_log2(b) + 1 } else { 0 })
-                .collect()
+        fn calculate_bound(v: &[u64]) -> Bounds {
+            Bounds(
+                v.iter()
+                    .map(|b| if *b > 0 { Log2::ceil_log2(b) + 1 } else { 0 })
+                    .collect(),
+            )
         }
 
         let mut new_matrix: Matrix<Bounds> = Matrix::new(self.bounds.rows, self.bounds.cols);
@@ -181,7 +193,7 @@ where
      * The degree of `f`.
      */
     pub fn d(&self) -> u64 {
-        self.f.degree() as u64
+        self.f.vartime_degree() as u64
     }
 
     /**
@@ -224,13 +236,12 @@ where
      * The number of bits needed to store the elements of R1.
      */
     pub fn b_1(&self) -> u64 {
-        let d_big = FpRistretto::from(self.d());
-        let max_bounds_column_sum = FpRistretto::from(self.max_bounds_column_sum());
+        let d_big = ZqRistretto::from(self.d());
+        let max_bounds_column_sum = ZqRistretto::from(self.max_bounds_column_sum());
 
-        let inf_norm_f: FpRistretto = self.f.infinity_norm().mod_switch_signed();
+        let inf_norm_f: ZqRistretto = self.f.infinity_norm().mod_switch_signed();
 
         let b1 = max_bounds_column_sum + d_big * inf_norm_f;
-        let b1 = MontBackend::into_bigint(b1);
 
         Log2::ceil_log2(&b1)
     }
@@ -276,12 +287,12 @@ where
  */
 pub struct ProverKnowledge<Q>
 where
-    Q: Field + CryptoHash + ModSwitch<FpRistretto> + FieldModulus<4>,
+    Q: Ring + CryptoHash + ModSwitch<ZqRistretto> + RingModulus<4> + Ord,
 {
     /**
      * The matrix containing the secret.
      */
-    pub s: Matrix<DensePolynomial<Q>>,
+    pub s: Matrix<Polynomial<Q>>,
 
     /**
      * Shared knowlege.
@@ -291,7 +302,7 @@ where
 
 impl<Q> ProverKnowledge<Q>
 where
-    Q: Field + ModSwitch<FpRistretto> + FieldModulus<4> + CryptoHash,
+    Q: Ring + ModSwitch<ZqRistretto> + RingModulus<4> + CryptoHash + Ord,
 {
     /**
      * Creates [`ProverKnowledge`]. Where `as=t` and `bound` is a bound on
@@ -307,11 +318,16 @@ where
         s: &MatrixPoly<Q>,
         t: &MatrixPoly<Q>,
         bounds: &Matrix<Bounds>,
-        f: &DensePolynomial<Q>,
+        f: &Polynomial<Q>,
     ) -> Self {
         assert_eq!(a.cols, s.rows);
         assert_eq!(a.rows, t.rows);
         assert_eq!(s.cols, t.cols);
+
+        debug_assert_eq!(
+            (a * s).map(|x| x.vartime_div_rem_restricted_rhs(f).1),
+            t.clone()
+        );
 
         let vk = VerifierKnowledge::new(a.clone(), t.clone(), f.clone(), bounds.clone());
 
@@ -356,13 +372,7 @@ impl LogProof {
         u: &RistrettoPoint,
     ) -> Self
     where
-        Q: Field
-            + ModSwitch<FpRistretto>
-            + FftField
-            + SmartMul<Q, Output = Q>
-            + CryptoHash
-            + Zero
-            + FieldModulus<4>,
+        Q: Ring + ModSwitch<ZqRistretto> + Mul<Q, Output = Q> + CryptoHash + RingModulus<4> + Ord,
     {
         let vk = &pk.vk;
         let d = vk.d();
@@ -394,7 +404,7 @@ impl LogProof {
             linear_relation::assert_factors(pk, f, &r_2, &r_1);
         }
 
-        let s_serialized: Vec<FpRistretto> = Self::serialize(&pk.s, d as usize);
+        let s_serialized: Vec<ZqRistretto> = Self::serialize(&pk.s, d as usize);
         let r_1_serialized = Self::serialize(&r_1, (2 * d - 1) as usize);
         let r_2_serialized = Self::serialize(&r_2, (d - 1) as usize);
 
@@ -550,7 +560,7 @@ impl LogProof {
         u: &RistrettoPoint,
     ) -> Result<(), ProofError>
     where
-        Q: Field + ModSwitch<FpRistretto> + FieldModulus<4> + FieldModulus<4> + CryptoHash + Zero,
+        Q: Ring + ModSwitch<ZqRistretto> + RingModulus<4> + CryptoHash + Ord,
     {
         transcript.linear_relation_domain_separator();
         transcript.append_linear_relation_knowledge(vk);
@@ -606,7 +616,7 @@ impl LogProof {
         v: &[Scalar],
     ) -> Scalar
     where
-        Q: Field + CryptoHash + ModSwitch<FpRistretto> + FieldModulus<4>,
+        Q: Ring + CryptoHash + ModSwitch<ZqRistretto> + RingModulus<4> + Ord,
     {
         // Compute the first addition term
         let t = vk.t.mod_switch_signed();
@@ -753,7 +763,7 @@ impl LogProof {
         gamma: &[Scalar],
     ) -> Vec<Scalar>
     where
-        Q: Field + CryptoHash + Zero + ModSwitch<FpRistretto> + FieldModulus<4>,
+        Q: Ring + CryptoHash + ModSwitch<ZqRistretto> + RingModulus<4> + Ord,
     {
         assert_eq!(beta.len(), vk.t.cols);
         assert_eq!(gamma.len(), vk.a.rows);
@@ -789,7 +799,7 @@ impl LogProof {
         assert_eq!(term_1.len() as u64, b_sum);
 
         // Compute term 2
-        let q = FpRistretto::from(Q::field_modulus());
+        let q = ZqRistretto::try_from(Q::field_modulus()).unwrap();
         let q: Scalar = q.field_into();
 
         let d2_min_1 = 2 * d as usize - 1;
@@ -836,7 +846,7 @@ impl LogProof {
         transcript: &mut Transcript,
     ) -> (Scalar, Vec<Scalar>, Vec<Scalar>, Vec<Scalar>, Scalar)
     where
-        Q: Field + CryptoHash + FieldModulus<4> + ModSwitch<FpRistretto>,
+        Q: Ring + CryptoHash + RingModulus<4> + ModSwitch<ZqRistretto> + Ord,
     {
         let l = vk.l();
 
@@ -925,23 +935,28 @@ impl LogProof {
         a: &MatrixPoly<Q>,
         s: &MatrixPoly<Q>,
         t: &MatrixPoly<Q>,
-        f: &DensePolynomial<Q>,
-    ) -> (MatrixPoly<Q>, MatrixPoly<FpRistretto>)
+        f: &Polynomial<Q>,
+    ) -> (MatrixPoly<Q>, MatrixPoly<ZqRistretto>)
     where
-        Q: Field + ModSwitch<FpRistretto> + FftField + SmartMul<Q, Output = Q> + FieldModulus<4>,
+        Q: Ring + ModSwitch<ZqRistretto> + Mul<Q, Output = Q> + RingModulus<4>,
     {
         let as_q = a * s;
         let t_as_q = t - &as_q;
 
         // f should evenly divide (t - as).
-        debug_assert_eq!((&t_as_q).scalar_rem(f), Matrix::new(t.rows, t.cols));
+        debug_assert_eq!(
+            t_as_q.map(|x| x.vartime_div_rem_restricted_rhs(f).1),
+            Matrix::new(t.rows, t.cols)
+        );
 
         let r_2 = &t_as_q / f;
 
+        debug_assert_eq!(t - r_2.map(|x| x * f), a * s);
+
         let as_p = a.mod_switch_signed() * s.mod_switch_signed();
-        let t_as_p = t.mod_switch_signed() - as_p;
-        let r_1 = t_as_p - r_2.mod_switch_signed().scalar_mul(f.mod_switch_signed());
-        let r_1 = r_1.scalar_div_q(&FpRistretto::from(Q::field_modulus()));
+        let t_as_p = t.mod_switch_signed() - &as_p;
+        let r_1 = &t_as_p - r_2.mod_switch_signed().scalar_mul(f.mod_switch_signed());
+        let r_1 = r_1.scalar_div_q(&ZqRistretto::try_from(Q::field_modulus()).unwrap());
 
         (r_2, r_1)
     }
@@ -958,40 +973,35 @@ impl LogProof {
      * This modifies bitvec in place.
      *
      */
-    fn to_2s_complement_single<Q, const N: usize>(
-        value: &Fp<MontBackend<Q, N>, N>,
-        log_b: u64,
-        bitvec: &mut BitVec,
-    ) where
-        Q: MontConfig<N>,
+    fn to_2s_complement_single<B, const N: usize>(value: &Zq<N, B>, log_b: u64, bitvec: &mut BitVec)
+    where
+        B: ArithmeticBackend<N>,
     {
         if log_b == 0 {
             return;
         }
 
-        // Get the value out of Montgomery form.
-        let value = MontBackend::into_bigint(*value);
-
-        let mod_div_2 = Fp::<MontBackend<Q, N>, N>::field_modulus_div_2();
-        let modulus = Fp::<MontBackend<Q, N>, N>::field_modulus();
+        let value = value.into_bigint();
+        let mod_div_2 = Zq::<N, B>::field_modulus_div_2();
+        let modulus = Zq::<N, B>::field_modulus();
         let is_negative = value > mod_div_2;
 
         // Compute the q's complement of value
-        let mut as_neg: BigInt<N> = modulus;
-        as_neg.sub_with_borrow(&value);
+        let as_neg: Uint<N> = modulus.wrapping_sub(&value);
 
         // The smaller of value and it's q's complement is the absolute
         // value.
-        let mut abs_value = BigInt::min(value, as_neg);
+        let abs_value = value.min(as_neg);
 
         // To make a positive number negative in 2's complement,
         // subtract 1 and flip the bits. So, here we sub 1 from abs if
         // original value was negative.
-        let big_negative = BigInt::from(is_negative as u8);
-        abs_value.sub_with_borrow(&big_negative);
+        let adjusted = abs_value.wrapping_sub(&Uint::from(is_negative as u8));
 
         for i in 0..(log_b - 1) {
-            let bit = abs_value.get_bit(i as usize);
+            // Inspecting crypto_bigint's code, the variable time is a function of the index,
+            // which is public information here.
+            let bit = adjusted.bit_vartime(i as usize);
 
             // Invert the bit if the original value was negative
             bitvec.push(bit ^ is_negative);
@@ -1009,12 +1019,9 @@ impl LogProof {
      * `value` is the element in Zq and `b` is the number of bits needed
      * to represent the signed value.
      */
-    fn to_2s_complement<Q, const N: usize>(
-        values: &[Fp<MontBackend<Q, N>, N>],
-        log_b: u64,
-    ) -> BitVec
+    fn to_2s_complement<B, const N: usize>(values: &[Zq<N, B>], log_b: u64) -> BitVec
     where
-        Q: MontConfig<N>,
+        B: ArithmeticBackend<N>,
     {
         let mut bitvec = BitVec::with_capacity(values.len() * log_b as usize);
 
@@ -1036,12 +1043,9 @@ impl LogProof {
      * `value` is the element in Zq and `b` is the number of bits needed
      * to represent the signed value.
      */
-    fn to_2s_complement_multibound<Q, const N: usize>(
-        values: &[Fp<MontBackend<Q, N>, N>],
-        log_b: &[u64],
-    ) -> BitVec
+    fn to_2s_complement_multibound<B, const N: usize>(values: &[Zq<N, B>], log_b: &[u64]) -> BitVec
     where
-        Q: MontConfig<N>,
+        B: ArithmeticBackend<N>,
     {
         // Make sure we have an equal number of values and bounds to serialize
         assert_eq!(values.len(), log_b.len());
@@ -1064,7 +1068,7 @@ impl LogProof {
      * coefficients being contiguous.
      */
     pub fn serialize_bounds(bounds: &Matrix<Bounds>) -> Vec<u64> {
-        bounds.as_slice().concat()
+        bounds.as_slice().iter().flat_map(|x| x.0.clone()).collect()
     }
 
     /**
@@ -1096,9 +1100,9 @@ impl LogProof {
      * The matrix is serialized in row-major order, with polynomial
      * coefficients being contiguous.
      */
-    pub fn serialize<Q>(x: &MatrixPoly<Q>, d: usize) -> Vec<FpRistretto>
+    pub fn serialize<Q>(x: &MatrixPoly<Q>, d: usize) -> Vec<ZqRistretto>
     where
-        Q: Field + ModSwitch<FpRistretto>,
+        Q: Ring + ModSwitch<ZqRistretto>,
     {
         let mut result = vec![];
 
@@ -1111,7 +1115,7 @@ impl LogProof {
                 }
 
                 for _ in poly.coeffs.len()..d {
-                    result.push(FpRistretto::zero());
+                    result.push(ZqRistretto::zero());
                 }
             }
         }
@@ -1122,19 +1126,19 @@ impl LogProof {
 
 #[cfg(test)]
 mod test {
+    use super::*;
+    use sunscreen_math::ring::BarrettBackend;
+
     use crate::{
-        fields::FqSeal128_8192,
-        linear_algebra::ScalarRem,
-        math::{make_poly, next_higher_power_of_two, Zero},
+        math::{make_poly, next_higher_power_of_two},
+        rings::ZqSeal128_8192,
         test::LatticeProblem,
         LogProofGenerators,
     };
 
-    use super::*;
-
     fn test_lattice<Q>(k: usize) -> LatticeProblem<Q>
     where
-        Q: Field + Zero + Clone + FftField,
+        Q: Ring + Clone + From<u64>,
     {
         let a = MatrixPoly::from([
             [
@@ -1171,20 +1175,20 @@ mod test {
             .map(|x| {
                 x.iter()
                     .map(|y| make_poly::<Q>(y))
-                    .collect::<Vec<DensePolynomial<Q>>>()
+                    .collect::<Vec<Polynomial<Q>>>()
             })
-            .collect::<Vec<Vec<DensePolynomial<Q>>>>();
+            .collect::<Vec<Vec<Polynomial<Q>>>>();
 
         let s = MatrixPoly::from(s_poly);
 
         // x^8 + 1
         let f = make_poly::<Q>(&[1, 0, 0, 0, 0, 0, 0, 0, 1]);
 
-        let d = f.degree();
+        let d = f.vartime_degree();
 
         let t = &a * &s;
 
-        let t_mod_f = (&t).scalar_rem(&f);
+        let t_mod_f = t.map(|x| x.vartime_div_rem_restricted_rhs(&f).1);
 
         let b = Matrix::from(
             s_coeff
@@ -1194,20 +1198,22 @@ mod test {
                         .map(|coeffs| {
                             let mut coeffs = coeffs.clone();
                             coeffs.resize(d, 0);
-                            coeffs
-                                .into_iter()
-                                .map(|x| {
-                                    if x == 0 {
-                                        0
-                                    } else {
-                                        next_higher_power_of_two(x.unsigned_abs())
-                                    }
-                                })
-                                .collect::<Vec<u64>>()
+                            Bounds(
+                                coeffs
+                                    .into_iter()
+                                    .map(|x| {
+                                        if x == 0 {
+                                            0
+                                        } else {
+                                            next_higher_power_of_two(x.unsigned_abs())
+                                        }
+                                    })
+                                    .collect::<Vec<u64>>(),
+                            )
                         })
-                        .collect::<Vec<Vec<u64>>>()
+                        .collect::<Vec<Bounds>>()
                 })
-                .collect::<Vec<Vec<Vec<u64>>>>(),
+                .collect::<Vec<Vec<Bounds>>>(),
         );
 
         LatticeProblem {
@@ -1221,7 +1227,7 @@ mod test {
 
     #[test]
     fn can_compute_residues() {
-        type Q = FqSeal128_8192;
+        type Q = ZqSeal128_8192;
 
         let LatticeProblem {
             a,
@@ -1233,9 +1239,9 @@ mod test {
 
         let (r_2, r_1) = LogProof::compute_factors(&a, &s, &t_mod_f, &f);
 
-        let as_p: MatrixPoly<FpRistretto> = a.mod_switch_signed() * s.mod_switch_signed();
+        let as_p: MatrixPoly<ZqRistretto> = a.mod_switch_signed() * s.mod_switch_signed();
 
-        let r_1_q = r_1.scalar_mul_q(&FpRistretto::from(Q::field_modulus()));
+        let r_1_q = r_1.scalar_mul_q(&ZqRistretto::try_from(Q::field_modulus()).unwrap());
 
         let r_2_f = (&r_2).scalar_mul(&f);
 
@@ -1247,7 +1253,7 @@ mod test {
 
     #[test]
     fn can_serialize() {
-        type Fq = FqSeal128_8192;
+        type Fq = ZqSeal128_8192;
 
         let base_poly = make_poly::<Fq>(&[1, 2, 3]);
 
@@ -1268,34 +1274,33 @@ mod test {
         // So set d=4.
         let s = LogProof::serialize(&a, 4);
 
-        let base_poly_ristretto = make_poly::<FpRistretto>(&[1, 2, 3]);
+        let base_poly_ristretto = make_poly::<ZqRistretto>(&[1, 2, 3]);
 
         for (i, p) in s.chunks(4).enumerate() {
             let i = i + 1;
             assert_eq!(p.len(), 4);
-            assert_eq!(p[0], (FpRistretto::from(i as u64) * base_poly_ristretto[0]));
-            assert_eq!(p[1], (FpRistretto::from(i as u64) * base_poly_ristretto[1]));
-            assert_eq!(p[2], (FpRistretto::from(i as u64) * base_poly_ristretto[2]));
+            assert_eq!(p[0], (ZqRistretto::from(i as u64) * base_poly_ristretto[0]));
+            assert_eq!(p[1], (ZqRistretto::from(i as u64) * base_poly_ristretto[1]));
+            assert_eq!(p[2], (ZqRistretto::from(i as u64) * base_poly_ristretto[2]));
             // Should have a zero padding due to the d=4 passed to
             // serialize.
-            assert_eq!(p[3], FpRistretto::zero());
+            assert_eq!(p[3], ZqRistretto::zero());
         }
     }
 
     #[test]
     fn can_2s_complement() {
-        #[derive(MontConfig)]
-        #[modulus = "257"]
-        #[generator = "3"] // Liar liar pants on fire.
+        #[derive(sunscreen_math::BarrettConfig)]
+        #[barrett_config(modulus = "257", num_limbs = 1)]
         struct ZqConfig;
 
-        type Zq = Fp<MontBackend<ZqConfig, 1>, 1>;
+        type Zr = Zq<1, BarrettBackend<1, ZqConfig>>;
 
         let mut vals = vec![];
 
         for i in 0..257 {
-            let field_val = Zq::from(i);
-            vals.push(field_val);
+            let ring_val = Zr::try_from(i).unwrap();
+            vals.push(ring_val);
         }
 
         let bit_vec = LogProof::to_2s_complement(&vals, 9);
@@ -1360,7 +1365,7 @@ mod test {
     }
 
     fn transcripts_match(k: usize) {
-        type Fq = FqSeal128_8192;
+        type Fq = ZqSeal128_8192;
 
         let LatticeProblem { a, s, t, f, b } = test_lattice::<Fq>(k);
 

@@ -1,7 +1,9 @@
-use ark_ff::{Field, Fp, MontBackend, MontConfig};
-use ark_poly::univariate::DensePolynomial;
 use digest::Digest;
 use sha3::Sha3_256;
+use sunscreen_math::{
+    poly::Polynomial,
+    ring::{ArithmeticBackend, Ring, Zq},
+};
 
 /**
  * A trait that allows you to get a collision-resistant hash of an object.
@@ -13,21 +15,21 @@ pub trait CryptoHash {
     fn crypto_hash(&self, hasher: &mut Sha3_256);
 }
 
-impl<Q, const N: usize> CryptoHash for Fp<MontBackend<Q, N>, N>
+impl<B, const N: usize> CryptoHash for Zq<N, B>
 where
-    Q: MontConfig<N>,
+    B: ArithmeticBackend<N>,
 {
     fn crypto_hash(&self, hasher: &mut Sha3_256) {
         // We can just leave the value in Montgomery form.
-        for i in self.0 .0 {
+        for i in self.val.as_words() {
             hasher.update(i.to_be_bytes());
         }
     }
 }
 
-impl<Q> CryptoHash for DensePolynomial<Q>
+impl<R> CryptoHash for Polynomial<R>
 where
-    Q: Field + CryptoHash,
+    R: Ring + CryptoHash,
 {
     fn crypto_hash(&self, hasher: &mut Sha3_256) {
         for c in &self.coeffs {

@@ -11,7 +11,7 @@ env:
 
 jobs:
   build:
-    runs-on: Beefmaster
+    runs-on: linux-8core
 
     steps:
     - uses: actions/checkout@v3
@@ -62,7 +62,7 @@ jobs:
       working-directory: ./sunscreen_docs
 
   lint:
-    runs-on: Beefmaster
+    runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
       with:
@@ -84,7 +84,7 @@ jobs:
       run: cargo clippy --release --all-targets -- --deny warnings
 
   api_docs:
-    runs-on: Beefmaster
+    runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
       with:
@@ -110,7 +110,7 @@ jobs:
         RUSTDOCFLAGS: -D warnings
       run: cargo doc --release --no-deps
   emscripten:
-    runs-on: Beefmaster
+    runs-on: linux-8core
     steps:
     - uses: actions/checkout@v3
       with:

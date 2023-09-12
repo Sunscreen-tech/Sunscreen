@@ -62,7 +62,7 @@ jobs:
       working-directory: ./sunscreen_docs
 
   lint:
-    runs-on: Beefmaster
+    runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
       with:
@@ -84,7 +84,7 @@ jobs:
       run: cargo clippy --release --all-targets -- --deny warnings
 
   api_docs:
-    runs-on: Beefmaster
+    runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
       with:

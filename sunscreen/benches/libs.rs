@@ -18,18 +18,54 @@ use sunscreen_runtime::{
     InnerPlaintext, Plaintext, TryFromPlaintext, TryIntoPlaintext, WithContext,
 };
 
-#[derive(Serialize)]
+#[derive(Clone, Serialize)]
 struct NamedParams {
     name: &'static str,
     params: Params,
 }
 
 lazy_static! {
-    static ref SMART_FHE_3: NamedParams = NamedParams {
-        name: "Smart FHE - 3",
+    static ref DIM_4096: NamedParams = NamedParams {
+        name: "n = 4086",
         params: Params {
             lattice_dimension: 4096,
             coeff_modulus: vec![0xffffee001, 0xffffc4001, 0x1ffffe0001],
+            plain_modulus: 4_096,
+            scheme_type: SchemeType::Bfv,
+            security_level: sunscreen::SecurityLevel::TC128,
+        }
+    };
+    static ref DIM_8192: NamedParams = NamedParams {
+        name: "n = 8192",
+        params: Params {
+            lattice_dimension: 8192,
+            coeff_modulus: vec![
+                0x7fffffd8001,
+                0x7fffffc8001,
+                0xfffffffc001,
+                0xffffff6c001,
+                0xfffffebc001,
+            ],
+            plain_modulus: 4_096,
+            scheme_type: SchemeType::Bfv,
+            security_level: sunscreen::SecurityLevel::TC128,
+        }
+    };
+    static ref DIM_16384: NamedParams = NamedParams {
+        name: "n = 16384",
+        params: Params {
+            lattice_dimension: 16384,
+            coeff_modulus: vec![
+                0xfffffffd8001,
+                0xfffffffa0001,
+                0xfffffff00001,
+                0x1fffffff68001,
+                0x1fffffff50001,
+                0x1ffffffee8001,
+                0x1ffffffea0001,
+                0x1ffffffe88001,
+                0x1ffffffe48001,
+            ],
             plain_modulus: 4_096,
             scheme_type: SchemeType::Bfv,
             security_level: sunscreen::SecurityLevel::TC128,
@@ -50,9 +86,8 @@ fn mul(a: Cipher<Signed>, b: Cipher<Signed>) -> Cipher<Signed> {
 fn bench_bfv_libs(c: &mut Criterion) {
     let mut rng = thread_rng();
     let mut group = c.benchmark_group("bfv_libs");
-    let param_sets = vec![&SMART_FHE_3];
 
-    for seal_par in param_sets {
+    for seal_par in [DIM_4096.clone(), DIM_8192.clone(), DIM_16384.clone()] {
         // SEAL
         let runtime = FheRuntime::new(&seal_par.params).unwrap();
         let app = Compiler::new()
@@ -68,6 +103,8 @@ fn bench_bfv_libs(c: &mut Criterion) {
         let signed_b = Signed::from(300);
         let seal_enc_a = runtime.encrypt(signed_a, &seal_pubkey).unwrap();
         let seal_enc_b = runtime.encrypt(signed_b, &seal_pubkey).unwrap();
+        let seal_pt_a = signed_a.try_into_plaintext(&seal_par.params).unwrap();
+        let seal_pt_b = signed_b.try_into_plaintext(&seal_par.params).unwrap();
 
         // fhe.rs
         let fhe_par = fhe_rs::BfvParametersBuilder::new()
@@ -80,31 +117,97 @@ fn bench_bfv_libs(c: &mut Criterion) {
         let fhe_seck = fhe_rs::SecretKey::random(&fhe_par, &mut OsRng);
         let fhe_pubk = fhe_rs::PublicKey::new(&fhe_seck, &mut rng);
         let fhe_rk = fhe_rs::RelinearizationKey::new(&fhe_seck, &mut rng).unwrap();
-        let fhe_pt_a = to_fhers_pt(signed_a, &seal_par.params, &fhe_par);
-        let fhe_pt_b = to_fhers_pt(signed_b, &seal_par.params, &fhe_par);
+        let fhe_pt_a = to_fhers_pt(seal_pt_a, &fhe_par);
+        let fhe_pt_b = to_fhers_pt(seal_pt_b, &fhe_par);
         let fhe_ct_a = fhe_pubk.try_encrypt(&fhe_pt_a, &mut rng).unwrap();
         let fhe_ct_b = fhe_pubk.try_encrypt(&fhe_pt_b, &mut rng).unwrap();
+        let n = fhe_par.degree();
+        let logq = fhe_par.moduli_sizes().iter().sum::<usize>();
 
-        group.bench_function(BenchmarkId::new("mul", "fhe-rs"), |b| {
-            b.iter(|| {
-                let mut c = &fhe_ct_a * &fhe_ct_b;
-                fhe_rk.relinearizes(&mut c).unwrap();
-            });
-        });
+        /******************* Key Gen *******************/
+
+        group.bench_function(
+            BenchmarkId::new("keygen", format!("n={}/log(q)={}/lib=fhe.rs", n, logq)),
+            |b| {
+                b.iter(|| {
+                    let sk = fhe_rs::SecretKey::random(&fhe_par, &mut OsRng);
+                    let _pk = fhe_rs::PublicKey::new(&sk, &mut rng);
+                    let _rk = fhe_rs::RelinearizationKey::new(&sk, &mut rng).unwrap();
+                    // This generates all the relevant Galois keys. I believe it is the same
+                    // thing we do in sunscreen/SEAL.
+                    let _ek = fhe_rs::EvaluationKeyBuilder::new(&sk)
+                        .unwrap()
+                        .enable_inner_sum()
+                        .unwrap()
+                        .enable_column_rotation(1)
+                        .unwrap()
+                        .enable_expansion(fhe_par.degree().ilog2() as usize)
+                        .unwrap()
+                        .build(&mut rng)
+                        .unwrap();
+                });
+            },
+        );
+        group.bench_function(
+            BenchmarkId::new("keygen", format!("n={}/log(q)={}/lib=SEAL", n, logq)),
+            |b| {
+                b.iter(|| {
+                    let _k = &runtime.generate_keys().unwrap();
+                });
+            },
+        );
+
+        /******************* Encrypt *******************/
+
+        group.bench_function(
+            BenchmarkId::new("encrypt", format!("n={}/log(q)={}/lib=fhe.rs", n, logq)),
+            |b| {
+                b.iter(|| {
+                    let _fhe_ct = fhe_pubk.try_encrypt(&fhe_pt_a, &mut rng).unwrap();
+                });
+            },
+        );
+        group.bench_function(
+            BenchmarkId::new("encrypt", format!("n={}/log(q)={}/lib=SEAL", n, logq)),
+            |b| {
+                b.iter(|| {
+                    // Plaintext doesnt have a TypeName instance, so we need to incur the
+                    // Signed encoding cost here :/
+                    let _seal_ct = runtime.encrypt(signed_a, &seal_pubkey).unwrap();
+                });
+            },
+        );
+
+        /******************* Mul *******************/
+
+        group.bench_function(
+            BenchmarkId::new("mul", format!("n={}/log(q)={}/lib=fhe.rs", n, logq)),
+            |b| {
+                b.iter(|| {
+                    let mut c = &fhe_ct_a * &fhe_ct_b;
+                    fhe_rk.relinearizes(&mut c).unwrap();
+                });
+            },
+        );
+
         // TODO the ciphertext clone is mixed up in here. Use a variant with a setup fn
-        group.bench_function(BenchmarkId::new("mul", "seal"), |b| {
-            b.iter(|| {
-                runtime
-                    .run(
-                        mul_prog,
-                        vec![seal_enc_a.clone(), seal_enc_b.clone()],
-                        &seal_pubkey,
-                    )
-                    .unwrap()
-            });
-        });
+        group.bench_function(
+            BenchmarkId::new("mul", format!("n={}/log(q)={}/lib=SEAL", n, logq)),
+            |b| {
+                b.iter(|| {
+                    runtime
+                        .run(
+                            mul_prog,
+                            vec![seal_enc_a.clone(), seal_enc_b.clone()],
+                            &seal_pubkey,
+                        )
+                        .unwrap()
+                });
+            },
+        );
 
         // Assert correctness
+
         // Run seal multiplication and decrypt
         let seal_res_enc = &runtime
             .run(
@@ -120,25 +223,34 @@ fn bench_bfv_libs(c: &mut Criterion) {
         // Assert decryptions are equal
         assert_eq_poly(seal_res_dec, &fhe_res_dec_pt, &seal_par.params);
 
-        group.bench_function(BenchmarkId::new("add", "fhe-rs"), |b| {
-            b.iter(|| {
-                let _c = &fhe_ct_a + &fhe_ct_b;
-            });
-        });
+        /******************* Add *******************/
+
+        group.bench_function(
+            BenchmarkId::new("add", format!("n={}/log(q)={}/lib=fhe.rs", n, logq)),
+            |b| {
+                b.iter(|| {
+                    let _c = &fhe_ct_a + &fhe_ct_b;
+                });
+            },
+        );
         // TODO the ciphertext clone is mixed up in here. Use a variant with a setup fn
-        group.bench_function(BenchmarkId::new("add", "seal"), |b| {
-            b.iter(|| {
-                runtime
-                    .run(
-                        add_prog,
-                        vec![seal_enc_a.clone(), seal_enc_b.clone()],
-                        &seal_pubkey,
-                    )
-                    .unwrap()
-            });
-        });
+        group.bench_function(
+            BenchmarkId::new("add", format!("n={}/log(q)={}/lib=SEAL", n, logq)),
+            |b| {
+                b.iter(|| {
+                    runtime
+                        .run(
+                            add_prog,
+                            vec![seal_enc_a.clone(), seal_enc_b.clone()],
+                            &seal_pubkey,
+                        )
+                        .unwrap()
+                });
+            },
+        );
 
         // Assert correctness
+
         // Run seal addition and decrypt
         let seal_res_enc = &runtime
             .run(
@@ -153,6 +265,27 @@ fn bench_bfv_libs(c: &mut Criterion) {
         let fhe_res_dec_pt = fhe_seck.try_decrypt(&fhe_res_enc).unwrap();
         // Assert decryptions are equal
         assert_eq_poly(seal_res_dec, &fhe_res_dec_pt, &seal_par.params);
+
+        /******************* Decrypt *******************/
+
+        group.bench_function(
+            BenchmarkId::new("decrypt", format!("n={}/log(q)={}/lib=fhe.rs", n, logq)),
+            |b| {
+                b.iter(|| {
+                    let _fhe_pt = fhe_seck.try_decrypt(&fhe_res_enc).unwrap();
+                });
+            },
+        );
+        group.bench_function(
+            BenchmarkId::new("decrypt", format!("n={}/log(q)={}/lib=SEAL", n, logq)),
+            |b| {
+                b.iter(|| {
+                    // Plaintext doesnt have a TypeName instance, so we need to incur the
+                    // Signed decoding cost here :/
+                    let _seal_pt: Signed = runtime.decrypt(&seal_res_enc, &seal_seck).unwrap();
+                });
+            },
+        );
     }
 
     group.finish();
@@ -175,13 +308,8 @@ fn log2(moduli: &Vec<u64>) -> u32 {
     moduli.iter().map(|m| m.ilog2()).sum()
 }
 
-fn to_fhers_pt(
-    a: Signed,
-    seal_params: &Params,
-    fhe_params: &Arc<fhe_rs::BfvParameters>,
-) -> fhe_rs::Plaintext {
-    let pt = a.try_into_plaintext(seal_params).unwrap();
-    let seal_pt = &pt.inner.as_seal_plaintext().unwrap()[0].data;
+fn to_fhers_pt(sun_pt: Plaintext, fhe_params: &Arc<fhe_rs::BfvParameters>) -> fhe_rs::Plaintext {
+    let seal_pt = &sun_pt.inner.as_seal_plaintext().unwrap()[0].data;
     let is_ntt = seal_pt.is_ntt_form();
     let pt_len = seal_pt.len();
 

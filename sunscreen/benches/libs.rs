@@ -4,9 +4,10 @@ use std::{fmt::Display, sync::Arc};
 
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 use fhe::bfv as fhe_rs;
-use fhe_traits::{FheDecoder, FheDecrypter, FheEncoder, FheEncrypter};
+use fhe_traits::{FheDecoder, FheDecrypter, FheEncoder, FheEncrypter, Serialize as FhersSerialize};
 use lazy_static::lazy_static;
 use rand::{rngs::OsRng, thread_rng};
+use seal_fhe::ToBytes;
 use serde::Serialize;
 use sunscreen::{
     fhe_program,
@@ -105,6 +106,11 @@ fn bench_bfv_libs(c: &mut Criterion) {
         let seal_enc_b = runtime.encrypt(signed_b, &seal_pubkey).unwrap();
         let seal_pt_a = signed_a.try_into_plaintext(&seal_par.params).unwrap();
         let seal_pt_b = signed_b.try_into_plaintext(&seal_par.params).unwrap();
+        println!(
+            "{}: seal ct size: {}",
+            seal_par.name,
+            seal_num_bytes(&seal_enc_a)
+        );
 
         // fhe.rs
         let fhe_par = fhe_rs::BfvParametersBuilder::new()
@@ -121,6 +127,12 @@ fn bench_bfv_libs(c: &mut Criterion) {
         let fhe_pt_b = to_fhers_pt(seal_pt_b, &fhe_par);
         let fhe_ct_a = fhe_pubk.try_encrypt(&fhe_pt_a, &mut rng).unwrap();
         let fhe_ct_b = fhe_pubk.try_encrypt(&fhe_pt_b, &mut rng).unwrap();
+        println!(
+            "{}: fhe.rs ct size: {}",
+            seal_par.name,
+            fhers_num_bytes(&fhe_ct_a)
+        );
+
         let n = fhe_par.degree();
         let logq = fhe_par.moduli_sizes().iter().sum::<usize>();
 
@@ -306,6 +318,18 @@ impl Display for NamedParams {
 
 fn log2(moduli: &Vec<u64>) -> u32 {
     moduli.iter().map(|m| m.ilog2()).sum()
+}
+
+fn seal_num_bytes(ct: &sunscreen::Ciphertext) -> usize {
+    match &ct.inner {
+        sunscreen_runtime::InnerCiphertext::Seal(inner_ct) => {
+            inner_ct[0].data.as_bytes().unwrap().len()
+        }
+    }
+}
+
+fn fhers_num_bytes(ct: &fhe_rs::Ciphertext) -> usize {
+    ct.to_bytes().len()
 }
 
 fn to_fhers_pt(sun_pt: Plaintext, fhe_params: &Arc<fhe_rs::BfvParameters>) -> fhe_rs::Plaintext {

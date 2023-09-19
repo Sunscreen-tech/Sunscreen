@@ -1,4 +1,4 @@
-use crate::{field::Field, Error, ModSwitch, One, Zero};
+use crate::{field::Field, Error, One, Zero};
 use crypto_bigint::NonZero;
 pub use crypto_bigint::Uint;
 use curve25519_dalek::scalar::Scalar;

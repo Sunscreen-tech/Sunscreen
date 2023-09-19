@@ -23,7 +23,7 @@ where
     fn crypto_hash(&self, hasher: &mut Sha3_256) {
         // We can just leave the value in Montgomery form.
         for i in self.val.as_words() {
-            hasher.update(&i.to_be_bytes());
+            hasher.update(i.to_be_bytes());
         }
     }
 }

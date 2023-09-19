@@ -2,7 +2,7 @@ use crate::{field::Field, Error, One, Zero};
 use crypto_bigint::NonZero;
 pub use crypto_bigint::Uint;
 use curve25519_dalek::scalar::Scalar;
-use num::traits::{WrappingAdd, WrappingMul, WrappingNeg, WrappingSub};
+use num::traits::{ToBytes, WrappingAdd, WrappingMul, WrappingNeg, WrappingSub};
 use std::{
     marker::PhantomData,
     ops::{Add, Mul, Neg, Sub},
@@ -63,6 +63,7 @@ pub trait WrappingSemantics:
     + Eq
     + Sync
     + Send
+    + ToBytes
 {
 }
 
@@ -167,16 +168,47 @@ impl One for u128 {
 /// Reduction modulo 2**n over an n-bit integer is trivial - just do wrapping arithmetic
 /// and allow values to overflow. This type simply exposes operations on the underlying
 /// integer type with wrapping semantics.
-pub struct ZInt<T>(T)
+pub struct ZInt<T>(pub T)
 where
     T: WrappingSemantics;
+
+impl<T> ZInt<T>
+where
+    T: WrappingSemantics,
+{
+    #[inline(always)]
+    /// Create a [`ZInt`] wrapping the given value.
+    pub fn new(val: T) -> Self {
+        Self(val)
+    }
+}
 
 impl<T> From<T> for ZInt<T>
 where
     T: WrappingSemantics,
 {
+    #[inline(always)]
     fn from(value: T) -> Self {
         Self(value)
+    }
+}
+
+impl<T> ToBytes for ZInt<T>
+where
+    T: WrappingSemantics,
+{
+    type Bytes = T::Bytes;
+
+    fn to_ne_bytes(&self) -> Self::Bytes {
+        self.0.to_ne_bytes()
+    }
+
+    fn to_be_bytes(&self) -> Self::Bytes {
+        self.0.to_be_bytes()
+    }
+
+    fn to_le_bytes(&self) -> Self::Bytes {
+        self.0.to_le_bytes()
     }
 }
 

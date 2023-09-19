@@ -2,7 +2,8 @@ use digest::Digest;
 use sha3::Sha3_256;
 use sunscreen_math::{
     poly::Polynomial,
-    ring::{ArithmeticBackend, Ring, Zq},
+    ring::{ArithmeticBackend, Ring, WrappingSemantics, ZInt, Zq},
+    ToBytes,
 };
 
 /**
@@ -24,6 +25,15 @@ where
         for i in self.val.as_words() {
             hasher.update(i.to_be_bytes());
         }
+    }
+}
+
+impl<T> CryptoHash for ZInt<T>
+where
+    T: WrappingSemantics,
+{
+    fn crypto_hash(&self, hasher: &mut Sha3_256) {
+        hasher.update(self.to_be_bytes());
     }
 }
 

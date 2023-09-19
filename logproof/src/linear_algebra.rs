@@ -62,6 +62,22 @@ where
     }
 
     /**
+     * Create a new matrix from the given data in row-major order.
+     *
+     * # Panics
+     * If `data.len() != rows * cols`.
+     */
+    pub fn new_with_data(rows: usize, cols: usize, data: &[T]) -> Self {
+        assert_eq!(rows * cols, data.len());
+
+        Self {
+            data: data.to_owned(),
+            rows,
+            cols,
+        }
+    }
+
+    /**
      * Creates an `m x n` zero matrix.
      *
      * # Remarks

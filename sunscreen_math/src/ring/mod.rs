@@ -1,4 +1,4 @@
-use crate::{field::Field, Error, One, Zero};
+use crate::{field::Field, Error, ModSwitch, One, Zero};
 use crypto_bigint::NonZero;
 pub use crypto_bigint::Uint;
 use curve25519_dalek::scalar::Scalar;
@@ -9,6 +9,7 @@ use std::{
 };
 use subtle::{Choice, ConditionallySelectable};
 use sunscreen_math_macros::refify_binary_op;
+use zerocopy::AsBytes;
 
 mod barrett;
 pub use barrett::*;
@@ -63,6 +64,7 @@ pub trait WrappingSemantics:
     + Eq
     + Sync
     + Send
+    + AsBytes
 {
 }
 
@@ -160,21 +162,33 @@ impl One for u128 {
 }
 
 #[repr(transparent)]
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, AsBytes)]
 /// A ring of integers modulo a power of 2. Said modulus is defined by T's bit width.
 ///
 /// # Remarks
 /// Reduction modulo 2**n over an n-bit integer is trivial - just do wrapping arithmetic
 /// and allow values to overflow. This type simply exposes operations on the underlying
 /// integer type with wrapping semantics.
-pub struct ZInt<T>(T)
+pub struct ZInt<T>(pub T)
 where
     T: WrappingSemantics;
+
+impl<T> ZInt<T>
+where
+    T: WrappingSemantics,
+{
+    #[inline(always)]
+    /// Create a [`ZInt`] wrapping the given value.
+    pub fn new(val: T) -> Self {
+        Self(val)
+    }
+}
 
 impl<T> From<T> for ZInt<T>
 where
     T: WrappingSemantics,
 {
+    #[inline(always)]
     fn from(value: T) -> Self {
         Self(value)
     }

@@ -2,8 +2,9 @@ use digest::Digest;
 use sha3::Sha3_256;
 use sunscreen_math::{
     poly::Polynomial,
-    ring::{ArithmeticBackend, Ring, Zq},
+    ring::{ArithmeticBackend, Ring, WrappingSemantics, ZInt, Zq},
 };
+use zerocopy::AsBytes;
 
 /**
  * A trait that allows you to get a collision-resistant hash of an object.
@@ -22,8 +23,17 @@ where
     fn crypto_hash(&self, hasher: &mut Sha3_256) {
         // We can just leave the value in Montgomery form.
         for i in self.val.as_words() {
-            hasher.update(i.to_be_bytes());
+            hasher.update(&i.to_be_bytes());
         }
+    }
+}
+
+impl<T> CryptoHash for ZInt<T>
+where
+    T: WrappingSemantics,
+{
+    fn crypto_hash(&self, hasher: &mut Sha3_256) {
+        hasher.update(self.as_bytes());
     }
 }
 

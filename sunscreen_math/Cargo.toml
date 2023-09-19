@@ -32,6 +32,7 @@ paste = { workspace = true }
 thiserror = { workspace = true }
 sunscreen_math_macros = { workspace = true }
 subtle = { workspace = true }
+zerocopy = { workspace = true }
 
 [build-dependencies]
 naga = { workspace = true, optional = true }

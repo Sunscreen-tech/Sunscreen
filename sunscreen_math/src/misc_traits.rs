@@ -48,3 +48,5 @@ pub trait ModSwitch<R> {
     /// (i.e. [-p/2, p/2]).
     fn mod_switch_signed(&self) -> R;
 }
+
+pub use num::traits::ToBytes;

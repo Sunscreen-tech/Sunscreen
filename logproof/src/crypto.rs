@@ -3,8 +3,8 @@ use sha3::Sha3_256;
 use sunscreen_math::{
     poly::Polynomial,
     ring::{ArithmeticBackend, Ring, WrappingSemantics, ZInt, Zq},
+    ToBytes,
 };
-use zerocopy::AsBytes;
 
 /**
  * A trait that allows you to get a collision-resistant hash of an object.
@@ -33,7 +33,7 @@ where
     T: WrappingSemantics,
 {
     fn crypto_hash(&self, hasher: &mut Sha3_256) {
-        hasher.update(self.as_bytes());
+        hasher.update(self.to_be_bytes());
     }
 }
 

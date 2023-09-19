@@ -2,14 +2,13 @@ use crate::{field::Field, Error, One, Zero};
 use crypto_bigint::NonZero;
 pub use crypto_bigint::Uint;
 use curve25519_dalek::scalar::Scalar;
-use num::traits::{WrappingAdd, WrappingMul, WrappingNeg, WrappingSub};
+use num::traits::{ToBytes, WrappingAdd, WrappingMul, WrappingNeg, WrappingSub};
 use std::{
     marker::PhantomData,
     ops::{Add, Mul, Neg, Sub},
 };
 use subtle::{Choice, ConditionallySelectable};
 use sunscreen_math_macros::refify_binary_op;
-use zerocopy::AsBytes;
 
 mod barrett;
 pub use barrett::*;
@@ -64,7 +63,7 @@ pub trait WrappingSemantics:
     + Eq
     + Sync
     + Send
-    + AsBytes
+    + ToBytes
 {
 }
 
@@ -162,7 +161,7 @@ impl One for u128 {
 }
 
 #[repr(transparent)]
-#[derive(Clone, Copy, Debug, AsBytes)]
+#[derive(Clone, Copy, Debug)]
 /// A ring of integers modulo a power of 2. Said modulus is defined by T's bit width.
 ///
 /// # Remarks
@@ -191,6 +190,25 @@ where
     #[inline(always)]
     fn from(value: T) -> Self {
         Self(value)
+    }
+}
+
+impl<T> ToBytes for ZInt<T>
+where
+    T: WrappingSemantics,
+{
+    type Bytes = T::Bytes;
+
+    fn to_ne_bytes(&self) -> Self::Bytes {
+        self.0.to_ne_bytes()
+    }
+
+    fn to_be_bytes(&self) -> Self::Bytes {
+        self.0.to_be_bytes()
+    }
+
+    fn to_le_bytes(&self) -> Self::Bytes {
+        self.0.to_le_bytes()
     }
 }
 

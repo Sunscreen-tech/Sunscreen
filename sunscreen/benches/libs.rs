@@ -402,11 +402,11 @@ pub mod fhe_rs {
     }
 
     pub fn encrypt(public_key: &PublicKey, pt: &Plaintext, mut rng: &mut ThreadRng) -> Ciphertext {
-        public_key.try_encrypt(&pt, &mut rng).unwrap()
+        public_key.try_encrypt(pt, &mut rng).unwrap()
     }
 
     pub fn decrypt(secret_key: &SecretKey, ct: &Ciphertext) -> Plaintext {
-        secret_key.try_decrypt(&ct).unwrap()
+        secret_key.try_decrypt(ct).unwrap()
     }
 
     pub fn multiply(ct_a: &Ciphertext, ct_b: &Ciphertext) -> Ciphertext {
@@ -444,9 +444,9 @@ fn human_readable_bytes(size: usize) -> String {
     if size < 1e3 {
         format!("{size} B")
     } else if size < 1e6 {
-        format!("{} KB", size as f64 / 1e3)
+        format!("{} KB", size / 1e3)
     } else {
-        format!("{} MB", size as f64 / 1e6)
+        format!("{} MB", size / 1e6)
     }
 }
 

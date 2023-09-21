@@ -1,7 +1,7 @@
 //! A benchmark comparing fhe.rs and SEAL
 
 use criterion::{criterion_group, criterion_main, BatchSize, BenchmarkId, Criterion};
-use fhe_traits::{FheDecoder, FheDecrypter, FheEncrypter};
+use fhe_traits::FheDecoder;
 use lazy_static::lazy_static;
 use rand::thread_rng;
 
@@ -97,10 +97,7 @@ fn bench_bfv_libs(c: &mut Criterion) {
             BenchmarkId::new("encrypt", format!("n={}/log(q)={}/lib=fhe.rs", n, logq)),
             |b| {
                 b.iter(|| {
-                    let _fhe_ct = fhe_keys
-                        .public_key
-                        .try_encrypt(&fhe_pt_a, &mut rng)
-                        .unwrap();
+                    let _fhe_ct = fhe_rs::encrypt(&fhe_keys.public_key, &fhe_pt_a, &mut rng);
                 });
             },
         );
@@ -120,21 +117,15 @@ fn bench_bfv_libs(c: &mut Criterion) {
             "n={}/log(q)={}/lib=SEAL: ciphertext size: {}",
             n,
             logq,
-            seal::num_bytes_ct(&seal_ct_a)
+            human_readable_bytes(seal::num_bytes_ct(&seal_ct_a))
         );
-        let fhe_ct_a = fhe_keys
-            .public_key
-            .try_encrypt(&fhe_pt_a, &mut rng)
-            .unwrap();
-        let fhe_ct_b = fhe_keys
-            .public_key
-            .try_encrypt(&fhe_pt_b, &mut rng)
-            .unwrap();
+        let fhe_ct_a = fhe_rs::encrypt(&fhe_keys.public_key, &fhe_pt_a, &mut rng);
+        let fhe_ct_b = fhe_rs::encrypt(&fhe_keys.public_key, &fhe_pt_b, &mut rng);
         println!(
             "n={}/log(q)={}/lib=fhe.rs: ciphertext size: {}",
             n,
             logq,
-            fhe_rs::num_bytes_ct(&fhe_ct_a)
+            human_readable_bytes(fhe_rs::num_bytes_ct(&fhe_ct_a))
         );
 
         /******************* Mul *******************/
@@ -143,7 +134,7 @@ fn bench_bfv_libs(c: &mut Criterion) {
             BenchmarkId::new("mul", format!("n={}/log(q)={}/lib=fhe.rs", n, logq)),
             |b| {
                 b.iter(|| {
-                    let _c = &fhe_ct_a * &fhe_ct_b;
+                    let _c = fhe_rs::multiply(&fhe_ct_a, &fhe_ct_b);
                 });
             },
         );
@@ -158,7 +149,7 @@ fn bench_bfv_libs(c: &mut Criterion) {
         );
 
         let seal_ct_c = seal::multiply(&seal_ctx, &seal_ct_a, &seal_ct_b);
-        let fhe_ct_c = &fhe_ct_a * &fhe_ct_b;
+        let fhe_ct_c = fhe_rs::multiply(&fhe_ct_a, &fhe_ct_b);
 
         /******************* Relinearize *******************/
 
@@ -178,7 +169,7 @@ fn bench_bfv_libs(c: &mut Criterion) {
         group.bench_function(
             BenchmarkId::new("relin", format!("n={}/log(q)={}/lib=SEAL", n, logq)),
             |b| {
-                // Don't really need batched ref on this, but want to be as consistent as possible
+                // Don't really need batched ref on this, but want to be as consistent as possible with the fhe.rs version
                 b.iter_batched_ref(
                     || seal_ct_c.clone(),
                     |ct| {
@@ -193,9 +184,9 @@ fn bench_bfv_libs(c: &mut Criterion) {
         let seal_ct_c = seal::multiply(&seal_ctx, &seal_ct_a, &seal_ct_b);
         let seal_ct_c = seal::relinearize(&seal_ctx, &seal_keys.relin_keys, &seal_ct_c);
         let seal_pt_c = seal::decrypt(&seal_ctx, &seal_keys.secret_key, &seal_ct_c);
-        let mut fhe_ct_c = &fhe_ct_a * &fhe_ct_b;
+        let mut fhe_ct_c = fhe_rs::multiply(&fhe_ct_a, &fhe_ct_b);
         fhe_keys.relin_key.relinearizes(&mut fhe_ct_c).unwrap();
-        let fhe_pt_c = fhe_keys.secret_key.try_decrypt(&fhe_ct_c).unwrap();
+        let fhe_pt_c = fhe_rs::decrypt(&fhe_keys.secret_key, &fhe_ct_c);
         assert_eq_poly(&seal_pt_c, &fhe_pt_c);
 
         /******************* Add *******************/
@@ -204,7 +195,7 @@ fn bench_bfv_libs(c: &mut Criterion) {
             BenchmarkId::new("add", format!("n={}/log(q)={}/lib=fhe.rs", n, logq)),
             |b| {
                 b.iter(|| {
-                    let _c = &fhe_ct_a + &fhe_ct_b;
+                    let _c = fhe_rs::add(&fhe_ct_a, &fhe_ct_b);
                 });
             },
         );
@@ -221,7 +212,7 @@ fn bench_bfv_libs(c: &mut Criterion) {
         let seal_ct_c = seal::add(&seal_ctx, &seal_ct_a, &seal_ct_b);
         let fhe_ct_c = &fhe_ct_a + &fhe_ct_b;
         let seal_pt_c = seal::decrypt(&seal_ctx, &seal_keys.secret_key, &seal_ct_c);
-        let fhe_pt_c = fhe_keys.secret_key.try_decrypt(&fhe_ct_c).unwrap();
+        let fhe_pt_c = fhe_rs::decrypt(&fhe_keys.secret_key, &fhe_ct_c);
         assert_eq_poly(&seal_pt_c, &fhe_pt_c);
 
         /******************* Decrypt *******************/
@@ -230,7 +221,7 @@ fn bench_bfv_libs(c: &mut Criterion) {
             BenchmarkId::new("decrypt", format!("n={}/log(q)={}/lib=fhe.rs", n, logq)),
             |b| {
                 b.iter(|| {
-                    let _fhe_pt = fhe_keys.secret_key.try_decrypt(&fhe_ct_c).unwrap();
+                    let _fhe_pt = fhe_rs::decrypt(&fhe_keys.secret_key, &fhe_ct_c);
                 });
             },
         );
@@ -307,8 +298,11 @@ mod seal {
         encryptor.encrypt(pt).unwrap()
     }
 
-    pub fn num_bytes_ct(ct: &Ciphertext) -> usize {
-        ct.as_bytes().unwrap().len()
+    // To decrypt requires instatiating the decryptor, so it is a more accurate comparison to
+    // include the decryptor construction in this benchmark
+    pub fn decrypt(ctx: &Context, secret_key: &SecretKey, c: &Ciphertext) -> Plaintext {
+        let decryptor = Decryptor::new(ctx, secret_key).unwrap();
+        decryptor.decrypt(c).unwrap()
     }
 
     // Including evaluator construction in cost of single operation, however this would
@@ -336,11 +330,8 @@ mod seal {
         evaluator.relinearize(c, relin_keys).unwrap()
     }
 
-    // To decrypt requires instatiating the decryptor, so it is a more accurate comparison to
-    // include the decryptor construction in this benchmark
-    pub fn decrypt(ctx: &Context, secret_key: &SecretKey, c: &Ciphertext) -> Plaintext {
-        let decryptor = Decryptor::new(ctx, secret_key).unwrap();
-        decryptor.decrypt(c).unwrap()
+    pub fn num_bytes_ct(ct: &Ciphertext) -> usize {
+        ct.as_bytes().unwrap().len()
     }
 }
 
@@ -348,7 +339,7 @@ pub mod fhe_rs {
     use std::sync::Arc;
 
     pub use fhe::bfv::*;
-    use fhe_traits::{FheEncoder, Serialize};
+    use fhe_traits::{FheDecrypter, FheEncoder, FheEncrypter, Serialize};
     use rand::rngs::ThreadRng;
     use sunscreen_runtime::Params;
 
@@ -410,6 +401,22 @@ pub mod fhe_rs {
         Plaintext::try_encode(&coeffs, Encoding::poly(), fhe_params).unwrap()
     }
 
+    pub fn encrypt(public_key: &PublicKey, pt: &Plaintext, mut rng: &mut ThreadRng) -> Ciphertext {
+        public_key.try_encrypt(&pt, &mut rng).unwrap()
+    }
+
+    pub fn decrypt(secret_key: &SecretKey, ct: &Ciphertext) -> Plaintext {
+        secret_key.try_decrypt(&ct).unwrap()
+    }
+
+    pub fn multiply(ct_a: &Ciphertext, ct_b: &Ciphertext) -> Ciphertext {
+        ct_a * ct_b
+    }
+
+    pub fn add(ct_a: &Ciphertext, ct_b: &Ciphertext) -> Ciphertext {
+        ct_a + ct_b
+    }
+
     pub fn num_bytes_ct(ct: &Ciphertext) -> usize {
         ct.to_bytes().len()
     }
@@ -430,6 +437,17 @@ fn assert_eq_poly(seal_pt_a: &seal::Plaintext, fhe_pt_b: &fhe_rs::Plaintext) {
     assert_eq!(coeffs_a, coeffs_b);
     assert_eq!(leading_zeros, vec![0; leading_zeros.len()]);
     assert!(pt_a_len <= coeffs_b_full.len())
+}
+
+fn human_readable_bytes(size: usize) -> String {
+    let size = size as f64;
+    if size < 1e3 {
+        format!("{size} B")
+    } else if size < 1e6 {
+        format!("{} KB", size as f64 / 1e3)
+    } else {
+        format!("{} MB", size as f64 / 1e6)
+    }
 }
 
 criterion_group! {

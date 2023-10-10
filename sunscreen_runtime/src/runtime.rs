@@ -671,7 +671,7 @@ where
         let now = Instant::now();
 
         let prog =
-            backend.jit_prover(program, &constant_inputs, &public_inputs, &private_inputs)?;
+            backend.jit_prover(program, &private_inputs, &public_inputs, &constant_inputs)?;
 
         trace!("Prover JIT time {}s", now.elapsed().as_secs_f64());
 

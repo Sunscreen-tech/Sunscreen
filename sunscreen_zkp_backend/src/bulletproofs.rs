@@ -458,9 +458,9 @@ impl ZkpBackend for BulletproofsBackend {
     fn jit_prover(
         &self,
         prog: &crate::CompiledZkpProgram,
-        constant_inputs: &[BigInt],
-        public_inputs: &[BigInt],
         private_inputs: &[BigInt],
+        public_inputs: &[BigInt],
+        constant_inputs: &[BigInt],
     ) -> Result<ExecutableZkpProgram> {
         let constant_inputs = constant_inputs
             .iter()
@@ -475,7 +475,7 @@ impl ZkpBackend for BulletproofsBackend {
             .map(Scalar::try_from)
             .collect::<Result<Vec<Scalar>>>()?;
 
-        jit_prover::<BulletproofsFieldSpec>(prog, &constant_inputs, &public_inputs, &private_inputs)
+        jit_prover::<BulletproofsFieldSpec>(prog, &private_inputs, &public_inputs, &constant_inputs)
     }
 
     fn jit_verifier(

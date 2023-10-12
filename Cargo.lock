@@ -97,7 +97,7 @@ dependencies = [
  "ark-std",
  "derivative",
  "digest 0.10.7",
- "itertools",
+ "itertools 0.10.5",
  "num-bigint",
  "num-traits 0.2.16",
  "paste",
@@ -604,7 +604,7 @@ dependencies = [
  "clap 2.34.0",
  "criterion-plot 0.4.5",
  "csv",
- "itertools",
+ "itertools 0.10.5",
  "lazy_static",
  "num-traits 0.2.16",
  "oorandom",
@@ -631,7 +631,7 @@ dependencies = [
  "clap 4.4.2",
  "criterion-plot 0.5.0",
  "is-terminal",
- "itertools",
+ "itertools 0.10.5",
  "num-traits 0.2.16",
  "once_cell",
  "oorandom",
@@ -650,7 +650,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2673cc8207403546f45f5fd319a974b1e6983ad1a3ee7e6041650013be041876"
 dependencies = [
  "cast",
- "itertools",
+ "itertools 0.10.5",
 ]
 
 [[package]]
@@ -660,7 +660,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6b50826342786a51a89e2da3a28f1c32b06e387201bc2d19791f622c673706b1"
 dependencies = [
  "cast",
- "itertools",
+ "itertools 0.10.5",
 ]
 
 [[package]]
@@ -1507,6 +1507,15 @@ name = "itertools"
 version = "0.10.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b0fd2260e829bddf4cb6ea802289de2f86d6a7a690192fbe91b3f46e0f2c8473"
+dependencies = [
+ "either",
+]
+
+[[package]]
+name = "itertools"
+version = "0.11.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b1c173a5686ce8bfa551b3563d0c2170bf24ca44da99c7ca4bfdab5418c3fe57"
 dependencies = [
  "either",
 ]
@@ -2784,6 +2793,7 @@ dependencies = [
  "criterion 0.3.6",
  "digest 0.9.0",
  "hex",
+ "itertools 0.11.0",
  "merlin",
  "rand",
  "rand_chacha",
@@ -2898,6 +2908,8 @@ dependencies = [
  "bincode",
  "crossbeam",
  "log",
+ "logproof",
+ "merlin",
  "num_cpus",
  "petgraph",
  "rayon",
@@ -2908,7 +2920,9 @@ dependencies = [
  "serde_json",
  "static_assertions",
  "sunscreen_compiler_common",
+ "sunscreen_curve25519",
  "sunscreen_fhe_program",
+ "sunscreen_math",
  "sunscreen_zkp_backend",
  "thiserror",
 ]
@@ -2922,6 +2936,7 @@ dependencies = [
  "log",
  "merlin",
  "petgraph",
+ "rand",
  "serde",
  "static_assertions",
  "sunscreen_bulletproofs",

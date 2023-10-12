@@ -1,6 +1,8 @@
 use std::marker::PhantomData;
 use std::time::Instant;
 
+use merlin::Transcript;
+
 use crate::error::*;
 use crate::metadata::*;
 use crate::ZkpProgramInput;
@@ -682,6 +684,53 @@ where
         Ok(backend.prove(&prog, &inputs)?)
     }
 
+    /**
+     * Prove the given `inputs` satisfy `program` with parameters for that
+     * particular proof system.
+     */
+    pub fn prove_with_parameters<I>(
+        &self,
+        program: &CompiledZkpProgram,
+        private_inputs: Vec<I>,
+        public_inputs: Vec<I>,
+        constant_inputs: Vec<I>,
+        parameters: &B::ProverParameters,
+        transcript: &mut Transcript,
+    ) -> Result<Proof>
+    where
+        I: Into<ZkpProgramInput>,
+    {
+        let private_inputs = private_inputs
+            .into_iter()
+            .flat_map(|x| I::into(x).0.to_native_fields())
+            .collect::<Vec<BigInt>>();
+        let public_inputs = public_inputs
+            .into_iter()
+            .flat_map(|x| I::into(x).0.to_native_fields())
+            .collect::<Vec<BigInt>>();
+        let constant_inputs = constant_inputs
+            .into_iter()
+            .flat_map(|x| I::into(x).0.to_native_fields())
+            .collect::<Vec<BigInt>>();
+
+        let backend = &self.zkp_backend;
+
+        trace!("Starting JIT (prover)...");
+
+        let now = Instant::now();
+
+        let prog =
+            backend.jit_prover(program, &private_inputs, &public_inputs, &constant_inputs)?;
+
+        trace!("Prover JIT time {}s", now.elapsed().as_secs_f64());
+
+        let inputs = [public_inputs, private_inputs].concat();
+
+        trace!("Starting backend prove...");
+
+        Ok(backend.prove_with_parameters(&prog, &inputs, parameters, transcript)?)
+    }
+
     /// Create a proof builder.
     ///
     /// This provides a wrapper around calling [`Self::prove`], and can be convenient when you
@@ -738,6 +787,44 @@ where
         trace!("Starting backend verify...");
 
         Ok(backend.verify(&prog, proof)?)
+    }
+
+    /**
+     * Verify that the given `proof` satisfies the given `program`.
+     */
+    pub fn verify_with_parameters<I>(
+        &self,
+        program: &CompiledZkpProgram,
+        proof: &Proof,
+        public_inputs: Vec<I>,
+        constant_inputs: Vec<I>,
+        parameters: &B::VerifierParameters,
+        transcript: &mut Transcript,
+    ) -> Result<()>
+    where
+        I: Into<ZkpProgramInput>,
+    {
+        let constant_inputs = constant_inputs
+            .into_iter()
+            .flat_map(|x| I::into(x).0.to_native_fields())
+            .collect::<Vec<BigInt>>();
+        let public_inputs = public_inputs
+            .into_iter()
+            .flat_map(|x| I::into(x).0.to_native_fields())
+            .collect::<Vec<BigInt>>();
+
+        let backend = &self.zkp_backend;
+
+        trace!("Starting JIT (verifier)");
+
+        let now = Instant::now();
+
+        let prog = backend.jit_verifier(program, &constant_inputs, &public_inputs)?;
+
+        trace!("Verifier JIT time {}s", now.elapsed().as_secs_f64());
+        trace!("Starting backend verify...");
+
+        Ok(backend.verify_with_parameters(&prog, proof, parameters, transcript)?)
     }
 
     /// Create a verification builder.
@@ -918,9 +1005,9 @@ pub type Runtime = GenericRuntime<(), ()>;
 pub struct ProofBuilder<'r, 'p, T: marker::Zkp, B: ZkpBackend> {
     runtime: &'r GenericRuntime<T, B>,
     program: &'p CompiledZkpProgram,
-    constant_inputs: Vec<ZkpProgramInput>,
-    public_inputs: Vec<ZkpProgramInput>,
     private_inputs: Vec<ZkpProgramInput>,
+    public_inputs: Vec<ZkpProgramInput>,
+    constant_inputs: Vec<ZkpProgramInput>,
 }
 
 impl<'r, 'p, T: marker::Zkp, B: ZkpBackend> ProofBuilder<'r, 'p, T, B> {
@@ -934,9 +1021,9 @@ impl<'r, 'p, T: marker::Zkp, B: ZkpBackend> ProofBuilder<'r, 'p, T, B> {
         Self {
             runtime,
             program,
-            constant_inputs: vec![],
-            public_inputs: vec![],
             private_inputs: vec![],
+            public_inputs: vec![],
+            constant_inputs: vec![],
         }
     }
 
@@ -998,6 +1085,23 @@ impl<'r, 'p, T: marker::Zkp, B: ZkpBackend> ProofBuilder<'r, 'p, T, B> {
             self.private_inputs,
             self.public_inputs,
             self.constant_inputs,
+        )
+    }
+
+    /// Generate a proof with parameters for that proof system; see
+    /// [`runtime.prove_with_parameters()`][GenericRuntime::prove_with_parameters].
+    pub fn prove_with_parameters(
+        self,
+        parameters: &B::ProverParameters,
+        transcript: &mut Transcript,
+    ) -> Result<Proof> {
+        self.runtime.prove_with_parameters(
+            self.program,
+            self.private_inputs,
+            self.public_inputs,
+            self.constant_inputs,
+            parameters,
+            transcript,
         )
     }
 }

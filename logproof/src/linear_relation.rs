@@ -12,7 +12,13 @@
 *   See [PR #276](https://github.com/Sunscreen-tech/Sunscreen/pull/276/files)
 *   from July 2023
 */
-use std::{cmp::max, iter::zip, ops::Mul, time::Instant};
+use std::{
+    cmp::max,
+    collections::HashSet,
+    iter::zip,
+    ops::{Mul, Range},
+    time::Instant,
+};
 
 use bitvec::{slice::BitSlice, vec::BitVec};
 use crypto_bigint::Uint;
@@ -190,6 +196,37 @@ where
     }
 
     /**
+     * Rannges in the serialized coefficients of S corresponding to the bounds
+     */
+    pub fn b_slices(&self) -> Vec<Vec<Range<usize>>> {
+        let mut b_ranges: Vec<Vec<Range<usize>>> = (0..self.bounds.rows)
+            .map(|_| vec![Range { start: 0, end: 0 }; self.bounds.cols])
+            .collect();
+
+        let b = self.b();
+
+        let mut last_end_range = 0;
+
+        for (k, b_piece) in b.as_slice().iter().enumerate() {
+            let bits = b_piece.iter().sum::<u64>() as usize;
+
+            // Get the orginal matrix index
+            let i = k / self.bounds.cols;
+            let j = k % self.bounds.cols;
+
+            let range = &mut b_ranges[i][j];
+
+            // End of range is +1 since the range is exclusive
+            range.start = last_end_range;
+            range.end = last_end_range + bits;
+
+            last_end_range = range.end;
+        }
+
+        b_ranges
+    }
+
+    /**
      * The degree of `f`.
      */
     pub fn d(&self) -> u64 {
@@ -333,6 +370,23 @@ where
 
         Self { s: s.clone(), vk }
     }
+
+    /// Currently we only really use this to pull out the first n bits, but we
+    /// could also export based on the index.
+    pub fn s_binary_by_index(&self, index: (usize, usize)) -> BitVec {
+        let s_piece = self.s[index].clone();
+        let s_piece = Matrix::new_with_data(1, 1, &[s_piece]);
+
+        let b_piece = self.vk.b()[index].clone();
+        let b_piece = Matrix::new_with_data(1, 1, &[b_piece]);
+
+        let s_serialized: Vec<ZqRistretto> = LogProof::serialize(&s_piece, self.vk.d() as usize);
+        let b_serialized = LogProof::serialize_bounds(&b_piece);
+
+        let s_binary: BitVec = LogProof::to_2s_complement_multibound(&s_serialized, &b_serialized);
+
+        s_binary
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -341,6 +395,12 @@ where
  * `A` and `T` are public while `S` is a secret known to the prover.
  */
 pub struct LogProof {
+    /**
+     * The Prover's commitment to a shared part of `s_1`; this can be the
+     * identity.
+     */
+    pub w_shared: RistrettoPoint,
+
     /**
      * The Prover's commitment to `s_1` and `s_2`.
      */
@@ -374,6 +434,25 @@ impl LogProof {
     where
         Q: Ring + ModSwitch<ZqRistretto> + Mul<Q, Output = Q> + CryptoHash + RingModulus<4> + Ord,
     {
+        let half_rho = Scalar::from_bits(rand256());
+        Self::create_with_shared(transcript, pk, g, h, u, &half_rho, &[])
+    }
+
+    /// Create a commitment where some parts of the witness S are shared with
+    /// another proof system. This produces a commitment to the shared bits in
+    /// S.
+    pub fn create_with_shared<Q>(
+        transcript: &mut Transcript,
+        pk: &ProverKnowledge<Q>,
+        g: &[RistrettoPoint],
+        h: &[RistrettoPoint],
+        u: &RistrettoPoint,
+        half_rho: &Scalar,
+        shared_indices: &[(usize, usize)],
+    ) -> Self
+    where
+        Q: Ring + ModSwitch<ZqRistretto> + Mul<Q, Output = Q> + CryptoHash + RingModulus<4> + Ord,
+    {
         let vk = &pk.vk;
         let d = vk.d();
         let m = vk.m();
@@ -389,7 +468,27 @@ impl LogProof {
         assert_eq!(g.len(), l as usize);
         assert_eq!(h.len(), l as usize);
 
+        for (n, (i, j)) in shared_indices.iter().enumerate() {
+            assert!(
+                *i < (m as usize),
+                "Shared index should be less than the number of rows in S (m = {}). Bad index at {}: ({}, {})",
+                m,
+                n,
+                i,
+                j
+            );
+            assert!(*j < (k as usize),
+                "Shared index should be less than the number of columns in S (k = {}). Bad index at {}: ({}, {})",
+                k,
+                n,
+                i,
+                j
+
+        );
+        }
+
         let b_serialized = LogProof::serialize_bounds(&b);
+        let b_slices = vk.b_slices();
 
         transcript.linear_relation_domain_separator();
         transcript.append_linear_relation_knowledge(vk);
@@ -430,8 +529,19 @@ impl LogProof {
         // inverts the bits. Bitwise NOT does the same thing.
         let s_2 = !s_1.clone();
 
-        let rho = Scalar::from_bits(rand256());
-        let w = Self::make_commitment(&s_1, &s_2, &rho, g, h, u);
+        let (s_1_shared, h_shared, s_1_unshared, h_unshared) =
+            Self::split_shared_and_unshared_bits(shared_indices, &b_slices, &s_1, h);
+
+        let w_shared = Self::make_shared_commitment(&s_1_shared, half_rho, &h_shared, u);
+        let w_unshared =
+            Self::make_unshared_commitment(&s_1_unshared, &s_2, half_rho, g, &h_unshared, u);
+        let w = w_shared + w_unshared;
+
+        if cfg!(debug_assertions) {
+            let w_prime =
+                Self::make_commitment(&s_1, &s_2, &(Scalar::from(2u64) * half_rho), g, h, u);
+            assert_eq!(w, w_prime);
+        }
 
         transcript.append_point(b"w", &w.compress());
 
@@ -539,10 +649,16 @@ impl LogProof {
             Self::compute_x(vk, &gamma, &alpha, &beta, &phi, &psi, &v)
         );
 
+        // The half_rho blinding factor needs to be doubled because by making a
+        // shared and unshared commitment with half_rho blinding factor in each,
+        // the total blinding factor is the sum of the two blinding factors.
+        let rho = half_rho + half_rho;
+
         let inner_product_proof =
             Self::create_inner_product_proof(transcript, &v_1, &v_2, &rho, &t, &g_prime, h, u);
 
         Self {
+            w_shared,
             w,
             inner_product_proof,
         }
@@ -859,6 +975,62 @@ impl LogProof {
         (alpha, beta, gamma, phi, psi)
     }
 
+    fn make_shared_commitment(
+        s_1_shared: &BitSlice,
+        rho: &Scalar,
+        h: &[RistrettoPoint],
+        u: &RistrettoPoint,
+    ) -> RistrettoPoint {
+        let mut commitment = RistrettoPoint::identity();
+
+        let s_1_shared = s_1_shared.iter().map(|b| b == true).collect::<Vec<bool>>();
+
+        commitment += s_1_shared
+            .par_iter()
+            .zip_eq(h.par_iter())
+            .filter_map(|(bit, p_i)| if *bit { Some(p_i) } else { None })
+            .sum::<RistrettoPoint>();
+
+        commitment += u * rho;
+
+        commitment
+    }
+
+    fn make_unshared_commitment(
+        s_1_unshared: &BitSlice,
+        s_2: &BitSlice,
+        rho: &Scalar,
+        g: &[RistrettoPoint],
+        h: &[RistrettoPoint],
+        u: &RistrettoPoint,
+    ) -> RistrettoPoint {
+        assert_eq!(s_1_unshared.len(), h.len());
+        assert_eq!(s_2.len(), g.len());
+
+        let mut commitment = RistrettoPoint::identity();
+        let s_1_unshared = s_1_unshared
+            .iter()
+            .map(|b| b == true)
+            .collect::<Vec<bool>>();
+        let s_2 = s_2.iter().map(|b| b == true).collect::<Vec<bool>>();
+
+        commitment += s_1_unshared
+            .par_iter()
+            .zip_eq(h.par_iter())
+            .filter_map(|(bit, p_i)| if *bit { Some(p_i) } else { None })
+            .sum::<RistrettoPoint>();
+
+        commitment += s_2
+            .par_iter()
+            .zip_eq(g.par_iter())
+            .filter_map(|(bit, p_i)| if *bit { Some(p_i) } else { None })
+            .sum::<RistrettoPoint>();
+
+        commitment += u * rho;
+
+        commitment
+    }
+
     /**
      * Creates the commitment `w` in the SDLP paper. This commits to the
      * bit vectors s_1 and s_2 with blinding factor u^rho.
@@ -871,8 +1043,8 @@ impl LogProof {
         h: &[RistrettoPoint],
         u: &RistrettoPoint,
     ) -> RistrettoPoint {
-        assert_eq!(s_1.len(), g.len());
-        assert_eq!(s_2.len(), h.len());
+        assert_eq!(s_1.len(), h.len());
+        assert_eq!(s_2.len(), g.len());
         assert_eq!(s_1.len(), s_2.len());
 
         let mut commitment = RistrettoPoint::identity();
@@ -881,33 +1053,15 @@ impl LogProof {
 
         commitment += s_1
             .par_iter()
-            .enumerate()
-            .fold(
-                RistrettoPoint::identity,
-                |c, (i, bit)| {
-                    if *bit {
-                        c + h[i]
-                    } else {
-                        c
-                    }
-                },
-            )
-            .reduce(RistrettoPoint::identity, |x, y| x + y);
+            .zip_eq(h.par_iter())
+            .filter_map(|(bit, p_i)| if *bit { Some(p_i) } else { None })
+            .sum::<RistrettoPoint>();
 
         commitment += s_2
             .par_iter()
-            .enumerate()
-            .fold(
-                RistrettoPoint::identity,
-                |c, (i, bit)| {
-                    if *bit {
-                        c + g[i]
-                    } else {
-                        c
-                    }
-                },
-            )
-            .reduce(RistrettoPoint::identity, |x, y| x + y);
+            .zip_eq(g.par_iter())
+            .filter_map(|(bit, p_i)| if *bit { Some(p_i) } else { None })
+            .sum::<RistrettoPoint>();
 
         commitment += u * rho;
 
@@ -1121,6 +1275,46 @@ impl LogProof {
         }
 
         result
+    }
+
+    fn split_shared_and_unshared_bits(
+        shared_indices: &[(usize, usize)],
+        b_slices: &[Vec<Range<usize>>],
+        s_1: &BitVec,
+        h: &[RistrettoPoint],
+    ) -> (BitVec, Vec<RistrettoPoint>, BitVec, Vec<RistrettoPoint>) {
+        let mut s_1_shared = BitVec::new();
+        let mut s_1_unshared = BitVec::new();
+
+        let mut h_shared = Vec::new();
+        let mut h_unshared = Vec::new();
+
+        let shared_index_set: HashSet<(usize, usize)> = shared_indices.iter().cloned().collect();
+
+        let m = b_slices.len();
+        let k = b_slices[0].len();
+
+        // Grab out the different shared and unshared bits.
+        for i in 0..m {
+            for j in 0..k {
+                let index = (i, j);
+
+                if shared_index_set.contains(&index) {
+                    s_1_shared.extend(s_1[b_slices[index.0][index.1].clone()].iter());
+                    h_shared.extend(h[b_slices[index.0][index.1].clone()].iter());
+                } else {
+                    s_1_unshared.extend(s_1[b_slices[index.0][index.1].clone()].iter());
+                    h_unshared.extend(h[b_slices[index.0][index.1].clone()].iter());
+                }
+            }
+        }
+
+        // And then extend with the rest of the bits.
+        let len_remaining = s_1_shared.len() + s_1_unshared.len();
+        s_1_unshared.extend(s_1[len_remaining..].iter());
+        h_unshared.extend(h[len_remaining..].iter());
+
+        (s_1_shared, h_shared, s_1_unshared, h_unshared)
     }
 }
 

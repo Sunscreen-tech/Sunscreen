@@ -27,6 +27,7 @@ use crypto_bigint::{
 pub use error::*;
 pub use exec::ExecutableZkpProgram;
 pub use jit::{jit_prover, jit_verifier, CompiledZkpProgram, Operation};
+use merlin::Transcript;
 use petgraph::stable_graph::NodeIndex;
 use serde::{Deserialize, Serialize};
 
@@ -370,6 +371,12 @@ pub trait ZkpBackend {
      */
     type Field: FieldSpec;
 
+    /// The parameters for prover manually passed into the backend.
+    type ProverParameters;
+
+    /// The parameters for verifier manually passed into the backend.
+    type VerifierParameters;
+
     /**
      * Create a proof for the given executable Sunscreen
      * program with the given inputs.
@@ -377,10 +384,34 @@ pub trait ZkpBackend {
     fn prove(&self, graph: &ExecutableZkpProgram, inputs: &[BigInt]) -> Result<Proof>;
 
     /**
+     * Create a proof for the given executable Sunscreen
+     * program with the given inputs.
+     */
+    fn prove_with_parameters(
+        &self,
+        graph: &ExecutableZkpProgram,
+        inputs: &[BigInt],
+        parameters: &Self::ProverParameters,
+        transcript: &mut Transcript,
+    ) -> Result<Proof>;
+
+    /**
      * Verify the given proof for the given executable
      * Sunscreen program.
      */
     fn verify(&self, graph: &ExecutableZkpProgram, proof: &Proof) -> Result<()>;
+
+    /**
+     * Verify the given proof for the given executable
+     * Sunscreen program.
+     */
+    fn verify_with_parameters(
+        &self,
+        graph: &ExecutableZkpProgram,
+        proof: &Proof,
+        parameters: &Self::VerifierParameters,
+        transcript: &mut Transcript,
+    ) -> Result<()>;
 
     /**
      * JIT the given frontend-compiled ZKP program

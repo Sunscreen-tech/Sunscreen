@@ -99,3 +99,4 @@ sunscreen_compiler_common = { version = "0.8.1", path = "./sunscreen_compiler_co
 sunscreen_math = { version = "0.8.1", path = "./sunscreen_math" }
 sunscreen_math_macros = { version = "0.8.1", path = "./sunscreen_math_macros" }
 seal_fhe = { version = "0.8.1", path = "./seal_fhe" }
+logproof = { version = "0.8.1", path = "./logproof" }

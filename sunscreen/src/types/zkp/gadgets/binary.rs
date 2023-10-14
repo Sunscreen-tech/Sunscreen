@@ -33,7 +33,7 @@ impl Gadget for ToUInt {
             return Err(ZkpError::gadget_error("Cannot create 0-bit uint."));
         }
 
-        if *val > BigInt::ONE.shl_vartime(self.n) {
+        if *val > BigInt::ONE.shl_vartime(self.n).wrapping_sub(&BigInt::ONE) {
             return Err(ZkpError::gadget_error(&format!(
                 "Value too large for {} bit unsigned int.",
                 self.n
@@ -105,9 +105,7 @@ impl Gadget for ToUInt {
 
 /**
  * Proves the given input is 0 or 1. We do this by:
- * * Compute a_inv = 1 - a.
- * * Constrain a + a_inv = 1
- * * Constrain a * a_inv = 0
+ * * Constrain (a - 1) * a = 0
  */
 pub struct AssertBinary;
 

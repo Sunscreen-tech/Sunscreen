@@ -480,7 +480,7 @@ impl BulletproofVerifierParameters {
 }
 
 impl BulletproofProverParameters {
-    /// Create a [`BulletproofParameters`].
+    /// Create a [`BulletproofProverParameters`].
     pub fn new(
         verifier_parameters: BulletproofVerifierParameters,
         blinding_factor: Scalar,

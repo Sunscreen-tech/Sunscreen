@@ -196,7 +196,7 @@ where
     }
 
     /**
-     * Rannges in the serialized coefficients of S corresponding to the bounds
+     * Ranges in the serialized coefficients of S corresponding to the bounds
      */
     pub fn b_slices(&self) -> Vec<Vec<Range<usize>>> {
         let mut b_ranges: Vec<Vec<Range<usize>>> = (0..self.bounds.rows)
@@ -371,8 +371,13 @@ where
         Self { s: s.clone(), vk }
     }
 
-    /// Currently we only really use this to pull out the first n bits, but we
-    /// could also export based on the index.
+    /**
+     * Pull out the binary expansion of a component of the witness S based on
+     * the index into S.
+     *
+     * # Panics
+     * * If the index is out of bounds
+     */
     pub fn s_binary_by_index(&self, index: (usize, usize)) -> BitVec {
         let s_piece = self.s[index].clone();
         let s_piece = Matrix::new_with_data(1, 1, &[s_piece]);

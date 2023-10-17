@@ -354,7 +354,7 @@ where
                     .edges_directed(id, Direction::Outgoing)
                     .map(|x| {
                         if !matches!(x.weight(), EdgeInfo::Unary) {
-                            return Err(GraphQueryError::NotUnaryOperation)?;
+                            Err(GraphQueryError::NotUnaryOperation)?;
                         }
 
                         match prog[x.target()].operation {
@@ -380,7 +380,7 @@ where
 
                 impl PartialOrd for SortableEdge {
                     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-                        self.1.partial_cmp(&other.1)
+                        Some(self.cmp(other))
                     }
                 }
 

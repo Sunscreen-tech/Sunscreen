@@ -163,8 +163,6 @@ where
     type Output = PolynomialMatrix<R>;
 
     fn sub(self, rhs: &PolynomialMatrix<R>) -> Self::Output {
-        let rhs = rhs.borrow();
-
         assert_eq!(self.rows, rhs.rows);
         assert_eq!(self.cols, rhs.cols);
 
@@ -188,8 +186,6 @@ where
     type Output = Matrix<R>;
 
     fn add(self, rhs: &Matrix<R>) -> Self::Output {
-        let rhs = rhs.borrow();
-
         assert_eq!(self.rows, rhs.rows);
         assert_eq!(self.cols, rhs.cols);
 
@@ -284,8 +280,6 @@ where
     type Output = PolynomialMatrix<R>;
 
     fn div(self, rhs: &Polynomial<R>) -> Self::Output {
-        let rhs = rhs.borrow();
-
         let data = self
             .data
             .par_iter()

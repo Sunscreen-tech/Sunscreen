@@ -513,7 +513,7 @@ where
 
         impl PartialOrd for SortableEdge {
             fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-                self.1.partial_cmp(&other.1)
+                Some(self.cmp(other))
             }
         }
 
@@ -521,7 +521,7 @@ where
             fn cmp(&self, other: &Self) -> std::cmp::Ordering {
                 // PartialCmp will always return Some(_) for usize,
                 // which is the thing we're comparing.
-                self.partial_cmp(other).unwrap()
+                self.1.partial_cmp(&other.1).unwrap()
             }
         }
 

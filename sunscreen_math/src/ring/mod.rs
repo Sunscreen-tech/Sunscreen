@@ -563,7 +563,7 @@ impl<const N: usize, B: ArithmeticBackend<N>> From<i64> for Zq<N, B> {
 
 impl<const N: usize, B: ArithmeticBackend<N>> PartialOrd for Zq<N, B> {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        self.val.partial_cmp(&other.val)
+        Some(self.cmp(other))
     }
 }
 

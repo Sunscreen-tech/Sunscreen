@@ -21,7 +21,6 @@ bincode = { workspace = true }
 crossbeam = { workspace = true }
 curve25519-dalek = { workspace = true }
 log = { workspace = true }
-logproof = { workspace = true }
 merlin = { workspace = true }
 seal_fhe = { workspace = true }
 sunscreen_fhe_program = { workspace = true }

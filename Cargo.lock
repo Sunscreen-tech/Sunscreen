@@ -2909,7 +2909,6 @@ dependencies = [
  "bincode",
  "crossbeam",
  "log",
- "logproof",
  "merlin",
  "num_cpus",
  "petgraph",

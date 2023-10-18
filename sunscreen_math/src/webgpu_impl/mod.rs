@@ -578,8 +578,6 @@ mod tests {
 
         for (i, (a, b)) in a.iter().zip(b.iter()).enumerate() {
             let expected = a >> *b;
-            dbg!(a);
-            dbg!(b);
 
             assert_eq!(a & 0xFFFFFFFF, a_packed[i] as u64);
             assert_eq!(a >> 32, a_packed[i + a_len] as u64);

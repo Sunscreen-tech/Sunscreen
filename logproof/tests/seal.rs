@@ -27,8 +27,6 @@ fn test_seal_linear_relation<B, const N: usize>(
 where
     B: BarrettConfig<N>,
 {
-    let degree = degree;
-
     let plain_modulus = PlainModulus::raw(plain_modulus).unwrap();
     let coeff_modulus = CoefficientModulus::bfv_default(degree, SecurityLevel::TC128).unwrap();
 

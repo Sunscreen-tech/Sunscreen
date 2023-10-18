@@ -134,6 +134,8 @@ where
 
     fn index(&self, index: (usize, usize)) -> &Self::Output {
         let (r, c) = index;
+        debug_assert!(r < self.rows);
+        debug_assert!(c < self.cols);
 
         &self.data[c + self.cols * r]
     }

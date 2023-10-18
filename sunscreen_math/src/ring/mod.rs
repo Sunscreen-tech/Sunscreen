@@ -510,6 +510,12 @@ impl<const N: usize, B: ArithmeticBackend<N>> TryFrom<Uint<N>> for Zq<N, B> {
     }
 }
 
+impl<const N: usize, B: ArithmeticBackend<N>> From<u32> for Zq<N, B> {
+    fn from(value: u32) -> Self {
+        (value as u64).into()
+    }
+}
+
 impl<const N: usize, B: ArithmeticBackend<N>> From<u64> for Zq<N, B> {
     /// Returns `value % q`.
     fn from(value: u64) -> Self {

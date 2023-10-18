@@ -402,9 +402,6 @@ mod tests {
         );
 
         for i in 0..v.len() {
-            dbg!(v.get(i).compress());
-            dbg!(o.get(i).compress());
-
             assert_eq!(v.get(i).compress(), o.get(i).compress());
         }
     }

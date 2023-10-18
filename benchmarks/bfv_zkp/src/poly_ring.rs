@@ -279,9 +279,6 @@ mod tests {
 
         let actual = &(&q * &b) + &r;
 
-        dbg!(q);
-        dbg!(r);
-
         assert_eq!(actual, a);
     }
 }

@@ -10,6 +10,7 @@ bitvec = { workspace = true }
 bytemuck = { workspace = true }
 crypto-bigint = { workspace = true }
 curve25519-dalek = { workspace = true }
+log = { workspace = true }
 merlin = { workspace = true }
 sha3 = { workspace = true }
 digest = { workspace = true }

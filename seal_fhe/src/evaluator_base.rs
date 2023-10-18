@@ -86,7 +86,7 @@ impl EvaluatorBase {
         self.handle
     }
 
-    pub(crate) fn negate_inplace(&self, a: &mut Ciphertext) -> Result<()> {
+    pub(crate) fn negate_inplace(&self, a: &Ciphertext) -> Result<()> {
         convert_seal_error(unsafe {
             bindgen::Evaluator_Negate(self.handle, a.get_handle(), a.get_handle())
         })?;
@@ -104,7 +104,7 @@ impl EvaluatorBase {
         Ok(out)
     }
 
-    pub(crate) fn add_inplace(&self, a: &mut Ciphertext, b: &Ciphertext) -> Result<()> {
+    pub(crate) fn add_inplace(&self, a: &Ciphertext, b: &Ciphertext) -> Result<()> {
         convert_seal_error(unsafe {
             bindgen::Evaluator_Add(self.handle, a.get_handle(), b.get_handle(), a.get_handle())
         })?;
@@ -163,7 +163,7 @@ impl EvaluatorBase {
         Ok(c)
     }
 
-    pub(crate) fn sub_inplace(&self, a: &mut Ciphertext, b: &Ciphertext) -> Result<()> {
+    pub(crate) fn sub_inplace(&self, a: &Ciphertext, b: &Ciphertext) -> Result<()> {
         convert_seal_error(unsafe {
             bindgen::Evaluator_Sub(self.handle, a.get_handle(), b.get_handle(), a.get_handle())
         })?;
@@ -181,7 +181,7 @@ impl EvaluatorBase {
         Ok(c)
     }
 
-    pub(crate) fn multiply_inplace(&self, a: &mut Ciphertext, b: &Ciphertext) -> Result<()> {
+    pub(crate) fn multiply_inplace(&self, a: &Ciphertext, b: &Ciphertext) -> Result<()> {
         convert_seal_error(unsafe {
             bindgen::Evaluator_Multiply(
                 self.handle,
@@ -211,7 +211,7 @@ impl EvaluatorBase {
         Ok(c)
     }
 
-    pub(crate) fn square_inplace(&self, a: &mut Ciphertext) -> Result<()> {
+    pub(crate) fn square_inplace(&self, a: &Ciphertext) -> Result<()> {
         convert_seal_error(unsafe {
             bindgen::Evaluator_Square(self.handle, a.get_handle(), a.get_handle(), null_mut())
         })?;
@@ -332,7 +332,7 @@ impl EvaluatorBase {
         Ok(c)
     }
 
-    pub(crate) fn add_plain_inplace(&self, a: &mut Ciphertext, b: &Plaintext) -> Result<()> {
+    pub(crate) fn add_plain_inplace(&self, a: &Ciphertext, b: &Plaintext) -> Result<()> {
         convert_seal_error(unsafe {
             bindgen::Evaluator_AddPlain(
                 self.get_handle(),
@@ -360,7 +360,7 @@ impl EvaluatorBase {
         Ok(c)
     }
 
-    pub(crate) fn sub_plain_inplace(&self, a: &mut Ciphertext, b: &Plaintext) -> Result<()> {
+    pub(crate) fn sub_plain_inplace(&self, a: &Ciphertext, b: &Plaintext) -> Result<()> {
         convert_seal_error(unsafe {
             bindgen::Evaluator_SubPlain(
                 self.get_handle(),
@@ -389,7 +389,7 @@ impl EvaluatorBase {
         Ok(c)
     }
 
-    pub(crate) fn multiply_plain_inplace(&self, a: &mut Ciphertext, b: &Plaintext) -> Result<()> {
+    pub(crate) fn multiply_plain_inplace(&self, a: &Ciphertext, b: &Plaintext) -> Result<()> {
         convert_seal_error(unsafe {
             bindgen::Evaluator_MultiplyPlain(
                 self.get_handle(),

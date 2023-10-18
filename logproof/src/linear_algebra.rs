@@ -137,7 +137,6 @@ where
         debug_assert!(r < self.rows);
         debug_assert!(c < self.cols);
 
-
         &self.data[c + self.cols * r]
     }
 }

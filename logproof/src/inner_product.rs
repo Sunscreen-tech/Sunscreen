@@ -6,6 +6,7 @@ use curve25519_dalek::{
 };
 use digest::ExtendableOutput;
 use digest::XofReader;
+use log::trace;
 use merlin::Transcript;
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -281,13 +282,13 @@ impl InnerProductProof {
 
         let a = transcript.challenge_point(b"a");
 
-        println!("Prefold {}s", now.elapsed().as_secs_f64());
+        trace!("Prefold {}s", now.elapsed().as_secs_f64());
 
         let now = Instant::now();
 
         let (g, h, t_pprime) = self.folding_verifier(transcript, &vk, &a, &g, &h)?;
 
-        println!("Fold {}s", now.elapsed().as_secs_f64());
+        trace!("Fold {}s", now.elapsed().as_secs_f64());
 
         let now = Instant::now();
 
@@ -305,8 +306,8 @@ impl InnerProductProof {
         let lhs = t_pprime * c + w + w_prime * c_inv;
         let rhs = g * self.z_1 + h * self.z_2 + a * (c_inv * self.z_1 * self.z_2) + u * self.tau;
 
-        println!("Post fold {}s", now.elapsed().as_secs_f64());
-        println!("Verify time {}s", total.elapsed().as_secs_f64());
+        trace!("Post fold {}s", now.elapsed().as_secs_f64());
+        trace!("Verify time {}s", total.elapsed().as_secs_f64());
 
         if lhs == rhs {
             Ok(())
@@ -432,7 +433,7 @@ impl InnerProductProof {
         let now = Instant::now();
         let g = parallel_multiscalar_multiplication(&s, g);
         let h = parallel_multiscalar_multiplication(&s_inv, h);
-        println!(
+        trace!(
             "MSM {}s: {} SM/s",
             now.elapsed().as_secs_f64(),
             (2. * n as f64) / now.elapsed().as_secs_f64()

@@ -23,6 +23,7 @@ use std::{
 use bitvec::{slice::BitSlice, vec::BitVec};
 use crypto_bigint::Uint;
 use curve25519_dalek::{ristretto::RistrettoPoint, scalar::Scalar, traits::Identity};
+use log::trace;
 use merlin::Transcript;
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -692,29 +693,29 @@ impl LogProof {
 
         let (alpha, beta, gamma, phi, psi) = Self::create_challenges(vk, transcript);
 
-        println!("Create challenges {}s", now.elapsed().as_secs_f64());
+        trace!("Create challenges {}s", now.elapsed().as_secs_f64());
 
         let now = Instant::now();
 
         let g_prime = Self::compute_g_prime(g, &phi);
 
-        println!("g_prime {}s", now.elapsed().as_secs_f64());
+        trace!("g_prime {}s", now.elapsed().as_secs_f64());
 
         let now = Instant::now();
 
         let v = Self::compute_v(vk, alpha, &beta, &gamma);
 
-        println!("v {}s", now.elapsed().as_secs_f64());
+        trace!("v {}s", now.elapsed().as_secs_f64());
         let now = Instant::now();
 
         let t = Self::compute_t(&self.w, &g_prime, h, &phi, &psi, &v);
-        println!("t {}s", now.elapsed().as_secs_f64());
+        trace!("t {}s", now.elapsed().as_secs_f64());
 
         let now = Instant::now();
 
         let x = Self::compute_x(vk, &gamma, &alpha, &beta, &phi, &psi, &v);
 
-        println!("x {}s", now.elapsed().as_secs_f64());
+        trace!("x {}s", now.elapsed().as_secs_f64());
 
         let ip_vk = inner_product::VerifierKnowledge { t, x };
 

@@ -1646,6 +1646,7 @@ dependencies = [
  "criterion 0.5.1",
  "crypto-bigint",
  "digest 0.10.7",
+ "log",
  "merlin",
  "once_cell",
  "rand",

@@ -281,15 +281,7 @@ impl InnerProductProof {
 
         let a = transcript.challenge_point(b"a");
 
-        println!("Prefold {}s", now.elapsed().as_secs_f64());
-
-        let now = Instant::now();
-
         let (g, h, t_pprime) = self.folding_verifier(transcript, &vk, &a, &g, &h)?;
-
-        println!("Fold {}s", now.elapsed().as_secs_f64());
-
-        let now = Instant::now();
 
         transcript.append_point(b"w", &self.w);
         transcript.append_point(b"w'", &self.w_prime);
@@ -304,9 +296,6 @@ impl InnerProductProof {
 
         let lhs = t_pprime * c + w + w_prime * c_inv;
         let rhs = g * self.z_1 + h * self.z_2 + a * (c_inv * self.z_1 * self.z_2) + u * self.tau;
-
-        println!("Post fold {}s", now.elapsed().as_secs_f64());
-        println!("Verify time {}s", total.elapsed().as_secs_f64());
 
         if lhs == rhs {
             Ok(())

@@ -6,6 +6,7 @@
 mod array;
 mod error;
 mod keys;
+mod linked;
 mod metadata;
 mod run;
 mod runtime;
@@ -15,6 +16,7 @@ use std::sync::Arc;
 
 pub use crate::error::*;
 pub use crate::keys::*;
+pub use crate::linked::*;
 pub use crate::metadata::*;
 pub use run::*;
 pub use runtime::*;

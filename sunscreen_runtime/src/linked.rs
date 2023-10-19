@@ -278,7 +278,7 @@ impl<Q: Ring + CryptoHash + ModSwitch<ZqRistretto> + RingModulus<4> + Ord> Linke
      * }
      * ```
      *
-     * With all of these pieces, we can use the `linked_proof` function to generate
+     * With all of these pieces, we can use the `LinkedProof::create` function to generate
      * a proof that the encrypted transaction amount is less than or equal to the
      * balance.
      *
@@ -301,7 +301,7 @@ impl<Q: Ring + CryptoHash + ModSwitch<ZqRistretto> + RingModulus<4> + Ord> Linke
      * let shared_indices = vec![(0, 0)];
      *
      * println!("Performing linked proof");
-     * let lp: LinkedProof = linked_proof(
+     * let lp: LinkedProof = LinkedProof::create(
      *     &lattice_problem,
      *     &shared_indices,
      *     valid_transaction_zkp,
@@ -316,8 +316,7 @@ impl<Q: Ring + CryptoHash + ModSwitch<ZqRistretto> + RingModulus<4> + Ord> Linke
      *
      * ```ignore
      * println!("Performing linked verify");
-     * let verified = linked_verify(
-     *     &lp,
+     * let verified = lp.verify(
      *     valid_transaction_zkp,
      *     vec![BulletproofsField::from(balance)], // Public inputs
      *     vec![],                                 // Constant inputs
@@ -478,7 +477,7 @@ impl<Q: Ring + CryptoHash + ModSwitch<ZqRistretto> + RingModulus<4> + Ord> Linke
      * is valid (by SDLP) and that the encrypted message has some property (by R1CS
      * Bulletproof).
      *
-     * See [`linked_proof`] for more details and an example use.
+     * See [`LinkedProof::create`] for more details and an example use.
      *
      * Arguments:
      *

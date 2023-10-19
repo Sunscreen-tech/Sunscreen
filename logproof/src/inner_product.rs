@@ -421,11 +421,6 @@ impl InnerProductProof {
         let now = Instant::now();
         let g = parallel_multiscalar_multiplication(&s, g);
         let h = parallel_multiscalar_multiplication(&s_inv, h);
-        println!(
-            "MSM {}s: {} SM/s",
-            now.elapsed().as_secs_f64(),
-            (2. * n as f64) / now.elapsed().as_secs_f64()
-        );
 
         Ok((g, h, t))
     }

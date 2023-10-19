@@ -18,7 +18,7 @@ Let's perform a transaction where the transaction amount is private and the bala
 Let's first tackle the SDLP to show that we can generate a valid encryption of a message. The BFV encryption equation in SEAL is
 
 \\[
-    (c_0, c_1) = (\Delta m + r + p_0 u + e_1, p_1 u + e_2)
+    (c_0, c_1) = (\Delta m + r + p_0 u + e_1,\ p_1 u + e_2)
 \\]
 
 where
@@ -72,23 +72,17 @@ The second proof we would like to show is that the encrypted value is less than 
 
 ```rust
 #[zkp_program]
-fn valid_transaction<F: FieldSpec>(
-    #[private] transaction_binary: [Field<F>; 15],
-    #[public] balance: Field<F>
-) {
+fn valid_transaction<F: FieldSpec>(#[private] x: [Field<F>; 15], #[public] balance: Field<F>) {
     let lower_bound = zkp_var!(0);
 
-    // Reconstruct the transaction amount from the message polynomial
-    // binary expansion.
-    let transaction = from_twos_complement_field_element(
-      transaction_binary
-    );
+    // Reconstruct x from the bag of bits
+    let x_recon = from_twos_complement_field_element(x);
 
-    // Constraint that transaction is less than or equal to balance
-    balance.constrain_ge_bounded(transaction, 64);
+    // Constraint that x is less than or equal to balance
+    balance.constrain_ge_bounded(x_recon, 64);
 
-    // Constraint that transaction is greater than or equal to zero
-    lower_bound.constrain_le_bounded(transaction, 64);
+    // Constraint that x is greater than or equal to zero
+    lower_bound.constrain_le_bounded(x_recon, 64);
 }
 ```
 
@@ -122,27 +116,28 @@ let app = Compiler::new()
     .zkp_program(valid_transaction)
     .compile()?;
 
+// Compile the ZKP program
 let valid_transaction_zkp = app.get_zkp_program(valid_transaction).unwrap();
 
-let transaction = 10_000u64;
+// Private and public inputs
+let x = 10_000u64;
 let balance = 12_000u64;
 
-let lattice_problem = test_seal_linear_relation::<SealQ128_1024, 1>(
-    transaction, 1024, 12289
-);
-
-// This means we only care about S[(0, 0)], which is `m` in the BFV encryption.
+// Generate the SDLP linear relation and specify that the message part of S
+// should be shared.
+let sdlp = seal_bfv_encryption_linear_relation::<SealQ128_1024, 1>(x, 1024, 12289, false);
 let shared_indices = vec![(0, 0)];
 
 println!("Performing linked proof");
 let lp = LinkedProof::create(
-    &lattice_problem,
+    &sdlp,
     &shared_indices,
     valid_transaction_zkp,
-    &[],                                 // Additional private inputs
-    &[BulletproofsField::from(balance)], // Public inputs
-    &[],                                 // Constant inputs
-);
+    vec![],
+    vec![BulletproofsField::from(balance)],
+    vec![],
+)
+.unwrap();
 println!("Linked proof done");
 ```
 
@@ -150,10 +145,11 @@ This will generate an proof of type `LinkedProof` that can be verified as follow
 
 ```rust
 println!("Performing linked verify");
-let verified = lp.verify(
+lp.verify(
     valid_transaction_zkp,
-    vec![BulletproofsField::from(balance)], // Public inputs
-    vec![],                                 // Constant inputs
-);
-println!("Verified linked proof: {}", verified);
+    vec![BulletproofsField::from(balance)],
+    vec![],
+)
+.expect("Failed to verify linked proof");
+println!("Linked verify done");
 ```

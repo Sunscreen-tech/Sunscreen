@@ -51,18 +51,21 @@ fn test_validated_transaction_example() -> Result<(), Error> {
         .zkp_program(valid_transaction)
         .compile()?;
 
+    // Compile the ZKP program
     let valid_transaction_zkp = app.get_zkp_program(valid_transaction).unwrap();
 
-    let x = 11999u64;
-    let balance = 12200u64;
+    // Private and public inputs
+    let x = 10_000u64;
+    let balance = 12_000u64;
 
-    let lattice_problem =
-        seal_bfv_encryption_linear_relation::<SealQ128_1024, 1>(x, 1024, 12289, false);
+    // Generate the SDLP linear relation and specify that the message part of S
+    // should be shared.
+    let sdlp = seal_bfv_encryption_linear_relation::<SealQ128_1024, 1>(x, 1024, 12289, false);
     let shared_indices = vec![(0, 0)];
 
     println!("Performing linked proof");
     let lp = LinkedProof::create(
-        &lattice_problem,
+        &sdlp,
         &shared_indices,
         valid_transaction_zkp,
         vec![],

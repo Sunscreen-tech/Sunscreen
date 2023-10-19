@@ -40,6 +40,9 @@ mod compiler;
 mod error;
 mod params;
 
+#[doc = include_str!("../docs/linked.md")]
+pub mod linked {}
+
 /// This module contains types used internally when compiling [`fhe_program`]s.
 pub mod fhe;
 /// This module contains types used when writing and compiling FHE and ZKP programs.

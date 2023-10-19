@@ -120,41 +120,12 @@ fn new_single_party_with_shared_generators(
 
 impl<Q: Ring + CryptoHash + ModSwitch<ZqRistretto> + RingModulus<4> + Ord> LinkedProof<Q> {
     /**
-     * This function creates a linked proof between a short discrete log proof
-     * (SDLP) and a R1CS bulletproof. An example use case is proving an
-     * encryption is valid (by SDLP) and that the encrypted message has some
-     * property (by R1CS Bulletproof).
+     * This function verifies a linked proof between a short discrete log proof
+     * (SDLP) and a R1CS bulletproof. An example use case is proving an encryption
+     * is valid (by SDLP) and that the encrypted message has some property (by R1CS
+     * Bulletproof).
      *
-     * The SDLP is used to prove a linear relation while keeping part of that
-     * relation secret. Specifically, the SDLP allows one to prove a matrix
-     * relation of the form A * S = T, where S is a matrix of secrets (sometimes
-     * also called a witness) and T is the result of computing A on that secret.
-     * An example relation is the equation for encryption in BFV, which can be
-     * used to show that a ciphertext is a valid encryption of some underlying
-     * message instead of a random value.
-     *
-     * R1CS bulletproofs enable proving arbitrary arithmetic circuits, which can
-     * be used to prove that some secret satisfies some property. For example,
-     * one can prove that a private transaction can occur because the sender has
-     * enough funds to cover the transaction, without revealing what the
-     * transaction is.
-     *
-     * Combining these two proofs is powerful because it allows one to prove
-     * both that a ciphertext is a valid encryption of some message and that the
-     * message satisfies some property. In the prior example of a private
-     * transaction, with a linked proof we can now prove that the sender knows
-     * the value in an encrypted transaction and that the sender has enough
-     * funds to cover the transaction, without decrypting the transaction.
-     *
-     * How does this work in practice? We will first generate a lattice problem
-     * of the form A * S = T and then specify what parts of S are shared with
-     * the ZKP program. We then specify the remaining private inputs to the ZKP
-     * program, the public inputs to the ZKP, and the constant inputs to the
-     * ZKP.
-     *
-     * __Important note__: The compiled program must have the linked parts as
-     * the first arguments, and then the private inputs, public inputs, and
-     * constant inputs.
+     * See the main documentation for more information.
      *
      * Arguments:
      *
@@ -166,163 +137,6 @@ impl<Q: Ring + CryptoHash + ModSwitch<ZqRistretto> + RingModulus<4> + Ord> Linke
      *                     shared values
      * * `public_inputs`: The public inputs to the ZKP program
      * * `constant_inputs`: The constant inputs to the ZKP program
-     *
-     * Example:
-     *
-     * Let's perform a transaction where the transaction amount is private and
-     * the balance is public. We want to prove that the transaction is valid
-     * (i.e. the transaction amount is less than or equal to the balance)
-     * without revealing the transaction amount.
-     *
-     * Let's first tackle the SDLP to show that we can generate a valid
-     * encryption of a message. The BFV encryption equation in SEAL is
-     *
-     * ```text
-     * (c_0, c_1) = (delta * m + r + p_0 * u + e_1, p_1 * u + e_2)
-     * ```
-     *
-     * where
-     *
-     * * `delta` is a constant polynomial with floor(q/t) as it's DC component. q is
-     *   the coefficient modulus and t is the plain modulus,
-     * * `m` is the polynomial plaintext message to encrypt,
-     * * `r` is a rounding polynomial proportional to m with coefficients in the
-     *   range [0, t],
-     * * p_0 and p_1 are the public key polynomials,
-     * * `u` is a random ternary polynomial,
-     * * `e_1` and `e_2` are random polynomials sampled from the centered binomial
-     *   distribution, and
-     * * `c_0` and `c_1` are the ciphertext polynomials.
-     *
-     * This can be implemented as a linear relation as follows.
-     *
-     * ```text
-     * A = [ delta, 1, p_0, 1, 0
-     *         0  , 0, p_1, 0, 1 ]
-     * S = [ m, r, u, e_1, e_2, ]^T
-     * T = [ c_0, c_1, ] ^ T
-     * ```
-     *
-     * To perform the SDLP, we will need to specify the bounds for each coefficient
-     * of each element of S. In the case where we encode m as a constant polynomial
-     * (ie the plaintext is a constant in the DC coefficient and zero for all other
-     * coefficients), the bounds for m are `[t, 0, ..., 0]`, while the bounds for
-     * the other components are based on their respective distributions.
-     *
-     * ```ignore
-     * // Information needed to define a SDLP lattice problem.
-     * struct LatticeProblem {
-     *  a: Matrix<Polynomial>,
-     *  s: Matrix<Polynomial>,
-     *  t: Matrix<Polynomial>,
-     *  f: Polynomial,
-     *  b: Matrix<Bounds>,
-     * }
-     *
-     * // Generate a lattice problem for A * S = T (mod f). The bounds for each
-     * // coefficient of each element of S are calculated in the function.
-     * let lattice_problem: LatticeProblem = Seal_BFV_encrytion(plaintext, degree, plain_modulus);
-     *
-     * // This can then be passed to the SDLP to generate a proof if desired.
-     * ```
-     *
-     * The second proof we would like to show is that the encrypted value is less
-     * than some balance. We can do that using the Sunscreen compiler and the
-     * following ZKP.
-     *
-     * ```ignore
-     * #[zkp_program]
-     * fn valid_transaction<F: FieldSpec>(
-     *     #[private] transaction_binary: [Field<F>; 15],
-     *     #[public] balance: Field<F>
-     * ) {
-     *     let lower_bound = zkp_var!(0);
-     *
-     *     // Reconstruct the transaction amount from the message polynomial
-     *     // binary expansion.
-     *     let transaction = from_twos_complement_field_element(
-     *       transaction_binary
-     *     );
-     *
-     *     // Constraint that transaction is less than or equal to balance
-     *     balance.constrain_ge_bounded(transaction, 64);
-     *
-     *     // Constraint that transaction is greater than or equal to zero
-     *     lower_bound.constrain_le_bounded(transaction, 64);
-     * }
-     * ```
-     *
-     * Interestingly the transaction amount is not specified as a number but in its
-     * twos complement binary representation. This is because in the SDLP, the
-     * message polynomial is expanded into its twos complement binary and then used
-     * as an input to the proof. In order to link the SDLP and the ZKP program, we
-     * will be sharing this binary expansion between the two proof systems. This
-     * means that in the ZKP, we will need to convert the binary expanded message
-     * polynomial back into something meaningful for us. In this particular example
-     * (a constant polynomial message with bounds on the DC component only), we can
-     * use this helper function to reconstitute the transaction amount.
-     *
-     * ```ignore
-     * fn from_twos_complement_field_element<F: FieldSpec, const N: usize>(
-     *     x: [ProgramNode<Field<F>>; N],
-     * ) -> ProgramNode<Field<F>> {
-     *     let mut x_recon = zkp_var!(0);
-     *
-     *     for (i, x_i) in x.iter().enumerate().take(N - 1) {
-     *         x_recon = x_recon + (zkp_var!(2i64.pow(i as u32)) * (*x_i));
-     *     }
-     *
-     *     x_recon = x_recon + zkp_var!(-(2i64.pow((N - 1) as u32))) * x[N - 1];
-     *
-     *     x_recon
-     * }
-     * ```
-     *
-     * With all of these pieces, we can use the `LinkedProof::create` function to generate
-     * a proof that the encrypted transaction amount is less than or equal to the
-     * balance.
-     *
-     * ```ignore
-     * let app = Compiler::new()
-     *     .zkp_backend::<BulletproofsBackend>()
-     *     .zkp_program(valid_transaction)
-     *     .compile()?;
-     *
-     * let valid_transaction_zkp = app.get_zkp_program(valid_transaction).unwrap();
-     *
-     * let transaction = 11999u64;
-     * let balance = 12200u64;
-     *
-     * let lattice_problem = test_seal_linear_relation::<SealQ128_1024, 1>(
-     *     transaction, 1024, 12289
-     * );
-     *
-     * // This means we only care about S[(0, 0)], which is `m` in the BFV encryption.
-     * let shared_indices = vec![(0, 0)];
-     *
-     * println!("Performing linked proof");
-     * let lp: LinkedProof = LinkedProof::create(
-     *     &lattice_problem,
-     *     &shared_indices,
-     *     valid_transaction_zkp,
-     *     &[],                                 // Additional private inputs
-     *     &[BulletproofsField::from(balance)], // Public inputs
-     *     &[],                                 // Constant inputs
-     * );
-     * println!("Linked proof done");
-     * ```
-     *
-     * This will generate an proof of type `LinkedProof` that can be verified as follows:
-     *
-     * ```ignore
-     * println!("Performing linked verify");
-     * let verified = lp.verify(
-     *     valid_transaction_zkp,
-     *     vec![BulletproofsField::from(balance)], // Public inputs
-     *     vec![],                                 // Constant inputs
-     * );
-     * println!("Verified linked proof: {}", verified);
-     * ```
      */
     pub fn create<I>(
         lattice_problem: &LatticeProblem<Q>,
@@ -477,11 +291,10 @@ impl<Q: Ring + CryptoHash + ModSwitch<ZqRistretto> + RingModulus<4> + Ord> Linke
      * is valid (by SDLP) and that the encrypted message has some property (by R1CS
      * Bulletproof).
      *
-     * See [`LinkedProof::create`] for more details and an example use.
+     * See the main documentation for more information and examples.
      *
      * Arguments:
      *
-     * * `lp`: The linked proof to verify
      * * `program`: The compiled ZKP program to verify
      * * `public_inputs`: The public inputs to the ZKP program
      * * `constant_inputs`: The constant inputs to the ZKP program

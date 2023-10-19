@@ -38,8 +38,6 @@ thiserror = { workspace = true }
 
 [dev-dependencies]
 serde_json = { workspace = true }
-sunscreen = { workspace = true }
-sunscreen_compiler_macros = { workspace = true }
 
 [features]
 deterministic = ["seal_fhe/deterministic"]

@@ -1,3 +1,5 @@
+// For tests, see the sunscreen crate.
+
 use bitvec::vec::BitVec;
 use bulletproofs::{BulletproofGens, GeneratorsChain, PedersenGens};
 use curve25519_dalek::{ristretto::RistrettoPoint, scalar::Scalar};
@@ -207,7 +209,7 @@ impl<Q: Ring + CryptoHash + ModSwitch<ZqRistretto> + RingModulus<4> + Ord> Linke
      * coefficients), the bounds for m are `[t, 0, ..., 0]`, while the bounds for
      * the other components are based on their respective distributions.
      *
-     * ```
+     * ```ignore
      * // Information needed to define a SDLP lattice problem.
      * struct LatticeProblem {
      *  a: Matrix<Polynomial>,
@@ -228,7 +230,7 @@ impl<Q: Ring + CryptoHash + ModSwitch<ZqRistretto> + RingModulus<4> + Ord> Linke
      * than some balance. We can do that using the Sunscreen compiler and the
      * following ZKP.
      *
-     * ```
+     * ```ignore
      * #[zkp_program]
      * fn valid_transaction<F: FieldSpec>(
      *     #[private] transaction_binary: [Field<F>; 15],
@@ -260,7 +262,7 @@ impl<Q: Ring + CryptoHash + ModSwitch<ZqRistretto> + RingModulus<4> + Ord> Linke
      * (a constant polynomial message with bounds on the DC component only), we can
      * use this helper function to reconstitute the transaction amount.
      *
-     * ```
+     * ```ignore
      * fn from_twos_complement_field_element<F: FieldSpec, const N: usize>(
      *     x: [ProgramNode<Field<F>>; N],
      * ) -> ProgramNode<Field<F>> {
@@ -280,7 +282,7 @@ impl<Q: Ring + CryptoHash + ModSwitch<ZqRistretto> + RingModulus<4> + Ord> Linke
      * a proof that the encrypted transaction amount is less than or equal to the
      * balance.
      *
-     * ```
+     * ```ignore
      * let app = Compiler::new()
      *     .zkp_backend::<BulletproofsBackend>()
      *     .zkp_program(valid_transaction)
@@ -312,7 +314,7 @@ impl<Q: Ring + CryptoHash + ModSwitch<ZqRistretto> + RingModulus<4> + Ord> Linke
      *
      * This will generate an proof of type `LinkedProof` that can be verified as follows:
      *
-     * ```
+     * ```ignore
      * println!("Performing linked verify");
      * let verified = linked_verify(
      *     &lp,
@@ -525,87 +527,5 @@ impl<Q: Ring + CryptoHash + ModSwitch<ZqRistretto> + RingModulus<4> + Ord> Linke
         }
 
         Ok(())
-    }
-}
-
-#[cfg(test)]
-mod tests {
-
-    use crate::LinkedProof;
-    use logproof::test::seal_bfv_encryption_linear_relation;
-    use sunscreen::{
-        bulletproofs::BulletproofsBackend,
-        types::zkp::{BulletproofsField, ConstrainCmp, Field, FieldSpec, ProgramNode},
-        zkp_program, zkp_var, Compiler,
-    };
-
-    use logproof::rings::SealQ128_1024;
-
-    /// Convert a twos complement represented signed integer into a field element.
-    fn from_twos_complement_field_element<F: FieldSpec, const N: usize>(
-        x: [ProgramNode<Field<F>>; N],
-    ) -> ProgramNode<Field<F>> {
-        let mut x_recon = zkp_var!(0);
-
-        for (i, x_i) in x.iter().enumerate().take(N - 1) {
-            x_recon = x_recon + (zkp_var!(2i64.pow(i as u32)) * (*x_i));
-        }
-
-        x_recon = x_recon + zkp_var!(-(2i64.pow((N - 1) as u32))) * x[N - 1];
-
-        x_recon
-    }
-
-    #[zkp_program]
-    fn valid_transaction<F: FieldSpec>(#[private] x: [Field<F>; 15], #[public] balance: Field<F>) {
-        let lower_bound = zkp_var!(0);
-
-        // Reconstruct x from the bag of bits
-        let x_recon = from_twos_complement_field_element(x);
-
-        // Constraint that x is less than or equal to balance
-        balance.constrain_ge_bounded(x_recon, 64);
-
-        // Constraint that x is greater than or equal to zero
-        lower_bound.constrain_le_bounded(x_recon, 64);
-    }
-
-    #[test]
-    fn test_valid_transaction() {
-        let app = Compiler::new()
-            .zkp_backend::<BulletproofsBackend>()
-            .zkp_program(valid_transaction)
-            .compile()
-            .unwrap();
-
-        let valid_transaction_zkp = app.get_zkp_program(valid_transaction).unwrap();
-
-        let x = 11999u64;
-        let balance = 12200u64;
-
-        let lattice_problem =
-            seal_bfv_encryption_linear_relation::<SealQ128_1024, 1>(x, 1024, 12289, false);
-        let shared_indices = vec![(0, 0)];
-
-        println!("Performing linked proof");
-        let lp = LinkedProof::create(
-            &lattice_problem,
-            &shared_indices,
-            valid_transaction_zkp,
-            vec![],
-            vec![BulletproofsField::from(balance)],
-            vec![],
-        )
-        .unwrap();
-        println!("Linked proof done");
-
-        println!("Performing linked verify");
-        lp.verify(
-            valid_transaction_zkp,
-            vec![BulletproofsField::from(balance)],
-            vec![],
-        )
-        .expect("Failed to verify linked proof");
-        println!("Linked verify done");
     }
 }

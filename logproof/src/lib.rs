@@ -69,4 +69,4 @@ pub use transcript::LogProofTranscript;
  * Components that are helpful for testing but should not be used in production.
  */
 pub mod test;
-pub use crate::test::LatticeProblem;
+pub use test::LatticeProblem;

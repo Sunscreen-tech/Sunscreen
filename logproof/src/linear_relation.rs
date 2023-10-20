@@ -549,6 +549,7 @@ impl LogProof {
             assert_eq!(w, w_prime);
         }
 
+        transcript.append_point(b"w_shared", &w_shared.compress());
         transcript.append_point(b"w", &w.compress());
 
         let (alpha, beta, gamma, phi, psi) = Self::create_challenges(&pk.vk, transcript);
@@ -687,6 +688,7 @@ impl LogProof {
         transcript.linear_relation_domain_separator();
         transcript.append_linear_relation_knowledge(vk);
 
+        transcript.append_point(b"w_shared", &self.w_shared.compress());
         transcript.append_point(b"w", &self.w.compress());
 
         let now = Instant::now();

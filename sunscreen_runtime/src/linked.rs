@@ -20,8 +20,12 @@ use logproof::{
 
 use crate::{ZkpProgramInput, ZkpRuntime};
 
+#[derive(Debug, Clone)]
 /// SDLP proof and associated information for verification
-pub struct Sdlp<Q: Ring + CryptoHash + ModSwitch<ZqRistretto> + RingModulus<4> + Ord> {
+pub struct Sdlp<Q>
+where
+    Q: Ring + CryptoHash + ModSwitch<ZqRistretto> + RingModulus<4> + Ord + Clone,
+{
     proof: LogProof,
     vk: LogProofVerifierKnowledge<Q>,
     g: Vec<RistrettoPoint>,
@@ -29,14 +33,19 @@ pub struct Sdlp<Q: Ring + CryptoHash + ModSwitch<ZqRistretto> + RingModulus<4> +
     u: RistrettoPoint,
 }
 
+#[derive(Clone)]
 /// R1CS BP proof and associated information for verification
 struct BP {
     proof: Proof,
     verifier_parameters: BulletproofVerifierParameters,
 }
 
+#[derive(Clone)]
 /// Linked proof between a SDLP and R1CS BP
-pub struct LinkedProof<Q: Ring + CryptoHash + ModSwitch<ZqRistretto> + RingModulus<4> + Ord> {
+pub struct LinkedProof<Q>
+where
+    Q: Ring + CryptoHash + ModSwitch<ZqRistretto> + RingModulus<4> + Ord + Clone,
+{
     sdlp: Sdlp<Q>,
     bp: BP,
 }

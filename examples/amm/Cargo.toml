@@ -6,4 +6,6 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-sunscreen = { workspace = true }
+# We explicitly import sunscreen instead of using the workspace definition to
+# avoid adding the "bulletproofs" feature.
+sunscreen = { version = "0.8.1", path = "../../sunscreen" }

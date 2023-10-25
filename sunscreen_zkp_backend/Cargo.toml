@@ -19,7 +19,6 @@ curve25519-dalek = { workspace = true }
 bulletproofs = { workspace = true, optional = true }
 crypto-bigint = { workspace = true }
 merlin = { workspace = true, optional = true }
-bumpalo = { workspace = true }
 petgraph = { workspace = true }
 rand = { workspace = true }
 sunscreen_compiler_common = { workspace = true }

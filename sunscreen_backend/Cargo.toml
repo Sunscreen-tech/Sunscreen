@@ -24,5 +24,4 @@ sunscreen_fhe_program = { workspace = true }
 sunscreen_runtime = { workspace = true }
 petgraph = { workspace = true }
 log = { workspace = true }
-env_logger = { workspace = true }
 num = { workspace = true }

@@ -19,16 +19,13 @@ readme = "crates-io.md"
 [dependencies]
 bincode = { workspace = true }
 crossbeam = { workspace = true }
-curve25519-dalek = { workspace = true }
 log = { workspace = true }
 merlin = { workspace = true }
 seal_fhe = { workspace = true }
 sunscreen_fhe_program = { workspace = true }
 sunscreen_compiler_common = { workspace = true }
-sunscreen_math = { workspace = true }
 sunscreen_zkp_backend = { workspace = true }
 petgraph = { workspace = true }
-num_cpus = { workspace = true }
 rayon = { workspace = true }
 rlp = { workspace = true }
 serde = { workspace = true }

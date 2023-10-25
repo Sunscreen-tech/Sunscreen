@@ -1642,7 +1642,6 @@ version = "0.8.1"
 dependencies = [
  "bincode",
  "bitvec",
- "bytemuck",
  "criterion 0.5.1",
  "crypto-bigint",
  "digest 0.10.7",
@@ -2774,7 +2773,6 @@ name = "sunscreen_backend"
 version = "0.8.1"
 dependencies = [
  "crossbeam",
- "env_logger",
  "log",
  "num",
  "petgraph",
@@ -2878,7 +2876,6 @@ dependencies = [
  "naga",
  "num",
  "ocl",
- "paste",
  "rand",
  "rayon",
  "subtle",
@@ -2910,7 +2907,6 @@ dependencies = [
  "crossbeam",
  "log",
  "merlin",
- "num_cpus",
  "petgraph",
  "rayon",
  "rlp",
@@ -2920,9 +2916,7 @@ dependencies = [
  "serde_json",
  "static_assertions",
  "sunscreen_compiler_common",
- "sunscreen_curve25519",
  "sunscreen_fhe_program",
- "sunscreen_math",
  "sunscreen_zkp_backend",
  "thiserror",
 ]
@@ -2931,7 +2925,6 @@ dependencies = [
 name = "sunscreen_zkp_backend"
 version = "0.8.1"
 dependencies = [
- "bumpalo",
  "crypto-bigint",
  "log",
  "merlin",

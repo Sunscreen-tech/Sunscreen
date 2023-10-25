@@ -28,7 +28,6 @@ wgpu = { workspace = true, optional = true }
 cust = { workspace = true, optional = true }
 num = { workspace = true }
 crypto-bigint = { workspace = true }
-paste = { workspace = true }
 thiserror = { workspace = true }
 sunscreen_math_macros = { workspace = true }
 subtle = { workspace = true }

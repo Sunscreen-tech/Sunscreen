@@ -76,7 +76,7 @@ impl std::ops::Deref for Bounds {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 /**
  * The artifacts known to both the prover and verifier.
  */

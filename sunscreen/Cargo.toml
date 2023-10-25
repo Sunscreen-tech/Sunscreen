@@ -19,11 +19,12 @@ readme = "crates-io.md"
 
 # Load the playground with all relevant features
 [package.metadata.playground]
-features = ["bulletproofs"]
+features = ["bulletproofs", "linkedproofs"]
 
 # Build docs.rs with these features
 [package.metadata.docs.rs]
-features = ["bulletproofs"]
+features = ["bulletproofs", "linkedproofs"]
+rustdoc-args = [ "--html-in-header", "katex-header.html" ]
 
 [dependencies]
 bumpalo = { workspace = true }
@@ -52,6 +53,7 @@ criterion = { workspace = true }
 env_logger = { workspace = true }
 float-cmp = { workspace = true }
 lazy_static = { workspace = true }
+logproof = { workspace = true }
 proptest = { workspace = true }
 sunscreen_zkp_backend = { workspace = true, features = ["bulletproofs"] }
 sunscreen_compiler_common = { workspace = true }
@@ -60,6 +62,7 @@ serde_json = { workspace = true }
 [features]
 bulletproofs = ["sunscreen_zkp_backend/bulletproofs"]
 hexl = ["seal_fhe/hexl"]
+linkedproofs = ["bulletproofs", "sunscreen_runtime/linkedproofs"]
 transparent-ciphertexts = ["seal_fhe/transparent-ciphertexts"]
 deterministic = ["seal_fhe/deterministic", "sunscreen_runtime/deterministic"]
 

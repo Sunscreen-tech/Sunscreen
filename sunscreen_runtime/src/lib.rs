@@ -11,6 +11,12 @@ mod run;
 mod runtime;
 mod serialization;
 
+#[cfg(feature = "linkedproofs")]
+mod linked;
+
+#[cfg(feature = "linkedproofs")]
+pub use crate::linked::*;
+
 use std::sync::Arc;
 
 pub use crate::error::*;

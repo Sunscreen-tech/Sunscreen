@@ -48,12 +48,12 @@ jobs:
       run: cargo fmt --check
     # Build and run the tests
     - name: Build and run tests
-      run: cargo test --workspace --verbose --release --features deterministic
+      run: cargo test --workspace --verbose --release --features deterministic,linkedproofs
     - name: Verify examples outside of workspace (allowlist_zkp)
       run: cargo test --workspace --verbose
       working-directory: ./examples/allowlist_zkp
     - name: Build sunscreen and bincode
-      run: cargo build --release --features bulletproofs --package sunscreen --package bincode
+      run: cargo build --release --features bulletproofs,linkedproofs --package sunscreen --package bincode
     - name: Build mdBook
       run: cargo build --release
       working-directory: ./mdBook

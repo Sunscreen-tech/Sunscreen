@@ -11,10 +11,10 @@ mod run;
 mod runtime;
 mod serialization;
 
-#[cfg(feature = "bulletproofs")]
+#[cfg(feature = "linkedproofs")]
 mod linked;
 
-#[cfg(feature = "bulletproofs")]
+#[cfg(feature = "linkedproofs")]
 pub use crate::linked::*;
 
 use std::sync::Arc;

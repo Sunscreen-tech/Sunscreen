@@ -8,4 +8,4 @@ edition = "2021"
 [dependencies]
 # We explicitly import sunscreen instead of using the workspace definition to
 # avoid adding the "bulletproofs" feature.
-sunscreen = { version = "0.8.1", path = "../../sunscreen" }
+sunscreen = { workspace = true }

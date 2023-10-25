@@ -40,6 +40,7 @@ mod compiler;
 mod error;
 mod params;
 
+#[cfg(feature = "bulletproofs")]
 #[doc = include_str!("../docs/linked.md")]
 pub mod linked {}
 

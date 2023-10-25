@@ -54,35 +54,60 @@ fn test_validated_transaction_example() -> Result<(), Error> {
     // Compile the ZKP program
     let valid_transaction_zkp = app.get_zkp_program(valid_transaction).unwrap();
 
-    // Private and public inputs
-    let x = 10_000u64;
-    let balance = 12_000u64;
+    let balance = 2u64;
 
-    // Generate the SDLP linear relation and specify that the message part of S
-    // should be shared.
-    let sdlp = seal_bfv_encryption_linear_relation::<SealQ128_1024, 1>(x, 1024, 12289, false);
-    let shared_indices = vec![(0, 0)];
+    // Try valid cases
+    for k in 0..=balance {
+        let x = k;
 
-    println!("Performing linked proof");
-    let lp = LinkedProof::create(
-        &sdlp,
-        &shared_indices,
-        valid_transaction_zkp,
-        vec![],
-        vec![BulletproofsField::from(balance)],
-        vec![],
-    )
-    .unwrap();
-    println!("Linked proof done");
+        // Generate the SDLP linear relation and specify that the message part of S
+        // should be shared.
+        let sdlp = seal_bfv_encryption_linear_relation::<SealQ128_1024, 1>(x, 1024, 12289, false);
+        let shared_indices = vec![(0, 0)];
 
-    println!("Performing linked verify");
-    lp.verify(
-        valid_transaction_zkp,
-        vec![BulletproofsField::from(balance)],
-        vec![],
-    )
-    .expect("Failed to verify linked proof");
-    println!("Linked verify done");
+        println!("Performing linked proof");
+        let lp = LinkedProof::create(
+            &sdlp,
+            &shared_indices,
+            valid_transaction_zkp,
+            vec![],
+            vec![BulletproofsField::from(balance)],
+            vec![],
+        )
+        .unwrap();
+        println!("Linked proof done");
+
+        println!("Performing linked verify");
+        lp.verify(
+            valid_transaction_zkp,
+            vec![BulletproofsField::from(balance)],
+            vec![],
+        )
+        .expect("Failed to verify linked proof");
+        println!("Linked verify done");
+    }
+
+    // Try an invalid case
+    {
+        let x = balance + 1;
+
+        // Generate the SDLP linear relation and specify that the message part of S
+        // should be shared.
+        let sdlp = seal_bfv_encryption_linear_relation::<SealQ128_1024, 1>(x, 1024, 12289, false);
+        let shared_indices = vec![(0, 0)];
+
+        println!("Proof should fail");
+        let lp = LinkedProof::create(
+            &sdlp,
+            &shared_indices,
+            valid_transaction_zkp,
+            vec![],
+            vec![BulletproofsField::from(balance)],
+            vec![],
+        );
+
+        assert!(lp.is_err());
+    }
 
     Ok(())
 }

@@ -402,12 +402,16 @@ where
     // Calculate the bounds for each element in S. m and r should have bounds of
     // the plaintext modulus, while u is ternary and e is sampled from the
     // centered binomial distribution with a standard deviation of 3.2.
-    let m_bounds = Bounds(
-        m_coeffs
-            .iter()
-            .map(|c| if *c == 0 { 0 } else { plain_modulus.value() })
-            .collect::<Vec<u64>>(),
-    );
+
+    let m_bounds = if batch_encoder {
+        Bounds(vec![plain_modulus.value(); m_coeffs.len()])
+    } else {
+        let mut bounds = vec![0; m_coeffs.len()];
+        bounds[0] = plain_modulus.value();
+
+        Bounds(bounds)
+    };
+
     let r_bounds = Bounds(vec![plain_modulus.value(); r_coeffs.len()]);
     let u_bounds = Bounds(vec![2; u_small[0].len()]);
     let e1_bounds = Bounds(vec![16; e_small[0].len()]);

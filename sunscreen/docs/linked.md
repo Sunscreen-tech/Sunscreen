@@ -61,7 +61,7 @@ let transaction = 10_000u64;
 // Generate a lattice problem for A * S = T (mod f). The bounds for each
 // coefficient of each element of S are calculated in the function.
 let lattice_problem = seal_bfv_encryption_linear_relation::<SealQ128_1024, 1>(
-    transaction, 
+    transaction,
     1024,  // Lattice dimension
     12289, // Plaintext modulus
     false  // Use the single encoder instead of the batch encoder
@@ -71,6 +71,25 @@ let lattice_problem = seal_bfv_encryption_linear_relation::<SealQ128_1024, 1>(
 The second proof we would like to show is that the encrypted value is less than some balance. We can do that using the Sunscreen compiler and the following ZKP.
 
 ```rust
+# use sunscreen::{zkp_var, zkp_program};
+# use sunscreen::types::zkp::{Field, ProgramNode};
+# use sunscreen_zkp_backend::FieldSpec;
+# use crate::sunscreen::types::zkp::ConstrainCmp;
+#
+# fn from_twos_complement_field_element<F: FieldSpec, const N: usize>(
+#     x: [ProgramNode<Field<F>>; N],
+# ) -> ProgramNode<Field<F>> {
+#     let mut x_recon = zkp_var!(0);
+#
+#     for (i, x_i) in x.iter().enumerate().take(N - 1) {
+#         x_recon = x_recon + (zkp_var!(2i64.pow(i as u32)) * (*x_i));
+#     }
+#
+#     x_recon = x_recon + zkp_var!(-(2i64.pow((N - 1) as u32))) * x[N - 1];
+#
+#     x_recon
+# }
+#
 #[zkp_program]
 fn valid_transaction<F: FieldSpec>(#[private] x: [Field<F>; 15], #[public] balance: Field<F>) {
     let lower_bound = zkp_var!(0);
@@ -91,6 +110,10 @@ Interestingly the transaction amount is not specified as a number but in its two
 In this particular example (a constant polynomial message with bounds on the DC component only), we can use this helper function to reconstitute the transaction amount.
 
 ```rust
+# use sunscreen::zkp_var;
+# use sunscreen::types::zkp::{Field, ProgramNode};
+# use sunscreen_zkp_backend::FieldSpec;
+#
 fn from_twos_complement_field_element<F: FieldSpec, const N: usize>(
     x: [ProgramNode<Field<F>>; N],
 ) -> ProgramNode<Field<F>> {
@@ -111,10 +134,47 @@ a proof that the encrypted transaction amount is less than or equal to the
 balance.
 
 ```rust
+# use sunscreen::{Compiler, zkp_var, zkp_program};
+# use sunscreen::types::zkp::{BulletproofsField, Field, ProgramNode};
+# use sunscreen_zkp_backend::FieldSpec;
+# use crate::sunscreen::types::zkp::ConstrainCmp;
+# use sunscreen_zkp_backend::bulletproofs::BulletproofsBackend;
+# use logproof::test::seal_bfv_encryption_linear_relation;
+# use logproof::rings::SealQ128_1024;
+# use sunscreen_runtime::LinkedProof;
+#
+# fn from_twos_complement_field_element<F: FieldSpec, const N: usize>(
+#     x: [ProgramNode<Field<F>>; N],
+# ) -> ProgramNode<Field<F>> {
+#     let mut x_recon = zkp_var!(0);
+#
+#     for (i, x_i) in x.iter().enumerate().take(N - 1) {
+#         x_recon = x_recon + (zkp_var!(2i64.pow(i as u32)) * (*x_i));
+#     }
+#
+#     x_recon = x_recon + zkp_var!(-(2i64.pow((N - 1) as u32))) * x[N - 1];
+#
+#     x_recon
+# }
+#
+# #[zkp_program]
+# fn valid_transaction<F: FieldSpec>(#[private] x: [Field<F>; 15], #[public] balance: Field<F>) {
+#     let lower_bound = zkp_var!(0);
+#
+#     // Reconstruct x from the bag of bits
+#     let x_recon = from_twos_complement_field_element(x);
+#
+#     // Constraint that x is less than or equal to balance
+#     balance.constrain_ge_bounded(x_recon, 64);
+#
+#     // Constraint that x is greater than or equal to zero
+#     lower_bound.constrain_le_bounded(x_recon, 64);
+# }
+#
 let app = Compiler::new()
     .zkp_backend::<BulletproofsBackend>()
     .zkp_program(valid_transaction)
-    .compile()?;
+    .compile().expect("ZKP program did not compile");
 
 // Compile the ZKP program
 let valid_transaction_zkp = app.get_zkp_program(valid_transaction).unwrap();
@@ -128,6 +188,8 @@ let balance = 12_000u64;
 let sdlp = seal_bfv_encryption_linear_relation::<SealQ128_1024, 1>(x, 1024, 12289, false);
 let shared_indices = vec![(0, 0)];
 
+// This will generate an proof of type `LinkedProof`
+
 println!("Performing linked proof");
 let lp = LinkedProof::create(
     &sdlp,
@@ -139,11 +201,9 @@ let lp = LinkedProof::create(
 )
 .unwrap();
 println!("Linked proof done");
-```
 
-This will generate an proof of type `LinkedProof` that can be verified as follows:
+// that can be verified as follows:
 
-```rust
 println!("Performing linked verify");
 lp.verify(
     valid_transaction_zkp,

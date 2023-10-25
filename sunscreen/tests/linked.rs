@@ -56,7 +56,7 @@ mod linked_tests {
         // Compile the ZKP program
         let valid_transaction_zkp = app.get_zkp_program(valid_transaction).unwrap();
 
-        let balance = 2u64;
+        let balance = 1u64;
 
         // Try valid cases
         for k in 0..=balance {

@@ -105,7 +105,7 @@ where
     /// * The inner type R supports constant time subtraction and multiplication.
     ///
     /// In order for polynomial division to work in a ring, `rhs` has restrictions.
-    /// Specifically, the highest order non-zero coefficient must be 1 so as to avoid
+    /// Specifically, the highest order non-zero coefficient in `rhs` must be 1 so as to avoid
     /// inverse operations. While multiplicative inverses are not guaranteed to exist
     /// for a [`Ring`] element, the inverse of one will always be one.
     ///

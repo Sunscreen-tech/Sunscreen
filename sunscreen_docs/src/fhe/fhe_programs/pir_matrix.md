@@ -36,7 +36,7 @@ When the server takes the dot product of the above vector with encrypted query v
 [Enc(item<sub>1,2</sub>), Enc(item<sub>2,2</sub>), Enc(item<sub>3,2</sub>), ..., Enc(item<sub>sqrt(n),2</sub>)] &middot; [Enc(1), Enc(0), ..., Enc(0)]<sup>t</sup> = Enc(item<sub>1,2</sub>)
 
 ## Program walkthrough
-Our database will have 100 items in it. We'll use an [array](./types/types.md/#arrays) to represent our database.
+Our database will have 100 items in it. We'll use an [array](./types/types.md#arrays) to represent our database.
 
 ### Setup
 ```rust

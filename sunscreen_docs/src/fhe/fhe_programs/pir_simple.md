@@ -32,7 +32,7 @@ Since Alice doesn't want to reveal to the server *which* item she's interested i
 [^1]: The encryption scheme must be [probabilistic](https://en.wikipedia.org/wiki/Probabilistic_encryption) (such that different randomness is used for encrypting each element in the query vector). Otherwise, the server *would* be able to tell apart Enc(1) from Enc(0) and deduce what Alice wants to retrieve. You don't have to worry about this issue when using Sunscreen's compiler.
 
 ## Program walkthrough
-Our database will have 100 items in it. We'll represent the vectors from earlier as [arrays](./types/types.md/#arrays), one of Sunscreen's supported types.
+Our database will have 100 items in it. We'll represent the vectors from earlier as [arrays](./types/types.md#arrays), one of Sunscreen's supported types.
 
 ### Setup
 
@@ -147,7 +147,7 @@ impl Alice {
 
 Alice will need to construct a runtime. Once that's done, she can generate her public/private key pair.
 
-Alice can create her unencrypted query "vector" (actually an [array](./types/types.md/#array)) of 0's and 1's by calling `create_query`. Recall that the we'll have a 1 in the place of her desired item's index and a 0 elsewhere. Since she wants her query to be private, she'll `encrypt` her `query`, passing in her `public_key` as necessary.
+Alice can create her unencrypted query "vector" (actually an [array](./types/types.md#array)) of 0's and 1's by calling `create_query`. Recall that the we'll have a 1 in the place of her desired item's index and a 0 elsewhere. Since she wants her query to be private, she'll `encrypt` her `query`, passing in her `public_key` as necessary.
 
 We won't use this until the very end but `check_response` allows Alice to decrypt the server's response by passing in the ciphertext she received (`value`) along with her `private_key`.
 

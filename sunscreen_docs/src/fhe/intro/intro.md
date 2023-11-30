@@ -4,7 +4,7 @@ Fully homomorphic encryption (FHE) is the next generation of public key encrypti
 
 Using FHE, anyone can perform computations directly on private (i.e. encrypted) data&mdash;no need to decrypt.
 
-We recommend starting with [this article](https://blog.nucypher.com/an-engineers-guide-to-fully-homomorphic-encryption/) if you're new to FHE.
+We recommend starting with [this article](https://blog.sunscreen.tech/an-intro-to-fully-homomorphic-encryption-for-engineers/) if you're new to FHE.
 
 
 ### Why should I care about FHE?
@@ -19,7 +19,7 @@ In machine learning, FHE allows for private inference. We have two parties in th
 
 FHE used to be incredibly slow. Performance has come a long way in the past few years; operations that used to take seconds (or even minutes) now take milliseconds (if not microseconds). 
 
-As magical as FHE is, it's actually [very hard](./why.md) to write FHE programs unless you're a cryptography expert (even then it's pretty hard).
+As magical as FHE is, it's actually [very hard](../intro/why.md) to write FHE programs unless you're a cryptography expert (even then it's pretty hard).
 Researchers built various FHE compilers in an attempt to improve usability. Unfortunately, these compilers failed for one of the following reasons: they introduced a [huge performance overhead](../compiler/performance.md), expected the user to know quite a bit about how FHE works, or were poorly designed for the target applications.
 
 For FHE to see widespread adoption, we need usability *and* great performance.

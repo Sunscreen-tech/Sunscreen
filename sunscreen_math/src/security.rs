@@ -32,9 +32,10 @@ pub fn evaluate_polynomial_2d<const M: usize, const N: usize>(
     result
 }
 
-// Exact probability of being x away from the mean given a standard deviation
-// that works when the ratio of x to the standard deviation is below 7.
-fn probability_away_from_mean_std_low(x: f64, std: f64) -> f64 {
+// Exact probability of being farther than x away from the mean given a standard
+// deviation that works when the ratio of x to the standard deviation is below
+// 7.
+fn probability_away_from_mean_gaussian_low(x: f64, std: f64) -> f64 {
     let normal = Normal::new(0.0, 1.0).unwrap();
 
     let single_tail_area = 1.0 - normal.cdf(x / std);
@@ -46,7 +47,7 @@ fn probability_away_from_mean_std_low(x: f64, std: f64) -> f64 {
 // Very low error approximation when the ratio of how far x is from the mean
 // given the standard deviation is above 7. Works up to a ratio of 30
 // (probability of 1e-197), afterwards it may diverge from the real value.
-fn probability_away_from_mean_std_high(x: f64, std: f64) -> f64 {
+fn probability_away_from_mean_gaussian_high(x: f64, std: f64) -> f64 {
     let ratio = x / std;
 
     if ratio > 30.0 {
@@ -68,20 +69,35 @@ fn probability_away_from_mean_std_high(x: f64, std: f64) -> f64 {
 }
 
 /**
- * Returns the probability of being x away from the mean given a standard
- * deviation.
+ * Returns the log10 of the probability of being farther than x away from the
+ * mean given a standard deviation. We return the log to handle very low
+ * probabilities.
  *
  * # Arguments
  *
  * * `x` - The distance from the mean.
  * * `std` - The standard deviation.
  *
+ * # Returns
+ * The log10 of the probability of being x away from the mean given a standard
+ * deviation.
+ *
+ * # Examples
+ * ```
+ * use sunscreen_math::security::probability_away_from_mean_gaussian;
+ *
+ * // Probability of being 1 standard deviation away from the mean. Should be
+ * // approximately 32%. If you know z-scores then this should be familiar.
+ * let log_prob = probability_away_from_mean_gaussian(1.0, 1.0);
+ * let prob = 10.0f64.powf(log_prob);
+ * let rounded_prob = (prob * 10000.0).round() / 10000.0;
+ * assert_eq!(rounded_prob, 0.3173);
  */
-pub fn probability_away_from_mean_std(x: f64, std: f64) -> f64 {
+pub fn probability_away_from_mean_gaussian(x: f64, std: f64) -> f64 {
     if x / std < 7.0 {
-        probability_away_from_mean_std_low(x, std)
+        probability_away_from_mean_gaussian_low(x, std)
     } else {
-        probability_away_from_mean_std_high(x, std)
+        probability_away_from_mean_gaussian_high(x, std)
     }
 }
 

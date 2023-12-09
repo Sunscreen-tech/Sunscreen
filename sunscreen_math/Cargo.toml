@@ -31,6 +31,8 @@ crypto-bigint = { workspace = true }
 thiserror = { workspace = true }
 sunscreen_math_macros = { workspace = true }
 subtle = { workspace = true }
+log.workspace = true
+statrs = "0.16.0"
 
 [build-dependencies]
 naga = { workspace = true, optional = true }

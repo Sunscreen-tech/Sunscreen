@@ -90,7 +90,7 @@ pub fn probability_away_from_mean_std(x: f64, std: f64) -> f64 {
 /// This approximation has an error of 0.031% +- 0.022%, max error 0.15%.
 /// Simulation data used for fit from
 /// lattice-estimator commit 25f9e88 (Nov 8th 2023).
-/// https://github.com/malb/lattice-estimator
+/// <https://github.com/malb/lattice-estimator>
 pub fn lwe_std_for_security_level(dimension: usize, security_level: f64) -> f64 {
     if !(368..=1024).contains(&dimension) {
         warn!(

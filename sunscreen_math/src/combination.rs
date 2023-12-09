@@ -165,7 +165,7 @@ impl Combinations {
      * * `None` - If the index is out of bounds.
      *
      * See
-     * https://jamesmccaffrey.wordpress.com/2022/06/28/generating-the-mth-lexicographical-element-of-a-combination-using-the-combinadic/
+     * <https://jamesmccaffrey.wordpress.com/2022/06/28/generating-the-mth-lexicographical-element-of-a-combination-using-the-combinadic/>
      * for more details
      */
     pub fn at_index(&self, index: usize) -> Option<Vec<usize>> {

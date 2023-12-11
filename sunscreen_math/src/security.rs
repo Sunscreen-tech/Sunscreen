@@ -101,8 +101,9 @@ pub fn probability_away_from_mean_gaussian(x: f64, std: f64) -> f64 {
     }
 }
 
-/// Returns the LWE standard deviation for a given dimension and security level.
-/// Valid from 368 to 1024 dimensions and 80 to 128 bits of security.
+/// Returns the LWE standard deviation for a given dimension and security level,
+/// normalized to the ciphertext modulus (although calculated with 2^64 as the
+/// modulus). Valid from 368 to 1024 dimensions and 80 to 128 bits of security.
 /// This approximation has an error of 0.031% +- 0.022%, max error 0.15%.
 /// Simulation data used for fit from
 /// lattice-estimator commit 25f9e88 (Nov 8th 2023).

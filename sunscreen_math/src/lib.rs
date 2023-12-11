@@ -27,6 +27,15 @@ pub mod field;
 mod cpu;
 pub use cpu::{CpuRistrettoPointVec, CpuScalarVec};
 
+/// Functions related to combinatorics
+pub mod combination;
+
+/// Statistics functions
+pub mod stats;
+
+/// Functions related to calculating security and correctness parameters.
+pub mod security;
+
 #[cfg(feature = "pina")]
 mod pina;
 use curve25519_dalek::ristretto::RistrettoPoint;

@@ -101,18 +101,33 @@ pub fn probability_away_from_mean_gaussian(x: f64, std: f64) -> f64 {
     }
 }
 
-/// Returns the LWE standard deviation for a given dimension and security level,
-/// normalized to the ciphertext modulus (although calculated with 2^64 as the
-/// modulus). Valid from 368 to 1024 dimensions and 80 to 128 bits of security.
-/// This approximation has an error of 0.031% +- 0.022%, max error 0.15%.
-/// Simulation data used for fit from
-/// lattice-estimator commit 25f9e88 (Nov 8th 2023).
-/// <https://github.com/malb/lattice-estimator>
+/**
+ * Returns the LWE standard deviation for a given dimension and security level,
+ * normalized to the ciphertext modulus (although calculated with 2^64 as the
+ * modulus). Valid from 368 to 2048 dimensions and 80 to 128 bits of security.
+ *
+ * The fit is most accurate in the region of 368 to 1024, while anything above
+ * 1024 is approximated over a sparse set of inputs. Testing has indicated that
+ * interpolated over the sparser fit data above 1024 matches quite well, but
+ * this has not been robustly tested.
+ *
+ * Some high dimensions will return a standard deviation below 1/modulus, which
+ * is problematic because potentially no random discrete numbers besides 0 would
+ * be sampled. You should check if the returned standard deviation is too low
+ * for your dimension and the modulus in case it was too low to generate any
+ * random numbers. For example, at dimension 2048 the effective lowest security
+ * is 102.2 bits for a modulus of 2^64.
+ *
+ * This approximation has an error of 0.032% +- 0.024%, max error 0.17%.
+ * Simulation data used for fit from
+ * lattice-estimator commit 25f9e88 (Nov 8th 2023).
+ * <https://github.com/malb/lattice-estimator>
+ */
 pub fn lwe_std_for_security_level(dimension: usize, security_level: f64) -> f64 {
-    if !(368..=1024).contains(&dimension) {
+    if !(368..=2048).contains(&dimension) {
         warn!(
             "Dimension {} is outside of the well behaved \
-            range of 368 to 1024 for the LWE standard deviation \
+            range of 368 to 2048 for the LWE standard deviation \
             to security level conversion",
             dimension
         );
@@ -129,26 +144,26 @@ pub fn lwe_std_for_security_level(dimension: usize, security_level: f64) -> f64 
 
     let coeffs = [
         [
-            -4.44906580e-01,
-            1.35331883e-02,
-            -4.65040418e-05,
-            1.13978498e-07,
+            -7.62764572e-01,
+            2.50356801e-02,
+            -1.68801365e-04,
+            5.03161614e-07,
         ],
         [
-            -3.75257133e-02,
-            5.70806504e-04,
-            -3.89131291e-06,
-            9.61541259e-09,
+            -3.73831468e-02,
+            5.56885396e-04,
+            -3.70805717e-06,
+            9.04035707e-09,
         ],
         [
-            -1.30018919e-06,
-            1.30345541e-08,
-            -8.00575696e-12,
+            -5.86726042e-07,
+            6.11446398e-09,
+            -1.14293199e-11,
             0.00000000e+00,
         ],
         [
-            4.04856008e-10,
-            -4.02068919e-12,
+            6.43204217e-11,
+            -5.54856202e-13,
             0.00000000e+00,
             0.00000000e+00,
         ],

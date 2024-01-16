@@ -5,7 +5,7 @@
 // The exported types here should be in terms of seal_fhe, with internal conversion logic to make
 // Prover/Verifier knowledge.
 
-use std::{borrow::Borrow, marker::PhantomData, ops::Neg};
+use std::{borrow::Borrow, fmt::Debug, marker::PhantomData, ops::Neg};
 
 use crypto_bigint::{NonZero, Uint};
 use seal_fhe::{
@@ -245,21 +245,17 @@ where
     for s in statements {
         // m*d block
         let msg_idx = s.message_id();
-        debug_assert_eq!(a[(row, msg_idx)], Polynomial::zero());
-        a[(row, msg_idx)] = d.clone();
+        a.set(row, msg_idx, d.clone());
 
         // r block
-        debug_assert_eq!(a[(row, offsets.remainder)], Polynomial::zero());
-        a[(row, offsets.remainder)] = Polynomial::one();
+        a.set(row, offsets.remainder, Polynomial::one());
 
         match s {
             // sk, e blocks
             BfvProofStatement::PrivateKeyEncryption { ciphertext, .. } => {
                 let c1 = (ctx, ciphertext.borrow()).as_poly_vec().pop().unwrap();
-                debug_assert_eq!(a[(row, offsets.private_a)], Polynomial::zero());
-                debug_assert_eq!(a[(row, offsets.private_e)], Polynomial::zero());
-                a[(row, offsets.private_a)] = c1;
-                a[(row, offsets.private_e)] = Polynomial::one();
+                a.set(row, offsets.private_a, c1);
+                a.set(row, offsets.private_e, Polynomial::one());
                 offsets.inc_private();
 
                 row += 1;
@@ -269,14 +265,10 @@ where
                 let mut pk = (ctx, public_key.borrow()).as_poly_vec();
                 let p1 = pk.pop().unwrap();
                 let p0 = pk.pop().unwrap();
-                debug_assert_eq!(a[(row, offsets.public_key)], Polynomial::zero());
-                debug_assert_eq!(a[(row + 1, offsets.public_key)], Polynomial::zero());
-                debug_assert_eq!(a[(row, offsets.public_e_0)], Polynomial::zero());
-                debug_assert_eq!(a[(row + 1, offsets.public_e_1)], Polynomial::zero());
-                a[(row, offsets.public_key)] = p0;
-                a[(row + 1, offsets.public_key)] = p1;
-                a[(row, offsets.public_e_0)] = Polynomial::one();
-                a[(row + 1, offsets.public_e_1)] = Polynomial::one();
+                a.set(row, offsets.public_key, p0);
+                a.set(row + 1, offsets.public_key, p1);
+                a.set(row, offsets.public_e_0, Polynomial::one());
+                a.set(row + 1, offsets.public_e_1, Polynomial::one());
                 offsets.inc_public();
 
                 row += 2;
@@ -301,8 +293,7 @@ where
 
     // m_i block
     for (i, m) in messages.iter().enumerate() {
-        debug_assert_eq!(s[(i, 0)], Polynomial::zero());
-        s[(i, 0)] = m.as_poly();
+        s.set(i, 0, m.as_poly());
     }
 
     // r_i, u_i, e_i, sk, e blocks
@@ -313,12 +304,9 @@ where
                 let r = r.as_poly();
                 let sk = private_key.borrow().as_poly();
                 let e = e.as_poly_vec().pop().unwrap();
-                debug_assert_eq!(s[(offsets.remainder, 0)], Polynomial::zero());
-                debug_assert_eq!(s[(offsets.private_a, 0)], Polynomial::zero());
-                debug_assert_eq!(s[(offsets.private_e, 0)], Polynomial::zero());
-                s[(offsets.remainder, 0)] = r;
-                s[(offsets.private_a, 0)] = sk.neg();
-                s[(offsets.private_e, 0)] = e.neg();
+                s.set(offsets.remainder, 0, r);
+                s.set(offsets.private_a, 0, sk.neg());
+                s.set(offsets.private_e, 0, e.neg());
                 offsets.inc_private();
             }
             // r_i, u_i, e_i
@@ -329,14 +317,10 @@ where
                 debug_assert_eq!(e.len(), 2, "ciphertexts must have length two");
                 let e1 = e.pop().unwrap();
                 let e0 = e.pop().unwrap();
-                debug_assert_eq!(s[(offsets.remainder, 0)], Polynomial::zero());
-                debug_assert_eq!(s[(offsets.public_key, 0)], Polynomial::zero());
-                debug_assert_eq!(s[(offsets.public_e_0, 0)], Polynomial::zero());
-                debug_assert_eq!(s[(offsets.public_e_1, 0)], Polynomial::zero());
-                s[(offsets.remainder, 0)] = r;
-                s[(offsets.public_key, 0)] = u;
-                s[(offsets.public_e_0, 0)] = e0;
-                s[(offsets.public_e_1, 0)] = e1;
+                s.set(offsets.remainder, 0, r);
+                s.set(offsets.public_key, 0, u);
+                s.set(offsets.public_e_0, 0, e0);
+                s.set(offsets.public_e_1, 0, e1);
                 offsets.inc_public();
             }
         }
@@ -390,25 +374,18 @@ where
 
     // insert them
     for i in 0..IdxOffsets::num_messages(statements) {
-        debug_assert_eq!(bounds[(i, 0)].0, &[]);
-        bounds[(i, 0)] = m_bound.clone();
+        bounds.set(i, 0, m_bound.clone());
     }
     for s in statements {
-        debug_assert_eq!(bounds[(offsets.remainder, 0)].0, &[]);
-        bounds[(offsets.remainder, 0)] = r_bound.clone();
+        bounds.set(offsets.remainder, 0, r_bound.clone());
         if s.is_private() {
-            debug_assert_eq!(bounds[(offsets.private_a, 0)].0, &[]);
-            debug_assert_eq!(bounds[(offsets.private_e, 0)].0, &[]);
-            bounds[(offsets.private_a, 0)] = s_bound.clone();
-            bounds[(offsets.private_e, 0)] = e_bound.clone();
+            bounds.set(offsets.private_a, 0, s_bound.clone());
+            bounds.set(offsets.private_e, 0, e_bound.clone());
             offsets.inc_private();
         } else {
-            debug_assert_eq!(bounds[(offsets.public_key, 0)].0, &[]);
-            debug_assert_eq!(bounds[(offsets.public_e_0, 0)].0, &[]);
-            debug_assert_eq!(bounds[(offsets.public_e_1, 0)].0, &[]);
-            bounds[(offsets.public_key, 0)] = u_bound.clone();
-            bounds[(offsets.public_e_0, 0)] = e_bound.clone();
-            bounds[(offsets.public_e_1, 0)] = e_bound.clone();
+            bounds.set(offsets.public_key, 0, u_bound.clone());
+            bounds.set(offsets.public_e_0, 0, e_bound.clone());
+            bounds.set(offsets.public_e_1, 0, e_bound.clone());
             offsets.inc_public();
         }
     }
@@ -599,6 +576,18 @@ impl StatementParams for EncryptionParameters {
             .iter()
             .map(|q| q.value())
             .collect()
+    }
+}
+
+/// Set entry in a matrix, with a debug assertion that the current entry is zero.
+trait MatrixSet<T> {
+    fn set(&mut self, row: usize, col: usize, entry: T);
+}
+impl<T: Zero + Clone + Debug + PartialEq> MatrixSet<T> for Matrix<T> {
+    #[inline(always)]
+    fn set(&mut self, row: usize, col: usize, entry: T) {
+        debug_assert_eq!(self[(row, col)], T::zero());
+        self[(row, col)] = entry;
     }
 }
 

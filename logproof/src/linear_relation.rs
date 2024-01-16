@@ -52,7 +52,7 @@ type MatrixPoly<Q> = Matrix<Polynomial<Q>>;
 /**
  * Bounds on the coefficients in the secret S
  */
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Bounds(pub Vec<u64>);
 
 impl Zero for Bounds {

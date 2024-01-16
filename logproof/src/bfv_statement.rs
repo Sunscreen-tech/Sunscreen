@@ -1,7 +1,7 @@
 //! This module provides a mid-level API for generating SDLP prover and verifier knowledge from BFV
 //! encryptions, all at the [`seal_fhe`] layer.
 
-use std::{borrow::Borrow, fmt::Debug, marker::PhantomData, ops::Neg};
+use std::{fmt::Debug, marker::PhantomData, ops::Neg};
 
 use crypto_bigint::{NonZero, Uint};
 use seal_fhe::{
@@ -194,9 +194,9 @@ pub fn generate_prover_knowledge<C, P, S, T, B, const N: usize>(
 ) -> LogProofProverKnowledge<Z<N, B>>
 where
     B: BarrettConfig<N>,
-    C: Borrow<Ciphertext>,
-    P: Borrow<PublicKey>,
-    S: Borrow<SecretKey>,
+    C: AsRef<Ciphertext>,
+    P: AsRef<PublicKey>,
+    S: AsRef<SecretKey>,
     T: StatementParams,
 {
     let vk = generate_verifier_knowledge(statements, params, ctx);
@@ -216,8 +216,8 @@ pub fn generate_verifier_knowledge<C, P, T, B, const N: usize>(
 ) -> LogProofVerifierKnowledge<Z<N, B>>
 where
     B: BarrettConfig<N>,
-    C: Borrow<Ciphertext>,
-    P: Borrow<PublicKey>,
+    C: AsRef<Ciphertext>,
+    P: AsRef<PublicKey>,
     T: StatementParams,
 {
     let a = compute_a(statements, params, ctx);
@@ -243,8 +243,8 @@ fn compute_a<C, P, T, B, const N: usize>(
 ) -> PolynomialMatrix<Z<N, B>>
 where
     B: BarrettConfig<N>,
-    C: Borrow<Ciphertext>,
-    P: Borrow<PublicKey>,
+    C: AsRef<Ciphertext>,
+    P: AsRef<PublicKey>,
     T: StatementParams,
 {
     let mut offsets = IdxOffsets::new(statements);
@@ -267,7 +267,7 @@ where
         match s {
             // sk, e blocks
             BfvProofStatement::PrivateKeyEncryption { ciphertext, .. } => {
-                let c1 = (ctx, ciphertext.borrow()).as_poly_vec().pop().unwrap();
+                let c1 = (ctx, ciphertext.as_ref()).as_poly_vec().pop().unwrap();
                 a.set(row, offsets.private_a, c1);
                 a.set(row, offsets.private_e, Polynomial::one());
                 offsets.inc_private();
@@ -276,7 +276,7 @@ where
             }
             // pk, e0, e1 blocks
             BfvProofStatement::PublicKeyEncryption { public_key, .. } => {
-                let mut pk = (ctx, public_key.borrow()).as_poly_vec();
+                let mut pk = (ctx, public_key.as_ref()).as_poly_vec();
                 let p1 = pk.pop().unwrap();
                 let p0 = pk.pop().unwrap();
                 a.set(row, offsets.public_key, p0);
@@ -300,7 +300,7 @@ fn compute_s<C, P, S, B, const N: usize>(
 ) -> PolynomialMatrix<Z<N, B>>
 where
     B: BarrettConfig<N>,
-    S: Borrow<SecretKey>,
+    S: AsRef<SecretKey>,
 {
     let mut offsets = IdxOffsets::new(statements);
     let mut s = PolynomialMatrix::new(offsets.a_shape().1, 1);
@@ -316,7 +316,7 @@ where
             // sk, e
             BfvWitness::PrivateKeyEncryption { private_key, e, r } => {
                 let r = r.as_poly();
-                let sk = private_key.borrow().as_poly();
+                let sk = private_key.as_ref().as_poly();
                 let e = e.as_poly_vec().pop().unwrap();
                 s.set(offsets.remainder, 0, r);
                 s.set(offsets.private_a, 0, sk.neg());
@@ -349,12 +349,12 @@ fn compute_t<C, P, B, const N: usize>(
 ) -> PolynomialMatrix<Z<N, B>>
 where
     B: BarrettConfig<N>,
-    C: Borrow<Ciphertext>,
+    C: AsRef<Ciphertext>,
 {
     let rows = statements
         .iter()
         .flat_map(|s| {
-            let mut c = (ctx, s.ciphertext().borrow()).as_poly_vec();
+            let mut c = (ctx, s.ciphertext().as_ref()).as_poly_vec();
             // only include first ciphertext element for private statements
             if s.is_private() {
                 c.pop().unwrap();

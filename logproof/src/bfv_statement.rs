@@ -20,12 +20,10 @@ use crate::{
 };
 
 /// In SEAL, `u` is sampled from a ternary distribution.
-// TODO if bounds are in u64 then perhaps this should be 3?
 const U_COEFFICIENT_BOUND: u64 = 2;
 /// In SEAL, `e` is sampled from a centered binomial distribution with std dev 3.2.
 const E_COEFFICIENT_BOUND: u64 = 16;
 /// In SEAL, secret keys are sampled from a ternary distribution.
-// TODO if bounds are in u64 then perhaps this should be 3?
 const S_COEFFICIENT_BOUND: u64 = 2;
 
 /// A proof statement verifying that a ciphertext is an encryption of a known plaintext message.

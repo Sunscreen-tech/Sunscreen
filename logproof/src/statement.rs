@@ -1,9 +1,5 @@
-// TODO revisit and see if there's a reasonable way to share code between BFV and TFHE logic. The
-// lower we go, the more it might be too much of a maintenance shackle than it is worth; at the
-// least, we could just have them impl the same high level traits, with impls not quite DRY.
-
-// The exported types here should be in terms of seal_fhe, with internal conversion logic to make
-// Prover/Verifier knowledge.
+//! This module provides a mid-level API for generating SDLP prover and verifier knowledge from BFV
+//! encryptions, all at the [`seal_fhe`] layer.
 
 use std::{borrow::Borrow, fmt::Debug, marker::PhantomData, ops::Neg};
 
@@ -36,8 +32,7 @@ const S_COEFFICIENT_BOUND: u64 = 2;
 /// Note that these statements are per SEAL plain/ciphertexts, where Sunscreen encodings are at a
 /// higher level. A single Sunscreen plaintext may actually encode multiple SEAL plaintexts, and
 /// hence multiple proof statements.
-//
-// Goddamn I miss higher kinded types :(
+#[derive(Debug)]
 pub enum BfvProofStatement<C, P> {
     PrivateKeyEncryption {
         message_id: usize,
@@ -75,7 +70,8 @@ impl<C, P> BfvProofStatement<C, P> {
 }
 
 /// A witness for a [`BfvProofStatement`].
-pub enum Witness<S> {
+#[derive(Debug)]
+pub enum BfvWitness<S> {
     PrivateKeyEncryption {
         /// The private key used for the encryption.
         private_key: S,
@@ -128,7 +124,7 @@ type Z<const N: usize, B> = Zq<N, BarrettBackend<N, B>>;
 ///
 /// For example, if we have two public key statements and one private key statement for three
 /// separate messages:
-/// ```ignore
+/// ```text
 ///                         A                     *   S        =     T
 /// (    d     r         pk     e[0] e[1] sk  e )
 /// [ [d 0 0 1 0 0 p_1[0] 0      1 0 0 0  0   0 ]   [   m_1  ]   [ c_1[0] ]
@@ -148,7 +144,7 @@ type Z<const N: usize, B> = Zq<N, BarrettBackend<N, B>>;
 /// ```
 ///
 /// If the private key statement is also encrypting the first message, this can be compacted:
-/// ```ignore
+/// ```text
 ///                     A                       *   S        =     T
 /// (    d   r         pk     e[0] e[1] sk  e )
 /// [ [d 0 1 0 0 p_1[0] 0      1 0 0 0  0   0 ]   [   m_1  ]   [ c_1[0] ]
@@ -167,15 +163,16 @@ type Z<const N: usize, B> = Zq<N, BarrettBackend<N, B>>;
 ///
 /// ```
 ///
-/// Note that the remainder for a given (plaintext, plaintext modulus, ciphertext modulus) trio
-/// should be constant, and thus it should technically be possible to reuse the remainder for
-/// multiple encryptions (public or private) of a single plaintext message, like we do for the
-/// delta scaling parameter. However, since the remainder is held in each [`Witness`], I've gone
-/// with the less surprising implementation where we have a remainder witness for each statement.
+/// # Remarks
+/// The remainder for a given (plaintext, plaintext modulus, ciphertext modulus) trio should be
+/// constant, and thus it should technically be possible to reuse the remainder for multiple
+/// encryptions (public or private) of a single plaintext message, like we do for the delta scaling
+/// parameter. However, since the remainder is held in each [`BfvWitness`], I've gone with the less
+/// surprising implementation where we have a remainder witness for each statement.
 pub fn generate_prover_knowledge<C, P, S, T, B, const N: usize>(
     statements: &[BfvProofStatement<C, P>],
     messages: &[Plaintext], // may want messages AsRef as well.. we'll see
-    witness: &[Witness<S>],
+    witness: &[BfvWitness<S>],
     params: &T,
     ctx: &Context,
 ) -> LogProofProverKnowledge<Z<N, B>>
@@ -282,7 +279,7 @@ where
 fn compute_s<C, P, S, B, const N: usize>(
     statements: &[BfvProofStatement<C, P>],
     messages: &[Plaintext],
-    witness: &[Witness<S>],
+    witness: &[BfvWitness<S>],
 ) -> PolynomialMatrix<Z<N, B>>
 where
     B: BarrettConfig<N>,
@@ -300,7 +297,7 @@ where
     for w in witness {
         match w {
             // sk, e
-            Witness::PrivateKeyEncryption { private_key, e, r } => {
+            BfvWitness::PrivateKeyEncryption { private_key, e, r } => {
                 let r = r.as_poly();
                 let sk = private_key.borrow().as_poly();
                 let e = e.as_poly_vec().pop().unwrap();
@@ -310,7 +307,7 @@ where
                 offsets.inc_private();
             }
             // r_i, u_i, e_i
-            Witness::PublicKeyEncryption { u, e, r } => {
+            BfvWitness::PublicKeyEncryption { u, e, r } => {
                 let r = r.as_poly();
                 let u = u.as_poly_vec().pop().unwrap();
                 let mut e = e.as_poly_vec();
@@ -394,7 +391,7 @@ where
 
 /// Represents the column offsets in `A` and the row offsets in `S` for the various fields.
 //
-// TODO This could be an iterator that spits out the next ProofStatement with the appropriate indices
+// Hm. This could be an iterator that spits out the next ProofStatement with the appropriate indices.
 struct IdxOffsets<C, P> {
     /// The remainder block occurs after the delta/message block.
     remainder: usize,
@@ -442,7 +439,7 @@ impl<C, P> IdxOffsets<C, P> {
     fn a_shape(&self) -> (usize, usize) {
         let num_private = self.private_e - self.private_a;
         let num_public = self.public_e_0 - self.public_key;
-        (self.private_e + num_private, num_public * 2 + num_private)
+        (num_public * 2 + num_private, self.private_e + num_private)
     }
 
     /// Record that a private statement or witness has been inserted into `A` or `S`, respectively
@@ -623,18 +620,22 @@ where
 
 #[cfg(test)]
 mod tests {
-    use rand::seq::IteratorRandom;
+    use merlin::Transcript;
+    use rand::Rng;
     use seal_fhe::{
-        BFVScalarEncoder, BfvEncryptionParametersBuilder, CoefficientModulus, Context, Decryptor,
-        Encryptor, KeyGenerator, PlainModulus, SecurityLevel,
+        BfvEncryptionParametersBuilder, CoefficientModulus, Context, Encryptor, KeyGenerator,
+        PlainModulus, SecurityLevel,
     };
 
-    use crate::rings::{ZqSeal128_1024, ZqSeal128_4096};
+    use crate::{
+        rings::{ZqSeal128_1024, ZqSeal128_4096},
+        InnerProductVerifierKnowledge, LogProof, LogProofGenerators, ProofError,
+    };
 
     use super::*;
 
     #[test]
-    fn test_idx_offsets() {
+    fn idx_offsets() {
         // recreating the example in the docs
         let statements = vec![
             BfvProofStatement::PublicKeyEncryption {
@@ -664,79 +665,77 @@ mod tests {
     }
 
     #[test]
-    fn test_delta() {
+    fn delta_calculation() {
         let delta: ZqSeal128_1024 = calculate_delta(3, vec![11]);
-        assert_eq!(delta.val.as_words()[0], 11 / 3);
+        assert_eq!(delta.val.as_words(), &[11 / 3]);
 
-        let delta: ZqSeal128_4096 = calculate_delta(4, vec![11, 13]);
-        assert_eq!(delta.val.as_words()[0], 11 * 13 / 4);
+        // ignores last moduli 11
+        let delta: ZqSeal128_4096 = calculate_delta(4, vec![53, 53, 11]);
+        assert_eq!(delta.val.as_words(), &[53 * 53 / 4, 0]);
+    }
+
+    #[test]
+    fn one_statement() {
+        test_statements_with(1, 0)
+    }
+
+    #[test]
+    fn two_separate_statements() {
+        test_statements_with(2, 0)
+    }
+
+    #[test]
+    fn two_statements_about_same_msg() {
+        test_statements_with(2, 1)
+    }
+
+    fn test_statements_with(num_statements: usize, num_duplicate_msgs: usize) {
+        let ctx = BFVTestContext::new();
+        let test_fixture = ctx.random_fixture_with(num_statements, num_duplicate_msgs);
+        let prover_knowledge = generate_prover_knowledge(
+            &test_fixture.statements,
+            &test_fixture.messages,
+            &test_fixture.witness,
+            &ctx.params,
+            &ctx.ctx,
+        );
+        let result = prove_and_verify(&prover_knowledge);
+        if result.is_err() {
+            panic!(
+                "SDLP from BFV statements failed: \n\
+                    - statements: {statements:#?} \n\
+                    - witnesses: {witness:#?} \n\
+                    - messages: {messages:#?} \n\
+                    - error: {error:#?}",
+                statements = test_fixture.statements,
+                witness = test_fixture.witness,
+                messages = test_fixture.messages,
+                error = result.err().unwrap(),
+            );
+        }
+    }
+
+    fn prove_and_verify(pk: &LogProofProverKnowledge<ZqSeal128_1024>) -> Result<(), ProofError> {
+        let gen: LogProofGenerators = LogProofGenerators::new(pk.vk.l() as usize);
+        let u = InnerProductVerifierKnowledge::get_u();
+        let mut p_t = Transcript::new(b"test");
+        let proof = LogProof::create(&mut p_t, pk, &gen.g, &gen.h, &u);
+        let mut v_t = Transcript::new(b"test");
+
+        proof.verify(&mut v_t, &pk.vk, &gen.g, &gen.h, &u)
     }
 
     struct TestFixture {
         statements: Vec<BfvProofStatement<Ciphertext, PublicKey>>,
         messages: Vec<Plaintext>,
-        witness: Vec<Witness<SecretKey>>,
+        witness: Vec<BfvWitness<SecretKey>>,
     }
 
     struct BFVTestContext {
         ctx: Context,
+        params: EncryptionParameters,
         public_key: PublicKey,
-        secret_key: SecretKey,
         encryptor: Encryptor,
-        decryptor: Decryptor,
-        encoder: BFVScalarEncoder,
-    }
-
-    impl TestFixture {
-        // TODO add private statements once we have a way to generate them
-        fn random() -> Self {
-            let ctx = BFVTestContext::new();
-            let mut rng = rand::thread_rng();
-
-            let statement_count = (1..=10).choose(&mut rng).unwrap();
-            let duplicate_msg_count = (0..statement_count).choose(&mut rng).unwrap();
-            let msg_count = statement_count - duplicate_msg_count;
-
-            // all the messages
-            let messages = (0..msg_count)
-                .map(|_| ctx.encoder.encode_unsigned(rand::random()).unwrap())
-                .collect::<Vec<_>>();
-
-            let mut statements = Vec::with_capacity(statement_count);
-            let mut witness = Vec::with_capacity(statement_count);
-
-            // statements without duplicate messages
-            for (i, msg) in messages.iter().enumerate() {
-                let (ct, u, e, r) = ctx.encryptor.encrypt_return_components(msg).unwrap();
-                statements.push(BfvProofStatement::PublicKeyEncryption {
-                    message_id: i,
-                    ciphertext: ct,
-                    public_key: ctx.public_key.clone(),
-                });
-                witness.push(Witness::PublicKeyEncryption { u, e, r });
-            }
-
-            // add in the statements about existing messages
-            for _ in 0..duplicate_msg_count {
-                let i = (0..msg_count).choose(&mut rng).unwrap();
-                let (ct, u, e, r) = ctx
-                    .encryptor
-                    .encrypt_return_components(&messages[i])
-                    .unwrap();
-                statements.push(BfvProofStatement::PublicKeyEncryption {
-                    message_id: i,
-                    ciphertext: ct,
-                    public_key: ctx.public_key.clone(),
-                });
-                witness.push(Witness::PublicKeyEncryption { u, e, r });
-            }
-
-            Self {
-                statements,
-                messages,
-                witness,
-            }
-        }
     }
 
     impl BFVTestContext {
@@ -756,17 +755,92 @@ mod tests {
             let secret_key = gen.secret_key();
             let encryptor =
                 Encryptor::with_public_and_secret_key(&ctx, &public_key, &secret_key).unwrap();
-            let decryptor = Decryptor::new(&ctx, &secret_key).unwrap();
-            let encoder = BFVScalarEncoder::new();
 
             BFVTestContext {
                 ctx,
+                params,
                 public_key,
-                secret_key,
                 encryptor,
-                decryptor,
-                encoder,
             }
+        }
+
+        // If we ever speed up SDLP, this would be nice to run in a loop. As is, it's too slow.
+        #[allow(unused)]
+        fn random_fixture(&self) -> TestFixture {
+            let mut rng = rand::thread_rng();
+            let num_statements = rng.gen_range(1..=3);
+            let num_duplicate_msgs = rng.gen_range(0..num_statements);
+            self.random_fixture_with(num_statements, num_duplicate_msgs)
+        }
+
+        /// Note that `num_duplicate_msgs` is in _addition_ to the first message about a given
+        /// index. So [0, 0, 0] contains `num_duplicate_msgs == 2`.
+        //
+        // TODO add private statements once we have a way to generate them, accepting
+        // num_public_statements, num_private_statements.
+        fn random_fixture_with(
+            &self,
+            num_statements: usize,
+            num_duplicate_msgs: usize,
+        ) -> TestFixture {
+            assert!(num_duplicate_msgs < num_statements);
+            let num_msgs = num_statements - num_duplicate_msgs;
+
+            // all the messages
+            let messages = (0..num_msgs)
+                .map(|_| self.random_plaintext())
+                .collect::<Vec<_>>();
+
+            let mut statements = Vec::with_capacity(num_statements);
+            let mut witness = Vec::with_capacity(num_statements);
+
+            // statements without duplicate messages
+            for (i, msg) in messages.iter().enumerate() {
+                let (ct, u, e, r) = self.encryptor.encrypt_return_components(msg).unwrap();
+                statements.push(BfvProofStatement::PublicKeyEncryption {
+                    message_id: i,
+                    ciphertext: ct,
+                    public_key: self.public_key.clone(),
+                });
+                witness.push(BfvWitness::PublicKeyEncryption { u, e, r });
+            }
+
+            // add in the statements about existing messages
+            let mut rng = rand::thread_rng();
+            for _ in 0..num_duplicate_msgs {
+                let i = rng.gen_range(0..num_msgs);
+                let (ct, u, e, r) = self
+                    .encryptor
+                    .encrypt_return_components(&messages[i])
+                    .unwrap();
+                statements.push(BfvProofStatement::PublicKeyEncryption {
+                    message_id: i,
+                    ciphertext: ct,
+                    public_key: self.public_key.clone(),
+                });
+                witness.push(BfvWitness::PublicKeyEncryption { u, e, r });
+            }
+
+            TestFixture {
+                statements,
+                messages,
+                witness,
+            }
+        }
+
+        fn random_plaintext(&self) -> Plaintext {
+            let mut rng = rand::thread_rng();
+            let mut pt = Plaintext::new().unwrap();
+            let modulus = self.params.plain_modulus();
+
+            let size = rng.gen_range(0..100);
+            pt.resize(size);
+
+            for i in 0..size {
+                pt.set_coefficient(i, rng.gen_range(0..modulus));
+            }
+
+            pt
         }
     }
 }

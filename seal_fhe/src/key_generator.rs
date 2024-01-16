@@ -192,6 +192,7 @@ impl Drop for KeyGenerator {
 /**
  * Class to store a public key.
  */
+#[derive(Debug)]
 pub struct PublicKey {
     handle: *mut c_void,
 }
@@ -285,6 +286,12 @@ impl Clone for PublicKey {
             .expect("Fatal error in PublicKey::clone");
 
         Self { handle }
+    }
+}
+
+impl AsRef<PublicKey> for PublicKey {
+    fn as_ref(&self) -> &PublicKey {
+        self
     }
 }
 
@@ -415,6 +422,20 @@ impl Clone for SecretKey {
             .expect("Fatal error in SecretKey::clone");
 
         Self { handle }
+    }
+}
+
+impl core::fmt::Debug for SecretKey {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+        f.debug_struct("SecretKey")
+            .field("handle", &"<ELIDED>")
+            .finish()
+    }
+}
+
+impl AsRef<SecretKey> for SecretKey {
+    fn as_ref(&self) -> &SecretKey {
+        self
     }
 }
 

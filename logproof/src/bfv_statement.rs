@@ -34,37 +34,50 @@ const S_COEFFICIENT_BOUND: u64 = 2;
 /// hence multiple proof statements.
 #[derive(Debug)]
 pub enum BfvProofStatement<C, P> {
+    /// A statement that the ciphertext symmetrically encrypts the identified message.
     PrivateKeyEncryption {
+        /// Column index in the A matrix, or equivalently the index of the message slice provided
+        /// when generating the prover knowledge.
         message_id: usize,
+        /// The ciphertext of the encryption statement.
         ciphertext: C,
     },
+    /// A statement that the ciphertext asymmetrically encrypts the identified message.
     PublicKeyEncryption {
+        /// Column index in the A matrix, or equivalently the index of the message slice provided
+        /// when generating the prover knowledge.
         message_id: usize,
+        /// The ciphertext of the encryption statement.
         ciphertext: C,
+        /// The public key of the encryption statement.
         public_key: P,
     },
 }
 
 impl<C, P> BfvProofStatement<C, P> {
-    fn message_id(&self) -> usize {
+    /// Get the message index of this statement.
+    pub fn message_id(&self) -> usize {
         match self {
             BfvProofStatement::PrivateKeyEncryption { message_id, .. } => *message_id,
             BfvProofStatement::PublicKeyEncryption { message_id, .. } => *message_id,
         }
     }
 
-    fn ciphertext(&self) -> &C {
+    /// Get the ciphertext of this statement.
+    pub fn ciphertext(&self) -> &C {
         match self {
             BfvProofStatement::PrivateKeyEncryption { ciphertext, .. } => ciphertext,
             BfvProofStatement::PublicKeyEncryption { ciphertext, .. } => ciphertext,
         }
     }
 
-    fn is_public(&self) -> bool {
+    /// Return whether or not this is a public encryption statement.
+    pub fn is_public(&self) -> bool {
         matches!(self, BfvProofStatement::PublicKeyEncryption { .. })
     }
 
-    fn is_private(&self) -> bool {
+    /// Return whether or not this is a private encryption statement.
+    pub fn is_private(&self) -> bool {
         matches!(self, BfvProofStatement::PrivateKeyEncryption { .. })
     }
 }
@@ -72,6 +85,7 @@ impl<C, P> BfvProofStatement<C, P> {
 /// A witness for a [`BfvProofStatement`].
 #[derive(Debug)]
 pub enum BfvWitness<S> {
+    /// A witness for the [`BfvProofStatement::PrivateKeyEncryption`] variant.
     PrivateKeyEncryption {
         /// The private key used for the encryption.
         private_key: S,
@@ -82,6 +96,7 @@ pub enum BfvWitness<S> {
         /// Rounding component after scaling the message by delta.
         r: Plaintext,
     },
+    /// A witness for the [`BfvProofStatement::PublicKeyEncryption`] variant.
     PublicKeyEncryption {
         /// Uniform ternary polynomial.
         ///
@@ -102,8 +117,9 @@ pub enum BfvWitness<S> {
 
 type Z<const N: usize, B> = Zq<N, BarrettBackend<N, B>>;
 
-/// Generate the full [`LogProofProverKnowledge`] for a given set of [`BfvProofStatement`]s. Some
-/// constraints to be aware of:
+/// Generate the full [`LogProofProverKnowledge`] for a given set of [`BfvProofStatement`]s.
+///
+/// Some constraints to be aware of:
 ///
 /// 1. We assume a common set of parameters is used across all statements.
 /// 2. Statements must reference message indices existing in the argument provided.
@@ -190,8 +206,9 @@ where
     LogProofProverKnowledge { vk, s }
 }
 
-/// Generate only the [`LogProofVerifierKnowledge`] for a given set of [`BfvProofStatement`]s. See
-/// the documentation for [`generate_prover_knowledge`] for more information.
+/// Generate only the [`LogProofVerifierKnowledge`] for a given set of [`BfvProofStatement`]s.
+///
+/// See the documentation for [`generate_prover_knowledge`] for more information.
 pub fn generate_verifier_knowledge<C, P, T, B, const N: usize>(
     statements: &[BfvProofStatement<C, P>],
     params: &T,

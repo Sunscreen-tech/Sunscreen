@@ -92,17 +92,13 @@ where
 
     /// A bound on each coefficient in the secret matrix S
     ///
-    /// # Remarks
     /// Every coefficient must have a bound, even if the polynomials have many leading zero
     /// coefficients. Thus, each `Bound` should have length the degree of [`f`](`Self::f`).
     pub bounds: Matrix<Bounds>,
 
-    /**
-     * The ideal `f` that defines the quotient ring `Z_q[X]/f`.
-     *
-     * # Remarks
-     * For FHE, this is usually `x^d+1` where `d` is a power of 2.
-     */
+    /// The ideal `f` that defines the quotient ring `Z_q[X]/f`.
+    ///
+    /// For FHE, this is usually `x^d+1` where `d` is a power of 2.
     pub f: Polynomial<Q>,
 }
 

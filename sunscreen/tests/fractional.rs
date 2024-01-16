@@ -61,9 +61,9 @@ fn can_add() {
     let (public_key, private_key) = runtime.generate_keys().unwrap();
 
     let do_add = |a: f64, b: f64| {
-        let a_p = Fractional::<64>::try_from(a).unwrap();
+        let a_p = Fractional::<64>::from(a);
         let a_c = runtime.encrypt(a_p, &public_key).unwrap();
-        let b_p = Fractional::<64>::try_from(b).unwrap();
+        let b_p = Fractional::<64>::from(b);
         let b_c = runtime.encrypt(b_p, &public_key).unwrap();
 
         let args: Vec<FheProgramInput> = vec![a_c.clone().into(), b_c.clone().into()];
@@ -167,9 +167,9 @@ fn can_mul() {
     let (public_key, private_key) = runtime.generate_keys().unwrap();
 
     let do_mul = |a: f64, b: f64| {
-        let a_p = Fractional::<64>::try_from(a).unwrap();
+        let a_p = Fractional::<64>::from(a);
         let a_c = runtime.encrypt(a_p, &public_key).unwrap();
-        let b_p = Fractional::<64>::try_from(b).unwrap();
+        let b_p = Fractional::<64>::from(b);
         let b_c = runtime.encrypt(b_p, &public_key).unwrap();
 
         let args: Vec<FheProgramInput> = vec![a_c.clone().into(), b_c.clone().into()];
@@ -293,9 +293,9 @@ fn can_sub() {
     let (public_key, private_key) = runtime.generate_keys().unwrap();
 
     let do_sub = |a: f64, b: f64| {
-        let a_p = Fractional::<64>::try_from(a).unwrap();
+        let a_p = Fractional::<64>::from(a);
         let a_c = runtime.encrypt(a_p, &public_key).unwrap();
-        let b_p = Fractional::<64>::try_from(b).unwrap();
+        let b_p = Fractional::<64>::from(b);
         let b_c = runtime.encrypt(b_p, &public_key).unwrap();
 
         let args: Vec<FheProgramInput> = vec![a_c.clone().into(), b_c.clone().into()];
@@ -369,7 +369,7 @@ fn can_div_cipher_const() {
 
     let test_div = |a: f64| {
         let a_c = runtime
-            .encrypt(Fractional::<64>::try_from(a).unwrap(), &public_key)
+            .encrypt(Fractional::<64>::from(a), &public_key)
             .unwrap();
 
         let args: Vec<FheProgramInput> = vec![a_c.into()];
@@ -413,7 +413,7 @@ fn can_negate() {
 
     let test_div = |a: f64| {
         let a_c = runtime
-            .encrypt(Fractional::<64>::try_from(a).unwrap(), &public_key)
+            .encrypt(Fractional::<64>::from(a), &public_key)
             .unwrap();
 
         let args: Vec<FheProgramInput> = vec![a_c.into()];

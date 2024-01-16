@@ -121,7 +121,7 @@ fn encrypt_term(runtime: &FheRuntime, public_key: &PublicKey, input: Term) -> Te
         Term::Ans => Term::Ans,
         Term::F64(v) => Term::Encrypted(
             runtime
-                .encrypt(Fractional::<64>::try_from(v).unwrap(), public_key)
+                .encrypt(Fractional::<64>::from(v), public_key)
                 .unwrap(),
         ),
         _ => {
@@ -250,7 +250,7 @@ fn bob(
         let runtime = FheRuntime::new(app.params()).unwrap();
 
         let mut ans = runtime
-            .encrypt(Fractional::<64>::try_from(0f64).unwrap(), &public_key)
+            .encrypt(Fractional::<64>::from(0f64), &public_key)
             .unwrap();
 
         loop {

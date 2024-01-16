@@ -1493,7 +1493,7 @@ mod test {
         let mut vals = vec![];
 
         for i in 0..257 {
-            let ring_val = Zr::try_from(i).unwrap();
+            let ring_val = Zr::from(i);
             vals.push(ring_val);
         }
 

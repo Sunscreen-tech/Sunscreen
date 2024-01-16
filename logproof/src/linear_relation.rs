@@ -77,28 +77,24 @@ impl std::ops::Deref for Bounds {
 }
 
 #[derive(Debug, Clone)]
-/**
- * The artifacts known to both the prover and verifier.
- */
+/// The artifacts known to both the prover and verifier.
 pub struct VerifierKnowledge<Q>
 where
     Q: Ring + CryptoHash + ModSwitch<ZqRistretto> + RingModulus<4> + Ord,
 {
-    /**
-     * The linear transform matrix A. `AS=T` should describe a series
-     * of RLWE/SIS instances (one per column of s and t) to ensure hardness
-     * in retrieving `S`.
-     */
+    /// The linear transform matrix A. `AS=T` should describe a series
+    /// of RLWE/SIS instances (one per column of s and t) to ensure hardness
+    /// in retrieving `S`.
     pub a: Matrix<Polynomial<Q>>,
 
-    /**
-     * The result of `AS`.
-     */
+    /// The result of `AS`.
     pub t: Matrix<Polynomial<Q>>,
 
-    /**
-     * A bound on each coefficient in the secret matrix S
-     */
+    /// A bound on each coefficient in the secret matrix S
+    ///
+    /// # Remarks
+    /// Every coefficient must have a bound, even if the polynomials have many leading zero
+    /// coefficients. Thus, each `Bound` should have length the degree of [`f`](`Self::f`).
     pub bounds: Matrix<Bounds>,
 
     /**

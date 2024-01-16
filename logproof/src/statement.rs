@@ -8,7 +8,9 @@
 use std::{borrow::Borrow, marker::PhantomData, ops::Neg};
 
 use crypto_bigint::{NonZero, Uint};
-use seal_fhe::{Ciphertext, Context, Modulus, Plaintext, PolynomialArray, PublicKey, SecretKey};
+use seal_fhe::{
+    Ciphertext, Context, EncryptionParameters, Plaintext, PolynomialArray, PublicKey, SecretKey,
+};
 use sunscreen_math::{
     poly::Polynomial,
     ring::{BarrettBackend, BarrettConfig, Ring, Zq},
@@ -16,9 +18,19 @@ use sunscreen_math::{
 };
 
 use crate::{
-    linear_algebra::PolynomialMatrix, rings::ZqRistretto, LogProofProverKnowledge,
-    LogProofVerifierKnowledge,
+    linear_algebra::{Matrix, PolynomialMatrix},
+    rings::ZqRistretto,
+    Bounds, LogProofProverKnowledge, LogProofVerifierKnowledge,
 };
+
+/// In SEAL, `u` is sampled from a ternary distribution.
+// TODO if bounds are in u64 then perhaps this should be 3?
+const U_COEFFICIENT_BOUND: u64 = 2;
+/// In SEAL, `e` is sampled from a centered binomial distribution with std dev 3.2.
+const E_COEFFICIENT_BOUND: u64 = 16;
+/// In SEAL, secret keys are sampled from a ternary distribution.
+// TODO if bounds are in u64 then perhaps this should be 3?
+const S_COEFFICIENT_BOUND: u64 = 2;
 
 /// A proof statement verifying that a ciphertext is an encryption of a known plaintext message.
 /// Note that these statements are per SEAL plain/ciphertexts, where Sunscreen encodings are at a
@@ -109,7 +121,7 @@ type Z<const N: usize, B> = Zq<N, BarrettBackend<N, B>>;
 /// 2. Private key statements each take up one row.
 /// 3. The offsets occur in blocks for each variable in the encryption statement; that is, given
 ///    that `c[0] = d * m + r + u * p[0] + e[0]` and `c[1] = u * p[1] + e[1]` for a public key
-///    encryption and `c[0] = d * m + r - (u * s + e)` and `c[1] = u` for a private key encryption,
+///    encryption and `c[0] = d * m + r - (a * s + e)` and `c[1] = a` for a private key encryption,
 ///    the offsets are ordered in blocks `d, r, pk, e[0], e[1], sk, e`, with the size of each block
 ///    depending on the number of messages, statements, and public vs. private statements. This is
 ///    almost impossible to express via text, but should be easy to follow in the example below.
@@ -118,12 +130,12 @@ type Z<const N: usize, B> = Zq<N, BarrettBackend<N, B>>;
 /// separate messages:
 /// ```ignore
 ///                         A                     *   S        =     T
-/// (    d     r         pk     e[0] e[1] s   e )
+/// (    d     r         pk     e[0] e[1] sk  e )
 /// [ [d 0 0 1 0 0 p_1[0] 0      1 0 0 0  0   0 ]   [   m_1  ]   [ c_1[0] ]
 /// [ [0 0 0 0 0 0 p_1[1] 0      0 0 1 0  0   0 ]   [   m_2  ]   [ c_1[1] ]
 /// [ [0 d 0 0 1 0 0      p_2[0] 0 1 0 0  0   0 ] * [   m_3  ] = [ c_2[0] ]
 /// [ [0 0 0 0 0 0 0      p_2[1] 0 0 0 1  0   0 ]   [   r_1  ]   [ c_2[1] ]
-/// [ [0 0 d 0 0 1 0      0      0 0 0 0  u_3 1 ]   [   r_2  ]   [ c_3[0] ]
+/// [ [0 0 d 0 0 1 0      0      0 0 0 0  a_3 1 ]   [   r_2  ]   [ c_3[0] ]
 ///                                                 [   r_3  ]
 ///                                                 [   u_1  ]
 ///                                                 [   u_2  ]
@@ -138,12 +150,12 @@ type Z<const N: usize, B> = Zq<N, BarrettBackend<N, B>>;
 /// If the private key statement is also encrypting the first message, this can be compacted:
 /// ```ignore
 ///                     A                       *   S        =     T
-/// (    d   r         pk     e[0] e[1] s   e )
+/// (    d   r         pk     e[0] e[1] sk  e )
 /// [ [d 0 1 0 0 p_1[0] 0      1 0 0 0  0   0 ]   [   m_1  ]   [ c_1[0] ]
 /// [ [0 0 0 0 0 p_1[1] 0      0 0 1 0  0   0 ]   [   m_2  ]   [ c_1[1] ]
 /// [ [0 d 0 1 0 0      p_2[0] 0 1 0 0  0   0 ] * [   r_1  ] = [ c_2[0] ]
 /// [ [0 0 0 0 0 0      p_2[1] 0 0 0 1  0   0 ]   [   r_2  ]   [ c_2[1] ]
-/// [ [d 0 0 0 1 0      0      0 0 0 0  u_3 1 ]   [   r_3  ]   [ c_3[0] ]
+/// [ [d 0 0 0 1 0      0      0 0 0 0  a_3 1 ]   [   r_3  ]   [ c_3[0] ]
 ///                                               [   u_1  ]
 ///                                               [   u_2  ]
 ///                                               [ e_1[0] ]
@@ -160,19 +172,19 @@ type Z<const N: usize, B> = Zq<N, BarrettBackend<N, B>>;
 /// multiple encryptions (public or private) of a single plaintext message, like we do for the
 /// delta scaling parameter. However, since the remainder is held in each [`Witness`], I've gone
 /// with the less surprising implementation where we have a remainder witness for each statement.
-pub fn generate_prover_knowledge<C, P, S, D, B, const N: usize>(
+pub fn generate_prover_knowledge<C, P, S, T, B, const N: usize>(
     statements: &[BfvProofStatement<C, P>],
     messages: &[Plaintext], // may want messages AsRef as well.. we'll see
     witness: &[Witness<S>],
-    params: D,
+    params: &T,
     ctx: &Context,
 ) -> LogProofProverKnowledge<Z<N, B>>
 where
     B: BarrettConfig<N>,
     C: Borrow<Ciphertext>,
     P: Borrow<PublicKey>,
-    D: AsDelta<N, B>,
     S: Borrow<SecretKey>,
+    T: StatementParams,
 {
     let vk = generate_verifier_knowledge(statements, params, ctx);
 
@@ -181,45 +193,52 @@ where
     LogProofProverKnowledge { vk, s }
 }
 
-pub fn generate_verifier_knowledge<C, P, D, B, const N: usize>(
+/// Generate only the [`LogProofVerifierKnowledge`] for a given set of [`BfvProofStatement`]s. See
+/// the documentation for [`generate_prover_knowledge`] for more information.
+pub fn generate_verifier_knowledge<C, P, T, B, const N: usize>(
     statements: &[BfvProofStatement<C, P>],
-    params: D,
+    params: &T,
     ctx: &Context,
 ) -> LogProofVerifierKnowledge<Z<N, B>>
 where
     B: BarrettConfig<N>,
     C: Borrow<Ciphertext>,
     P: Borrow<PublicKey>,
-    D: AsDelta<N, B>,
+    T: StatementParams,
 {
     let a = compute_a(statements, params, ctx);
     let t = compute_t(statements, ctx);
+    let bounds = compute_bounds(statements, params);
+    let f = Polynomial {
+        coeffs: {
+            let degree = params.degree() as usize;
+            let mut cs = vec![Zq::zero(); degree + 1];
+            cs[0] = Zq::one();
+            cs[degree] = Zq::one();
+            cs
+        },
+    };
 
-    LogProofVerifierKnowledge {
-        a,
-        t,
-        bounds: todo!(),
-        f: todo!(),
-    }
+    LogProofVerifierKnowledge { a, t, bounds, f }
 }
 
-fn compute_a<C, P, D, B, const N: usize>(
+fn compute_a<C, P, T, B, const N: usize>(
     statements: &[BfvProofStatement<C, P>],
-    params: D,
+    params: &T,
     ctx: &Context,
 ) -> PolynomialMatrix<Z<N, B>>
 where
     B: BarrettConfig<N>,
     C: Borrow<Ciphertext>,
     P: Borrow<PublicKey>,
-    D: AsDelta<N, B>,
+    T: StatementParams,
 {
     let mut offsets = IdxOffsets::new(statements);
     let (rows, cols) = offsets.a_shape();
     let mut a = PolynomialMatrix::new(rows, cols);
 
     let d = Polynomial {
-        coeffs: vec![params.as_delta()],
+        coeffs: vec![params.delta()],
     };
 
     let mut row = 0;
@@ -234,12 +253,12 @@ where
         a[(row, offsets.remainder)] = Polynomial::one();
 
         match s {
-            // s, e blocks
+            // sk, e blocks
             BfvProofStatement::PrivateKeyEncryption { ciphertext, .. } => {
-                let u = (ctx, ciphertext.borrow()).as_poly_vec().pop().unwrap();
-                debug_assert_eq!(a[(row, offsets.private_u)], Polynomial::zero());
+                let c1 = (ctx, ciphertext.borrow()).as_poly_vec().pop().unwrap();
+                debug_assert_eq!(a[(row, offsets.private_a)], Polynomial::zero());
                 debug_assert_eq!(a[(row, offsets.private_e)], Polynomial::zero());
-                a[(row, offsets.private_u)] = u;
+                a[(row, offsets.private_a)] = c1;
                 a[(row, offsets.private_e)] = Polynomial::one();
                 offsets.inc_private();
 
@@ -275,8 +294,6 @@ fn compute_s<C, P, S, B, const N: usize>(
 ) -> PolynomialMatrix<Z<N, B>>
 where
     B: BarrettConfig<N>,
-    C: Borrow<Ciphertext>,
-    P: Borrow<PublicKey>,
     S: Borrow<SecretKey>,
 {
     let mut offsets = IdxOffsets::new(statements);
@@ -288,19 +305,19 @@ where
         s[(i, 0)] = m.as_poly();
     }
 
-    // r_i, u_i, e_i, s, e blocks
+    // r_i, u_i, e_i, sk, e blocks
     for w in witness {
         match w {
-            // s, e
+            // sk, e
             Witness::PrivateKeyEncryption { private_key, e, r } => {
                 let r = r.as_poly();
                 let sk = private_key.borrow().as_poly();
                 let e = e.as_poly_vec().pop().unwrap();
                 debug_assert_eq!(s[(offsets.remainder, 0)], Polynomial::zero());
-                debug_assert_eq!(s[(offsets.private_u, 0)], Polynomial::zero());
+                debug_assert_eq!(s[(offsets.private_a, 0)], Polynomial::zero());
                 debug_assert_eq!(s[(offsets.private_e, 0)], Polynomial::zero());
                 s[(offsets.remainder, 0)] = r;
-                s[(offsets.private_u, 0)] = sk.neg();
+                s[(offsets.private_a, 0)] = sk.neg();
                 s[(offsets.private_e, 0)] = e.neg();
                 offsets.inc_private();
             }
@@ -335,7 +352,6 @@ fn compute_t<C, P, B, const N: usize>(
 where
     B: BarrettConfig<N>,
     C: Borrow<Ciphertext>,
-    P: Borrow<PublicKey>,
 {
     let rows = statements
         .iter()
@@ -357,7 +373,51 @@ where
     t
 }
 
+fn compute_bounds<C, P, T>(statements: &[BfvProofStatement<C, P>], params: &T) -> Matrix<Bounds>
+where
+    T: StatementParams,
+{
+    let mut offsets = IdxOffsets::new(statements);
+    let mut bounds = Matrix::<Bounds>::new(offsets.a_shape().1, 1);
+    let degree = params.degree() as usize;
+
+    // calculate bounds
+    let m_bound = Bounds(vec![params.plain_modulus(); degree]);
+    let r_bound = m_bound.clone();
+    let u_bound = Bounds(vec![U_COEFFICIENT_BOUND; degree]);
+    let e_bound = Bounds(vec![E_COEFFICIENT_BOUND; degree]);
+    let s_bound = Bounds(vec![S_COEFFICIENT_BOUND; degree]);
+
+    // insert them
+    for i in 0..IdxOffsets::num_messages(statements) {
+        debug_assert_eq!(bounds[(i, 0)].0, &[]);
+        bounds[(i, 0)] = m_bound.clone();
+    }
+    for s in statements {
+        debug_assert_eq!(bounds[(offsets.remainder, 0)].0, &[]);
+        bounds[(offsets.remainder, 0)] = r_bound.clone();
+        if s.is_private() {
+            debug_assert_eq!(bounds[(offsets.private_a, 0)].0, &[]);
+            debug_assert_eq!(bounds[(offsets.private_e, 0)].0, &[]);
+            bounds[(offsets.private_a, 0)] = s_bound.clone();
+            bounds[(offsets.private_e, 0)] = e_bound.clone();
+            offsets.inc_private();
+        } else {
+            debug_assert_eq!(bounds[(offsets.public_key, 0)].0, &[]);
+            debug_assert_eq!(bounds[(offsets.public_e_0, 0)].0, &[]);
+            debug_assert_eq!(bounds[(offsets.public_e_1, 0)].0, &[]);
+            bounds[(offsets.public_key, 0)] = u_bound.clone();
+            bounds[(offsets.public_e_0, 0)] = e_bound.clone();
+            bounds[(offsets.public_e_1, 0)] = e_bound.clone();
+            offsets.inc_public();
+        }
+    }
+    bounds
+}
+
 /// Represents the column offsets in `A` and the row offsets in `S` for the various fields.
+//
+// TODO This could be an iterator that spits out the next ProofStatement with the appropriate indices
 struct IdxOffsets<C, P> {
     /// The remainder block occurs after the delta/message block.
     remainder: usize,
@@ -368,7 +428,7 @@ struct IdxOffsets<C, P> {
     /// The public key statement's second error component block occurs after the first.
     public_e_1: usize,
     /// The private key block occurs next.
-    private_u: usize,
+    private_a: usize,
     /// The private key statement's error component block occurs last.
     private_e: usize,
     _phantom: PhantomData<(C, P)>,
@@ -387,15 +447,15 @@ impl<C, P> IdxOffsets<C, P> {
         let public_key = remainder + num_statements;
         let public_e_0 = public_key + num_public;
         let public_e_1 = public_e_0 + num_public;
-        let private_u = public_e_1 + num_public;
-        let private_e = private_u + num_private;
+        let private_a = public_e_1 + num_public;
+        let private_e = private_a + num_private;
 
         Self {
             remainder,
             public_key,
             public_e_0,
             public_e_1,
-            private_u,
+            private_a,
             private_e,
             _phantom: PhantomData,
         }
@@ -403,7 +463,7 @@ impl<C, P> IdxOffsets<C, P> {
 
     /// Return the (row, col) shape of A.
     fn a_shape(&self) -> (usize, usize) {
-        let num_private = self.private_e - self.private_u;
+        let num_private = self.private_e - self.private_a;
         let num_public = self.public_e_0 - self.public_key;
         (self.private_e + num_private, num_public * 2 + num_private)
     }
@@ -412,7 +472,7 @@ impl<C, P> IdxOffsets<C, P> {
     /// bumping the indices.
     fn inc_private(&mut self) {
         self.remainder += 1;
-        self.private_u += 1;
+        self.private_a += 1;
         self.private_e += 1;
     }
 
@@ -511,39 +571,54 @@ impl<const N: usize, B: BarrettConfig<N>> AsPolynomials<Z<N, B>> for (&Context, 
     }
 }
 
-/// A generic way to pass in the necessary BFV parameters (i.e. the plain & coeff moduli).
-pub trait AsDelta<const N: usize, B: BarrettConfig<N>> {
-    fn as_delta(&self) -> Z<N, B>;
-}
-
-impl<const N: usize, B: BarrettConfig<N>> AsDelta<N, B> for (Modulus, Vec<Modulus>) {
-    fn as_delta(&self) -> Z<N, B> {
-        let (p, qs) = self;
-        (p.value(), qs.iter().map(|q| q.value()).collect()).as_delta()
+/// A generic way to pass in the necessary BFV parameters.
+pub trait StatementParams {
+    /// Lattice degree.
+    fn degree(&self) -> u64;
+    /// Plaintext modulus.
+    fn plain_modulus(&self) -> u64;
+    /// Ciphertext modulus.
+    fn ciphertext_modulus(&self) -> Vec<u64>;
+    /// Calculate delta, the scaling parameter.
+    fn delta<const N: usize, B: BarrettConfig<N>>(&self) -> Z<N, B> {
+        calculate_delta(self.plain_modulus(), self.ciphertext_modulus())
     }
 }
 
-impl<const N: usize, B: BarrettConfig<N>> AsDelta<N, B> for (u64, Vec<u64>) {
-    fn as_delta(&self) -> Z<N, B> {
-        let (p, qs) = self;
+impl StatementParams for EncryptionParameters {
+    fn degree(&self) -> u64 {
+        self.get_poly_modulus_degree()
+    }
 
-        // Calculate the data coefficient modulus, which for fields with more
-        // that one modulus in the coefficient modulus set is equal to the
-        // product of all but the last moduli in the set.
-        let mut data_modulus = ZqRistretto::from(1);
-        if qs.len() == 1 {
-            data_modulus = data_modulus * ZqRistretto::from(qs[0]);
-        } else {
-            for q in qs.iter().take(qs.len() - 1) {
-                data_modulus = data_modulus * ZqRistretto::from(*q);
-            }
+    fn plain_modulus(&self) -> u64 {
+        self.get_plain_modulus().value()
+    }
+
+    fn ciphertext_modulus(&self) -> Vec<u64> {
+        self.get_coefficient_modulus()
+            .iter()
+            .map(|q| q.value())
+            .collect()
+    }
+}
+
+fn calculate_delta<const N: usize, B: BarrettConfig<N>>(p: u64, qs: Vec<u64>) -> Z<N, B> {
+    // Calculate the data coefficient modulus, which for fields with more
+    // that one modulus in the coefficient modulus set is equal to the
+    // product of all but the last moduli in the set.
+    let mut data_modulus = ZqRistretto::from(1);
+    if qs.len() == 1 {
+        data_modulus = data_modulus * ZqRistretto::from(qs[0]);
+    } else {
+        for q in qs.iter().take(qs.len() - 1) {
+            data_modulus = data_modulus * ZqRistretto::from(*q);
         }
-        let p_bigint = NonZero::new(Uint::from(*p)).unwrap();
-        let delta = data_modulus.into_bigint().div_rem(&p_bigint).0;
-        let limbs = delta.as_limbs().map(|l| l.into());
-        let delta_uint = Uint::<N>::from_words(limbs[0..N].try_into().unwrap());
-        Zq::try_from(delta_uint).unwrap()
     }
+    let p_bigint = NonZero::new(Uint::from(p)).unwrap();
+    let delta = data_modulus.into_bigint().div_rem(&p_bigint).0;
+    let limbs = delta.as_limbs().map(|l| l.into());
+    let delta_uint = Uint::<N>::from_words(limbs[0..N].try_into().unwrap());
+    Zq::try_from(delta_uint).unwrap()
 }
 
 fn strip_trailing_value<T>(mut v: Vec<T>, trim_value: T) -> Vec<T>
@@ -565,7 +640,7 @@ mod tests {
         Encryptor, KeyGenerator, PlainModulus, SecurityLevel,
     };
 
-    use crate::rings::{SealQ128_1024, ZqSeal128_1024, ZqSeal128_4096};
+    use crate::rings::{ZqSeal128_1024, ZqSeal128_4096};
 
     use super::*;
 
@@ -595,18 +670,16 @@ mod tests {
         assert_eq!(idx_offsets.public_key, 2 + 3);
         assert_eq!(idx_offsets.public_e_0, 2 + 3 + 2);
         assert_eq!(idx_offsets.public_e_1, 2 + 3 + 2 + 2);
-        assert_eq!(idx_offsets.private_u, 2 + 3 + 2 + 2 + 2);
+        assert_eq!(idx_offsets.private_a, 2 + 3 + 2 + 2 + 2);
         assert_eq!(idx_offsets.private_e, 2 + 3 + 2 + 2 + 2 + 1);
     }
 
     #[test]
     fn test_delta() {
-        let moduli = (3, vec![11]);
-        let delta: ZqSeal128_1024 = moduli.as_delta();
+        let delta: ZqSeal128_1024 = calculate_delta(3, vec![11]);
         assert_eq!(delta.val.as_words()[0], 11 / 3);
 
-        let moduli = (4, vec![11, 13]);
-        let delta: ZqSeal128_4096 = moduli.as_delta();
+        let delta: ZqSeal128_4096 = calculate_delta(4, vec![11, 13]);
         assert_eq!(delta.val.as_words()[0], 11 * 13 / 4);
     }
 

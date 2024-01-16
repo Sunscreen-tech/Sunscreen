@@ -1,6 +1,7 @@
 #[cfg(feature = "linkedproofs")]
 mod linked_tests {
     use logproof::test::seal_bfv_encryption_linear_relation;
+    use sunscreen::types::zkp::BulletproofsField;
     use sunscreen::Error;
     use sunscreen::{
         types::zkp::{ConstrainCmp, Field, FieldSpec, ProgramNode},
@@ -10,12 +11,6 @@ mod linked_tests {
 
     use logproof::rings::SealQ128_1024;
     use sunscreen_zkp_backend::bulletproofs::BulletproofsBackend;
-
-    // We copy the sunscreen_zkp_backend::bulletproofs::BulletproofsField type here
-    // because we can't import it directly from sunscreen_zkp_backend without
-    // enabling the "bulletproofs" feature
-    type BulletproofsField =
-    Field<<sunscreen_zkp_backend::bulletproofs::BulletproofsBackend as sunscreen_zkp_backend::ZkpBackend>::Field>;
 
     /// Convert a twos complement represented signed integer into a field element.
     fn from_twos_complement_field_element<F: FieldSpec, const N: usize>(

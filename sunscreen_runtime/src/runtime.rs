@@ -604,7 +604,7 @@ where
                         Ok(ciphertext)
                     })
                     .collect::<Result<Vec<SealCiphertext>>>()?
-                    .drain(0..)
+                    .into_iter()
                     .map(|c| WithContext {
                         params: fhe_data.params.clone(),
                         data: c,

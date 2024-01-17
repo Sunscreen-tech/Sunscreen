@@ -21,8 +21,9 @@ use crate::{
 
 /// In SEAL, `u` is sampled from a ternary distribution.
 const U_COEFFICIENT_BOUND: u64 = 2;
-/// In SEAL, `e` is sampled from a centered binomial distribution with std dev 3.2.
-const E_COEFFICIENT_BOUND: u64 = 16;
+/// In SEAL, `e` is sampled from a centered binomial distribution with std dev 3.2, and a maximum
+/// width multiplier of 6, so max bound is 19.2.
+const E_COEFFICIENT_BOUND: u64 = 19;
 /// In SEAL, secret keys are sampled from a ternary distribution.
 const S_COEFFICIENT_BOUND: u64 = 2;
 

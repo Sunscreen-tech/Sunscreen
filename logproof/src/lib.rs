@@ -52,6 +52,8 @@ pub use linear_relation::{
     VerifierKnowledge as LogProofVerifierKnowledge,
 };
 
+pub mod bfv_statement;
+
 /**
  * A collection of fields Z_q you can use in our log proofs.
  */

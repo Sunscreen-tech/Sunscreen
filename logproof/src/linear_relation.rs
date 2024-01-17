@@ -52,7 +52,7 @@ type MatrixPoly<Q> = Matrix<Polynomial<Q>>;
 /**
  * Bounds on the coefficients in the secret S
  */
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Bounds(pub Vec<u64>);
 
 impl Zero for Bounds {
@@ -77,36 +77,29 @@ impl std::ops::Deref for Bounds {
 }
 
 #[derive(Debug, Clone)]
-/**
- * The artifacts known to both the prover and verifier.
- */
+/// The artifacts known to both the prover and verifier.
 pub struct VerifierKnowledge<Q>
 where
     Q: Ring + CryptoHash + ModSwitch<ZqRistretto> + RingModulus<4> + Ord,
 {
-    /**
-     * The linear transform matrix A. `AS=T` should describe a series
-     * of RLWE/SIS instances (one per column of s and t) to ensure hardness
-     * in retrieving `S`.
-     */
+    /// The linear transform matrix A. `AS=T` should describe a series
+    /// of RLWE/SIS instances (one per column of s and t) to ensure hardness
+    /// in retrieving `S`.
     pub a: Matrix<Polynomial<Q>>,
 
-    /**
-     * The result of `AS`.
-     */
+    /// The result of `AS`.
     pub t: Matrix<Polynomial<Q>>,
 
-    /**
-     * A bound on each coefficient in the secret matrix S
-     */
+    /// A bound on each coefficient in the secret matrix S.
+    ///
+    /// Every coefficient must have a bound, even if the polynomials have many leading zero
+    /// coefficients. Thus, each `Bound` should have length the degree of [`f`](`Self::f`).
+    /// Also, be aware that the bound is on the absolute value of the coefficient.
     pub bounds: Matrix<Bounds>,
 
-    /**
-     * The ideal `f` that defines the quotient ring `Z_q[X]/f`.
-     *
-     * # Remarks
-     * For FHE, this is usually `x^d+1` where `d` is a power of 2.
-     */
+    /// The ideal `f` that defines the quotient ring `Z_q[X]/f`.
+    ///
+    /// For FHE, this is usually `x^d+1` where `d` is a power of 2.
     pub f: Polynomial<Q>,
 }
 
@@ -166,7 +159,7 @@ where
         // the original paper we should get an undefined value. Here we say that
         // a zero bound produces a zero `b` value from the paper. This is later
         // used to ignore coefficients that have a bound of zero.
-        fn calculate_bound(v: &[u64]) -> Bounds {
+        fn calculate_bound(v: &Bounds) -> Bounds {
             Bounds(
                 v.iter()
                     .map(|b| if *b > 0 { Log2::ceil_log2(b) + 1 } else { 0 })
@@ -174,15 +167,7 @@ where
             )
         }
 
-        let mut new_matrix: Matrix<Bounds> = Matrix::new(self.bounds.rows, self.bounds.cols);
-
-        for i in 0..self.bounds.rows {
-            for j in 0..self.bounds.cols {
-                new_matrix[(i, j)] = calculate_bound(&self.bounds[(i, j)])
-            }
-        }
-
-        new_matrix
+        self.bounds.map(calculate_bound)
     }
 
     /**
@@ -1501,7 +1486,7 @@ mod test {
         let mut vals = vec![];
 
         for i in 0..257 {
-            let ring_val = Zr::try_from(i).unwrap();
+            let ring_val = Zr::from(i);
             vals.push(ring_val);
         }
 

@@ -824,7 +824,7 @@ mod tests {
             let mut coeffs = vec![];
 
             for j in 1..5 {
-                coeffs.push(ZqRistretto::try_from((i * j) as u64).unwrap());
+                coeffs.push(ZqRistretto::from((i * j) as u64));
             }
 
             polys.push(Polynomial { coeffs });
@@ -892,7 +892,7 @@ mod tests {
 
         for i in 0..a.rows {
             for j in 0..a.cols {
-                a[(i, j)] = ZqSeal128_8192::try_from((i + j) as u64).unwrap();
+                a[(i, j)] = ZqSeal128_8192::from((i + j) as u64);
             }
         }
 

@@ -12,7 +12,7 @@ mod metadata;
 mod run;
 mod runtime;
 #[cfg(feature = "sdlp")]
-mod sdlp;
+pub mod sdlp;
 mod serialization;
 
 use std::sync::Arc;
@@ -28,8 +28,6 @@ pub use linked::*;
 pub use metadata::*;
 pub use run::*;
 pub use runtime::*;
-#[cfg(feature = "sdlp")]
-pub use sdlp::*;
 pub use serialization::WithContext;
 
 #[derive(Debug, Clone, PartialEq, Hash, Serialize, Deserialize, Eq)]

@@ -1,3 +1,6 @@
+//! This module contains the [`LogProofBuilder`], which allows you to perform encryptions while
+//! aggregating SDLP proof statements of the ciphertext validity.
+
 // TODO remove
 #![allow(missing_docs)]
 #![allow(unused_imports)]
@@ -17,7 +20,9 @@ use logproof::{
 use seal::SecurityLevel;
 use seal_fhe as seal;
 use sunscreen_compiler_common::{Type, TypeName};
-use sunscreen_math::ring::{BarrettBackend, BarrettConfig, Ring, RingModulus, Zq};
+use sunscreen_math::ring::{
+    ArithmeticBackend, BarrettBackend, BarrettConfig, Ring, RingModulus, Zq,
+};
 
 use crate::{
     marker, BFVEncryptionComponents, Ciphertext, Error, GenericRuntime, Params, Plaintext,
@@ -48,6 +53,7 @@ struct PlaintextTyped {
 // Instead, use an `id: usize` and only dole this out from the builder itself.
 #[derive(Debug, Clone)]
 pub struct SharedMessage {
+    // I think I can track the actual lp_message index here... probably better?
     pub(crate) id: usize,
     // TODO with proper invariants enforced, this field could be removed. It exists in the
     // builder's shared_messages. See if this makes it easier for ZKPs, if not rip it out.
@@ -238,6 +244,19 @@ impl<'r, 'p, 's, M: marker::Fhe, Z> LogProofBuilder<'r, 'p, 's, M, Z> {
         }
     }
 
+    // pub fn build_dyn2<const N: usize>(
+    //     self,
+    // ) -> Result<LogProofProverKnowledge<Zq<N, BarrettBackend<N, impl BarrettConfig<N>>>>> {
+    //     let params = self.runtime.params();
+    //     match (params.lattice_dimension, params.security_level) {
+    //         (1024, SecurityLevel::TC128) => Ok(self.build_generic::<1, SealQ128_1024>()?),
+    //         (2048, SecurityLevel::TC128) => Ok(self.build_generic::<1, SealQ128_2048>()?),
+    //         (4096, SecurityLevel::TC128) => Ok(self.build_generic::<2, SealQ128_4096>()?),
+    //         (8192, SecurityLevel::TC128) => Ok(self.build_generic::<3, SealQ128_8192>()?),
+    //         _ => Err(Error::UnsupportedParameters),
+    //     }
+    // }
+
     // TODO this is unnecesarily complicated, built off an API that we haven't yet used. Take down
     // the BFVEncyrptionComponents and maybe offer an FnMut arg in the encryption method that lets
     // us gather them ourselves. And then maybe we just build BfvStatements directly, at the time
@@ -368,9 +387,27 @@ mod sealed {
 
 // attempt 1
 // wtf unsuck this
-enum SealSdlpEnum {
+pub enum SealSdlpEnum {
     LP1024(LogProofProverKnowledge<ZqSeal128_1024>),
     LP2048(LogProofProverKnowledge<ZqSeal128_2048>),
     LP4096(LogProofProverKnowledge<ZqSeal128_4096>),
     LP8192(LogProofProverKnowledge<ZqSeal128_8192>),
 }
+
+// impl SealSdlpEnum {
+//     pub fn with_logproof<T, F>(&self, f: F) -> T
+//     where
+//         F: FnOnce(
+//             &LogProofProverKnowledge<
+//                 impl Ring + CryptoHash + ModSwitch<ZqRistretto> + RingModulus<4> + Ord,
+//             >,
+//         ) -> T,
+//     {
+//         match self {
+//             SealSdlpEnum::LP1024(x) => f(x),
+//             SealSdlpEnum::LP2048(x) => f(x),
+//             SealSdlpEnum::LP4096(x) => f(x),
+//             SealSdlpEnum::LP8192(x) => f(x),
+//         }
+//     }
+// }

@@ -19,11 +19,11 @@ readme = "crates-io.md"
 [dependencies]
 bincode = { workspace = true }
 bitvec = { workspace = true, optional = true }
-bulletproofs = { workspace = true , optional = true}
+bulletproofs = { workspace = true, optional = true }
 crossbeam = { workspace = true }
 curve25519-dalek = { workspace = true }
 log = { workspace = true }
-logproof = { workspace = true , optional = true}
+logproof = { workspace = true, optional = true }
 merlin = { workspace = true }
 seal_fhe = { workspace = true }
 sunscreen_fhe_program = { workspace = true }
@@ -43,5 +43,6 @@ serde_json = { workspace = true }
 
 [features]
 bulletproofs = []
-linkedproofs = ["dep:bitvec", "dep:bulletproofs", "dep:logproof"]
+sdlp = ["dep:logproof"]
+linkedproofs = ["sdlp", "dep:bitvec", "dep:bulletproofs"]
 deterministic = ["seal_fhe/deterministic"]

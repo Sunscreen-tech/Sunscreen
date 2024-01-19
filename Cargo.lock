@@ -2798,6 +2798,7 @@ dependencies = [
  "sunscreen_compiler_macros",
  "sunscreen_curve25519",
  "sunscreen_fhe_program",
+ "sunscreen_math",
  "sunscreen_runtime",
  "sunscreen_zkp_backend",
  "thiserror",

@@ -65,6 +65,7 @@ pub mod rings;
 pub mod math;
 mod transcript;
 
+pub use merlin::Transcript;
 pub use transcript::LogProofTranscript;
 
 /**

@@ -605,8 +605,7 @@ where
                 let ciphertexts = inner_plain
                     .iter()
                     .map(|p| {
-                        // TODO shouldn't this be !export_components?
-                        let ciphertext = if export_components {
+                        let ciphertext = if !export_components {
                             encryptor.encrypt(p).map_err(Error::SealError)
                         } else {
                             let (ciphertext, u, e, r) = encrypt_function(&encryptor, p, seed)?;

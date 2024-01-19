@@ -55,37 +55,19 @@ where
 pub enum LinkedProofError {
     /// An error with the ZKP proving.
     #[error(transparent)]
-    ZkpError(sunscreen_zkp_backend::Error),
+    ZkpError(#[from] sunscreen_zkp_backend::Error),
 
     /// An error generating the runtime.
     #[error(transparent)]
-    SunscreenRuntimeError(crate::Error),
+    SunscreenRuntimeError(#[from] crate::Error),
 
     /// Error from the SDLP.
     #[error("SDLP proof error: {0:?}")]
-    LogproofProofError(ProofError),
+    LogproofProofError(#[from] ProofError),
 
     /// The commitment to the shared inputs in the SDLP and R1CS BP do not match.
     #[error("Shared commitments are not equal")]
     SharedCommitmentsNotEqual,
-}
-
-impl From<sunscreen_zkp_backend::Error> for LinkedProofError {
-    fn from(err: sunscreen_zkp_backend::Error) -> Self {
-        LinkedProofError::ZkpError(err)
-    }
-}
-
-impl From<crate::Error> for LinkedProofError {
-    fn from(err: crate::Error) -> Self {
-        LinkedProofError::SunscreenRuntimeError(err)
-    }
-}
-
-impl From<ProofError> for LinkedProofError {
-    fn from(err: ProofError) -> Self {
-        LinkedProofError::LogproofProofError(err)
-    }
 }
 
 /// Generate a set of generators for a single party where some of the

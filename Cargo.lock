@@ -1622,6 +1622,7 @@ dependencies = [
  "sha3 0.10.8",
  "sunscreen_curve25519",
  "sunscreen_math",
+ "thiserror",
 ]
 
 [[package]]

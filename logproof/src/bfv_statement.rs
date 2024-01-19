@@ -1,7 +1,7 @@
 //! This module provides a mid-level API for generating SDLP prover and verifier knowledge from BFV
 //! encryptions, all at the [`seal_fhe`] layer.
 
-use std::{fmt::Debug, marker::PhantomData, ops::Neg};
+use std::{borrow::Cow, fmt::Debug, marker::PhantomData, ops::Neg};
 
 use crypto_bigint::{NonZero, Uint};
 use seal_fhe::{
@@ -83,17 +83,17 @@ impl<C, P> BfvProofStatement<C, P> {
 
 /// A witness for a [`BfvProofStatement`].
 #[derive(Debug)]
-pub enum BfvWitness<S> {
+pub enum BfvWitness<'a, 's> {
     /// A witness for the [`BfvProofStatement::PrivateKeyEncryption`] variant.
     PrivateKeyEncryption {
         /// The private key used for the encryption.
-        private_key: S,
+        private_key: Cow<'s, SecretKey>,
         /// Gaussian error polynomial
         ///
         /// N.B. this polynomial array should always have size one, see note below.
-        e: PolynomialArray,
+        e: Cow<'a, PolynomialArray>,
         /// Rounding component after scaling the message by delta.
-        r: Plaintext,
+        r: Cow<'a, Plaintext>,
     },
     /// A witness for the [`BfvProofStatement::PublicKeyEncryption`] variant.
     PublicKeyEncryption {
@@ -102,15 +102,15 @@ pub enum BfvWitness<S> {
         /// N.B. this polynomial array should always have size one, i.e. it is a single
         /// polynomial. I believe the type is simply the only reasonable one exported by
         /// `seal_fhe`.
-        u: PolynomialArray,
+        u: Cow<'a, PolynomialArray>,
         /// Gaussian error polynomial.
         ///
         /// Note that we currently assume that ciphertexts have length two, i.e.
         /// relinearization happens after every multiplication, and hence this error
         /// polynomial array should also have size two.
-        e: PolynomialArray,
+        e: Cow<'a, PolynomialArray>,
         /// Rounding component after scaling the message by delta.
-        r: Plaintext,
+        r: Cow<'a, Plaintext>,
     },
 }
 
@@ -184,10 +184,10 @@ type Z<const N: usize, B> = Zq<N, BarrettBackend<N, B>>;
 /// encryptions (public or private) of a single plaintext message, like we do for the delta scaling
 /// parameter. However, since the remainder is held in each [`BfvWitness`], I've gone with the less
 /// surprising implementation where we have a remainder witness for each statement.
-pub fn generate_prover_knowledge<C, P, S, T, B, const N: usize>(
+pub fn generate_prover_knowledge<C, P, T, B, const N: usize>(
     statements: &[BfvProofStatement<C, P>],
     messages: &[Plaintext], // may want messages AsRef as well.. we'll see
-    witness: &[BfvWitness<S>],
+    witness: &[BfvWitness<'_, '_>],
     params: &T,
     ctx: &Context,
 ) -> LogProofProverKnowledge<Z<N, B>>
@@ -195,7 +195,6 @@ where
     B: BarrettConfig<N>,
     C: AsRef<Ciphertext>,
     P: AsRef<PublicKey>,
-    S: AsRef<SecretKey>,
     T: StatementParams,
 {
     let vk = generate_verifier_knowledge(statements, params, ctx);
@@ -292,14 +291,13 @@ where
     a
 }
 
-fn compute_s<C, P, S, B, const N: usize>(
+fn compute_s<C, P, B, const N: usize>(
     statements: &[BfvProofStatement<C, P>],
     messages: &[Plaintext],
-    witness: &[BfvWitness<S>],
+    witness: &[BfvWitness<'_, '_>],
 ) -> PolynomialMatrix<Z<N, B>>
 where
     B: BarrettConfig<N>,
-    S: AsRef<SecretKey>,
 {
     let mut offsets = IdxOffsets::new(statements);
     let mut s = PolynomialMatrix::new(offsets.a_shape().1, 1);
@@ -741,10 +739,10 @@ mod tests {
         proof.verify(&mut v_t, &pk.vk, &gen.g, &gen.h, &u)
     }
 
-    struct TestFixture {
+    struct TestFixture<'a, 's> {
         statements: Vec<BfvProofStatement<Ciphertext, PublicKey>>,
         messages: Vec<Plaintext>,
-        witness: Vec<BfvWitness<SecretKey>>,
+        witness: Vec<BfvWitness<'a, 's>>,
     }
 
     struct BFVTestContext {
@@ -818,7 +816,11 @@ mod tests {
                     ciphertext: ct,
                     public_key: self.public_key.clone(),
                 });
-                witness.push(BfvWitness::PublicKeyEncryption { u, e, r });
+                witness.push(BfvWitness::PublicKeyEncryption {
+                    u: Cow::Owned(u),
+                    e: Cow::Owned(e),
+                    r: Cow::Owned(r),
+                });
             }
 
             // add in the statements about existing messages
@@ -834,7 +836,11 @@ mod tests {
                     ciphertext: ct,
                     public_key: self.public_key.clone(),
                 });
-                witness.push(BfvWitness::PublicKeyEncryption { u, e, r });
+                witness.push(BfvWitness::PublicKeyEncryption {
+                    u: Cow::Owned(u),
+                    e: Cow::Owned(e),
+                    r: Cow::Owned(r),
+                });
             }
 
             TestFixture {

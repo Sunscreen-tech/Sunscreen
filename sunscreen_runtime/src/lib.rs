@@ -6,29 +6,31 @@
 mod array;
 mod error;
 mod keys;
+#[cfg(feature = "linkedproofs")]
+mod linked;
 mod metadata;
 mod run;
 mod runtime;
+#[cfg(feature = "sdlp")]
+mod sdlp;
 mod serialization;
 
-#[cfg(feature = "linkedproofs")]
-mod linked;
-
-#[cfg(feature = "linkedproofs")]
-pub use crate::linked::*;
-
 use std::sync::Arc;
-
-pub use crate::error::*;
-pub use crate::keys::*;
-pub use crate::metadata::*;
-pub use run::*;
-pub use runtime::*;
-pub use serialization::WithContext;
 
 use seal_fhe::{Ciphertext as SealCiphertext, Plaintext as SealPlaintext};
 use serde::{Deserialize, Serialize};
 use sunscreen_zkp_backend::BigInt;
+
+pub use error::*;
+pub use keys::*;
+#[cfg(feature = "linkedproofs")]
+pub use linked::*;
+pub use metadata::*;
+pub use run::*;
+pub use runtime::*;
+#[cfg(feature = "sdlp")]
+pub use sdlp::*;
+pub use serialization::WithContext;
 
 #[derive(Debug, Clone, PartialEq, Hash, Serialize, Deserialize, Eq)]
 /**
@@ -128,7 +130,7 @@ impl From<SealPlaintext> for SealData {
     }
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 /**
  * Represents an encoded plaintext suitable for use in the underlying scheme.
  */
@@ -165,6 +167,18 @@ pub enum InnerCiphertext {
     Seal(Vec<WithContext<SealCiphertext>>),
 }
 
+impl InnerCiphertext {
+    /**
+     * Unwraps the enum and returns the underlying seal ciphertexts, or
+     * returns an error if this ciphertext isn't a Seal ciphertext.
+     */
+    pub fn as_seal_ciphertext(&self) -> Result<&[WithContext<SealCiphertext>]> {
+        match self {
+            Self::Seal(d) => Ok(d),
+        }
+    }
+}
+
 #[derive(Clone, Deserialize, Serialize)]
 /**
  * An encryption of the given data type. Note, the data type is
@@ -181,6 +195,16 @@ pub struct Ciphertext {
      * The scheme and backend-specific plaintext.
      */
     pub inner: InnerCiphertext,
+}
+
+impl Ciphertext {
+    /**
+     * Unwraps the inner ciphertext as a Seal ciphertext variant. Returns an
+     * error if the inner ciphertext is not a Seal ciphertext.
+     */
+    pub fn inner_as_seal_ciphertext(&self) -> Result<&[WithContext<SealCiphertext>]> {
+        self.inner.as_seal_ciphertext()
+    }
 }
 
 /**
@@ -259,6 +283,12 @@ pub trait TryIntoPlaintext {
      * Attempts to turn this type into a [`Plaintext`].
      */
     fn try_into_plaintext(&self, params: &Params) -> Result<Plaintext>;
+}
+
+impl TryIntoPlaintext for Plaintext {
+    fn try_into_plaintext(&self, _params: &Params) -> Result<Plaintext> {
+        Ok(self.clone())
+    }
 }
 
 /**

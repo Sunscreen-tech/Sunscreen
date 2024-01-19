@@ -127,6 +127,14 @@ pub enum Error {
      */
     #[error("ZKP builder error: {0}")]
     ZkpBuilderError(Box<String>),
+
+    /**
+     * Parameters not supported in the given context.
+     *
+     * SDLP only supports particular security level and lattice dimensions.
+     */
+    #[error("These parameters are not supported in this context")]
+    UnsupportedParameters,
 }
 
 const_assert!(std::mem::size_of::<Error>() <= 24);

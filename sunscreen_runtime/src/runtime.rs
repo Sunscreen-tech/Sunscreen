@@ -113,11 +113,12 @@ pub mod marker {
  * of ciphertexts.
  */
 #[allow(unused)]
+// TODO possible remove this ?
 pub struct BFVEncryptionComponents {
-    ciphertext: Ciphertext,
-    u: Vec<PolynomialArray>,
-    e: Vec<PolynomialArray>,
-    r: Vec<Plaintext>,
+    pub(crate) ciphertext: Ciphertext,
+    pub(crate) u: Vec<PolynomialArray>,
+    pub(crate) e: Vec<PolynomialArray>,
+    pub(crate) r: Vec<Plaintext>,
 }
 
 /**
@@ -328,6 +329,15 @@ where
     }
 
     /**
+     * Returns the underlying SEAL context.
+     */
+    pub(crate) fn context(&self) -> &SealContext {
+        match &self.runtime_data.unwrap_fhe().context {
+            Context::Seal(seal_ctx) => seal_ctx,
+        }
+    }
+
+    /**
      * Validates and runs the given FHE program. Unless you can guarantee your FHE program is valid,
      * you should use this method rather than [`run_program_unchecked`].
      */
@@ -504,7 +514,7 @@ where
      * Returns [`Error::ParameterMismatch`] if the plaintext is incompatible
      * with this runtime's scheme.
      */
-    fn encrypt_return_components<P>(
+    pub(crate) fn encrypt_return_components<P>(
         &self,
         val: P,
         public_key: &PublicKey,
@@ -549,7 +559,7 @@ where
      * Returns [`Error::ParameterMismatch`] if the plaintext is incompatible with this runtime's
      * scheme.
      */
-    fn encrypt_return_components_switched<P>(
+    pub(crate) fn encrypt_return_components_switched<P>(
         &self,
         val: P,
         public_key: &PublicKey,
@@ -559,11 +569,27 @@ where
     where
         P: TryIntoPlaintext + TypeName,
     {
+        let plaintext = val.try_into_plaintext(self.params())?;
+        let plaintext_type = P::type_name();
+        self.encrypt_return_components_switched_internal(
+            &plaintext,
+            &plaintext_type,
+            public_key,
+            export_components,
+            seed,
+        )
+    }
+
+    pub(crate) fn encrypt_return_components_switched_internal(
+        &self,
+        plaintext: &Plaintext,
+        plaintext_type: &Type,
+        public_key: &PublicKey,
+        export_components: bool,
+        seed: Option<&[u64; 8]>,
+    ) -> Result<BFVEncryptionComponents> {
         let fhe_data = self.runtime_data.unwrap_fhe();
-
-        let plaintext = val.try_into_plaintext(&fhe_data.params)?;
-
-        let (ciphertext, u, e, r) = match (&fhe_data.context, plaintext.inner) {
+        let (ciphertext, u, e, r) = match (&fhe_data.context, &plaintext.inner) {
             (Context::Seal(context), InnerPlaintext::Seal(inner_plain)) => {
                 let encryptor = Encryptor::with_public_key(context, &public_key.public_key.data)?;
 
@@ -579,6 +605,7 @@ where
                 let ciphertexts = inner_plain
                     .iter()
                     .map(|p| {
+                        // TODO shouldn't this be !export_components?
                         let ciphertext = if export_components {
                             encryptor.encrypt(p).map_err(Error::SealError)
                         } else {
@@ -590,7 +617,7 @@ where
                             };
 
                             let r = Plaintext {
-                                data_type: P::type_name(),
+                                data_type: plaintext_type.clone(),
                                 inner: InnerPlaintext::Seal(vec![r_context]),
                             };
 
@@ -615,7 +642,7 @@ where
                     Ciphertext {
                         data_type: Type {
                             is_encrypted: true,
-                            ..P::type_name()
+                            ..plaintext_type.clone()
                         },
                         inner: InnerCiphertext::Seal(ciphertexts),
                     },

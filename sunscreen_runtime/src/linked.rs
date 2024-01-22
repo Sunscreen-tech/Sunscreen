@@ -1,11 +1,12 @@
+// TODO linkage here, sdlp specific in sibling crate ?
 // For tests, see the sunscreen crate.
 
 use bitvec::vec::BitVec;
 use bulletproofs::{BulletproofGens, GeneratorsChain, PedersenGens};
 use curve25519_dalek::{ristretto::RistrettoPoint, scalar::Scalar};
-use logproof::{crypto::CryptoHash, math::ModSwitch, LogProofVerifierKnowledge, ProofError};
+use logproof::ProofError;
 use merlin::Transcript;
-use sunscreen_math::ring::{Ring, RingModulus};
+
 use sunscreen_zkp_backend::{
     bulletproofs::{
         BulletproofProverParameters, BulletproofVerifierParameters, BulletproofsBackend,
@@ -13,21 +14,18 @@ use sunscreen_zkp_backend::{
     BigInt, CompiledZkpProgram, Proof, ZkpBackend,
 };
 
-use logproof::{
-    math::rand256, rings::ZqRistretto, LatticeProblem, LogProof, LogProofGenerators,
-    LogProofProverKnowledge,
-};
+use logproof::{math::rand256, LogProof, LogProofGenerators};
 
-use crate::{ZkpProgramInput, ZkpRuntime};
+use crate::{
+    sdlp::{SealSdlpProverKnowledge, SealSdlpVerifierKnowledge},
+    ZkpProgramInput, ZkpRuntime,
+};
 
 #[derive(Debug, Clone)]
 /// SDLP proof and associated information for verification
-pub struct Sdlp<Q>
-where
-    Q: Ring + CryptoHash + ModSwitch<ZqRistretto> + RingModulus<4> + Ord + Clone,
-{
+pub struct Sdlp {
     proof: LogProof,
-    vk: LogProofVerifierKnowledge<Q>,
+    vk: SealSdlpVerifierKnowledge,
     g: Vec<RistrettoPoint>,
     h: Vec<RistrettoPoint>,
     u: RistrettoPoint,
@@ -42,11 +40,8 @@ struct BP {
 
 #[derive(Clone)]
 /// Linked proof between a SDLP and R1CS BP
-pub struct LinkedProof<Q>
-where
-    Q: Ring + CryptoHash + ModSwitch<ZqRistretto> + RingModulus<4> + Ord + Clone,
-{
-    sdlp: Sdlp<Q>,
+pub struct LinkedProof {
+    sdlp: Sdlp,
     bp: BP,
 }
 
@@ -109,7 +104,7 @@ fn new_single_party_with_shared_generators(
     BulletproofGens::new_from_generators(vec![g], vec![h]).unwrap()
 }
 
-impl<Q: Ring + CryptoHash + ModSwitch<ZqRistretto> + RingModulus<4> + Ord> LinkedProof<Q> {
+impl LinkedProof {
     /**
      * This function verifies a linked proof between a short discrete log proof
      * (SDLP) and a R1CS bulletproof. An example use case is proving an encryption
@@ -130,7 +125,7 @@ impl<Q: Ring + CryptoHash + ModSwitch<ZqRistretto> + RingModulus<4> + Ord> Linke
      * * `constant_inputs`: The constant inputs to the ZKP program
      */
     pub fn create<I>(
-        lattice_problem: &LatticeProblem<Q>,
+        prover_knowledge: &SealSdlpProverKnowledge,
         shared_indices: &[(usize, usize)],
         program: &CompiledZkpProgram,
         private_inputs: Vec<I>,
@@ -143,23 +138,16 @@ impl<Q: Ring + CryptoHash + ModSwitch<ZqRistretto> + RingModulus<4> + Ord> Linke
         let backend = BulletproofsBackend::new();
         let mut transcript = Transcript::new(b"linked-sdlp-and-r1cs-bp");
 
-        let pk = LogProofProverKnowledge::new(
-            &lattice_problem.a,
-            &lattice_problem.s,
-            &lattice_problem.t,
-            &lattice_problem.b,
-            &lattice_problem.f,
-        );
-
+        let vk = prover_knowledge.vk();
         let binary_parts = shared_indices
             .iter()
-            .map(|(i, j)| pk.s_binary_by_index((*i, *j)))
+            .map(|(i, j)| prover_knowledge.s_binary_by_index((*i, *j)))
             .collect::<Vec<BitVec>>();
 
-        let gens = LogProofGenerators::new(pk.vk.l() as usize);
+        let gens = LogProofGenerators::new(vk.l() as usize);
 
         // Get shared generators
-        let b_slices = pk.vk.b_slices();
+        let b_slices = vk.b_slices();
         let shared_gens = shared_indices
             .iter()
             .flat_map(|(i, j)| {
@@ -172,9 +160,8 @@ impl<Q: Ring + CryptoHash + ModSwitch<ZqRistretto> + RingModulus<4> + Ord> Linke
 
         let half_rho = Scalar::from_bits(rand256());
 
-        let sdlp_proof = LogProof::create_with_shared(
+        let sdlp_proof = prover_knowledge.create_shared_logproof(
             &mut transcript,
-            &pk,
             &gens.g,
             &gens.h,
             &u,
@@ -184,7 +171,7 @@ impl<Q: Ring + CryptoHash + ModSwitch<ZqRistretto> + RingModulus<4> + Ord> Linke
 
         let sdlp_package = Sdlp {
             proof: sdlp_proof,
-            vk: pk.vk,
+            vk,
             g: gens.g,
             h: gens.h,
             u,
@@ -303,9 +290,9 @@ impl<Q: Ring + CryptoHash + ModSwitch<ZqRistretto> + RingModulus<4> + Ord> Linke
 
         let mut transcript = Transcript::new(b"linked-sdlp-and-r1cs-bp");
 
-        self.sdlp.proof.verify(
+        self.sdlp.vk.verify(
+            &self.sdlp.proof,
             &mut transcript,
-            &self.sdlp.vk,
             &self.sdlp.g,
             &self.sdlp.h,
             &self.sdlp.u,

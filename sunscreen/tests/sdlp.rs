@@ -1,15 +1,12 @@
 #[cfg(feature = "sdlp")]
 mod sdlp_tests {
     use lazy_static::lazy_static;
-    use logproof::{
-        crypto::CryptoHash, math::ModSwitch, rings::ZqRistretto, InnerProductVerifierKnowledge,
-        LogProof, LogProofGenerators, LogProofProverKnowledge, Transcript,
-    };
+    use logproof::{InnerProductVerifierKnowledge, LogProofGenerators, Transcript};
     use sunscreen::types::bfv::Signed;
     use sunscreen_fhe_program::SchemeType;
-    use sunscreen_math::ring::{Ring, RingModulus};
+
     use sunscreen_runtime::{
-        sdlp::{LogProofBuilder, SealSdlpEnum},
+        sdlp::{LogProofBuilder, SealSdlpProverKnowledge},
         FheRuntime, Params,
     };
 
@@ -57,25 +54,14 @@ mod sdlp_tests {
         prove_and_verify_seal(sdlp)
     }
 
-    fn prove_and_verify_seal(seal_sdlp: SealSdlpEnum) {
-        match seal_sdlp {
-            SealSdlpEnum::LP1024(x) => prove_and_verify(&x),
-            SealSdlpEnum::LP2048(x) => prove_and_verify(&x),
-            SealSdlpEnum::LP4096(x) => prove_and_verify(&x),
-            SealSdlpEnum::LP8192(x) => prove_and_verify(&x),
-        }
-    }
-
-    fn prove_and_verify<Q>(pk: &LogProofProverKnowledge<Q>)
-    where
-        Q: Ring + CryptoHash + ModSwitch<ZqRistretto> + RingModulus<4> + Ord,
-    {
-        let gen: LogProofGenerators = LogProofGenerators::new(pk.vk.l() as usize);
+    fn prove_and_verify_seal(pk: SealSdlpProverKnowledge) {
+        let vk = pk.vk();
+        let gen: LogProofGenerators = LogProofGenerators::new(vk.l() as usize);
         let u = InnerProductVerifierKnowledge::get_u();
         let mut p_t = Transcript::new(b"test");
-        let proof = LogProof::create(&mut p_t, pk, &gen.g, &gen.h, &u);
+        let proof = pk.create_logproof(&mut p_t, &gen.g, &gen.h, &u);
         let mut v_t = Transcript::new(b"test");
 
-        proof.verify(&mut v_t, &pk.vk, &gen.g, &gen.h, &u).unwrap()
+        vk.verify(&proof, &mut v_t, &gen.g, &gen.h, &u).unwrap()
     }
 }

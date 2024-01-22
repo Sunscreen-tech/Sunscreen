@@ -26,10 +26,12 @@ log = { workspace = true }
 logproof = { workspace = true, optional = true }
 merlin = { workspace = true }
 seal_fhe = { workspace = true }
+seq-macro = { version = "0.3", optional = true }
 sunscreen_fhe_program = { workspace = true }
 sunscreen_compiler_common = { workspace = true }
 sunscreen_math = { workspace = true }
 sunscreen_zkp_backend = { workspace = true }
+paste = { workspace = true, optional = true }
 petgraph = { workspace = true }
 rayon = { workspace = true }
 rlp = { workspace = true }
@@ -43,6 +45,6 @@ serde_json = { workspace = true }
 
 [features]
 bulletproofs = []
-sdlp = ["dep:logproof"]
-linkedproofs = ["sdlp", "dep:bitvec", "dep:bulletproofs"]
+sdlp = ["dep:logproof", "dep:bitvec", "dep:seq-macro", "dep:paste"]
+linkedproofs = ["sdlp", "dep:bulletproofs"]
 deterministic = ["seal_fhe/deterministic"]

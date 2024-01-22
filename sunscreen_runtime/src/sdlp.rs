@@ -5,8 +5,10 @@
 #![allow(missing_docs)]
 #![allow(unused_imports)]
 
-use std::{borrow::Cow, collections::HashMap, sync::Arc};
+use std::{borrow::Cow, collections::HashMap, ops::Range, sync::Arc};
 
+use bitvec::vec::BitVec;
+use curve25519_dalek::{ristretto::RistrettoPoint, scalar::Scalar};
 use logproof::{
     bfv_statement::{self, BfvProofStatement, BfvWitness, StatementParams},
     crypto::CryptoHash,
@@ -15,8 +17,9 @@ use logproof::{
         SealQ128_1024, SealQ128_2048, SealQ128_4096, SealQ128_8192, ZqRistretto, ZqSeal128_1024,
         ZqSeal128_2048, ZqSeal128_4096, ZqSeal128_8192,
     },
-    LogProofProverKnowledge, LogProofVerifierKnowledge,
+    LogProof, LogProofProverKnowledge, LogProofVerifierKnowledge, ProofError,
 };
+use merlin::Transcript;
 use seal::SecurityLevel;
 use seal_fhe as seal;
 use sunscreen_compiler_common::{Type, TypeName};
@@ -29,6 +32,8 @@ use crate::{
     PrivateKey, PublicKey, Result, TryIntoPlaintext,
 };
 
+// TODO use this to limit what types people can share with ZKPs. May want to separate the notion of
+// ZKP and internal SDLP sharing.
 pub trait Share: TryIntoPlaintext + TypeName {
     /// The number of underlying BFV plaintexts.
     ///
@@ -39,18 +44,12 @@ pub trait Share: TryIntoPlaintext + TypeName {
 }
 
 #[derive(Debug, Clone)]
-struct PlaintextTyped {
+pub(crate) struct PlaintextTyped {
     plaintext: Plaintext,
     type_name: Type,
 }
 
 /// A [`Plaintext`] message that can be shared. Create this with [`LogProofBuilder::share`].
-//
-// Initial idea was to just rely on `Arc::ptr_eq` to compare `SharedMessage`s... would be elegant
-// but does it make sense? I don't know if we are guaranteed the underlying data doesn't move,
-// unless you mess with Pin/Unpin, which seems grossly unnecessary for this.
-//
-// Instead, use an `id: usize` and only dole this out from the builder itself.
 #[derive(Debug, Clone)]
 pub struct SharedMessage {
     // I think I can track the actual lp_message index here... probably better?
@@ -106,6 +105,8 @@ enum EncryptedComponents<'p, 's> {
 
 /// Internal state for the [`LogProofBuilder`]. This holds higher level proof statements, messages,
 /// and witnesses, that are later converted into [`logproof::bfv_statement`] piecess.
+//
+// TODO rip this out and just build logproof statements as we go.
 struct Statement<'p, 's> {
     msg: Message,
     encryption: EncryptedComponents<'p, 's>,
@@ -119,6 +120,9 @@ struct Statement<'p, 's> {
 /// Use this builder to encrypt your [`Plaintext`]s while automatically generate a log proof of the
 /// encryption statements. We implicitly assume that these plaintexts and ciphertexts are backed by
 /// the SEAL BFV scheme, otherwise the methods will return an `Err`.
+//
+// TODO when refactoring to build statements as we go, have the shared message id equal the
+// starting message index.
 pub struct LogProofBuilder<'r, 'p, 's, M, B> {
     runtime: &'r GenericRuntime<M, B>,
     statements: Vec<Statement<'p, 's>>,
@@ -187,13 +191,12 @@ impl<'r, 'p, 's, M: marker::Fhe, Z> LogProofBuilder<'r, 'p, 's, M, Z> {
         self.encrypt_internal(Message::Shared(message.clone()), public_key)
     }
 
-    // shit need P::type_name() available here...
-
     fn encrypt_internal(
         &mut self,
         message: Message,
         public_key: &'p PublicKey,
     ) -> Result<Ciphertext> {
+        // TODO during refactor, see if it makes sense to pass in an FnMut(component_i)
         let components = self.runtime.encrypt_return_components_switched_internal(
             message.plaintext(),
             message.type_name(),
@@ -222,24 +225,21 @@ impl<'r, 'p, 's, M: marker::Fhe, Z> LogProofBuilder<'r, 'p, 's, M, Z> {
         })
     }
 
-    pub fn build(self) -> Result<SealSdlpEnum> {
+    pub fn build(self) -> Result<SealSdlpProverKnowledge> {
         let params = self.runtime.params();
         match (params.lattice_dimension, params.security_level) {
-            (1024, SecurityLevel::TC128) => Ok(SealSdlpEnum::LP1024(self.build_generic()?)),
-            (2048, SecurityLevel::TC128) => Ok(SealSdlpEnum::LP2048(self.build_generic()?)),
-            (4096, SecurityLevel::TC128) => Ok(SealSdlpEnum::LP4096(self.build_generic()?)),
-            (8192, SecurityLevel::TC128) => Ok(SealSdlpEnum::LP8192(self.build_generic()?)),
-            _ => Err(Error::UnsupportedParameters),
-        }
-    }
-
-    pub fn build_dyn(self) -> Result<Box<dyn SealSdlp>> {
-        let params = self.runtime.params();
-        match (params.lattice_dimension, params.security_level) {
-            (1024, SecurityLevel::TC128) => Ok(Box::new(self.build_generic::<1, SealQ128_1024>()?)),
-            (2048, SecurityLevel::TC128) => Ok(Box::new(self.build_generic::<1, SealQ128_2048>()?)),
-            (4096, SecurityLevel::TC128) => Ok(Box::new(self.build_generic::<2, SealQ128_4096>()?)),
-            (8192, SecurityLevel::TC128) => Ok(Box::new(self.build_generic::<3, SealQ128_8192>()?)),
+            (1024, SecurityLevel::TC128) => Ok(SealSdlpProverKnowledge(
+                SealSdlpProverKnowledgeInternal::LP1024(self.build_generic()?),
+            )),
+            (2048, SecurityLevel::TC128) => Ok(SealSdlpProverKnowledge(
+                SealSdlpProverKnowledgeInternal::LP2048(self.build_generic()?),
+            )),
+            (4096, SecurityLevel::TC128) => Ok(SealSdlpProverKnowledge(
+                SealSdlpProverKnowledgeInternal::LP4096(self.build_generic()?),
+            )),
+            (8192, SecurityLevel::TC128) => Ok(SealSdlpProverKnowledge(
+                SealSdlpProverKnowledgeInternal::LP8192(self.build_generic()?),
+            )),
             _ => Err(Error::UnsupportedParameters),
         }
     }
@@ -358,56 +358,225 @@ impl StatementParams for Params {
     }
 }
 
-type SealLp<const N: usize> = LogProofProverKnowledge<Zq<N, Box<dyn BarrettConfig<N>>>>;
-
-trait SealSdlp {}
-impl SealSdlp for LogProofProverKnowledge<ZqSeal128_1024> {}
-impl SealSdlp for LogProofProverKnowledge<ZqSeal128_2048> {}
-impl SealSdlp for LogProofProverKnowledge<ZqSeal128_4096> {}
-impl SealSdlp for LogProofProverKnowledge<ZqSeal128_8192> {}
-
 impl<'r, 'p, 's, M: marker::Fhe + marker::Zkp, B> LogProofBuilder<'r, 'p, 's, M, B> {
     pub fn linked_proof() {
         todo!("if the underlying runtime has zkp capabilities, let the user create linked proofs with shared messages")
     }
 }
 
-// attempt 2 any better? fuck
-struct Sdlp(Box<dyn sealed::Sdlp>);
-mod sealed {
-    use super::*;
-
-    pub trait Sdlp {}
-
-    impl Sdlp for LogProofProverKnowledge<ZqSeal128_1024> {}
-    impl Sdlp for LogProofProverKnowledge<ZqSeal128_2048> {}
-    impl Sdlp for LogProofProverKnowledge<ZqSeal128_4096> {}
-    impl Sdlp for LogProofProverKnowledge<ZqSeal128_8192> {}
+mod private {
+    pub trait Sealed {}
 }
 
+// Shit I don't know what the hell impls like this would look like. LogProof doesn't have generics,
+// just generic methods... how can we make multiple valid ones? Maybe we need to shift this down onto the PK.
+pub(crate) trait Sdlp: private::Sealed {
+    type ProverKnowledge: SdlpProverKnowledge;
+
+    fn create_with_shared(
+        &self,
+        transcript: &mut Transcript,
+        g: &[RistrettoPoint],
+        h: &[RistrettoPoint],
+        u: &RistrettoPoint,
+        half_rho: &Scalar,
+        shared_indices: &[(usize, usize)],
+    ) -> LogProof;
+
+    fn verify(
+        &self,
+        transcript: &mut Transcript,
+        vk: &<Self::ProverKnowledge as SdlpProverKnowledge>::VerifierKnowledge,
+        g: &[RistrettoPoint],
+        h: &[RistrettoPoint],
+        u: &RistrettoPoint,
+    ) -> Result<(), ProofError>;
+}
+
+pub(crate) trait SdlpProverKnowledge: private::Sealed {
+    type VerifierKnowledge: SdlpVerifierKnowledge;
+    /// Pull out the binary expansion of a component of the witness S based on the index into S.
+    fn s_binary_by_index(&self, index: (usize, usize)) -> BitVec;
+}
+
+pub(crate) trait SdlpVerifierKnowledge: private::Sealed {
+    /// The length in bits of the binary expansion of the serialized secret * vectors.
+    fn l(&self) -> u64;
+    /// Ranges in the serialized coefficients of S corresponding to the bounds
+    fn b_slices(&self) -> Vec<Vec<Range<usize>>>;
+}
 // attempt 1
 // wtf unsuck this
-pub enum SealSdlpEnum {
+// TODO seq macro to fix this shit
+
+pub struct SealSdlpProverKnowledge(SealSdlpProverKnowledgeInternal);
+#[derive(Debug, Clone)]
+pub struct SealSdlpVerifierKnowledge(SealSdlpVerifierKnowledgeInternal);
+
+pub(crate) enum SealSdlpProverKnowledgeInternal {
     LP1024(LogProofProverKnowledge<ZqSeal128_1024>),
     LP2048(LogProofProverKnowledge<ZqSeal128_2048>),
     LP4096(LogProofProverKnowledge<ZqSeal128_4096>),
     LP8192(LogProofProverKnowledge<ZqSeal128_8192>),
 }
 
-// impl SealSdlpEnum {
-//     pub fn with_logproof<T, F>(&self, f: F) -> T
-//     where
-//         F: FnOnce(
-//             &LogProofProverKnowledge<
-//                 impl Ring + CryptoHash + ModSwitch<ZqRistretto> + RingModulus<4> + Ord,
-//             >,
-//         ) -> T,
-//     {
-//         match self {
-//             SealSdlpEnum::LP1024(x) => f(x),
-//             SealSdlpEnum::LP2048(x) => f(x),
-//             SealSdlpEnum::LP4096(x) => f(x),
-//             SealSdlpEnum::LP8192(x) => f(x),
-//         }
-//     }
-// }
+#[derive(Debug, Clone)]
+pub(crate) enum SealSdlpVerifierKnowledgeInternal {
+    LP1024(LogProofVerifierKnowledge<ZqSeal128_1024>),
+    LP2048(LogProofVerifierKnowledge<ZqSeal128_2048>),
+    LP4096(LogProofVerifierKnowledge<ZqSeal128_4096>),
+    LP8192(LogProofVerifierKnowledge<ZqSeal128_8192>),
+}
+
+impl SealSdlpProverKnowledge {
+    pub fn s_binary_by_index(&self, index: (usize, usize)) -> BitVec {
+        match &self.0 {
+            SealSdlpProverKnowledgeInternal::LP1024(pk) => pk.s_binary_by_index(index),
+            SealSdlpProverKnowledgeInternal::LP2048(pk) => pk.s_binary_by_index(index),
+            SealSdlpProverKnowledgeInternal::LP4096(pk) => pk.s_binary_by_index(index),
+            SealSdlpProverKnowledgeInternal::LP8192(pk) => pk.s_binary_by_index(index),
+        }
+    }
+
+    pub fn vk(&self) -> SealSdlpVerifierKnowledge {
+        match &self.0 {
+            SealSdlpProverKnowledgeInternal::LP1024(pk) => {
+                SealSdlpVerifierKnowledge(SealSdlpVerifierKnowledgeInternal::LP1024(pk.vk.clone()))
+            }
+            SealSdlpProverKnowledgeInternal::LP2048(pk) => {
+                SealSdlpVerifierKnowledge(SealSdlpVerifierKnowledgeInternal::LP2048(pk.vk.clone()))
+            }
+            SealSdlpProverKnowledgeInternal::LP4096(pk) => {
+                SealSdlpVerifierKnowledge(SealSdlpVerifierKnowledgeInternal::LP4096(pk.vk.clone()))
+            }
+            SealSdlpProverKnowledgeInternal::LP8192(pk) => {
+                SealSdlpVerifierKnowledge(SealSdlpVerifierKnowledgeInternal::LP8192(pk.vk.clone()))
+            }
+        }
+    }
+
+    pub fn create_shared_logproof(
+        &self,
+        transcript: &mut Transcript,
+        g: &[RistrettoPoint],
+        h: &[RistrettoPoint],
+        u: &RistrettoPoint,
+        half_rho: &Scalar,
+        shared_indices: &[(usize, usize)],
+    ) -> LogProof {
+        match &self.0 {
+            SealSdlpProverKnowledgeInternal::LP1024(pk) => {
+                LogProof::create_with_shared(transcript, pk, g, h, u, half_rho, shared_indices)
+            }
+            SealSdlpProverKnowledgeInternal::LP2048(pk) => {
+                LogProof::create_with_shared(transcript, pk, g, h, u, half_rho, shared_indices)
+            }
+            SealSdlpProverKnowledgeInternal::LP4096(pk) => {
+                LogProof::create_with_shared(transcript, pk, g, h, u, half_rho, shared_indices)
+            }
+            SealSdlpProverKnowledgeInternal::LP8192(pk) => {
+                LogProof::create_with_shared(transcript, pk, g, h, u, half_rho, shared_indices)
+            }
+        }
+    }
+
+    pub fn create_logproof(
+        &self,
+        transcript: &mut Transcript,
+        g: &[RistrettoPoint],
+        h: &[RistrettoPoint],
+        u: &RistrettoPoint,
+    ) -> LogProof {
+        match &self.0 {
+            SealSdlpProverKnowledgeInternal::LP1024(pk) => {
+                LogProof::create(transcript, pk, g, h, u)
+            }
+            SealSdlpProverKnowledgeInternal::LP2048(pk) => {
+                LogProof::create(transcript, pk, g, h, u)
+            }
+            SealSdlpProverKnowledgeInternal::LP4096(pk) => {
+                LogProof::create(transcript, pk, g, h, u)
+            }
+            SealSdlpProverKnowledgeInternal::LP8192(pk) => {
+                LogProof::create(transcript, pk, g, h, u)
+            }
+        }
+    }
+}
+
+impl SealSdlpVerifierKnowledge {
+    pub fn l(&self) -> u64 {
+        match &self.0 {
+            SealSdlpVerifierKnowledgeInternal::LP1024(vk) => vk.l(),
+            SealSdlpVerifierKnowledgeInternal::LP2048(vk) => vk.l(),
+            SealSdlpVerifierKnowledgeInternal::LP4096(vk) => vk.l(),
+            SealSdlpVerifierKnowledgeInternal::LP8192(vk) => vk.l(),
+        }
+    }
+    pub fn b_slices(&self) -> Vec<Vec<Range<usize>>> {
+        match &self.0 {
+            SealSdlpVerifierKnowledgeInternal::LP1024(vk) => vk.b_slices(),
+            SealSdlpVerifierKnowledgeInternal::LP2048(vk) => vk.b_slices(),
+            SealSdlpVerifierKnowledgeInternal::LP4096(vk) => vk.b_slices(),
+            SealSdlpVerifierKnowledgeInternal::LP8192(vk) => vk.b_slices(),
+        }
+    }
+    pub fn verify(
+        &self,
+        logproof: &LogProof,
+        transcript: &mut Transcript,
+        g: &[RistrettoPoint],
+        h: &[RistrettoPoint],
+        u: &RistrettoPoint,
+    ) -> Result<(), ProofError> {
+        match &self.0 {
+            SealSdlpVerifierKnowledgeInternal::LP1024(vk) => {
+                logproof.verify(transcript, vk, g, h, u)
+            }
+            SealSdlpVerifierKnowledgeInternal::LP2048(vk) => {
+                logproof.verify(transcript, vk, g, h, u)
+            }
+            SealSdlpVerifierKnowledgeInternal::LP4096(vk) => {
+                logproof.verify(transcript, vk, g, h, u)
+            }
+            SealSdlpVerifierKnowledgeInternal::LP8192(vk) => {
+                logproof.verify(transcript, vk, g, h, u)
+            }
+        }
+    }
+}
+
+// TODO try https://github.com/taiki-e/auto_enums ; may help
+// maybe strum?
+
+// #[macro_export]
+macro_rules! zq_iter {
+    ($f:path) => (
+        $f!(ZqSeal128_1024)
+        $f!(ZqSeal128_2048)
+        $f!(ZqSeal128_4096)
+        $f!(ZqSeal128_8192)
+    );
+    ($f:path, $enum:tt) => (
+        $f!(ZqSeal128_1024, $enum)
+        $f!(ZqSeal128_2048, $enum)
+        $f!(ZqSeal128_4096, $enum)
+        $f!(ZqSeal128_8192, $enum)
+    );
+    ($f:path, $enum:tt, $arg: tt) => (
+        $f!(ZqSeal128_1024, $enum, $arg)
+        $f!(ZqSeal128_2048, $enum, $arg)
+        $f!(ZqSeal128_4096, $enum, $arg)
+        $f!(ZqSeal128_8192, $enum, $arg)
+    );
+}
+macro_rules! zq_iter_match_arm {
+    ($enum:ty, $clause:expr) => {
+        zq_iter!(zq_iter_match_arm_each, $enum, $clause)
+    };
+}
+macro_rules! zq_iter_match_arm_each {
+    ($zq:ty, $enum:ty, $clause:tt) => (
+        $enum::$zq(k) => $clause,
+    );
+}

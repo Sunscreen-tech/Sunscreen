@@ -1,14 +1,11 @@
-#[cfg(feature = "sdlp")]
+#[cfg(feature = "linkedproofs")]
 mod sdlp_tests {
     use lazy_static::lazy_static;
     use logproof::{InnerProductVerifierKnowledge, LogProofGenerators, Transcript};
     use sunscreen::types::bfv::Signed;
     use sunscreen_fhe_program::SchemeType;
 
-    use sunscreen_runtime::{
-        sdlp::{LogProofBuilder, SealSdlpProverKnowledge},
-        FheRuntime, Params,
-    };
+    use sunscreen_runtime::{FheRuntime, LogProofBuilder, Params, SealSdlpProverKnowledge};
 
     lazy_static! {
         static ref SMALL_PARAMS: Params = Params {

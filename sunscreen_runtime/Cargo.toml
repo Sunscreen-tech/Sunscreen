@@ -44,7 +44,12 @@ thiserror = { workspace = true }
 serde_json = { workspace = true }
 
 [features]
-bulletproofs = []
-sdlp = ["dep:logproof", "dep:bitvec", "dep:seq-macro", "dep:paste"]
-linkedproofs = ["sdlp", "dep:bulletproofs"]
+bulletproofs = ["dep:bulletproofs"]
+linkedproofs = [
+  "bulletproofs",
+  "dep:logproof",
+  "dep:bitvec",
+  "dep:seq-macro",
+  "dep:paste",
+]
 deterministic = ["seal_fhe/deterministic"]

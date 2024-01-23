@@ -4,6 +4,7 @@
 //! This crate contains the types and functions for executing a Sunscreen FHE or ZKP program.
 
 mod array;
+mod builder;
 mod error;
 mod keys;
 #[cfg(feature = "linkedproofs")]
@@ -11,8 +12,6 @@ mod linked;
 mod metadata;
 mod run;
 mod runtime;
-#[cfg(feature = "sdlp")]
-pub mod sdlp;
 mod serialization;
 
 use std::sync::Arc;
@@ -21,6 +20,7 @@ use seal_fhe::{Ciphertext as SealCiphertext, Plaintext as SealPlaintext};
 use serde::{Deserialize, Serialize};
 use sunscreen_zkp_backend::BigInt;
 
+pub use builder::*;
 pub use error::*;
 pub use keys::*;
 #[cfg(feature = "linkedproofs")]

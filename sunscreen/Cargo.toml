@@ -63,8 +63,7 @@ serde_json = { workspace = true }
 [features]
 bulletproofs = ["sunscreen_zkp_backend/bulletproofs"]
 hexl = ["seal_fhe/hexl"]
-linkedproofs = ["sdlp", "bulletproofs", "sunscreen_runtime/linkedproofs"]
-sdlp = ["sunscreen_runtime/sdlp"]
+linkedproofs = ["bulletproofs", "sunscreen_runtime/linkedproofs"]
 transparent-ciphertexts = ["seal_fhe/transparent-ciphertexts"]
 deterministic = ["seal_fhe/deterministic", "sunscreen_runtime/deterministic"]
 

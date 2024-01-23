@@ -1,12 +1,22 @@
-// TODO linkage here, sdlp specific in sibling crate ?
 // For tests, see the sunscreen crate.
+
+// TODO remove
+#![allow(missing_docs)]
+#![allow(unused_imports)]
+
+use std::ops::Range;
 
 use bitvec::vec::BitVec;
 use bulletproofs::{BulletproofGens, GeneratorsChain, PedersenGens};
 use curve25519_dalek::{ristretto::RistrettoPoint, scalar::Scalar};
-use logproof::ProofError;
+use logproof::{
+    math::rand256,
+    rings::{ZqSeal128_1024, ZqSeal128_2048, ZqSeal128_4096, ZqSeal128_8192},
+    LogProof, LogProofGenerators, LogProofProverKnowledge, LogProofVerifierKnowledge, ProofError,
+};
 use merlin::Transcript;
-
+use paste::paste;
+use seq_macro::seq;
 use sunscreen_zkp_backend::{
     bulletproofs::{
         BulletproofProverParameters, BulletproofVerifierParameters, BulletproofsBackend,
@@ -14,12 +24,7 @@ use sunscreen_zkp_backend::{
     BigInt, CompiledZkpProgram, Proof, ZkpBackend,
 };
 
-use logproof::{math::rand256, LogProof, LogProofGenerators};
-
-use crate::{
-    sdlp::{SealSdlpProverKnowledge, SealSdlpVerifierKnowledge},
-    Result, ZkpProgramInput, ZkpRuntime,
-};
+use crate::{Result, ZkpProgramInput, ZkpRuntime};
 
 #[derive(Debug, Clone)]
 /// SDLP proof and associated information for verification
@@ -313,5 +318,151 @@ impl LinkedProof {
         }
 
         Ok(())
+    }
+}
+
+pub struct SealSdlpProverKnowledge(pub(crate) SealSdlpProverKnowledgeInternal);
+#[derive(Debug, Clone)]
+pub struct SealSdlpVerifierKnowledge(pub(crate) SealSdlpVerifierKnowledgeInternal);
+
+pub(crate) enum SealSdlpProverKnowledgeInternal {
+    LP1(LogProofProverKnowledge<ZqSeal128_1024>),
+    LP2(LogProofProverKnowledge<ZqSeal128_2048>),
+    LP3(LogProofProverKnowledge<ZqSeal128_4096>),
+    LP4(LogProofProverKnowledge<ZqSeal128_8192>),
+}
+
+#[derive(Debug, Clone)]
+pub(crate) enum SealSdlpVerifierKnowledgeInternal {
+    LP1(LogProofVerifierKnowledge<ZqSeal128_1024>),
+    LP2(LogProofVerifierKnowledge<ZqSeal128_2048>),
+    LP3(LogProofVerifierKnowledge<ZqSeal128_4096>),
+    LP4(LogProofVerifierKnowledge<ZqSeal128_8192>),
+}
+
+macro_rules! impl_from {
+    ($zq_type:ty, $variant:ident) => {
+        paste! {
+            impl From<LogProofProverKnowledge<$zq_type>> for SealSdlpProverKnowledge {
+                fn from(k: LogProofProverKnowledge<$zq_type>) -> Self {
+                    Self(SealSdlpProverKnowledgeInternal::$variant(k))
+                }
+            }
+            impl From<LogProofVerifierKnowledge<$zq_type>> for SealSdlpVerifierKnowledge {
+                fn from(k: LogProofVerifierKnowledge<$zq_type>) -> Self {
+                    Self(SealSdlpVerifierKnowledgeInternal::$variant(k))
+                }
+            }
+        }
+    };
+}
+
+impl_from!(ZqSeal128_1024, LP1);
+impl_from!(ZqSeal128_2048, LP2);
+impl_from!(ZqSeal128_4096, LP3);
+impl_from!(ZqSeal128_8192, LP4);
+
+macro_rules! seq_zq {
+    ($block:tt) => (
+        seq!(N in 1..=4 {
+            $block
+        })
+    )
+}
+
+impl SealSdlpProverKnowledge {
+    pub fn s_binary_by_index(&self, index: (usize, usize)) -> BitVec {
+        seq_zq!({
+            match &self.0 {
+                #(
+                    SealSdlpProverKnowledgeInternal::LP~N(pk) => pk.s_binary_by_index(index),
+                )*
+            }
+        })
+    }
+
+    pub fn vk(&self) -> SealSdlpVerifierKnowledge {
+        seq_zq!({
+            match &self.0 {
+                #(
+                    SealSdlpProverKnowledgeInternal::LP~N(pk) => {
+                        SealSdlpVerifierKnowledge(SealSdlpVerifierKnowledgeInternal::LP~N(pk.vk.clone()))
+                    }
+                )*
+            }
+        })
+    }
+
+    pub fn create_shared_logproof(
+        &self,
+        transcript: &mut Transcript,
+        g: &[RistrettoPoint],
+        h: &[RistrettoPoint],
+        u: &RistrettoPoint,
+        half_rho: &Scalar,
+        shared_indices: &[(usize, usize)],
+    ) -> LogProof {
+        seq_zq!({
+            match &self.0 {
+                #(
+                    SealSdlpProverKnowledgeInternal::LP~N(pk) => {
+                        LogProof::create_with_shared(transcript, pk, g, h, u, half_rho, shared_indices)
+                    }
+                )*
+            }
+        })
+    }
+
+    pub fn create_logproof(
+        &self,
+        transcript: &mut Transcript,
+        g: &[RistrettoPoint],
+        h: &[RistrettoPoint],
+        u: &RistrettoPoint,
+    ) -> LogProof {
+        seq_zq!({
+            match &self.0 {
+                #(
+                    SealSdlpProverKnowledgeInternal::LP~N(pk) => LogProof::create(transcript, pk, g, h, u),
+                )*
+            }
+        })
+    }
+}
+
+impl SealSdlpVerifierKnowledge {
+    pub fn l(&self) -> u64 {
+        seq_zq!({
+            match &self.0 {
+                #(
+                    SealSdlpVerifierKnowledgeInternal::LP~N(vk) => vk.l(),
+                )*
+            }
+        })
+    }
+    pub fn b_slices(&self) -> Vec<Vec<Range<usize>>> {
+        seq_zq!({
+            match &self.0 {
+                #(
+                    SealSdlpVerifierKnowledgeInternal::LP~N(vk) => vk.b_slices(),
+                )*
+            }
+        })
+    }
+    pub fn verify(
+        &self,
+        logproof: &LogProof,
+        transcript: &mut Transcript,
+        g: &[RistrettoPoint],
+        h: &[RistrettoPoint],
+        u: &RistrettoPoint,
+    ) -> Result<(), ProofError> {
+        seq_zq!({
+            match &self.0 {
+                #(
+                    SealSdlpVerifierKnowledgeInternal::LP~N(vk) => logproof.verify(transcript, vk, g, h, u),
+                )*
+            }
+        })
     }
 }

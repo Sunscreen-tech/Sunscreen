@@ -129,12 +129,16 @@ pub enum Error {
     ZkpBuilderError(Box<String>),
 
     /**
-     * Parameters not supported in the given context.
-     *
-     * SDLP only supports particular security level and lattice dimensions.
+     * Error when building a logproof
      */
-    #[error("These parameters are not supported in this context")]
-    UnsupportedParameters,
+    #[cfg(feature = "sdlp")]
+    #[error(transparent)]
+    LogProofBuilderError(#[from] crate::sdlp::LogProofBuilderError),
+
+    /// Error when proving or verifying a linked proof.
+    #[cfg(feature = "linkedproofs")]
+    #[error("Linked proof error: {0}")]
+    LinkedProofError(#[from] crate::linked::LinkedProofError),
 }
 
 const_assert!(std::mem::size_of::<Error>() <= 24);

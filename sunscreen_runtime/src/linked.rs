@@ -18,7 +18,7 @@ use logproof::{math::rand256, LogProof, LogProofGenerators};
 
 use crate::{
     sdlp::{SealSdlpProverKnowledge, SealSdlpVerifierKnowledge},
-    ZkpProgramInput, ZkpRuntime,
+    Result, ZkpProgramInput, ZkpRuntime,
 };
 
 #[derive(Debug, Clone)]
@@ -46,16 +46,8 @@ pub struct LinkedProof {
 }
 
 /// Errors that can occur when generating a linked SDLP and R1CS BP proof
-#[derive(Debug, Clone, thiserror::Error)]
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum LinkedProofError {
-    /// An error with the ZKP proving.
-    #[error(transparent)]
-    ZkpError(#[from] sunscreen_zkp_backend::Error),
-
-    /// An error generating the runtime.
-    #[error(transparent)]
-    SunscreenRuntimeError(#[from] crate::Error),
-
     /// Error from the SDLP.
     #[error("SDLP proof error: {0:?}")]
     LogproofProofError(#[from] ProofError),
@@ -106,12 +98,13 @@ fn new_single_party_with_shared_generators(
 
 impl LinkedProof {
     /**
-     * This function verifies a linked proof between a short discrete log proof
+     * This function creates a linked proof between a short discrete log proof
      * (SDLP) and a R1CS bulletproof. An example use case is proving an encryption
      * is valid (by SDLP) and that the encrypted message has some property (by R1CS
      * Bulletproof).
      *
-     * See the main documentation for more information.
+     * Note that the [builder methods](`LogProofBuilder`) offer an easier way to construct this
+     * proof. See the user documentation for more information.
      *
      * Arguments:
      *
@@ -131,7 +124,7 @@ impl LinkedProof {
         private_inputs: Vec<I>,
         public_inputs: Vec<I>,
         constant_inputs: Vec<I>,
-    ) -> Result<Self, sunscreen_zkp_backend::Error>
+    ) -> Result<Self>
     where
         I: Into<ZkpProgramInput> + Clone,
     {
@@ -282,7 +275,7 @@ impl LinkedProof {
         program: &CompiledZkpProgram,
         public_inputs: Vec<I>,
         constant_inputs: Vec<I>,
-    ) -> Result<(), LinkedProofError>
+    ) -> Result<()>
     where
         I: Into<ZkpProgramInput> + Clone,
     {
@@ -290,13 +283,16 @@ impl LinkedProof {
 
         let mut transcript = Transcript::new(b"linked-sdlp-and-r1cs-bp");
 
-        self.sdlp.vk.verify(
-            &self.sdlp.proof,
-            &mut transcript,
-            &self.sdlp.g,
-            &self.sdlp.h,
-            &self.sdlp.u,
-        )?;
+        self.sdlp
+            .vk
+            .verify(
+                &self.sdlp.proof,
+                &mut transcript,
+                &self.sdlp.g,
+                &self.sdlp.h,
+                &self.sdlp.u,
+            )
+            .map_err(LinkedProofError::LogproofProofError)?;
 
         runtime.verify_with_parameters(
             program,
@@ -312,7 +308,7 @@ impl LinkedProof {
             let a_i1_shared = (*b).0.A_I1_shared();
 
             if a_i1_shared != self.sdlp.proof.w_shared.compress() {
-                return Err(LinkedProofError::SharedCommitmentsNotEqual);
+                return Err(LinkedProofError::SharedCommitmentsNotEqual.into());
             }
         }
 

@@ -26,11 +26,14 @@ use sunscreen_compiler_common::{Type, TypeName};
 use sunscreen_math::ring::{
     ArithmeticBackend, BarrettBackend, BarrettConfig, Ring, RingModulus, Zq,
 };
+use sunscreen_zkp_backend::{bulletproofs::BulletproofsBackend, CompiledZkpProgram};
 
 use crate::{
-    marker, BFVEncryptionComponents, Ciphertext, Error, GenericRuntime, Params, Plaintext,
-    PrivateKey, PublicKey, Result, TryIntoPlaintext,
+    marker, BFVEncryptionComponents, Ciphertext, Error, GenericRuntime, LinkedProof, Params,
+    Plaintext, PrivateKey, PublicKey, Result, TryIntoPlaintext, ZkpProgramInput,
 };
+
+// TODO collapse all builder errors
 
 // TODO use this to limit what types people can share with ZKPs. May want to separate the notion of
 // ZKP and internal SDLP sharing.
@@ -92,6 +95,7 @@ impl Message {
     }
 }
 
+// TODO or just one key 'k lifetime?
 enum EncryptedComponents<'p, 's> {
     Asymmetric {
         public_key: &'p PublicKey,
@@ -123,18 +127,43 @@ struct Statement<'p, 's> {
 //
 // TODO when refactoring to build statements as we go, have the shared message id equal the
 // starting message index.
-pub struct LogProofBuilder<'r, 'p, 's, M, B> {
+pub struct LogProofBuilder<'r, 'p, 's, 'z, M, B> {
+    // log proof fields
     runtime: &'r GenericRuntime<M, B>,
     statements: Vec<Statement<'p, 's>>,
     shared_messages: Vec<SharedMessage>,
+
+    // linked proof fields
+    compiled_zkp_program: Option<&'z CompiledZkpProgram>,
+    shared_inputs: Vec<SharedMessage>,
+    private_inputs: Vec<ZkpProgramInput>,
+    public_inputs: Vec<ZkpProgramInput>,
+    constant_inputs: Vec<ZkpProgramInput>,
 }
 
-impl<'r, 'p, 's, M: marker::Fhe, Z> LogProofBuilder<'r, 'p, 's, M, Z> {
+/// Errors that can occur when building a log proof or linked proof.
+#[derive(PartialEq, Eq, Debug, Clone, thiserror::Error)]
+pub enum LogProofBuilderError {
+    /// An error with the ZKP proving.
+    #[error("These FHE parameters are not supported by logproof: {0:?}")]
+    UnsupportedParameters(Box<Params>),
+
+    /// An error generating the runtime.
+    #[error("Logproof builder error: {0}")]
+    InvalidBuildCommand(Box<String>),
+}
+
+impl<'r, 'p, 's, 'z, M: marker::Fhe, Z> LogProofBuilder<'r, 'p, 's, 'z, M, Z> {
     pub fn new(runtime: &'r GenericRuntime<M, Z>) -> Self {
         Self {
             runtime,
             statements: vec![],
             shared_messages: vec![],
+            compiled_zkp_program: None,
+            shared_inputs: vec![],
+            private_inputs: vec![],
+            public_inputs: vec![],
+            constant_inputs: vec![],
         }
     }
 
@@ -225,22 +254,28 @@ impl<'r, 'p, 's, M: marker::Fhe, Z> LogProofBuilder<'r, 'p, 's, M, Z> {
         })
     }
 
-    pub fn build(self) -> Result<SealSdlpProverKnowledge> {
+    /// Build the [`SealSdlpProverKnowledge`] for the statements added to this builder.
+    ///
+    /// You can use this to create a [`crate::linked::LinkedProof`] if you have enabled the
+    /// `linkedproofs` feature. If you have constructed this builder with a ZKP capable runtime
+    /// and bulletproofs backend, you may also wish to use the available linkedproof methods on
+    /// this builder.
+    pub fn build_logproof(&self) -> Result<SealSdlpProverKnowledge> {
         let params = self.runtime.params();
         match (params.lattice_dimension, params.security_level) {
             (1024, SecurityLevel::TC128) => Ok(SealSdlpProverKnowledge(
-                SealSdlpProverKnowledgeInternal::LP1024(self.build_generic()?),
+                SealSdlpProverKnowledgeInternal::LP1024(self.build_generic_logproof()?),
             )),
             (2048, SecurityLevel::TC128) => Ok(SealSdlpProverKnowledge(
-                SealSdlpProverKnowledgeInternal::LP2048(self.build_generic()?),
+                SealSdlpProverKnowledgeInternal::LP2048(self.build_generic_logproof()?),
             )),
             (4096, SecurityLevel::TC128) => Ok(SealSdlpProverKnowledge(
-                SealSdlpProverKnowledgeInternal::LP4096(self.build_generic()?),
+                SealSdlpProverKnowledgeInternal::LP4096(self.build_generic_logproof()?),
             )),
             (8192, SecurityLevel::TC128) => Ok(SealSdlpProverKnowledge(
-                SealSdlpProverKnowledgeInternal::LP8192(self.build_generic()?),
+                SealSdlpProverKnowledgeInternal::LP8192(self.build_generic_logproof()?),
             )),
-            _ => Err(Error::UnsupportedParameters),
+            _ => Err(LogProofBuilderError::UnsupportedParameters(Box::new(params.clone())).into()),
         }
     }
 
@@ -262,8 +297,8 @@ impl<'r, 'p, 's, M: marker::Fhe, Z> LogProofBuilder<'r, 'p, 's, M, Z> {
     //
     // That would probably also get rid of the annoying typename tracking thing too. Just have
     // `SharedMessage` hold an `Arc<dyn TypeName + TryIntoPlaintext>`.
-    fn build_generic<const N: usize, B: BarrettConfig<N>>(
-        self,
+    fn build_generic_logproof<const N: usize, B: BarrettConfig<N>>(
+        &self,
     ) -> Result<LogProofProverKnowledge<Zq<N, BarrettBackend<N, B>>>>
 where {
         let mut lp_statements = vec![];
@@ -338,9 +373,90 @@ where {
     }
 }
 
-impl<'r, 'p, 's, M: marker::Fhe + marker::Zkp, B> LogProofBuilder<'r, 'p, 's, M, B> {
-    pub fn linked_proof() {
-        todo!("if the underlying runtime has zkp capabilities, let the user create linked proofs with shared messages")
+// TODO fold sdlp feature into linkedproofs, move enum def to linked.rs, and move all builders into
+// this file as builder module. Add linkedproof_builder method to runtime.
+
+#[cfg(feature = "linkedproofs")]
+impl<'r, 'p, 's, 'z, M: marker::Fhe + marker::Zkp>
+    LogProofBuilder<'r, 'p, 's, 'z, M, BulletproofsBackend>
+{
+    /// Add a ZKP program to be linked with the logproof.
+    ///
+    /// This method is required to call [`Self::build_linkedproof`].
+    // TODO make a marker struct for `LogProofBuilder` and a `LinkedProofBuilder<marker = Zkp>`
+    // that can be constructed with `new(CompiledZkpProgram)`.
+    pub fn zkp_program(&mut self, program: &'z CompiledZkpProgram) -> &mut Self {
+        self.compiled_zkp_program = Some(program);
+        self
+    }
+
+    /// Add a shared private input to the ZKP program.
+    ///
+    /// This method assumes that you've created the `message` argument with _this_ builder.
+    pub fn shared_input(&mut self, message: &SharedMessage) -> &mut Self {
+        self.shared_inputs.push(message.clone());
+        self
+    }
+
+    /// Add a private input to the ZKP program.
+    pub fn private_input(&mut self, input: impl Into<ZkpProgramInput>) -> &mut Self {
+        self.private_inputs.push(input.into());
+        self
+    }
+
+    /// Add a public input to the ZKP program.
+    pub fn public_input(&mut self, input: impl Into<ZkpProgramInput>) -> &mut Self {
+        self.public_inputs.push(input.into());
+        self
+    }
+
+    /// Add a constant input to the proof builder.
+    pub fn constant_input(&mut self, input: impl Into<ZkpProgramInput>) -> &mut Self {
+        self.constant_inputs.push(input.into());
+        self
+    }
+
+    /// Output a [`LinkedProof`] from the encryption statements and ZKP program and inputs added to
+    /// this builder.
+    pub fn build_linkedproof(&mut self) -> Result<crate::linked::LinkedProof> {
+        let sdlp = self.build_logproof()?;
+        // TODO this isn't accurate, but will be once we track idx map above.
+        let shared_indices = self
+            .shared_inputs
+            .iter()
+            .map(|m| (m.id, 0))
+            .collect::<Vec<_>>();
+        let program = self.compiled_zkp_program.ok_or_else(|| {
+            LogProofBuilderError::InvalidBuildCommand(Box::new(
+                "Cannot build linked proof without a compiled ZKP program. Use the `.zkp_program()` method".to_string(),
+            ))
+        })?;
+
+        // debugging
+        println!("shared_indices: {:?}", shared_indices);
+        match &sdlp.0 {
+            SealSdlpProverKnowledgeInternal::LP1024(k) => {
+                println!("sdlp.pk.s[shared_indices[0]]: {:?}", k.s[shared_indices[0]])
+            }
+            SealSdlpProverKnowledgeInternal::LP2048(k) => {
+                println!("sdlp.pk.s[shared_indices[0]]: {:?}", k.s[shared_indices[0]])
+            }
+            SealSdlpProverKnowledgeInternal::LP4096(k) => {
+                println!("sdlp.pk.s[shared_indices[0]]: {:?}", k.s[shared_indices[0]])
+            }
+            SealSdlpProverKnowledgeInternal::LP8192(k) => {
+                println!("sdlp.pk.s[shared_indices[0]]: {:?}", k.s[shared_indices[0]])
+            }
+        }
+
+        LinkedProof::create(
+            &sdlp,
+            &shared_indices,
+            program,
+            self.private_inputs.clone(), // bleh
+            self.public_inputs.clone(),
+            self.constant_inputs.clone(),
+        )
     }
 }
 
@@ -358,8 +474,8 @@ impl StatementParams for Params {
     }
 }
 
-// TODO Try using auto_enum returning `impl SdlpProverKnowledge`. Can store in Sdlp type with
-// erased serde impls (see typetag crate).
+// TODO tried using https://github.com/taiki-e/auto_enums with these traits, intending to use erased serde impls w/ typetag crate.
+// However, trouble in that associated VK type must be specified :/
 mod trait_attempt {
     use super::*;
 
@@ -458,9 +574,12 @@ mod trait_attempt {
 }
 
 // or the other option: manual enums. there seems to be no nice way to macro this, even with seq! proc macro
+// seq! macro _could_ help if we arbitrarily name each variant LP1, LP2, etc.
 
 pub use enum_attempt::*;
 mod enum_attempt {
+    // TODO move all this to exist in ./linked.rs
+    // this file should just be builders
     use super::*;
 
     pub struct SealSdlpProverKnowledge(pub(super) SealSdlpProverKnowledgeInternal);
@@ -599,9 +718,6 @@ mod enum_attempt {
             }
         }
     }
-
-    // TODO try https://github.com/taiki-e/auto_enums ; may help
-    // maybe strum?
 
     // #[macro_export]
     macro_rules! zq_iter {

@@ -1,4 +1,4 @@
-#[derive(Debug, Clone, thiserror::Error)]
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 /**
  * An error that occurred when verifying a proof.
  */

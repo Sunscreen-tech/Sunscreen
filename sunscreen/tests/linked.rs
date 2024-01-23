@@ -2,17 +2,30 @@
 
 #[cfg(feature = "linkedproofs")]
 mod linked_tests {
+    use lazy_static::lazy_static;
+    use logproof::rings::ZqSeal128_1024;
     use logproof::test::seal_bfv_encryption_linear_relation;
+    use sunscreen::types::bfv::{Signed, Unsigned, Unsigned64};
     use sunscreen::types::zkp::BulletproofsField;
-    use sunscreen::Error;
     use sunscreen::{
         types::zkp::{ConstrainCmp, Field, FieldSpec, ProgramNode},
         zkp_program, zkp_var, Compiler,
     };
-    use sunscreen_runtime::LinkedProof;
-
-    use logproof::rings::ZqSeal128_1024;
+    use sunscreen::{Error, ZkpProgramFnExt};
+    use sunscreen_fhe_program::SchemeType;
+    use sunscreen_runtime::sdlp::LogProofBuilder;
+    use sunscreen_runtime::{FheZkpRuntime, LinkedProof, Params};
     use sunscreen_zkp_backend::bulletproofs::BulletproofsBackend;
+
+    lazy_static! {
+        static ref SMALL_PARAMS: Params = Params {
+            lattice_dimension: 1024,
+            coeff_modulus: vec![0x7e00001],
+            plain_modulus: 4_096,
+            scheme_type: SchemeType::Bfv,
+            security_level: sunscreen::SecurityLevel::TC128,
+        };
+    }
 
     /// Convert a twos complement represented signed integer into a field element.
     fn from_twos_complement_field_element<F: FieldSpec, const N: usize>(
@@ -30,7 +43,11 @@ mod linked_tests {
     }
 
     #[zkp_program]
-    fn valid_transaction<F: FieldSpec>(#[private] x: [Field<F>; 15], #[public] balance: Field<F>) {
+    fn valid_transaction<F: FieldSpec>(
+        #[private] x: [Field<F>; 1024],
+        // #[private] x: [Field<F>; 13312],
+        #[public] balance: Field<F>,
+    ) {
         let lower_bound = zkp_var!(0);
 
         // Reconstruct x from the bag of bits
@@ -44,43 +61,29 @@ mod linked_tests {
     }
 
     #[test]
-    fn test_validated_transaction_example() -> Result<(), Error> {
-        let app = Compiler::new()
-            .zkp_backend::<BulletproofsBackend>()
-            .zkp_program(valid_transaction)
-            .compile()?;
+    fn test_valid_transaction_example() -> Result<(), Error> {
+        let rt = FheZkpRuntime::new(&SMALL_PARAMS, &BulletproofsBackend::new())?;
+        let (public_key, _secret_key) = rt.generate_keys().unwrap();
+        let valid_transaction_zkp = valid_transaction.compile::<BulletproofsBackend>()?;
 
-        // Compile the ZKP program
-        let valid_transaction_zkp = app.get_zkp_program(valid_transaction).unwrap();
-
-        let balance = 1u64;
+        let balance = 10u64;
 
         // Try valid cases
-        for k in 0..=balance {
-            let x = k;
-
-            // Generate the SDLP linear relation and specify that the message part of S
-            // should be shared.
-            // let sdlp =
-            //     seal_bfv_encryption_linear_relation::<Seal128_1024, 1>(x, 1024, 12289, false);
-            let sdlp: sunscreen_runtime::sdlp::SealSdlpProverKnowledge = todo!();
-            let shared_indices = vec![(0, 0)];
-
+        for tx in [5, 10] {
+            let mut proof_builder = LogProofBuilder::new(&rt);
+            let (_ct, tx_msg) =
+                proof_builder.encrypt_and_share(&Unsigned64::from(tx), &public_key)?;
             println!("Performing linked proof");
-            let lp = LinkedProof::create(
-                &sdlp,
-                &shared_indices,
-                valid_transaction_zkp,
-                vec![],
-                vec![BulletproofsField::from(balance)],
-                vec![],
-            )
-            .unwrap();
+            let lp = proof_builder
+                .zkp_program(&valid_transaction_zkp)
+                .shared_input(&tx_msg)
+                .public_input(BulletproofsField::from(balance))
+                .build_linkedproof()?;
             println!("Linked proof done");
 
             println!("Performing linked verify");
             lp.verify(
-                valid_transaction_zkp,
+                &valid_transaction_zkp,
                 vec![BulletproofsField::from(balance)],
                 vec![],
             )
@@ -88,29 +91,29 @@ mod linked_tests {
             println!("Linked verify done");
         }
 
-        // Try an invalid case
-        {
-            let x = balance + 1;
+        Ok(())
+    }
 
-            // Generate the SDLP linear relation and specify that the message part of S
-            // should be shared.
-            // let sdlp =
-            //     seal_bfv_encryption_linear_relation::<Seal128_1024, 1>(x, 1024, 12289, false);
-            let sdlp: sunscreen_runtime::sdlp::SealSdlpProverKnowledge = todo!();
-            let shared_indices = vec![(0, 0)];
+    #[test]
+    fn test_invalid_transaction_example() -> Result<(), Error> {
+        let rt = FheZkpRuntime::new(&SMALL_PARAMS, &BulletproofsBackend::new())?;
+        let (public_key, _secret_key) = rt.generate_keys().unwrap();
+        let valid_transaction_zkp = valid_transaction.compile::<BulletproofsBackend>()?;
 
-            println!("Proof should fail");
-            let lp = LinkedProof::create(
-                &sdlp,
-                &shared_indices,
-                valid_transaction_zkp,
-                vec![],
-                vec![BulletproofsField::from(balance)],
-                vec![],
-            );
+        let balance = 10u64;
 
-            assert!(lp.is_err());
-        }
+        let tx = balance + 1;
+
+        let mut proof_builder = LogProofBuilder::new(&rt);
+        let (_ct, tx_msg) = proof_builder.encrypt_and_share(&Unsigned64::from(tx), &public_key)?;
+        proof_builder
+            .zkp_program(&valid_transaction_zkp)
+            .shared_input(&tx_msg)
+            .public_input(BulletproofsField::from(balance));
+
+        println!("Proof should fail");
+        let lp = proof_builder.build_linkedproof();
+        assert!(lp.is_err());
 
         Ok(())
     }

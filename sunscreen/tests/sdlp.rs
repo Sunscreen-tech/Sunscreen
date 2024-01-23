@@ -30,7 +30,7 @@ mod sdlp_tests {
             .encrypt(&Signed::from(3), &public_key)
             .unwrap();
 
-        let sdlp = logproof_builder.build().unwrap();
+        let sdlp = logproof_builder.build_logproof().unwrap();
         prove_and_verify_seal(sdlp)
     }
 
@@ -49,7 +49,7 @@ mod sdlp_tests {
         let _b = logproof_builder
             .encrypt(&Signed::from(3), &public_key)
             .unwrap();
-        let sdlp = logproof_builder.build().unwrap();
+        let sdlp = logproof_builder.build_logproof().unwrap();
 
         prove_and_verify_seal(sdlp)
     }

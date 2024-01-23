@@ -230,27 +230,27 @@ pub use linked::*;
 mod linked {
     use super::BuilderError;
 
-    use std::{borrow::Cow, collections::HashMap, sync::Arc};
+    use std::{borrow::Cow, sync::Arc};
 
     use logproof::{
         bfv_statement::{self, BfvProofStatement, BfvWitness, StatementParams},
         rings::{SealQ128_1024, SealQ128_2048, SealQ128_4096, SealQ128_8192},
         LogProofProverKnowledge,
     };
+    use seal_fhe as seal;
     use seal_fhe::SecurityLevel;
     use sunscreen_compiler_common::{Type, TypeName};
     use sunscreen_math::ring::{BarrettBackend, BarrettConfig, Zq};
     use sunscreen_zkp_backend::{bulletproofs::BulletproofsBackend, CompiledZkpProgram};
 
     use crate::{
-        marker, BFVEncryptionComponents, Ciphertext, Error, GenericRuntime, LinkedProof, Params,
-        Plaintext, PrivateKey, PublicKey, Result, SealSdlpProverKnowledge, TryIntoPlaintext,
-        ZkpProgramInput,
+        marker, BFVEncryptionComponents, Ciphertext, GenericRuntime, LinkedProof, Params,
+        Plaintext, PublicKey, Result, SealSdlpProverKnowledge, TryIntoPlaintext, ZkpProgramInput,
     };
 
     // TODO use this to limit what types people can share with ZKPs. Implement this after tests are
     // passing. May want to separate the notion of ZKP and internal SDLP sharing.
-    /// TODO document
+    /// TODO docs
     pub trait Share: TryIntoPlaintext + TypeName {
         /// The number of underlying BFV plaintexts.
         ///
@@ -271,9 +271,6 @@ mod linked {
     pub struct SharedMessage {
         // I think I can track the actual lp_message index here... probably better?
         pub(crate) id: usize,
-        // TODO with proper invariants enforced, this field could be removed. It exists in the
-        // builder's shared_messages. See if this makes it easier for ZKPs, if not rip it out.
-        // Wait or does it even need to exit in builder.shared_messages?
         pub(crate) message: Arc<PlaintextTyped>,
     }
 
@@ -309,29 +306,9 @@ mod linked {
         }
     }
 
-    // TODO or just one key 'k lifetime?
-    enum EncryptedComponents<'p, 's> {
-        Asymmetric {
-            public_key: &'p PublicKey,
-            components: BFVEncryptionComponents,
-        },
-        Symmetric {
-            private_key: &'s PrivateKey,
-            components: (),
-        },
-    }
-
-    /// Internal state for the [`LogProofBuilder`]. This holds higher level proof statements, messages,
-    /// and witnesses, that are later converted into [`logproof::bfv_statement`] piecess.
-    //
-    // TODO rip this out and just build logproof statements as we go.
-    struct Statement<'p, 's> {
-        msg: Message,
-        encryption: EncryptedComponents<'p, 's>,
-    }
-
-    // Could use a marker to determine when a valid proof can be created; if a user calls a method like
-    // `add_statement` without message/witness, could return e.g. Builder<Verification>.
+    // TODO Could use a marker to determine when a valid proof can be created; if a user calls
+    // a method like `add_statement` without message/witness, could return e.g.
+    // Builder<Verification>.
 
     /// A builder for [`LogProofProverKnowledge`] or [`LogProofVerifierKnowledge`].
     ///
@@ -341,11 +318,13 @@ mod linked {
     //
     // TODO when refactoring to build statements as we go, have the shared message id equal the
     // starting message index.
-    pub struct LogProofBuilder<'r, 'p, 's, 'z, M, B> {
-        // log proof fields
+    pub struct LogProofBuilder<'r, 'k, 'w, 'z, M, B> {
         runtime: &'r GenericRuntime<M, B>,
-        statements: Vec<Statement<'p, 's>>,
-        shared_messages: Vec<SharedMessage>,
+
+        // log proof fields
+        statements: Vec<BfvProofStatement<seal::Ciphertext, &'k seal::PublicKey>>,
+        messages: Vec<seal::Plaintext>,
+        witness: Vec<BfvWitness<'w, 'k>>,
 
         // linked proof fields
         compiled_zkp_program: Option<&'z CompiledZkpProgram>,
@@ -355,13 +334,14 @@ mod linked {
         constant_inputs: Vec<ZkpProgramInput>,
     }
 
-    impl<'r, 'p, 's, 'z, M: marker::Fhe, Z> LogProofBuilder<'r, 'p, 's, 'z, M, Z> {
+    impl<'r, 'k, 'w, 'z, M: marker::Fhe, Z> LogProofBuilder<'r, 'k, 'w, 'z, M, Z> {
         /// Create a new [`LogProofBuilder`].
         pub fn new(runtime: &'r GenericRuntime<M, Z>) -> Self {
             Self {
                 runtime,
                 statements: vec![],
-                shared_messages: vec![],
+                messages: vec![],
+                witness: vec![],
                 compiled_zkp_program: None,
                 shared_inputs: vec![],
                 private_inputs: vec![],
@@ -374,7 +354,7 @@ mod linked {
         ///
         /// If you do not want to add the encryption statement to the proof, just use [the
         /// runtime](`crate::GenericRuntime::encrypt`) directly.
-        pub fn encrypt<P>(&mut self, message: &P, public_key: &'p PublicKey) -> Result<Ciphertext>
+        pub fn encrypt<P>(&mut self, message: &P, public_key: &'k PublicKey) -> Result<Ciphertext>
         where
             P: TryIntoPlaintext + TypeName,
         {
@@ -390,21 +370,18 @@ mod linked {
         pub fn encrypt_and_share<P>(
             &mut self,
             message: &P,
-            public_key: &'p PublicKey,
+            public_key: &'k PublicKey,
         ) -> Result<(Ciphertext, SharedMessage)>
         where
             P: TryIntoPlaintext + TypeName,
         {
             let pt = self.plaintext_typed(message)?;
-            let id = self.shared_messages.len();
+            let idx_start = self.messages.len();
+            let ct = self.encrypt_internal(Message::Plain(pt.clone()), public_key)?;
             let shared_message = SharedMessage {
-                id,
+                id: idx_start,
                 message: Arc::new(pt),
             };
-            self.shared_messages.push(shared_message.clone());
-            let ct = self.encrypt_internal(Message::Shared(shared_message.clone()), public_key)?;
-            // SHIT this isn't right. Doing it like this, when it is time to process the shared
-            // messages, there's nothing linking back to the OG message index....
             Ok((ct, shared_message))
         }
 
@@ -418,7 +395,7 @@ mod linked {
         pub fn encrypt_shared(
             &mut self,
             message: &SharedMessage,
-            public_key: &'p PublicKey,
+            public_key: &'k PublicKey,
         ) -> Result<Ciphertext> {
             self.encrypt_internal(Message::Shared(message.clone()), public_key)
         }
@@ -426,27 +403,44 @@ mod linked {
         fn encrypt_internal(
             &mut self,
             message: Message,
-            public_key: &'p PublicKey,
+            public_key: &'k PublicKey,
         ) -> Result<Ciphertext> {
-            // TODO during refactor, see if it makes sense to pass in an FnMut(component_i)
-            let components = self.runtime.encrypt_return_components_switched_internal(
+            let enc_components = self.runtime.encrypt_return_components_switched_internal(
                 message.plaintext(),
                 message.type_name(),
                 public_key,
                 true,
                 None,
             )?;
-            let ct = components.ciphertext.clone();
-            self.statements.push(Statement {
-                msg: message,
-                encryption: EncryptedComponents::Asymmetric {
-                    public_key,
-                    components,
-                },
-            });
-            Ok(ct)
+            let mut existing_idx = message.shared_id();
+
+            for AsymmetricEncryption { ct, u, e, r, m } in
+                zip_seal_pieces(&enc_components, message.plaintext())?
+            {
+                let message_id = existing_idx.unwrap_or_else(|| {
+                    let idx = self.messages.len();
+                    self.messages.push(m.clone());
+                    idx
+                });
+                self.statements
+                    .push(BfvProofStatement::PublicKeyEncryption {
+                        message_id,
+                        ciphertext: ct.clone(),
+                        public_key: &public_key.public_key.data,
+                    });
+                self.witness.push(BfvWitness::PublicKeyEncryption {
+                    u: Cow::Owned(u),
+                    e: Cow::Owned(e),
+                    r: Cow::Owned(r.clone()),
+                });
+                if let Some(idx) = existing_idx.as_mut() {
+                    *idx += 1
+                }
+            }
+            Ok(enc_components.ciphertext)
         }
 
+        // TODO can `SharedMessage` hold an `Arc<dyn TypeName + TryIntoPlaintext>` to avoid PlaintextTyped?
         fn plaintext_typed<P>(&self, pt: &P) -> Result<PlaintextTyped>
         where
             P: TryIntoPlaintext + TypeName,
@@ -482,83 +476,15 @@ mod linked {
             }
         }
 
-        // TODO this is unnecesarily complicated, built off an API that we haven't yet used. Take down
-        // the BFVEncyrptionComponents and maybe offer an FnMut arg in the encryption method that lets
-        // us gather them ourselves. And then maybe we just build BfvStatements directly, at the time
-        // of encryption, instead of these intermediary types. Might mean cloning but w/e.
-        //
-        // That would probably also get rid of the annoying typename tracking thing too. Just have
-        // `SharedMessage` hold an `Arc<dyn TypeName + TryIntoPlaintext>`.
         fn build_generic_logproof<const N: usize, B: BarrettConfig<N>>(
             &self,
-        ) -> Result<LogProofProverKnowledge<Zq<N, BarrettBackend<N, B>>>>
-where {
-            let mut lp_statements = vec![];
-            let mut lp_messages = vec![];
-            let mut lp_witness: Vec<BfvWitness> = vec![];
-            let mut idx_map: HashMap<usize, usize> = HashMap::new();
-
-            for statement in &self.statements {
-                // handle message id insertion / lookup
-                let message_idx_start = statement
-                    .msg
-                    .shared_id()
-                    .and_then(|id| idx_map.get(&id))
-                    .copied()
-                    .map(Ok::<_, Error>)
-                    .unwrap_or_else(|| {
-                        let seal_pts = statement
-                            .msg
-                            .plaintext()
-                            .inner_as_seal_plaintext()?
-                            .iter()
-                            .map(|pt| pt.data.clone()); // TODO accept refs instead of cloning here
-                        let idx = lp_messages.len();
-                        lp_messages.extend(seal_pts);
-                        if let Some(msg_id) = statement.msg.shared_id() {
-                            idx_map.insert(msg_id, idx);
-                        }
-                        Ok(idx)
-                    })?;
-
-                // handle statement/witness
-                match &statement.encryption {
-                    EncryptedComponents::Asymmetric {
-                        public_key,
-                        components,
-                    } => {
-                        let seal_cts = &components.ciphertext.inner_as_seal_ciphertext()?;
-                        assert_eq!(seal_cts.len(), components.u.len());
-                        assert_eq!(seal_cts.len(), components.e.len());
-                        assert_eq!(seal_cts.len(), components.r.len());
-
-                        for (i, ct) in seal_cts.iter().enumerate() {
-                            let u = &components.u[i];
-                            let e = &components.e[i];
-                            let r = &components.r[i].inner_as_seal_plaintext()?[0].data;
-                            let message_id = message_idx_start + i;
-
-                            lp_statements.push(BfvProofStatement::PublicKeyEncryption {
-                                ciphertext: &ct.data,
-                                message_id,
-                                public_key: &public_key.public_key.data,
-                            });
-                            lp_witness.push(BfvWitness::PublicKeyEncryption {
-                                u: Cow::Borrowed(u),
-                                e: std::borrow::Cow::Borrowed(e),
-                                r: std::borrow::Cow::Borrowed(r),
-                            });
-                        }
-                    }
-                    EncryptedComponents::Symmetric { .. } => todo!("symmetric encryption"),
-                }
-            }
+        ) -> Result<LogProofProverKnowledge<Zq<N, BarrettBackend<N, B>>>> {
             let params = self.runtime.params();
             let ctx = self.runtime.context();
             Ok(bfv_statement::generate_prover_knowledge(
-                &lp_statements,
-                &lp_messages,
-                &lp_witness,
+                &self.statements,
+                &self.messages,
+                &self.witness,
                 params,
                 ctx,
             ))
@@ -611,7 +537,7 @@ where {
         /// this builder.
         pub fn build_linkedproof(&mut self) -> Result<crate::linked::LinkedProof> {
             let sdlp = self.build_logproof()?;
-            // TODO this isn't accurate, but will be once we track idx map above.
+            // TODO we need to split shared inputs so they can appear as separate args in the ZKP programs
             let shared_indices = self
                 .shared_inputs
                 .iter()
@@ -661,5 +587,38 @@ where {
         fn ciphertext_modulus(&self) -> Vec<u64> {
             self.coeff_modulus.clone()
         }
+    }
+
+    // Helper struct when decomposing the encryption pieces.
+    struct AsymmetricEncryption<'a> {
+        ct: &'a seal::Ciphertext,
+        u: seal::PolynomialArray,
+        e: seal::PolynomialArray,
+        r: &'a seal::Plaintext,
+        m: &'a seal::Plaintext,
+    }
+
+    fn zip_seal_pieces<'a>(
+        enc_components: &'a BFVEncryptionComponents,
+        pt: &'a Plaintext,
+    ) -> Result<impl Iterator<Item = AsymmetricEncryption<'a>>> {
+        let seal_cts = enc_components
+            .ciphertext
+            .inner_as_seal_ciphertext()?
+            .iter()
+            .map(|ct| &ct.data);
+        let seal_pts = pt.inner_as_seal_plaintext()?.iter();
+        let us = enc_components.u.clone().into_iter();
+        let es = enc_components.e.clone().into_iter();
+        let rs = enc_components
+            .r
+            .iter()
+            .map(|r| &r.inner_as_seal_plaintext().unwrap()[0].data);
+        Ok(seal_cts
+            .zip(seal_pts)
+            .zip(us)
+            .zip(es)
+            .zip(rs)
+            .map(|((((ct, pt), u), e), r)| AsymmetricEncryption { ct, u, e, r, m: pt }))
     }
 }

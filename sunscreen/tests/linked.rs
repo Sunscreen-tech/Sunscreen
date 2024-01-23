@@ -61,6 +61,7 @@ mod linked_tests {
     }
 
     #[test]
+    // TODO issue is probably because we need tighter bounds.
     fn test_valid_transaction_example() -> Result<(), Error> {
         let rt = FheZkpRuntime::new(&SMALL_PARAMS, &BulletproofsBackend::new())?;
         let (public_key, _secret_key) = rt.generate_keys().unwrap();

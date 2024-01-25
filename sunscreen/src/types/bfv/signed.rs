@@ -19,7 +19,7 @@ use crate::{
 };
 
 use sunscreen_runtime::{
-    InnerPlaintext, NumCiphertexts, Plaintext, TryFromPlaintext, TryIntoPlaintext,
+    InnerPlaintext, NumCiphertexts, Plaintext, ShareWithZKP, TryFromPlaintext, TryIntoPlaintext,
 };
 
 use std::ops::*;
@@ -34,6 +34,14 @@ pub struct Signed {
 
 impl NumCiphertexts for Signed {
     const NUM_CIPHERTEXTS: usize = 1;
+}
+
+impl ShareWithZKP for Signed {
+    /// While a freshly encoded plaintext will only use up to 64 coefficients, plaintexts resulting
+    /// from a multiplicative circuit can result in valid Signed encodings that use more than 64
+    /// coefficients. A bound of 128 should work for virtually all cases.
+    const DEGREE_BOUND: usize = 64;
+    // const DEGREE_BOUND: usize = 128;
 }
 
 impl FheProgramInputTrait for Signed {}

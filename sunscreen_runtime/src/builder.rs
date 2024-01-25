@@ -233,9 +233,9 @@ mod linked {
     use std::{borrow::Cow, sync::Arc};
 
     use logproof::{
-        bfv_statement::{self, BfvProofStatement, BfvWitness, StatementParams},
+        bfv_statement::{self, BfvMessage, BfvProofStatement, BfvWitness, StatementParams},
         rings::{SealQ128_1024, SealQ128_2048, SealQ128_4096, SealQ128_8192},
-        LogProofProverKnowledge,
+        Bounds, LogProofProverKnowledge,
     };
     use seal_fhe as seal;
     use seal_fhe::SecurityLevel;
@@ -244,20 +244,24 @@ mod linked {
     use sunscreen_zkp_backend::{bulletproofs::BulletproofsBackend, CompiledZkpProgram};
 
     use crate::{
-        marker, BFVEncryptionComponents, Ciphertext, GenericRuntime, LinkedProof, Params,
-        Plaintext, PublicKey, Result, SealSdlpProverKnowledge, TryIntoPlaintext, ZkpProgramInput,
+        marker, BFVEncryptionComponents, Ciphertext, GenericRuntime, LinkedProof, NumCiphertexts,
+        Params, Plaintext, PublicKey, Result, SealSdlpProverKnowledge, TryIntoPlaintext,
+        ZkpProgramInput,
     };
 
-    // TODO use this to limit what types people can share with ZKPs. Implement this after tests are
-    // passing. May want to separate the notion of ZKP and internal SDLP sharing.
-    /// TODO docs
-    pub trait Share: TryIntoPlaintext + TypeName {
-        /// The number of underlying BFV plaintexts.
+    /// A trait for sharing a plaintext with a ZKP program.
+    pub trait ShareWithZKP: NumCiphertexts {
+        /// The number of nonzero coefficients to share between the SDLP and ZKP.
         ///
-        /// It is up to the implementer to ensure that this number always matches the number of
-        /// plaintexts underlying the outer [`Plaintext`]. This is not checked by the compiler. If the
-        /// type encodes a variable number of plaintexts, then a valid `Share` impl does not exist.
-        const MESSAGE_LEN: usize;
+        /// Note that when plaintexts polynomials are shared with ZKP programs, the ZKP program
+        /// assumes the coefficients form a 2s complement encoding. Without this bound, all
+        /// coefficients (up to the lattice degree `N`) are shared and thus the ZKP circuit has to
+        /// compute `2^N`. Of course, each ZKP field element is limited by its underlying
+        /// representation (e.g. a 256-bit scalar for Bulletproofs). Thus, any encoding should keep
+        /// this limit this in mind.
+        ///
+        /// This number should be less than 256.
+        const DEGREE_BOUND: usize;
     }
 
     #[derive(Debug, Clone)]
@@ -269,15 +273,8 @@ mod linked {
     /// A [`Plaintext`] message that can be shared. Create this with [`LogProofBuilder::share`].
     #[derive(Debug, Clone)]
     pub struct SharedMessage {
-        // I think I can track the actual lp_message index here... probably better?
         pub(crate) id: usize,
         pub(crate) message: Arc<PlaintextTyped>,
-    }
-
-    impl AsRef<Plaintext> for SharedMessage {
-        fn as_ref(&self) -> &Plaintext {
-            &self.message.plaintext
-        }
     }
 
     enum Message {
@@ -286,17 +283,17 @@ mod linked {
     }
 
     impl Message {
-        fn plaintext(&self) -> &Plaintext {
+        fn pt_typed(&self) -> &PlaintextTyped {
             match self {
-                Message::Plain(m) => &m.plaintext,
-                Message::Shared(m) => m.as_ref(),
+                Message::Plain(m) => m,
+                Message::Shared(m) => &m.message,
             }
         }
+        fn pt(&self) -> &Plaintext {
+            &self.pt_typed().plaintext
+        }
         fn type_name(&self) -> &Type {
-            match self {
-                Message::Plain(m) => &m.type_name,
-                Message::Shared(m) => &m.message.type_name,
-            }
+            &self.pt_typed().type_name
         }
         fn shared_id(&self) -> Option<usize> {
             match self {
@@ -306,24 +303,17 @@ mod linked {
         }
     }
 
-    // TODO Could use a marker to determine when a valid proof can be created; if a user calls
-    // a method like `add_statement` without message/witness, could return e.g.
-    // Builder<Verification>.
-
     /// A builder for [`LogProofProverKnowledge`] or [`LogProofVerifierKnowledge`].
     ///
     /// Use this builder to encrypt your [`Plaintext`]s while automatically generate a log proof of the
     /// encryption statements. We implicitly assume that these plaintexts and ciphertexts are backed by
     /// the SEAL BFV scheme, otherwise the methods will return an `Err`.
-    //
-    // TODO when refactoring to build statements as we go, have the shared message id equal the
-    // starting message index.
     pub struct LogProofBuilder<'r, 'k, 'w, 'z, M, B> {
         runtime: &'r GenericRuntime<M, B>,
 
         // log proof fields
         statements: Vec<BfvProofStatement<seal::Ciphertext, &'k seal::PublicKey>>,
-        messages: Vec<seal::Plaintext>,
+        messages: Vec<BfvMessage>,
         witness: Vec<BfvWitness<'w, 'k>>,
 
         // linked proof fields
@@ -359,25 +349,30 @@ mod linked {
             P: TryIntoPlaintext + TypeName,
         {
             let pt = self.plaintext_typed(message)?;
-            self.encrypt_internal(Message::Plain(pt), public_key)
+            self.encrypt_internal(Message::Plain(pt), public_key, None)
         }
 
         /// Encrypt a plaintext intended for sharing.
         ///
         /// The returned `SharedMessage` can be used:
         /// 1. to add an encryption statement of ciphertext equality to the proof (see [`Self::encrypt_shared`]).
-        /// 2. as a shared input to a ZKP program (see [`TODO`]).
+        /// 2. as a shared input to a ZKP program (see [`Self::shared_input`]).
         pub fn encrypt_and_share<P>(
             &mut self,
             message: &P,
             public_key: &'k PublicKey,
         ) -> Result<(Ciphertext, SharedMessage)>
         where
-            P: TryIntoPlaintext + TypeName,
+            P: ShareWithZKP + TryIntoPlaintext + TypeName,
         {
+            // The user intends to share this message, so add a more conservative bound
             let pt = self.plaintext_typed(message)?;
             let idx_start = self.messages.len();
-            let ct = self.encrypt_internal(Message::Plain(pt.clone()), public_key)?;
+            let ct = self.encrypt_internal(
+                Message::Plain(pt.clone()),
+                public_key,
+                Some(self.mk_bounds::<P>()),
+            )?;
             let shared_message = SharedMessage {
                 id: idx_start,
                 message: Arc::new(pt),
@@ -391,37 +386,44 @@ mod linked {
         /// this is not what you want, use [`Self::encrypt`].
         ///
         /// This method assumes that you've created the `message` argument with _this_ builder.
-        // TODO should I enforce that? I could use a global `static BUILDER_ID: AtomicUsize`...
         pub fn encrypt_shared(
             &mut self,
             message: &SharedMessage,
             public_key: &'k PublicKey,
         ) -> Result<Ciphertext> {
-            self.encrypt_internal(Message::Shared(message.clone()), public_key)
+            // The existing message already has bounds, no need to recompute them.
+            let bounds = None;
+            self.encrypt_internal(Message::Shared(message.clone()), public_key, bounds)
         }
 
         fn encrypt_internal(
             &mut self,
             message: Message,
             public_key: &'k PublicKey,
+            bounds: Option<Bounds>,
         ) -> Result<Ciphertext> {
             let enc_components = self.runtime.encrypt_return_components_switched_internal(
-                message.plaintext(),
+                message.pt(),
                 message.type_name(),
                 public_key,
                 true,
                 None,
             )?;
-            let mut existing_idx = message.shared_id();
+            let existing_idx = message.shared_id();
 
-            for AsymmetricEncryption { ct, u, e, r, m } in
-                zip_seal_pieces(&enc_components, message.plaintext())?
+            for (i, AsymmetricEncryption { ct, u, e, r, m }) in
+                zip_seal_pieces(&enc_components, message.pt())?.enumerate()
             {
-                let message_id = existing_idx.unwrap_or_else(|| {
+                let message_id = if let Some(idx) = existing_idx {
+                    idx + i
+                } else {
                     let idx = self.messages.len();
-                    self.messages.push(m.clone());
+                    self.messages.push(BfvMessage {
+                        plaintext: m.clone(),
+                        bounds: bounds.clone(),
+                    });
                     idx
-                });
+                };
                 self.statements
                     .push(BfvProofStatement::PublicKeyEncryption {
                         message_id,
@@ -433,14 +435,10 @@ mod linked {
                     e: Cow::Owned(e),
                     r: Cow::Owned(r.clone()),
                 });
-                if let Some(idx) = existing_idx.as_mut() {
-                    *idx += 1
-                }
             }
             Ok(enc_components.ciphertext)
         }
 
-        // TODO can `SharedMessage` hold an `Arc<dyn TypeName + TryIntoPlaintext>` to avoid PlaintextTyped?
         fn plaintext_typed<P>(&self, pt: &P) -> Result<PlaintextTyped>
         where
             P: TryIntoPlaintext + TypeName,
@@ -489,10 +487,14 @@ mod linked {
                 ctx,
             ))
         }
-    }
 
-    // TODO fold sdlp feature into linkedproofs, move enum def to linked.rs, and move all builders into
-    // this file as builder module. Add linkedproof_builder method to runtime.
+        fn mk_bounds<P: ShareWithZKP>(&self) -> Bounds {
+            let params = self.runtime.params();
+            let mut bounds = vec![params.plain_modulus; P::DEGREE_BOUND];
+            bounds.resize(params.lattice_dimension as usize, 0);
+            Bounds(bounds)
+        }
+    }
 
     impl<'r, 'p, 's, 'z, M: marker::Fhe + marker::Zkp>
         LogProofBuilder<'r, 'p, 's, 'z, M, BulletproofsBackend>
@@ -500,8 +502,6 @@ mod linked {
         /// Add a ZKP program to be linked with the logproof.
         ///
         /// This method is required to call [`Self::build_linkedproof`].
-        // TODO make a marker struct for `LogProofBuilder` and a `LinkedProofBuilder<marker = Zkp>`
-        // that can be constructed with `new(CompiledZkpProgram)`.
         pub fn zkp_program(&mut self, program: &'z CompiledZkpProgram) -> &mut Self {
             self.compiled_zkp_program = Some(program);
             self
@@ -537,7 +537,8 @@ mod linked {
         /// this builder.
         pub fn build_linkedproof(&mut self) -> Result<crate::linked::LinkedProof> {
             let sdlp = self.build_logproof()?;
-            // TODO we need to split shared inputs so they can appear as separate args in the ZKP programs
+            // TODO we need to split shared inputs so that separate args are type checked in the
+            // ZKP program signature
             let shared_indices = self
                 .shared_inputs
                 .iter()
@@ -546,23 +547,6 @@ mod linked {
             let program = self.compiled_zkp_program.ok_or_else(|| {
                 BuilderError::user_error("Cannot build linked proof without a compiled ZKP program. Use the `.zkp_program()` method")
             })?;
-
-            // debugging
-            println!("shared_indices: {:?}", shared_indices);
-            match &sdlp.0 {
-                crate::SealSdlpProverKnowledgeInternal::LP1(k) => {
-                    println!("sdlp.pk.s[shared_indices[0]]: {:?}", k.s[shared_indices[0]])
-                }
-                crate::SealSdlpProverKnowledgeInternal::LP2(k) => {
-                    println!("sdlp.pk.s[shared_indices[0]]: {:?}", k.s[shared_indices[0]])
-                }
-                crate::SealSdlpProverKnowledgeInternal::LP3(k) => {
-                    println!("sdlp.pk.s[shared_indices[0]]: {:?}", k.s[shared_indices[0]])
-                }
-                crate::SealSdlpProverKnowledgeInternal::LP4(k) => {
-                    println!("sdlp.pk.s[shared_indices[0]]: {:?}", k.s[shared_indices[0]])
-                }
-            }
 
             LinkedProof::create(
                 &sdlp,

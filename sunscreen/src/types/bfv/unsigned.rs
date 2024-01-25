@@ -5,7 +5,7 @@ use paste::paste;
 use seal_fhe::Plaintext as SealPlaintext;
 
 use sunscreen_runtime::{
-    InnerPlaintext, NumCiphertexts, Plaintext, TryFromPlaintext, TryIntoPlaintext,
+    InnerPlaintext, NumCiphertexts, Plaintext, ShareWithZKP, TryFromPlaintext, TryIntoPlaintext,
 };
 
 use crate as sunscreen;
@@ -339,6 +339,14 @@ macro_rules! type_synonyms {
 
 type_synonyms! {
     64, 128, 256, 512
+}
+
+impl ShareWithZKP for Unsigned64 {
+    const DEGREE_BOUND: usize = 128;
+}
+
+impl ShareWithZKP for Unsigned128 {
+    const DEGREE_BOUND: usize = 255;
 }
 
 #[cfg(test)]

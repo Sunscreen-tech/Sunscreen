@@ -114,6 +114,23 @@ pub enum BfvWitness<'a, 's> {
     },
 }
 
+/// A BFV message, which is a SEAL plaintext and an optional coefficient bound.
+#[derive(Debug)]
+pub struct BfvMessage {
+    /// The plaintext message.
+    pub plaintext: Plaintext,
+    /// An optional bound on the plaintext message.
+    ///
+    /// By default, we use a conservative coefficient bound equal to the plaintext modulus for
+    /// every coefficient in the lattice dimension. This is a _much_ higher bound than is
+    /// necessary for common numeric plaintext encodings. For example, if you are encoding a
+    /// 64-bit signed integer in 2s complement, you likely don't need 1024 coefficients to be
+    /// nonzero.
+    ///
+    /// Note that the bounds should be a vector of length equal to the lattice dimension.
+    pub bounds: Option<Bounds>,
+}
+
 type Z<const N: usize, B> = Zq<N, BarrettBackend<N, B>>;
 
 /// Generate the full [`LogProofProverKnowledge`] for a given set of [`BfvProofStatement`]s.
@@ -186,7 +203,7 @@ type Z<const N: usize, B> = Zq<N, BarrettBackend<N, B>>;
 /// surprising implementation where we have a remainder witness for each statement.
 pub fn generate_prover_knowledge<C, P, T, B, const N: usize>(
     statements: &[BfvProofStatement<C, P>],
-    messages: &[Plaintext], // may want messages AsRef as well.. we'll see
+    messages: &[BfvMessage],
     witness: &[BfvWitness<'_, '_>],
     params: &T,
     ctx: &Context,
@@ -197,7 +214,11 @@ where
     P: AsRef<PublicKey>,
     T: StatementParams,
 {
-    let vk = generate_verifier_knowledge(statements, params, ctx);
+    let bounds = messages
+        .iter()
+        .map(|m| m.bounds.clone())
+        .collect::<Vec<_>>();
+    let vk = generate_verifier_knowledge(statements, &bounds, params, ctx);
 
     let s = compute_s(statements, messages, witness);
 
@@ -209,6 +230,7 @@ where
 /// See the documentation for [`generate_prover_knowledge`] for more information.
 pub fn generate_verifier_knowledge<C, P, T, B, const N: usize>(
     statements: &[BfvProofStatement<C, P>],
+    msg_bounds: &[Option<Bounds>],
     params: &T,
     ctx: &Context,
 ) -> LogProofVerifierKnowledge<Z<N, B>>
@@ -220,7 +242,7 @@ where
 {
     let a = compute_a(statements, params, ctx);
     let t = compute_t(statements, ctx);
-    let bounds = compute_bounds(statements, params);
+    let bounds = compute_bounds(statements, msg_bounds, params);
     let f = Polynomial {
         coeffs: {
             let degree = params.degree() as usize;
@@ -293,7 +315,7 @@ where
 
 fn compute_s<C, P, B, const N: usize>(
     statements: &[BfvProofStatement<C, P>],
-    messages: &[Plaintext],
+    messages: &[BfvMessage],
     witness: &[BfvWitness<'_, '_>],
 ) -> PolynomialMatrix<Z<N, B>>
 where
@@ -304,7 +326,7 @@ where
 
     // m_i block
     for (i, m) in messages.iter().enumerate() {
-        s.set(i, 0, m.as_poly());
+        s.set(i, 0, m.plaintext.as_poly());
     }
 
     // r_i, u_i, e_i, sk, e blocks
@@ -368,7 +390,11 @@ where
     t
 }
 
-fn compute_bounds<C, P, T>(statements: &[BfvProofStatement<C, P>], params: &T) -> Matrix<Bounds>
+fn compute_bounds<C, P, T>(
+    statements: &[BfvProofStatement<C, P>],
+    msg_bounds: &[Option<Bounds>],
+    params: &T,
+) -> Matrix<Bounds>
 where
     T: StatementParams,
 {
@@ -377,15 +403,23 @@ where
     let degree = params.degree() as usize;
 
     // calculate bounds
-    let m_bound = Bounds(vec![params.plain_modulus(); degree]);
-    let r_bound = m_bound.clone();
+    let m_default_bound = Bounds(vec![params.plain_modulus(); degree]);
+    let r_bound = m_default_bound.clone();
     let u_bound = Bounds(vec![U_COEFFICIENT_BOUND; degree]);
     let e_bound = Bounds(vec![E_COEFFICIENT_BOUND; degree]);
     let s_bound = Bounds(vec![S_COEFFICIENT_BOUND; degree]);
 
     // insert them
     for i in 0..IdxOffsets::num_messages(statements) {
-        bounds.set(i, 0, m_bound.clone());
+        bounds.set(
+            i,
+            0,
+            msg_bounds
+                .get(i)
+                .and_then(|o| o.as_ref())
+                .unwrap_or(&m_default_bound)
+                .clone(),
+        );
     }
     for s in statements {
         bounds.set(offsets.remainder, 0, r_bound.clone());
@@ -741,7 +775,7 @@ mod tests {
 
     struct TestFixture<'a, 's> {
         statements: Vec<BfvProofStatement<Ciphertext, PublicKey>>,
-        messages: Vec<Plaintext>,
+        messages: Vec<BfvMessage>,
         witness: Vec<BfvWitness<'a, 's>>,
     }
 
@@ -802,15 +836,21 @@ mod tests {
 
             // all the messages
             let messages = (0..num_msgs)
-                .map(|_| self.random_plaintext())
+                .map(|_| BfvMessage {
+                    plaintext: self.random_plaintext(),
+                    bounds: None,
+                })
                 .collect::<Vec<_>>();
 
             let mut statements = Vec::with_capacity(num_statements);
             let mut witness = Vec::with_capacity(num_statements);
 
             // statements without duplicate messages
-            for (i, msg) in messages.iter().enumerate() {
-                let (ct, u, e, r) = self.encryptor.encrypt_return_components(msg).unwrap();
+            for (i, m) in messages.iter().enumerate() {
+                let (ct, u, e, r) = self
+                    .encryptor
+                    .encrypt_return_components(&m.plaintext)
+                    .unwrap();
                 statements.push(BfvProofStatement::PublicKeyEncryption {
                     message_id: i,
                     ciphertext: ct,
@@ -829,7 +869,7 @@ mod tests {
                 let i = rng.gen_range(0..num_msgs);
                 let (ct, u, e, r) = self
                     .encryptor
-                    .encrypt_return_components(&messages[i])
+                    .encrypt_return_components(&messages[i].plaintext)
                     .unwrap();
                 statements.push(BfvProofStatement::PublicKeyEncryption {
                     message_id: i,

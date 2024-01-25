@@ -16,7 +16,7 @@ mod jit;
 
 use std::{
     any::Any,
-    ops::{Add, Deref, Mul, Neg, Sub},
+    ops::{Add, Deref, Mul, Neg, Shl, Sub},
 };
 
 pub use crypto_bigint::Uint;
@@ -359,6 +359,18 @@ impl BigInt {
      * The value 1.
      */
     pub const ONE: Self = Self(U512::ONE);
+}
+
+impl Shl<usize> for BigInt {
+    type Output = BigInt;
+
+    /// NOTE: this operation is variable time with respect to `rhs` *ONLY*.
+    ///
+    /// When used with a fixed `rhs`, this function is constant-time with respect
+    /// to `self`.
+    fn shl(self, rhs: usize) -> BigInt {
+        BigInt::from(self.0.shl(rhs))
+    }
 }
 
 /**

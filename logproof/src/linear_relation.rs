@@ -1120,6 +1120,7 @@ impl LogProof {
      * This modifies bitvec in place.
      *
      */
+    // TODO seems incorrect for log_b == 1; {0, 1} -> 0 and {-1} -> 1
     fn to_2s_complement_single<B, const N: usize>(value: &Zq<N, B>, log_b: u64, bitvec: &mut BitVec)
     where
         B: ArithmeticBackend<N>,
@@ -1197,7 +1198,7 @@ impl LogProof {
         // Make sure we have an equal number of values and bounds to serialize
         assert_eq!(values.len(), log_b.len());
 
-        let mut bitvec = BitVec::with_capacity(values.len() * log_b.iter().sum::<u64>() as usize);
+        let mut bitvec = BitVec::with_capacity(log_b.iter().sum::<u64>() as usize);
 
         // This code should not feature timing side-channels.
         for (value, bound) in zip(values.iter(), log_b.iter()) {

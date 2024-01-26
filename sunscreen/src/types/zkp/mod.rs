@@ -1,12 +1,13 @@
+#[cfg(feature = "linkedproofs")]
+mod bfv_plaintext;
 mod field;
 mod gadgets;
 mod program_node;
 mod rns_polynomial;
 
+#[cfg(feature = "linkedproofs")]
+pub use bfv_plaintext::*;
 pub use field::*;
-// N.B. `NodeIndex` is actually common to both FHE and ZKP, but it's really only leaked as an
-// implementation detail on the ZKP side (via gadgets). So I think it makes sense to export under
-// sunscreen::types::zkp.
 pub use petgraph::stable_graph::NodeIndex;
 pub use program_node::*;
 pub use rns_polynomial::*;

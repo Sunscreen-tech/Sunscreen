@@ -6,6 +6,7 @@ use crate::zkp::{invoke_gadget, with_zkp_ctx, ZkpContextOps};
 
 use super::ToUInt;
 
+#[derive(Clone, Copy)]
 pub struct SignedModulus {
     field_modulus: BigInt,
     max_remainder_bits: usize,

@@ -5,7 +5,7 @@ use paste::paste;
 use seal_fhe::Plaintext as SealPlaintext;
 
 use sunscreen_runtime::{
-    InnerPlaintext, NumCiphertexts, Plaintext, ShareWithZKP, TryFromPlaintext, TryIntoPlaintext,
+    InnerPlaintext, NumCiphertexts, Plaintext, TryFromPlaintext, TryIntoPlaintext,
 };
 
 use crate as sunscreen;
@@ -341,12 +341,17 @@ type_synonyms! {
     64, 128, 256, 512
 }
 
-impl ShareWithZKP for Unsigned64 {
-    const DEGREE_BOUND: usize = 128;
-}
+#[cfg(feature = "linkedproofs")]
+mod sharing {
+    use sunscreen_runtime::ShareWithZKP;
 
-impl ShareWithZKP for Unsigned128 {
-    const DEGREE_BOUND: usize = 255;
+    impl ShareWithZKP for super::Unsigned64 {
+        const DEGREE_BOUND: usize = 128;
+    }
+
+    impl ShareWithZKP for super::Unsigned128 {
+        const DEGREE_BOUND: usize = 255;
+    }
 }
 
 #[cfg(test)]

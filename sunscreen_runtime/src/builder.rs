@@ -275,6 +275,7 @@ mod linked {
     pub struct SharedMessage {
         pub(crate) id: usize,
         pub(crate) message: Arc<PlaintextTyped>,
+        pub(crate) len: usize,
     }
 
     enum Message {
@@ -373,9 +374,11 @@ mod linked {
                 public_key,
                 Some(self.mk_bounds::<P>()),
             )?;
+            let idx_end = self.messages.len();
             let shared_message = SharedMessage {
                 id: idx_start,
                 message: Arc::new(pt),
+                len: idx_end - idx_start,
             };
             Ok((ct, shared_message))
         }
@@ -537,22 +540,20 @@ mod linked {
         /// this builder.
         pub fn build_linkedproof(&mut self) -> Result<crate::linked::LinkedProof> {
             let sdlp = self.build_logproof()?;
-            // TODO we need to split shared inputs so that separate args are type checked in the
-            // ZKP program signature
-            let shared_indices = self
-                .shared_inputs
-                .iter()
-                .map(|m| (m.id, 0))
-                .collect::<Vec<_>>();
             let program = self.compiled_zkp_program.ok_or_else(|| {
                 BuilderError::user_error("Cannot build linked proof without a compiled ZKP program. Use the `.zkp_program()` method")
             })?;
+            let shared_indices = self
+                .shared_inputs
+                .iter()
+                .flat_map(|m| (m.id..m.id + m.len).map(|ix| (ix, 0)))
+                .collect::<Vec<_>>();
 
             LinkedProof::create(
                 &sdlp,
                 &shared_indices,
                 program,
-                self.private_inputs.clone(), // bleh
+                self.private_inputs.clone(),
                 self.public_inputs.clone(),
                 self.constant_inputs.clone(),
             )

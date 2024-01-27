@@ -13,8 +13,9 @@ use crate::{
 };
 
 enum ArgumentKind {
-    Public,
+    Shared,
     Private,
+    Public,
     Constant,
 }
 
@@ -108,6 +109,7 @@ fn parse_inner(_attr_params: ZkpProgramAttrs, input_fn: ItemFn) -> Result<TokenS
 
     let mut public_seen = false;
     let mut constant_seen = false;
+    let mut private_seen = false;
     let unwrapped_inputs = match extract_fn_arguments(inputs) {
         Ok(args) => {
             args.iter().map(|a| {
@@ -120,17 +122,27 @@ fn parse_inner(_attr_params: ZkpProgramAttrs, input_fn: ItemFn) -> Result<TokenS
                                 "private arguments must be specified before #[public] and #[constant] arguments"
                             ));
                         }
+                        private_seen = true;
                     },
                     [attr] => {
                         let ident = attr.path().get_ident();
 
                         match ident.map(|x| x.to_string()).as_deref() {
+                            Some("shared") => {
+                                if private_seen || public_seen || constant_seen {
+                                    return Err(Error::compile_error(attr.path().span(),
+                                        "#[shared] arguments must be specified before #[private], #[public] and #[constant] arguments"
+                                    ));
+                                }
+                                arg_kind = ArgumentKind::Shared;
+                            },
                             Some("private") => {
                                 if public_seen || constant_seen {
                                     return Err(Error::compile_error(attr.path().span(),
                                         "#[private] arguments must be specified before #[public] and #[constant] arguments"
                                     ));
                                 }
+                                private_seen = true;
                             },
                             Some("public") => {
                                 if constant_seen {
@@ -147,14 +159,14 @@ fn parse_inner(_attr_params: ZkpProgramAttrs, input_fn: ItemFn) -> Result<TokenS
                             },
                             _ => {
                                 return Err(Error::compile_error(attr.path().span(), &format!(
-                                    "Expected #[private], #[public] or #[constant], found {}",
+                                    "Expected #[shared], #[private], #[public] or #[constant], found {}",
                                     attr.path().to_token_stream()
                                 )));
                             }
                         }
                     },
                     [_, attr, ..] => {
-                        return Err(Error::compile_error(attr.span(), "ZKP program arguments may only have one attribute (#[private], #[public] or #[constant])."));
+                        return Err(Error::compile_error(attr.span(), "ZKP program arguments may only have one attribute (#[shared], #[private], #[public] or #[constant])."));
                     }
                 };
 
@@ -176,7 +188,7 @@ fn parse_inner(_attr_params: ZkpProgramAttrs, input_fn: ItemFn) -> Result<TokenS
 
     let var_decl = unwrapped_inputs.iter().map(|t| {
         let input_type = match t.0 {
-            ArgumentKind::Private => "private_input",
+            ArgumentKind::Private | ArgumentKind::Shared => "private_input",
             ArgumentKind::Public => "public_input",
             ArgumentKind::Constant => "constant_input",
         };

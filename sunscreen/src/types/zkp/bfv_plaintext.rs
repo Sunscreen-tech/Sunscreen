@@ -27,17 +27,6 @@ struct BfvPlaintext<F: FieldSpec, const C: usize, const N: usize> {
     data: Box<[[Field<F>; C]; N]>,
 }
 
-impl<F: FieldSpec, T, const N: usize, const R: usize> From<[[T; N]; R]> for BfvPlaintext<F, N, R>
-where
-    T: Into<Field<F>> + std::fmt::Debug,
-{
-    fn from(x: [[T; N]; R]) -> Self {
-        Self {
-            data: Box::new(x.map(|x| x.map(|x| x.into()))),
-        }
-    }
-}
-
 impl<F: FieldSpec, const C: usize, const N: usize> NumFieldElements for BfvPlaintext<F, C, N> {
     const NUM_NATIVE_FIELD_ELEMENTS: usize = C * N;
 }
@@ -140,7 +129,7 @@ mod tests {
     use crate::{self as sunscreen, ZkpProgramFnExt};
 
     #[zkp_program]
-    fn is_eq<F: FieldSpec>(#[private] x: BfvSigned<F, 13>, #[public] y: Field<F>) {
+    fn is_eq<F: FieldSpec>(#[shared] x: BfvSigned<F, 13>, #[public] y: Field<F>) {
         x.into_field_elem().constrain_eq(y);
     }
 

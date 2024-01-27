@@ -105,7 +105,7 @@ mod linked_tests {
     }
 
     #[zkp_program]
-    fn is_eq<F: FieldSpec>(#[private] x: BfvSigned<F, 13>, #[public] y: Field<F>) {
+    fn is_eq<F: FieldSpec>(#[shared] x: BfvSigned<F, 13>, #[public] y: Field<F>) {
         x.into_field_elem().constrain_eq(y);
     }
 

@@ -137,7 +137,7 @@ impl LinkedProof {
         let mut transcript = Transcript::new(b"linked-sdlp-and-r1cs-bp");
 
         let vk = prover_knowledge.vk();
-        let binary_parts = shared_indices
+        let shared_inputs_binary = shared_indices
             .iter()
             .map(|(i, j)| prover_knowledge.s_binary_by_index((*i, *j)))
             .collect::<Vec<BitVec>>();
@@ -146,13 +146,14 @@ impl LinkedProof {
 
         // Get shared generators
         let b_slices = vk.b_slices();
-        let shared_gens = shared_indices
+        let shared_gen_ranges = shared_indices
             .iter()
-            .flat_map(|(i, j)| {
-                let range = (b_slices[*i][*j]).clone();
-                gens.h[range].to_vec()
-            })
-            .collect::<Vec<RistrettoPoint>>();
+            .map(|(i, j)| b_slices[*i][*j].clone())
+            .collect::<Vec<_>>();
+        let shared_gens = shared_gen_ranges
+            .iter()
+            .flat_map(|range| gens.h[range.clone()].to_vec())
+            .collect::<Vec<_>>();
 
         let u = PedersenGens::default().B_blinding;
 
@@ -175,36 +176,26 @@ impl LinkedProof {
             u,
         };
 
-        let private_inputs_zkp_input: Vec<ZkpProgramInput> = private_inputs
-            .iter()
-            .map(|input| I::into(input.clone()))
+        // Convert inputs into bigints
+        let private_inputs_bigint = private_inputs
+            .into_iter()
+            .flat_map(|input| input.into().0.to_native_fields());
+        let public_inputs_bigint: Vec<BigInt> = public_inputs
+            .into_iter()
+            .flat_map(|input| input.into().0.to_native_fields())
             .collect::<Vec<_>>();
-        let public_inputs_zkp_input: Vec<ZkpProgramInput> = public_inputs
-            .iter()
-            .map(|input| I::into(input.clone()))
-            .collect::<Vec<_>>();
-        let constant_inputs_zkp_input: Vec<ZkpProgramInput> = constant_inputs
-            .iter()
-            .map(|input| I::into(input.clone()))
-            .collect::<Vec<_>>();
-
-        let private_inputs_bigint: Vec<BigInt> = private_inputs_zkp_input
-            .iter()
-            .flat_map(|input| input.0.to_native_fields())
-            .collect::<Vec<_>>();
-        let public_inputs_bigint: Vec<BigInt> = public_inputs_zkp_input
-            .iter()
-            .flat_map(|input| input.0.to_native_fields())
-            .collect::<Vec<_>>();
-        let constant_inputs_bigint: Vec<BigInt> = constant_inputs_zkp_input
-            .iter()
-            .flat_map(|input| input.0.to_native_fields())
+        let constant_inputs_bigint: Vec<BigInt> = constant_inputs
+            .into_iter()
+            .flat_map(|input| input.into().0.to_native_fields())
             .collect::<Vec<_>>();
 
-        // Prepend the bigint representations of our binary bits
-        let private_inputs_bigint = binary_parts
-            .iter()
-            .flat_map(|x| x.iter().map(|y| BigInt::from(*y as u64)))
+        // Convert sharted inputs into bigints
+        let shared_inputs_bigint = shared_inputs_binary.iter().flat_map(|shared_input_binary| {
+            shared_input_binary.iter().map(|y| BigInt::from(*y as u8))
+        });
+
+        // Combine the shared & private inputs
+        let private_inputs_bigint = shared_inputs_bigint
             .chain(private_inputs_bigint)
             .collect::<Vec<_>>();
 

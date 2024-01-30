@@ -75,9 +75,12 @@ impl<F: FieldSpec> AsFieldElement<F> for ProgramNode<BfvSigned<F>> {
     fn into_field_elem(self) -> ProgramNode<Field<F>> {
         let bound = self.ids.len() / <Signed as ShareWithZKP>::DEGREE_BOUND;
         let plain_modulus = 2u64.pow(bound as u32 - 1);
-        let (plain_modulus, two, mut coeffs) = with_zkp_ctx(|ctx| {
+
+        let (plain_modulus, plain_modulus_1, two, mut coeffs) = with_zkp_ctx(|ctx| {
             let plain_modulus = ctx.add_constant(&BigInt::from(plain_modulus));
+            let one = ctx.add_constant(&BigInt::from_u32(1));
             let two = ctx.add_constant(&BigInt::from_u32(2));
+            let plain_modulus_1 = ctx.add_addition(plain_modulus, one);
             // Get coeffs via 2s complement construction
             let coeffs = self
                 .ids
@@ -96,15 +99,13 @@ impl<F: FieldSpec> AsFieldElement<F> for ProgramNode<BfvSigned<F>> {
                     c
                 })
                 .collect::<Vec<_>>();
-            (plain_modulus, two, coeffs)
+            (plain_modulus, plain_modulus_1, two, coeffs)
         });
 
         // Translate coefficients into field modulus
         let cutoff_divider = SignedModulus::new(F::FIELD_MODULUS, 1);
         let divider = SignedModulus::new(F::FIELD_MODULUS, 63);
-        // TODO make sure this is correct, might need +1 somewhere to match the signed encoding;
-        // Add a test with odd plaintext modulus.
-        let neg_cutoff = invoke_gadget(cutoff_divider, &[plain_modulus, two])[0];
+        let neg_cutoff = invoke_gadget(cutoff_divider, &[plain_modulus_1, two])[0];
         for c in coeffs.iter_mut() {
             let is_negative = invoke_gadget(divider, &[*c, neg_cutoff])[0];
             *c = with_zkp_ctx(|ctx| {
@@ -147,8 +148,74 @@ mod tests {
     fn doggie() {}
 
     #[test]
-    fn can_decode_signed_properly() {
-        let plain_modulus = 4096_u64;
+    #[ignore = "currently unsupported"]
+    fn can_decode_signed_for_arbitrary_plain_moduli() {
+        test_plain_modulus(4095);
+        test_plain_modulus(4097);
+        test_plain_modulus(1153);
+    }
+
+    #[test]
+    fn can_decode_signed_for_powers_of_two_moduli() {
+        test_plain_modulus(1024);
+        test_plain_modulus(4096);
+        test_plain_modulus(262_144); // default in compiler.rs
+    }
+
+    #[test]
+    fn can_decode_signed_with_coefficients_near_cutoff() {
+        let plain_modulus = 1024_u64;
+        let is_eq_zkp = Compiler::new()
+            .fhe_program(doggie)
+            .plain_modulus_constraint(PlainModulusConstraint::Raw(1024))
+            .zkp_backend::<BulletproofsBackend>()
+            .zkp_program(is_eq)
+            .compile()
+            .unwrap()
+            .take_zkp_program(is_eq)
+            .unwrap();
+
+        let runtime = ZkpRuntime::new(BulletproofsBackend::new()).unwrap();
+
+        let log_p = plain_modulus.ilog2() as usize + 1;
+
+        for (coeff, equiv) in [(511, 511), (512, -512), (513, -511)] {
+            let mut signed_encoding = [0; <Signed as ShareWithZKP>::DEGREE_BOUND];
+            signed_encoding[0] = coeff;
+
+            let coeffs = signed_encoding.map(|c| {
+                let mut bits = vec![0; log_p];
+                for (i, b) in bits.iter_mut().enumerate() {
+                    let bit = (c & (0x1 << i)) >> i;
+                    *b = bit;
+                }
+                bits
+            });
+
+            let encoded = BfvSigned(BfvPlaintext {
+                data: coeffs
+                    .into_iter()
+                    .flat_map(|c| c.into_iter().map(BulletproofsField::from))
+                    .collect(),
+            });
+
+            let proof = runtime
+                .proof_builder(&is_eq_zkp)
+                .private_input(encoded)
+                .public_input(BulletproofsField::from(equiv))
+                .prove()
+                .unwrap();
+
+            runtime
+                .verification_builder(&is_eq_zkp)
+                .proof(&proof)
+                .public_input(BulletproofsField::from(equiv))
+                .verify()
+                .unwrap();
+        }
+    }
+
+    fn test_plain_modulus(plain_modulus: u64) {
         let is_eq_zkp = Compiler::new()
             .fhe_program(doggie)
             .plain_modulus_constraint(PlainModulusConstraint::Raw(plain_modulus))
@@ -161,11 +228,11 @@ mod tests {
 
         let runtime = ZkpRuntime::new(BulletproofsBackend::new()).unwrap();
 
-        const LOG_P: usize = 13; // i.e. `plain_modulus.ilog2() + 1`
+        let log_p = plain_modulus.ilog2() as usize + 1;
 
         for val in [3i64, -3] {
             // Simulate the polynomial signed encoding
-            let mut signed_encoding = [0; 128];
+            let mut signed_encoding = [0; <Signed as ShareWithZKP>::DEGREE_BOUND];
             let abs_val = val.unsigned_abs();
             for (i, c) in signed_encoding.iter_mut().take(64).enumerate() {
                 let bit = (abs_val & 0x1 << i) >> i;
@@ -180,7 +247,7 @@ mod tests {
             // Note that these numbers will virtually always be positive in the Zq context, for all but
             // pathological plaintext moduli.
             let coeffs = signed_encoding.map(|c| {
-                let mut bits = [0; LOG_P];
+                let mut bits = vec![0; log_p];
                 for (i, b) in bits.iter_mut().enumerate() {
                     let bit = (c & (0x1 << i)) >> i;
                     *b = bit;
@@ -190,8 +257,8 @@ mod tests {
 
             let encoded = BfvSigned(BfvPlaintext {
                 data: coeffs
-                    .iter()
-                    .flat_map(|c| c.map(BulletproofsField::from))
+                    .into_iter()
+                    .flat_map(|c| c.into_iter().map(BulletproofsField::from))
                     .collect(),
             });
 

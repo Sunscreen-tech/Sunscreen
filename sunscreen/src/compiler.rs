@@ -564,7 +564,17 @@ where
         let zkp_data = self.data.zkp_data();
 
         let shared_zkp_programs = zkp_data.shared_zkp_program_fns.iter().map(|prog| {
+            // Since this is an FheZkpCompiler, the params unwrap below _should_ be impossible.
             let params = params.ok_or(Error::NoParams)?.clone();
+            // Note: this is currently unsupported because determining the exact arbitrary
+            // plaintext modulus from the dynamic length of a shared ZKP input in general is not
+            // possible (as x.ilog2() is not injective). We could support this if we store the
+            // plaintext modulus as an optional field directly on the ProgramNode.
+            if !params.plain_modulus.is_power_of_two() {
+                return Err(Error::unsupported(
+                    "Plaintext modulus must be a power of two for ZKP programs with #[shared] arguments.",
+                ));
+            }
             let result = prog.build(params.plain_modulus)?;
             let result = zkp::compile(&result);
             let metadata = ZkpProgramMetadata {

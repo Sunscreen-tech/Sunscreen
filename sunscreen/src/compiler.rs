@@ -560,14 +560,15 @@ where
         self
     }
 
-    fn compile_zkp(&self, params: &Params) -> Result<HashMap<String, CompiledZkpProgram>> {
+    fn compile_zkp(&self, params: Option<&Params>) -> Result<HashMap<String, CompiledZkpProgram>> {
         let zkp_data = self.data.zkp_data();
 
         let shared_zkp_programs = zkp_data.shared_zkp_program_fns.iter().map(|prog| {
+            let params = params.ok_or(Error::NoParams)?.clone();
             let result = prog.build(params.plain_modulus)?;
             let result = zkp::compile(&result);
             let metadata = ZkpProgramMetadata {
-                params: Some(params.clone()),
+                params: Some(params),
                 signature: prog.signature(),
             };
             let compiled_program = CompiledZkpProgram {
@@ -619,12 +620,7 @@ where
      */
     pub fn compile(self) -> Result<Application<FheZkp>> {
         let fhe_programs = self.compile_fhe()?;
-        let params = &fhe_programs
-            .values()
-            .next()
-            .ok_or(Error::NoPrograms)? // TODO better error for the user?
-            .metadata
-            .params;
+        let params = fhe_programs.values().next().map(|p| &p.metadata.params);
         Application::new(self.compile_fhe()?, self.compile_zkp(params)?)
     }
 }

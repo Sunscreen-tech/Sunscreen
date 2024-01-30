@@ -41,8 +41,7 @@ mod error;
 mod params;
 
 #[cfg(feature = "linkedproofs")]
-#[doc = include_str!("../docs/linked.md")]
-pub mod linked {}
+pub mod linked;
 
 /// This module contains types used internally when compiling [`fhe_program`]s.
 pub mod fhe;

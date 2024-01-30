@@ -45,7 +45,7 @@ struct BP {
 }
 
 #[derive(Clone)]
-/// Linked proof between a SDLP and R1CS BP
+/// A linked proof between an SDLP and R1CS BP
 pub struct LinkedProof {
     sdlp: Sdlp,
     bp: BP,
@@ -104,26 +104,19 @@ fn new_single_party_with_shared_generators(
 
 impl LinkedProof {
     const TRANSCRIPT_LABEL: &'static [u8] = b"linked-sdlp-and-r1cs-bp";
-    /**
-     * This function creates a linked proof between a short discrete log proof
-     * (SDLP) and a R1CS bulletproof. An example use case is proving an encryption
-     * is valid (by SDLP) and that the encrypted message has some property (by R1CS
-     * Bulletproof).
-     *
-     * Note that the [builder methods](`crate::LogProofBuilder`) offer an easier way to construct this
-     * proof. See the user documentation for more information.
-     *
-     * Arguments:
-     *
-     * * `lattice_problem`: The lattice problem to prove
-     * * `shared_indices`: The indices of the shared values between the SDLP and the
-     *                     R1CS bulletproof
-     * * `program`: The compiled ZKP program to prove
-     * * `private_inputs`: The private inputs to the ZKP program, not including the
-     *                     shared values
-     * * `public_inputs`: The public inputs to the ZKP program
-     * * `constant_inputs`: The constant inputs to the ZKP program
-     */
+    /// This function creates a linked proof.
+    ///
+    /// Note that the [builder methods](`crate::LogProofBuilder`) offer an easier way to construct this
+    /// proof. See the user documentation for more information.
+    ///
+    /// Arguments:
+    /// * `prover_knowledge`: The SDLP prover knowledge
+    /// * `shared_indices`: The indices of the shared values between the SDLP witness matrix `S`
+    /// and the R1CS bulletproof
+    /// * `program`: The compiled ZKP program to prove
+    /// * `private_inputs`: The private inputs to the ZKP program, not including the shared values
+    /// * `public_inputs`: The public inputs to the ZKP program
+    /// * `constant_inputs`: The constant inputs to the ZKP program
     pub fn create<I>(
         prover_knowledge: &SealSdlpProverKnowledge,
         shared_indices: &[(usize, usize)],
@@ -254,20 +247,16 @@ impl LinkedProof {
         })
     }
 
-    /**
-     * This function verifies a linked proof between a short discrete log proof
-     * (SDLP) and a R1CS bulletproof. An example use case is proving an encryption
-     * is valid (by SDLP) and that the encrypted message has some property (by R1CS
-     * Bulletproof).
-     *
-     * See the main documentation for more information and examples.
-     *
-     * Arguments:
-     *
-     * * `program`: The compiled ZKP program to verify
-     * * `public_inputs`: The public inputs to the ZKP program
-     * * `constant_inputs`: The constant inputs to the ZKP program
-     */
+    /// This function verifies the linked proof.
+    ///
+    /// See the main documentation for more information and examples.
+    ///
+    /// Arguments:
+    ///
+    /// * `program`: The compiled ZKP program to verify
+    /// * `public_inputs`: The public inputs to the ZKP program
+    /// * `constant_inputs`: The constant inputs to the ZKP program
+    ///
     pub fn verify<I>(
         &self,
         program: &CompiledZkpProgram,

@@ -2182,6 +2182,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "private_tx_linkedproof"
+version = "0.1.0"
+dependencies = [
+ "sunscreen",
+]
+
+[[package]]
 name = "proc-macro2"
 version = "1.0.69"
 source = "registry+https://github.com/rust-lang/crates.io-index"

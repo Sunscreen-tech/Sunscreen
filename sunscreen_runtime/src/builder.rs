@@ -270,7 +270,7 @@ mod linked {
         type_name: Type,
     }
 
-    /// A [`Plaintext`] message that can be shared. Create this with [`LogProofBuilder::share`].
+    /// A [`Plaintext`] message that can be shared. Create this with [`LogProofBuilder::encrypt_and_share`].
     #[derive(Debug, Clone)]
     pub struct SharedMessage {
         pub(crate) id: usize,
@@ -304,7 +304,7 @@ mod linked {
         }
     }
 
-    /// A builder for [`LogProofProverKnowledge`] or [`LogProofVerifierKnowledge`].
+    /// A builder for [`Sdlp`] or [`LinkedProof`].
     ///
     /// Use this builder to encrypt your [`Plaintext`]s while automatically generate a log proof of the
     /// encryption statements. We implicitly assume that these plaintexts and ciphertexts are backed by

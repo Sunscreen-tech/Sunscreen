@@ -6,7 +6,7 @@ Why would we want to do this? FHE operations actually add and multiply [polynomi
 
 ## Addition
 Let's start with a simple carryless addition example. Adding 99 + 43 without propagating carries gives us:
-```ignore
+```text
   9  9
 + 4  3
 ------
@@ -19,7 +19,7 @@ Furthermore, we can represent negative values by negating each digit. For exampl
 
 We can easily extend this reasoning to base 2 (binary). Under carryless arithmetic, base 2 simply means that each digit is a multiple of a power of 2. For example, we can compute `3 + 2 + (-4)` as follows:
 
-```ignore
+```text
 3 + 2 =
   1 1 = 3
 + 1 0 = 2
@@ -59,7 +59,7 @@ Note that the coefficients are the same as the digits in our carryless arithmeti
 
 ## Multiplication
 Now, lets go through a multiplication example with binary carryless arithmetic. Here, we multiply `7 * 13 = 91`:
-```ignore
+```text
         0 1 1 1 = 7
 *       1 1 0 1 = 13
 ---------------
@@ -109,7 +109,7 @@ Suppose `p = 7` and we try to add `3 + 1`. Values should be within the range \\(
 ### Addition
 Let's look at an addition example, treating the coefficients as carryless arithmetic binary digits. Take `p = 9` (meaning digits are in the interval \\([-4,4]\\)) and add `15 = 4 0 -1`[^3] with `8 = 2 2 -4`.
 
-```ignore
+```text
   4 0 -1 = 15
 + 2 2 -4 = 8
 --------
@@ -127,7 +127,7 @@ If we increase `p` to `13` and repeat the example, we do get the correct answer 
 ### Multiplication
 Next, let's consider canonical representations of `31 = 1 1 1 1 1` and `15 = 0 1 1 1 1` when `p = 7` (i.e. digits in interval \\([-3, 3]\\)). Adding these numbers doesn't lead to overflow, but what about multiplication? Let's find out:
 
-```ignore
+```text
              1  1  1  1  1 = 31
 *            0  1  1  1  1 = 15
 --------------------------

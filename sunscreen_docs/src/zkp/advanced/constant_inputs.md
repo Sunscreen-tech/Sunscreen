@@ -57,7 +57,7 @@ performance is to enable tracing[^trace].
 If you run this ZKP program on the polynomial with coefficients `1,...,100`
 evaluated at the point `2`, you'll see a trace like the following:
 
-```ignore
+```text
 [TRACE sunscreen_runtime::runtime] Starting JIT (prover)...
 [TRACE sunscreen_runtime::runtime] Prover JIT time 0.002542035s
 [TRACE sunscreen_runtime::runtime] Starting backend prove...
@@ -98,7 +98,7 @@ the factor \\(n\\).
 If we change the argument types from `#[public]` to `#[constant]` and rerun the
 trace, we'll see a big improvement:
 
-```ignore
+```text
 [TRACE sunscreen_runtime::runtime] Starting JIT (prover)...
 [TRACE sunscreen_runtime::runtime] Prover JIT time 0.002529488s
 [TRACE sunscreen_runtime::runtime] Starting backend prove...

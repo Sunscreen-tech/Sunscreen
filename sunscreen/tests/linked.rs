@@ -14,7 +14,7 @@ mod linked_tests {
     };
     use sunscreen::{Error, ZkpProgramFnExt};
     use sunscreen_fhe_program::SchemeType;
-    use sunscreen_runtime::{FheZkpRuntime, LinkedProof, LogProofBuilder, Params};
+    use sunscreen_runtime::{FheZkpRuntime, LinkedProof, LogProofBuilder, Params, ZkpProgramInput};
     use sunscreen_zkp_backend::bulletproofs::BulletproofsBackend;
 
     lazy_static! {
@@ -54,8 +54,8 @@ mod linked_tests {
             .compile()
             .unwrap();
         let rt = FheZkpRuntime::new(app.params(), &BulletproofsBackend::new()).unwrap();
-
         let valid_transaction_zkp = app.get_zkp_program(valid_transaction).unwrap();
+
         let (public_key, _secret_key) = rt.generate_keys().unwrap();
 
         let balance = 10i64;
@@ -99,8 +99,8 @@ mod linked_tests {
             .compile()
             .unwrap();
         let rt = FheZkpRuntime::new(app.params(), &BulletproofsBackend::new()).unwrap();
-
         let valid_transaction_zkp = app.get_zkp_program(valid_transaction).unwrap();
+
         let (public_key, _secret_key) = rt.generate_keys().unwrap();
 
         let balance = 10i64;
@@ -136,11 +136,11 @@ mod linked_tests {
             .compile()
             .unwrap();
         let rt = FheZkpRuntime::new(app.params(), &BulletproofsBackend::new()).unwrap();
-
         let is_eq_zkp = app.get_zkp_program(is_eq).unwrap();
+
         let (public_key, _secret_key) = rt.generate_keys().unwrap();
 
-        for val in [3, -3] {
+        for val in [3, 0, -3] {
             let mut proof_builder = LogProofBuilder::new(&rt);
             let (_ct, val_msg) = proof_builder
                 .encrypt_and_share(&Signed::from(val), &public_key)
@@ -160,6 +160,59 @@ mod linked_tests {
                 }
             ));
             lp.verify(&is_eq_zkp, vec![BulletproofsField::from(val)], vec![])
+                .expect("Failed to verify linked proof");
+        }
+    }
+
+    #[zkp_program]
+    fn is_eq_3<F: FieldSpec>(
+        #[shared] x: BfvSigned<F>,
+        #[shared] y: BfvSigned<F>,
+        #[private] z: Field<F>,
+    ) {
+        let x = x.into_field_elem();
+        let y = y.into_field_elem();
+        x.constrain_eq(y);
+        y.constrain_eq(z);
+    }
+
+    #[test]
+    fn test_same_msg_proof() {
+        // proves equivalence of pt x and pt x1 within SDLP
+        // proves equivalence of pt x, pt y, and field elem z within ZKP
+        let app = Compiler::new()
+            .fhe_program(doggie)
+            .with_params(&SMALL_PARAMS)
+            .zkp_backend::<BulletproofsBackend>()
+            .zkp_program(is_eq_3)
+            .compile()
+            .unwrap();
+        let rt = FheZkpRuntime::new(app.params(), &BulletproofsBackend::new()).unwrap();
+        let is_eq_zkp = app.get_zkp_program(is_eq_3).unwrap();
+
+        let (public_key, _secret_key) = rt.generate_keys().unwrap();
+
+        for val in [3, 0, -3] {
+            let mut proof_builder = LogProofBuilder::new(&rt);
+            let (_ct_x, x_msg) = proof_builder
+                .encrypt_and_share(&Signed::from(val), &public_key)
+                .unwrap();
+            // proves same plaintext within SDLP
+            let _ct_x1 = proof_builder.encrypt_shared(&x_msg, &public_key).unwrap();
+            // proves same value within ZKP
+            let (_ct_y, y_msg) = proof_builder
+                .encrypt_and_share(&Signed::from(val), &public_key)
+                .unwrap();
+            proof_builder
+                .zkp_program(&is_eq_zkp)
+                .unwrap()
+                .shared_input(&x_msg)
+                .shared_input(&y_msg)
+                .private_input(BulletproofsField::from(val));
+
+            let sdlp = proof_builder.build_logproof().unwrap();
+            let lp = proof_builder.build_linkedproof().unwrap();
+            lp.verify::<ZkpProgramInput>(&is_eq_zkp, vec![], vec![])
                 .expect("Failed to verify linked proof");
         }
     }

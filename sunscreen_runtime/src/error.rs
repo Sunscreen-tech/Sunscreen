@@ -132,6 +132,11 @@ pub enum Error {
     #[cfg(feature = "linkedproofs")]
     #[error("Linked proof error: {0}")]
     LinkedProofError(#[from] crate::linked::LinkedProofError),
+
+    /// Error when proving or verifying a solo logproof.
+    #[cfg(feature = "linkedproofs")]
+    #[error("Log proof error: {0}")]
+    LogProofError(#[from] logproof::ProofError),
 }
 
 const_assert!(std::mem::size_of::<Error>() <= 24);

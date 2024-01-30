@@ -12,7 +12,8 @@ use curve25519_dalek::{ristretto::RistrettoPoint, scalar::Scalar};
 use logproof::{
     math::rand256,
     rings::{ZqSeal128_1024, ZqSeal128_2048, ZqSeal128_4096, ZqSeal128_8192},
-    LogProof, LogProofGenerators, LogProofProverKnowledge, LogProofVerifierKnowledge, ProofError,
+    InnerProductVerifierKnowledge, LogProof, LogProofGenerators, LogProofProverKnowledge,
+    LogProofVerifierKnowledge, ProofError,
 };
 use merlin::Transcript;
 use paste::paste;
@@ -102,6 +103,7 @@ fn new_single_party_with_shared_generators(
 }
 
 impl LinkedProof {
+    const TRANSCRIPT_LABEL: &'static [u8] = b"linked-sdlp-and-r1cs-bp";
     /**
      * This function creates a linked proof between a short discrete log proof
      * (SDLP) and a R1CS bulletproof. An example use case is proving an encryption
@@ -134,7 +136,7 @@ impl LinkedProof {
         I: Into<ZkpProgramInput> + Clone,
     {
         let backend = BulletproofsBackend::new();
-        let mut transcript = Transcript::new(b"linked-sdlp-and-r1cs-bp");
+        let mut transcript = Transcript::new(Self::TRANSCRIPT_LABEL);
 
         let vk = prover_knowledge.vk();
         let shared_inputs_binary = shared_indices
@@ -277,7 +279,7 @@ impl LinkedProof {
     {
         let runtime = ZkpRuntime::new(BulletproofsBackend::new())?;
 
-        let mut transcript = Transcript::new(b"linked-sdlp-and-r1cs-bp");
+        let mut transcript = Transcript::new(Self::TRANSCRIPT_LABEL);
 
         self.sdlp
             .vk
@@ -307,6 +309,40 @@ impl LinkedProof {
                 return Err(LinkedProofError::SharedCommitmentsNotEqual.into());
             }
         }
+
+        Ok(())
+    }
+}
+
+impl Sdlp {
+    const TRANSCRIPT_LABEL: &'static [u8] = b"solo-sdlp";
+    /// This function creates a singular SDLP, not linked to any other proof system. This can be
+    /// used when only proving valid encryptions of known values, but _not_ for proving any
+    /// properties of those underlying values.
+    ///
+    /// The [builder methods](`LogProofBuilder`) offer an easier way to construct this proof.
+    pub fn create(prover_knowledge: &SealSdlpProverKnowledge) -> Result<Self> {
+        let mut transcript = Transcript::new(Self::TRANSCRIPT_LABEL);
+        let vk = prover_knowledge.vk();
+        let gen = LogProofGenerators::new(vk.l() as usize);
+        let u = InnerProductVerifierKnowledge::get_u();
+        let proof = prover_knowledge.create_logproof(&mut transcript, &gen.g, &gen.h, &u);
+
+        Ok(Self {
+            proof,
+            vk,
+            g: gen.g,
+            h: gen.h,
+            u,
+        })
+    }
+
+    /// This function verifies a solo SDLP.
+    pub fn verify(&self) -> Result<()> {
+        let mut transcript = Transcript::new(Self::TRANSCRIPT_LABEL);
+
+        self.vk
+            .verify(&self.proof, &mut transcript, &self.g, &self.h, &self.u)?;
 
         Ok(())
     }

@@ -245,8 +245,8 @@ mod linked {
 
     use crate::{
         marker, BFVEncryptionComponents, Ciphertext, CompiledZkpProgram, GenericRuntime,
-        LinkedProof, NumCiphertexts, Params, Plaintext, PublicKey, Result, SealSdlpProverKnowledge,
-        TryIntoPlaintext, ZkpProgramInput,
+        LinkedProof, NumCiphertexts, Params, Plaintext, PublicKey, Result, Sdlp,
+        SealSdlpProverKnowledge, TryIntoPlaintext, ZkpProgramInput,
     };
 
     /// A trait for sharing a plaintext with a ZKP program.
@@ -452,32 +452,35 @@ mod linked {
             })
         }
 
-        /// Build the [`SealSdlpProverKnowledge`] for the statements added to this builder.
+        /// Build the [`Sdlp`] for the statements added to this builder.
         ///
-        /// You can use this to create a [`crate::linked::LinkedProof`] if you have enabled the
-        /// `linkedproofs` feature. If you have constructed this builder with a ZKP capable runtime
-        /// and bulletproofs backend, you may also wish to use the available linkedproof methods on
-        /// this builder.
-        pub fn build_logproof(&self) -> Result<SealSdlpProverKnowledge> {
+        /// You can use this as a standalone proof, or alternatively see
+        /// [`Self::build_linkedproof`] to prove additional properties about the underlying
+        /// plaintexts.
+        pub fn build_logproof(&self) -> Result<Sdlp> {
+            Sdlp::create(&self.build_sdlp_pk()?)
+        }
+
+        fn build_sdlp_pk(&self) -> Result<SealSdlpProverKnowledge> {
             let params = self.runtime.params();
             match (params.lattice_dimension, params.security_level) {
                 (1024, SecurityLevel::TC128) => Ok(SealSdlpProverKnowledge::from(
-                    self.build_generic_logproof::<1, SealQ128_1024>()?,
+                    self.build_sdlp_pk_generic::<1, SealQ128_1024>()?,
                 )),
                 (2048, SecurityLevel::TC128) => Ok(SealSdlpProverKnowledge::from(
-                    self.build_generic_logproof::<1, SealQ128_2048>()?,
+                    self.build_sdlp_pk_generic::<1, SealQ128_2048>()?,
                 )),
                 (4096, SecurityLevel::TC128) => Ok(SealSdlpProverKnowledge::from(
-                    self.build_generic_logproof::<2, SealQ128_4096>()?,
+                    self.build_sdlp_pk_generic::<2, SealQ128_4096>()?,
                 )),
                 (8192, SecurityLevel::TC128) => Ok(SealSdlpProverKnowledge::from(
-                    self.build_generic_logproof::<3, SealQ128_8192>()?,
+                    self.build_sdlp_pk_generic::<3, SealQ128_8192>()?,
                 )),
                 _ => Err(BuilderError::UnsupportedParameters(Box::new(params.clone())).into()),
             }
         }
 
-        fn build_generic_logproof<const N: usize, B: BarrettConfig<N>>(
+        fn build_sdlp_pk_generic<const N: usize, B: BarrettConfig<N>>(
             &self,
         ) -> Result<LogProofProverKnowledge<Zq<N, BarrettBackend<N, B>>>> {
             let params = self.runtime.params();
@@ -549,7 +552,7 @@ mod linked {
         /// Output a [`LinkedProof`] from the encryption statements and ZKP program and inputs added to
         /// this builder.
         pub fn build_linkedproof(&mut self) -> Result<crate::linked::LinkedProof> {
-            let sdlp = self.build_logproof()?;
+            let sdlp = self.build_sdlp_pk()?;
             let program = self.compiled_zkp_program.ok_or_else(|| {
                 BuilderError::user_error("Cannot build linked proof without a compiled ZKP program. Use the `.zkp_program()` method")
             })?;

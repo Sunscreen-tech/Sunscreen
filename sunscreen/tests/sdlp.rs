@@ -1,11 +1,10 @@
 #[cfg(feature = "linkedproofs")]
 mod sdlp_tests {
     use lazy_static::lazy_static;
-    use logproof::{InnerProductVerifierKnowledge, LogProofGenerators, Transcript};
     use sunscreen::types::bfv::Signed;
     use sunscreen_fhe_program::SchemeType;
 
-    use sunscreen_runtime::{FheRuntime, LogProofBuilder, Params, SealSdlpProverKnowledge};
+    use sunscreen_runtime::{FheRuntime, LogProofBuilder, Params};
 
     lazy_static! {
         static ref SMALL_PARAMS: Params = Params {
@@ -28,7 +27,7 @@ mod sdlp_tests {
             .unwrap();
 
         let sdlp = logproof_builder.build_logproof().unwrap();
-        prove_and_verify_seal(sdlp)
+        sdlp.verify().unwrap();
     }
 
     #[test]
@@ -47,18 +46,6 @@ mod sdlp_tests {
             .encrypt(&Signed::from(3), &public_key)
             .unwrap();
         let sdlp = logproof_builder.build_logproof().unwrap();
-
-        prove_and_verify_seal(sdlp)
-    }
-
-    fn prove_and_verify_seal(pk: SealSdlpProverKnowledge) {
-        let vk = pk.vk();
-        let gen: LogProofGenerators = LogProofGenerators::new(vk.l() as usize);
-        let u = InnerProductVerifierKnowledge::get_u();
-        let mut p_t = Transcript::new(b"test");
-        let proof = pk.create_logproof(&mut p_t, &gen.g, &gen.h, &u);
-        let mut v_t = Transcript::new(b"test");
-
-        vk.verify(&proof, &mut v_t, &gen.g, &gen.h, &u).unwrap()
+        sdlp.verify().unwrap();
     }
 }

@@ -2,9 +2,8 @@ use merlin::Transcript;
 
 use logproof::{
     rings::{SealQ128_1024, SealQ128_2048, SealQ128_4096, SealQ128_8192},
-    test::{seal_bfv_encryption_linear_relation, LatticeProblem},
-    InnerProductVerifierKnowledge, LogProof, LogProofGenerators, LogProofProverKnowledge,
-    LogProofTranscript,
+    test::seal_bfv_encryption_linear_relation,
+    InnerProductVerifierKnowledge, LogProof, LogProofGenerators, LogProofTranscript,
 };
 use sunscreen_math::ring::BarrettConfig;
 
@@ -12,10 +11,7 @@ fn zero_knowledge_proof<B, const N: usize>(message: u64, degree: u64, plain_modu
 where
     B: BarrettConfig<N>,
 {
-    let LatticeProblem { a, s, t, f, b } =
-        seal_bfv_encryption_linear_relation::<B, N>(message, degree, plain_modulus, true);
-
-    let pk = LogProofProverKnowledge::new(&a, &s, &t, &b, &f);
+    let pk = seal_bfv_encryption_linear_relation::<B, N>(message, degree, plain_modulus);
 
     let mut transcript = Transcript::new(b"test");
     let mut verify_transcript = transcript.clone();
@@ -45,15 +41,15 @@ fn zero_knowledge_bfv_proof_1024() {
 
 #[test]
 fn full_knowledge_bfv_proof_2048() {
-    seal_bfv_encryption_linear_relation::<SealQ128_2048, 1>(12, 2048, 1032193, true);
+    seal_bfv_encryption_linear_relation::<SealQ128_2048, 1>(12, 2048, 1032193);
 }
 
 #[test]
 fn full_knowledge_bfv_proof_4096() {
-    seal_bfv_encryption_linear_relation::<SealQ128_4096, 2>(12, 4096, 1032193, true);
+    seal_bfv_encryption_linear_relation::<SealQ128_4096, 2>(12, 4096, 1032193);
 }
 
 #[test]
 fn full_knowledge_bfv_proof_8192() {
-    seal_bfv_encryption_linear_relation::<SealQ128_8192, 3>(12, 8192, 1032193, true);
+    seal_bfv_encryption_linear_relation::<SealQ128_8192, 3>(12, 8192, 1032193);
 }

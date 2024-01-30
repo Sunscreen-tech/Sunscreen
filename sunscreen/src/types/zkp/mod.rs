@@ -196,8 +196,20 @@ pub trait NumFieldElements {
  * programs.
  */
 pub trait ZkpType: NumFieldElements + Sized + TypeName + ToNativeFields {}
-
 impl<T: NumFieldElements + Sized + TypeName + ToNativeFields> ZkpType for T {}
+
+/// The dynamic number of native field elements needed to represent a ZKP type.
+pub trait DynamicNumFieldElements {
+    /// Calculate the number of native field elements needed to represent this type.
+    fn num_native_field_elements(plaintext_modulus: u64) -> usize;
+}
+
+/**
+ * Encapsulates the traits required for a shared type to be used in ZKP
+ * programs.
+ */
+pub trait SharedZkpType: DynamicNumFieldElements + Sized + TypeName + ToNativeFields {}
+impl<T: DynamicNumFieldElements + Sized + TypeName + ToNativeFields> SharedZkpType for T {}
 
 /**
  * Methods for coercing ZKP data types.

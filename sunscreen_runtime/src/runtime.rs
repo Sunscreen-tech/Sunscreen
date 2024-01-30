@@ -9,9 +9,9 @@ use crate::ProofBuilder;
 use crate::VerificationBuilder;
 use crate::ZkpProgramInput;
 use crate::{
-    run_program_unchecked, serialization::WithContext, Ciphertext, FheProgramInput,
-    InnerCiphertext, InnerPlaintext, Plaintext, PrivateKey, PublicKey, SealCiphertext, SealData,
-    SealPlaintext, TryFromPlaintext, TryIntoPlaintext, TypeNameInstance,
+    run_program_unchecked, serialization::WithContext, Ciphertext, CompiledZkpProgram,
+    FheProgramInput, InnerCiphertext, InnerPlaintext, Plaintext, PrivateKey, PublicKey,
+    SealCiphertext, SealData, SealPlaintext, TryFromPlaintext, TryIntoPlaintext, TypeNameInstance,
 };
 
 use log::trace;
@@ -25,7 +25,6 @@ use seal_fhe::{
 
 pub use sunscreen_compiler_common::{Type, TypeName};
 use sunscreen_zkp_backend::BigInt;
-use sunscreen_zkp_backend::CompiledZkpProgram;
 use sunscreen_zkp_backend::Proof;
 use sunscreen_zkp_backend::ZkpBackend;
 
@@ -701,8 +700,12 @@ where
 
         let now = Instant::now();
 
-        let prog =
-            backend.jit_prover(program, &private_inputs, &public_inputs, &constant_inputs)?;
+        let prog = backend.jit_prover(
+            &program.zkp_program_fn,
+            &private_inputs,
+            &public_inputs,
+            &constant_inputs,
+        )?;
 
         trace!("Prover JIT time {}s", now.elapsed().as_secs_f64());
 
@@ -748,8 +751,12 @@ where
 
         let now = Instant::now();
 
-        let prog =
-            backend.jit_prover(program, &private_inputs, &public_inputs, &constant_inputs)?;
+        let prog = backend.jit_prover(
+            &program.zkp_program_fn,
+            &private_inputs,
+            &public_inputs,
+            &constant_inputs,
+        )?;
 
         trace!("Prover JIT time {}s", now.elapsed().as_secs_f64());
 
@@ -810,7 +817,8 @@ where
 
         let now = Instant::now();
 
-        let prog = backend.jit_verifier(program, &constant_inputs, &public_inputs)?;
+        let prog =
+            backend.jit_verifier(&program.zkp_program_fn, &constant_inputs, &public_inputs)?;
 
         trace!("Verifier JIT time {}s", now.elapsed().as_secs_f64());
         trace!("Starting backend verify...");
@@ -848,7 +856,8 @@ where
 
         let now = Instant::now();
 
-        let prog = backend.jit_verifier(program, &constant_inputs, &public_inputs)?;
+        let prog =
+            backend.jit_verifier(&program.zkp_program_fn, &constant_inputs, &public_inputs)?;
 
         trace!("Verifier JIT time {}s", now.elapsed().as_secs_f64());
         trace!("Starting backend verify...");

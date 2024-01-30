@@ -21,10 +21,10 @@ use sunscreen_zkp_backend::{
     bulletproofs::{
         BulletproofProverParameters, BulletproofVerifierParameters, BulletproofsBackend,
     },
-    BigInt, CompiledZkpProgram, Proof, ZkpBackend,
+    BigInt, Proof, ZkpBackend,
 };
 
-use crate::{Result, ZkpProgramInput, ZkpRuntime};
+use crate::{CompiledZkpProgram, Result, ZkpProgramInput, ZkpRuntime};
 
 #[derive(Debug, Clone)]
 /// SDLP proof and associated information for verification
@@ -200,14 +200,14 @@ impl LinkedProof {
             .collect::<Vec<_>>();
 
         let metrics = backend.metrics(
-            program,
+            &program.zkp_program_fn,
             &private_inputs_bigint,
             &public_inputs_bigint,
             &constant_inputs_bigint,
         )?;
 
         let constraint_count = backend.constraint_count(
-            program,
+            &program.zkp_program_fn,
             &private_inputs_bigint,
             &public_inputs_bigint,
             &constant_inputs_bigint,
@@ -230,7 +230,7 @@ impl LinkedProof {
             BulletproofProverParameters::new(verifier_parameters.clone(), half_rho);
 
         let prog = backend.jit_prover(
-            program,
+            &program.zkp_program_fn,
             &private_inputs_bigint,
             &public_inputs_bigint,
             &constant_inputs_bigint,

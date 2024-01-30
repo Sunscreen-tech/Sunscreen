@@ -1,9 +1,9 @@
 //! This module various builders.
 
 use merlin::Transcript;
-use sunscreen_zkp_backend::{CompiledZkpProgram, Proof, ZkpBackend};
+use sunscreen_zkp_backend::{Proof, ZkpBackend};
 
-use crate::{marker, GenericRuntime, Params, Result, ZkpProgramInput};
+use crate::{marker, CompiledZkpProgram, GenericRuntime, Params, Result, ZkpProgramInput};
 
 /// Errors that can occur when building a log proof or linked proof.
 #[derive(PartialEq, Eq, Debug, Clone, thiserror::Error)]
@@ -241,12 +241,12 @@ mod linked {
     use seal_fhe::SecurityLevel;
     use sunscreen_compiler_common::{Type, TypeName};
     use sunscreen_math::ring::{BarrettBackend, BarrettConfig, Zq};
-    use sunscreen_zkp_backend::{bulletproofs::BulletproofsBackend, CompiledZkpProgram};
+    use sunscreen_zkp_backend::bulletproofs::BulletproofsBackend;
 
     use crate::{
-        marker, BFVEncryptionComponents, Ciphertext, GenericRuntime, LinkedProof, NumCiphertexts,
-        Params, Plaintext, PublicKey, Result, SealSdlpProverKnowledge, TryIntoPlaintext,
-        ZkpProgramInput,
+        marker, BFVEncryptionComponents, Ciphertext, CompiledZkpProgram, GenericRuntime,
+        LinkedProof, NumCiphertexts, Params, Plaintext, PublicKey, Result, SealSdlpProverKnowledge,
+        TryIntoPlaintext, ZkpProgramInput,
     };
 
     /// A trait for sharing a plaintext with a ZKP program.
@@ -505,9 +505,19 @@ mod linked {
         /// Add a ZKP program to be linked with the logproof.
         ///
         /// This method is required to call [`Self::build_linkedproof`].
-        pub fn zkp_program(&mut self, program: &'z CompiledZkpProgram) -> &mut Self {
+        pub fn zkp_program(&mut self, program: &'z CompiledZkpProgram) -> Result<&mut Self> {
+            let params = program.metadata.params.as_ref().ok_or_else(|| {
+                BuilderError::user_error(
+                    "Cannot link a ZKP program without associated FHE parameters. Make sure your ZKP program has #[shared] parameters and is compiled alongside an FHE program.",
+                )
+            })?;
+            if params != self.runtime.params() {
+                return Err(BuilderError::user_error(
+                    "The FHE parameters of the ZKP program do not match the FHE parameters of the runtime.",
+                ));
+            }
             self.compiled_zkp_program = Some(program);
-            self
+            Ok(self)
         }
 
         /// Add a shared private input to the ZKP program.

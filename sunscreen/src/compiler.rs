@@ -1,5 +1,6 @@
 use crate::fhe::{FheCompile, FheFrontendCompilation};
 use crate::params::{determine_params, PlainModulusConstraint};
+use crate::zkp::{NotShared, Shared};
 use crate::{
     zkp, Application, CallSignature, Error, FheProgramMetadata, Params, RequiredKeys, Result,
     SchemeType, SecurityLevel, ZkpProgramFn,
@@ -7,8 +8,11 @@ use crate::{
 use std::collections::{HashMap, HashSet};
 use std::marker::PhantomData;
 use sunscreen_fhe_program::FheProgramTrait;
-use sunscreen_runtime::{marker, CompiledFheProgram, Fhe, FheRuntime, FheZkp, Zkp};
-use sunscreen_zkp_backend::{CompiledZkpProgram, FieldSpec, ZkpBackend};
+use sunscreen_runtime::{
+    marker, CompiledFheProgram, CompiledZkpProgram, Fhe, FheRuntime, FheZkp, Zkp,
+    ZkpProgramMetadata,
+};
+use sunscreen_zkp_backend::{FieldSpec, ZkpBackend};
 
 #[derive(Debug, Clone)]
 enum ParamsMode {
@@ -159,37 +163,37 @@ impl<B> Default for ZkpCompilerData<B> {
     fn default() -> Self {
         Self {
             zkp_program_fns: vec![],
+            shared_zkp_program_fns: vec![],
         }
     }
 }
 
 struct ZkpCompilerData<B> {
-    // In practice, B should always be BoxZkpFn<Field = F>> where
-    // F: FieldSpec.
-    zkp_program_fns: Vec<B>,
+    zkp_program_fns: Vec<Box<dyn ZkpProgramFn<B, Share = NotShared>>>,
+    shared_zkp_program_fns: Vec<Box<dyn ZkpProgramFn<B, Share = Shared>>>,
 }
 
-enum CompilerData<B> {
+enum CompilerData<F> {
     None,
     Fhe(FheCompilerData),
-    Zkp(ZkpCompilerData<B>),
-    FheZkp(FheCompilerData, ZkpCompilerData<B>),
+    Zkp(ZkpCompilerData<F>),
+    FheZkp(FheCompilerData, ZkpCompilerData<F>),
 }
 
-impl<B> CompilerData<B> {
+impl<F> CompilerData<F> {
     fn new_fhe(data: FheCompilerData) -> Self {
         Self::Fhe(data)
     }
 
-    fn new_zkp(data: ZkpCompilerData<B>) -> Self {
+    fn new_zkp(data: ZkpCompilerData<F>) -> Self {
         Self::Zkp(data)
     }
 
-    fn new_fhe_zkp(fhe_data: FheCompilerData, zkp_data: ZkpCompilerData<B>) -> Self {
+    fn new_fhe_zkp(fhe_data: FheCompilerData, zkp_data: ZkpCompilerData<F>) -> Self {
         Self::FheZkp(fhe_data, zkp_data)
     }
 
-    fn zkp_data_mut(&mut self) -> &mut ZkpCompilerData<B> {
+    fn zkp_data_mut(&mut self) -> &mut ZkpCompilerData<F> {
         match self {
             Self::Zkp(d) => d,
             Self::FheZkp(_, d) => d,
@@ -197,7 +201,7 @@ impl<B> CompilerData<B> {
         }
     }
 
-    fn zkp_data(&self) -> &ZkpCompilerData<B> {
+    fn zkp_data(&self) -> &ZkpCompilerData<F> {
         match self {
             Self::Zkp(d) => d,
             Self::FheZkp(_, d) => d,
@@ -221,7 +225,7 @@ impl<B> CompilerData<B> {
         }
     }
 
-    fn unwrap_zkp(self) -> ZkpCompilerData<B> {
+    fn unwrap_zkp(self) -> ZkpCompilerData<F> {
         match self {
             Self::Zkp(d) => d,
             Self::FheZkp(_, d) => d,
@@ -238,13 +242,11 @@ impl<B> CompilerData<B> {
     }
 }
 
-type BoxZkpFn<F> = Box<dyn ZkpProgramFn<F>>;
-
 /**
  * A frontend compiler for Sunscreen FHE programs.
  */
-pub struct GenericCompiler<T, B> {
-    data: CompilerData<B>,
+pub struct GenericCompiler<T, F> {
+    data: CompilerData<F>,
     _phantom: PhantomData<T>,
 }
 
@@ -398,10 +400,42 @@ impl<T, B> GenericCompiler<T, B> {
     }
 }
 
-impl<T, B> GenericCompiler<T, BoxZkpFn<B>>
+impl<B> ZkpCompiler<B>
 where
     B: FieldSpec,
 {
+    /**
+     * Add the given FHE program for compilation.
+     */
+    pub fn fhe_program<F>(self, fhe_program_fn: F) -> FheZkpCompiler<B>
+    where
+        F: FheProgramFn + 'static,
+    {
+        let mut fhe_data = FheCompilerData::default();
+        fhe_data.fhe_program_fns.push(Box::new(fhe_program_fn));
+
+        FheZkpCompiler {
+            data: CompilerData::new_fhe_zkp(fhe_data, self.data.unwrap_zkp()),
+            _phantom: PhantomData,
+        }
+    }
+
+    /// Add the given ZKP program for compilation.
+    ///
+    /// Note that this method will not accept "shared" ZKP programs, which have inputs shared from
+    /// FHE programs. You must first call `fhe_program` to add an FHE program to unlock this
+    /// capability.
+    pub fn zkp_program<F>(mut self, zkp_program_fn: F) -> Self
+    where
+        F: ZkpProgramFn<B, Share = zkp::NotShared> + 'static,
+    {
+        self.data
+            .zkp_data_mut()
+            .zkp_program_fns
+            .push(Box::new(zkp_program_fn));
+        self
+    }
+
     fn compile_zkp(&self) -> Result<HashMap<String, CompiledZkpProgram>> {
         let zkp_data = self.data.zkp_data();
 
@@ -409,17 +443,36 @@ where
             .zkp_program_fns
             .iter()
             .map(|prog| {
-                let result = prog.build()?;
+                let result = prog.build(())?;
                 let result = zkp::compile(&result);
+                let metadata = ZkpProgramMetadata {
+                    params: None,
+                    signature: prog.signature(),
+                };
+                let compiled_program = CompiledZkpProgram {
+                    zkp_program_fn: result,
+                    metadata,
+                };
 
-                Ok((prog.name().to_owned(), result))
+                Ok((prog.name().to_owned(), compiled_program))
             })
             .collect::<Result<HashMap<_, _>>>()?;
 
         Ok(zkp_programs)
     }
 
-    fn compile_internal(self) -> Result<Application<T>> {
+    /**
+     * Compile the ZKP programs. If successful, returns an
+     * [`Application`] containing a compiled form of each
+     * `zkp_program` argument.
+     *
+     * # Remarks
+     * Each specified ZKP program must have a unique name,
+     * regardless of its parent module or crate. `compile` returns
+     * a [`Error::NameCollision`] if two or more FHE programs
+     * have the same name.
+     */
+    pub fn compile(self) -> Result<Application<Zkp>> {
         Application::new(HashMap::new(), self.compile_zkp()?)
     }
 }
@@ -428,7 +481,7 @@ impl FheCompiler {
     /**
      * Add the given FHE program for compilation.
      */
-    pub fn fhe_program<F>(mut self, fhe_program_fn: F) -> FheCompiler
+    pub fn fhe_program<F>(mut self, fhe_program_fn: F) -> Self
     where
         F: FheProgramFn + 'static,
     {
@@ -442,7 +495,7 @@ impl FheCompiler {
     /**
      * Set a ZKP backend for compiling ZKP programs.
      */
-    pub fn zkp_backend<B: ZkpBackend>(self) -> FheZkpCompiler<BoxZkpFn<B::Field>> {
+    pub fn zkp_backend<B: ZkpBackend>(self) -> FheZkpCompiler<B::Field> {
         let data = CompilerData::new_fhe_zkp(self.data.unwrap_fhe(), ZkpCompilerData::default());
 
         FheZkpCompiler {
@@ -474,56 +527,6 @@ impl FheCompiler {
     }
 }
 
-impl<B> ZkpCompiler<B>
-where
-    B: FieldSpec,
-{
-    /**
-     * Add the given FHE program for compilation.
-     */
-    pub fn fhe_program<F>(self, fhe_program_fn: F) -> FheZkpCompiler<B>
-    where
-        F: FheProgramFn + 'static,
-    {
-        let mut fhe_data = FheCompilerData::default();
-        fhe_data.fhe_program_fns.push(Box::new(fhe_program_fn));
-
-        FheZkpCompiler {
-            data: CompilerData::new_fhe_zkp(fhe_data, self.data.unwrap_zkp()),
-            _phantom: PhantomData,
-        }
-    }
-
-    /**
-     * Add the given FHE program for compilation.
-     */
-    pub fn zkp_program<F>(mut self, zkp_program_fn: F) -> Self
-    where
-        F: ZkpProgramFn<B> + 'static,
-    {
-        self.data
-            .zkp_data_mut()
-            .zkp_program_fns
-            .push(Box::new(zkp_program_fn));
-        self
-    }
-
-    /**
-     * Compile the ZKP programs. If successful, returns an
-     * [`Application`] containing a compiled form of each
-     * `zkp_program` argument.
-     *
-     * # Remarks
-     * Each specified ZKP program must have a unique name,
-     * regardless of its parent module or crate. `compile` returns
-     * a [`Error::NameCollision`] if two or more FHE programs
-     * have the same name.
-     */
-    pub fn compile(self) -> Result<Application<Zkp>> {
-        self.compile_internal()
-    }
-}
-
 impl<B> FheZkpCompiler<B>
 where
     B: FieldSpec,
@@ -549,11 +552,51 @@ where
     where
         F: ZkpProgramFn<B> + 'static,
     {
-        self.data
-            .zkp_data_mut()
-            .zkp_program_fns
-            .push(Box::new(zkp_program_fn));
+        let zkp_data = self.data.zkp_data_mut();
+        match zkp_program_fn.into_shared() {
+            Ok(shared) => zkp_data.shared_zkp_program_fns.push(shared),
+            Err(not_shared) => zkp_data.zkp_program_fns.push(not_shared),
+        }
         self
+    }
+
+    fn compile_zkp(&self, params: &Params) -> Result<HashMap<String, CompiledZkpProgram>> {
+        let zkp_data = self.data.zkp_data();
+
+        let shared_zkp_programs = zkp_data.shared_zkp_program_fns.iter().map(|prog| {
+            let result = prog.build(params.plain_modulus)?;
+            let result = zkp::compile(&result);
+            let metadata = ZkpProgramMetadata {
+                params: Some(params.clone()),
+                signature: prog.signature(),
+            };
+            let compiled_program = CompiledZkpProgram {
+                zkp_program_fn: result,
+                metadata,
+            };
+            Ok((prog.name().to_owned(), compiled_program))
+        });
+        let zkp_programs = zkp_data
+            .zkp_program_fns
+            .iter()
+            .map(|prog| {
+                let result = prog.build(())?;
+                let result = zkp::compile(&result);
+                let metadata = ZkpProgramMetadata {
+                    params: None,
+                    signature: prog.signature(),
+                };
+                let compiled_program = CompiledZkpProgram {
+                    zkp_program_fn: result,
+                    metadata,
+                };
+
+                Ok((prog.name().to_owned(), compiled_program))
+            })
+            .chain(shared_zkp_programs)
+            .collect::<Result<HashMap<_, _>>>()?;
+
+        Ok(zkp_programs)
     }
 
     /**
@@ -575,7 +618,14 @@ where
      * will return a [`Error::NameCollision`] error.
      */
     pub fn compile(self) -> Result<Application<FheZkp>> {
-        self.compile_internal()
+        let fhe_programs = self.compile_fhe()?;
+        let params = &fhe_programs
+            .values()
+            .next()
+            .ok_or(Error::NoPrograms)? // TODO better error for the user?
+            .metadata
+            .params;
+        Application::new(self.compile_fhe()?, self.compile_zkp(params)?)
     }
 }
 
@@ -634,8 +684,8 @@ where
  */
 pub type Compiler = GenericCompiler<(), ()>;
 pub type FheCompiler = GenericCompiler<Fhe, ()>;
-pub type ZkpCompiler<F> = GenericCompiler<Zkp, BoxZkpFn<F>>;
-pub type FheZkpCompiler<F> = GenericCompiler<FheZkp, BoxZkpFn<F>>;
+pub type ZkpCompiler<B> = GenericCompiler<Zkp, B>;
+pub type FheZkpCompiler<B> = GenericCompiler<FheZkp, B>;
 
 #[cfg(test)]
 mod tests {

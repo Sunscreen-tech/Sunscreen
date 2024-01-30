@@ -4,6 +4,7 @@ pub use semver::Version;
 use serde::{Deserialize, Serialize};
 use sunscreen_compiler_common::Type;
 use sunscreen_fhe_program::{FheProgram, SchemeType};
+use sunscreen_zkp_backend::CompiledZkpProgram as ZkpProgram;
 
 use crate::{Error, Result};
 
@@ -200,7 +201,7 @@ pub struct FheProgramMetadata {
  */
 pub struct CompiledFheProgram {
     /**
-     * The underlying FHE FHE program.
+     * The underlying FHE program.
      */
     pub fhe_program_fn: FheProgram,
 
@@ -209,6 +210,29 @@ pub struct CompiledFheProgram {
      * parameters needed by a [`Runtime`](crate::Runtime) to encrypt/decrypt its inputs/outputs.
      */
     pub metadata: FheProgramMetadata,
+}
+
+/// A serializable list of metadata for a ZKP program.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ZkpProgramMetadata {
+    /// The FHE scheme parameters, required for ZKP programs with FHE-shared inputs.
+    pub params: Option<Params>,
+
+    /// The call signature (arguments and returns) of the ZKP program.
+    pub signature: CallSignature,
+}
+
+/**
+ * A ZKP program with its associated metadata.
+ */
+#[derive(Clone)]
+pub struct CompiledZkpProgram {
+    /// The underlying ZKP program.
+    pub zkp_program_fn: ZkpProgram,
+
+    /// Information about the FHE program, including its call signature and the scheme
+    /// parameters needed for ZKP programs with FHE-shared inputs.
+    pub metadata: ZkpProgramMetadata,
 }
 
 #[cfg(test)]

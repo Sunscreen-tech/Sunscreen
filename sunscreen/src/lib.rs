@@ -55,7 +55,6 @@ use fhe::{FheOperation, Literal};
 use petgraph::stable_graph::StableGraph;
 use serde::{Deserialize, Serialize};
 use sunscreen_runtime::{marker, Fhe, FheZkp, Zkp};
-use sunscreen_zkp_backend::CompiledZkpProgram;
 
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -68,10 +67,10 @@ pub use seal_fhe::Plaintext as SealPlaintext;
 pub use sunscreen_compiler_macros::*;
 pub use sunscreen_fhe_program::{SchemeType, SecurityLevel};
 pub use sunscreen_runtime::{
-    CallSignature, Ciphertext, CompiledFheProgram, Error as RuntimeError, FheProgramInput,
-    FheProgramInputTrait, FheProgramMetadata, FheRuntime, FheZkpRuntime, InnerCiphertext,
-    InnerPlaintext, Params, Plaintext, PrivateKey, ProofBuilder, PublicKey, RequiredKeys, Runtime,
-    VerificationBuilder, WithContext, ZkpProgramInput, ZkpRuntime,
+    CallSignature, Ciphertext, CompiledFheProgram, CompiledZkpProgram, Error as RuntimeError,
+    FheProgramInput, FheProgramInputTrait, FheProgramMetadata, FheRuntime, FheZkpRuntime,
+    InnerCiphertext, InnerPlaintext, Params, Plaintext, PrivateKey, ProofBuilder, PublicKey,
+    RequiredKeys, Runtime, VerificationBuilder, WithContext, ZkpProgramInput, ZkpRuntime,
 };
 #[cfg(feature = "bulletproofs")]
 pub use sunscreen_zkp_backend::bulletproofs;

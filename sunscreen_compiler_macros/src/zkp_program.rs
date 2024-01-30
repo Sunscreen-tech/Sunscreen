@@ -1,5 +1,5 @@
 use proc_macro2::{Ident, Span, TokenStream};
-use quote::{quote, quote_spanned, ToTokens};
+use quote::{format_ident, quote, quote_spanned, ToTokens};
 use sunscreen_compiler_common::macros::{
     create_program_node, emit_signature, extract_fn_arguments, ExtractFnArgumentsError,
 };
@@ -107,6 +107,7 @@ fn parse_inner(_attr_params: ZkpProgramAttrs, input_fn: ItemFn) -> Result<TokenS
         }
     };
 
+    let mut is_shared = false;
     let mut public_seen = false;
     let mut constant_seen = false;
     let mut private_seen = false;
@@ -135,6 +136,7 @@ fn parse_inner(_attr_params: ZkpProgramAttrs, input_fn: ItemFn) -> Result<TokenS
                                     ));
                                 }
                                 arg_kind = ArgumentKind::Shared;
+                                is_shared = true;
                             },
                             Some("private") => {
                                 if public_seen || constant_seen {
@@ -186,20 +188,35 @@ fn parse_inner(_attr_params: ZkpProgramAttrs, input_fn: ItemFn) -> Result<TokenS
 
     let signature = emit_signature(&argument_types, &[]);
 
+    let build_arg = format_ident!("shared_input");
+
     let var_decl = unwrapped_inputs.iter().map(|t| {
-        let input_type = match t.0 {
-            ArgumentKind::Private | ArgumentKind::Shared => "private_input",
-            ArgumentKind::Public => "public_input",
-            ArgumentKind::Constant => "constant_input",
+        let (input_type, input_arg) = match t.0 {
+            ArgumentKind::Shared => ("shared_input", Some(&build_arg)),
+            ArgumentKind::Private => ("private_input", None),
+            ArgumentKind::Public => ("public_input", None),
+            ArgumentKind::Constant => ("constant_input", None),
         };
 
-        create_program_node(&t.2.to_string(), t.1, input_type)
+        create_program_node(&t.2.to_string(), t.1, input_type, input_arg)
     });
 
     let zkp_program_struct_name =
         Ident::new(&format!("{}_struct", zkp_program_name), Span::call_site());
 
     let zkp_program_name_literal = format!("{}", zkp_program_name);
+
+    let (associated_share_type, into_shared_variant, ext_impl) = if is_shared {
+        (quote! { sunscreen::zkp::Shared }, quote! {Ok}, None)
+    } else {
+        (
+            quote! { sunscreen::zkp::NotShared },
+            quote! {Err},
+            Some(quote! {
+                impl sunscreen::ZkpProgramFnExt for #zkp_program_struct_name {}
+            }),
+        )
+    };
 
     Ok(quote! {
         #[allow(non_camel_case_types)]
@@ -213,10 +230,12 @@ fn parse_inner(_attr_params: ZkpProgramAttrs, input_fn: ItemFn) -> Result<TokenS
         }
 
         impl <#generic_ident: #generic_bound> sunscreen::ZkpProgramFn<#generic_ident> for #zkp_program_struct_name {
-            fn build(&self) -> sunscreen::Result<sunscreen::zkp::ZkpFrontendCompilation> {
+            type Share = #associated_share_type;
+
+            fn build(&self, shared_input: <Self::Share as sunscreen::zkp::Share>::Input) -> sunscreen::Result<sunscreen::zkp::ZkpFrontendCompilation> {
                 use std::cell::RefCell;
                 use std::mem::transmute;
-                use sunscreen::{Error, INDEX_ARENA, Result, types::{zkp::{ProgramNode, CreateZkpProgramInput, ConstrainEq, IntoProgramNode}, TypeName}, zkp::{CURRENT_ZKP_CTX, ZkpContext, ZkpData}};
+                use sunscreen::{Error, INDEX_ARENA, Result, types::{zkp::{ProgramNode, CreateSharedZkpProgramInput, CreateZkpProgramInput, ConstrainEq, IntoProgramNode}, TypeName}, zkp::{CURRENT_ZKP_CTX, ZkpContext, ZkpData}};
 
                 let mut context = ZkpContext::new(ZkpData::new());
 
@@ -262,9 +281,14 @@ fn parse_inner(_attr_params: ZkpProgramAttrs, input_fn: ItemFn) -> Result<TokenS
             fn signature(&self) -> sunscreen::CallSignature {
                 #signature
             }
+
+            #[allow(clippy::type_complexity)]
+            fn into_shared(self) -> Result<std::boxed::Box<dyn sunscreen::ZkpProgramFn<F, Share = sunscreen::zkp::Shared>>, std::boxed::Box<dyn sunscreen::ZkpProgramFn<F, Share = sunscreen::zkp::NotShared>>> {
+                #into_shared_variant(std::boxed::Box::new(self))
+            }
         }
 
-        impl sunscreen::ZkpProgramFnExt for #zkp_program_struct_name {}
+        #ext_impl
 
         #[allow(non_upper_case_globals)]
         #vis const #zkp_program_name: #zkp_program_struct_name = #zkp_program_struct_name;

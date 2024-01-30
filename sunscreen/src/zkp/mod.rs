@@ -12,16 +12,49 @@ use std::sync::Arc;
 use std::vec;
 use std::{any::Any, cell::RefCell};
 
+mod sealed {
+    pub trait Sealed {}
+    impl Sealed for super::Shared {}
+    impl Sealed for super::NotShared {}
+}
+/// Restrict share indicator associated type to one of these values.
+pub trait Share: sealed::Sealed {
+    /// The input type that is necessary for this type of ZKP program.
+    type Input: Clone;
+}
+
+/// Indicates that a ZKP program contains inputs from shared FHE programs.
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct Shared;
+impl Share for Shared {
+    type Input = u64;
+}
+
+/// Indicates that a ZKP program does not contain shared inputs.
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct NotShared;
+impl Share for NotShared {
+    type Input = ();
+}
+
+type BoxedFn<F, S> = Box<dyn ZkpProgramFn<F, Share = S>>;
+
 /// An internal representation of a ZKP program specification.
 pub trait ZkpProgramFn<F: FieldSpec> {
+    /// Indicates whether or not this ZKP program contains shared inputs.
+    type Share: Share;
+
     /// Create a circuit from this specification.
-    fn build(&self) -> Result<ZkpFrontendCompilation>;
+    fn build(&self, shared_input: <Self::Share as Share>::Input) -> Result<ZkpFrontendCompilation>;
 
     /// Gets the call signature for this program.
     fn signature(&self) -> CallSignature;
 
     /// Gets the name of this program.
     fn name(&self) -> &str;
+
+    /// Runtime check if this ZKP program fn is shared.
+    fn into_shared(self) -> Result<BoxedFn<F, Shared>, BoxedFn<F, NotShared>>;
 }
 
 /// An extension of [`ZkpProgramFn`], providing helpers and convenience methods.
@@ -75,9 +108,9 @@ pub trait ZkpProgramFnExt {
     /// # Ok(())
     /// # }
     /// ```
-    fn compile<B: ZkpBackend>(&self) -> Result<CompiledZkpProgram>
+    fn compile<B: ZkpBackend>(&self) -> Result<crate::CompiledZkpProgram>
     where
-        Self: ZkpProgramFn<B::Field>,
+        Self: ZkpProgramFn<B::Field, Share = NotShared>,
         Self: Sized + Clone + AsRef<str> + 'static,
     {
         Ok(Compiler::new()
@@ -116,7 +149,7 @@ pub trait ZkpProgramFnExt {
     fn runtime_with<B: ZkpBackend>(&self, backend: B) -> Result<ZkpRuntime<B>>
     where
         B: 'static,
-        Self: ZkpProgramFn<B::Field>,
+        Self: ZkpProgramFn<B::Field, Share = NotShared>,
         Self: Sized + Clone + AsRef<str> + 'static,
     {
         Ok(ZkpRuntime::new(backend)?)
@@ -150,7 +183,7 @@ pub trait ZkpProgramFnExt {
     fn runtime<B: ZkpBackend + Default>(&self) -> Result<ZkpRuntime<B>>
     where
         B: 'static,
-        Self: ZkpProgramFn<B::Field>,
+        Self: ZkpProgramFn<B::Field, Share = NotShared>,
         Self: Sized + Clone + AsRef<str> + 'static,
     {
         self.runtime_with(B::default())

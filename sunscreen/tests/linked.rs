@@ -8,6 +8,7 @@ mod linked_tests {
     use sunscreen::types::bfv::{Signed, Unsigned, Unsigned64};
     use sunscreen::types::zkp::{AsFieldElement, BfvSigned, BulletproofsField, Mod};
     use sunscreen::{
+        fhe_program,
         types::zkp::{ConstrainCmp, Field, FieldSpec, ProgramNode},
         zkp_program, zkp_var, Compiler,
     };
@@ -16,21 +17,11 @@ mod linked_tests {
     use sunscreen_runtime::{FheZkpRuntime, LinkedProof, LogProofBuilder, Params};
     use sunscreen_zkp_backend::bulletproofs::BulletproofsBackend;
 
-    lazy_static! {
-        static ref SMALL_PARAMS: Params = Params {
-            lattice_dimension: 1024,
-            coeff_modulus: vec![0x7e00001],
-            plain_modulus: 4_096,
-            scheme_type: SchemeType::Bfv,
-            security_level: sunscreen::SecurityLevel::TC128,
-        };
-    }
+    #[fhe_program(scheme = "bfv")]
+    fn doggie() {}
 
     #[zkp_program]
-    fn valid_transaction<F: FieldSpec>(
-        #[private] tx: BfvSigned<F, 13>,
-        #[public] balance: Field<F>,
-    ) {
+    fn valid_transaction<F: FieldSpec>(#[shared] tx: BfvSigned<F>, #[public] balance: Field<F>) {
         let lower_bound = zkp_var!(0);
 
         // Reconstruct tx
@@ -45,11 +36,16 @@ mod linked_tests {
 
     #[test]
     fn test_valid_transaction_example() {
-        let rt = FheZkpRuntime::new(&SMALL_PARAMS, &BulletproofsBackend::new()).unwrap();
+        let app = Compiler::new()
+            .fhe_program(doggie)
+            .zkp_backend::<BulletproofsBackend>()
+            .zkp_program(valid_transaction)
+            .compile()
+            .unwrap();
+        let rt = FheZkpRuntime::new(app.params(), &BulletproofsBackend::new()).unwrap();
 
+        let valid_transaction_zkp = app.get_zkp_program(valid_transaction).unwrap();
         let (public_key, _secret_key) = rt.generate_keys().unwrap();
-
-        let valid_transaction_zkp = valid_transaction.compile::<BulletproofsBackend>().unwrap();
 
         let balance = 10i64;
 
@@ -64,6 +60,7 @@ mod linked_tests {
             println!("Performing linked proof");
             let lp = proof_builder
                 .zkp_program(&valid_transaction_zkp)
+                .unwrap()
                 .shared_input(&tx_msg)
                 .public_input(BulletproofsField::from(balance))
                 .build_linkedproof()
@@ -83,9 +80,16 @@ mod linked_tests {
 
     #[test]
     fn test_invalid_transaction_example() {
-        let rt = FheZkpRuntime::new(&SMALL_PARAMS, &BulletproofsBackend::new()).unwrap();
+        let app = Compiler::new()
+            .fhe_program(doggie)
+            .zkp_backend::<BulletproofsBackend>()
+            .zkp_program(valid_transaction)
+            .compile()
+            .unwrap();
+        let rt = FheZkpRuntime::new(app.params(), &BulletproofsBackend::new()).unwrap();
+
+        let valid_transaction_zkp = app.get_zkp_program(valid_transaction).unwrap();
         let (public_key, _secret_key) = rt.generate_keys().unwrap();
-        let valid_transaction_zkp = valid_transaction.compile::<BulletproofsBackend>().unwrap();
 
         let balance = 10i64;
 
@@ -96,6 +100,7 @@ mod linked_tests {
                 .unwrap();
             proof_builder
                 .zkp_program(&valid_transaction_zkp)
+                .unwrap()
                 .shared_input(&tx_msg)
                 .public_input(BulletproofsField::from(balance));
 
@@ -105,15 +110,22 @@ mod linked_tests {
     }
 
     #[zkp_program]
-    fn is_eq<F: FieldSpec>(#[shared] x: BfvSigned<F, 13>, #[public] y: Field<F>) {
+    fn is_eq<F: FieldSpec>(#[shared] x: BfvSigned<F>, #[public] y: Field<F>) {
         x.into_field_elem().constrain_eq(y);
     }
 
     #[test]
     fn test_is_eq() {
-        let rt = FheZkpRuntime::new(&SMALL_PARAMS, &BulletproofsBackend::new()).unwrap();
+        let app = Compiler::new()
+            .fhe_program(doggie)
+            .zkp_backend::<BulletproofsBackend>()
+            .zkp_program(is_eq)
+            .compile()
+            .unwrap();
+        let rt = FheZkpRuntime::new(app.params(), &BulletproofsBackend::new()).unwrap();
+
+        let is_eq_zkp = app.get_zkp_program(is_eq).unwrap();
         let (public_key, _secret_key) = rt.generate_keys().unwrap();
-        let is_eq_zkp = is_eq.compile::<BulletproofsBackend>().unwrap();
 
         for val in [3, -3] {
             let mut proof_builder = LogProofBuilder::new(&rt);
@@ -122,6 +134,7 @@ mod linked_tests {
                 .unwrap();
             proof_builder
                 .zkp_program(&is_eq_zkp)
+                .unwrap()
                 .shared_input(&val_msg)
                 .public_input(BulletproofsField::from(val));
 

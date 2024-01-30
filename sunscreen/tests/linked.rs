@@ -17,6 +17,16 @@ mod linked_tests {
     use sunscreen_runtime::{FheZkpRuntime, LinkedProof, LogProofBuilder, Params};
     use sunscreen_zkp_backend::bulletproofs::BulletproofsBackend;
 
+    lazy_static! {
+        static ref SMALL_PARAMS: Params = Params {
+            lattice_dimension: 1024,
+            coeff_modulus: vec![0x7e00001],
+            plain_modulus: 4_096,
+            scheme_type: SchemeType::Bfv,
+            security_level: sunscreen::SecurityLevel::TC128,
+        };
+    }
+
     #[fhe_program(scheme = "bfv")]
     fn doggie() {}
 
@@ -38,6 +48,7 @@ mod linked_tests {
     fn test_valid_transaction_example() {
         let app = Compiler::new()
             .fhe_program(doggie)
+            .with_params(&SMALL_PARAMS)
             .zkp_backend::<BulletproofsBackend>()
             .zkp_program(valid_transaction)
             .compile()
@@ -82,6 +93,7 @@ mod linked_tests {
     fn test_invalid_transaction_example() {
         let app = Compiler::new()
             .fhe_program(doggie)
+            .with_params(&SMALL_PARAMS)
             .zkp_backend::<BulletproofsBackend>()
             .zkp_program(valid_transaction)
             .compile()
@@ -118,6 +130,7 @@ mod linked_tests {
     fn test_is_eq() {
         let app = Compiler::new()
             .fhe_program(doggie)
+            .with_params(&SMALL_PARAMS)
             .zkp_backend::<BulletproofsBackend>()
             .zkp_program(is_eq)
             .compile()

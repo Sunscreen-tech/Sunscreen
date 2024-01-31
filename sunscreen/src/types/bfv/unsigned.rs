@@ -343,13 +343,21 @@ type_synonyms! {
 
 #[cfg(feature = "linkedproofs")]
 mod sharing {
-    use sunscreen_runtime::ShareWithZKP;
+    use crate::types::zkp::BfvSigned;
 
-    impl ShareWithZKP for super::Unsigned64 {
+    use super::*;
+    use sunscreen_runtime::ShareWithZkp;
+    use sunscreen_zkp_backend::FieldSpec;
+
+    impl ShareWithZkp for Unsigned64 {
+        // TODO
+        type ZkpType<F: FieldSpec> = BfvSigned<F>;
         const DEGREE_BOUND: usize = 128;
     }
 
-    impl ShareWithZKP for super::Unsigned128 {
+    impl ShareWithZkp for Unsigned128 {
+        // TODO
+        type ZkpType<F: FieldSpec> = BfvSigned<F>;
         const DEGREE_BOUND: usize = 255;
     }
 }

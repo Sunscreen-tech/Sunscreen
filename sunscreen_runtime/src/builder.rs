@@ -241,7 +241,10 @@ mod linked {
     use seal_fhe::SecurityLevel;
     use sunscreen_compiler_common::{Type, TypeName};
     use sunscreen_math::ring::{BarrettBackend, BarrettConfig, Zq};
-    use sunscreen_zkp_backend::bulletproofs::BulletproofsBackend;
+    use sunscreen_zkp_backend::{
+        bulletproofs::{BulletproofsBackend, BulletproofsFieldSpec},
+        FieldSpec,
+    };
 
     use crate::{
         marker, BFVEncryptionComponents, Ciphertext, CompiledZkpProgram, GenericRuntime,
@@ -250,7 +253,10 @@ mod linked {
     };
 
     /// A trait for sharing a plaintext with a ZKP program.
-    pub trait ShareWithZKP: NumCiphertexts {
+    pub trait ShareWithZkp: NumCiphertexts {
+        /// The associated ZKP input type when this plaintext is shared with a ZKP program.
+        type ZkpType<F: FieldSpec>: TypeName;
+
         /// The number of nonzero coefficients to share between the SDLP and ZKP.
         ///
         /// Note that when plaintexts polynomials are shared with ZKP programs, the ZKP program
@@ -265,16 +271,29 @@ mod linked {
     }
 
     #[derive(Debug, Clone)]
+    /// We pass this around for both plain and shared messages, as we need both the plaintext and
+    /// its type information to perform encryption.
+    ///
+    /// Essentially we store the output from TryIntoPlaintext and TypeName.
     pub(crate) struct PlaintextTyped {
         plaintext: Plaintext,
         type_name: Type,
+    }
+
+    /// We pass this around for just shared messages, as also need the zkp type information.
+    ///
+    /// Essentially we store the output from ShareWithZkp
+    #[derive(Debug, Clone)]
+    pub(crate) struct SharedPlaintextTyped {
+        plaintext_typed: PlaintextTyped,
+        zkp_type: Type,
     }
 
     /// A [`Plaintext`] message that can be shared. Create this with [`LogProofBuilder::encrypt_and_share`].
     #[derive(Debug, Clone)]
     pub struct SharedMessage {
         pub(crate) id: usize,
-        pub(crate) message: Arc<PlaintextTyped>,
+        pub(crate) message: Arc<SharedPlaintextTyped>,
         pub(crate) len: usize,
     }
 
@@ -287,7 +306,7 @@ mod linked {
         fn pt_typed(&self) -> &PlaintextTyped {
             match self {
                 Message::Plain(m) => m,
-                Message::Shared(m) => &m.message,
+                Message::Shared(m) => &m.message.plaintext_typed,
             }
         }
         fn pt(&self) -> &Plaintext {
@@ -364,20 +383,26 @@ mod linked {
             public_key: &'k PublicKey,
         ) -> Result<(Ciphertext, SharedMessage)>
         where
-            P: ShareWithZKP + TryIntoPlaintext + TypeName,
+            P: ShareWithZkp + TryIntoPlaintext + TypeName,
         {
             // The user intends to share this message, so add a more conservative bound
-            let pt = self.plaintext_typed(message)?;
+            let plaintext_typed = self.plaintext_typed(message)?;
             let idx_start = self.messages.len();
             let ct = self.encrypt_internal(
-                Message::Plain(pt.clone()),
+                Message::Plain(plaintext_typed.clone()),
                 public_key,
                 Some(self.mk_bounds::<P>()),
             )?;
             let idx_end = self.messages.len();
+            // TODO shouldn't be assuming bulletproofs here...
+            // need to separate the notion of sharing duplicate messages and sharing to ZKP
+            let zkp_type = P::ZkpType::<BulletproofsFieldSpec>::type_name();
             let shared_message = SharedMessage {
                 id: idx_start,
-                message: Arc::new(pt),
+                message: Arc::new(SharedPlaintextTyped {
+                    plaintext_typed,
+                    zkp_type,
+                }),
                 len: idx_end - idx_start,
             };
             Ok((ct, shared_message))
@@ -491,7 +516,7 @@ mod linked {
             ))
         }
 
-        fn mk_bounds<P: ShareWithZKP>(&self) -> Bounds {
+        fn mk_bounds<P: ShareWithZkp>(&self) -> Bounds {
             let params = self.runtime.params();
             let mut bounds = vec![params.plain_modulus; P::DEGREE_BOUND];
             bounds.resize(params.lattice_dimension as usize, 0);
@@ -556,10 +581,16 @@ mod linked {
                 .iter()
                 .flat_map(|m| (m.id..m.id + m.len).map(|ix| (ix, 0)))
                 .collect::<Vec<_>>();
+            let shared_types = self
+                .shared_inputs
+                .iter()
+                .map(|m| m.message.zkp_type.clone())
+                .collect::<Vec<_>>();
 
             LinkedProof::create(
                 &sdlp,
                 &shared_indices,
+                &shared_types,
                 program,
                 self.private_inputs.clone(),
                 self.public_inputs.clone(),

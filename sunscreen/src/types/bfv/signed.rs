@@ -37,11 +37,19 @@ impl NumCiphertexts for Signed {
 }
 
 #[cfg(feature = "linkedproofs")]
-impl sunscreen_runtime::ShareWithZKP for Signed {
-    /// While a freshly encoded plaintext will only use up to 64 coefficients, plaintexts resulting
-    /// from a multiplicative circuit can result in valid Signed encodings that use more than 64
-    /// coefficients. A bound of 128 should work for virtually all cases.
-    const DEGREE_BOUND: usize = 128;
+mod sharing {
+    use super::*;
+    use crate::types::zkp::BfvSigned;
+    use sunscreen_runtime::ShareWithZkp;
+    use sunscreen_zkp_backend::FieldSpec;
+
+    impl ShareWithZkp for Signed {
+        type ZkpType<F: FieldSpec> = BfvSigned<F>;
+        /// While a freshly encoded plaintext will only use up to 64 coefficients, plaintexts resulting
+        /// from a multiplicative circuit can result in valid Signed encodings that use more than 64
+        /// coefficients. A bound of 128 should work for virtually all cases.
+        const DEGREE_BOUND: usize = 128;
+    }
 }
 
 impl FheProgramInputTrait for Signed {}

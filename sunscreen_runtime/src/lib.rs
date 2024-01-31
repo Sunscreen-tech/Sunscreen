@@ -364,3 +364,10 @@ pub trait TypeNameInstance {
      */
     fn type_name_instance(&self) -> Type;
 }
+
+// Useful impl if you are aggregating a list of various types.
+impl TypeNameInstance for Type {
+    fn type_name_instance(&self) -> Type {
+        self.clone()
+    }
+}

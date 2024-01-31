@@ -155,11 +155,16 @@ fn can_declare_array_inputs() {
 
     let program = app.get_zkp_program(in_range).unwrap();
 
-    let inputs = (0..64u64)
-        .flat_map(|i| (0..9u64).map(|j| BPField::from(i + j)).collect::<Vec<_>>())
-        .collect::<Vec<_>>();
+    let mut inputs = [[BPField::from(0); 9]; 64];
+    for (i, inner) in inputs.iter_mut().enumerate() {
+        for (j, x) in inner.iter_mut().enumerate() {
+            *x = BPField::from((i + j) as u32);
+        }
+    }
 
-    let proof = runtime.prove(program, inputs, vec![], vec![]).unwrap();
+    let proof = runtime
+        .prove(program, vec![inputs], vec![], vec![])
+        .unwrap();
 
     runtime
         .verify(program, &proof, Vec::<ZkpProgramInput>::new(), vec![])

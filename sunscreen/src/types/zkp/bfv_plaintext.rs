@@ -1,5 +1,5 @@
 use sunscreen_compiler_macros::TypeName;
-use sunscreen_runtime::ShareWithZKP;
+use sunscreen_runtime::ShareWithZkp;
 use sunscreen_zkp_backend::{BigInt, FieldSpec};
 
 use crate::{
@@ -39,11 +39,11 @@ impl<F: FieldSpec, const N: usize> ToNativeFields for BfvPlaintext<F, N> {
 ///
 /// Use the [`AsFieldElement::into_field_elem`] method to decode the the value into a field
 /// element within a ZKP program.
-pub struct BfvSigned<F: FieldSpec>(BfvPlaintext<F, { <Signed as ShareWithZKP>::DEGREE_BOUND }>);
+pub struct BfvSigned<F: FieldSpec>(BfvPlaintext<F, { <Signed as ShareWithZkp>::DEGREE_BOUND }>);
 
 impl<F: FieldSpec> DynamicNumFieldElements for BfvSigned<F> {
     fn num_native_field_elements(plaintext_modulus: u64) -> usize {
-        <BfvPlaintext<F, { <Signed as ShareWithZKP>::DEGREE_BOUND }> as DynamicNumFieldElements>::
+        <BfvPlaintext<F, { <Signed as ShareWithZkp>::DEGREE_BOUND }> as DynamicNumFieldElements>::
             num_native_field_elements(plaintext_modulus)
     }
 }
@@ -64,7 +64,7 @@ pub trait AsFieldElement<F: FieldSpec> {
 
 impl<F: FieldSpec> AsFieldElement<F> for ProgramNode<BfvSigned<F>> {
     fn into_field_elem(self) -> ProgramNode<Field<F>> {
-        let bound = self.ids.len() / <Signed as ShareWithZKP>::DEGREE_BOUND;
+        let bound = self.ids.len() / <Signed as ShareWithZkp>::DEGREE_BOUND;
         let plain_modulus = 2u64.pow(bound as u32 - 1);
 
         let (plain_modulus, plain_modulus_1, two, mut coeffs) = with_zkp_ctx(|ctx| {
@@ -171,7 +171,7 @@ mod tests {
         let log_p = plain_modulus.ilog2() as usize + 1;
 
         for (coeff, equiv) in [(511, 511), (512, -512), (513, -511)] {
-            let mut signed_encoding = [0; <Signed as ShareWithZKP>::DEGREE_BOUND];
+            let mut signed_encoding = [0; <Signed as ShareWithZkp>::DEGREE_BOUND];
             signed_encoding[0] = coeff;
 
             let coeffs = signed_encoding.map(|c| {
@@ -223,7 +223,7 @@ mod tests {
 
         for val in [3i64, -3] {
             // Simulate the polynomial signed encoding
-            let mut signed_encoding = [0; <Signed as ShareWithZKP>::DEGREE_BOUND];
+            let mut signed_encoding = [0; <Signed as ShareWithZkp>::DEGREE_BOUND];
             let abs_val = val.unsigned_abs();
             for (i, c) in signed_encoding.iter_mut().take(64).enumerate() {
                 let bit = (abs_val & 0x1 << i) >> i;

@@ -18,6 +18,7 @@ use logproof::{
 use merlin::Transcript;
 use paste::paste;
 use seq_macro::seq;
+use sunscreen_compiler_common::Type;
 use sunscreen_zkp_backend::{
     bulletproofs::{
         BulletproofProverParameters, BulletproofVerifierParameters, BulletproofsBackend,
@@ -25,7 +26,7 @@ use sunscreen_zkp_backend::{
     BigInt, Proof, ZkpBackend,
 };
 
-use crate::{CompiledZkpProgram, Result, ZkpProgramInput, ZkpRuntime};
+use crate::{CompiledZkpProgram, Result, TypeNameInstance, ZkpProgramInput, ZkpRuntime};
 
 #[derive(Debug, Clone)]
 /// SDLP proof and associated information for verification
@@ -112,7 +113,9 @@ impl LinkedProof {
     /// Arguments:
     /// * `prover_knowledge`: The SDLP prover knowledge
     /// * `shared_indices`: The indices of the shared values between the SDLP witness matrix `S`
-    /// and the R1CS bulletproof
+    ///                     and the R1CS bulletproof
+    /// * `shared_types`: The types of the shared values (which need not be the same length as the
+    ///                   indices)
     /// * `program`: The compiled ZKP program to prove
     /// * `private_inputs`: The private inputs to the ZKP program, not including the shared values
     /// * `public_inputs`: The public inputs to the ZKP program
@@ -120,6 +123,7 @@ impl LinkedProof {
     pub fn create<I>(
         prover_knowledge: &SealSdlpProverKnowledge,
         shared_indices: &[(usize, usize)],
+        shared_types: &[Type],
         program: &CompiledZkpProgram,
         private_inputs: Vec<I>,
         public_inputs: Vec<I>,
@@ -128,6 +132,7 @@ impl LinkedProof {
     where
         I: Into<ZkpProgramInput> + Clone,
     {
+        type Rt = ZkpRuntime<BulletproofsBackend>;
         let backend = BulletproofsBackend::new();
         let mut transcript = Transcript::new(Self::TRANSCRIPT_LABEL);
 
@@ -172,17 +177,15 @@ impl LinkedProof {
         };
 
         // Convert inputs into bigints
-        let private_inputs_bigint = private_inputs
-            .into_iter()
-            .flat_map(|input| input.into().0.to_native_fields());
-        let public_inputs_bigint: Vec<BigInt> = public_inputs
-            .into_iter()
-            .flat_map(|input| input.into().0.to_native_fields())
-            .collect::<Vec<_>>();
-        let constant_inputs_bigint: Vec<BigInt> = constant_inputs
-            .into_iter()
-            .flat_map(|input| input.into().0.to_native_fields())
-            .collect::<Vec<_>>();
+        let [private_inputs_bigint, public_inputs_bigint, constant_inputs_bigint] =
+            <Rt>::collect_zkp_args_with(
+                [private_inputs, public_inputs, constant_inputs],
+                |inputs| {
+                    let mut all_types = shared_types.to_owned();
+                    all_types.extend(inputs.concat().into_iter().map(|i| i.type_name_instance()));
+                    <Rt>::validate_arguments(&program.metadata.signature, &all_types)
+                },
+            )?;
 
         // Convert sharted inputs into bigints
         let shared_inputs_bigint = shared_inputs_binary.iter().flat_map(|shared_input_binary| {

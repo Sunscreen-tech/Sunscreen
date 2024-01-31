@@ -425,6 +425,20 @@ where
     /// Note that this method will not accept "shared" ZKP programs, which have inputs shared from
     /// FHE programs. You must first call `fhe_program` to add an FHE program to unlock this
     /// capability.
+    ///
+    /// The following will fail to compile:
+    /// ```compile_fail
+    /// # use sunscreen::{bulletproofs::BulletproofsBackend, types::zkp::{BfvSigned, BulletproofsField, Field, FieldSpec}, zkp_program, zkp_var, Compiler };
+    ///
+    /// #[zkp_program]
+    /// fn prog<F: FieldSpec>(#[shared] x: BfvSigned<F>) { }
+    ///
+    /// let app = Compiler::new()
+    ///     .zkp_backend::<BulletproofsBackend>()
+    ///     .zkp_program(prog)
+    ///     .compile()
+    ///     .unwrap();
+    /// ```
     pub fn zkp_program<F>(mut self, zkp_program_fn: F) -> Self
     where
         F: ZkpProgramFn<B, Share = zkp::NotShared> + 'static,
@@ -545,9 +559,26 @@ where
         self
     }
 
-    /**
-     * Add the given FHE program for compilation.
-     */
+    /// Add the given ZKP program for compilation.
+    ///
+    /// This method _will_ accept "shared" ZKP programs, which have inputs shared from
+    /// FHE programs.
+    ///
+    /// ```
+    /// # use sunscreen::{bulletproofs::BulletproofsBackend, types::zkp::{BfvSigned, BulletproofsField, Field, FieldSpec}, fhe_program, zkp_program, zkp_var, Compiler };
+    /// # #[fhe_program(scheme = "bfv")]
+    /// # fn fhe_prog() { }
+    ///
+    /// #[zkp_program]
+    /// fn zkp_prog<F: FieldSpec>(#[shared] x: BfvSigned<F>) { }
+    ///
+    /// let app = Compiler::new()
+    ///     .fhe_program(fhe_prog)
+    ///     .zkp_backend::<BulletproofsBackend>()
+    ///     .zkp_program(zkp_prog)
+    ///     .compile()
+    ///     .unwrap();
+    /// ```
     pub fn zkp_program<F>(mut self, zkp_program_fn: F) -> Self
     where
         F: ZkpProgramFn<B> + 'static,

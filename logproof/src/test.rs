@@ -84,12 +84,8 @@ where
     let statement = BfvProofStatement::PublicKeyEncryption {
         message_id: 0,
         ciphertext,
-        public_key,
+        public_key: Cow::Borrowed(&public_key),
     };
-    let witness = BfvWitness::PublicKeyEncryption {
-        u: Cow::Owned(u),
-        e: Cow::Owned(e),
-        r: Cow::Owned(r),
-    };
+    let witness = BfvWitness::PublicKeyEncryption { u, e, r };
     generate_prover_knowledge(&[statement], &[message], &[witness], &params, &ctx)
 }

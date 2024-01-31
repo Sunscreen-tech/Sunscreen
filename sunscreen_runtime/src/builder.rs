@@ -309,13 +309,13 @@ mod linked {
     /// Use this builder to encrypt your [`Plaintext`]s while automatically generate a log proof of the
     /// encryption statements. We implicitly assume that these plaintexts and ciphertexts are backed by
     /// the SEAL BFV scheme, otherwise the methods will return an `Err`.
-    pub struct LogProofBuilder<'r, 'k, 'w, 'z, M, B> {
+    pub struct LogProofBuilder<'r, 'k, 'z, M, B> {
         runtime: &'r GenericRuntime<M, B>,
 
         // log proof fields
-        statements: Vec<BfvProofStatement<seal::Ciphertext, &'k seal::PublicKey>>,
+        statements: Vec<BfvProofStatement<'k>>,
         messages: Vec<BfvMessage>,
-        witness: Vec<BfvWitness<'w, 'k>>,
+        witness: Vec<BfvWitness<'k>>,
 
         // linked proof fields
         compiled_zkp_program: Option<&'z CompiledZkpProgram>,
@@ -325,7 +325,7 @@ mod linked {
         constant_inputs: Vec<ZkpProgramInput>,
     }
 
-    impl<'r, 'k, 'w, 'z, M: marker::Fhe, Z> LogProofBuilder<'r, 'k, 'w, 'z, M, Z> {
+    impl<'r, 'k, 'z, M: marker::Fhe, Z> LogProofBuilder<'r, 'k, 'z, M, Z> {
         /// Create a new [`LogProofBuilder`].
         pub fn new(runtime: &'r GenericRuntime<M, Z>) -> Self {
             Self {
@@ -431,13 +431,10 @@ mod linked {
                     .push(BfvProofStatement::PublicKeyEncryption {
                         message_id,
                         ciphertext: ct.clone(),
-                        public_key: &public_key.public_key.data,
+                        public_key: Cow::Borrowed(&public_key.public_key.data),
                     });
-                self.witness.push(BfvWitness::PublicKeyEncryption {
-                    u: Cow::Owned(u),
-                    e: Cow::Owned(e),
-                    r: Cow::Owned(r.clone()),
-                });
+                self.witness
+                    .push(BfvWitness::PublicKeyEncryption { u, e, r: r.clone() });
             }
             Ok(enc_components.ciphertext)
         }
@@ -502,9 +499,7 @@ mod linked {
         }
     }
 
-    impl<'r, 'p, 's, 'z, M: marker::Fhe + marker::Zkp>
-        LogProofBuilder<'r, 'p, 's, 'z, M, BulletproofsBackend>
-    {
+    impl<'r, 'k, 'z, M: marker::Fhe + marker::Zkp> LogProofBuilder<'r, 'k, 'z, M, BulletproofsBackend> {
         /// Add a ZKP program to be linked with the logproof.
         ///
         /// This method is required to call [`Self::build_linkedproof`].

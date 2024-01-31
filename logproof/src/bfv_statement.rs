@@ -1,7 +1,7 @@
 //! This module provides a mid-level API for generating SDLP prover and verifier knowledge from BFV
 //! encryptions, all at the [`seal_fhe`] layer.
 
-use std::{borrow::Cow, fmt::Debug, marker::PhantomData, ops::Neg};
+use std::{borrow::Cow, fmt::Debug, ops::Neg};
 
 use crypto_bigint::{NonZero, Uint};
 use seal_fhe::{
@@ -32,14 +32,14 @@ const S_COEFFICIENT_BOUND: u64 = 2;
 /// higher level. A single Sunscreen plaintext may actually encode multiple SEAL plaintexts, and
 /// hence multiple proof statements.
 #[derive(Debug)]
-pub enum BfvProofStatement<C, P> {
+pub enum BfvProofStatement<'p> {
     /// A statement that the ciphertext symmetrically encrypts the identified message.
     PrivateKeyEncryption {
         /// Column index in the A matrix, or equivalently the index of the message slice provided
         /// when generating the prover knowledge.
         message_id: usize,
         /// The ciphertext of the encryption statement.
-        ciphertext: C,
+        ciphertext: Ciphertext,
     },
     /// A statement that the ciphertext asymmetrically encrypts the identified message.
     PublicKeyEncryption {
@@ -47,13 +47,13 @@ pub enum BfvProofStatement<C, P> {
         /// when generating the prover knowledge.
         message_id: usize,
         /// The ciphertext of the encryption statement.
-        ciphertext: C,
+        ciphertext: Ciphertext,
         /// The public key of the encryption statement.
-        public_key: P,
+        public_key: Cow<'p, PublicKey>,
     },
 }
 
-impl<C, P> BfvProofStatement<C, P> {
+impl<'p> BfvProofStatement<'p> {
     /// Get the message index of this statement.
     pub fn message_id(&self) -> usize {
         match self {
@@ -63,10 +63,10 @@ impl<C, P> BfvProofStatement<C, P> {
     }
 
     /// Get the ciphertext of this statement.
-    pub fn ciphertext(&self) -> &C {
+    pub fn ciphertext(&self) -> &Ciphertext {
         match self {
-            BfvProofStatement::PrivateKeyEncryption { ciphertext, .. } => ciphertext,
-            BfvProofStatement::PublicKeyEncryption { ciphertext, .. } => ciphertext,
+            BfvProofStatement::PrivateKeyEncryption { ciphertext, .. } => &ciphertext,
+            BfvProofStatement::PublicKeyEncryption { ciphertext, .. } => &ciphertext,
         }
     }
 
@@ -83,7 +83,7 @@ impl<C, P> BfvProofStatement<C, P> {
 
 /// A witness for a [`BfvProofStatement`].
 #[derive(Debug)]
-pub enum BfvWitness<'a, 's> {
+pub enum BfvWitness<'s> {
     /// A witness for the [`BfvProofStatement::PrivateKeyEncryption`] variant.
     PrivateKeyEncryption {
         /// The private key used for the encryption.
@@ -91,9 +91,9 @@ pub enum BfvWitness<'a, 's> {
         /// Gaussian error polynomial
         ///
         /// N.B. this polynomial array should always have size one, see note below.
-        e: Cow<'a, PolynomialArray>,
+        e: PolynomialArray,
         /// Rounding component after scaling the message by delta.
-        r: Cow<'a, Plaintext>,
+        r: Plaintext,
     },
     /// A witness for the [`BfvProofStatement::PublicKeyEncryption`] variant.
     PublicKeyEncryption {
@@ -102,15 +102,15 @@ pub enum BfvWitness<'a, 's> {
         /// N.B. this polynomial array should always have size one, i.e. it is a single
         /// polynomial. I believe the type is simply the only reasonable one exported by
         /// `seal_fhe`.
-        u: Cow<'a, PolynomialArray>,
+        u: PolynomialArray,
         /// Gaussian error polynomial.
         ///
         /// Note that we currently assume that ciphertexts have length two, i.e.
         /// relinearization happens after every multiplication, and hence this error
         /// polynomial array should also have size two.
-        e: Cow<'a, PolynomialArray>,
+        e: PolynomialArray,
         /// Rounding component after scaling the message by delta.
-        r: Cow<'a, Plaintext>,
+        r: Plaintext,
     },
 }
 
@@ -201,18 +201,16 @@ type Z<const N: usize, B> = Zq<N, BarrettBackend<N, B>>;
 /// encryptions (public or private) of a single plaintext message, like we do for the delta scaling
 /// parameter. However, since the remainder is held in each [`BfvWitness`], I've gone with the less
 /// surprising implementation where we have a remainder witness for each statement.
-pub fn generate_prover_knowledge<C, P, T, B, const N: usize>(
-    statements: &[BfvProofStatement<C, P>],
+pub fn generate_prover_knowledge<P, B, const N: usize>(
+    statements: &[BfvProofStatement<'_>],
     messages: &[BfvMessage],
-    witness: &[BfvWitness<'_, '_>],
-    params: &T,
+    witness: &[BfvWitness<'_>],
+    params: &P,
     ctx: &Context,
 ) -> LogProofProverKnowledge<Z<N, B>>
 where
     B: BarrettConfig<N>,
-    C: AsRef<Ciphertext>,
-    P: AsRef<PublicKey>,
-    T: StatementParams,
+    P: StatementParams,
 {
     let bounds = messages
         .iter()
@@ -228,17 +226,15 @@ where
 /// Generate only the [`LogProofVerifierKnowledge`] for a given set of [`BfvProofStatement`]s.
 ///
 /// See the documentation for [`generate_prover_knowledge`] for more information.
-pub fn generate_verifier_knowledge<C, P, T, B, const N: usize>(
-    statements: &[BfvProofStatement<C, P>],
+pub fn generate_verifier_knowledge<P, B, const N: usize>(
+    statements: &[BfvProofStatement<'_>],
     msg_bounds: &[Option<Bounds>],
-    params: &T,
+    params: &P,
     ctx: &Context,
 ) -> LogProofVerifierKnowledge<Z<N, B>>
 where
     B: BarrettConfig<N>,
-    C: AsRef<Ciphertext>,
-    P: AsRef<PublicKey>,
-    T: StatementParams,
+    P: StatementParams,
 {
     let a = compute_a(statements, params, ctx);
     let t = compute_t(statements, ctx);
@@ -256,16 +252,14 @@ where
     LogProofVerifierKnowledge { a, t, bounds, f }
 }
 
-fn compute_a<C, P, T, B, const N: usize>(
-    statements: &[BfvProofStatement<C, P>],
-    params: &T,
+fn compute_a<P, B, const N: usize>(
+    statements: &[BfvProofStatement<'_>],
+    params: &P,
     ctx: &Context,
 ) -> PolynomialMatrix<Z<N, B>>
 where
     B: BarrettConfig<N>,
-    C: AsRef<Ciphertext>,
-    P: AsRef<PublicKey>,
-    T: StatementParams,
+    P: StatementParams,
 {
     let mut offsets = IdxOffsets::new(statements);
     let (rows, cols) = offsets.a_shape();
@@ -313,10 +307,10 @@ where
     a
 }
 
-fn compute_s<C, P, B, const N: usize>(
-    statements: &[BfvProofStatement<C, P>],
+fn compute_s<B, const N: usize>(
+    statements: &[BfvProofStatement<'_>],
     messages: &[BfvMessage],
-    witness: &[BfvWitness<'_, '_>],
+    witness: &[BfvWitness<'_>],
 ) -> PolynomialMatrix<Z<N, B>>
 where
     B: BarrettConfig<N>,
@@ -362,13 +356,12 @@ where
     s
 }
 
-fn compute_t<C, P, B, const N: usize>(
-    statements: &[BfvProofStatement<C, P>],
+fn compute_t<B, const N: usize>(
+    statements: &[BfvProofStatement<'_>],
     ctx: &Context,
 ) -> PolynomialMatrix<Z<N, B>>
 where
     B: BarrettConfig<N>,
-    C: AsRef<Ciphertext>,
 {
     let rows = statements
         .iter()
@@ -390,13 +383,13 @@ where
     t
 }
 
-fn compute_bounds<C, P, T>(
-    statements: &[BfvProofStatement<C, P>],
+fn compute_bounds<P>(
+    statements: &[BfvProofStatement<'_>],
     msg_bounds: &[Option<Bounds>],
-    params: &T,
+    params: &P,
 ) -> Matrix<Bounds>
 where
-    T: StatementParams,
+    P: StatementParams,
 {
     let mut offsets = IdxOffsets::new(statements);
     let mut bounds = Matrix::<Bounds>::new(offsets.a_shape().1, 1);
@@ -440,7 +433,7 @@ where
 /// Represents the column offsets in `A` and the row offsets in `S` for the various fields.
 //
 // Hm. This could be an iterator that spits out the next ProofStatement with the appropriate indices.
-struct IdxOffsets<C, P> {
+struct IdxOffsets {
     /// The remainder block occurs after the delta/message block.
     remainder: usize,
     /// The public key block occurs after the remainders.
@@ -453,11 +446,10 @@ struct IdxOffsets<C, P> {
     private_a: usize,
     /// The private key statement's error component block occurs last.
     private_e: usize,
-    _phantom: PhantomData<(C, P)>,
 }
 
-impl<C, P> IdxOffsets<C, P> {
-    fn new(statements: &[BfvProofStatement<C, P>]) -> Self {
+impl IdxOffsets {
+    fn new(statements: &[BfvProofStatement<'_>]) -> Self {
         // Counts
         let num_messages = Self::num_messages(statements);
         let num_public = Self::num_public(statements);
@@ -479,7 +471,6 @@ impl<C, P> IdxOffsets<C, P> {
             public_e_1,
             private_a,
             private_e,
-            _phantom: PhantomData,
         }
     }
 
@@ -507,18 +498,18 @@ impl<C, P> IdxOffsets<C, P> {
         self.public_e_1 += 1;
     }
 
-    fn num_messages(statements: &[BfvProofStatement<C, P>]) -> usize {
+    fn num_messages(statements: &[BfvProofStatement<'_>]) -> usize {
         statements
             .iter()
             .fold(0usize, |max, s| usize::max(max, s.message_id()))
             + 1
     }
 
-    fn num_private(statements: &[BfvProofStatement<C, P>]) -> usize {
+    fn num_private(statements: &[BfvProofStatement<'_>]) -> usize {
         statements.iter().filter(|s| s.is_private()).count()
     }
 
-    fn num_public(statements: &[BfvProofStatement<C, P>]) -> usize {
+    fn num_public(statements: &[BfvProofStatement<'_>]) -> usize {
         statements.len() - Self::num_private(statements)
     }
 }
@@ -685,24 +676,9 @@ mod tests {
     #[test]
     fn idx_offsets() {
         // recreating the example in the docs
-        let statements = vec![
-            BfvProofStatement::PublicKeyEncryption {
-                message_id: 0,
-                ciphertext: 0xdeadbeef_u32,
-                public_key: 100_u32,
-            },
-            BfvProofStatement::PublicKeyEncryption {
-                message_id: 1,
-                ciphertext: 0xdeedbeaf_u32,
-                public_key: 100_u32,
-            },
-            BfvProofStatement::PrivateKeyEncryption {
-                message_id: 0,
-                ciphertext: 0xbeefdead_u32,
-            },
-        ];
-
-        let idx_offsets = IdxOffsets::new(&statements);
+        let ctx = BFVTestContext::new();
+        let test_fixture = ctx.random_fixture_with(3, 1);
+        let idx_offsets = IdxOffsets::new(&test_fixture.statements);
 
         assert_eq!(idx_offsets.remainder, 2);
         assert_eq!(idx_offsets.public_key, 2 + 3);
@@ -773,10 +749,10 @@ mod tests {
         proof.verify(&mut v_t, &pk.vk, &gen.g, &gen.h, &u)
     }
 
-    struct TestFixture<'a, 's> {
-        statements: Vec<BfvProofStatement<Ciphertext, PublicKey>>,
+    struct TestFixture<'p, 's> {
+        statements: Vec<BfvProofStatement<'p>>,
         messages: Vec<BfvMessage>,
-        witness: Vec<BfvWitness<'a, 's>>,
+        witness: Vec<BfvWitness<'s>>,
     }
 
     struct BFVTestContext {
@@ -854,13 +830,9 @@ mod tests {
                 statements.push(BfvProofStatement::PublicKeyEncryption {
                     message_id: i,
                     ciphertext: ct,
-                    public_key: self.public_key.clone(),
+                    public_key: Cow::Borrowed(&self.public_key),
                 });
-                witness.push(BfvWitness::PublicKeyEncryption {
-                    u: Cow::Owned(u),
-                    e: Cow::Owned(e),
-                    r: Cow::Owned(r),
-                });
+                witness.push(BfvWitness::PublicKeyEncryption { u, e, r });
             }
 
             // add in the statements about existing messages
@@ -874,13 +846,9 @@ mod tests {
                 statements.push(BfvProofStatement::PublicKeyEncryption {
                     message_id: i,
                     ciphertext: ct,
-                    public_key: self.public_key.clone(),
+                    public_key: Cow::Borrowed(&self.public_key),
                 });
-                witness.push(BfvWitness::PublicKeyEncryption {
-                    u: Cow::Owned(u),
-                    e: Cow::Owned(e),
-                    r: Cow::Owned(r),
-                });
+                witness.push(BfvWitness::PublicKeyEncryption { u, e, r });
             }
 
             TestFixture {

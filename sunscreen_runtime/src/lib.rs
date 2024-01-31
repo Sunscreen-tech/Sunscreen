@@ -249,6 +249,12 @@ where
     }
 }
 
+impl TypeNameInstance for ZkpProgramInput {
+    fn type_name_instance(&self) -> Type {
+        self.0.type_name_instance()
+    }
+}
+
 impl TypeNameInstance for FheProgramInput {
     fn type_name_instance(&self) -> Type {
         match self {

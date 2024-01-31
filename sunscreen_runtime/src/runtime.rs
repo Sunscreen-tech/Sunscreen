@@ -183,6 +183,30 @@ pub struct GenericRuntime<T, B> {
     _phantom_t: PhantomData<T>,
     zkp_backend: B,
 }
+impl<T, B> GenericRuntime<T, B> {
+    fn validate_arguments<A>(signature: &CallSignature, arguments: &[A]) -> Result<()>
+    where
+        A: TypeNameInstance,
+    {
+        if arguments.len() != signature.arguments.len()
+            || arguments
+                .iter()
+                .map(|a| a.type_name_instance())
+                .zip(signature.arguments.iter())
+                .any(|(ty, expected)| ty != *expected)
+        {
+            Err(Error::argument_mismatch(
+                &signature.arguments,
+                &arguments
+                    .iter()
+                    .map(|a| a.type_name_instance())
+                    .collect::<Vec<_>>(),
+            ))
+        } else {
+            Ok(())
+        }
+    }
+}
 
 impl<T, B> GenericRuntime<T, B>
 where
@@ -370,27 +394,8 @@ where
 
         let mut arguments: Vec<FheProgramInput> = arguments.drain(0..).map(|a| a.into()).collect();
 
-        let expected_args = &fhe_program.metadata.signature.arguments;
-
-        // Check the arguments match the signature.
-        if expected_args.len() != arguments.len() {
-            return Err(Error::IncorrectCiphertextCount);
-        }
-
         // Check the passed arguments' types match the signature.
-        if arguments
-            .iter()
-            .enumerate()
-            .any(|(i, a)| a.type_name_instance() != expected_args[i])
-        {
-            return Err(Error::argument_mismatch(
-                expected_args,
-                &arguments
-                    .iter()
-                    .map(|a| a.type_name_instance())
-                    .collect::<Vec<Type>>(),
-            ));
-        }
+        Self::validate_arguments(&fhe_program.metadata.signature, &arguments)?;
 
         if fhe_program.metadata.signature.num_ciphertexts.len()
             != fhe_program.metadata.signature.returns.len()
@@ -668,6 +673,42 @@ where
     T: marker::Zkp,
     B: ZkpBackend,
 {
+    fn gather_zkp_args<I>(
+        &self,
+        program: &CompiledZkpProgram,
+        private_inputs: Vec<I>,
+        public_inputs: Vec<I>,
+        constant_inputs: Vec<I>,
+    ) -> Result<(Vec<BigInt>, Vec<BigInt>, Vec<BigInt>)>
+    where
+        I: Into<ZkpProgramInput>,
+    {
+        let private_inputs = private_inputs.into_iter().map(I::into).collect::<Vec<_>>();
+        let public_inputs = public_inputs.into_iter().map(I::into).collect::<Vec<_>>();
+        let constant_inputs = constant_inputs.into_iter().map(I::into).collect::<Vec<_>>();
+
+        let all_arguments = [
+            private_inputs.clone(),
+            public_inputs.clone(),
+            constant_inputs.clone(),
+        ]
+        .concat();
+        Self::validate_arguments(&program.metadata.signature, &all_arguments)?;
+
+        let private_inputs = private_inputs
+            .into_iter()
+            .flat_map(|x| x.0.to_native_fields())
+            .collect::<Vec<BigInt>>();
+        let public_inputs = public_inputs
+            .into_iter()
+            .flat_map(|x| x.0.to_native_fields())
+            .collect::<Vec<BigInt>>();
+        let constant_inputs = constant_inputs
+            .into_iter()
+            .flat_map(|x| x.0.to_native_fields())
+            .collect::<Vec<BigInt>>();
+        Ok((private_inputs, public_inputs, constant_inputs))
+    }
     /**
      * Prove the given `inputs` satisfy `program`.
      */
@@ -681,18 +722,8 @@ where
     where
         I: Into<ZkpProgramInput>,
     {
-        let private_inputs = private_inputs
-            .into_iter()
-            .flat_map(|x| I::into(x).0.to_native_fields())
-            .collect::<Vec<BigInt>>();
-        let public_inputs = public_inputs
-            .into_iter()
-            .flat_map(|x| I::into(x).0.to_native_fields())
-            .collect::<Vec<BigInt>>();
-        let constant_inputs = constant_inputs
-            .into_iter()
-            .flat_map(|x| I::into(x).0.to_native_fields())
-            .collect::<Vec<BigInt>>();
+        let (private_inputs, public_inputs, constant_inputs) =
+            self.gather_zkp_args(program, private_inputs, public_inputs, constant_inputs)?;
 
         let backend = &self.zkp_backend;
 

@@ -1,5 +1,5 @@
 use sunscreen::{types::zkp::Field, zkp_program, Compiler, Runtime};
-use sunscreen_runtime::ZkpProgramInput;
+use sunscreen_runtime::{TypeNameInstance, ZkpProgramInput};
 use sunscreen_zkp_backend::{bulletproofs::BulletproofsBackend, FieldSpec, ZkpBackend};
 
 type BPField = Field<<BulletproofsBackend as ZkpBackend>::Field>;
@@ -40,7 +40,6 @@ fn can_add_and_mul_native_fields() {
 #[test]
 fn get_input_mismatch_on_incorrect_args() {
     use sunscreen_runtime::Error;
-    use sunscreen_zkp_backend::Error as ZkpError;
 
     #[zkp_program]
     fn add_mul<F: FieldSpec>(a: Field<F>, b: Field<F>) {
@@ -57,12 +56,16 @@ fn get_input_mismatch_on_incorrect_args() {
 
     let program = app.get_zkp_program(add_mul).unwrap();
 
-    let result = runtime.prove(program, vec![BPField::from(0u8)], vec![], vec![]);
+    let arg = BPField::from(0u8);
+    let result = runtime.prove(program, vec![arg], vec![], vec![]);
 
-    assert!(matches!(
-        result,
-        Err(Error::ZkpError(ZkpError::InputsMismatch(_)))
-    ));
+    assert_eq!(
+        result.err().unwrap(),
+        Error::ArgumentMismatch(Box::new((
+            vec![arg.type_name_instance(); 2],
+            vec![arg.type_name_instance(); 1]
+        )))
+    );
 }
 
 #[test]

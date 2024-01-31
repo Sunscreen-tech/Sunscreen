@@ -295,7 +295,10 @@ mod tests {
     use super::*;
 
     #[test]
-    fn main_works() -> Result<(), Error> {
-        main()
+    fn main_works() {
+        let ten_mb = 10 * 1024 * 1024;
+        let builder = std::thread::Builder::new().stack_size(ten_mb);
+        let handler = builder.spawn(main).unwrap();
+        handler.join().unwrap().unwrap();
     }
 }

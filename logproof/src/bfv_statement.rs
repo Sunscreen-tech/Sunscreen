@@ -65,8 +65,8 @@ impl<'p> BfvProofStatement<'p> {
     /// Get the ciphertext of this statement.
     pub fn ciphertext(&self) -> &Ciphertext {
         match self {
-            BfvProofStatement::PrivateKeyEncryption { ciphertext, .. } => &ciphertext,
-            BfvProofStatement::PublicKeyEncryption { ciphertext, .. } => &ciphertext,
+            BfvProofStatement::PrivateKeyEncryption { ciphertext, .. } => ciphertext,
+            BfvProofStatement::PublicKeyEncryption { ciphertext, .. } => ciphertext,
         }
     }
 
@@ -281,7 +281,7 @@ where
         match s {
             // sk, e blocks
             BfvProofStatement::PrivateKeyEncryption { ciphertext, .. } => {
-                let c1 = (ctx, ciphertext.as_ref()).as_poly_vec().pop().unwrap();
+                let c1 = (ctx, ciphertext).as_poly_vec().pop().unwrap();
                 a.set(row, offsets.private_a, c1);
                 a.set(row, offsets.private_e, Polynomial::one());
                 offsets.inc_private();
@@ -366,7 +366,7 @@ where
     let rows = statements
         .iter()
         .flat_map(|s| {
-            let mut c = (ctx, s.ciphertext().as_ref()).as_poly_vec();
+            let mut c = (ctx, s.ciphertext()).as_poly_vec();
             // only include first ciphertext element for private statements
             if s.is_private() {
                 c.pop().unwrap();
@@ -675,17 +675,17 @@ mod tests {
 
     #[test]
     fn idx_offsets() {
-        // recreating the example in the docs
+        // TODO create the example in the docs after symmetric unlocked. for now, just public.
         let ctx = BFVTestContext::new();
         let test_fixture = ctx.random_fixture_with(3, 1);
         let idx_offsets = IdxOffsets::new(&test_fixture.statements);
 
         assert_eq!(idx_offsets.remainder, 2);
         assert_eq!(idx_offsets.public_key, 2 + 3);
-        assert_eq!(idx_offsets.public_e_0, 2 + 3 + 2);
-        assert_eq!(idx_offsets.public_e_1, 2 + 3 + 2 + 2);
-        assert_eq!(idx_offsets.private_a, 2 + 3 + 2 + 2 + 2);
-        assert_eq!(idx_offsets.private_e, 2 + 3 + 2 + 2 + 2 + 1);
+        assert_eq!(idx_offsets.public_e_0, 2 + 3 + 3);
+        assert_eq!(idx_offsets.public_e_1, 2 + 3 + 3 + 3);
+        assert_eq!(idx_offsets.private_a, 2 + 3 + 3 + 3 + 3);
+        assert_eq!(idx_offsets.private_e, 2 + 3 + 3 + 3 + 3);
     }
 
     #[test]

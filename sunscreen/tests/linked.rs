@@ -14,7 +14,9 @@ mod linked_tests {
     };
     use sunscreen::{Error, PlainModulusConstraint, ZkpProgramFnExt};
     use sunscreen_fhe_program::SchemeType;
-    use sunscreen_runtime::{FheZkpRuntime, LinkedProof, LogProofBuilder, Params, ZkpProgramInput};
+    use sunscreen_runtime::{
+        FheZkp, FheZkpRuntime, LinkedProof, LogProofBuilder, Params, PublicKey, ZkpProgramInput,
+    };
     use sunscreen_zkp_backend::bulletproofs::BulletproofsBackend;
 
     lazy_static! {
@@ -210,7 +212,6 @@ mod linked_tests {
                 .shared_input(&y_msg)
                 .private_input(BulletproofsField::from(val));
 
-            let sdlp = proof_builder.build_logproof().unwrap();
             let lp = proof_builder.build_linkedproof().unwrap();
             lp.verify::<ZkpProgramInput>(&is_eq_zkp, vec![], vec![])
                 .expect("Failed to verify linked proof");
@@ -250,5 +251,43 @@ mod linked_tests {
             res,
             Err(sunscreen_runtime::Error::BuilderError { .. })
         ));
+    }
+
+    #[test]
+    fn throws_shared_arg_mismatch() {
+        fn test_case(num_shared_inputs: usize, num_private_inputs: usize) {
+            let app = Compiler::new()
+                .fhe_program(doggie)
+                .with_params(&SMALL_PARAMS)
+                .zkp_backend::<BulletproofsBackend>()
+                .zkp_program(is_eq_3)
+                .compile()
+                .unwrap();
+            let rt = FheZkpRuntime::new(app.params(), &BulletproofsBackend::new()).unwrap();
+            let is_eq_zkp = app.get_zkp_program(is_eq_3).unwrap();
+
+            let (public_key, _secret_key) = rt.generate_keys().unwrap();
+            let mut proof_builder = LogProofBuilder::new(&rt);
+            proof_builder.zkp_program(&is_eq_zkp).unwrap();
+            for _ in 0..num_shared_inputs {
+                let (_ct, msg) = proof_builder
+                    .encrypt_and_share(&Signed::from(1), &public_key)
+                    .unwrap();
+                proof_builder.shared_input(&msg);
+            }
+            for _ in 0..num_private_inputs {
+                proof_builder.private_input(BulletproofsField::from(1));
+            }
+            let res = proof_builder.build_linkedproof();
+            assert!(matches!(
+                res,
+                Err(sunscreen::RuntimeError::ArgumentMismatch(_))
+            ));
+        }
+        // Missing shared inputs
+        test_case(0, 1);
+        // Missing one shared inputs
+        test_case(1, 1);
+        // TODO add signed/unsigned mismatch after we impl sharing for unshared.
     }
 }

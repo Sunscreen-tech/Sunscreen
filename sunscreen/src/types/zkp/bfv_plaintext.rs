@@ -14,16 +14,8 @@ use crate as sunscreen;
 
 /// A BFV plaintext polynomial that has been shared to a ZKP program.
 ///
-/// Note that `C` represents the size of the 2s complement decomposition of each coefficient in the
-/// polynomial. This is unfortunately plaintext modulus dependent, and can be calculated by
-/// `plaintext_modulus.ilog2() + 1`.
-///
-/// Similarly `N` is the degree of the _shared_ polynomial, which may be less than the full lattice
+/// Here `N` is the degree of the _shared_ polynomial, which may be less than the full lattice
 /// dimension. See [`Share::DEGREE_BOUND`](sunscreen_runtime::Share).
-//
-// TODO shit if we only have a dynamic len it might not be possible to determine the exact
-// plaintext modulus. We'll have the log_p but that's not distinct to each p. Unless we restrict to
-// powers of 2
 #[derive(Debug, Clone, TypeName)]
 struct BfvPlaintext<F: FieldSpec, const N: usize> {
     data: Vec<Field<F>>,
@@ -31,10 +23,6 @@ struct BfvPlaintext<F: FieldSpec, const N: usize> {
 
 impl<F: FieldSpec, const N: usize> DynamicNumFieldElements for BfvPlaintext<F, N> {
     fn num_native_field_elements(plaintext_modulus: u64) -> usize {
-        // TODO ascertain the correct bound for all moduli. I think this is it but I'm not sure.
-        // Add a test with odd moduli
-        // it might be this instead?
-        // let log_p = (plaintext_modulus as f64).log2().ceil() as usize + 1;
         let log_p = plaintext_modulus.ilog2() + 1;
         log_p as usize * N
     }
@@ -48,6 +36,9 @@ impl<F: FieldSpec, const N: usize> ToNativeFields for BfvPlaintext<F, N> {
 
 #[derive(Debug, Clone, TypeName)]
 /// A [BFV signed integer](crate::types::bfv::Signed) that has been shared to a ZKP program.
+///
+/// Use the [`AsFieldElement::into_field_elem`] method to decode the the value into a field
+/// element within a ZKP program.
 pub struct BfvSigned<F: FieldSpec>(BfvPlaintext<F, { <Signed as ShareWithZKP>::DEGREE_BOUND }>);
 
 impl<F: FieldSpec> DynamicNumFieldElements for BfvSigned<F> {

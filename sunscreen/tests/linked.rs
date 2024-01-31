@@ -12,7 +12,7 @@ mod linked_tests {
         types::zkp::{ConstrainCmp, Field, FieldSpec, ProgramNode},
         zkp_program, zkp_var, Compiler,
     };
-    use sunscreen::{Error, ZkpProgramFnExt};
+    use sunscreen::{Error, PlainModulusConstraint, ZkpProgramFnExt};
     use sunscreen_fhe_program::SchemeType;
     use sunscreen_runtime::{FheZkpRuntime, LinkedProof, LogProofBuilder, Params, ZkpProgramInput};
     use sunscreen_zkp_backend::bulletproofs::BulletproofsBackend;
@@ -215,5 +215,40 @@ mod linked_tests {
             lp.verify::<ZkpProgramInput>(&is_eq_zkp, vec![], vec![])
                 .expect("Failed to verify linked proof");
         }
+    }
+
+    #[test]
+    fn compiler_enforces_moduli_pow_2() {
+        // try to compile zkp program with plain modulus 100
+        let res = Compiler::new()
+            .fhe_program(doggie)
+            .plain_modulus_constraint(PlainModulusConstraint::Raw(100))
+            .zkp_backend::<BulletproofsBackend>()
+            .zkp_program(is_eq)
+            .compile();
+        assert!(matches!(res, Err(sunscreen::Error::Unsupported { .. })));
+    }
+
+    #[test]
+    fn builder_enforces_moduli_match() {
+        // compile zkp program with plain modulus 512
+        let app = Compiler::new()
+            .fhe_program(doggie)
+            .plain_modulus_constraint(PlainModulusConstraint::Raw(512))
+            .zkp_backend::<BulletproofsBackend>()
+            .zkp_program(is_eq)
+            .compile()
+            .unwrap();
+        let is_eq_zkp = app.get_zkp_program(is_eq).unwrap();
+
+        // but use runtime with modulus 4096
+        let rt = FheZkpRuntime::new(&SMALL_PARAMS, &BulletproofsBackend::new()).unwrap();
+
+        let mut proof_builder = LogProofBuilder::new(&rt);
+        let res = proof_builder.zkp_program(&is_eq_zkp);
+        assert!(matches!(
+            res,
+            Err(sunscreen_runtime::Error::BuilderError { .. })
+        ));
     }
 }

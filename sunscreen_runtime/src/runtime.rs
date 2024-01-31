@@ -184,7 +184,7 @@ pub struct GenericRuntime<T, B> {
     zkp_backend: B,
 }
 impl<T, B> GenericRuntime<T, B> {
-    fn validate_arguments<A>(signature: &CallSignature, arguments: &[A]) -> Result<()>
+    pub(crate) fn validate_arguments<A>(signature: &CallSignature, arguments: &[A]) -> Result<()>
     where
         A: TypeNameInstance,
     {
@@ -673,42 +673,52 @@ where
     T: marker::Zkp,
     B: ZkpBackend,
 {
-    fn gather_zkp_args<I>(
-        &self,
-        program: &CompiledZkpProgram,
-        private_inputs: Vec<I>,
-        public_inputs: Vec<I>,
-        constant_inputs: Vec<I>,
-    ) -> Result<(Vec<BigInt>, Vec<BigInt>, Vec<BigInt>)>
+    /// Take each input type and transform into bigints. Optionally validate args with provided closure.
+    pub(crate) fn collect_zkp_args_with<const N: usize, I>(
+        args: [Vec<I>; N],
+        predicate: impl FnOnce(&[Vec<ZkpProgramInput>]) -> Result<()>,
+    ) -> Result<[Vec<BigInt>; N]>
     where
         I: Into<ZkpProgramInput>,
     {
-        let private_inputs = private_inputs.into_iter().map(I::into).collect::<Vec<_>>();
-        let public_inputs = public_inputs.into_iter().map(I::into).collect::<Vec<_>>();
-        let constant_inputs = constant_inputs.into_iter().map(I::into).collect::<Vec<_>>();
+        // Collect into inputs
+        let inputs = args.map(|xs| xs.into_iter().map(I::into).collect::<Vec<_>>());
 
-        let all_arguments = [
-            private_inputs.clone(),
-            public_inputs.clone(),
-            constant_inputs.clone(),
-        ]
-        .concat();
-        Self::validate_arguments(&program.metadata.signature, &all_arguments)?;
+        // Validate inputs
+        predicate(&inputs)?;
 
-        let private_inputs = private_inputs
-            .into_iter()
-            .flat_map(|x| x.0.to_native_fields())
-            .collect::<Vec<BigInt>>();
-        let public_inputs = public_inputs
-            .into_iter()
-            .flat_map(|x| x.0.to_native_fields())
-            .collect::<Vec<BigInt>>();
-        let constant_inputs = constant_inputs
-            .into_iter()
-            .flat_map(|x| x.0.to_native_fields())
-            .collect::<Vec<BigInt>>();
-        Ok((private_inputs, public_inputs, constant_inputs))
+        // Collect into bigints
+        let bigints = inputs.map(|xs| {
+            xs.into_iter()
+                .flat_map(|x| x.0.to_native_fields())
+                .collect()
+        });
+        Ok(bigints)
     }
+
+    /// Collect all ZKP arg types into bigints and validate against program call signature.
+    pub(crate) fn collect_and_validate_zkp_args<const N: usize, I>(
+        args: [Vec<I>; N],
+        program: &CompiledZkpProgram,
+    ) -> Result<[Vec<BigInt>; N]>
+    where
+        I: Into<ZkpProgramInput>,
+    {
+        Self::collect_zkp_args_with(args, |inputs: &[Vec<ZkpProgramInput>]| {
+            let all_inputs = inputs.concat();
+            Self::validate_arguments(&program.metadata.signature, &all_inputs)
+        })
+    }
+
+    /// Collect ZKP arg types into bigints with no validation. Useful for verification side, as our
+    /// call signature currently isn't granular enough to cover shared/private/public/constant.
+    pub(crate) fn collect_zkp_args<const N: usize, I>(args: [Vec<I>; N]) -> Result<[Vec<BigInt>; N]>
+    where
+        I: Into<ZkpProgramInput>,
+    {
+        Self::collect_zkp_args_with(args, |_| Ok(()))
+    }
+
     /**
      * Prove the given `inputs` satisfy `program`.
      */
@@ -722,8 +732,10 @@ where
     where
         I: Into<ZkpProgramInput>,
     {
-        let (private_inputs, public_inputs, constant_inputs) =
-            self.gather_zkp_args(program, private_inputs, public_inputs, constant_inputs)?;
+        let [private_inputs, public_inputs, constant_inputs] = Self::collect_and_validate_zkp_args(
+            [private_inputs, public_inputs, constant_inputs],
+            program,
+        )?;
 
         let backend = &self.zkp_backend;
 
@@ -763,18 +775,10 @@ where
     where
         I: Into<ZkpProgramInput>,
     {
-        let private_inputs = private_inputs
-            .into_iter()
-            .flat_map(|x| I::into(x).0.to_native_fields())
-            .collect::<Vec<BigInt>>();
-        let public_inputs = public_inputs
-            .into_iter()
-            .flat_map(|x| I::into(x).0.to_native_fields())
-            .collect::<Vec<BigInt>>();
-        let constant_inputs = constant_inputs
-            .into_iter()
-            .flat_map(|x| I::into(x).0.to_native_fields())
-            .collect::<Vec<BigInt>>();
+        let [private_inputs, public_inputs, constant_inputs] = Self::collect_and_validate_zkp_args(
+            [private_inputs, public_inputs, constant_inputs],
+            program,
+        )?;
 
         let backend = &self.zkp_backend;
 
@@ -833,14 +837,8 @@ where
     where
         I: Into<ZkpProgramInput>,
     {
-        let constant_inputs = constant_inputs
-            .into_iter()
-            .flat_map(|x| I::into(x).0.to_native_fields())
-            .collect::<Vec<BigInt>>();
-        let public_inputs = public_inputs
-            .into_iter()
-            .flat_map(|x| I::into(x).0.to_native_fields())
-            .collect::<Vec<BigInt>>();
+        let [public_inputs, constant_inputs] =
+            Self::collect_zkp_args([public_inputs, constant_inputs])?;
 
         let backend = &self.zkp_backend;
 
@@ -872,14 +870,8 @@ where
     where
         I: Into<ZkpProgramInput>,
     {
-        let constant_inputs = constant_inputs
-            .into_iter()
-            .flat_map(|x| I::into(x).0.to_native_fields())
-            .collect::<Vec<BigInt>>();
-        let public_inputs = public_inputs
-            .into_iter()
-            .flat_map(|x| I::into(x).0.to_native_fields())
-            .collect::<Vec<BigInt>>();
+        let [public_inputs, constant_inputs] =
+            Self::collect_zkp_args([public_inputs, constant_inputs])?;
 
         let backend = &self.zkp_backend;
 

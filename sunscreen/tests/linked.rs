@@ -1,22 +1,16 @@
-#![allow(unused_imports, unused_variables, unreachable_code, clippy::all)]
-
 #[cfg(feature = "linkedproofs")]
 mod linked_tests {
     use lazy_static::lazy_static;
-    use logproof::rings::ZqSeal128_1024;
-    use logproof::test::seal_bfv_encryption_linear_relation;
-    use sunscreen::types::bfv::{Signed, Unsigned, Unsigned64};
-    use sunscreen::types::zkp::{AsFieldElement, BfvSigned, BulletproofsField, Mod};
+    use sunscreen::types::bfv::Signed;
+    use sunscreen::types::zkp::{AsFieldElement, BfvSigned, BulletproofsField};
+    use sunscreen::PlainModulusConstraint;
     use sunscreen::{
         fhe_program,
-        types::zkp::{ConstrainCmp, Field, FieldSpec, ProgramNode},
+        types::zkp::{ConstrainCmp, Field, FieldSpec},
         zkp_program, zkp_var, Compiler,
     };
-    use sunscreen::{Error, PlainModulusConstraint, ZkpProgramFnExt};
     use sunscreen_fhe_program::SchemeType;
-    use sunscreen_runtime::{
-        FheZkp, FheZkpRuntime, LinkedProof, LogProofBuilder, Params, PublicKey, ZkpProgramInput,
-    };
+    use sunscreen_runtime::{FheZkpRuntime, LogProofBuilder, Params, ZkpProgramInput};
     use sunscreen_zkp_backend::bulletproofs::BulletproofsBackend;
 
     lazy_static! {
@@ -72,7 +66,7 @@ mod linked_tests {
 
             println!("Performing linked proof");
             let lp = proof_builder
-                .zkp_program(&valid_transaction_zkp)
+                .zkp_program(valid_transaction_zkp)
                 .unwrap()
                 .shared_input(&tx_msg)
                 .public_input(BulletproofsField::from(balance))
@@ -82,7 +76,7 @@ mod linked_tests {
 
             println!("Performing linked verify");
             lp.verify(
-                &valid_transaction_zkp,
+                valid_transaction_zkp,
                 vec![BulletproofsField::from(balance)],
                 vec![],
             )
@@ -113,7 +107,7 @@ mod linked_tests {
                 .encrypt_and_share(&Signed::from(tx), &public_key)
                 .unwrap();
             proof_builder
-                .zkp_program(&valid_transaction_zkp)
+                .zkp_program(valid_transaction_zkp)
                 .unwrap()
                 .shared_input(&tx_msg)
                 .public_input(BulletproofsField::from(balance));
@@ -148,20 +142,22 @@ mod linked_tests {
                 .encrypt_and_share(&Signed::from(val), &public_key)
                 .unwrap();
             proof_builder
-                .zkp_program(&is_eq_zkp)
+                .zkp_program(is_eq_zkp)
                 .unwrap()
                 .shared_input(&val_msg)
                 .public_input(BulletproofsField::from(val));
 
-            let lp = proof_builder.build_linkedproof().expect(&format!(
-                "Failed to encode {} value",
-                if val.is_positive() {
-                    "positive"
-                } else {
-                    "negative"
-                }
-            ));
-            lp.verify(&is_eq_zkp, vec![BulletproofsField::from(val)], vec![])
+            let lp = proof_builder.build_linkedproof().unwrap_or_else(|_| {
+                panic!(
+                    "Failed to encode {} value",
+                    if val.is_positive() {
+                        "positive"
+                    } else {
+                        "negative"
+                    }
+                )
+            });
+            lp.verify(is_eq_zkp, vec![BulletproofsField::from(val)], vec![])
                 .expect("Failed to verify linked proof");
         }
     }
@@ -206,14 +202,14 @@ mod linked_tests {
                 .encrypt_and_share(&Signed::from(val), &public_key)
                 .unwrap();
             proof_builder
-                .zkp_program(&is_eq_zkp)
+                .zkp_program(is_eq_zkp)
                 .unwrap()
                 .shared_input(&x_msg)
                 .shared_input(&y_msg)
                 .private_input(BulletproofsField::from(val));
 
             let lp = proof_builder.build_linkedproof().unwrap();
-            lp.verify::<ZkpProgramInput>(&is_eq_zkp, vec![], vec![])
+            lp.verify::<ZkpProgramInput>(is_eq_zkp, vec![], vec![])
                 .expect("Failed to verify linked proof");
         }
     }
@@ -246,7 +242,7 @@ mod linked_tests {
         let rt = FheZkpRuntime::new(&SMALL_PARAMS, &BulletproofsBackend::new()).unwrap();
 
         let mut proof_builder = LogProofBuilder::new(&rt);
-        let res = proof_builder.zkp_program(&is_eq_zkp);
+        let res = proof_builder.zkp_program(is_eq_zkp);
         assert!(matches!(
             res,
             Err(sunscreen_runtime::Error::BuilderError { .. })
@@ -268,7 +264,7 @@ mod linked_tests {
 
             let (public_key, _secret_key) = rt.generate_keys().unwrap();
             let mut proof_builder = LogProofBuilder::new(&rt);
-            proof_builder.zkp_program(&is_eq_zkp).unwrap();
+            proof_builder.zkp_program(is_eq_zkp).unwrap();
             for _ in 0..num_shared_inputs {
                 let (_ct, msg) = proof_builder
                     .encrypt_and_share(&Signed::from(1), &public_key)

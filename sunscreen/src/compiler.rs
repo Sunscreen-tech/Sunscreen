@@ -242,9 +242,22 @@ impl<B> CompilerData<B> {
     }
 }
 
-/**
- * A frontend compiler for Sunscreen FHE programs.
- */
+/// A compiler for Sunscreen FHE programs.
+//
+// A note for developer sanity below: the type strategy here is to have `.fhe_program` enhance to
+// an FHE-capable compiler, and `.zkp_backend` to enhance to a ZKP-capable compiler. For that
+// strategy alone, the only methods that need to be defined in multiple impls are the
+// aforementioned ones, as the returned compiler type will change depending on the current compiler
+// type.
+//
+// But there's one added complication in that the ZKP method `.zkp_program` has type restrictions
+// depending on if the current ZKP-capable compiler is also FHE-capable, so that method also needs
+// multiple definitions.
+//
+// Future desired work: allow FHE params to be specified for both FHE and ZKP programs. This is
+// surprisingly complicated with the current approach. We may have to split into two markers (one
+// for FHE and one for ZKP) for that to be feasible, without requiring 6 definitions for the same
+// method.
 pub struct GenericCompiler<T, B> {
     data: CompilerData<B>,
     _phantom: PhantomData<T>,
@@ -298,7 +311,52 @@ impl Compiler {
     }
 }
 
-impl<T, B> GenericCompiler<T, B> {
+// This generic impl can contain public methods where the builder remains the same type, or
+// internal methods that are restricted to FHE-capable builder types.
+impl<T: marker::Fhe, B> GenericCompiler<T, B> {
+    /**
+     * Set the compiler to search for suitable encryption scheme parameters for the FHE program.
+     */
+    pub fn find_params(mut self) -> Self {
+        self.data.fhe_data_mut().params_mode = ParamsMode::Search;
+        self
+    }
+
+    /**
+     * Set the constraint the parameter search algorithm places on the plaintext modulus.
+     * You can either force the algorithm to use an exact value or any value that supports
+     * batching of at least n bits in length.
+     */
+    pub fn plain_modulus_constraint(mut self, p: PlainModulusConstraint) -> Self {
+        self.data.fhe_data_mut().plain_modulus_constraint = p;
+        self
+    }
+
+    /**
+     * Don't use the parameter search algorithm, and instead explicitly set the scheme's parameters.
+     * For expert use and may cause failures.
+     */
+    pub fn with_params(mut self, params: &Params) -> Self {
+        self.data.fhe_data_mut().params_mode = ParamsMode::Manual(params.clone());
+        self
+    }
+
+    /**
+     * Set the security level. If unspecified, the compiler assumes 128-bit security.
+     */
+    pub fn security_level(mut self, security_level: SecurityLevel) -> Self {
+        self.data.fhe_data_mut().security_level = security_level;
+        self
+    }
+
+    /**
+     * The minimum number of bits of noise budget the search algorithm will leave for all outputs.
+     */
+    pub fn additional_noise_budget(mut self, noise_margin: u32) -> Self {
+        self.data.fhe_data_mut().noise_margin = noise_margin;
+        self
+    }
+
     fn compile_fhe(&self) -> Result<HashMap<String, CompiledFheProgram>> {
         let fhe_data: &FheCompilerData = self.data.fhe_data();
 
@@ -400,6 +458,60 @@ impl<T, B> GenericCompiler<T, B> {
     }
 }
 
+// This generic impl can contain public methods where the builder remains the same type, or
+// internal methods that are restricted to ZKP-capable builder types.
+impl<T: marker::Zkp, B: FieldSpec> GenericCompiler<T, B> {
+    fn compile_zkp(&self, params: Option<&Params>) -> Result<HashMap<String, CompiledZkpProgram>> {
+        let zkp_data = self.data.zkp_data();
+
+        let shared_zkp_programs = zkp_data.shared_zkp_program_fns.iter().map(|prog| {
+            // As long as we've properly maintained invariants internal to the compiler, shared
+            // programs should only be present when params are available.
+            let params = params.expect("no params; please file a bug!").clone();
+            // Note: this is currently unsupported because determining the exact arbitrary
+            // plaintext modulus from the dynamic length of a shared ZKP input in general is not
+            // possible (as x.ilog2() is not injective). We may support this in the future.
+            if !params.plain_modulus.is_power_of_two() {
+                return Err(Error::unsupported(
+                    "Plaintext modulus must be a power of two for ZKP programs with #[shared] arguments.",
+                ));
+            }
+            let result = prog.build(params.plain_modulus)?;
+            let result = zkp::compile(&result);
+            let metadata = ZkpProgramMetadata {
+                params: Some(params),
+                signature: prog.signature(),
+            };
+            let compiled_program = CompiledZkpProgram {
+                zkp_program_fn: result,
+                metadata,
+            };
+            Ok((prog.name().to_owned(), compiled_program))
+        });
+        let zkp_programs = zkp_data
+            .zkp_program_fns
+            .iter()
+            .map(|prog| {
+                let result = prog.build(())?;
+                let result = zkp::compile(&result);
+                let metadata = ZkpProgramMetadata {
+                    params: None,
+                    signature: prog.signature(),
+                };
+                let compiled_program = CompiledZkpProgram {
+                    zkp_program_fn: result,
+                    metadata,
+                };
+
+                Ok((prog.name().to_owned(), compiled_program))
+            })
+            .chain(shared_zkp_programs)
+            .collect::<Result<HashMap<_, _>>>()?;
+
+        Ok(zkp_programs)
+    }
+}
+
 impl<B> ZkpCompiler<B>
 where
     B: FieldSpec,
@@ -450,31 +562,6 @@ where
         self
     }
 
-    fn compile_zkp(&self) -> Result<HashMap<String, CompiledZkpProgram>> {
-        let zkp_data = self.data.zkp_data();
-
-        let zkp_programs = zkp_data
-            .zkp_program_fns
-            .iter()
-            .map(|prog| {
-                let result = prog.build(())?;
-                let result = zkp::compile(&result);
-                let metadata = ZkpProgramMetadata {
-                    params: None,
-                    signature: prog.signature(),
-                };
-                let compiled_program = CompiledZkpProgram {
-                    zkp_program_fn: result,
-                    metadata,
-                };
-
-                Ok((prog.name().to_owned(), compiled_program))
-            })
-            .collect::<Result<HashMap<_, _>>>()?;
-
-        Ok(zkp_programs)
-    }
-
     /**
      * Compile the ZKP programs. If successful, returns an
      * [`Application`] containing a compiled form of each
@@ -487,7 +574,7 @@ where
      * have the same name.
      */
     pub fn compile(self) -> Result<Application<Zkp>> {
-        Application::new(HashMap::new(), self.compile_zkp()?)
+        Application::new(HashMap::new(), self.compile_zkp(None)?)
     }
 }
 
@@ -591,56 +678,6 @@ where
         self
     }
 
-    fn compile_zkp(&self, params: Option<&Params>) -> Result<HashMap<String, CompiledZkpProgram>> {
-        let zkp_data = self.data.zkp_data();
-
-        let shared_zkp_programs = zkp_data.shared_zkp_program_fns.iter().map(|prog| {
-            // Since this is an FheZkpCompiler, the params unwrap below _should_ be impossible.
-            let params = params.ok_or(Error::NoParams)?.clone();
-            // Note: this is currently unsupported because determining the exact arbitrary
-            // plaintext modulus from the dynamic length of a shared ZKP input in general is not
-            // possible (as x.ilog2() is not injective). We could support this if we store the
-            // plaintext modulus as an optional field directly on the ProgramNode.
-            if !params.plain_modulus.is_power_of_two() {
-                return Err(Error::unsupported(
-                    "Plaintext modulus must be a power of two for ZKP programs with #[shared] arguments.",
-                ));
-            }
-            let result = prog.build(params.plain_modulus)?;
-            let result = zkp::compile(&result);
-            let metadata = ZkpProgramMetadata {
-                params: Some(params),
-                signature: prog.signature(),
-            };
-            let compiled_program = CompiledZkpProgram {
-                zkp_program_fn: result,
-                metadata,
-            };
-            Ok((prog.name().to_owned(), compiled_program))
-        });
-        let zkp_programs = zkp_data
-            .zkp_program_fns
-            .iter()
-            .map(|prog| {
-                let result = prog.build(())?;
-                let result = zkp::compile(&result);
-                let metadata = ZkpProgramMetadata {
-                    params: None,
-                    signature: prog.signature(),
-                };
-                let compiled_program = CompiledZkpProgram {
-                    zkp_program_fn: result,
-                    metadata,
-                };
-
-                Ok((prog.name().to_owned(), compiled_program))
-            })
-            .chain(shared_zkp_programs)
-            .collect::<Result<HashMap<_, _>>>()?;
-
-        Ok(zkp_programs)
-    }
-
     /**
      * Compile the FHE and ZKP programs. If successful, returns an
      * [`Application`] containing a compiled form of each
@@ -661,56 +698,15 @@ where
      */
     pub fn compile(self) -> Result<Application<FheZkp>> {
         let fhe_programs = self.compile_fhe()?;
-        let params = fhe_programs.values().next().map(|p| &p.metadata.params);
+        let params = fhe_programs
+            .values()
+            .next()
+            .map(|p| &p.metadata.params)
+            .or_else(|| match &self.data.fhe_data().params_mode {
+                ParamsMode::Search => None,
+                ParamsMode::Manual(p) => Some(p),
+            });
         Application::new(self.compile_fhe()?, self.compile_zkp(params)?)
-    }
-}
-
-impl<T, B> GenericCompiler<T, B>
-where
-    T: marker::Fhe,
-{
-    /**
-     * Set the compiler to search for suitable encryption scheme parameters for the FHE program.
-     */
-    pub fn find_params(mut self) -> Self {
-        self.data.fhe_data_mut().params_mode = ParamsMode::Search;
-        self
-    }
-
-    /**
-     * Set the constraint the parameter search algorithm places on the plaintext modulus.
-     * You can either force the algorithm to use an exact value or any value that supports
-     * batching of at least n bits in length.
-     */
-    pub fn plain_modulus_constraint(mut self, p: PlainModulusConstraint) -> Self {
-        self.data.fhe_data_mut().plain_modulus_constraint = p;
-        self
-    }
-
-    /**
-     * Don't use the parameter search algorithm, and instead explicitly set the scheme's parameters.
-     * For expert use and may cause failures.
-     */
-    pub fn with_params(mut self, params: &Params) -> Self {
-        self.data.fhe_data_mut().params_mode = ParamsMode::Manual(params.clone());
-        self
-    }
-
-    /**
-     * Set the security level. If unspecified, the compiler assumes 128-bit security.
-     */
-    pub fn security_level(mut self, security_level: SecurityLevel) -> Self {
-        self.data.fhe_data_mut().security_level = security_level;
-        self
-    }
-
-    /**
-     * The minimum number of bits of noise budget the search algorithm will leave for all outputs.
-     */
-    pub fn additional_noise_budget(mut self, noise_margin: u32) -> Self {
-        self.data.fhe_data_mut().noise_margin = noise_margin;
-        self
     }
 }
 

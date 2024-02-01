@@ -114,7 +114,6 @@ pub mod marker {
  * of ciphertexts.
  */
 #[allow(unused)]
-// TODO possible remove this ?
 pub struct BFVEncryptionComponents {
     pub(crate) ciphertext: Ciphertext,
     pub(crate) u: Vec<PolynomialArray>,

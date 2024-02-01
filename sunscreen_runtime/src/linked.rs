@@ -1,9 +1,5 @@
 // For tests, see the sunscreen crate.
 
-// TODO remove
-#![allow(missing_docs)]
-#![allow(unused_imports)]
-
 use std::ops::Range;
 
 use bitvec::vec::BitVec;
@@ -340,7 +336,10 @@ impl Sdlp {
     }
 }
 
+/// The prover knowledge of an [`Sdlp`].
 pub struct SealSdlpProverKnowledge(pub(crate) SealSdlpProverKnowledgeInternal);
+
+/// The verifier knowledge of an [`Sdlp`].
 #[derive(Debug, Clone)]
 pub struct SealSdlpVerifierKnowledge(pub(crate) SealSdlpVerifierKnowledgeInternal);
 
@@ -390,6 +389,9 @@ macro_rules! seq_zq {
 }
 
 impl SealSdlpProverKnowledge {
+    /// Get the binary expansion of a component of the witness matrix `S`.
+    ///
+    /// Delegation to [`LogProofProverKnowledge::s_binary_by_index`].
     pub fn s_binary_by_index(&self, index: (usize, usize)) -> BitVec {
         seq_zq!({
             match &self.0 {
@@ -400,6 +402,9 @@ impl SealSdlpProverKnowledge {
         })
     }
 
+    /// Get the verifier knowledge component.
+    ///
+    /// Delegation to [`LogProofProverKnowledge::vk`].
     pub fn vk(&self) -> SealSdlpVerifierKnowledge {
         seq_zq!({
             match &self.0 {
@@ -412,6 +417,9 @@ impl SealSdlpProverKnowledge {
         })
     }
 
+    /// Create a shared `LogProof`.
+    ///
+    /// Delegation to [`LogProof::create_with_shared`].
     pub fn create_shared_logproof(
         &self,
         transcript: &mut Transcript,
@@ -432,6 +440,9 @@ impl SealSdlpProverKnowledge {
         })
     }
 
+    /// Create a `LogProof` without sharing.
+    ///
+    /// Delegation to [`LogProof::create`].
     pub fn create_logproof(
         &self,
         transcript: &mut Transcript,
@@ -450,6 +461,9 @@ impl SealSdlpProverKnowledge {
 }
 
 impl SealSdlpVerifierKnowledge {
+    /// Get the length in bits of the binary expansion of the serialized secret * vectors.
+    ///
+    /// Delegate to [`LogProofVerifierKnowledge::l`].
     pub fn l(&self) -> u64 {
         seq_zq!({
             match &self.0 {
@@ -459,6 +473,10 @@ impl SealSdlpVerifierKnowledge {
             }
         })
     }
+
+    /// Get the ranges in the serialized coefficients of `S` corresponding to the bounds
+    ///
+    /// Delegate to [`LogProofVerifierKnowledge::b_slices`].
     pub fn b_slices(&self) -> Vec<Vec<Range<usize>>> {
         seq_zq!({
             match &self.0 {
@@ -468,6 +486,10 @@ impl SealSdlpVerifierKnowledge {
             }
         })
     }
+
+    /// Verify the log proof.
+    ///
+    /// Delegate to [`LogProof::verify`].
     pub fn verify(
         &self,
         logproof: &LogProof,

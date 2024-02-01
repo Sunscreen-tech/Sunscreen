@@ -1,4 +1,4 @@
-//! This module various builders.
+//! This module contains various builders for ZKPs, SDLPs, and linked proofs.
 
 use merlin::Transcript;
 use sunscreen_zkp_backend::{Proof, ZkpBackend};

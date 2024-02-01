@@ -44,9 +44,8 @@ thiserror = { workspace = true }
 serde_json = { workspace = true }
 
 [features]
-bulletproofs = ["dep:bulletproofs"]
 linkedproofs = [
-  "bulletproofs",
+  "dep:bulletproofs",
   "dep:logproof",
   "dep:bitvec",
   "dep:seq-macro",

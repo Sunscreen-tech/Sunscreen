@@ -60,6 +60,9 @@ jobs:
     - name: Verify examples outside of workspace (allowlist_zkp)
       run: cargo test --workspace --verbose --release
       working-directory: ./examples/allowlist_zkp
+    - name: Verify examples outside of workspace (private_tx_linkedproof)
+      run: cargo test --workspace --verbose --release
+      working-directory: ./examples/private_tx_linkedproof
 
     # Build package in prep for user docs
     - name: Build sunscreen and bincode

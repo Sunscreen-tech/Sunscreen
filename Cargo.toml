@@ -20,7 +20,12 @@ members = [
     "sunscreen_compiler_common",
     "sunscreen_zkp_backend",
 ]
-exclude = ["mdBook", "rust-playground", "examples/allowlist_zkp"]
+exclude = [
+    "mdBook",
+    "rust-playground",
+    "examples/allowlist_zkp",
+    "examples/private_tx_linkedproof",
+]
 
 [profile.release]
 split-debuginfo = "packed"

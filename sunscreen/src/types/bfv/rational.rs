@@ -21,6 +21,21 @@ pub struct Rational {
     den: Signed,
 }
 
+#[cfg(feature = "linkedproofs")]
+mod sharing {
+    use crate::types::zkp::BfvRational;
+
+    use super::*;
+    use sunscreen_runtime::ShareWithZkp;
+    use sunscreen_zkp_backend::FieldSpec;
+
+    impl ShareWithZkp for Rational {
+        type ZkpType<F: FieldSpec> = BfvRational<F>;
+        // N.B. the degree bound is per polynomial
+        const DEGREE_BOUND: usize = <Signed as ShareWithZkp>::DEGREE_BOUND;
+    }
+}
+
 impl PartialEq for Rational {
     fn eq(&self, other: &Self) -> bool {
         let num_a: i64 = self.num.into();
@@ -97,6 +112,15 @@ impl TryFrom<f64> for Rational {
             num: Signed::from(*val.numer()),
             den: Signed::from(*val.denom()),
         })
+    }
+}
+
+impl From<Rational64> for Rational {
+    fn from(val: Rational64) -> Self {
+        Self {
+            num: Signed::from(*val.numer()),
+            den: Signed::from(*val.denom()),
+        }
     }
 }
 

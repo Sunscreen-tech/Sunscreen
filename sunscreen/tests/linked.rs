@@ -1,8 +1,9 @@
 #[cfg(feature = "linkedproofs")]
 mod linked_tests {
     use lazy_static::lazy_static;
-    use sunscreen::types::bfv::Signed;
-    use sunscreen::types::zkp::{AsFieldElement, BfvSigned, BulletproofsField};
+    use num::Rational64;
+    use sunscreen::types::bfv::{Rational, Signed};
+    use sunscreen::types::zkp::{AsFieldElement, BfvRational, BfvSigned, BulletproofsField};
     use sunscreen::PlainModulusConstraint;
     use sunscreen::{
         fhe_program,
@@ -118,21 +119,21 @@ mod linked_tests {
     }
 
     #[zkp_program]
-    fn is_eq<F: FieldSpec>(#[shared] x: BfvSigned<F>, #[public] y: Field<F>) {
+    fn is_eq_signed<F: FieldSpec>(#[shared] x: BfvSigned<F>, #[public] y: Field<F>) {
         x.into_field_elem().constrain_eq(y);
     }
 
     #[test]
-    fn test_is_eq() {
+    fn test_signed_encoding() {
         let app = Compiler::new()
             .fhe_program(doggie)
             .with_params(&SMALL_PARAMS)
             .zkp_backend::<BulletproofsBackend>()
-            .zkp_program(is_eq)
+            .zkp_program(is_eq_signed)
             .compile()
             .unwrap();
         let rt = FheZkpRuntime::new(app.params(), &BulletproofsBackend::new()).unwrap();
-        let is_eq_zkp = app.get_zkp_program(is_eq).unwrap();
+        let is_eq_zkp = app.get_zkp_program(is_eq_signed).unwrap();
 
         let (public_key, _secret_key) = rt.generate_keys().unwrap();
 
@@ -159,6 +160,107 @@ mod linked_tests {
             });
             lp.verify(is_eq_zkp, vec![BulletproofsField::from(val)], vec![])
                 .expect("Failed to verify linked proof");
+        }
+    }
+
+    #[zkp_program]
+    fn is_eq_rational<F: FieldSpec>(
+        #[shared] x: BfvRational<F>,
+        #[private] num: Field<F>,
+        #[private] den: Field<F>,
+    ) {
+        let (x_num, x_den) = x.into_field_elem();
+        x_num.constrain_eq(num);
+        x_den.constrain_eq(den);
+    }
+
+    #[test]
+    fn test_rational_encoding() {
+        let app = Compiler::new()
+            .fhe_program(doggie)
+            .with_params(&SMALL_PARAMS)
+            .zkp_backend::<BulletproofsBackend>()
+            .zkp_program(is_eq_rational)
+            .compile()
+            .unwrap();
+        let rt = FheZkpRuntime::new(app.params(), &BulletproofsBackend::new()).unwrap();
+        let is_eq_zkp = app.get_zkp_program(is_eq_rational).unwrap();
+
+        let (public_key, _secret_key) = rt.generate_keys().unwrap();
+
+        for _ in 0..1 {
+            // use i32 values to ensure multiplication doesn't overflow
+            let x_n = rand::random::<i32>() as i64;
+            // ensure denominator is positive
+            let x_d = rand::random::<i32>().saturating_abs().saturating_add(1) as i64;
+            let x = Rational::from(Rational64::new_raw(x_n, x_d));
+            let mut proof_builder = LogProofBuilder::new(&rt);
+            let (_ct, x_msg) = proof_builder.encrypt_and_share(&x, &public_key).unwrap();
+            proof_builder
+                .zkp_program(is_eq_zkp)
+                .unwrap()
+                .shared_input(&x_msg)
+                .private_input(BulletproofsField::from(x_n))
+                .private_input(BulletproofsField::from(x_d));
+
+            let lp = proof_builder
+                .build_linkedproof()
+                .unwrap_or_else(|_| panic!("Failed to encode {x:?}"));
+            lp.verify::<ZkpProgramInput>(is_eq_zkp, vec![], vec![])
+                .expect("Failed to encode {x:?}");
+        }
+    }
+
+    #[zkp_program]
+    fn compare_rational<F: FieldSpec>(#[shared] x: BfvRational<F>, #[shared] y: BfvRational<F>) {
+        let (x_n, x_d) = x.into_field_elem();
+        let (y_n, y_d) = y.into_field_elem();
+        let x = x_n * y_d;
+        let y = y_n * x_d;
+        x.constrain_le_bounded(y, 64)
+    }
+
+    #[test]
+    fn can_compare_rationals() {
+        let app = Compiler::new()
+            .fhe_program(doggie)
+            .with_params(&SMALL_PARAMS)
+            .zkp_backend::<BulletproofsBackend>()
+            .zkp_program(compare_rational)
+            .compile()
+            .unwrap();
+        let rt = FheZkpRuntime::new(app.params(), &BulletproofsBackend::new()).unwrap();
+        let compare_rational_zkp = app.get_zkp_program(compare_rational).unwrap();
+
+        let (public_key, _secret_key) = rt.generate_keys().unwrap();
+
+        // To slow to run in a loop :/ if we eventually expose small params for testing, do more cases
+        // TODO change 10 to 1 !
+        for _ in 0..10 {
+            // use i32 values to ensure multiplication doesn't overflow
+            let x_n = rand::random::<i32>() as i64;
+            let y_n = rand::random::<i32>() as i64;
+            // ensure denominator is positive
+            let x_d = rand::random::<i32>().saturating_abs().saturating_add(1) as i64;
+            let y_d = rand::random::<i32>().saturating_abs().saturating_add(1) as i64;
+            let x = Rational64::new_raw(x_n, x_d);
+            let y = Rational64::new_raw(y_n, y_d);
+            let (x, y) = (Rational::from(x.min(y)), Rational::from(x.max(y)));
+
+            let mut proof_builder = LogProofBuilder::new(&rt);
+            let (_ct, x_msg) = proof_builder.encrypt_and_share(&x, &public_key).unwrap();
+            let (_ct, y_msg) = proof_builder.encrypt_and_share(&y, &public_key).unwrap();
+            proof_builder
+                .zkp_program(compare_rational_zkp)
+                .unwrap()
+                .shared_input(&x_msg)
+                .shared_input(&y_msg);
+
+            let lp = proof_builder
+                .build_linkedproof()
+                .unwrap_or_else(|_| panic!("Failed to prove {x:?} <= {y:?}"));
+            lp.verify::<ZkpProgramInput>(compare_rational_zkp, vec![], vec![])
+                .unwrap_or_else(|_| panic!("Failed to verify {x:?} <= {y:?}"));
         }
     }
 
@@ -221,7 +323,7 @@ mod linked_tests {
             .fhe_program(doggie)
             .plain_modulus_constraint(PlainModulusConstraint::Raw(100))
             .zkp_backend::<BulletproofsBackend>()
-            .zkp_program(is_eq)
+            .zkp_program(is_eq_signed)
             .compile();
         assert!(matches!(res, Err(sunscreen::Error::Unsupported { .. })));
     }
@@ -233,10 +335,10 @@ mod linked_tests {
             .fhe_program(doggie)
             .plain_modulus_constraint(PlainModulusConstraint::Raw(512))
             .zkp_backend::<BulletproofsBackend>()
-            .zkp_program(is_eq)
+            .zkp_program(is_eq_signed)
             .compile()
             .unwrap();
-        let is_eq_zkp = app.get_zkp_program(is_eq).unwrap();
+        let is_eq_zkp = app.get_zkp_program(is_eq_signed).unwrap();
 
         // but use runtime with modulus 4096
         let rt = FheZkpRuntime::new(&SMALL_PARAMS, &BulletproofsBackend::new()).unwrap();

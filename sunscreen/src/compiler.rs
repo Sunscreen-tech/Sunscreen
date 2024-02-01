@@ -173,27 +173,27 @@ struct ZkpCompilerData<B> {
     shared_zkp_program_fns: Vec<Box<dyn ZkpProgramFn<B, Share = Shared>>>,
 }
 
-enum CompilerData<F> {
+enum CompilerData<B> {
     None,
     Fhe(FheCompilerData),
-    Zkp(ZkpCompilerData<F>),
-    FheZkp(FheCompilerData, ZkpCompilerData<F>),
+    Zkp(ZkpCompilerData<B>),
+    FheZkp(FheCompilerData, ZkpCompilerData<B>),
 }
 
-impl<F> CompilerData<F> {
+impl<B> CompilerData<B> {
     fn new_fhe(data: FheCompilerData) -> Self {
         Self::Fhe(data)
     }
 
-    fn new_zkp(data: ZkpCompilerData<F>) -> Self {
+    fn new_zkp(data: ZkpCompilerData<B>) -> Self {
         Self::Zkp(data)
     }
 
-    fn new_fhe_zkp(fhe_data: FheCompilerData, zkp_data: ZkpCompilerData<F>) -> Self {
+    fn new_fhe_zkp(fhe_data: FheCompilerData, zkp_data: ZkpCompilerData<B>) -> Self {
         Self::FheZkp(fhe_data, zkp_data)
     }
 
-    fn zkp_data_mut(&mut self) -> &mut ZkpCompilerData<F> {
+    fn zkp_data_mut(&mut self) -> &mut ZkpCompilerData<B> {
         match self {
             Self::Zkp(d) => d,
             Self::FheZkp(_, d) => d,
@@ -201,7 +201,7 @@ impl<F> CompilerData<F> {
         }
     }
 
-    fn zkp_data(&self) -> &ZkpCompilerData<F> {
+    fn zkp_data(&self) -> &ZkpCompilerData<B> {
         match self {
             Self::Zkp(d) => d,
             Self::FheZkp(_, d) => d,
@@ -225,7 +225,7 @@ impl<F> CompilerData<F> {
         }
     }
 
-    fn unwrap_zkp(self) -> ZkpCompilerData<F> {
+    fn unwrap_zkp(self) -> ZkpCompilerData<B> {
         match self {
             Self::Zkp(d) => d,
             Self::FheZkp(_, d) => d,
@@ -245,8 +245,8 @@ impl<F> CompilerData<F> {
 /**
  * A frontend compiler for Sunscreen FHE programs.
  */
-pub struct GenericCompiler<T, F> {
-    data: CompilerData<F>,
+pub struct GenericCompiler<T, B> {
+    data: CompilerData<B>,
     _phantom: PhantomData<T>,
 }
 

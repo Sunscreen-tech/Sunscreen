@@ -789,6 +789,8 @@ mod tests {
         let app = Compiler::new().fhe_program(kitty).compile().unwrap();
 
         assert_eq!(app.type_id(), TypeId::of::<Application<Fhe>>());
+        assert_eq!(app.fhe_programs.len(), 1);
+        assert_eq!(app.zkp_programs.len(), 0);
     }
 
     #[test]
@@ -803,6 +805,8 @@ mod tests {
             .unwrap();
 
         assert_eq!(app.type_id(), TypeId::of::<Application<Zkp>>());
+        assert_eq!(app.fhe_programs.len(), 0);
+        assert_eq!(app.zkp_programs.len(), 1);
     }
 
     #[test]
@@ -821,5 +825,7 @@ mod tests {
             .unwrap();
 
         assert_eq!(app.type_id(), TypeId::of::<Application<FheZkp>>());
+        assert_eq!(app.fhe_programs.len(), 1);
+        assert_eq!(app.zkp_programs.len(), 1);
     }
 }

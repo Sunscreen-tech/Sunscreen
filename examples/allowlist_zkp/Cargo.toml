@@ -1,7 +1,9 @@
-[workspace]
-members = ["zkp", "prover", "verifier"]
+[package]
+name = "allowlist_zkp"
+version = "0.1.0"
+edition = "2021"
 
-[workspace.dependencies]
-anyhow = "1.0"
-bincode = "1.3.3"
-sunscreen = { path = "../../sunscreen", features = ["bulletproofs"] }
+[dependencies]
+anyhow = "1.0.79"
+bincode = { workspace = true }
+sunscreen = { workspace = true }

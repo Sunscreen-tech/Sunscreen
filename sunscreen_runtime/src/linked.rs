@@ -1,10 +1,11 @@
 // For tests, see the sunscreen crate.
 
-use std::ops::Range;
+use std::{ops::Range, time::Instant};
 
 use bitvec::vec::BitVec;
 use bulletproofs::{BulletproofGens, GeneratorsChain, PedersenGens};
 use curve25519_dalek::{ristretto::RistrettoPoint, scalar::Scalar};
+use log::trace;
 use logproof::{
     math::rand256,
     rings::{ZqSeal128_1024, ZqSeal128_2048, ZqSeal128_4096, ZqSeal128_8192},
@@ -189,6 +190,7 @@ impl LinkedProof {
         });
 
         // Combine the shared & private inputs
+        // Note: shared inputs _must_ come first. The proof linking logic depends on this.
         let private_inputs_bigint = shared_inputs_bigint
             .chain(private_inputs_bigint)
             .collect::<Vec<_>>();
@@ -223,17 +225,23 @@ impl LinkedProof {
         let prover_parameters =
             BulletproofProverParameters::new(verifier_parameters.clone(), half_rho);
 
+        trace!("Starting BP JIT (prover)...");
+        let now = Instant::now();
         let prog = backend.jit_prover(
             &program.zkp_program_fn,
             &private_inputs_bigint,
             &public_inputs_bigint,
             &constant_inputs_bigint,
         )?;
+        trace!("Prover BP JIT time {}s", now.elapsed().as_secs_f64());
 
         let inputs = [public_inputs_bigint, private_inputs_bigint].concat();
 
+        trace!("Starting BP backend prove...");
+        let now = Instant::now();
         let bp_proof =
             backend.prove_with_parameters(&prog, &inputs, &prover_parameters, &mut transcript)?;
+        trace!("Prover BP time {}s", now.elapsed().as_secs_f64());
 
         let bp_package = BP {
             proof: bp_proof,

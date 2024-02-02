@@ -1119,8 +1119,10 @@ impl LogProof {
      *
      * This modifies bitvec in place.
      *
+     * Valid values for `log_b` are u64 integers not equal to 1; this function will
+     * panic on any other input.
+     *
      */
-    // TODO seems incorrect for log_b == 1; {0, 1} -> 0 and {-1} -> 1
     fn to_2s_complement_single<B, const N: usize>(value: &Zq<N, B>, log_b: u64, bitvec: &mut BitVec)
     where
         B: ArithmeticBackend<N>,
@@ -1128,6 +1130,7 @@ impl LogProof {
         if log_b == 0 {
             return;
         }
+        assert_ne!(log_b, 1);
 
         let value = value.into_bigint();
         let mod_div_2 = Zq::<N, B>::field_modulus_div_2();

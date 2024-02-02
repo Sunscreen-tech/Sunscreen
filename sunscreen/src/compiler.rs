@@ -254,7 +254,7 @@ impl<B> CompilerData<B> {
 // depending on if the current ZKP-capable compiler is also FHE-capable, so that method also needs
 // multiple definitions.
 //
-// Future desired work: allow FHE params to be specified for both FHE and ZKP programs. This is
+// TODO: allow FHE params to be specified for both FHE and ZKP programs. This is
 // surprisingly complicated with the current approach. We may have to split into two markers (one
 // for FHE and one for ZKP) for that to be feasible, without requiring 6 definitions for the same
 // method.
@@ -516,9 +516,7 @@ impl<B> ZkpCompiler<B>
 where
     B: FieldSpec,
 {
-    /**
-     * Add the given FHE program for compilation.
-     */
+    /// Add the given FHE program for compilation.
     pub fn fhe_program<F>(self, fhe_program_fn: F) -> FheZkpCompiler<B>
     where
         F: FheProgramFn + 'static,
@@ -570,7 +568,7 @@ where
      * # Remarks
      * Each specified ZKP program must have a unique name,
      * regardless of its parent module or crate. `compile` returns
-     * a [`Error::NameCollision`] if two or more FHE programs
+     * a [`Error::NameCollision`] if two or more ZKP programs
      * have the same name.
      */
     pub fn compile(self) -> Result<Application<Zkp>> {

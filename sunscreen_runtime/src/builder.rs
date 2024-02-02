@@ -1,6 +1,5 @@
 //! This module contains various builders for ZKPs, SDLPs, and linked proofs.
 
-use merlin::Transcript;
 use sunscreen_zkp_backend::{Proof, ZkpBackend};
 
 use crate::{marker, CompiledZkpProgram, GenericRuntime, Params, Result, ZkpProgramInput};
@@ -110,23 +109,6 @@ impl<'r, 'p, T: marker::Zkp, B: ZkpBackend> ProofBuilder<'r, 'p, T, B> {
             self.private_inputs,
             self.public_inputs,
             self.constant_inputs,
-        )
-    }
-
-    /// Generate a proof with parameters for that proof system; see
-    /// [`runtime.prove_with_parameters()`][GenericRuntime::prove_with_parameters].
-    pub fn prove_with_parameters(
-        self,
-        parameters: &B::ProverParameters,
-        transcript: &mut Transcript,
-    ) -> Result<Proof> {
-        self.runtime.prove_with_parameters(
-            self.program,
-            self.private_inputs,
-            self.public_inputs,
-            self.constant_inputs,
-            parameters,
-            transcript,
         )
     }
 }
@@ -259,14 +241,16 @@ mod linked {
 
         /// The number of nonzero coefficients to share between the SDLP and ZKP.
         ///
-        /// Note that when plaintexts polynomials are shared with ZKP programs, the ZKP program
-        /// assumes the coefficients form a 2s complement encoding. Without this bound, all
-        /// coefficients (up to the lattice degree `N`) are shared and thus the ZKP circuit has to
-        /// compute `2^N`. Of course, each ZKP field element is limited by its underlying
-        /// representation (e.g. a 256-bit scalar for Bulletproofs). Thus, any encoding should keep
-        /// this limit this in mind.
+        /// Note that many FHE plaintext types are encoded into polynomials with a flavor of binary
+        /// or 2s complement encoding; that is, as coefficients of powers of 2. In this case, the
+        /// `DEGREE_BOUND` must be chosen carefully to ensure that the field elements don't
+        /// overflow.
         ///
-        /// This number should be less than 256.
+        /// For example, if you include 256 coefficients of a plaintext polynomial encoding a
+        /// `Signed` value, the ZKP circuit will attempt to multiply the last coefficient by
+        /// `2^{256}`. If using the bulletproofs backend, the `Scalar` type backing the field
+        /// elements is only a 256-bit integer, and will overflow! So, set this value carefully
+        /// depending on the plaintext encoding and field element decoding logic.
         const DEGREE_BOUND: usize;
     }
 

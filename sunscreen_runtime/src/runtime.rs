@@ -758,49 +758,6 @@ where
         Ok(backend.prove(&prog, &inputs)?)
     }
 
-    /**
-     * Prove the given `inputs` satisfy `program` with parameters for that
-     * particular proof system.
-     */
-    pub fn prove_with_parameters<I>(
-        &self,
-        program: &CompiledZkpProgram,
-        private_inputs: Vec<I>,
-        public_inputs: Vec<I>,
-        constant_inputs: Vec<I>,
-        parameters: &B::ProverParameters,
-        transcript: &mut Transcript,
-    ) -> Result<Proof>
-    where
-        I: Into<ZkpProgramInput>,
-    {
-        let [private_inputs, public_inputs, constant_inputs] = Self::collect_and_validate_zkp_args(
-            [private_inputs, public_inputs, constant_inputs],
-            program,
-        )?;
-
-        let backend = &self.zkp_backend;
-
-        trace!("Starting JIT (prover)...");
-
-        let now = Instant::now();
-
-        let prog = backend.jit_prover(
-            &program.zkp_program_fn,
-            &private_inputs,
-            &public_inputs,
-            &constant_inputs,
-        )?;
-
-        trace!("Prover JIT time {}s", now.elapsed().as_secs_f64());
-
-        let inputs = [public_inputs, private_inputs].concat();
-
-        trace!("Starting backend prove...");
-
-        Ok(backend.prove_with_parameters(&prog, &inputs, parameters, transcript)?)
-    }
-
     /// Create a proof builder.
     ///
     /// This provides a wrapper around calling [`Self::prove`], and can be convenient when you
@@ -857,7 +814,7 @@ where
     /**
      * Verify that the given `proof` satisfies the given `program`.
      */
-    pub fn verify_with_parameters<I>(
+    pub(crate) fn verify_with_parameters<I>(
         &self,
         program: &CompiledZkpProgram,
         proof: &Proof,

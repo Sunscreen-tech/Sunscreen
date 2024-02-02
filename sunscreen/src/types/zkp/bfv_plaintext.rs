@@ -56,9 +56,7 @@ impl<F: FieldSpec> ToNativeFields for BfvSigned<F> {
 
 /// Decode the underlying plaintext polynomial into the field.
 pub trait AsFieldElement<F: FieldSpec> {
-    /**
-     * Return a structure scaled by `x`.
-     */
+    /// Get the plaintext value as a field element.
     fn into_field_elem(self) -> ProgramNode<Field<F>>;
 }
 

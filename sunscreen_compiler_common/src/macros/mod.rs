@@ -469,14 +469,14 @@ mod test {
         let type_name = quote! {
             BfvPlaintext<Signed>
         };
-        let arg = format_ident!("shared_input");
+        let arg = format_ident!("input_arg");
 
         let type_name: Type = parse_quote!(#type_name);
 
         let actual = create_program_node("pt", &type_name, "shared_input", Some(&arg));
 
         let expected = quote! {
-            let pt: ProgramNode<BfvPlaintext<Signed> > = ProgramNode::shared_input(shared_input);
+            let pt: ProgramNode<BfvPlaintext<Signed> > = ProgramNode::shared_input(input_arg);
         };
 
         assert_syn_eq(&actual, &expected);

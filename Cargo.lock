@@ -2800,6 +2800,7 @@ dependencies = [
  "paste",
  "petgraph",
  "proptest",
+ "rand",
  "seal_fhe",
  "serde",
  "serde_json",

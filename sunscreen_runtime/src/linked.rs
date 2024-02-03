@@ -89,6 +89,7 @@ fn new_single_party_with_shared_generators(
         if left_side {
             g[index] = *gen;
             left_side = false;
+            // TODO this overflows if shared arguments are provided with no constraints
             index -= 1;
         } else {
             h[index] = *gen;
@@ -112,7 +113,7 @@ impl LinkedProof {
     /// * `shared_indices`: The indices of the shared values between the SDLP witness matrix `S`
     ///                     and the R1CS bulletproof
     /// * `shared_types`: The types of the shared values (which need not be the same length as the
-    ///                   indices)
+    ///                   indices), used for argument validation.
     /// * `program`: The compiled ZKP program to prove
     /// * `private_inputs`: The private inputs to the ZKP program, not including the shared values
     /// * `public_inputs`: The public inputs to the ZKP program

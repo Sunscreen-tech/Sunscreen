@@ -1622,6 +1622,7 @@ dependencies = [
  "sha3 0.10.8",
  "sunscreen_curve25519",
  "sunscreen_math",
+ "thiserror",
 ]
 
 [[package]]
@@ -2181,6 +2182,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "private_tx_linkedproof"
+version = "0.1.0"
+dependencies = [
+ "sunscreen",
+]
+
+[[package]]
 name = "proc-macro2"
 version = "1.0.69"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2571,6 +2579,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "836fa6a3e1e547f9a2c4040802ec865b5d85f4014efe00555d7090a3dcaa1090"
 
 [[package]]
+name = "seq-macro"
+version = "0.3.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a3f0bf26fd526d2a95683cd0f87bf103b8539e2ca1ef48ce002d67aad59aa0b4"
+
+[[package]]
 name = "serde"
 version = "1.0.189"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2945,11 +2959,13 @@ dependencies = [
  "log",
  "logproof",
  "merlin",
+ "paste",
  "petgraph",
  "rayon",
  "rlp",
  "seal_fhe",
  "semver",
+ "seq-macro",
  "serde",
  "serde_json",
  "static_assertions",

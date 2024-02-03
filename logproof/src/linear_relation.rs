@@ -1119,6 +1119,9 @@ impl LogProof {
      *
      * This modifies bitvec in place.
      *
+     * Valid values for `log_b` are u64 integers not equal to 1; this function will
+     * panic on any other input.
+     *
      */
     fn to_2s_complement_single<B, const N: usize>(value: &Zq<N, B>, log_b: u64, bitvec: &mut BitVec)
     where
@@ -1127,6 +1130,7 @@ impl LogProof {
         if log_b == 0 {
             return;
         }
+        assert_ne!(log_b, 1);
 
         let value = value.into_bigint();
         let mod_div_2 = Zq::<N, B>::field_modulus_div_2();
@@ -1197,7 +1201,7 @@ impl LogProof {
         // Make sure we have an equal number of values and bounds to serialize
         assert_eq!(values.len(), log_b.len());
 
-        let mut bitvec = BitVec::with_capacity(values.len() * log_b.iter().sum::<u64>() as usize);
+        let mut bitvec = BitVec::with_capacity(log_b.iter().sum::<u64>() as usize);
 
         // This code should not feature timing side-channels.
         for (value, bound) in zip(values.iter(), log_b.iter()) {

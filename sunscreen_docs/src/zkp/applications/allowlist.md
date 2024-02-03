@@ -13,7 +13,7 @@ that code between both the prover and verifier. This is easily accomplished with
 a [Cargo workspace](https://doc.rust-lang.org/book/ch14-03-cargo-workspaces.html).
 For example, the workspace might have a file structure like this: 
 
-```ignore
+```text
 .
 ├── Cargo.lock
 ├── Cargo.toml

@@ -5,7 +5,7 @@ Using the `Batched` data type allow up to 4-5 orders of magnitude more throughpu
 
 Operations on `Batched` work element-wise on values contained within the two operands. If you've ever written SSE or AVX code before, this is very similar idea. Here's a simplified example (with only 1 row of values) of what this looks like.
 
-```ignore
+```text
 a = [0, 1, 2, 3];
 b = [4, 5, 6, 7];
 
@@ -34,7 +34,7 @@ Additionally, the `Batched` type features a number of rotations
 
 Under rotations, lanes wrap around the left or right side. In this example, we rotate a batched type left by 3 places
 
-```ignore
+```text
   [[0, 1, 2, 3], [4, 5, 6, 7]] << 3
 = [[3, 0, 1, 2], [7, 4, 5, 6]]
 ```

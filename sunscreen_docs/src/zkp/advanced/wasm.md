@@ -62,7 +62,7 @@ where `myapp` is the name of your executable.
 
 On success, you should see the following files:
 
-```ignore
+```text
 target/wasm32-unknown-emscripten/release/myapp.js
 target/wasm32-unknown-emscripten/release/myapp.wasm
 ```

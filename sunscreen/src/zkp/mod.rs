@@ -12,16 +12,49 @@ use std::sync::Arc;
 use std::vec;
 use std::{any::Any, cell::RefCell};
 
+mod sealed {
+    pub trait Sealed {}
+    impl Sealed for super::Linked {}
+    impl Sealed for super::NotLinked {}
+}
+/// Restrict the associated type [link indicator](`ZkpProgramFn::Link`) on to one of these values.
+pub trait Link: sealed::Sealed {
+    /// The input type that is necessary for this type of ZKP program.
+    type Input: Clone;
+}
+
+/// Indicates that a ZKP program contains inputs from linked FHE programs.
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct Linked;
+impl Link for Linked {
+    type Input = u64;
+}
+
+/// Indicates that a ZKP program does not contain linked inputs.
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct NotLinked;
+impl Link for NotLinked {
+    type Input = ();
+}
+
+type BoxedFn<F, S> = Box<dyn ZkpProgramFn<F, Link = S>>;
+
 /// An internal representation of a ZKP program specification.
 pub trait ZkpProgramFn<F: FieldSpec> {
+    /// Indicates whether or not this ZKP program contains linked inputs.
+    type Link: Link;
+
     /// Create a circuit from this specification.
-    fn build(&self) -> Result<ZkpFrontendCompilation>;
+    fn build(&self, linked_input: <Self::Link as Link>::Input) -> Result<ZkpFrontendCompilation>;
 
     /// Gets the call signature for this program.
     fn signature(&self) -> CallSignature;
 
     /// Gets the name of this program.
     fn name(&self) -> &str;
+
+    /// Runtime check if this ZKP program fn is linked.
+    fn into_linked(self) -> Result<BoxedFn<F, Linked>, BoxedFn<F, NotLinked>>;
 }
 
 /// An extension of [`ZkpProgramFn`], providing helpers and convenience methods.
@@ -75,9 +108,9 @@ pub trait ZkpProgramFnExt {
     /// # Ok(())
     /// # }
     /// ```
-    fn compile<B: ZkpBackend>(&self) -> Result<CompiledZkpProgram>
+    fn compile<B: ZkpBackend>(&self) -> Result<crate::CompiledZkpProgram>
     where
-        Self: ZkpProgramFn<B::Field>,
+        Self: ZkpProgramFn<B::Field, Link = NotLinked>,
         Self: Sized + Clone + AsRef<str> + 'static,
     {
         Ok(Compiler::new()
@@ -116,7 +149,7 @@ pub trait ZkpProgramFnExt {
     fn runtime_with<B: ZkpBackend>(&self, backend: B) -> Result<ZkpRuntime<B>>
     where
         B: 'static,
-        Self: ZkpProgramFn<B::Field>,
+        Self: ZkpProgramFn<B::Field, Link = NotLinked>,
         Self: Sized + Clone + AsRef<str> + 'static,
     {
         Ok(ZkpRuntime::new(backend)?)
@@ -150,7 +183,7 @@ pub trait ZkpProgramFnExt {
     fn runtime<B: ZkpBackend + Default>(&self) -> Result<ZkpRuntime<B>>
     where
         B: 'static,
-        Self: ZkpProgramFn<B::Field>,
+        Self: ZkpProgramFn<B::Field, Link = NotLinked>,
         Self: Sized + Clone + AsRef<str> + 'static,
     {
         self.runtime_with(B::default())

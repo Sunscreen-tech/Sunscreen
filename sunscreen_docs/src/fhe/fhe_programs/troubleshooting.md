@@ -24,7 +24,7 @@ It's a type wrapper needed to compile your FHE program. Internally, the `#[fhe_p
 Usually, these errors tell you an `FheProgramNode`'s inner type doesn't
 support an operation you're trying to perform. In the example below, the compiler is saying you can't divide `Signed` values:
 
-```ignore
+```text
 error[E0369]: cannot divide `FheProgramNode<Cipher<Signed>>` by `FheProgramNode<Cipher<Signed>>`
   --> examples/simple_multiply/src/main.rs:22:7
    |

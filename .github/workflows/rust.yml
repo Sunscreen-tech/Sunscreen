@@ -44,19 +44,31 @@ jobs:
     # Checks are ordered from fastest to slowest so your build fails quickly on invalid PRs
     # We do everything in release mode so tests run quickly and steps cache each other.
     # Check the submitted change meets style guidelines
+
     - name: Cargo Format
       run: cargo fmt --check
+
+    # Check that common feature permutations compile
+    - name: Core compile check
+      run: cargo check --release
+    - name: Full compile check
+      run: cargo check --release --features deterministic,linkedproofs
+
     # Build and run the tests
     - name: Build and run tests
       run: cargo test --workspace --verbose --release --features deterministic,linkedproofs
     - name: Verify examples outside of workspace (allowlist_zkp)
-      run: cargo test --workspace --verbose
+      run: cargo test --workspace --verbose --release
       working-directory: ./examples/allowlist_zkp
+
+    # Build package in prep for user docs
     - name: Build sunscreen and bincode
       run: cargo build --release --features bulletproofs,linkedproofs --package sunscreen --package bincode
+    # Build mdbook
     - name: Build mdBook
       run: cargo build --release
       working-directory: ./mdBook
+    # Build user documentation
     - name: Test docs
       run: ../mdBook/target/release/mdbook test -L dependency=../target/release/deps --extern sunscreen=../target/release/libsunscreen.rlib --extern bincode=../target/release/libbincode.rlib
       working-directory: ./sunscreen_docs
@@ -101,14 +113,11 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-cargo-doc-
           ${{ runner.os }}-cargo-
-    # Cursory check to ensure your CL contains valid Rust code
-    - name: Cargo check
-      run: cargo check --release
-    # Check the documentation builds, links work, etc.
+    # Check the full documentation builds, links work, etc.
     - name: Cargo doc
       env:
         RUSTDOCFLAGS: -D warnings
-      run: cargo doc --release --no-deps
+      run: cargo doc --release --no-deps --features bulletproofs,linkedproofs
   emscripten:
     runs-on: linux-8core
     steps:
@@ -138,4 +147,5 @@ jobs:
     - name: Add Rust wasm32-unknown-emscripten target
       run: rustup target add wasm32-unknown-emscripten
     - name: Build AMM target for Emscripten
-      run: source emsdk/emsdk/emsdk_env.sh; cargo build --bin amm --target wasm32-unknown-emscripten --release
+      run: source ../../emsdk/emsdk/emsdk_env.sh; cargo build --target wasm32-unknown-emscripten --release
+      working-directory: ./examples/amm

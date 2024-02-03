@@ -24,7 +24,7 @@ features = ["bulletproofs", "linkedproofs"]
 # Build docs.rs with these features
 [package.metadata.docs.rs]
 features = ["bulletproofs", "linkedproofs"]
-rustdoc-args = [ "--html-in-header", "katex-header.html" ]
+rustdoc-args = ["--html-in-header", "docs/assets/katex-header.html"]
 
 [dependencies]
 bumpalo = { workspace = true }

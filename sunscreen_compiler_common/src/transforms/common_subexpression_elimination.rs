@@ -61,7 +61,7 @@ fn get_binary_operands<O: Operation>(
  * # Remarks
  * CSE is an optimization that collapses and reuses redundance
  * computations. For example:
- * ```ignore
+ * ```text
  * a = b + c * d
  * e = c * d + 42
  * ```

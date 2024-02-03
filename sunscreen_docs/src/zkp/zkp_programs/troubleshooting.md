@@ -17,7 +17,7 @@ Usually, these errors tell you a `ProgramNode` doesn't support an operation
 you're trying to perform. In the example below, the compiler is saying you can't
 compare values:
 
-```ignore
+```text
 error[E0369]: binary operation `>` cannot be applied to type `ProgramNode<Field<F>>`
   --> examples/ordering_zkp/src/main.rs:13:15
    |

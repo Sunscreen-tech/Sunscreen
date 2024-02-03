@@ -1,5 +1,5 @@
 use sunscreen_compiler_macros::TypeName;
-use sunscreen_runtime::ShareWithZkp;
+use sunscreen_runtime::LinkWithZkp;
 use sunscreen_zkp_backend::{BigInt, FieldSpec};
 
 use crate::{
@@ -12,10 +12,10 @@ use super::{gadgets::SignedModulus, DynamicNumFieldElements, Field, ToNativeFiel
 
 use crate as sunscreen;
 
-/// A BFV plaintext polynomial that has been shared to a ZKP program.
+/// A BFV plaintext polynomial that has been linked to a ZKP program.
 ///
-/// Here `N` is the degree of the _shared_ polynomial, which may be less than the full lattice
-/// dimension. See [`Share::DEGREE_BOUND`](sunscreen_runtime::Share).
+/// Here `N` is the degree of the _linked_ polynomial, which may be less than the full lattice
+/// dimension. See [`Link::DEGREE_BOUND`](sunscreen_runtime::Link).
 #[derive(Debug, Clone, TypeName)]
 struct BfvPlaintext<F: FieldSpec, const N: usize> {
     data: Vec<Field<F>>,
@@ -35,15 +35,15 @@ impl<F: FieldSpec, const N: usize> ToNativeFields for BfvPlaintext<F, N> {
 }
 
 #[derive(Debug, Clone, TypeName)]
-/// A [BFV signed integer](crate::types::bfv::Signed) that has been shared to a ZKP program.
+/// A [BFV signed integer](crate::types::bfv::Signed) that has been linked to a ZKP program.
 ///
 /// Use the [`AsFieldElement::into_field_elem`] method to decode the the value into a field
 /// element within a ZKP program.
-pub struct BfvSigned<F: FieldSpec>(BfvPlaintext<F, { <Signed as ShareWithZkp>::DEGREE_BOUND }>);
+pub struct BfvSigned<F: FieldSpec>(BfvPlaintext<F, { <Signed as LinkWithZkp>::DEGREE_BOUND }>);
 
 impl<F: FieldSpec> DynamicNumFieldElements for BfvSigned<F> {
     fn num_native_field_elements(plaintext_modulus: u64) -> usize {
-        <BfvPlaintext<F, { <Signed as ShareWithZkp>::DEGREE_BOUND }> as DynamicNumFieldElements>::
+        <BfvPlaintext<F, { <Signed as LinkWithZkp>::DEGREE_BOUND }> as DynamicNumFieldElements>::
             num_native_field_elements(plaintext_modulus)
     }
 }
@@ -62,7 +62,7 @@ pub trait AsFieldElement<F: FieldSpec> {
 
 impl<F: FieldSpec> AsFieldElement<F> for ProgramNode<BfvSigned<F>> {
     fn into_field_elem(self) -> ProgramNode<Field<F>> {
-        let bound = self.ids.len() / <Signed as ShareWithZkp>::DEGREE_BOUND;
+        let bound = self.ids.len() / <Signed as LinkWithZkp>::DEGREE_BOUND;
         let plain_modulus = 2u64.pow(bound as u32 - 1);
 
         let (plain_modulus, plain_modulus_1, two, mut coeffs) = with_zkp_ctx(|ctx| {
@@ -129,7 +129,7 @@ mod tests {
     use crate::{fhe_program, zkp_program};
 
     #[zkp_program]
-    fn is_eq<F: FieldSpec>(#[shared] x: BfvSigned<F>, #[public] y: Field<F>) {
+    fn is_eq<F: FieldSpec>(#[linked] x: BfvSigned<F>, #[public] y: Field<F>) {
         x.into_field_elem().constrain_eq(y);
     }
 
@@ -169,7 +169,7 @@ mod tests {
         let log_p = plain_modulus.ilog2() as usize + 1;
 
         for (coeff, equiv) in [(511, 511), (512, -512), (513, -511)] {
-            let mut signed_encoding = [0; <Signed as ShareWithZkp>::DEGREE_BOUND];
+            let mut signed_encoding = [0; <Signed as LinkWithZkp>::DEGREE_BOUND];
             signed_encoding[0] = coeff;
 
             let coeffs = signed_encoding.map(|c| {
@@ -221,7 +221,7 @@ mod tests {
 
         for val in [3i64, -3] {
             // Simulate the polynomial signed encoding
-            let mut signed_encoding = [0; <Signed as ShareWithZkp>::DEGREE_BOUND];
+            let mut signed_encoding = [0; <Signed as LinkWithZkp>::DEGREE_BOUND];
             let abs_val = val.unsigned_abs();
             for (i, c) in signed_encoding.iter_mut().take(64).enumerate() {
                 let bit = (abs_val & 0x1 << i) >> i;

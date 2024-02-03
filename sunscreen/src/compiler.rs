@@ -1,6 +1,6 @@
 use crate::fhe::{FheCompile, FheFrontendCompilation};
 use crate::params::{determine_params, PlainModulusConstraint};
-use crate::zkp::{NotShared, Shared};
+use crate::zkp::{Linked, NotLinked};
 use crate::{
     zkp, Application, CallSignature, Error, FheProgramMetadata, Params, RequiredKeys, Result,
     SchemeType, SecurityLevel, ZkpProgramFn,
@@ -163,14 +163,14 @@ impl<B> Default for ZkpCompilerData<B> {
     fn default() -> Self {
         Self {
             zkp_program_fns: vec![],
-            shared_zkp_program_fns: vec![],
+            linked_zkp_program_fns: vec![],
         }
     }
 }
 
 struct ZkpCompilerData<B> {
-    zkp_program_fns: Vec<Box<dyn ZkpProgramFn<B, Share = NotShared>>>,
-    shared_zkp_program_fns: Vec<Box<dyn ZkpProgramFn<B, Share = Shared>>>,
+    zkp_program_fns: Vec<Box<dyn ZkpProgramFn<B, Link = NotLinked>>>,
+    linked_zkp_program_fns: Vec<Box<dyn ZkpProgramFn<B, Link = Linked>>>,
 }
 
 enum CompilerData<B> {
@@ -464,16 +464,16 @@ impl<T: marker::Zkp, B: FieldSpec> GenericCompiler<T, B> {
     fn compile_zkp(&self, params: Option<&Params>) -> Result<HashMap<String, CompiledZkpProgram>> {
         let zkp_data = self.data.zkp_data();
 
-        let shared_zkp_programs = zkp_data.shared_zkp_program_fns.iter().map(|prog| {
-            // As long as we've properly maintained invariants internal to the compiler, shared
+        let linked_zkp_programs = zkp_data.linked_zkp_program_fns.iter().map(|prog| {
+            // As long as we've properly maintained invariants internal to the compiler, linked
             // programs should only be present when params are available.
             let params = params.expect("no params; please file a bug!").clone();
             // Note: this is currently unsupported because determining the exact arbitrary
-            // plaintext modulus from the dynamic length of a shared ZKP input in general is not
+            // plaintext modulus from the dynamic length of a linked ZKP input in general is not
             // possible (as x.ilog2() is not injective). We may support this in the future.
             if !params.plain_modulus.is_power_of_two() {
                 return Err(Error::unsupported(
-                    "Plaintext modulus must be a power of two for ZKP programs with #[shared] arguments.",
+                    "Plaintext modulus must be a power of two for ZKP programs with #[linked] arguments.",
                 ));
             }
             let result = prog.build(params.plain_modulus)?;
@@ -505,7 +505,7 @@ impl<T: marker::Zkp, B: FieldSpec> GenericCompiler<T, B> {
 
                 Ok((prog.name().to_owned(), compiled_program))
             })
-            .chain(shared_zkp_programs)
+            .chain(linked_zkp_programs)
             .collect::<Result<HashMap<_, _>>>()?;
 
         Ok(zkp_programs)
@@ -532,7 +532,7 @@ where
 
     /// Add the given ZKP program for compilation.
     ///
-    /// Note that this method will not accept "shared" ZKP programs, which have inputs shared from
+    /// Note that this method will not accept "linked" ZKP programs, which have inputs linked from
     /// FHE programs. You must first call `fhe_program` to add an FHE program to unlock this
     /// capability.
     ///
@@ -541,7 +541,7 @@ where
     /// # use sunscreen::{bulletproofs::BulletproofsBackend, types::zkp::{BfvSigned, BulletproofsField, Field, FieldSpec}, zkp_program, zkp_var, Compiler };
     ///
     /// #[zkp_program]
-    /// fn prog<F: FieldSpec>(#[shared] x: BfvSigned<F>) { }
+    /// fn prog<F: FieldSpec>(#[linked] x: BfvSigned<F>) { }
     ///
     /// let app = Compiler::new()
     ///     .zkp_backend::<BulletproofsBackend>()
@@ -551,7 +551,7 @@ where
     /// ```
     pub fn zkp_program<F>(mut self, zkp_program_fn: F) -> Self
     where
-        F: ZkpProgramFn<B, Share = zkp::NotShared> + 'static,
+        F: ZkpProgramFn<B, Link = zkp::NotLinked> + 'static,
     {
         self.data
             .zkp_data_mut()
@@ -646,7 +646,7 @@ where
 
     /// Add the given ZKP program for compilation.
     ///
-    /// This method _will_ accept "shared" ZKP programs, which have inputs shared from
+    /// This method _will_ accept "linked" ZKP programs, which have inputs linked from
     /// FHE programs.
     ///
     /// ```
@@ -655,7 +655,7 @@ where
     /// # fn fhe_prog() { }
     ///
     /// #[zkp_program]
-    /// fn zkp_prog<F: FieldSpec>(#[shared] x: BfvSigned<F>) { }
+    /// fn zkp_prog<F: FieldSpec>(#[linked] x: BfvSigned<F>) { }
     ///
     /// let app = Compiler::new()
     ///     .fhe_program(fhe_prog)
@@ -669,9 +669,9 @@ where
         F: ZkpProgramFn<B> + 'static,
     {
         let zkp_data = self.data.zkp_data_mut();
-        match zkp_program_fn.into_shared() {
-            Ok(shared) => zkp_data.shared_zkp_program_fns.push(shared),
-            Err(not_shared) => zkp_data.zkp_program_fns.push(not_shared),
+        match zkp_program_fn.into_linked() {
+            Ok(linked) => zkp_data.linked_zkp_program_fns.push(linked),
+            Err(not_linked) => zkp_data.zkp_program_fns.push(not_linked),
         }
         self
     }

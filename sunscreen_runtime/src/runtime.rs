@@ -710,7 +710,7 @@ where
     }
 
     /// Collect ZKP arg types into bigints with no validation. Useful for verification side, as our
-    /// call signature currently isn't granular enough to cover shared/private/public/constant.
+    /// call signature currently isn't granular enough to cover linked/private/public/constant.
     pub(crate) fn collect_zkp_args<const N: usize, I>(args: [Vec<I>; N]) -> Result<[Vec<BigInt>; N]>
     where
         I: Into<ZkpProgramInput>,

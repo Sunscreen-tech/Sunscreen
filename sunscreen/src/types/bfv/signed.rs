@@ -40,10 +40,10 @@ impl NumCiphertexts for Signed {
 mod sharing {
     use super::*;
     use crate::types::zkp::BfvSigned;
-    use sunscreen_runtime::ShareWithZkp;
+    use sunscreen_runtime::LinkWithZkp;
     use sunscreen_zkp_backend::FieldSpec;
 
-    impl ShareWithZkp for Signed {
+    impl LinkWithZkp for Signed {
         type ZkpType<F: FieldSpec> = BfvSigned<F>;
         /// While a freshly encoded plaintext will only use up to 64 coefficients, plaintexts resulting
         /// from a multiplicative circuit can result in valid Signed encodings that use more than 64

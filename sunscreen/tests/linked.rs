@@ -27,7 +27,7 @@ mod linked_tests {
     fn doggie() {}
 
     #[zkp_program]
-    fn valid_transaction<F: FieldSpec>(#[shared] tx: BfvSigned<F>, #[public] balance: Field<F>) {
+    fn valid_transaction<F: FieldSpec>(#[linked] tx: BfvSigned<F>, #[public] balance: Field<F>) {
         let lower_bound = zkp_var!(0);
 
         // Reconstruct tx
@@ -61,14 +61,14 @@ mod linked_tests {
             let mut proof_builder = LogProofBuilder::new(&rt);
 
             let (_ct, tx_msg) = proof_builder
-                .encrypt_and_share(&Signed::from(tx), &public_key)
+                .encrypt_and_link(&Signed::from(tx), &public_key)
                 .unwrap();
 
             println!("Performing linked proof");
             let lp = proof_builder
                 .zkp_program(valid_transaction_zkp)
                 .unwrap()
-                .shared_input(&tx_msg)
+                .linked_input(&tx_msg)
                 .public_input(BulletproofsField::from(balance))
                 .build_linkedproof()
                 .unwrap();
@@ -104,12 +104,12 @@ mod linked_tests {
         for tx in [-1, balance + 1] {
             let mut proof_builder = LogProofBuilder::new(&rt);
             let (_ct, tx_msg) = proof_builder
-                .encrypt_and_share(&Signed::from(tx), &public_key)
+                .encrypt_and_link(&Signed::from(tx), &public_key)
                 .unwrap();
             proof_builder
                 .zkp_program(valid_transaction_zkp)
                 .unwrap()
-                .shared_input(&tx_msg)
+                .linked_input(&tx_msg)
                 .public_input(BulletproofsField::from(balance));
 
             let lp = proof_builder.build_linkedproof();
@@ -118,7 +118,7 @@ mod linked_tests {
     }
 
     #[zkp_program]
-    fn is_eq<F: FieldSpec>(#[shared] x: BfvSigned<F>, #[public] y: Field<F>) {
+    fn is_eq<F: FieldSpec>(#[linked] x: BfvSigned<F>, #[public] y: Field<F>) {
         x.into_field_elem().constrain_eq(y);
     }
 
@@ -139,12 +139,12 @@ mod linked_tests {
         for val in [3, 0, -3] {
             let mut proof_builder = LogProofBuilder::new(&rt);
             let (_ct, val_msg) = proof_builder
-                .encrypt_and_share(&Signed::from(val), &public_key)
+                .encrypt_and_link(&Signed::from(val), &public_key)
                 .unwrap();
             proof_builder
                 .zkp_program(is_eq_zkp)
                 .unwrap()
-                .shared_input(&val_msg)
+                .linked_input(&val_msg)
                 .public_input(BulletproofsField::from(val));
 
             let lp = proof_builder.build_linkedproof().unwrap_or_else(|_| {
@@ -164,8 +164,8 @@ mod linked_tests {
 
     #[zkp_program]
     fn is_eq_3<F: FieldSpec>(
-        #[shared] x: BfvSigned<F>,
-        #[shared] y: BfvSigned<F>,
+        #[linked] x: BfvSigned<F>,
+        #[linked] y: BfvSigned<F>,
         #[private] z: Field<F>,
     ) {
         let x = x.into_field_elem();
@@ -193,19 +193,19 @@ mod linked_tests {
         for val in [3, 0, -3] {
             let mut proof_builder = LogProofBuilder::new(&rt);
             let (_ct_x, x_msg) = proof_builder
-                .encrypt_and_share(&Signed::from(val), &public_key)
+                .encrypt_and_link(&Signed::from(val), &public_key)
                 .unwrap();
             // proves same plaintext within SDLP
-            let _ct_x1 = proof_builder.encrypt_shared(&x_msg, &public_key).unwrap();
+            let _ct_x1 = proof_builder.encrypt_linked(&x_msg, &public_key).unwrap();
             // proves same value within ZKP
             let (_ct_y, y_msg) = proof_builder
-                .encrypt_and_share(&Signed::from(val), &public_key)
+                .encrypt_and_link(&Signed::from(val), &public_key)
                 .unwrap();
             proof_builder
                 .zkp_program(is_eq_zkp)
                 .unwrap()
-                .shared_input(&x_msg)
-                .shared_input(&y_msg)
+                .linked_input(&x_msg)
+                .linked_input(&y_msg)
                 .private_input(BulletproofsField::from(val));
 
             let lp = proof_builder.build_linkedproof().unwrap();
@@ -250,8 +250,8 @@ mod linked_tests {
     }
 
     #[test]
-    fn throws_shared_arg_mismatch() {
-        fn test_case(num_shared_inputs: usize, num_private_inputs: usize) {
+    fn throws_linked_arg_mismatch() {
+        fn test_case(num_linked_inputs: usize, num_private_inputs: usize) {
             let app = Compiler::new()
                 .fhe_program(doggie)
                 .with_params(&SMALL_PARAMS)
@@ -265,11 +265,11 @@ mod linked_tests {
             let (public_key, _secret_key) = rt.generate_keys().unwrap();
             let mut proof_builder = LogProofBuilder::new(&rt);
             proof_builder.zkp_program(is_eq_zkp).unwrap();
-            for _ in 0..num_shared_inputs {
+            for _ in 0..num_linked_inputs {
                 let (_ct, msg) = proof_builder
-                    .encrypt_and_share(&Signed::from(1), &public_key)
+                    .encrypt_and_link(&Signed::from(1), &public_key)
                     .unwrap();
-                proof_builder.shared_input(&msg);
+                proof_builder.linked_input(&msg);
             }
             for _ in 0..num_private_inputs {
                 proof_builder.private_input(BulletproofsField::from(1));
@@ -280,10 +280,10 @@ mod linked_tests {
                 Err(sunscreen::RuntimeError::ArgumentMismatch(_))
             ));
         }
-        // Missing shared inputs
+        // Missing linked inputs
         test_case(0, 1);
-        // Missing one shared inputs
+        // Missing one linked inputs
         test_case(1, 1);
-        // TODO add signed/unsigned mismatch after we impl sharing for unshared.
+        // TODO add signed/unsigned mismatch after we impl sharing for unlinked.
     }
 }

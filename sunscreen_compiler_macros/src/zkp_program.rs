@@ -13,7 +13,7 @@ use crate::{
 };
 
 enum ArgumentKind {
-    Shared,
+    Linked,
     Private,
     Public,
     Constant,
@@ -107,7 +107,7 @@ fn parse_inner(_attr_params: ZkpProgramAttrs, input_fn: ItemFn) -> Result<TokenS
         }
     };
 
-    let mut is_shared = false;
+    let mut is_linked = false;
     let mut public_seen = false;
     let mut constant_seen = false;
     let mut private_seen = false;
@@ -129,14 +129,14 @@ fn parse_inner(_attr_params: ZkpProgramAttrs, input_fn: ItemFn) -> Result<TokenS
                         let ident = attr.path().get_ident();
 
                         match ident.map(|x| x.to_string()).as_deref() {
-                            Some("shared") => {
+                            Some("linked") => {
                                 if private_seen || public_seen || constant_seen {
                                     return Err(Error::compile_error(attr.path().span(),
-                                        "#[shared] arguments must be specified before #[private], #[public] and #[constant] arguments"
+                                        "#[linked] arguments must be specified before #[private], #[public] and #[constant] arguments"
                                     ));
                                 }
-                                arg_kind = ArgumentKind::Shared;
-                                is_shared = true;
+                                arg_kind = ArgumentKind::Linked;
+                                is_linked = true;
                             },
                             Some("private") => {
                                 if public_seen || constant_seen {
@@ -161,14 +161,14 @@ fn parse_inner(_attr_params: ZkpProgramAttrs, input_fn: ItemFn) -> Result<TokenS
                             },
                             _ => {
                                 return Err(Error::compile_error(attr.path().span(), &format!(
-                                    "Expected #[shared], #[private], #[public] or #[constant], found {}",
+                                    "Expected #[linked], #[private], #[public] or #[constant], found {}",
                                     attr.path().to_token_stream()
                                 )));
                             }
                         }
                     },
                     [_, attr, ..] => {
-                        return Err(Error::compile_error(attr.span(), "ZKP program arguments may only have one attribute (#[shared], #[private], #[public] or #[constant])."));
+                        return Err(Error::compile_error(attr.span(), "ZKP program arguments may only have one attribute (#[linked], #[private], #[public] or #[constant])."));
                     }
                 };
 
@@ -188,11 +188,11 @@ fn parse_inner(_attr_params: ZkpProgramAttrs, input_fn: ItemFn) -> Result<TokenS
 
     let signature = emit_signature(&argument_types, &[]);
 
-    let build_arg = format_ident!("shared_input");
+    let build_arg = format_ident!("linked_input");
 
     let var_decl = unwrapped_inputs.iter().map(|t| {
         let (input_type, input_arg) = match t.0 {
-            ArgumentKind::Shared => ("shared_input", Some(&build_arg)),
+            ArgumentKind::Linked => ("linked_input", Some(&build_arg)),
             ArgumentKind::Private => ("private_input", None),
             ArgumentKind::Public => ("public_input", None),
             ArgumentKind::Constant => ("constant_input", None),
@@ -206,11 +206,11 @@ fn parse_inner(_attr_params: ZkpProgramAttrs, input_fn: ItemFn) -> Result<TokenS
 
     let zkp_program_name_literal = format!("{}", zkp_program_name);
 
-    let (associated_share_type, into_shared_variant, ext_impl) = if is_shared {
-        (quote! { sunscreen::zkp::Shared }, quote! {Ok}, None)
+    let (associated_link_type, into_linked_variant, ext_impl) = if is_linked {
+        (quote! { sunscreen::zkp::Linked }, quote! {Ok}, None)
     } else {
         (
-            quote! { sunscreen::zkp::NotShared },
+            quote! { sunscreen::zkp::NotLinked },
             quote! {Err},
             Some(quote! {
                 impl sunscreen::ZkpProgramFnExt for #zkp_program_struct_name {}
@@ -230,12 +230,12 @@ fn parse_inner(_attr_params: ZkpProgramAttrs, input_fn: ItemFn) -> Result<TokenS
         }
 
         impl <#generic_ident: #generic_bound> sunscreen::ZkpProgramFn<#generic_ident> for #zkp_program_struct_name {
-            type Share = #associated_share_type;
+            type Link = #associated_link_type;
 
-            fn build(&self, shared_input: <Self::Share as sunscreen::zkp::Share>::Input) -> sunscreen::Result<sunscreen::zkp::ZkpFrontendCompilation> {
+            fn build(&self, linked_input: <Self::Link as sunscreen::zkp::Link>::Input) -> sunscreen::Result<sunscreen::zkp::ZkpFrontendCompilation> {
                 use std::cell::RefCell;
                 use std::mem::transmute;
-                use sunscreen::{Error, INDEX_ARENA, Result, types::{zkp::{ProgramNode, CreateSharedZkpProgramInput, CreateZkpProgramInput, ConstrainEq, IntoProgramNode}, TypeName}, zkp::{CURRENT_ZKP_CTX, ZkpContext, ZkpData}};
+                use sunscreen::{Error, INDEX_ARENA, Result, types::{zkp::{ProgramNode, CreateLinkedZkpProgramInput, CreateZkpProgramInput, ConstrainEq, IntoProgramNode}, TypeName}, zkp::{CURRENT_ZKP_CTX, ZkpContext, ZkpData}};
 
                 let mut context = ZkpContext::new(ZkpData::new());
 
@@ -283,8 +283,8 @@ fn parse_inner(_attr_params: ZkpProgramAttrs, input_fn: ItemFn) -> Result<TokenS
             }
 
             #[allow(clippy::type_complexity)]
-            fn into_shared(self) -> Result<std::boxed::Box<dyn sunscreen::ZkpProgramFn<F, Share = sunscreen::zkp::Shared>>, std::boxed::Box<dyn sunscreen::ZkpProgramFn<F, Share = sunscreen::zkp::NotShared>>> {
-                #into_shared_variant(std::boxed::Box::new(self))
+            fn into_linked(self) -> Result<std::boxed::Box<dyn sunscreen::ZkpProgramFn<F, Link = sunscreen::zkp::Linked>>, std::boxed::Box<dyn sunscreen::ZkpProgramFn<F, Link = sunscreen::zkp::NotLinked>>> {
+                #into_linked_variant(std::boxed::Box::new(self))
             }
         }
 

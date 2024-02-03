@@ -16,7 +16,7 @@ fn update_balance(tx: Cipher<Signed>, balance: Signed) -> Cipher<Signed> {
 }
 
 #[zkp_program]
-fn valid_transaction<F: FieldSpec>(#[shared] tx: BfvSigned<F>, #[public] balance: Field<F>) {
+fn valid_transaction<F: FieldSpec>(#[linked] tx: BfvSigned<F>, #[public] balance: Field<F>) {
     let tx = tx.into_field_elem();
 
     // Constraint that tx is less than or equal to balance
@@ -51,12 +51,12 @@ fn main() -> Result<()> {
     let mut proof_builder = LogProofBuilder::new(&rt);
 
     println!("Encrypting and sharing transaction...");
-    let (_ct, tx_msg) = proof_builder.encrypt_and_share(&tx, &public_key)?;
+    let (_ct, tx_msg) = proof_builder.encrypt_and_link(&tx, &public_key)?;
 
     println!("Building linkedproof...");
     let lp = proof_builder
         .zkp_program(valid_tx_zkp)?
-        .shared_input(&tx_msg)
+        .linked_input(&tx_msg)
         .public_input(balance)
         .build_linkedproof()?;
 

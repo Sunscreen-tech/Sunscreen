@@ -205,11 +205,11 @@ pub trait DynamicNumFieldElements {
 }
 
 /**
- * Encapsulates the traits required for a shared type to be used in ZKP
+ * Encapsulates the traits required for an SDLP-linked type to be used in ZKP
  * programs.
  */
-pub trait SharedZkpType: DynamicNumFieldElements + Sized + TypeName + ToNativeFields {}
-impl<T: DynamicNumFieldElements + Sized + TypeName + ToNativeFields> SharedZkpType for T {}
+pub trait LinkedZkpType: DynamicNumFieldElements + Sized + TypeName + ToNativeFields {}
+impl<T: DynamicNumFieldElements + Sized + TypeName + ToNativeFields> LinkedZkpType for T {}
 
 /**
  * Methods for coercing ZKP data types.

@@ -234,12 +234,13 @@ mod linked {
         SealSdlpProverKnowledge, TryIntoPlaintext, ZkpProgramInput,
     };
 
-    /// A trait for sharing a plaintext with a ZKP program.
-    pub trait ShareWithZkp: NumCiphertexts {
-        /// The associated ZKP input type when this plaintext is shared with a ZKP program.
+    /// All FHE plaintext types can be used in a [`Sdlp`]. This trait indicates further that a
+    /// plaintext type can be linked between the SDLP and a ZKP program.
+    pub trait LinkWithZkp: NumCiphertexts {
+        /// The associated ZKP input type when this plaintext is linked with a ZKP program.
         type ZkpType<F: FieldSpec>: TypeName;
 
-        /// The number of nonzero coefficients to share between the SDLP and ZKP.
+        /// The number of nonzero coefficients to link between the SDLP and ZKP.
         ///
         /// Note that many FHE plaintext types are encoded into polynomials with a flavor of binary
         /// or 2s complement encoding; that is, as coefficients of powers of 2. In this case, the
@@ -255,7 +256,7 @@ mod linked {
     }
 
     #[derive(Debug, Clone)]
-    /// We pass this around for both plain and shared messages, as we need both the plaintext and
+    /// We pass this around for both plain and linked messages, as we need both the plaintext and
     /// its type information to perform encryption.
     ///
     /// Essentially we store the output from TryIntoPlaintext and TypeName.
@@ -264,33 +265,33 @@ mod linked {
         type_name: Type,
     }
 
-    /// We pass this around for just shared messages, as also need the zkp type information.
+    /// We pass this around for just linked messages, as also need the zkp type information.
     ///
-    /// Essentially we store the output from ShareWithZkp
+    /// Essentially we store the output from LinkWithZkp
     #[derive(Debug, Clone)]
-    pub(crate) struct SharedPlaintextTyped {
+    pub(crate) struct LinkedPlaintextTyped {
         plaintext_typed: PlaintextTyped,
         zkp_type: Type,
     }
 
-    /// A [`Plaintext`] message that can be shared. Create this with [`LogProofBuilder::encrypt_and_share`].
+    /// A [`Plaintext`] message that can be linked. Create this with [`LogProofBuilder::encrypt_and_link`].
     #[derive(Debug, Clone)]
-    pub struct SharedMessage {
+    pub struct LinkedMessage {
         pub(crate) id: usize,
-        pub(crate) message: Arc<SharedPlaintextTyped>,
+        pub(crate) message: Arc<LinkedPlaintextTyped>,
         pub(crate) len: usize,
     }
 
     enum Message {
         Plain(PlaintextTyped),
-        Shared(SharedMessage),
+        Linked(LinkedMessage),
     }
 
     impl Message {
         fn pt_typed(&self) -> &PlaintextTyped {
             match self {
                 Message::Plain(m) => m,
-                Message::Shared(m) => &m.message.plaintext_typed,
+                Message::Linked(m) => &m.message.plaintext_typed,
             }
         }
         fn pt(&self) -> &Plaintext {
@@ -299,9 +300,9 @@ mod linked {
         fn type_name(&self) -> &Type {
             &self.pt_typed().type_name
         }
-        fn shared_id(&self) -> Option<usize> {
+        fn linked_id(&self) -> Option<usize> {
             match self {
-                Message::Shared(SharedMessage { id, .. }) => Some(*id),
+                Message::Linked(LinkedMessage { id, .. }) => Some(*id),
                 _ => None,
             }
         }
@@ -322,7 +323,7 @@ mod linked {
 
         // linked proof fields
         compiled_zkp_program: Option<&'z CompiledZkpProgram>,
-        shared_inputs: Vec<SharedMessage>,
+        linked_inputs: Vec<LinkedMessage>,
         private_inputs: Vec<ZkpProgramInput>,
         public_inputs: Vec<ZkpProgramInput>,
         constant_inputs: Vec<ZkpProgramInput>,
@@ -337,7 +338,7 @@ mod linked {
                 messages: vec![],
                 witness: vec![],
                 compiled_zkp_program: None,
-                shared_inputs: vec![],
+                linked_inputs: vec![],
                 private_inputs: vec![],
                 public_inputs: vec![],
                 constant_inputs: vec![],
@@ -358,18 +359,18 @@ mod linked {
 
         /// Encrypt a plaintext intended for sharing.
         ///
-        /// The returned `SharedMessage` can be used:
-        /// 1. to add an encryption statement of ciphertext equality to the proof (see [`Self::encrypt_shared`]).
-        /// 2. as a shared input to a ZKP program (see [`Self::shared_input`]).
-        pub fn encrypt_and_share<P>(
+        /// The returned `LinkedMessage` can be used:
+        /// 1. to add an encryption statement of ciphertext equality to the proof (see [`Self::encrypt_linked`]).
+        /// 2. as a linked input to a ZKP program (see [`Self::linked_input`]).
+        pub fn encrypt_and_link<P>(
             &mut self,
             message: &P,
             public_key: &'k PublicKey,
-        ) -> Result<(Ciphertext, SharedMessage)>
+        ) -> Result<(Ciphertext, LinkedMessage)>
         where
-            P: ShareWithZkp + TryIntoPlaintext + TypeName,
+            P: LinkWithZkp + TryIntoPlaintext + TypeName,
         {
-            // The user intends to share this message, so add a more conservative bound
+            // The user intends to link this message, so add a more conservative bound
             let plaintext_typed = self.plaintext_typed(message)?;
             let idx_start = self.messages.len();
             let ct = self.encrypt_internal(
@@ -381,31 +382,31 @@ mod linked {
             // TODO shouldn't be assuming bulletproofs here...
             // need to separate the notion of sharing duplicate messages and sharing to ZKP
             let zkp_type = P::ZkpType::<BulletproofsFieldSpec>::type_name();
-            let shared_message = SharedMessage {
+            let linked_message = LinkedMessage {
                 id: idx_start,
-                message: Arc::new(SharedPlaintextTyped {
+                message: Arc::new(LinkedPlaintextTyped {
                     plaintext_typed,
                     zkp_type,
                 }),
                 len: idx_end - idx_start,
             };
-            Ok((ct, shared_message))
+            Ok((ct, linked_message))
         }
 
-        /// Encrypt a shared message, adding the new encryption statement to the proof.
+        /// Encrypt a linked message, adding the new encryption statement to the proof.
         ///
         /// This method purposefully reveals that two ciphertexts enrypt the same underlying value. If
         /// this is not what you want, use [`Self::encrypt`].
         ///
         /// This method assumes that you've created the `message` argument with _this_ builder.
-        pub fn encrypt_shared(
+        pub fn encrypt_linked(
             &mut self,
-            message: &SharedMessage,
+            message: &LinkedMessage,
             public_key: &'k PublicKey,
         ) -> Result<Ciphertext> {
             // The existing message already has bounds, no need to recompute them.
             let bounds = None;
-            self.encrypt_internal(Message::Shared(message.clone()), public_key, bounds)
+            self.encrypt_internal(Message::Linked(message.clone()), public_key, bounds)
         }
 
         fn encrypt_internal(
@@ -421,7 +422,7 @@ mod linked {
                 true,
                 None,
             )?;
-            let existing_idx = message.shared_id();
+            let existing_idx = message.linked_id();
 
             for (i, AsymmetricEncryption { ct, u, e, r, m }) in
                 zip_seal_pieces(&enc_components, message.pt())?.enumerate()
@@ -500,7 +501,7 @@ mod linked {
             ))
         }
 
-        fn mk_bounds<P: ShareWithZkp>(&self) -> Bounds {
+        fn mk_bounds<P: LinkWithZkp>(&self) -> Bounds {
             let params = self.runtime.params();
             let mut bounds = vec![params.plain_modulus; P::DEGREE_BOUND];
             bounds.resize(params.lattice_dimension as usize, 0);
@@ -515,7 +516,7 @@ mod linked {
         pub fn zkp_program(&mut self, program: &'z CompiledZkpProgram) -> Result<&mut Self> {
             let params = program.metadata.params.as_ref().ok_or_else(|| {
                 BuilderError::user_error(
-                    "Cannot link a ZKP program without associated FHE parameters. Make sure your ZKP program has #[shared] parameters and is compiled alongside an FHE program.",
+                    "Cannot link a ZKP program without associated FHE parameters. Make sure your ZKP program has #[linked] parameters and is compiled alongside an FHE program.",
                 )
             })?;
             if params != self.runtime.params() {
@@ -527,11 +528,11 @@ mod linked {
             Ok(self)
         }
 
-        /// Add a shared private input to the ZKP program.
+        /// Add a linked private input to the ZKP program.
         ///
         /// This method assumes that you've created the `message` argument with _this_ builder.
-        pub fn shared_input(&mut self, message: &SharedMessage) -> &mut Self {
-            self.shared_inputs.push(message.clone());
+        pub fn linked_input(&mut self, message: &LinkedMessage) -> &mut Self {
+            self.linked_inputs.push(message.clone());
             self
         }
 
@@ -560,21 +561,21 @@ mod linked {
             let program = self.compiled_zkp_program.ok_or_else(|| {
                 BuilderError::user_error("Cannot build linked proof without a compiled ZKP program. Use the `.zkp_program()` method")
             })?;
-            let shared_indices = self
-                .shared_inputs
+            let linked_indices = self
+                .linked_inputs
                 .iter()
                 .flat_map(|m| (m.id..m.id + m.len).map(|ix| (ix, 0)))
                 .collect::<Vec<_>>();
-            let shared_types = self
-                .shared_inputs
+            let linked_types = self
+                .linked_inputs
                 .iter()
                 .map(|m| m.message.zkp_type.clone())
                 .collect::<Vec<_>>();
 
             LinkedProof::create(
                 &sdlp,
-                &shared_indices,
-                &shared_types,
+                &linked_indices,
+                &linked_types,
                 program,
                 self.private_inputs.clone(),
                 self.public_inputs.clone(),

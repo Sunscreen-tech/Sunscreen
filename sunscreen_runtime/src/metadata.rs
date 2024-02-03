@@ -215,7 +215,7 @@ pub struct CompiledFheProgram {
 /// A serializable list of metadata for a ZKP program.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ZkpProgramMetadata {
-    /// The FHE scheme parameters, required for ZKP programs with FHE-shared inputs.
+    /// The FHE scheme parameters, required for ZKP programs with SDLP-linked inputs.
     pub params: Option<Params>,
 
     /// The call signature (arguments and returns) of the ZKP program.
@@ -231,7 +231,7 @@ pub struct CompiledZkpProgram {
     pub zkp_program_fn: ZkpProgram,
 
     /// Information about the FHE program, including its call signature and the scheme
-    /// parameters needed for ZKP programs with FHE-shared inputs.
+    /// parameters needed for ZKP programs with SDLP-linked inputs.
     pub metadata: ZkpProgramMetadata,
 }
 

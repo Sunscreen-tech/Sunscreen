@@ -473,10 +473,10 @@ mod test {
 
         let type_name: Type = parse_quote!(#type_name);
 
-        let actual = create_program_node("pt", &type_name, "shared_input", Some(&arg));
+        let actual = create_program_node("pt", &type_name, "linked_input", Some(&arg));
 
         let expected = quote! {
-            let pt: ProgramNode<BfvPlaintext<Signed> > = ProgramNode::shared_input(input_arg);
+            let pt: ProgramNode<BfvPlaintext<Signed> > = ProgramNode::linked_input(input_arg);
         };
 
         assert_syn_eq(&actual, &expected);

@@ -12,7 +12,7 @@ use crate::{
     INDEX_ARENA,
 };
 
-use super::{ConstrainCmpVarVar, ConstrainEqVarVar, Field, SharedZkpType};
+use super::{ConstrainCmpVarVar, ConstrainEqVarVar, Field, LinkedZkpType};
 
 #[derive(Clone, Copy)]
 /**
@@ -70,10 +70,10 @@ pub trait CreateZkpProgramInput {
     fn constant_input() -> Self;
 }
 
-/// Trait for adding FHE-shared inputs to a ZKP program.
-pub trait CreateSharedZkpProgramInput {
-    /// Creates an FHE shared program input of type T, which requires the plaintext modulus.
-    fn shared_input(plaintext_modulus: u64) -> Self;
+/// Trait for adding FHE-linked inputs to a ZKP program.
+pub trait CreateLinkedZkpProgramInput {
+    /// Creates an FHE linked program input of type T, which requires the plaintext modulus.
+    fn linked_input(plaintext_modulus: u64) -> Self;
 }
 
 impl<T> ProgramNode<T> {
@@ -116,12 +116,12 @@ where
     }
 }
 
-impl<T, const N: usize> CreateSharedZkpProgramInput for [T; N]
+impl<T, const N: usize> CreateLinkedZkpProgramInput for [T; N]
 where
-    T: CreateSharedZkpProgramInput + Copy,
+    T: CreateLinkedZkpProgramInput + Copy,
 {
-    fn shared_input(plaintext_modulus: u64) -> Self {
-        [0; N].map(|_| T::shared_input(plaintext_modulus))
+    fn linked_input(plaintext_modulus: u64) -> Self {
+        [0; N].map(|_| T::linked_input(plaintext_modulus))
     }
 }
 
@@ -160,11 +160,11 @@ where
     }
 }
 
-impl<T> CreateSharedZkpProgramInput for ProgramNode<T>
+impl<T> CreateLinkedZkpProgramInput for ProgramNode<T>
 where
-    T: SharedZkpType,
+    T: LinkedZkpType,
 {
-    fn shared_input(plaintext_modulus: u64) -> Self {
+    fn linked_input(plaintext_modulus: u64) -> Self {
         let len = T::num_native_field_elements(plaintext_modulus);
         let mut ids = Vec::with_capacity(len);
 

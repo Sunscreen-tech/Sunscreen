@@ -31,16 +31,16 @@ mod sdlp_tests {
     }
 
     #[test]
-    fn prove_shared_asymmetric_statements() {
+    fn prove_linked_asymmetric_statements() {
         let rt = FheRuntime::new(&SMALL_PARAMS).unwrap();
         let (public_key, _secret_key) = rt.generate_keys().unwrap();
         let mut logproof_builder = LogProofBuilder::new(&rt);
 
-        let (_a1, shared_a) = logproof_builder
-            .encrypt_and_share(&Signed::from(2), &public_key)
+        let (_a1, linked_a) = logproof_builder
+            .encrypt_and_link(&Signed::from(2), &public_key)
             .unwrap();
         let _a2 = logproof_builder
-            .encrypt_shared(&shared_a, &public_key)
+            .encrypt_linked(&linked_a, &public_key)
             .unwrap();
         let _b = logproof_builder
             .encrypt(&Signed::from(3), &public_key)

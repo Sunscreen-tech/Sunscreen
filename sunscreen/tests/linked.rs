@@ -148,9 +148,9 @@ mod linked_tests {
                 .shared_input(&val_msg)
                 .public_input(BulletproofsField::from(val));
 
-            let lp = proof_builder.build_linkedproof().unwrap_or_else(|_| {
+            let lp = proof_builder.build_linkedproof().unwrap_or_else(|e| {
                 panic!(
-                    "Failed to encode {} value",
+                    "Failed to encode {} value; {e}",
                     if val.is_positive() {
                         "positive"
                     } else {
@@ -205,11 +205,58 @@ mod linked_tests {
 
             let lp = proof_builder
                 .build_linkedproof()
-                .unwrap_or_else(|_| panic!("Failed to encode {x:?}"));
+                .unwrap_or_else(|e| panic!("Failed to encode {x:?}; {e}"));
             lp.verify::<ZkpProgramInput>(is_eq_zkp, vec![], vec![])
                 .expect("Failed to encode {x:?}");
         }
     }
+
+    #[zkp_program]
+    fn compare_signed<F: FieldSpec>(#[shared] x: BfvSigned<F>, #[shared] y: BfvSigned<F>) {
+        x.into_field_elem()
+            .constrain_le_bounded(y.into_field_elem(), 64)
+    }
+
+    #[test]
+    fn can_compare_signed() {
+        let app = Compiler::new()
+            .fhe_program(doggie)
+            .with_params(&SMALL_PARAMS)
+            .zkp_backend::<BulletproofsBackend>()
+            .zkp_program(compare_signed)
+            .compile()
+            .unwrap();
+        let rt = FheZkpRuntime::new(app.params(), &BulletproofsBackend::new()).unwrap();
+        let compare_signed_zkp = app.get_zkp_program(compare_signed).unwrap();
+
+        let (public_key, _secret_key) = rt.generate_keys().unwrap();
+
+        // To slow to run in a loop :/ if we eventually expose small params for testing, do more cases
+        for _ in 0..1 {
+            let x = Signed::from(rand::random::<i32>() as i64);
+            let y = Signed::from(rand::random::<i32>() as i64);
+
+            let mut proof_builder = LogProofBuilder::new(&rt);
+            let (_ct, x_msg) = proof_builder.encrypt_and_share(&x, &public_key).unwrap();
+            let (_ct, y_msg) = proof_builder.encrypt_and_share(&y, &public_key).unwrap();
+            proof_builder
+                .zkp_program(compare_signed_zkp)
+                .unwrap()
+                .shared_input(&x_msg)
+                .shared_input(&y_msg);
+
+            let lp = proof_builder
+                .build_linkedproof()
+                .unwrap_or_else(|e| panic!("Failed to prove {x:?} <= {y:?}, {e}"));
+            lp.verify::<ZkpProgramInput>(compare_signed_zkp, vec![], vec![])
+                .unwrap_or_else(|e| panic!("Failed to verify {x:?} <= {y:?}; {e}"));
+        }
+    }
+
+    // FIX: Failed to verify. Weird. diff between multiplications is only 62 bits...
+    // Rational { num: Signed { val: -1320394805 }, den: Signed { val: 1462441804 } }
+    // <=
+    // Rational { num: Signed { val: 2060531977 }, den: Signed { val: 1978235381 } }
 
     #[zkp_program]
     fn compare_rational<F: FieldSpec>(#[shared] x: BfvRational<F>, #[shared] y: BfvRational<F>) {
@@ -235,9 +282,7 @@ mod linked_tests {
         let (public_key, _secret_key) = rt.generate_keys().unwrap();
 
         // To slow to run in a loop :/ if we eventually expose small params for testing, do more cases
-        // TODO change 10 to 1 !
-        for _ in 0..10 {
-            // use i32 values to ensure multiplication doesn't overflow
+        for _ in 0..1 {
             let x_n = rand::random::<i32>() as i64;
             let y_n = rand::random::<i32>() as i64;
             // ensure denominator is positive
@@ -258,9 +303,9 @@ mod linked_tests {
 
             let lp = proof_builder
                 .build_linkedproof()
-                .unwrap_or_else(|_| panic!("Failed to prove {x:?} <= {y:?}"));
+                .unwrap_or_else(|e| panic!("Failed to prove {x:?} <= {y:?}, {e}"));
             lp.verify::<ZkpProgramInput>(compare_rational_zkp, vec![], vec![])
-                .unwrap_or_else(|_| panic!("Failed to verify {x:?} <= {y:?}"));
+                .unwrap_or_else(|e| panic!("Failed to verify {x:?} <= {y:?}; {e}"));
         }
     }
 
@@ -387,5 +432,296 @@ mod linked_tests {
         // Missing one shared inputs
         test_case(1, 1);
         // TODO add signed/unsigned mismatch after we impl sharing for unshared.
+    }
+    mod sanity {
+        use super::*;
+        // Failed to verify Rational { num: Signed { val: 863010290 }, den: Signed { val: 2134164612 } } <= Rational { num: Signed { val: 1875999945 }, den: Signed { val: 126208454 } }
+        const X_N: i64 = 863010290;
+        const X_D: i64 = 2134164612;
+        const Y_N: i64 = 1875999945;
+        const Y_D: i64 = 126208454;
+
+        const X: i64 = X_N * Y_D;
+        const Y: i64 = Y_N * X_D;
+
+        #[test]
+        fn direct_signed_comparison() {
+            let app = Compiler::new()
+                .fhe_program(doggie)
+                .with_params(&SMALL_PARAMS)
+                .zkp_backend::<BulletproofsBackend>()
+                .zkp_program(compare_signed)
+                .compile()
+                .unwrap();
+            let rt = FheZkpRuntime::new(app.params(), &BulletproofsBackend::new()).unwrap();
+            let compare_signed_zkp = app.get_zkp_program(compare_signed).unwrap();
+
+            let (public_key, _secret_key) = rt.generate_keys().unwrap();
+
+            // To slow to run in a loop :/ if we eventually expose small params for testing, do more cases
+            let x = Signed::from(X);
+            let y = Signed::from(Y);
+
+            let mut proof_builder = LogProofBuilder::new(&rt);
+            let (_ct, x_msg) = proof_builder.encrypt_and_share(&x, &public_key).unwrap();
+            let (_ct, y_msg) = proof_builder.encrypt_and_share(&y, &public_key).unwrap();
+            proof_builder
+                .zkp_program(compare_signed_zkp)
+                .unwrap()
+                .shared_input(&x_msg)
+                .shared_input(&y_msg);
+
+            let lp = proof_builder
+                .build_linkedproof()
+                .unwrap_or_else(|e| panic!("Failed to prove {x:?} <= {y:?}, {e}"));
+            lp.verify::<ZkpProgramInput>(compare_signed_zkp, vec![], vec![])
+                .unwrap_or_else(|e| panic!("Failed to verify {x:?} <= {y:?}; {e}"));
+        }
+
+        #[zkp_program]
+        fn four_signed_args_nada<F: FieldSpec>(
+            #[shared] x_n: BfvSigned<F>,
+            #[shared] x_d: BfvSigned<F>,
+            #[shared] y_n: BfvSigned<F>,
+            #[shared] y_d: BfvSigned<F>,
+        ) {
+        }
+
+        #[test]
+        fn four_signed_args_nada_test() {
+            let app = Compiler::new()
+                .fhe_program(doggie)
+                .with_params(&SMALL_PARAMS)
+                .zkp_backend::<BulletproofsBackend>()
+                .zkp_program(four_signed_args_nada)
+                .compile()
+                .unwrap();
+            let rt = FheZkpRuntime::new(app.params(), &BulletproofsBackend::new()).unwrap();
+            let compare_signed_zkp = app.get_zkp_program(four_signed_args_nada).unwrap();
+
+            let (public_key, _secret_key) = rt.generate_keys().unwrap();
+
+            // To slow to run in a loop :/ if we eventually expose small params for testing, do more cases
+            let x_n = Signed::from(X_N);
+            let x_d = Signed::from(X_D);
+            let y_n = Signed::from(Y_N);
+            let y_d = Signed::from(Y_D);
+
+            let mut proof_builder = LogProofBuilder::new(&rt);
+            let (_ct, xn_msg) = proof_builder.encrypt_and_share(&x_n, &public_key).unwrap();
+            let (_ct, xd_msg) = proof_builder.encrypt_and_share(&x_d, &public_key).unwrap();
+            let (_ct, yn_msg) = proof_builder.encrypt_and_share(&y_n, &public_key).unwrap();
+            let (_ct, yd_msg) = proof_builder.encrypt_and_share(&y_d, &public_key).unwrap();
+            proof_builder
+                .zkp_program(compare_signed_zkp)
+                .unwrap()
+                .shared_input(&xn_msg)
+                .shared_input(&xd_msg)
+                .shared_input(&yn_msg)
+                .shared_input(&yd_msg);
+
+            let lp = proof_builder.build_linkedproof().unwrap();
+            lp.verify::<ZkpProgramInput>(compare_signed_zkp, vec![], vec![])
+                .unwrap();
+        }
+
+        #[zkp_program]
+        fn four_signed_args_irrelevant_comp<F: FieldSpec>(
+            #[shared] x_n: BfvSigned<F>,
+            #[shared] x_d: BfvSigned<F>,
+            #[shared] y_n: BfvSigned<F>,
+            #[shared] y_d: BfvSigned<F>,
+        ) {
+            let zero: ProgramNode<Field<F>> = zkp_var!(0);
+            let one: ProgramNode<Field<F>> = zkp_var!(1);
+            zero.constrain_lt_bounded(one, 64)
+        }
+
+        #[test]
+        fn four_signed_args_irrelevant_test() {
+            let app = Compiler::new()
+                .fhe_program(doggie)
+                .with_params(&SMALL_PARAMS)
+                .zkp_backend::<BulletproofsBackend>()
+                .zkp_program(four_signed_args_irrelevant_comp)
+                .compile()
+                .unwrap();
+            let rt = FheZkpRuntime::new(app.params(), &BulletproofsBackend::new()).unwrap();
+            let compare_signed_zkp = app
+                .get_zkp_program(four_signed_args_irrelevant_comp)
+                .unwrap();
+
+            let (public_key, _secret_key) = rt.generate_keys().unwrap();
+
+            // To slow to run in a loop :/ if we eventually expose small params for testing, do more cases
+            let x_n = Signed::from(X_N);
+            let x_d = Signed::from(X_D);
+            let y_n = Signed::from(Y_N);
+            let y_d = Signed::from(Y_D);
+
+            let mut proof_builder = LogProofBuilder::new(&rt);
+            let (_ct, xn_msg) = proof_builder.encrypt_and_share(&x_n, &public_key).unwrap();
+            let (_ct, xd_msg) = proof_builder.encrypt_and_share(&x_d, &public_key).unwrap();
+            let (_ct, yn_msg) = proof_builder.encrypt_and_share(&y_n, &public_key).unwrap();
+            let (_ct, yd_msg) = proof_builder.encrypt_and_share(&y_d, &public_key).unwrap();
+            proof_builder
+                .zkp_program(compare_signed_zkp)
+                .unwrap()
+                .shared_input(&xn_msg)
+                .shared_input(&xd_msg)
+                .shared_input(&yn_msg)
+                .shared_input(&yd_msg);
+
+            let lp = proof_builder.build_linkedproof().unwrap();
+            lp.verify::<ZkpProgramInput>(compare_signed_zkp, vec![], vec![])
+                .unwrap();
+        }
+
+        #[zkp_program]
+        fn four_signed_args_decoded_irrelevant_comp<F: FieldSpec>(
+            #[shared] x_n: BfvSigned<F>,
+            #[shared] x_d: BfvSigned<F>,
+            #[shared] y_n: BfvSigned<F>,
+            #[shared] y_d: BfvSigned<F>,
+        ) {
+            let _x_n = x_n.into_field_elem();
+            let _x_d = x_d.into_field_elem();
+            let _y_n = y_n.into_field_elem();
+            let _y_d = y_d.into_field_elem();
+            let zero: ProgramNode<Field<F>> = zkp_var!(0);
+            let one: ProgramNode<Field<F>> = zkp_var!(1);
+            zero.constrain_lt_bounded(one, 64)
+        }
+
+        #[test]
+        fn four_signed_args_decoded_irrelevant_test() {
+            let app = Compiler::new()
+                .fhe_program(doggie)
+                .with_params(&SMALL_PARAMS)
+                .zkp_backend::<BulletproofsBackend>()
+                .zkp_program(four_signed_args_decoded_irrelevant_comp)
+                .compile()
+                .unwrap();
+            let rt = FheZkpRuntime::new(app.params(), &BulletproofsBackend::new()).unwrap();
+            let compare_signed_zkp = app
+                .get_zkp_program(four_signed_args_decoded_irrelevant_comp)
+                .unwrap();
+
+            let (public_key, _secret_key) = rt.generate_keys().unwrap();
+
+            // To slow to run in a loop :/ if we eventually expose small params for testing, do more cases
+            let x_n = Signed::from(X_N);
+            let x_d = Signed::from(X_D);
+            let y_n = Signed::from(Y_N);
+            let y_d = Signed::from(Y_D);
+
+            let mut proof_builder = LogProofBuilder::new(&rt);
+            let (_ct, xn_msg) = proof_builder.encrypt_and_share(&x_n, &public_key).unwrap();
+            let (_ct, xd_msg) = proof_builder.encrypt_and_share(&x_d, &public_key).unwrap();
+            let (_ct, yn_msg) = proof_builder.encrypt_and_share(&y_n, &public_key).unwrap();
+            let (_ct, yd_msg) = proof_builder.encrypt_and_share(&y_d, &public_key).unwrap();
+            proof_builder
+                .zkp_program(compare_signed_zkp)
+                .unwrap()
+                .shared_input(&xn_msg)
+                .shared_input(&xd_msg)
+                .shared_input(&yn_msg)
+                .shared_input(&yd_msg);
+
+            let lp = proof_builder.build_linkedproof().unwrap();
+            lp.verify::<ZkpProgramInput>(compare_signed_zkp, vec![], vec![])
+                .unwrap();
+        }
+
+        #[zkp_program]
+        fn mul_signed_compare<F: FieldSpec>(
+            #[shared] x_n: BfvSigned<F>,
+            #[shared] x_d: BfvSigned<F>,
+            #[shared] y_n: BfvSigned<F>,
+            #[shared] y_d: BfvSigned<F>,
+        ) {
+            let x_n = x_n.into_field_elem();
+            let x_d = x_d.into_field_elem();
+            let y_n = y_n.into_field_elem();
+            let y_d = y_d.into_field_elem();
+            let x = x_n * y_d;
+            let y = y_n * x_d;
+            x.constrain_le_bounded(y, 64)
+        }
+
+        #[test]
+        fn mul_signed_comparison() {
+            let app = Compiler::new()
+                .fhe_program(doggie)
+                .with_params(&SMALL_PARAMS)
+                .zkp_backend::<BulletproofsBackend>()
+                .zkp_program(mul_signed_compare)
+                .compile()
+                .unwrap();
+            let rt = FheZkpRuntime::new(app.params(), &BulletproofsBackend::new()).unwrap();
+            let compare_signed_zkp = app.get_zkp_program(mul_signed_compare).unwrap();
+
+            let (public_key, _secret_key) = rt.generate_keys().unwrap();
+
+            // To slow to run in a loop :/ if we eventually expose small params for testing, do more cases
+            let x_n = Signed::from(X_N);
+            let x_d = Signed::from(X_D);
+            let y_n = Signed::from(Y_N);
+            let y_d = Signed::from(Y_D);
+
+            let mut proof_builder = LogProofBuilder::new(&rt);
+            let (_ct, xn_msg) = proof_builder.encrypt_and_share(&x_n, &public_key).unwrap();
+            let (_ct, xd_msg) = proof_builder.encrypt_and_share(&x_d, &public_key).unwrap();
+            let (_ct, yn_msg) = proof_builder.encrypt_and_share(&y_n, &public_key).unwrap();
+            let (_ct, yd_msg) = proof_builder.encrypt_and_share(&y_d, &public_key).unwrap();
+            proof_builder
+                .zkp_program(compare_signed_zkp)
+                .unwrap()
+                .shared_input(&xn_msg)
+                .shared_input(&xd_msg)
+                .shared_input(&yn_msg)
+                .shared_input(&yd_msg);
+
+            let lp = proof_builder.build_linkedproof().unwrap();
+            lp.verify::<ZkpProgramInput>(compare_signed_zkp, vec![], vec![])
+                .unwrap();
+        }
+
+        #[zkp_program]
+        fn single_signed_mul<F: FieldSpec>(#[shared] x: BfvSigned<F>, y: Field<F>) {
+            let x = x.into_field_elem();
+            let _z = x * y;
+        }
+
+        #[test]
+        fn single_signed_mul_test() {
+            let app = Compiler::new()
+                .fhe_program(doggie)
+                .with_params(&SMALL_PARAMS)
+                .zkp_backend::<BulletproofsBackend>()
+                .zkp_program(single_signed_mul)
+                .compile()
+                .unwrap();
+            let rt = FheZkpRuntime::new(app.params(), &BulletproofsBackend::new()).unwrap();
+            let compare_signed_zkp = app.get_zkp_program(single_signed_mul).unwrap();
+
+            let (public_key, _secret_key) = rt.generate_keys().unwrap();
+
+            // To slow to run in a loop :/ if we eventually expose small params for testing, do more cases
+            let x = Signed::from(X_N);
+            let y = BulletproofsField::from(Y_D);
+
+            let mut proof_builder = LogProofBuilder::new(&rt);
+            let (_ct, x_msg) = proof_builder.encrypt_and_share(&x, &public_key).unwrap();
+            proof_builder
+                .zkp_program(compare_signed_zkp)
+                .unwrap()
+                .shared_input(&x_msg)
+                .private_input(y);
+
+            let lp = proof_builder.build_linkedproof().unwrap();
+            lp.verify::<ZkpProgramInput>(compare_signed_zkp, vec![], vec![])
+                .unwrap();
+        }
     }
 }

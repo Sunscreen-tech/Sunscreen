@@ -89,6 +89,7 @@ fn new_single_party_with_shared_generators(
         if left_side {
             g[index] = *gen;
             left_side = false;
+            // TODO this overflows if shared arguments are provided with no constraints
             index -= 1;
         } else {
             h[index] = *gen;

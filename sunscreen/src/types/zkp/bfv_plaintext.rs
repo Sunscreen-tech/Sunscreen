@@ -1,10 +1,14 @@
+use paste::paste;
 use sunscreen_compiler_macros::TypeName;
 use sunscreen_runtime::LinkWithZkp;
 use sunscreen_zkp_backend::{BigInt, FieldSpec};
 
 use crate::{
     invoke_gadget,
-    types::{bfv::Signed, zkp::ProgramNode},
+    types::{
+        bfv::{Signed, Unsigned128, Unsigned64},
+        zkp::ProgramNode,
+    },
     zkp::{with_zkp_ctx, ZkpContextOps},
 };
 
@@ -12,57 +16,44 @@ use super::{gadgets::SignedModulus, DynamicNumFieldElements, Field, ToNativeFiel
 
 use crate as sunscreen;
 
-/// A BFV plaintext polynomial that has been linked to a ZKP program.
+/// A BFV plaintext polynomial with signed encoding that has been linked to a ZKP program.
+///
+/// Both our Signed and Unsigned bfv types use this encoding.
 ///
 /// Here `N` is the degree of the _linked_ polynomial, which may be less than the full lattice
 /// dimension. See [`Link::DEGREE_BOUND`](sunscreen_runtime::Link).
-#[derive(Debug, Clone, TypeName)]
-struct BfvPlaintext<F: FieldSpec, const N: usize> {
+#[derive(Debug, Clone)]
+struct BfvSignedEncoding<F: FieldSpec, const N: usize> {
     data: Vec<Field<F>>,
 }
 
-impl<F: FieldSpec, const N: usize> DynamicNumFieldElements for BfvPlaintext<F, N> {
+impl<F: FieldSpec, const N: usize> DynamicNumFieldElements for BfvSignedEncoding<F, N> {
     fn num_native_field_elements(plaintext_modulus: u64) -> usize {
         let log_p = plaintext_modulus.ilog2() + 1;
         log_p as usize * N
     }
 }
 
-impl<F: FieldSpec, const N: usize> ToNativeFields for BfvPlaintext<F, N> {
+impl<F: FieldSpec, const N: usize> ToNativeFields for BfvSignedEncoding<F, N> {
     fn to_native_fields(&self) -> Vec<BigInt> {
         self.data.iter().map(|x| x.val).collect()
     }
 }
 
-#[derive(Debug, Clone, TypeName)]
-/// A [BFV signed integer](crate::types::bfv::Signed) that has been linked to a ZKP program.
-///
-/// Use the [`AsFieldElement::into_field_elem`] method to decode the the value into a field
-/// element within a ZKP program.
-pub struct BfvSigned<F: FieldSpec>(BfvPlaintext<F, { <Signed as LinkWithZkp>::DEGREE_BOUND }>);
-
-impl<F: FieldSpec> DynamicNumFieldElements for BfvSigned<F> {
-    fn num_native_field_elements(plaintext_modulus: u64) -> usize {
-        <BfvPlaintext<F, { <Signed as LinkWithZkp>::DEGREE_BOUND }> as DynamicNumFieldElements>::
-            num_native_field_elements(plaintext_modulus)
-    }
-}
-
-impl<F: FieldSpec> ToNativeFields for BfvSigned<F> {
-    fn to_native_fields(&self) -> Vec<BigInt> {
-        self.0.to_native_fields()
-    }
-}
-
-/// Decode the underlying plaintext polynomial into the field.
+/// Decode into the field.
 pub trait AsFieldElement<F: FieldSpec> {
+    /// The output type of the decoding.
+    type Output;
+
     /// Get the plaintext value as a field element.
-    fn into_field_elem(self) -> ProgramNode<Field<F>>;
+    fn into_field_elem(self) -> Self::Output;
 }
 
-impl<F: FieldSpec> AsFieldElement<F> for ProgramNode<BfvSigned<F>> {
-    fn into_field_elem(self) -> ProgramNode<Field<F>> {
-        let bound = self.ids.len() / <Signed as LinkWithZkp>::DEGREE_BOUND;
+impl<const N: usize, F: FieldSpec> AsFieldElement<F> for ProgramNode<BfvSignedEncoding<F, N>> {
+    type Output = ProgramNode<Field<F>>;
+
+    fn into_field_elem(self) -> Self::Output {
+        let bound = self.ids.len() / N;
         let plain_modulus = 2u64.pow(bound as u32 - 1);
 
         let (plain_modulus, plain_modulus_1, two, mut coeffs) = with_zkp_ctx(|ctx| {
@@ -113,6 +104,96 @@ impl<F: FieldSpec> AsFieldElement<F> for ProgramNode<BfvSigned<F>> {
             }
             x
         })])
+    }
+}
+
+/// A [BFV signed integer](Signed) that has been linked to a ZKP program.
+///
+/// Use the [`AsFieldElement::into_field_elem`] method to decode the value into a field
+/// element within a ZKP program.
+#[derive(Debug, Clone, TypeName)]
+pub struct BfvSigned<F: FieldSpec>(BfvSignedEncoding<F, { <Signed as LinkWithZkp>::DEGREE_BOUND }>);
+
+/// A [BFV unsigned 64-bit integer](Unsigned64) that has been linked to a ZKP program.
+///
+/// Use the [`AsFieldElement::into_field_elem`] method to decode the value into a field
+/// element within a ZKP program.
+#[derive(Debug, Clone, TypeName)]
+pub struct BfvUnsigned64<F: FieldSpec>(
+    BfvSignedEncoding<F, { <Unsigned64 as LinkWithZkp>::DEGREE_BOUND }>,
+);
+
+/// A [BFV unsigned 128-bit integer](Unsigned128) that has been linked to a ZKP program.
+///
+/// Use the [`AsFieldElement::into_field_elem`] method to decode the value into a field
+/// element within a ZKP program.
+#[derive(Debug, Clone, TypeName)]
+pub struct BfvUnsigned128<F: FieldSpec>(
+    BfvSignedEncoding<F, { <Unsigned128 as LinkWithZkp>::DEGREE_BOUND }>,
+);
+
+/// A [BFV rational](crate::types::bfv::Rational) that has been linked to a ZKP program.
+///
+/// Use the [`AsFieldElement::into_field_elem`] method to decode the numerator and denominator into
+/// field elements within a ZKP program.
+#[derive(Debug, Clone, TypeName)]
+pub struct BfvRational<F: FieldSpec>(BfvSigned<F>, BfvSigned<F>);
+
+macro_rules! impl_linked_zkp_type {
+    ($($int_type:ident),+) => {
+        $(
+            paste! {
+                impl<F: FieldSpec> DynamicNumFieldElements for [<Bfv $int_type>]<F> {
+                    fn num_native_field_elements(plaintext_modulus: u64) -> usize {
+                        <BfvSignedEncoding<F, { <$int_type as LinkWithZkp>::DEGREE_BOUND }> as DynamicNumFieldElements>::
+                            num_native_field_elements(plaintext_modulus)
+                    }
+                }
+
+                impl<F: FieldSpec> ToNativeFields for [<Bfv $int_type>]<F> {
+                    fn to_native_fields(&self) -> Vec<BigInt> {
+                        self.0.to_native_fields()
+                    }
+                }
+
+                impl<F: FieldSpec> AsFieldElement<F> for ProgramNode<[<Bfv $int_type>]<F>> {
+                    type Output = ProgramNode<Field<F>>;
+
+                    fn into_field_elem(self) -> Self::Output {
+                        let cast: ProgramNode<BfvSignedEncoding<F, { <$int_type as LinkWithZkp>::DEGREE_BOUND }>> =
+                            ProgramNode::new(&self.ids);
+                        cast.into_field_elem()
+                    }
+                }
+            }
+        )+
+    };
+}
+
+impl_linked_zkp_type! {
+    Signed, Unsigned64, Unsigned128
+}
+
+impl<F: FieldSpec> DynamicNumFieldElements for BfvRational<F> {
+    fn num_native_field_elements(plaintext_modulus: u64) -> usize {
+        2 * BfvSigned::<F>::num_native_field_elements(plaintext_modulus)
+    }
+}
+
+impl<F: FieldSpec> ToNativeFields for BfvRational<F> {
+    fn to_native_fields(&self) -> Vec<BigInt> {
+        [self.0.to_native_fields(), self.1.to_native_fields()].concat()
+    }
+}
+
+impl<F: FieldSpec> AsFieldElement<F> for ProgramNode<BfvRational<F>> {
+    type Output = (ProgramNode<Field<F>>, ProgramNode<Field<F>>);
+
+    fn into_field_elem(self) -> Self::Output {
+        let len = self.ids.len() / 2;
+        let num: ProgramNode<BfvSigned<F>> = ProgramNode::new(&self.ids[..len]);
+        let den: ProgramNode<BfvSigned<F>> = ProgramNode::new(&self.ids[len..]);
+        (num.into_field_elem(), den.into_field_elem())
     }
 }
 
@@ -181,7 +262,7 @@ mod tests {
                 bits
             });
 
-            let encoded = BfvSigned(BfvPlaintext {
+            let encoded = BfvSigned(BfvSignedEncoding {
                 data: coeffs
                     .into_iter()
                     .flat_map(|c| c.into_iter().map(BulletproofsField::from))
@@ -244,7 +325,7 @@ mod tests {
                 bits
             });
 
-            let encoded = BfvSigned(BfvPlaintext {
+            let encoded = BfvSigned(BfvSignedEncoding {
                 data: coeffs
                     .into_iter()
                     .flat_map(|c| c.into_iter().map(BulletproofsField::from))

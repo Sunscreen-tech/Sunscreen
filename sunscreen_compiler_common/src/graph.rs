@@ -610,10 +610,13 @@ mod tests {
         assert_eq!(
             visited,
             vec![
-                NodeIndex::from(3),
-                NodeIndex::from(1),
+                // Inputs first visited in order
                 NodeIndex::from(0),
+                NodeIndex::from(1),
+                NodeIndex::from(3),
+                // Then the addition
                 NodeIndex::from(2),
+                // And finally the multiplication which depends on the addition
                 NodeIndex::from(4)
             ]
         );
@@ -688,11 +691,15 @@ mod tests {
         assert_eq!(
             visited,
             vec![
+                // First the mul (4), which depends on (2, 3)
                 NodeIndex::from(4),
+                // The RHS of the mul (4)
+                NodeIndex::from(3),
+                // Then the LHS of the mul, which is the add (2)
                 NodeIndex::from(2),
-                NodeIndex::from(0),
+                // Then the add inputs
                 NodeIndex::from(1),
-                NodeIndex::from(3)
+                NodeIndex::from(0),
             ]
         );
     }
@@ -717,14 +724,16 @@ mod tests {
         })
         .unwrap();
 
+        // we should end up with the same order as without the deletion,
+        // as we still mark the addition as visited
         assert_eq!(
             visited,
             vec![
                 NodeIndex::from(4),
+                NodeIndex::from(3),
                 NodeIndex::from(2),
-                NodeIndex::from(0),
                 NodeIndex::from(1),
-                NodeIndex::from(3)
+                NodeIndex::from(0),
             ]
         );
     }
@@ -738,7 +747,7 @@ mod tests {
         forward_traverse_mut(&mut ir.graph, |_, n| {
             visited.push(n);
 
-            // Delete the addition
+            // Add a multplication
             if n.index() == 2 {
                 let mut transforms: GraphTransforms<NodeInfo<Operation>, EdgeInfo> =
                     GraphTransforms::new();
@@ -763,15 +772,20 @@ mod tests {
         })
         .unwrap();
 
+        // The difference from the forward traversal without append should just be the new node
+        // inserted right before the mul (4). this is because, while the new node doesn't have any
+        // unvisited dependencies, it still gets added to the _end_ of the ready queue. The (4)
+        // node still comes later because, at the time of the append, that node is _not_ yet ready
+        // and thus not yet in the queue.
         assert_eq!(
             visited,
             vec![
-                NodeIndex::from(3),
-                NodeIndex::from(1),
                 NodeIndex::from(0),
+                NodeIndex::from(1),
+                NodeIndex::from(3),
                 NodeIndex::from(2),
-                NodeIndex::from(4),
                 NodeIndex::from(5),
+                NodeIndex::from(4),
             ]
         );
     }

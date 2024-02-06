@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{HashSet, VecDeque};
 
 use petgraph::{
     dot::Dot,
@@ -215,14 +215,14 @@ where
         Direction::Incoming
     };
 
-    let mut ready_nodes: Vec<NodeIndex> = graph
+    let mut ready_nodes: VecDeque<NodeIndex> = graph
         .node_identifiers()
         .filter(|&x| graph.neighbors_directed(x, prev_direction).next().is_none())
         .collect();
 
     ready.extend(ready_nodes.iter());
 
-    while let Some(n) = ready_nodes.pop() {
+    while let Some(n) = ready_nodes.pop_front() {
         visited.insert(n);
 
         // Remember the next nodes from the current node in case it gets deleted.
@@ -244,7 +244,7 @@ where
             for i in graph.neighbors_directed(n, next_direction) {
                 if !ready.contains(&i) && node_ready(i) {
                     ready.insert(i);
-                    ready_nodes.push(i);
+                    ready_nodes.push_back(i);
                 }
             }
         }
@@ -253,7 +253,7 @@ where
         for i in next_nodes {
             if !ready.contains(&i) && node_ready(i) {
                 ready.insert(i);
-                ready_nodes.push(i);
+                ready_nodes.push_back(i);
             }
         }
 
@@ -261,7 +261,7 @@ where
         for i in added_nodes {
             if graph.neighbors_directed(i, prev_direction).next().is_none() {
                 ready.insert(i);
-                ready_nodes.push(i);
+                ready_nodes.push_back(i);
             }
         }
     }

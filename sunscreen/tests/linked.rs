@@ -265,7 +265,6 @@ mod linked_tests {
     }
 
     #[test]
-    #[ignore = "bug in linked input multplication"]
     fn can_compare_rationals() {
         let app = Compiler::new()
             .fhe_program(doggie)

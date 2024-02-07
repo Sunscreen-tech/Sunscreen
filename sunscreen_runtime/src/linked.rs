@@ -66,8 +66,6 @@ pub enum LinkedProofError {
 fn new_single_party_with_shared_generators(
     gens_capacity: usize,
     shared_generators: &[RistrettoPoint],
-    insertion_point: usize,
-    right_side_allocated: bool,
 ) -> BulletproofGens {
     let mut label = [b'G', 0, 0, 0, 0];
     let mut g = GeneratorsChain::new(&label)
@@ -79,21 +77,14 @@ fn new_single_party_with_shared_generators(
         .take(gens_capacity)
         .collect::<Vec<RistrettoPoint>>();
 
-    let mut index = insertion_point;
-    let mut left_side = !right_side_allocated;
-
-    // Insert the shared generators. Note that the order of the shared
-    // generators is reversed because the inputs in the R1CS BP are reversed
-    // after compilation.
-    for gen in shared_generators.iter() {
-        if left_side {
-            g[index] = *gen;
-            left_side = false;
-            // TODO this overflows if shared arguments are provided with no constraints
-            index -= 1;
+    // Insert the shared generators.
+    for (ix, gen) in shared_generators.iter().enumerate() {
+        // left side
+        if ix % 2 == 0 {
+            g[ix / 2] = *gen;
+        // right side
         } else {
-            h[index] = *gen;
-            left_side = true;
+            h[ix / 2] = *gen;
         }
     }
 
@@ -196,13 +187,6 @@ impl LinkedProof {
             .chain(private_inputs_bigint)
             .collect::<Vec<_>>();
 
-        let metrics = backend.metrics(
-            &program.zkp_program_fn,
-            &private_inputs_bigint,
-            &public_inputs_bigint,
-            &constant_inputs_bigint,
-        )?;
-
         let constraint_count = backend.constraint_count(
             &program.zkp_program_fn,
             &private_inputs_bigint,
@@ -210,12 +194,8 @@ impl LinkedProof {
             &constant_inputs_bigint,
         )?;
 
-        let bulletproof_gens = new_single_party_with_shared_generators(
-            2 * constraint_count,
-            &shared_gens.clone(),
-            metrics.multipliers - 1,
-            metrics.final_multiplier_rhs_allocated,
-        );
+        let bulletproof_gens =
+            new_single_party_with_shared_generators(2 * constraint_count, &shared_gens.clone());
 
         let verifier_parameters = BulletproofVerifierParameters::new(
             PedersenGens::default(),

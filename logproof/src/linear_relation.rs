@@ -1291,19 +1291,18 @@ impl LogProof {
         let m = b_slices.len();
         let k = b_slices[0].len();
 
-        // Grab out the different shared and unshared bits.
+        // Grab out the unshared bits.
         for i in 0..m {
             for j in 0..k {
-                let index = (i, j);
-
-                if shared_index_set.contains(&index) {
-                    s_1_shared.extend(s_1[b_slices[index.0][index.1].clone()].iter());
-                    h_shared.extend(h[b_slices[index.0][index.1].clone()].iter());
-                } else {
-                    s_1_unshared.extend(s_1[b_slices[index.0][index.1].clone()].iter());
-                    h_unshared.extend(h[b_slices[index.0][index.1].clone()].iter());
+                if !shared_index_set.contains(&(i, j)) {
+                    s_1_unshared.extend(s_1[b_slices[i][j].clone()].iter());
+                    h_unshared.extend(h[b_slices[i][j].clone()].iter());
                 }
             }
+        }
+        for (i, j) in shared_indices {
+            s_1_shared.extend(s_1[b_slices[*i][*j].clone()].iter());
+            h_shared.extend(h[b_slices[*i][*j].clone()].iter());
         }
 
         // And then extend with the rest of the bits.

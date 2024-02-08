@@ -1,8 +1,8 @@
 # allowlist
 
-This example shows a possible project layout using cargo workspaces. The
-`prover` and `verifier` are separate crates and refer to the common `zkp` crate
-for the ZKP program definition.
+This example shows a possible project layout of a [cargo package](pkg-docs) with a `lib`
+crate containing the ZKP program definition, and two binary crates `prover` and
+`verifier`. 
 
 When the prover and verifier live on different machines, they'll probably
 communicate by sending the serialized proof over a network call. However, we can
@@ -14,5 +14,7 @@ public allowlist, without revealing which entry. The allowlist is hardcoded to
 the numbers 100 to 199 inclusive.
 
 ```shell
-cargo run -p prover -- 101 | cargo run -p verifier
+cargo run --bin prover -- 101 | cargo run --bin verifier
 ```
+
+[pkg-docs]: https://rustwiki.org/en/book/ch07-01-packages-and-crates.html

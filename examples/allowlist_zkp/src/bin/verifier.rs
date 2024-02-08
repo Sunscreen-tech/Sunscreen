@@ -5,7 +5,7 @@ use sunscreen::{
     bulletproofs::BulletproofsBackend, types::zkp::BulletproofsField, Proof, ZkpProgramFnExt,
 };
 
-use zkp::{default_list, allowlist};
+use allowlist_zkp::{allowlist, default_list};
 
 fn main() -> Result<()> {
     let prog = allowlist.compile::<BulletproofsBackend>()?;

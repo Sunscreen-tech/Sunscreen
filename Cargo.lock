@@ -3036,6 +3036,7 @@ dependencies = [
  "rand",
  "seal_fhe",
  "serde",
+ "serde_json",
  "static_assertions",
  "subtle",
  "sunscreen_backend",

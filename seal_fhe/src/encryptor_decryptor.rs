@@ -629,7 +629,4 @@ mod tests {
             );
         }
     }
-
-    #[cfg(feature = "deterministic")]
-    pub use deterministic::*;
 }

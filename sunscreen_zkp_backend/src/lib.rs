@@ -16,7 +16,7 @@ mod jit;
 
 use std::{
     any::Any,
-    ops::{Add, Deref, Mul, Neg, Sub},
+    ops::{Add, Deref, Mul, Neg, Shl, Sub},
 };
 
 pub use crypto_bigint::Uint;
@@ -27,6 +27,7 @@ use crypto_bigint::{
 pub use error::*;
 pub use exec::ExecutableZkpProgram;
 pub use jit::{jit_prover, jit_verifier, CompiledZkpProgram, Operation};
+use merlin::Transcript;
 use petgraph::stable_graph::NodeIndex;
 use serde::{Deserialize, Serialize};
 
@@ -183,7 +184,7 @@ impl Deref for BigInt {
 
 impl PartialOrd for BigInt {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        self.0.partial_cmp(&other.0)
+        Some(self.cmp(other))
     }
 }
 
@@ -360,6 +361,18 @@ impl BigInt {
     pub const ONE: Self = Self(U512::ONE);
 }
 
+impl Shl<usize> for BigInt {
+    type Output = BigInt;
+
+    /// NOTE: this operation is variable time with respect to `rhs` *ONLY*.
+    ///
+    /// When used with a fixed `rhs`, this function is constant-time with respect
+    /// to `self`.
+    fn shl(self, rhs: usize) -> BigInt {
+        BigInt::from(self.0.shl(rhs))
+    }
+}
+
 /**
  * The methods needed for a type to serve as a proof
  * system in the Sunscreen ecosystem.
@@ -370,6 +383,12 @@ pub trait ZkpBackend {
      */
     type Field: FieldSpec;
 
+    /// The parameters for prover manually passed into the backend.
+    type ProverParameters;
+
+    /// The parameters for verifier manually passed into the backend.
+    type VerifierParameters;
+
     /**
      * Create a proof for the given executable Sunscreen
      * program with the given inputs.
@@ -377,10 +396,34 @@ pub trait ZkpBackend {
     fn prove(&self, graph: &ExecutableZkpProgram, inputs: &[BigInt]) -> Result<Proof>;
 
     /**
+     * Create a proof for the given executable Sunscreen
+     * program with the given inputs.
+     */
+    fn prove_with_parameters(
+        &self,
+        graph: &ExecutableZkpProgram,
+        inputs: &[BigInt],
+        parameters: &Self::ProverParameters,
+        transcript: &mut Transcript,
+    ) -> Result<Proof>;
+
+    /**
      * Verify the given proof for the given executable
      * Sunscreen program.
      */
     fn verify(&self, graph: &ExecutableZkpProgram, proof: &Proof) -> Result<()>;
+
+    /**
+     * Verify the given proof for the given executable
+     * Sunscreen program.
+     */
+    fn verify_with_parameters(
+        &self,
+        graph: &ExecutableZkpProgram,
+        proof: &Proof,
+        parameters: &Self::VerifierParameters,
+        transcript: &mut Transcript,
+    ) -> Result<()>;
 
     /**
      * JIT the given frontend-compiled ZKP program

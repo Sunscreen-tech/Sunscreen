@@ -32,8 +32,8 @@ fn can_add_array_elements() {
 
     let (public_key, private_key) = runtime.generate_keys().unwrap();
 
-    let a = Signed::try_from(2).unwrap();
-    let b = Signed::try_from(4).unwrap();
+    let a = Signed::from(2);
+    let b = Signed::from(4);
     let a_c = runtime.encrypt([a, b], &public_key).unwrap();
 
     let result = runtime

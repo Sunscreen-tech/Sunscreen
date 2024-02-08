@@ -341,6 +341,26 @@ type_synonyms! {
     64, 128, 256, 512
 }
 
+#[cfg(feature = "linkedproofs")]
+mod sharing {
+    use crate::types::zkp::BfvUnsigned128;
+    use crate::types::zkp::BfvUnsigned64;
+
+    use super::*;
+    use sunscreen_runtime::LinkWithZkp;
+    use sunscreen_zkp_backend::FieldSpec;
+
+    impl LinkWithZkp for Unsigned64 {
+        type ZkpType<F: FieldSpec> = BfvUnsigned64<F>;
+        const DEGREE_BOUND: usize = 128;
+    }
+
+    impl LinkWithZkp for Unsigned128 {
+        type ZkpType<F: FieldSpec> = BfvUnsigned128<F>;
+        const DEGREE_BOUND: usize = 255;
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

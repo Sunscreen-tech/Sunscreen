@@ -1,12 +1,13 @@
+#[cfg(feature = "linkedproofs")]
+mod bfv_plaintext;
 mod field;
 mod gadgets;
 mod program_node;
 mod rns_polynomial;
 
+#[cfg(feature = "linkedproofs")]
+pub use bfv_plaintext::*;
 pub use field::*;
-// N.B. `NodeIndex` is actually common to both FHE and ZKP, but it's really only leaked as an
-// implementation detail on the ZKP side (via gadgets). So I think it makes sense to export under
-// sunscreen::types::zkp.
 pub use petgraph::stable_graph::NodeIndex;
 pub use program_node::*;
 pub use rns_polynomial::*;
@@ -195,8 +196,20 @@ pub trait NumFieldElements {
  * programs.
  */
 pub trait ZkpType: NumFieldElements + Sized + TypeName + ToNativeFields {}
-
 impl<T: NumFieldElements + Sized + TypeName + ToNativeFields> ZkpType for T {}
+
+/// The dynamic number of native field elements needed to represent a ZKP type.
+pub trait DynamicNumFieldElements {
+    /// Calculate the number of native field elements needed to represent this type.
+    fn num_native_field_elements(plaintext_modulus: u64) -> usize;
+}
+
+/**
+ * Encapsulates the traits required for an SDLP-linked type to be used in ZKP
+ * programs.
+ */
+pub trait LinkedZkpType: DynamicNumFieldElements + Sized + TypeName + ToNativeFields {}
+impl<T: DynamicNumFieldElements + Sized + TypeName + ToNativeFields> LinkedZkpType for T {}
 
 /**
  * Methods for coercing ZKP data types.

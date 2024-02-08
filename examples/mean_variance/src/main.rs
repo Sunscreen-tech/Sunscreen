@@ -149,7 +149,7 @@ impl Alice {
     pub fn encrypt_and_serialize_input(&self) -> Result<Vec<u8>, Error> {
         fn create_dataset() -> [Fractional<64>; DATA_POINTS] {
             (0..DATA_POINTS)
-                .map(|x| Fractional::try_from(x as f64).unwrap())
+                .map(|x| Fractional::from(x as f64))
                 .collect::<Vec<Fractional<64>>>()
                 .try_into()
                 .unwrap()

@@ -241,9 +241,9 @@ fn validate_zkp_program(prog: &CompiledZkpProgram) -> Result<()> {
  */
 pub fn jit_prover<U>(
     prog: &CompiledZkpProgram,
-    constant_inputs: &[U::BackendField],
-    public_inputs: &[U::BackendField],
     private_inputs: &[U::BackendField],
+    public_inputs: &[U::BackendField],
+    constant_inputs: &[U::BackendField],
 ) -> Result<ExecutableZkpProgram>
 where
     U: FieldSpec,
@@ -354,7 +354,7 @@ where
                     .edges_directed(id, Direction::Outgoing)
                     .map(|x| {
                         if !matches!(x.weight(), EdgeInfo::Unary) {
-                            return Err(GraphQueryError::NotUnaryOperation)?;
+                            Err(GraphQueryError::NotUnaryOperation)?;
                         }
 
                         match prog[x.target()].operation {
@@ -380,7 +380,7 @@ where
 
                 impl PartialOrd for SortableEdge {
                     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-                        self.1.partial_cmp(&other.1)
+                        Some(self.cmp(other))
                     }
                 }
 

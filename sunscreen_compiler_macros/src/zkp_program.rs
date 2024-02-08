@@ -1,5 +1,5 @@
 use proc_macro2::{Ident, Span, TokenStream};
-use quote::{quote, quote_spanned, ToTokens};
+use quote::{format_ident, quote, quote_spanned, ToTokens};
 use sunscreen_compiler_common::macros::{
     create_program_node, emit_signature, extract_fn_arguments, ExtractFnArgumentsError,
 };
@@ -13,8 +13,9 @@ use crate::{
 };
 
 enum ArgumentKind {
-    Public,
+    Linked,
     Private,
+    Public,
     Constant,
 }
 
@@ -106,8 +107,10 @@ fn parse_inner(_attr_params: ZkpProgramAttrs, input_fn: ItemFn) -> Result<TokenS
         }
     };
 
+    let mut is_linked = false;
     let mut public_seen = false;
     let mut constant_seen = false;
+    let mut private_seen = false;
     let unwrapped_inputs = match extract_fn_arguments(inputs) {
         Ok(args) => {
             args.iter().map(|a| {
@@ -120,17 +123,28 @@ fn parse_inner(_attr_params: ZkpProgramAttrs, input_fn: ItemFn) -> Result<TokenS
                                 "private arguments must be specified before #[public] and #[constant] arguments"
                             ));
                         }
+                        private_seen = true;
                     },
                     [attr] => {
                         let ident = attr.path().get_ident();
 
                         match ident.map(|x| x.to_string()).as_deref() {
+                            Some("linked") => {
+                                if private_seen || public_seen || constant_seen {
+                                    return Err(Error::compile_error(attr.path().span(),
+                                        "#[linked] arguments must be specified before #[private], #[public] and #[constant] arguments"
+                                    ));
+                                }
+                                arg_kind = ArgumentKind::Linked;
+                                is_linked = true;
+                            },
                             Some("private") => {
                                 if public_seen || constant_seen {
                                     return Err(Error::compile_error(attr.path().span(),
                                         "#[private] arguments must be specified before #[public] and #[constant] arguments"
                                     ));
                                 }
+                                private_seen = true;
                             },
                             Some("public") => {
                                 if constant_seen {
@@ -147,14 +161,14 @@ fn parse_inner(_attr_params: ZkpProgramAttrs, input_fn: ItemFn) -> Result<TokenS
                             },
                             _ => {
                                 return Err(Error::compile_error(attr.path().span(), &format!(
-                                    "Expected #[private], #[public] or #[constant], found {}",
+                                    "Expected #[linked], #[private], #[public] or #[constant], found {}",
                                     attr.path().to_token_stream()
                                 )));
                             }
                         }
                     },
                     [_, attr, ..] => {
-                        return Err(Error::compile_error(attr.span(), "ZKP program arguments may only have one attribute (#[private], #[public] or #[constant])."));
+                        return Err(Error::compile_error(attr.span(), "ZKP program arguments may only have one attribute (#[linked], #[private], #[public] or #[constant])."));
                     }
                 };
 
@@ -174,20 +188,35 @@ fn parse_inner(_attr_params: ZkpProgramAttrs, input_fn: ItemFn) -> Result<TokenS
 
     let signature = emit_signature(&argument_types, &[]);
 
+    let build_arg = format_ident!("linked_input");
+
     let var_decl = unwrapped_inputs.iter().map(|t| {
-        let input_type = match t.0 {
-            ArgumentKind::Private => "private_input",
-            ArgumentKind::Public => "public_input",
-            ArgumentKind::Constant => "constant_input",
+        let (input_type, input_arg) = match t.0 {
+            ArgumentKind::Linked => ("linked_input", Some(&build_arg)),
+            ArgumentKind::Private => ("private_input", None),
+            ArgumentKind::Public => ("public_input", None),
+            ArgumentKind::Constant => ("constant_input", None),
         };
 
-        create_program_node(&t.2.to_string(), t.1, input_type)
+        create_program_node(&t.2.to_string(), t.1, input_type, input_arg)
     });
 
     let zkp_program_struct_name =
         Ident::new(&format!("{}_struct", zkp_program_name), Span::call_site());
 
     let zkp_program_name_literal = format!("{}", zkp_program_name);
+
+    let (associated_link_type, into_linked_variant, ext_impl) = if is_linked {
+        (quote! { sunscreen::zkp::Linked }, quote! {Ok}, None)
+    } else {
+        (
+            quote! { sunscreen::zkp::NotLinked },
+            quote! {Err},
+            Some(quote! {
+                impl sunscreen::ZkpProgramFnExt for #zkp_program_struct_name {}
+            }),
+        )
+    };
 
     Ok(quote! {
         #[allow(non_camel_case_types)]
@@ -201,10 +230,12 @@ fn parse_inner(_attr_params: ZkpProgramAttrs, input_fn: ItemFn) -> Result<TokenS
         }
 
         impl <#generic_ident: #generic_bound> sunscreen::ZkpProgramFn<#generic_ident> for #zkp_program_struct_name {
-            fn build(&self) -> sunscreen::Result<sunscreen::zkp::ZkpFrontendCompilation> {
+            type Link = #associated_link_type;
+
+            fn build(&self, linked_input: <Self::Link as sunscreen::zkp::Link>::Input) -> sunscreen::Result<sunscreen::zkp::ZkpFrontendCompilation> {
                 use std::cell::RefCell;
                 use std::mem::transmute;
-                use sunscreen::{Error, INDEX_ARENA, Result, types::{zkp::{ProgramNode, CreateZkpProgramInput, ConstrainEq, IntoProgramNode}, TypeName}, zkp::{CURRENT_ZKP_CTX, ZkpContext, ZkpData}};
+                use sunscreen::{Error, INDEX_ARENA, Result, types::{zkp::{ProgramNode, CreateLinkedZkpProgramInput, CreateZkpProgramInput, ConstrainEq, IntoProgramNode}, TypeName}, zkp::{CURRENT_ZKP_CTX, ZkpContext, ZkpData}};
 
                 let mut context = ZkpContext::new(ZkpData::new());
 
@@ -250,9 +281,14 @@ fn parse_inner(_attr_params: ZkpProgramAttrs, input_fn: ItemFn) -> Result<TokenS
             fn signature(&self) -> sunscreen::CallSignature {
                 #signature
             }
+
+            #[allow(clippy::type_complexity)]
+            fn into_linked(self) -> Result<std::boxed::Box<dyn sunscreen::ZkpProgramFn<F, Link = sunscreen::zkp::Linked>>, std::boxed::Box<dyn sunscreen::ZkpProgramFn<F, Link = sunscreen::zkp::NotLinked>>> {
+                #into_linked_variant(std::boxed::Box::new(self))
+            }
         }
 
-        impl sunscreen::ZkpProgramFnExt for #zkp_program_struct_name {}
+        #ext_impl
 
         #[allow(non_upper_case_globals)]
         #vis const #zkp_program_name: #zkp_program_struct_name = #zkp_program_struct_name;

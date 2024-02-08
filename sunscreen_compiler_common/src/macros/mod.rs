@@ -48,7 +48,12 @@ pub fn lift_type(arg_type: &Type) -> Result<Type, ProgramTypeError> {
 /**
  * Emits code to make a program node for the given type T.
  */
-pub fn create_program_node(var_name: &str, arg_type: &Type, input_method: &str) -> TokenStream2 {
+pub fn create_program_node(
+    var_name: &str,
+    arg_type: &Type,
+    input_method: &str,
+    input_arg: Option<&Ident>,
+) -> TokenStream2 {
     let mapped_type = match lift_type(arg_type) {
         Ok(v) => v,
         Err(ProgramTypeError::IllegalType(s)) => {
@@ -71,7 +76,7 @@ pub fn create_program_node(var_name: &str, arg_type: &Type, input_method: &str) 
     };
 
     quote_spanned! {arg_type.span() =>
-        let #var_name: #mapped_type = #type_annotation::#input_method();
+        let #var_name: #mapped_type = #type_annotation::#input_method(#input_arg);
     }
 }
 
@@ -433,7 +438,7 @@ mod test {
 
         let type_name: Type = parse_quote!(#type_name);
 
-        let actual = create_program_node("horse", &type_name, "input");
+        let actual = create_program_node("horse", &type_name, "input", None);
 
         let expected = quote! {
             let horse: ProgramNode<Cipher<Rational> > = ProgramNode::input();
@@ -450,10 +455,28 @@ mod test {
 
         let type_name: Type = parse_quote!(#type_name);
 
-        let actual = create_program_node("horse", &type_name, "doggie");
+        let actual = create_program_node("horse", &type_name, "doggie", None);
 
         let expected = quote! {
             let horse: ProgramNode<Cipher<Rational> > = ProgramNode::doggie();
+        };
+
+        assert_syn_eq(&actual, &expected);
+    }
+
+    #[test]
+    fn can_pass_args_to_input() {
+        let type_name = quote! {
+            BfvPlaintext<Signed>
+        };
+        let arg = format_ident!("input_arg");
+
+        let type_name: Type = parse_quote!(#type_name);
+
+        let actual = create_program_node("pt", &type_name, "linked_input", Some(&arg));
+
+        let expected = quote! {
+            let pt: ProgramNode<BfvPlaintext<Signed> > = ProgramNode::linked_input(input_arg);
         };
 
         assert_syn_eq(&actual, &expected);
@@ -467,7 +490,7 @@ mod test {
 
         let type_name: Type = parse_quote!(#type_name);
 
-        let actual = create_program_node("horse", &type_name, "input");
+        let actual = create_program_node("horse", &type_name, "input", None);
 
         let expected = quote! {
             let horse: [ProgramNode<Cipher<Rational> >; 7] = <[ProgramNode<Cipher<Rational> >; 7]>::input();
@@ -484,7 +507,7 @@ mod test {
 
         let type_name: Type = parse_quote!(#type_name);
 
-        let actual = create_program_node("horse", &type_name, "input");
+        let actual = create_program_node("horse", &type_name, "input", None);
 
         let expected = quote! {
             let horse: [[ProgramNode<Cipher<Rational> >; 7]; 6] = <[[ProgramNode<Cipher<Rational> >; 7]; 6]>::input();

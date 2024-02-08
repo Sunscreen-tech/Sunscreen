@@ -105,7 +105,7 @@ where
     /// * The inner type R supports constant time subtraction and multiplication.
     ///
     /// In order for polynomial division to work in a ring, `rhs` has restrictions.
-    /// Specifically, the highest order non-zero coefficient must be 1 so as to avoid
+    /// Specifically, the highest order non-zero coefficient in `rhs` must be 1 so as to avoid
     /// inverse operations. While multiplicative inverses are not guaranteed to exist
     /// for a [`Ring`] element, the inverse of one will always be one.
     ///
@@ -391,7 +391,7 @@ mod tests {
         type TestPoly = Polynomial<Zq<1, BarrettBackend<1, Cfg>>>;
 
         let x = TestPoly {
-            coeffs: vec![R::try_from(1).unwrap()],
+            coeffs: vec![R::from(1)],
         };
 
         assert_eq!(x.vartime_degree(), 0);
@@ -407,12 +407,7 @@ mod tests {
         type TestPoly = Polynomial<Zq<1, BarrettBackend<1, Cfg>>>;
 
         let x = TestPoly {
-            coeffs: vec![
-                R::try_from(0).unwrap(),
-                R::try_from(1).unwrap(),
-                R::try_from(2).unwrap(),
-                R::try_from(3).unwrap(),
-            ],
+            coeffs: vec![R::from(0), R::from(1), R::from(2), R::from(3)],
         };
 
         assert_eq!(x.vartime_degree(), 3);
@@ -428,13 +423,7 @@ mod tests {
         type TestPoly = Polynomial<Zq<1, BarrettBackend<1, Cfg>>>;
 
         let x = TestPoly {
-            coeffs: vec![
-                R::try_from(0).unwrap(),
-                R::try_from(1).unwrap(),
-                R::try_from(2).unwrap(),
-                R::try_from(3).unwrap(),
-                R::try_from(0).unwrap(),
-            ],
+            coeffs: vec![R::from(0), R::from(1), R::from(2), R::from(3), R::from(0)],
         };
 
         assert_eq!(x.vartime_degree(), 3);
@@ -483,28 +472,15 @@ mod tests {
         assert_eq!(TestPoly::zero(), TestPoly::zero());
 
         let a = TestPoly {
-            coeffs: vec![
-                R::try_from(0).unwrap(),
-                R::try_from(1).unwrap(),
-                R::try_from(2).unwrap(),
-            ],
+            coeffs: vec![R::from(0), R::from(1), R::from(2)],
         };
 
         let b = TestPoly {
-            coeffs: vec![
-                R::try_from(1).unwrap(),
-                R::try_from(2).unwrap(),
-                R::try_from(3).unwrap(),
-            ],
+            coeffs: vec![R::from(1), R::from(2), R::from(3)],
         };
 
         let c = TestPoly {
-            coeffs: vec![
-                R::try_from(0).unwrap(),
-                R::try_from(1).unwrap(),
-                R::try_from(2).unwrap(),
-                R::try_from(3).unwrap(),
-            ],
+            coeffs: vec![R::from(0), R::from(1), R::from(2), R::from(3)],
         };
 
         assert_eq!(a, a);
@@ -529,32 +505,15 @@ mod tests {
         );
 
         let a = TestPoly {
-            coeffs: vec![
-                R::try_from(0).unwrap(),
-                R::try_from(1).unwrap(),
-                R::try_from(2).unwrap(),
-                R::try_from(0).unwrap(),
-            ],
+            coeffs: vec![R::from(0), R::from(1), R::from(2), R::from(0)],
         };
 
         let b = TestPoly {
-            coeffs: vec![
-                R::try_from(0).unwrap(),
-                R::try_from(1).unwrap(),
-                R::try_from(2).unwrap(),
-                R::try_from(0).unwrap(),
-                R::try_from(0).unwrap(),
-            ],
+            coeffs: vec![R::from(0), R::from(1), R::from(2), R::from(0), R::from(0)],
         };
 
         let c = TestPoly {
-            coeffs: vec![
-                R::try_from(0).unwrap(),
-                R::try_from(1).unwrap(),
-                R::try_from(2).unwrap(),
-                R::try_from(3).unwrap(),
-                R::try_from(0).unwrap(),
-            ],
+            coeffs: vec![R::from(0), R::from(1), R::from(2), R::from(3), R::from(0)],
         };
 
         assert_eq!(a, a);
@@ -573,21 +532,17 @@ mod tests {
 
         let a = TestPoly {
             coeffs: vec![
-                R::try_from(1).unwrap(),
-                R::try_from(2).unwrap(),
-                R::try_from(0).unwrap(),
-                R::try_from(4).unwrap(),
-                R::try_from(2).unwrap(),
-                R::try_from(3).unwrap(),
+                R::from(1),
+                R::from(2),
+                R::from(0),
+                R::from(4),
+                R::from(2),
+                R::from(3),
             ],
         };
 
         let b = TestPoly {
-            coeffs: vec![
-                R::try_from(1).unwrap(),
-                R::try_from(1).unwrap(),
-                R::try_from(1).unwrap(),
-            ],
+            coeffs: vec![R::from(1), R::from(1), R::from(1)],
         };
 
         let (q, rem) = a.vartime_div_rem_restricted_rhs(&b);
@@ -608,23 +563,18 @@ mod tests {
 
         let a = TestPoly {
             coeffs: vec![
-                R::try_from(1).unwrap(),
-                R::try_from(2).unwrap(),
-                R::try_from(0).unwrap(),
-                R::try_from(4).unwrap(),
-                R::try_from(2).unwrap(),
-                R::try_from(3).unwrap(),
-                R::try_from(0).unwrap(),
+                R::from(1),
+                R::from(2),
+                R::from(0),
+                R::from(4),
+                R::from(2),
+                R::from(3),
+                R::from(0),
             ],
         };
 
         let b = TestPoly {
-            coeffs: vec![
-                R::try_from(1).unwrap(),
-                R::try_from(1).unwrap(),
-                R::try_from(1).unwrap(),
-                R::try_from(0).unwrap(),
-            ],
+            coeffs: vec![R::from(1), R::from(1), R::from(1), R::from(0)],
         };
 
         let (q, rem) = a.vartime_div_rem_restricted_rhs(&b);
@@ -653,7 +603,7 @@ mod tests {
 
             for _ in 0..target_den_degree {
                 let coeff = Uniform::from(0..1234u64).sample(&mut thread_rng());
-                den.coeffs.push(R::try_from(coeff).unwrap());
+                den.coeffs.push(R::from(coeff));
             }
 
             // Leading coefficient in denominator must be a 1.
@@ -661,7 +611,7 @@ mod tests {
 
             for _ in 0..=target_num_degree {
                 let coeff = Uniform::from(0..1234u64).sample(&mut thread_rng());
-                num.coeffs.push(R::try_from(coeff).unwrap());
+                num.coeffs.push(R::from(coeff));
             }
 
             let (q, rem) = num.vartime_div_rem_restricted_rhs(&den);

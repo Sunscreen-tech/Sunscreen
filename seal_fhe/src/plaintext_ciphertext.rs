@@ -51,6 +51,12 @@ impl Clone for Plaintext {
     }
 }
 
+impl AsRef<Plaintext> for Plaintext {
+    fn as_ref(&self) -> &Self {
+        self
+    }
+}
+
 impl PartialEq for Plaintext {
     fn eq(&self, other: &Self) -> bool {
         if self.len() == other.len() {
@@ -161,7 +167,7 @@ impl Plaintext {
     }
 
     /**
-     * Constructs an empty ciphertext allocating no memory.
+     * Constructs an empty plaintext allocating no memory.
      */
     pub fn new() -> Result<Self> {
         let mut handle: *mut c_void = null_mut();
@@ -316,6 +322,7 @@ impl Drop for Plaintext {
  * constructor as an extra argument, or by calling the reserve function at
  * any time.
  */
+#[derive(Debug)]
 pub struct Ciphertext {
     handle: *mut c_void,
 }
@@ -331,6 +338,12 @@ impl Clone for Ciphertext {
             .expect("Fatal error: Failed to clone ciphertext");
 
         Self { handle }
+    }
+}
+
+impl AsRef<Ciphertext> for Ciphertext {
+    fn as_ref(&self) -> &Self {
+        self
     }
 }
 

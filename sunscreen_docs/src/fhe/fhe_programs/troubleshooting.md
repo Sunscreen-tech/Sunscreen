@@ -8,7 +8,7 @@ Another technique that can be helpful is to call the `render()` method on your c
 ## My FHE program yields the wrong answer. I'm certain the algorithm is correct.
 Your issue might be one of 2 things:
 1. You exceeded the [noise budget](../advanced/noise_margin.md). You can check the noise budget remaining on a ciphertext (this requires the private key) by calling (`runtime.measure_noise_budget(&ciphertext, &private_key)`). If this value is `0`, you exceeded the noise budget and your value is corrupted. The most common scenario where you will encounter this issue is when [chaining](#i-need-to-use-the-output-of-one-fhe-program-as-the-input-to-another-ie-chain-program-executions) multiple FHE program executions.
-2. Overflow. [Try increasing the plaintext modulus](../advanced/plain_modulus/choosing_plain_modulus.md). Due to [carryless arithmetic](../advanced/carryless_arithmetic.md), understanding overflow can be a bit tricky. Usually, overflow occurs when your plaintext modulus is too small and a digit wraps. Values can also overflow during multiplication due to running out of digits. However, this is very rare in FHE.
+2. Overflow. [Try increasing the plaintext modulus](../advanced/plain_modulus/plain_modulus.md). Due to [carryless arithmetic](../advanced/carryless_arithmetic.md), understanding overflow can be a bit tricky. Usually, overflow occurs when your plaintext modulus is too small and a digit wraps. Values can also overflow during multiplication due to running out of digits. However, this is very rare in FHE.
 
 ## I need to use the output of one FHE program as the input to another (i.e. chain program executions).
 We will likely improve the experience in the future, but you can do this today as follows:
@@ -24,7 +24,7 @@ It's a type wrapper needed to compile your FHE program. Internally, the `#[fhe_p
 Usually, these errors tell you an `FheProgramNode`'s inner type doesn't
 support an operation you're trying to perform. In the example below, the compiler is saying you can't divide `Signed` values:
 
-```ignore
+```text
 error[E0369]: cannot divide `FheProgramNode<Cipher<Signed>>` by `FheProgramNode<Cipher<Signed>>`
   --> examples/simple_multiply/src/main.rs:22:7
    |

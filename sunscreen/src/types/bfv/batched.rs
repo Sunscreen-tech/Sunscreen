@@ -676,52 +676,52 @@ mod tests {
 
     #[test]
     fn can_add_non_fhe() {
-        let a = Batched::<4>::try_from(A_VEC).unwrap();
-        let b = Batched::<4>::try_from(B_VEC).unwrap();
+        let a = Batched::<4>::from(A_VEC);
+        let b = Batched::<4>::from(B_VEC);
 
         assert_eq!(a + b, [[6, 8, 10, 12], [6, 8, 10, 12]].into());
     }
 
     #[test]
     fn can_mul_non_fhe() {
-        let a = Batched::<4>::try_from(A_VEC).unwrap();
-        let b = Batched::<4>::try_from(B_VEC).unwrap();
+        let a = Batched::<4>::from(A_VEC);
+        let b = Batched::<4>::from(B_VEC);
 
         assert_eq!(a * b, [[5, 12, 21, 32], [5, 12, 21, 32]].into());
     }
 
     #[test]
     fn can_sub_non_fhe() {
-        let a = Batched::<4>::try_from(A_VEC).unwrap();
-        let b = Batched::<4>::try_from(B_VEC).unwrap();
+        let a = Batched::<4>::from(A_VEC);
+        let b = Batched::<4>::from(B_VEC);
 
         assert_eq!(a - b, [[-4, -4, -4, -4], [4, 4, 4, 4]].into());
     }
 
     #[test]
     fn can_neg_non_fhe() {
-        let a = Batched::<4>::try_from(A_VEC).unwrap();
+        let a = Batched::<4>::from(A_VEC);
 
         assert_eq!(-a, [[-1, -2, -3, -4], [-5, -6, -7, -8]].into());
     }
 
     #[test]
     fn can_shl_non_fhe() {
-        let a = Batched::<4>::try_from(A_VEC).unwrap();
+        let a = Batched::<4>::from(A_VEC);
 
         assert_eq!(a << 3, [[4, 1, 2, 3], [8, 5, 6, 7]].into());
     }
 
     #[test]
     fn can_shr_non_fhe() {
-        let a = Batched::<4>::try_from(A_VEC).unwrap();
+        let a = Batched::<4>::from(A_VEC);
 
         assert_eq!(a >> 3, [[2, 3, 4, 1], [6, 7, 8, 5]].into());
     }
 
     #[test]
     fn can_swap_rows_non_fhe() {
-        let a = Batched::<4>::try_from(A_VEC).unwrap();
+        let a = Batched::<4>::from(A_VEC);
 
         assert_eq!(a.swap_rows(), [[5, 6, 7, 8], [1, 2, 3, 4]].into());
     }

@@ -134,6 +134,8 @@ where
 
     fn index(&self, index: (usize, usize)) -> &Self::Output {
         let (r, c) = index;
+        debug_assert!(r < self.rows);
+        debug_assert!(c < self.cols);
 
         &self.data[c + self.cols * r]
     }
@@ -163,8 +165,6 @@ where
     type Output = PolynomialMatrix<R>;
 
     fn sub(self, rhs: &PolynomialMatrix<R>) -> Self::Output {
-        let rhs = rhs.borrow();
-
         assert_eq!(self.rows, rhs.rows);
         assert_eq!(self.cols, rhs.cols);
 
@@ -188,8 +188,6 @@ where
     type Output = Matrix<R>;
 
     fn add(self, rhs: &Matrix<R>) -> Self::Output {
-        let rhs = rhs.borrow();
-
         assert_eq!(self.rows, rhs.rows);
         assert_eq!(self.cols, rhs.cols);
 
@@ -284,8 +282,6 @@ where
     type Output = PolynomialMatrix<R>;
 
     fn div(self, rhs: &Polynomial<R>) -> Self::Output {
-        let rhs = rhs.borrow();
-
         let data = self
             .data
             .par_iter()
@@ -828,7 +824,7 @@ mod tests {
             let mut coeffs = vec![];
 
             for j in 1..5 {
-                coeffs.push(ZqRistretto::try_from((i * j) as u64).unwrap());
+                coeffs.push(ZqRistretto::from((i * j) as u64));
             }
 
             polys.push(Polynomial { coeffs });
@@ -896,7 +892,7 @@ mod tests {
 
         for i in 0..a.rows {
             for j in 0..a.cols {
-                a[(i, j)] = ZqSeal128_8192::try_from((i + j) as u64).unwrap();
+                a[(i, j)] = ZqSeal128_8192::from((i + j) as u64);
             }
         }
 

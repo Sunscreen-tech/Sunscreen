@@ -8,12 +8,16 @@ In this example, we'll also see how proof serialization works.
 
 ## A brief diversion on file structure with serialization
 
-In Sunscreen, you can serialize proofs. Usually, we'll define a ZKP program in one place, and share
-that code between both the prover and verifier. This is easily accomplished with
-a [Cargo workspace](https://doc.rust-lang.org/book/ch14-03-cargo-workspaces.html).
+In Sunscreen, you can serialize proofs. Usually, we'll define a ZKP program in
+one place, and share that code between both the prover and verifier. This is
+easily accomplished with a [Cargo
+package](https://doc.rust-lang.org/book/ch07-01-packages-and-crates.html) with
+multiple binaries, or [Cargo
+workspace](https://doc.rust-lang.org/book/ch14-03-cargo-workspaces.html) if you
+need more flexibility.
 For example, the workspace might have a file structure like this: 
 
-```ignore
+```text
 .
 ├── Cargo.lock
 ├── Cargo.toml
@@ -180,5 +184,5 @@ $ cargo run -p prover 150 | cargo run -p verifier
 Verified proof successfully!
 ```
 
-The [full workspace example](https://github.com/Sunscreen-tech/Sunscreen/tree/main/examples/allowlist_zkp)
+The [full example](https://github.com/Sunscreen-tech/Sunscreen/tree/main/examples/allowlist_zkp)
 is on GitHub for reference.

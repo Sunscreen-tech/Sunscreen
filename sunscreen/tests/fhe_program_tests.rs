@@ -369,8 +369,6 @@ fn can_collect_output() {
         ]
     });
 
-    dbg!(serde_json::to_string(&context).unwrap());
-
     assert_eq!(
         context,
         serde_json::from_value::<FheFrontendCompilation>(expected).unwrap()

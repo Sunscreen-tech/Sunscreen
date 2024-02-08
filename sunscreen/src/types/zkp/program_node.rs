@@ -12,7 +12,7 @@ use crate::{
     INDEX_ARENA,
 };
 
-use super::{ConstrainCmpVarVar, ConstrainEqVarVar, Field};
+use super::{ConstrainCmpVarVar, ConstrainEqVarVar, Field, LinkedZkpType};
 
 #[derive(Clone, Copy)]
 /**
@@ -26,10 +26,7 @@ use super::{ConstrainCmpVarVar, ConstrainEqVarVar, Field};
  * # Remarks
  * For internal use only.
  */
-pub struct ProgramNode<T>
-where
-    T: ZkpType,
-{
+pub struct ProgramNode<T> {
     /**
      * The indices in the graph that compose the type backing this
      * `ProgramNode`.
@@ -38,7 +35,7 @@ where
     _phantom: PhantomData<T>,
 }
 
-impl<T: ZkpType> std::fmt::Debug for ProgramNode<T> {
+impl<T> std::fmt::Debug for ProgramNode<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str("ProgramNode<elided>")
     }
@@ -73,10 +70,13 @@ pub trait CreateZkpProgramInput {
     fn constant_input() -> Self;
 }
 
-impl<T> ProgramNode<T>
-where
-    T: ZkpType,
-{
+/// Trait for adding FHE-linked inputs to a ZKP program.
+pub trait CreateLinkedZkpProgramInput {
+    /// Creates an FHE linked program input of type T, which requires the plaintext modulus.
+    fn linked_input(plaintext_modulus: u64) -> Self;
+}
+
+impl<T> ProgramNode<T> {
     /**
      * Create a new Program node from the given indicies in the
      */
@@ -88,7 +88,7 @@ where
             ids_dest.copy_from_slice(ids);
 
             // The memory in the bump allocator is valid until we call reset, which
-            // we do after creating the FHE program. At this time, no FheProgramNodes should
+            // we do after creating the ZKP program. At this time, no ZKP ProgramNodes should
             // remain.
             // We invoke the dark transmutation ritual to turn a finite lifetime into a 'static.
             Self {
@@ -104,27 +104,24 @@ where
     T: CreateZkpProgramInput + Copy,
 {
     fn constant_input() -> Self {
-        (0..N)
-            .map(|_| T::constant_input())
-            .collect::<Vec<_>>()
-            .try_into()
-            .unwrap_or_else(|_| unreachable!())
+        [0; N].map(|_| T::constant_input())
     }
 
     fn private_input() -> Self {
-        (0..N)
-            .map(|_| T::private_input())
-            .collect::<Vec<_>>()
-            .try_into()
-            .unwrap_or_else(|_| unreachable!())
+        [0; N].map(|_| T::private_input())
     }
 
     fn public_input() -> Self {
-        (0..N)
-            .map(|_| T::public_input())
-            .collect::<Vec<_>>()
-            .try_into()
-            .unwrap_or_else(|_| unreachable!())
+        [0; N].map(|_| T::public_input())
+    }
+}
+
+impl<T, const N: usize> CreateLinkedZkpProgramInput for [T; N]
+where
+    T: CreateLinkedZkpProgramInput + Copy,
+{
+    fn linked_input(plaintext_modulus: u64) -> Self {
+        [0; N].map(|_| T::linked_input(plaintext_modulus))
     }
 }
 
@@ -157,6 +154,22 @@ where
 
         for _ in 0..T::NUM_NATIVE_FIELD_ELEMENTS {
             ids.push(with_zkp_ctx(|ctx| ctx.add_constant_input()));
+        }
+
+        Self::new(&ids)
+    }
+}
+
+impl<T> CreateLinkedZkpProgramInput for ProgramNode<T>
+where
+    T: LinkedZkpType,
+{
+    fn linked_input(plaintext_modulus: u64) -> Self {
+        let len = T::num_native_field_elements(plaintext_modulus);
+        let mut ids = Vec::with_capacity(len);
+
+        for _ in 0..len {
+            ids.push(with_zkp_ctx(|ctx| ctx.add_private_input()));
         }
 
         Self::new(&ids)

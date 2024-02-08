@@ -54,7 +54,7 @@ A high level approach to efficiently computing a dot product with FHE is:
 4. Sum the two rows together by adding the sum variable to a `swap_rows()` version of itself.
 
 To show why steps 3 and 4 sum the lanes of a `Batched` value, let's walk through an example
-```ignore
+```text
 c =
   [[01, 02, 03, 04, 05, 06, 07, 08], [09, 10, 11, 12, 13, 14, 15, 16]]
 
@@ -77,7 +77,7 @@ c = c + (c << 4)
 After running step 3, we have 2 rows where every column contains the sum of all the columns in the respective row for the original c vector.
 
 Next, we simply need to swap the rows and add
-```ignore
+```text
 c = c + c.swapRows()
   [[036, 036, 036, 036, 036, 036, 036, 036], [100, 100, 100, 100, 100, 100, 100, 100]]
 + [[100, 100, 100, 100, 100, 100, 100, 100], [036, 036, 036, 036, 036, 036, 036, 036]]

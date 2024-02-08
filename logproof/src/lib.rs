@@ -52,6 +52,8 @@ pub use linear_relation::{
     VerifierKnowledge as LogProofVerifierKnowledge,
 };
 
+pub mod bfv_statement;
+
 /**
  * A collection of fields Z_q you can use in our log proofs.
  */
@@ -63,9 +65,12 @@ pub mod rings;
 pub mod math;
 mod transcript;
 
+pub use merlin::Transcript;
 pub use transcript::LogProofTranscript;
 
 /**
  * Components that are helpful for testing but should not be used in production.
  */
+#[doc(hidden)]
 pub mod test;
+pub use test::LatticeProblem;

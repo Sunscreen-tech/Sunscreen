@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{HashSet, VecDeque};
 
 use petgraph::{
     dot::Dot,
@@ -215,14 +215,14 @@ where
         Direction::Incoming
     };
 
-    let mut ready_nodes: Vec<NodeIndex> = graph
+    let mut ready_nodes: VecDeque<NodeIndex> = graph
         .node_identifiers()
         .filter(|&x| graph.neighbors_directed(x, prev_direction).next().is_none())
         .collect();
 
     ready.extend(ready_nodes.iter());
 
-    while let Some(n) = ready_nodes.pop() {
+    while let Some(n) = ready_nodes.pop_front() {
         visited.insert(n);
 
         // Remember the next nodes from the current node in case it gets deleted.
@@ -244,7 +244,7 @@ where
             for i in graph.neighbors_directed(n, next_direction) {
                 if !ready.contains(&i) && node_ready(i) {
                     ready.insert(i);
-                    ready_nodes.push(i);
+                    ready_nodes.push_back(i);
                 }
             }
         }
@@ -253,7 +253,7 @@ where
         for i in next_nodes {
             if !ready.contains(&i) && node_ready(i) {
                 ready.insert(i);
-                ready_nodes.push(i);
+                ready_nodes.push_back(i);
             }
         }
 
@@ -261,7 +261,7 @@ where
         for i in added_nodes {
             if graph.neighbors_directed(i, prev_direction).next().is_none() {
                 ready.insert(i);
-                ready_nodes.push(i);
+                ready_nodes.push_back(i);
             }
         }
     }
@@ -513,7 +513,7 @@ where
 
         impl PartialOrd for SortableEdge {
             fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-                self.1.partial_cmp(&other.1)
+                Some(self.cmp(other))
             }
         }
 
@@ -521,7 +521,7 @@ where
             fn cmp(&self, other: &Self) -> std::cmp::Ordering {
                 // PartialCmp will always return Some(_) for usize,
                 // which is the thing we're comparing.
-                self.partial_cmp(other).unwrap()
+                self.1.partial_cmp(&other.1).unwrap()
             }
         }
 
@@ -610,10 +610,13 @@ mod tests {
         assert_eq!(
             visited,
             vec![
-                NodeIndex::from(3),
-                NodeIndex::from(1),
+                // Inputs first visited in order
                 NodeIndex::from(0),
+                NodeIndex::from(1),
+                NodeIndex::from(3),
+                // Then the addition
                 NodeIndex::from(2),
+                // And finally the multiplication which depends on the addition
                 NodeIndex::from(4)
             ]
         );
@@ -688,11 +691,15 @@ mod tests {
         assert_eq!(
             visited,
             vec![
+                // First the mul (4), which depends on (2, 3)
                 NodeIndex::from(4),
+                // The RHS of the mul (4)
+                NodeIndex::from(3),
+                // Then the LHS of the mul, which is the add (2)
                 NodeIndex::from(2),
-                NodeIndex::from(0),
+                // Then the add inputs
                 NodeIndex::from(1),
-                NodeIndex::from(3)
+                NodeIndex::from(0),
             ]
         );
     }
@@ -717,14 +724,16 @@ mod tests {
         })
         .unwrap();
 
+        // we should end up with the same order as without the deletion,
+        // as we still mark the addition as visited
         assert_eq!(
             visited,
             vec![
                 NodeIndex::from(4),
+                NodeIndex::from(3),
                 NodeIndex::from(2),
-                NodeIndex::from(0),
                 NodeIndex::from(1),
-                NodeIndex::from(3)
+                NodeIndex::from(0),
             ]
         );
     }
@@ -738,7 +747,7 @@ mod tests {
         forward_traverse_mut(&mut ir.graph, |_, n| {
             visited.push(n);
 
-            // Delete the addition
+            // Add a multplication
             if n.index() == 2 {
                 let mut transforms: GraphTransforms<NodeInfo<Operation>, EdgeInfo> =
                     GraphTransforms::new();
@@ -763,15 +772,20 @@ mod tests {
         })
         .unwrap();
 
+        // The difference from the forward traversal without append should just be the new node
+        // inserted right before the mul (4). this is because, while the new node doesn't have any
+        // unvisited dependencies, it still gets added to the _end_ of the ready queue. The (4)
+        // node still comes later because, at the time of the append, that node is _not_ yet ready
+        // and thus not yet in the queue.
         assert_eq!(
             visited,
             vec![
-                NodeIndex::from(3),
-                NodeIndex::from(1),
                 NodeIndex::from(0),
+                NodeIndex::from(1),
+                NodeIndex::from(3),
                 NodeIndex::from(2),
-                NodeIndex::from(4),
                 NodeIndex::from(5),
+                NodeIndex::from(4),
             ]
         );
     }

@@ -27,7 +27,7 @@ use sunscreen::{
 /// Let's try an example. Suppose `p(x) = (x^4 - 4)` and `q(x) = (x^2 - 3)` are polynomials in
 /// `Z[x]/(x^5 + 1)`. Then
 ///
-/// ```ignore
+/// ```text
 /// p(x) * q(x) = (x^4 - 4) * (x^2 - 3)
 ///             = x^6 - 3x^4 - 4x^2 + 12
 ///             = -x - 3x^4 - 4x^2 + 12

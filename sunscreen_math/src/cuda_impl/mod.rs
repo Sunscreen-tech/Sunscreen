@@ -291,8 +291,6 @@ mod tests {
         let b = runtime.alloc_from_slice(&(2..76u32).collect::<Vec<_>>());
         let c = runtime.alloc::<u32>(b.len());
 
-        dbg!(&a.data);
-
         runtime.launch_kernel(
             "basic_kernel",
             &[

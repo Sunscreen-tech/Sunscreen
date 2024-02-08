@@ -42,7 +42,7 @@ pub trait Render {
 
 /**
  * A supertrait that concisely contains all the traits needed to serve
- * as an operation for [`NodeInfo`](crate::context::NodeInfo).
+ * as an operation for [`NodeInfo`].
  *
  * Also provides functions that describe properties of an operation.
  */

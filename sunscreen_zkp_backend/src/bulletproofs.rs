@@ -4,7 +4,7 @@ use std::{
 };
 
 use bulletproofs::{
-    r1cs::{ConstraintSystem, LinearCombination, Prover, R1CSError, R1CSProof, Verifier},
+    r1cs::{ConstraintSystem, LinearCombination, Metrics, Prover, R1CSError, R1CSProof, Verifier},
     BulletproofGens, PedersenGens,
 };
 use crypto_bigint::{Limb, Uint};
@@ -12,12 +12,13 @@ use curve25519_dalek::scalar::Scalar;
 use log::trace;
 use merlin::Transcript;
 use petgraph::stable_graph::NodeIndex;
+use rand::thread_rng;
 use serde::{Deserialize, Serialize};
 use sunscreen_compiler_common::{forward_traverse, GraphQuery};
 
 use crate::{
-    exec::Operation, jit::jit_verifier, jit_prover, BigInt, Error, ExecutableZkpProgram, FieldSpec,
-    Proof, Result, ZkpBackend,
+    exec::Operation, jit::jit_verifier, jit_prover, BigInt, CompiledZkpProgram, Error,
+    ExecutableZkpProgram, FieldSpec, Proof, Result, ZkpBackend,
 };
 
 #[derive(Clone)]
@@ -107,7 +108,7 @@ struct BulletproofsCircuit {
 /**
  * A verifiable proof in the Bulletproofs R1CS system.
  */
-pub struct BulletproofsR1CSProof(R1CSProof);
+pub struct BulletproofsR1CSProof(pub R1CSProof);
 
 impl BulletproofsCircuit {
     /**
@@ -119,10 +120,9 @@ impl BulletproofsCircuit {
         }
     }
 
-    fn make_transcript(len: usize) -> Transcript {
+    fn make_base_transcript() -> Transcript {
         let mut transcript = Transcript::new(b"R1CS");
         transcript.append_message(b"dom-sep", b"R1CS proof");
-        transcript.append_u64(b"gen-len", len as u64);
 
         transcript
     }
@@ -327,6 +327,74 @@ impl BulletproofsBackend {
     pub fn new() -> Self {
         Self
     }
+
+    /// Generate a prover from a given circuit. The purpose of this is to be
+    /// able to extract information from the prover without actually running it.
+    fn prover_with_circuit<'g>(
+        &'g self,
+        program: &CompiledZkpProgram,
+        private_inputs: &[BigInt],
+        public_inputs: &[BigInt],
+        constant_inputs: &[BigInt],
+        pc_gens: &'g PedersenGens,
+        transcript: &'g mut Transcript,
+    ) -> Result<Prover<'g, &mut Transcript>> {
+        let prog = self.jit_prover(program, private_inputs, public_inputs, constant_inputs)?;
+
+        let inputs = [public_inputs, private_inputs].concat();
+        // Convert the inputs to Scalars
+        let inputs = inputs
+            .iter()
+            .map(|x| x.try_into())
+            .collect::<Result<Vec<Scalar>>>()
+            .unwrap();
+
+        let mut circuit = BulletproofsCircuit::new(prog.node_count());
+
+        let mut prover = Prover::new(pc_gens, transcript);
+
+        let _ = circuit.gen_circuit(&prog, &mut prover, |x| Some(inputs[x]));
+
+        Ok(prover)
+    }
+
+    /// Returns the prover metrics for the given program.
+    pub fn metrics(
+        &self,
+        program: &CompiledZkpProgram,
+        private_inputs: &[BigInt],
+        public_inputs: &[BigInt],
+        constant_inputs: &[BigInt],
+    ) -> Result<Metrics> {
+        let pc_gens = PedersenGens::default();
+        let mut transcript = Transcript::new(b"dummy");
+
+        let prover = self.prover_with_circuit(
+            program,
+            private_inputs,
+            public_inputs,
+            constant_inputs,
+            &pc_gens,
+            &mut transcript,
+        )?;
+
+        Ok(prover.metrics())
+    }
+
+    /// Returns the number of constraints in the given program.
+    pub fn constraint_count(
+        &self,
+        program: &CompiledZkpProgram,
+        private_inputs: &[BigInt],
+        public_inputs: &[BigInt],
+        constant_inputs: &[BigInt],
+    ) -> Result<usize> {
+        let prog = self.jit_prover(program, private_inputs, public_inputs, constant_inputs)?;
+
+        let constraint_count = constraint_count(&prog)?;
+
+        Ok(constraint_count)
+    }
 }
 
 impl Default for BulletproofsBackend {
@@ -335,6 +403,7 @@ impl Default for BulletproofsBackend {
     }
 }
 
+/// Get the number of constraints in the given program.
 fn constraint_count(graph: &ExecutableZkpProgram) -> Result<usize> {
     let mut count = 0;
     let mut input_count = 0usize;
@@ -370,10 +439,108 @@ fn constraint_count(graph: &ExecutableZkpProgram) -> Result<usize> {
     Ok(count)
 }
 
+/// Parameters for verifying Bulletproof circuit.
+#[derive(Clone)]
+pub struct BulletproofVerifierParameters {
+    pedersen_generators: PedersenGens,
+    bulletproof_generators: BulletproofGens,
+    shared_length: usize,
+}
+
+/// Parameters for proving a Bulletproof circuit.
+#[derive(Clone)]
+pub struct BulletproofProverParameters {
+    verifier_parameters: BulletproofVerifierParameters,
+    blinding_factor: Scalar,
+}
+
+impl BulletproofVerifierParameters {
+    /// Create a [`BulletproofVerifierParameters`].
+    pub fn new(
+        pedersen_generators: PedersenGens,
+        bulletproof_generators: BulletproofGens,
+        shared_length: usize,
+    ) -> Self {
+        Self {
+            pedersen_generators,
+            bulletproof_generators,
+            shared_length,
+        }
+    }
+
+    /// Return the Pedersen generators.
+    pub fn pedersen_generators(&self) -> &PedersenGens {
+        &self.pedersen_generators
+    }
+
+    /// Return the Bulletproof generators.
+    pub fn bulletproof_generators(&self) -> &BulletproofGens {
+        &self.bulletproof_generators
+    }
+}
+
+impl BulletproofProverParameters {
+    /// Create a [`BulletproofProverParameters`].
+    pub fn new(
+        verifier_parameters: BulletproofVerifierParameters,
+        blinding_factor: Scalar,
+    ) -> Self {
+        Self {
+            verifier_parameters,
+            blinding_factor,
+        }
+    }
+}
+
 impl ZkpBackend for BulletproofsBackend {
     type Field = BulletproofsFieldSpec;
 
+    type ProverParameters = BulletproofProverParameters;
+    type VerifierParameters = BulletproofVerifierParameters;
+
+    /**
+     * Create a proof for the given executable Sunscreen
+     * program with the given inputs.
+     */
     fn prove(&self, graph: &ExecutableZkpProgram, inputs: &[BigInt]) -> Result<Proof> {
+        let mut transcript = BulletproofsCircuit::make_base_transcript();
+
+        let constraint_count = constraint_count(graph)?;
+
+        let mut rng = {
+            let mut builder = transcript.build_rng();
+
+            // commit to all the inputs, including the private ones.
+            for input in inputs {
+                let words = input.0.as_words();
+                let bytes: Vec<u8> = words.iter().flat_map(|x| x.to_le_bytes()).collect();
+
+                builder = builder.rekey_with_witness_bytes(b"input", &bytes);
+            }
+
+            // And throw in some thread RNG for good measure. The bulletproofs
+            // library does this as well.
+            builder.finalize(&mut thread_rng())
+        };
+        let blinding_factor = Scalar::random(&mut rng);
+
+        let verifier_parameters = Self::VerifierParameters::new(
+            PedersenGens::default(),
+            BulletproofGens::new(2 * constraint_count, 1),
+            0,
+        );
+
+        let parameters = Self::ProverParameters::new(verifier_parameters, blinding_factor);
+        self.prove_with_parameters(graph, inputs, &parameters, &mut transcript)
+    }
+
+    fn prove_with_parameters(
+        &self,
+        graph: &ExecutableZkpProgram,
+        inputs: &[BigInt],
+        parameters: &Self::ProverParameters,
+        transcript: &mut Transcript,
+    ) -> Result<Proof> {
         let expected_input_count = graph
             .node_weights()
             .filter(|x| matches!(x.operation, Operation::Input(_)))
@@ -395,14 +562,15 @@ impl ZkpBackend for BulletproofsBackend {
             .map(|x| x.try_into())
             .collect::<Result<Vec<Scalar>>>()?;
 
-        let transcript = BulletproofsCircuit::make_transcript(constraint_count);
-
-        let (pedersen_gens, bulletproof_gens) =
-            BulletproofsCircuit::make_gens(2 * constraint_count);
+        transcript.append_message(b"dom-sep", b"R1CS proof");
+        transcript.append_u64(b"gen-len", constraint_count as u64);
 
         let mut circuit = BulletproofsCircuit::new(graph.node_count());
 
-        let mut prover = Prover::new(&pedersen_gens, transcript);
+        let mut prover = Prover::new(
+            &parameters.verifier_parameters.pedersen_generators,
+            transcript,
+        );
 
         let now = Instant::now();
 
@@ -413,7 +581,13 @@ impl ZkpBackend for BulletproofsBackend {
 
         let now = Instant::now();
 
-        let proof = prover.prove(&bulletproof_gens)?;
+        let proof = prover
+            .prove_with_parameters_and_return_transcript(
+                &parameters.verifier_parameters.bulletproof_generators,
+                parameters.verifier_parameters.shared_length,
+                &parameters.blinding_factor,
+            )
+            .map(|(proof, _)| proof)?;
 
         trace!("Bulletproofs prover time {}s", now.elapsed().as_secs_f64());
 
@@ -421,6 +595,24 @@ impl ZkpBackend for BulletproofsBackend {
     }
 
     fn verify(&self, graph: &ExecutableZkpProgram, proof: &Proof) -> Result<()> {
+        let constraint_count = constraint_count(graph)?;
+        let mut transcript = BulletproofsCircuit::make_base_transcript();
+
+        let (pedersen_gens, bulletproof_gens) =
+            BulletproofsCircuit::make_gens(2 * constraint_count);
+
+        let parameters = Self::VerifierParameters::new(pedersen_gens, bulletproof_gens, 0);
+
+        self.verify_with_parameters(graph, proof, &parameters, &mut transcript)
+    }
+
+    fn verify_with_parameters(
+        &self,
+        graph: &ExecutableZkpProgram,
+        proof: &Proof,
+        parameters: &Self::VerifierParameters,
+        transcript: &mut Transcript,
+    ) -> Result<()> {
         let proof = match proof {
             Proof::Bulletproofs(x) => x,
             _ => {
@@ -432,9 +624,8 @@ impl ZkpBackend for BulletproofsBackend {
 
         let constraint_count = constraint_count(graph)?;
 
-        let transcript = BulletproofsCircuit::make_transcript(constraint_count);
-        let (pedersen_gens, bulletproof_gens) =
-            BulletproofsCircuit::make_gens(2 * constraint_count);
+        transcript.append_message(b"dom-sep", b"R1CS proof");
+        transcript.append_u64(b"gen-len", constraint_count as u64);
 
         let mut circuit = BulletproofsCircuit::new(graph.node_count());
 
@@ -448,7 +639,11 @@ impl ZkpBackend for BulletproofsBackend {
 
         let now = Instant::now();
 
-        verifier.verify(&proof.0, &pedersen_gens, &bulletproof_gens)?;
+        verifier.verify(
+            &proof.0,
+            &parameters.pedersen_generators,
+            &parameters.bulletproof_generators,
+        )?;
 
         trace!("Bulletproofs verify time {}s", now.elapsed().as_secs_f64());
 
@@ -458,11 +653,11 @@ impl ZkpBackend for BulletproofsBackend {
     fn jit_prover(
         &self,
         prog: &crate::CompiledZkpProgram,
-        constant_inputs: &[BigInt],
-        public_inputs: &[BigInt],
         private_inputs: &[BigInt],
+        public_inputs: &[BigInt],
+        constant_inputs: &[BigInt],
     ) -> Result<ExecutableZkpProgram> {
-        let constant_inputs = constant_inputs
+        let private_inputs = private_inputs
             .iter()
             .map(Scalar::try_from)
             .collect::<Result<Vec<Scalar>>>()?;
@@ -470,12 +665,12 @@ impl ZkpBackend for BulletproofsBackend {
             .iter()
             .map(Scalar::try_from)
             .collect::<Result<Vec<Scalar>>>()?;
-        let private_inputs = private_inputs
+        let constant_inputs = constant_inputs
             .iter()
             .map(Scalar::try_from)
             .collect::<Result<Vec<Scalar>>>()?;
 
-        jit_prover::<BulletproofsFieldSpec>(prog, &constant_inputs, &public_inputs, &private_inputs)
+        jit_prover::<BulletproofsFieldSpec>(prog, &private_inputs, &public_inputs, &constant_inputs)
     }
 
     fn jit_verifier(

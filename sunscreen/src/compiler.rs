@@ -1,5 +1,6 @@
 use crate::fhe::{FheCompile, FheFrontendCompilation};
 use crate::params::{determine_params, PlainModulusConstraint};
+use crate::zkp::{Linked, NotLinked};
 use crate::{
     zkp, Application, CallSignature, Error, FheProgramMetadata, Params, RequiredKeys, Result,
     SchemeType, SecurityLevel, ZkpProgramFn,
@@ -7,8 +8,11 @@ use crate::{
 use std::collections::{HashMap, HashSet};
 use std::marker::PhantomData;
 use sunscreen_fhe_program::FheProgramTrait;
-use sunscreen_runtime::{marker, CompiledFheProgram, Fhe, FheRuntime, FheZkp, Zkp};
-use sunscreen_zkp_backend::{CompiledZkpProgram, FieldSpec, ZkpBackend};
+use sunscreen_runtime::{
+    marker, CompiledFheProgram, CompiledZkpProgram, Fhe, FheRuntime, FheZkp, Zkp,
+    ZkpProgramMetadata,
+};
+use sunscreen_zkp_backend::{FieldSpec, ZkpBackend};
 
 #[derive(Debug, Clone)]
 enum ParamsMode {
@@ -159,14 +163,14 @@ impl<B> Default for ZkpCompilerData<B> {
     fn default() -> Self {
         Self {
             zkp_program_fns: vec![],
+            linked_zkp_program_fns: vec![],
         }
     }
 }
 
 struct ZkpCompilerData<B> {
-    // In practice, B should always be BoxZkpFn<Field = F>> where
-    // F: FieldSpec.
-    zkp_program_fns: Vec<B>,
+    zkp_program_fns: Vec<Box<dyn ZkpProgramFn<B, Link = NotLinked>>>,
+    linked_zkp_program_fns: Vec<Box<dyn ZkpProgramFn<B, Link = Linked>>>,
 }
 
 enum CompilerData<B> {
@@ -238,11 +242,22 @@ impl<B> CompilerData<B> {
     }
 }
 
-type BoxZkpFn<F> = Box<dyn ZkpProgramFn<F>>;
-
-/**
- * A frontend compiler for Sunscreen FHE programs.
- */
+/// A compiler for Sunscreen FHE programs.
+//
+// A note for developer sanity below: the type strategy here is to have `.fhe_program` enhance to
+// an FHE-capable compiler, and `.zkp_backend` to enhance to a ZKP-capable compiler. For that
+// strategy alone, the only methods that need to be defined in multiple impls are the
+// aforementioned ones, as the returned compiler type will change depending on the current compiler
+// type.
+//
+// But there's one added complication in that the ZKP method `.zkp_program` has type restrictions
+// depending on if the current ZKP-capable compiler is also FHE-capable, so that method also needs
+// multiple definitions.
+//
+// TODO: allow FHE params to be specified for both FHE and ZKP programs. This is
+// surprisingly complicated with the current approach. We may have to split into two markers (one
+// for FHE and one for ZKP) for that to be feasible, without requiring 6 definitions for the same
+// method.
 pub struct GenericCompiler<T, B> {
     data: CompilerData<B>,
     _phantom: PhantomData<T>,
@@ -296,7 +311,52 @@ impl Compiler {
     }
 }
 
-impl<T, B> GenericCompiler<T, B> {
+// This generic impl can contain public methods where the builder remains the same type, or
+// internal methods that are restricted to FHE-capable builder types.
+impl<T: marker::Fhe, B> GenericCompiler<T, B> {
+    /**
+     * Set the compiler to search for suitable encryption scheme parameters for the FHE program.
+     */
+    pub fn find_params(mut self) -> Self {
+        self.data.fhe_data_mut().params_mode = ParamsMode::Search;
+        self
+    }
+
+    /**
+     * Set the constraint the parameter search algorithm places on the plaintext modulus.
+     * You can either force the algorithm to use an exact value or any value that supports
+     * batching of at least n bits in length.
+     */
+    pub fn plain_modulus_constraint(mut self, p: PlainModulusConstraint) -> Self {
+        self.data.fhe_data_mut().plain_modulus_constraint = p;
+        self
+    }
+
+    /**
+     * Don't use the parameter search algorithm, and instead explicitly set the scheme's parameters.
+     * For expert use and may cause failures.
+     */
+    pub fn with_params(mut self, params: &Params) -> Self {
+        self.data.fhe_data_mut().params_mode = ParamsMode::Manual(params.clone());
+        self
+    }
+
+    /**
+     * Set the security level. If unspecified, the compiler assumes 128-bit security.
+     */
+    pub fn security_level(mut self, security_level: SecurityLevel) -> Self {
+        self.data.fhe_data_mut().security_level = security_level;
+        self
+    }
+
+    /**
+     * The minimum number of bits of noise budget the search algorithm will leave for all outputs.
+     */
+    pub fn additional_noise_budget(mut self, noise_margin: u32) -> Self {
+        self.data.fhe_data_mut().noise_margin = noise_margin;
+        self
+    }
+
     fn compile_fhe(&self) -> Result<HashMap<String, CompiledFheProgram>> {
         let fhe_data: &FheCompilerData = self.data.fhe_data();
 
@@ -398,29 +458,121 @@ impl<T, B> GenericCompiler<T, B> {
     }
 }
 
-impl<T, B> GenericCompiler<T, BoxZkpFn<B>>
-where
-    B: FieldSpec,
-{
-    fn compile_zkp(&self) -> Result<HashMap<String, CompiledZkpProgram>> {
+// This generic impl can contain public methods where the builder remains the same type, or
+// internal methods that are restricted to ZKP-capable builder types.
+impl<T: marker::Zkp, B: FieldSpec> GenericCompiler<T, B> {
+    fn compile_zkp(&self, params: Option<&Params>) -> Result<HashMap<String, CompiledZkpProgram>> {
         let zkp_data = self.data.zkp_data();
 
+        let linked_zkp_programs = zkp_data.linked_zkp_program_fns.iter().map(|prog| {
+            // As long as we've properly maintained invariants internal to the compiler, linked
+            // programs should only be present when params are available.
+            let params = params.expect("no params; please file a bug!").clone();
+            // Note: this is currently unsupported because determining the exact arbitrary
+            // plaintext modulus from the dynamic length of a linked ZKP input in general is not
+            // possible (as x.ilog2() is not injective). We may support this in the future.
+            if !params.plain_modulus.is_power_of_two() {
+                return Err(Error::unsupported(
+                    "Plaintext modulus must be a power of two for ZKP programs with #[linked] arguments.",
+                ));
+            }
+            let result = prog.build(params.plain_modulus)?;
+            let result = zkp::compile(&result);
+            let metadata = ZkpProgramMetadata {
+                params: Some(params),
+                signature: prog.signature(),
+            };
+            let compiled_program = CompiledZkpProgram {
+                zkp_program_fn: result,
+                metadata,
+            };
+            Ok((prog.name().to_owned(), compiled_program))
+        });
         let zkp_programs = zkp_data
             .zkp_program_fns
             .iter()
             .map(|prog| {
-                let result = prog.build()?;
+                let result = prog.build(())?;
                 let result = zkp::compile(&result);
+                let metadata = ZkpProgramMetadata {
+                    params: None,
+                    signature: prog.signature(),
+                };
+                let compiled_program = CompiledZkpProgram {
+                    zkp_program_fn: result,
+                    metadata,
+                };
 
-                Ok((prog.name().to_owned(), result))
+                Ok((prog.name().to_owned(), compiled_program))
             })
+            .chain(linked_zkp_programs)
             .collect::<Result<HashMap<_, _>>>()?;
 
         Ok(zkp_programs)
     }
+}
 
-    fn compile_internal(self) -> Result<Application<T>> {
-        Application::new(HashMap::new(), self.compile_zkp()?)
+impl<B> ZkpCompiler<B>
+where
+    B: FieldSpec,
+{
+    /// Add the given FHE program for compilation.
+    pub fn fhe_program<F>(self, fhe_program_fn: F) -> FheZkpCompiler<B>
+    where
+        F: FheProgramFn + 'static,
+    {
+        let mut fhe_data = FheCompilerData::default();
+        fhe_data.fhe_program_fns.push(Box::new(fhe_program_fn));
+
+        FheZkpCompiler {
+            data: CompilerData::new_fhe_zkp(fhe_data, self.data.unwrap_zkp()),
+            _phantom: PhantomData,
+        }
+    }
+
+    /// Add the given ZKP program for compilation.
+    ///
+    /// Note that this method will not accept "linked" ZKP programs, which have inputs linked from
+    /// FHE programs. You must first call `fhe_program` to add an FHE program to unlock this
+    /// capability.
+    ///
+    /// The following will fail to compile:
+    /// ```compile_fail
+    /// # use sunscreen::{bulletproofs::BulletproofsBackend, types::zkp::{BfvSigned, BulletproofsField, Field, FieldSpec}, zkp_program, zkp_var, Compiler };
+    ///
+    /// #[zkp_program]
+    /// fn prog<F: FieldSpec>(#[linked] x: BfvSigned<F>) { }
+    ///
+    /// let app = Compiler::new()
+    ///     .zkp_backend::<BulletproofsBackend>()
+    ///     .zkp_program(prog)
+    ///     .compile()
+    ///     .unwrap();
+    /// ```
+    pub fn zkp_program<F>(mut self, zkp_program_fn: F) -> Self
+    where
+        F: ZkpProgramFn<B, Link = zkp::NotLinked> + 'static,
+    {
+        self.data
+            .zkp_data_mut()
+            .zkp_program_fns
+            .push(Box::new(zkp_program_fn));
+        self
+    }
+
+    /**
+     * Compile the ZKP programs. If successful, returns an
+     * [`Application`] containing a compiled form of each
+     * `zkp_program` argument.
+     *
+     * # Remarks
+     * Each specified ZKP program must have a unique name,
+     * regardless of its parent module or crate. `compile` returns
+     * a [`Error::NameCollision`] if two or more ZKP programs
+     * have the same name.
+     */
+    pub fn compile(self) -> Result<Application<Zkp>> {
+        Application::new(HashMap::new(), self.compile_zkp(None)?)
     }
 }
 
@@ -428,7 +580,7 @@ impl FheCompiler {
     /**
      * Add the given FHE program for compilation.
      */
-    pub fn fhe_program<F>(mut self, fhe_program_fn: F) -> FheCompiler
+    pub fn fhe_program<F>(mut self, fhe_program_fn: F) -> Self
     where
         F: FheProgramFn + 'static,
     {
@@ -442,7 +594,7 @@ impl FheCompiler {
     /**
      * Set a ZKP backend for compiling ZKP programs.
      */
-    pub fn zkp_backend<B: ZkpBackend>(self) -> FheZkpCompiler<BoxZkpFn<B::Field>> {
+    pub fn zkp_backend<B: ZkpBackend>(self) -> FheZkpCompiler<B::Field> {
         let data = CompilerData::new_fhe_zkp(self.data.unwrap_fhe(), ZkpCompilerData::default());
 
         FheZkpCompiler {
@@ -474,56 +626,6 @@ impl FheCompiler {
     }
 }
 
-impl<B> ZkpCompiler<B>
-where
-    B: FieldSpec,
-{
-    /**
-     * Add the given FHE program for compilation.
-     */
-    pub fn fhe_program<F>(self, fhe_program_fn: F) -> FheZkpCompiler<B>
-    where
-        F: FheProgramFn + 'static,
-    {
-        let mut fhe_data = FheCompilerData::default();
-        fhe_data.fhe_program_fns.push(Box::new(fhe_program_fn));
-
-        FheZkpCompiler {
-            data: CompilerData::new_fhe_zkp(fhe_data, self.data.unwrap_zkp()),
-            _phantom: PhantomData,
-        }
-    }
-
-    /**
-     * Add the given FHE program for compilation.
-     */
-    pub fn zkp_program<F>(mut self, zkp_program_fn: F) -> Self
-    where
-        F: ZkpProgramFn<B> + 'static,
-    {
-        self.data
-            .zkp_data_mut()
-            .zkp_program_fns
-            .push(Box::new(zkp_program_fn));
-        self
-    }
-
-    /**
-     * Compile the ZKP programs. If successful, returns an
-     * [`Application`] containing a compiled form of each
-     * `zkp_program` argument.
-     *
-     * # Remarks
-     * Each specified ZKP program must have a unique name,
-     * regardless of its parent module or crate. `compile` returns
-     * a [`Error::NameCollision`] if two or more FHE programs
-     * have the same name.
-     */
-    pub fn compile(self) -> Result<Application<Zkp>> {
-        self.compile_internal()
-    }
-}
-
 impl<B> FheZkpCompiler<B>
 where
     B: FieldSpec,
@@ -542,17 +644,35 @@ where
         self
     }
 
-    /**
-     * Add the given FHE program for compilation.
-     */
+    /// Add the given ZKP program for compilation.
+    ///
+    /// This method _will_ accept "linked" ZKP programs, which have inputs linked from
+    /// FHE programs.
+    ///
+    /// ```
+    /// # use sunscreen::{bulletproofs::BulletproofsBackend, types::zkp::{BfvSigned, BulletproofsField, Field, FieldSpec}, fhe_program, zkp_program, zkp_var, Compiler };
+    /// # #[fhe_program(scheme = "bfv")]
+    /// # fn fhe_prog() { }
+    ///
+    /// #[zkp_program]
+    /// fn zkp_prog<F: FieldSpec>(#[linked] x: BfvSigned<F>) { }
+    ///
+    /// let app = Compiler::new()
+    ///     .fhe_program(fhe_prog)
+    ///     .zkp_backend::<BulletproofsBackend>()
+    ///     .zkp_program(zkp_prog)
+    ///     .compile()
+    ///     .unwrap();
+    /// ```
     pub fn zkp_program<F>(mut self, zkp_program_fn: F) -> Self
     where
         F: ZkpProgramFn<B> + 'static,
     {
-        self.data
-            .zkp_data_mut()
-            .zkp_program_fns
-            .push(Box::new(zkp_program_fn));
+        let zkp_data = self.data.zkp_data_mut();
+        match zkp_program_fn.into_linked() {
+            Ok(linked) => zkp_data.linked_zkp_program_fns.push(linked),
+            Err(not_linked) => zkp_data.zkp_program_fns.push(not_linked),
+        }
         self
     }
 
@@ -575,55 +695,16 @@ where
      * will return a [`Error::NameCollision`] error.
      */
     pub fn compile(self) -> Result<Application<FheZkp>> {
-        self.compile_internal()
-    }
-}
-
-impl<T, B> GenericCompiler<T, B>
-where
-    T: marker::Fhe,
-{
-    /**
-     * Set the compiler to search for suitable encryption scheme parameters for the FHE program.
-     */
-    pub fn find_params(mut self) -> Self {
-        self.data.fhe_data_mut().params_mode = ParamsMode::Search;
-        self
-    }
-
-    /**
-     * Set the constraint the parameter search algorithm places on the plaintext modulus.
-     * You can either force the algorithm to use an exact value or any value that supports
-     * batching of at least n bits in length.
-     */
-    pub fn plain_modulus_constraint(mut self, p: PlainModulusConstraint) -> Self {
-        self.data.fhe_data_mut().plain_modulus_constraint = p;
-        self
-    }
-
-    /**
-     * Don't use the parameter search algorithm, and instead explicitly set the scheme's parameters.
-     * For expert use and may cause failures.
-     */
-    pub fn with_params(mut self, params: &Params) -> Self {
-        self.data.fhe_data_mut().params_mode = ParamsMode::Manual(params.clone());
-        self
-    }
-
-    /**
-     * Set the security level. If unspecified, the compiler assumes 128-bit security.
-     */
-    pub fn security_level(mut self, security_level: SecurityLevel) -> Self {
-        self.data.fhe_data_mut().security_level = security_level;
-        self
-    }
-
-    /**
-     * The minimum number of bits of noise budget the search algorithm will leave for all outputs.
-     */
-    pub fn additional_noise_budget(mut self, noise_margin: u32) -> Self {
-        self.data.fhe_data_mut().noise_margin = noise_margin;
-        self
+        let fhe_programs = self.compile_fhe()?;
+        let params = fhe_programs
+            .values()
+            .next()
+            .map(|p| &p.metadata.params)
+            .or_else(|| match &self.data.fhe_data().params_mode {
+                ParamsMode::Search => None,
+                ParamsMode::Manual(p) => Some(p),
+            });
+        Application::new(self.compile_fhe()?, self.compile_zkp(params)?)
     }
 }
 
@@ -634,8 +715,8 @@ where
  */
 pub type Compiler = GenericCompiler<(), ()>;
 pub type FheCompiler = GenericCompiler<Fhe, ()>;
-pub type ZkpCompiler<F> = GenericCompiler<Zkp, BoxZkpFn<F>>;
-pub type FheZkpCompiler<F> = GenericCompiler<FheZkp, BoxZkpFn<F>>;
+pub type ZkpCompiler<B> = GenericCompiler<Zkp, B>;
+pub type FheZkpCompiler<B> = GenericCompiler<FheZkp, B>;
 
 #[cfg(test)]
 mod tests {
@@ -702,6 +783,8 @@ mod tests {
         let app = Compiler::new().fhe_program(kitty).compile().unwrap();
 
         assert_eq!(app.type_id(), TypeId::of::<Application<Fhe>>());
+        assert_eq!(app.fhe_programs.len(), 1);
+        assert_eq!(app.zkp_programs.len(), 0);
     }
 
     #[test]
@@ -716,6 +799,8 @@ mod tests {
             .unwrap();
 
         assert_eq!(app.type_id(), TypeId::of::<Application<Zkp>>());
+        assert_eq!(app.fhe_programs.len(), 0);
+        assert_eq!(app.zkp_programs.len(), 1);
     }
 
     #[test]
@@ -734,5 +819,7 @@ mod tests {
             .unwrap();
 
         assert_eq!(app.type_id(), TypeId::of::<Application<FheZkp>>());
+        assert_eq!(app.fhe_programs.len(), 1);
+        assert_eq!(app.zkp_programs.len(), 1);
     }
 }

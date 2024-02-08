@@ -123,10 +123,20 @@ pub enum Error {
     ZkpError(#[from] ZkpError),
 
     /**
-     * An error occurred when building a proof or verification
+     * An error occurred from incorrect usage of a builder.
      */
-    #[error("ZKP builder error: {0}")]
-    ZkpBuilderError(Box<String>),
+    #[error("Builder error: {0}")]
+    BuilderError(#[from] crate::builder::BuilderError),
+
+    /// Error when proving or verifying a linked proof.
+    #[cfg(feature = "linkedproofs")]
+    #[error("Linked proof error: {0}")]
+    LinkedProofError(#[from] crate::linked::LinkedProofError),
+
+    /// Error when proving or verifying a solo logproof.
+    #[cfg(feature = "linkedproofs")]
+    #[error("Log proof error: {0}")]
+    LogProofError(#[from] logproof::ProofError),
 }
 
 const_assert!(std::mem::size_of::<Error>() <= 24);
@@ -153,13 +163,6 @@ impl Error {
         Self::FheTypeError(Box::new(msg.to_owned()))
     }
 
-    /**
-     * Create an [`Error::ZkpBuilderError`].
-     */
-    pub fn zkp_builder_error(msg: &str) -> Self {
-        Self::ZkpBuilderError(Box::new(msg.to_owned()))
-    }
-
     fn unwrap_argument_mismatch_data(&self) -> &(Vec<Type>, Vec<Type>) {
         match self {
             Self::ArgumentMismatch(d) => d,
@@ -184,4 +187,4 @@ impl From<bincode::Error> for Error {
 /**
  * Wrapper around [`Result`](std::result::Result) with this crate's error type.
  */
-pub type Result<T> = std::result::Result<T, Error>;
+pub type Result<T, E = Error> = std::result::Result<T, E>;

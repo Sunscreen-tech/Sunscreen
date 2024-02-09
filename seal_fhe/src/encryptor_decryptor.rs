@@ -89,8 +89,24 @@ impl Encryptor {
         Ok(Encryptor { handle })
     }
 
+    /// Creates an Encryptor instance initialized with the specified SEALContext and
+    /// secret key.
+    pub fn with_secret_key(ctx: &Context, secret_key: &SecretKey) -> Result<Encryptor> {
+        let mut handle: *mut c_void = null_mut();
+
+        convert_seal_error(unsafe {
+            bindgen::Encryptor_Create(
+                ctx.get_handle(),
+                null_mut(),
+                secret_key.get_handle(),
+                &mut handle,
+            )
+        })?;
+
+        Ok(Encryptor { handle })
+    }
+
     /**
-     *
      * Encrypts a plaintext with the public key and returns the ciphertext as
      * a serializable object.
      *
@@ -121,7 +137,6 @@ impl Encryptor {
     }
 
     /**
-     *
      * Encrypts a plaintext with the public key and returns the ciphertext as a
      * serializable object. Also returns the u and e values used in encrypting
      * the value.
@@ -253,6 +268,114 @@ impl Encryptor {
 
         Ok((ciphertext, u_destination, e_destination, fix_destination))
     }
+
+    /**
+     * Encrypts a plaintext with the secret key and returns the ciphertext as
+     * a serializable object.
+     *
+     * The encryption parameters for the resulting ciphertext correspond to:
+     * 1) in BFV, the highest (data) level in the modulus switching chain,
+     * 2) in CKKS, the encryption parameters of the plaintext.
+     * Dynamic memory allocations in the process are allocated from the memory
+     * pool pointed to by the given MemoryPoolHandle.
+     *
+     * * `plainext` - The plaintext to encrypt.
+     */
+    pub fn encrypt_symmetric(&self, plaintext: &Plaintext) -> Result<Ciphertext> {
+        // We don't call the encrypt_return_components because the return
+        // components are allocated on the SEAL global memory pool. By calling
+        // the regular encrypt function, we skip that allocation.
+        let ciphertext = Ciphertext::new()?;
+
+        convert_seal_error(unsafe {
+            bindgen::Encryptor_EncryptSymmetric(
+                self.handle,
+                plaintext.get_handle(),
+                false,
+                ciphertext.get_handle(),
+                null_mut(),
+            )
+        })?;
+
+        Ok(ciphertext)
+    }
+
+    /// Encrypts a plaintext with the secret key and returns the ciphertext as a
+    /// serializable object. Also returns the e (noise) and r (remainder) values used in
+    /// encrypting the value.
+    ///
+    /// The encryption parameters for the resulting ciphertext correspond to:
+    /// 1) in BFV, the highest (data) level in the modulus switching chain,
+    /// 2) in CKKS, the encryption parameters of the plaintext.
+    /// Dynamic memory allocations in the process are allocated from the memory
+    /// pool pointed to by the given MemoryPoolHandle.
+    ///
+    /// * `plainext` - The plaintext to encrypt.
+    pub fn encrypt_symmetric_return_components(
+        &self,
+        plaintext: &Plaintext,
+    ) -> Result<(Ciphertext, PolynomialArray, Plaintext)> {
+        let ciphertext = Ciphertext::new()?;
+        let e_destination = PolynomialArray::new()?;
+        let r_destination = Plaintext::new()?;
+
+        convert_seal_error(unsafe {
+            bindgen::Encryptor_EncryptSymmetricReturnComponents(
+                self.handle,
+                plaintext.get_handle(),
+                ciphertext.get_handle(),
+                e_destination.get_handle(),
+                r_destination.get_handle(),
+                null_mut(),
+            )
+        })?;
+
+        Ok((ciphertext, e_destination, r_destination))
+    }
+
+    /**
+     * DO NOT USE THIS FUNCTION IN PRODUCTION: IT PRODUCES DETERMINISTIC
+     * ENCRYPTIONS. IT IS INHERENTLY INSECURE, AND ONLY MEANT FOR TESTING OR
+     * DEMONSTRATION PURPOSES.
+     *
+     * Encrypts a plaintext with the public key and returns the ciphertext as a
+     * serializable object. Also returns the u and e values used in encrypting
+     * the value.
+     *
+     * The encryption parameters for the resulting ciphertext correspond to:
+     * 1) in BFV, the highest (data) level in the modulus switching chain,
+     * 2) in CKKS, the encryption parameters of the plaintext.
+     * Dynamic memory allocations in the process are allocated from the memory
+     * pool pointed to by the given MemoryPoolHandle.
+     *
+     * * `plainext` - The plaintext to encrypt.
+     * * `seed` - The seed to use for encryption.
+     */
+    #[cfg(feature = "deterministic")]
+    pub fn encrypt_symmetric_return_components_deterministic(
+        &self,
+        plaintext: &Plaintext,
+        seed: &[u64; 8],
+    ) -> Result<(Ciphertext, PolynomialArray, Plaintext)> {
+        let ciphertext = Ciphertext::new()?;
+        let e_destination = PolynomialArray::new()?;
+        let r_destination = Plaintext::new()?;
+
+        // We do not need the components so we do not export them.
+        convert_seal_error(unsafe {
+            bindgen::Encryptor_EncryptSymmetricReturnComponentsSetSeed(
+                self.handle,
+                plaintext.get_handle(),
+                ciphertext.get_handle(),
+                e_destination.get_handle(),
+                r_destination.get_handle(),
+                seed.as_ptr() as *mut c_void,
+                null_mut(),
+            )
+        })?;
+
+        Ok((ciphertext, e_destination, r_destination))
+    }
 }
 
 impl Drop for Encryptor {
@@ -383,18 +506,24 @@ impl Drop for Decryptor {
 mod tests {
     use crate::*;
 
-    #[test]
-    fn can_create_encryptor_from_public_key() {
-        let params = BfvEncryptionParametersBuilder::new()
+    fn mk_ctx<F>(enc_modifier: F) -> Context
+    where
+        F: FnOnce(BfvEncryptionParametersBuilder) -> BfvEncryptionParametersBuilder,
+    {
+        let builder = BfvEncryptionParametersBuilder::new()
             .set_poly_modulus_degree(8192)
             .set_coefficient_modulus(
                 CoefficientModulus::create(8192, &[50, 30, 30, 50, 50]).unwrap(),
             )
-            .set_plain_modulus_u64(1234)
-            .build()
-            .unwrap();
+            .set_plain_modulus_u64(1234);
+        let params = enc_modifier(builder).build().unwrap();
 
-        let ctx = Context::new(&params, false, SecurityLevel::TC128).unwrap();
+        Context::new(&params, false, SecurityLevel::TC128).unwrap()
+    }
+
+    #[test]
+    fn can_create_encryptor_from_public_key() {
+        let ctx = mk_ctx(|b| b);
         let gen = KeyGenerator::new(&ctx).unwrap();
 
         let public_key = gen.create_public_key();
@@ -405,17 +534,22 @@ mod tests {
     }
 
     #[test]
-    fn can_create_encryptor_from_public_and_secret_key() {
-        let params = BfvEncryptionParametersBuilder::new()
-            .set_poly_modulus_degree(8192)
-            .set_coefficient_modulus(
-                CoefficientModulus::create(8192, &[50, 30, 30, 50, 50]).unwrap(),
-            )
-            .set_plain_modulus_u64(1234)
-            .build()
-            .unwrap();
+    fn can_create_encryptor_from_secret_key() {
+        let ctx = mk_ctx(|b| b);
 
-        let ctx = Context::new(&params, false, SecurityLevel::TC128).unwrap();
+        let gen = KeyGenerator::new(&ctx).unwrap();
+
+        let secret_key = gen.secret_key();
+
+        let encryptor = Encryptor::with_secret_key(&ctx, &secret_key).unwrap();
+
+        std::mem::drop(encryptor);
+    }
+
+    #[test]
+    fn can_create_encryptor_from_public_and_secret_key() {
+        let ctx = mk_ctx(|b| b);
+
         let gen = KeyGenerator::new(&ctx).unwrap();
 
         let public_key = gen.create_public_key();
@@ -449,16 +583,7 @@ mod tests {
 
     #[test]
     fn can_encrypt_and_decrypt_unsigned() {
-        let params = BfvEncryptionParametersBuilder::new()
-            .set_poly_modulus_degree(8192)
-            .set_coefficient_modulus(
-                CoefficientModulus::create(8192, &[50, 30, 30, 50, 50]).unwrap(),
-            )
-            .set_plain_modulus(PlainModulus::batching(8192, 20).unwrap())
-            .build()
-            .unwrap();
-
-        let ctx = Context::new(&params, false, SecurityLevel::TC128).unwrap();
+        let ctx = mk_ctx(|b| b.set_plain_modulus(PlainModulus::batching(8192, 20).unwrap()));
         let gen = KeyGenerator::new(&ctx).unwrap();
 
         let encoder = BFVEncoder::new(&ctx).unwrap();
@@ -478,26 +603,22 @@ mod tests {
             Encryptor::with_public_and_secret_key(&ctx, &public_key, &secret_key).unwrap();
         let decryptor = Decryptor::new(&ctx, &secret_key).unwrap();
 
+        // asymmetric test
         let ciphertext = encryptor.encrypt(&plaintext).unwrap();
         let decrypted = decryptor.decrypt(&ciphertext).unwrap();
-
         let data_2 = encoder.decode_unsigned(&decrypted).unwrap();
+        assert_eq!(data, data_2);
 
+        // symmetric test
+        let ciphertext = encryptor.encrypt_symmetric(&plaintext).unwrap();
+        let decrypted = decryptor.decrypt(&ciphertext).unwrap();
+        let data_2 = encoder.decode_unsigned(&decrypted).unwrap();
         assert_eq!(data, data_2);
     }
 
     #[test]
     fn can_encrypt_and_decrypt_signed() {
-        let params = BfvEncryptionParametersBuilder::new()
-            .set_poly_modulus_degree(8192)
-            .set_coefficient_modulus(
-                CoefficientModulus::create(8192, &[50, 30, 30, 50, 50]).unwrap(),
-            )
-            .set_plain_modulus(PlainModulus::batching(8192, 20).unwrap())
-            .build()
-            .unwrap();
-
-        let ctx = Context::new(&params, false, SecurityLevel::TC128).unwrap();
+        let ctx = mk_ctx(|b| b.set_plain_modulus(PlainModulus::batching(8192, 20).unwrap()));
         let gen = KeyGenerator::new(&ctx).unwrap();
 
         let encoder = BFVEncoder::new(&ctx).unwrap();
@@ -517,26 +638,22 @@ mod tests {
             Encryptor::with_public_and_secret_key(&ctx, &public_key, &secret_key).unwrap();
         let decryptor = Decryptor::new(&ctx, &secret_key).unwrap();
 
+        // asymmetric test
         let ciphertext = encryptor.encrypt(&plaintext).unwrap();
         let decrypted = decryptor.decrypt(&ciphertext).unwrap();
-
         let data_2 = encoder.decode_signed(&decrypted).unwrap();
+        assert_eq!(data, data_2);
 
+        // asymmetric test
+        let ciphertext = encryptor.encrypt_symmetric(&plaintext).unwrap();
+        let decrypted = decryptor.decrypt(&ciphertext).unwrap();
+        let data_2 = encoder.decode_signed(&decrypted).unwrap();
         assert_eq!(data, data_2);
     }
 
     #[test]
     fn can_encrypt_and_decrypt_from_return_components() {
-        let params = BfvEncryptionParametersBuilder::new()
-            .set_poly_modulus_degree(8192)
-            .set_coefficient_modulus(
-                CoefficientModulus::create(8192, &[50, 30, 30, 50, 50]).unwrap(),
-            )
-            .set_plain_modulus(PlainModulus::batching(8192, 20).unwrap())
-            .build()
-            .unwrap();
-
-        let ctx = Context::new(&params, false, SecurityLevel::TC128).unwrap();
+        let ctx = mk_ctx(|b| b.set_plain_modulus(PlainModulus::batching(8192, 20).unwrap()));
         let gen = KeyGenerator::new(&ctx).unwrap();
 
         let encoder = BFVEncoder::new(&ctx).unwrap();
@@ -556,11 +673,19 @@ mod tests {
             Encryptor::with_public_and_secret_key(&ctx, &public_key, &secret_key).unwrap();
         let decryptor = Decryptor::new(&ctx, &secret_key).unwrap();
 
+        // asymmetric test
         let ciphertext = encryptor.encrypt_return_components(&plaintext).unwrap().0;
         let decrypted = decryptor.decrypt(&ciphertext).unwrap();
-
         let data_2 = encoder.decode_unsigned(&decrypted).unwrap();
+        assert_eq!(data, data_2);
 
+        // asymmetric test
+        let ciphertext = encryptor
+            .encrypt_symmetric_return_components(&plaintext)
+            .unwrap()
+            .0;
+        let decrypted = decryptor.decrypt(&ciphertext).unwrap();
+        let data_2 = encoder.decode_unsigned(&decrypted).unwrap();
         assert_eq!(data, data_2);
     }
 
@@ -573,16 +698,7 @@ mod tests {
 
         #[test]
         fn encrypt_deterministic() {
-            let params = BfvEncryptionParametersBuilder::new()
-                .set_poly_modulus_degree(8192)
-                .set_coefficient_modulus(
-                    CoefficientModulus::create(8192, &[50, 30, 30, 50, 50]).unwrap(),
-                )
-                .set_plain_modulus(PlainModulus::batching(8192, 20).unwrap())
-                .build()
-                .unwrap();
-
-            let ctx = Context::new(&params, false, SecurityLevel::TC128).unwrap();
+            let ctx = mk_ctx(|b| b.set_plain_modulus(PlainModulus::batching(8192, 20).unwrap()));
 
             let encoder = BFVEncoder::new(&ctx).unwrap();
 

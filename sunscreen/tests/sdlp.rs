@@ -31,18 +31,32 @@ mod sdlp_tests {
     }
 
     #[test]
-    fn prove_linked_asymmetric_statements() {
+    fn prove_one_symmetric_statement() {
         let rt = FheRuntime::new(&SMALL_PARAMS).unwrap();
-        let (public_key, _secret_key) = rt.generate_keys().unwrap();
+        let (_public_key, private_key) = rt.generate_keys().unwrap();
+        let mut logproof_builder = LogProofBuilder::new(&rt);
+
+        let _ct = logproof_builder
+            .encrypt_symmetric(&Signed::from(3), &private_key)
+            .unwrap();
+
+        let sdlp = logproof_builder.build_logproof().unwrap();
+        sdlp.verify().unwrap();
+    }
+
+    #[test]
+    fn prove_linked_statements() {
+        let rt = FheRuntime::new(&SMALL_PARAMS).unwrap();
+        let (public_key, private_key) = rt.generate_keys().unwrap();
         let mut logproof_builder = LogProofBuilder::new(&rt);
 
         let (_a1, linked_a) = logproof_builder
             .encrypt_and_link(&Signed::from(2), &public_key)
             .unwrap();
         let _a2 = logproof_builder
-            .encrypt_linked(&linked_a, &public_key)
+            .encrypt_symmetric_linked(&linked_a, &private_key)
             .unwrap();
-        let _b = logproof_builder
+        let _other = logproof_builder
             .encrypt(&Signed::from(3), &public_key)
             .unwrap();
         let sdlp = logproof_builder.build_logproof().unwrap();

@@ -219,7 +219,6 @@ mod linked {
         rings::{SealQ128_1024, SealQ128_2048, SealQ128_4096, SealQ128_8192},
         Bounds, LogProofProverKnowledge,
     };
-    use seal_fhe as seal;
     use seal_fhe::SecurityLevel;
     use sunscreen_compiler_common::{Type, TypeName};
     use sunscreen_math::ring::{BarrettBackend, BarrettConfig, Zq};
@@ -229,9 +228,9 @@ mod linked {
     };
 
     use crate::{
-        marker, BFVEncryptionComponents, Ciphertext, CompiledZkpProgram, GenericRuntime,
-        LinkedProof, NumCiphertexts, Params, Plaintext, PublicKey, Result, Sdlp,
-        SealSdlpProverKnowledge, TryIntoPlaintext, ZkpProgramInput,
+        marker, Ciphertext, CompiledZkpProgram, GenericRuntime, LinkedProof, NumCiphertexts,
+        Params, Plaintext, PrivateKey, PublicKey, Result, Sdlp, SealSdlpProverKnowledge,
+        TryIntoPlaintext, ZkpProgramInput,
     };
 
     /// All FHE plaintext types can be used in a [`Sdlp`]. This trait indicates further that a
@@ -285,6 +284,11 @@ mod linked {
     enum Message {
         Plain(PlaintextTyped),
         Linked(LinkedMessage),
+    }
+
+    enum Key<'a> {
+        Public(&'a PublicKey),
+        Private(&'a PrivateKey),
     }
 
     impl Message {
@@ -371,6 +375,22 @@ mod linked {
             self.encrypt_internal(Message::Plain(pt), public_key, None)
         }
 
+        /// Encrypt a plaintext symmetrically, adding the encryption statement to the proof.
+        ///
+        /// If you do not want to add the encryption statement to the proof, just use [the
+        /// runtime](`crate::GenericRuntime::encrypt_symmetric`) directly.
+        pub fn encrypt_symmetric<P>(
+            &mut self,
+            message: &P,
+            private_key: &'k PrivateKey,
+        ) -> Result<Ciphertext>
+        where
+            P: TryIntoPlaintext + TypeName,
+        {
+            let pt = self.plaintext_typed(message)?;
+            self.encrypt_symmetric_internal(Message::Plain(pt), private_key, None)
+        }
+
         /// Encrypt a plaintext intended for sharing.
         ///
         /// The returned `LinkedMessage` can be used:
@@ -384,14 +404,48 @@ mod linked {
         where
             P: LinkWithZkp + TryIntoPlaintext + TypeName,
         {
+            self.encrypt_and_link_internal(message, Key::Public(public_key))
+        }
+
+        /// Symmetrically encrypt a plaintext intended for sharing.
+        ///
+        /// The returned `LinkedMessage` can be used:
+        /// 1. to add an encryption statement of ciphertext equality to the proof (see [`Self::encrypt_linked`]).
+        /// 2. as a linked input to a ZKP program (see [`Self::linked_input`]).
+        pub fn encrypt_symmetric_and_link<P>(
+            &mut self,
+            message: &P,
+            private_key: &'k PrivateKey,
+        ) -> Result<(Ciphertext, LinkedMessage)>
+        where
+            P: LinkWithZkp + TryIntoPlaintext + TypeName,
+        {
+            self.encrypt_and_link_internal(message, Key::Private(private_key))
+        }
+
+        fn encrypt_and_link_internal<P>(
+            &mut self,
+            message: &P,
+            key: Key<'k>,
+        ) -> Result<(Ciphertext, LinkedMessage)>
+        where
+            P: LinkWithZkp + TryIntoPlaintext + TypeName,
+        {
             // The user intends to link this message, so add a more conservative bound
             let plaintext_typed = self.plaintext_typed(message)?;
             let idx_start = self.messages.len();
-            let ct = self.encrypt_internal(
-                Message::Plain(plaintext_typed.clone()),
-                public_key,
-                Some(self.mk_bounds::<P>()),
-            )?;
+            let ct = match key {
+                Key::Public(public_key) => self.encrypt_internal(
+                    Message::Plain(plaintext_typed.clone()),
+                    public_key,
+                    Some(self.mk_bounds::<P>()),
+                ),
+                Key::Private(private_key) => self.encrypt_symmetric_internal(
+                    Message::Plain(plaintext_typed.clone()),
+                    private_key,
+                    Some(self.mk_bounds::<P>()),
+                ),
+            }?;
             let idx_end = self.messages.len();
             // TODO shouldn't be assuming bulletproofs here...
             // need to separate the notion of sharing duplicate messages and sharing to ZKP
@@ -423,40 +477,89 @@ mod linked {
             self.encrypt_internal(Message::Linked(message.clone()), public_key, bounds)
         }
 
+        /// Encrypt a linked message symmetrically, adding the new encryption statement to the
+        /// proof.
+        ///
+        /// This method purposefully reveals that two ciphertexts enrypt the same underlying value. If
+        /// this is not what you want, use [`Self::encrypt`].
+        ///
+        /// This method assumes that you've created the `message` argument with _this_ builder.
+        pub fn encrypt_symmetric_linked(
+            &mut self,
+            message: &LinkedMessage,
+            private_key: &'k PrivateKey,
+        ) -> Result<Ciphertext> {
+            // The existing message already has bounds, no need to recompute them.
+            let bounds = None;
+            self.encrypt_symmetric_internal(Message::Linked(message.clone()), private_key, bounds)
+        }
+
         fn encrypt_internal(
             &mut self,
             message: Message,
             public_key: &'k PublicKey,
             bounds: Option<Bounds>,
         ) -> Result<Ciphertext> {
-            let enc_components = self
-                .runtime
-                .encrypt_return_components(&message, public_key)?;
             let existing_idx = message.linked_id();
+            let mut i = 0;
+            self.runtime
+                .encrypt_map_components(&message, public_key, |m, ct, u, e, r| {
+                    let message_id = if let Some(idx) = existing_idx {
+                        idx + i
+                    } else {
+                        let idx = self.messages.len();
+                        self.messages.push(BfvMessage {
+                            plaintext: m.clone(),
+                            bounds: bounds.clone(),
+                        });
+                        idx
+                    };
+                    self.statements
+                        .push(BfvProofStatement::PublicKeyEncryption {
+                            message_id,
+                            ciphertext: ct.clone(),
+                            public_key: Cow::Borrowed(&public_key.public_key.data),
+                        });
+                    self.witness
+                        .push(BfvWitness::PublicKeyEncryption { u, e, r: r.clone() });
+                    i += 1;
+                    Ok(())
+                })
+        }
 
-            for (i, AsymmetricEncryption { ct, u, e, r, m }) in
-                zip_seal_pieces(&enc_components, message.pt())?.enumerate()
-            {
-                let message_id = if let Some(idx) = existing_idx {
-                    idx + i
-                } else {
-                    let idx = self.messages.len();
-                    self.messages.push(BfvMessage {
-                        plaintext: m.clone(),
-                        bounds: bounds.clone(),
+        fn encrypt_symmetric_internal(
+            &mut self,
+            message: Message,
+            private_key: &'k PrivateKey,
+            bounds: Option<Bounds>,
+        ) -> Result<Ciphertext> {
+            let existing_idx = message.linked_id();
+            let mut i = 0;
+            self.runtime
+                .encrypt_symmetric_map_components(&message, private_key, |m, ct, e, r| {
+                    let message_id = if let Some(idx) = existing_idx {
+                        idx + i
+                    } else {
+                        let idx = self.messages.len();
+                        self.messages.push(BfvMessage {
+                            plaintext: m.clone(),
+                            bounds: bounds.clone(),
+                        });
+                        idx
+                    };
+                    self.statements
+                        .push(BfvProofStatement::PrivateKeyEncryption {
+                            message_id,
+                            ciphertext: ct.clone(),
+                        });
+                    self.witness.push(BfvWitness::PrivateKeyEncryption {
+                        private_key: Cow::Borrowed(&private_key.0.data),
+                        e,
+                        r,
                     });
-                    idx
-                };
-                self.statements
-                    .push(BfvProofStatement::PublicKeyEncryption {
-                        message_id,
-                        ciphertext: ct.clone(),
-                        public_key: Cow::Borrowed(&public_key.public_key.data),
-                    });
-                self.witness
-                    .push(BfvWitness::PublicKeyEncryption { u, e, r: r.clone() });
-            }
-            Ok(enc_components.ciphertext)
+                    i += 1;
+                    Ok(())
+                })
         }
 
         fn plaintext_typed<P>(&self, pt: &P) -> Result<PlaintextTyped>
@@ -606,38 +709,5 @@ mod linked {
         fn ciphertext_modulus(&self) -> Vec<u64> {
             self.coeff_modulus.clone()
         }
-    }
-
-    // Helper struct when decomposing the encryption pieces.
-    struct AsymmetricEncryption<'a> {
-        ct: &'a seal::Ciphertext,
-        u: seal::PolynomialArray,
-        e: seal::PolynomialArray,
-        r: &'a seal::Plaintext,
-        m: &'a seal::Plaintext,
-    }
-
-    fn zip_seal_pieces<'a>(
-        enc_components: &'a BFVEncryptionComponents,
-        pt: &'a Plaintext,
-    ) -> Result<impl Iterator<Item = AsymmetricEncryption<'a>>> {
-        let seal_cts = enc_components
-            .ciphertext
-            .inner_as_seal_ciphertext()?
-            .iter()
-            .map(|ct| &ct.data);
-        let seal_pts = pt.inner_as_seal_plaintext()?.iter();
-        let us = enc_components.u.clone().into_iter();
-        let es = enc_components.e.clone().into_iter();
-        let rs = enc_components
-            .r
-            .iter()
-            .map(|r| &r.inner_as_seal_plaintext().unwrap()[0].data);
-        Ok(seal_cts
-            .zip(seal_pts)
-            .zip(us)
-            .zip(es)
-            .zip(rs)
-            .map(|((((ct, pt), u), e), r)| AsymmetricEncryption { ct, u, e, r, m: pt }))
     }
 }

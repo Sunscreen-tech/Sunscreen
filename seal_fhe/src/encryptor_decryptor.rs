@@ -175,7 +175,6 @@ impl Encryptor {
     }
 
     /**
-     *
      * DO NOT USE THIS FUNCTION IN PRODUCTION: IT PRODUCES DETERMINISTIC
      * ENCRYPTIONS. IT IS INHERENTLY INSECURE, AND ONLY MEANT FOR TESTING OR
      * DEMONSTRATION PURPOSES.
@@ -293,6 +292,49 @@ impl Encryptor {
                 plaintext.get_handle(),
                 false,
                 ciphertext.get_handle(),
+                null_mut(),
+            )
+        })?;
+
+        Ok(ciphertext)
+    }
+
+    /**
+     * DO NOT USE THIS FUNCTION IN PRODUCTION: IT PRODUCES DETERMINISTIC
+     * ENCRYPTIONS. IT IS INHERENTLY INSECURE, AND ONLY MEANT FOR TESTING OR
+     * DEMONSTRATION PURPOSES.
+     *
+     * Encrypts a plaintext with the secret key and returns the ciphertext as a
+     * serializable object.
+     *
+     * The encryption parameters for the resulting ciphertext correspond to:
+     * 1) in BFV, the highest (data) level in the modulus switching chain,
+     * 2) in CKKS, the encryption parameters of the plaintext.
+     * Dynamic memory allocations in the process are allocated from the memory
+     * pool pointed to by the given MemoryPoolHandle.
+     *
+     * * `plainext` - The plaintext to encrypt.
+     * * `seed` - The seed to use for encryption.
+     */
+    #[cfg(feature = "deterministic")]
+    pub fn encrypt_symmetric_deterministic(
+        &self,
+        plaintext: &Plaintext,
+        seed: &[u64; 8],
+    ) -> Result<Ciphertext> {
+        let ciphertext = Ciphertext::new()?;
+        let e_destination = PolynomialArray::new()?;
+        let r_destination = Plaintext::new()?;
+
+        // We do not need the components so we do not export them.
+        convert_seal_error(unsafe {
+            bindgen::Encryptor_EncryptSymmetricReturnComponentsSetSeed(
+                self.handle,
+                plaintext.get_handle(),
+                ciphertext.get_handle(),
+                e_destination.get_handle(),
+                r_destination.get_handle(),
+                seed.as_ptr() as *mut c_void,
                 null_mut(),
             )
         })?;

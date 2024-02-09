@@ -308,6 +308,20 @@ mod linked {
         }
     }
 
+    // Infallible since we've already obtained the plaintext
+    impl TryIntoPlaintext for Message {
+        fn try_into_plaintext(&self, _params: &Params) -> Result<Plaintext> {
+            Ok(self.pt().clone())
+        }
+    }
+
+    // Forward to the underlying plaintext type
+    impl crate::TypeNameInstance for Message {
+        fn type_name_instance(&self) -> Type {
+            self.type_name().clone()
+        }
+    }
+
     /// A builder for [`Sdlp`] or [`LinkedProof`].
     ///
     /// Use this builder to encrypt your [`Plaintext`]s while automatically generate a log proof of the
@@ -415,13 +429,9 @@ mod linked {
             public_key: &'k PublicKey,
             bounds: Option<Bounds>,
         ) -> Result<Ciphertext> {
-            let enc_components = self.runtime.encrypt_return_components_switched_internal(
-                message.pt(),
-                message.type_name(),
-                public_key,
-                true,
-                None,
-            )?;
+            let enc_components = self
+                .runtime
+                .encrypt_return_components(&message, public_key)?;
             let existing_idx = message.linked_id();
 
             for (i, AsymmetricEncryption { ct, u, e, r, m }) in

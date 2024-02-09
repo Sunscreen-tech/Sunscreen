@@ -84,6 +84,8 @@ pub(crate) struct BFVEncryptionComponents {
     pub(crate) r: Vec<Plaintext>,
 }
 
+// TODO remove the plaintext wrapper type from r, its useless and not necessary given that polynomial array types also come from seal layer.
+
 /// Components needed to perform BFV symmetric encryption. Specifically, BFV is defined by the
 /// following equation in SEAL:
 ///
@@ -480,25 +482,8 @@ where
             &val.try_into_plaintext(&fhe_data.params)?.inner,
         ) {
             (Context::Seal(context), InnerPlaintext::Seal(inner_plain)) => {
-                let encryptor = Encryptor::with_public_key(&context, &public_key.public_key.data)?;
-                let ciphertexts = inner_plain
-                    .iter()
-                    .map(|p| {
-                        let ct = WithContext {
-                            params: fhe_data.params.clone(),
-                            data: encryptor.encrypt(p).map_err(Error::SealError)?,
-                        };
-                        Ok(ct)
-                    })
-                    .collect::<Result<Vec<_>>>()?;
-
-                Ok(Ciphertext {
-                    data_type: Type {
-                        is_encrypted: true,
-                        ..P::type_name().clone()
-                    },
-                    inner: InnerCiphertext::Seal(ciphertexts),
-                })
+                let encryptor = Asymmetric::new(context, public_key)?;
+                encryptor.aggregate_ciphertexts(&P::type_name(), inner_plain, |e, p| e.encrypt(p))
             }
         }
     }
@@ -518,25 +503,8 @@ where
             &val.try_into_plaintext(&fhe_data.params)?.inner,
         ) {
             (Context::Seal(context), InnerPlaintext::Seal(inner_plain)) => {
-                let encryptor = Encryptor::with_secret_key(context, &private_key.0.data)?;
-                let ciphertexts = inner_plain
-                    .iter()
-                    .map(|p| {
-                        let ct = WithContext {
-                            params: fhe_data.params.clone(),
-                            data: encryptor.encrypt_symmetric(p).map_err(Error::SealError)?,
-                        };
-                        Ok(ct)
-                    })
-                    .collect::<Result<Vec<_>>>()?;
-
-                Ok(Ciphertext {
-                    data_type: Type {
-                        is_encrypted: true,
-                        ..P::type_name().clone()
-                    },
-                    inner: InnerCiphertext::Seal(ciphertexts),
-                })
+                let encryptor = Symmetric::new(context, private_key)?;
+                encryptor.aggregate_ciphertexts(&P::type_name(), inner_plain, |e, p| e.encrypt(p))
             }
         }
     }
@@ -567,26 +535,43 @@ where
             &val.try_into_plaintext(&fhe_data.params)?.inner,
         ) {
             (Context::Seal(context), InnerPlaintext::Seal(inner_plain)) => {
-                let encryptor = Encryptor::with_public_key(&context, &public_key.public_key.data)?;
-                let ciphertexts = inner_plain
-                    .iter()
-                    .map(|p| {
-                        let ct = WithContext {
-                            params: fhe_data.params.clone(),
-                            data: encryptor
-                                .encrypt_deterministic(p)
-                                .map_err(Error::SealError)?,
-                        };
-                        Ok(ct)
-                    })
-                    .collect::<Result<Vec<_>>>()?;
+                let encryptor = <Asymmetric as SealEncrypt>::new(context, public_key)?;
+                encryptor.aggregate_ciphertexts(&P::type_name(), inner_plain, |e, p| {
+                    e.encrypt_deterministic(p, seed)
+                })
+            }
+        }
+    }
 
-                Ok(Ciphertext {
-                    data_type: Type {
-                        is_encrypted: true,
-                        ..P::type_name().clone()
-                    },
-                    inner: InnerCiphertext::Seal(ciphertexts),
+    /**
+     * DO NOT USE THIS FUNCTION IN PRODUCTION: IT PRODUCES DETERMINISTIC
+     * ENCRYPTIONS. IT IS INHERENTLY INSECURE, AND ONLY MEANT FOR TESTING OR
+     * DEMONSTRATION PURPOSES.
+     *
+     * Encrypts the given [`FheType`](crate::FheType) using the given public key.
+     *
+     * Returns [`Error::ParameterMismatch`] if the plaintext is incompatible with this runtime's
+     * scheme.
+     */
+    #[cfg(feature = "deterministic")]
+    pub fn encrypt_symmetric_deterministic<P>(
+        &self,
+        val: P,
+        private_key: &PrivateKey,
+        seed: &[u64; 8],
+    ) -> Result<Ciphertext>
+    where
+        P: TryIntoPlaintext + TypeName,
+    {
+        let fhe_data = self.runtime_data.unwrap_fhe();
+        match (
+            &fhe_data.context,
+            &val.try_into_plaintext(&fhe_data.params)?.inner,
+        ) {
+            (Context::Seal(context), InnerPlaintext::Seal(inner_plain)) => {
+                let encryptor = <Symmetric as SealEncrypt>::new(context, private_key)?;
+                encryptor.aggregate_ciphertexts(&P::type_name(), inner_plain, |e, p| {
+                    e.encrypt_deterministic(p, seed)
                 })
             }
         }
@@ -602,15 +587,54 @@ where
      */
     pub(crate) fn encrypt_return_components<P>(
         &self,
-        val: P,
+        val: &P,
         public_key: &PublicKey,
     ) -> Result<BFVEncryptionComponents>
     where
-        P: TryIntoPlaintext + TypeName,
+        P: TryIntoPlaintext + TypeNameInstance,
     {
-        let plaintext = val.try_into_plaintext(self.params())?;
-        let plaintext_type = P::type_name();
-        self.encrypt_return_components_internal(&plaintext, &plaintext_type, public_key, None)
+        let fhe_data = self.runtime_data.unwrap_fhe();
+        match (
+            &fhe_data.context,
+            &val.try_into_plaintext(&fhe_data.params)?.inner,
+        ) {
+            (Context::Seal(context), InnerPlaintext::Seal(inner_plain)) => {
+                let encryptor = Asymmetric::new(context, public_key)?;
+                encryptor.aggregate_components(&val.type_name_instance(), inner_plain, |e, p| {
+                    e.encrypt_return_components(p)
+                })
+            }
+        }
+    }
+
+    #[allow(dead_code)]
+    /**
+     * Encrypts the given [`FheType`](crate::FheType) symmetrically using the given private key,
+     * returning the ciphertext and the components used in encrypting the data.
+     *
+     * Returns [`Error::ParameterMismatch`] if the plaintext is incompatible
+     * with this runtime's scheme.
+     */
+    pub(crate) fn encrypt_symmetric_return_components<P>(
+        &self,
+        val: &P,
+        private_key: &PrivateKey,
+    ) -> Result<BFVSymmetricEncryptionComponents>
+    where
+        P: TryIntoPlaintext + TypeNameInstance,
+    {
+        let fhe_data = self.runtime_data.unwrap_fhe();
+        match (
+            &fhe_data.context,
+            &val.try_into_plaintext(&fhe_data.params)?.inner,
+        ) {
+            (Context::Seal(context), InnerPlaintext::Seal(inner_plain)) => {
+                let encryptor = Symmetric::new(context, private_key)?;
+                encryptor.aggregate_components(&val.type_name_instance(), inner_plain, |e, p| {
+                    e.encrypt_return_components(p)
+                })
+            }
+        }
     }
 
     /**
@@ -634,112 +658,18 @@ where
     where
         P: TryIntoPlaintext + TypeName,
     {
-        let plaintext = val.try_into_plaintext(self.params())?;
-        let plaintext_type = P::type_name();
-        self.encrypt_return_components_internal(&plaintext, &plaintext_type, public_key, Some(seed))
-    }
-
-    pub(crate) fn encrypt_return_components_internal(
-        &self,
-        plaintext: &Plaintext,
-        plaintext_type: &Type,
-        public_key: &PublicKey,
-        seed: Option<&[u64; 8]>,
-    ) -> Result<BFVEncryptionComponents> {
         let fhe_data = self.runtime_data.unwrap_fhe();
-        let (ciphertext, u, e, r) = match (&fhe_data.context, &plaintext.inner) {
+        match (
+            &fhe_data.context,
+            &val.try_into_plaintext(&fhe_data.params)?.inner,
+        ) {
             (Context::Seal(context), InnerPlaintext::Seal(inner_plain)) => {
-                let encryptor = Encryptor::with_public_key(context, &public_key.public_key.data)?;
-                let enc_fn = |pt: &SealPlaintext, _seed: Option<&[u64; 8]>| {
-                    #[cfg(feature = "deterministic")]
-                    if let Some(seed) = seed {
-                        encryptor.encrypt_return_components_deterministic(&pt, seed)
-                    } else {
-                        encryptor.encrypt_return_components(&pt)
-                    }
-                    #[cfg(not(feature = "deterministic"))]
-                    encryptor.encrypt_return_components(&pt)
-                };
-
-                let capacity = inner_plain.len();
-
-                let mut us = Vec::with_capacity(capacity);
-                let mut es = Vec::with_capacity(capacity);
-                let mut rs = Vec::with_capacity(capacity);
-
-                let ciphertexts = inner_plain
-                    .iter()
-                    .map(|p| {
-                        let (ciphertext, u, e, r) = enc_fn(p, seed)?;
-
-                        let r_context = WithContext {
-                            params: fhe_data.params.clone(),
-                            data: r,
-                        };
-
-                        let r = Plaintext {
-                            data_type: plaintext_type.clone(),
-                            inner: InnerPlaintext::Seal(vec![r_context]),
-                        };
-
-                        us.push(u);
-                        es.push(e);
-                        rs.push(r);
-
-                        Ok(WithContext {
-                            params: fhe_data.params.clone(),
-                            data: ciphertext,
-                        })
-                    })
-                    .collect::<Result<Vec<_>>>()?;
-
-                (
-                    Ciphertext {
-                        data_type: Type {
-                            is_encrypted: true,
-                            ..plaintext_type.clone()
-                        },
-                        inner: InnerCiphertext::Seal(ciphertexts),
-                    },
-                    us,
-                    es,
-                    rs,
-                )
+                let encryptor = Asymmetric::new(context, public_key)?;
+                encryptor.aggregate_components(&P::type_name(), inner_plain, |e, p| {
+                    e.encrypt_return_components_deterministic(p, seed)
+                })
             }
-        };
-
-        Ok(BFVEncryptionComponents {
-            ciphertext,
-            u,
-            e,
-            r,
-        })
-    }
-
-    #[allow(dead_code)]
-    /**
-     * Encrypts the given [`FheType`](crate::FheType) symmetrically using the given private key,
-     * returning the ciphertext and the components used in encrypting the data.
-     *
-     * Returns [`Error::ParameterMismatch`] if the plaintext is incompatible
-     * with this runtime's scheme.
-     */
-    pub(crate) fn encrypt_symmetric_return_components<P>(
-        &self,
-        val: P,
-        private_key: &PrivateKey,
-    ) -> Result<BFVSymmetricEncryptionComponents>
-    where
-        P: TryIntoPlaintext + TypeName,
-    {
-        let plaintext = val.try_into_plaintext(self.params())?;
-        let plaintext_type = P::type_name();
-        self.encrypt_symmetric_return_components_internal(
-            &plaintext,
-            &plaintext_type,
-            private_key,
-            None,
-        )
+        }
     }
 
     /**
@@ -763,80 +693,273 @@ where
     where
         P: TryIntoPlaintext + TypeName,
     {
-        let plaintext = val.try_into_plaintext(self.params())?;
-        let plaintext_type = P::type_name();
-        self.encrypt_symmetric_return_components_internal(
-            &plaintext,
-            &plaintext_type,
-            private_key,
-            Some(seed),
-        )
+        let fhe_data = self.runtime_data.unwrap_fhe();
+        match (
+            &fhe_data.context,
+            &val.try_into_plaintext(&fhe_data.params)?.inner,
+        ) {
+            (Context::Seal(context), InnerPlaintext::Seal(inner_plain)) => {
+                let encryptor = Symmetric::new(context, private_key)?;
+                encryptor.aggregate_components(&P::type_name(), inner_plain, |e, p| {
+                    e.encrypt_return_components_deterministic(p, seed)
+                })
+            }
+        }
+    }
+}
+
+struct Asymmetric(Encryptor);
+struct Symmetric(Encryptor);
+
+/// Internal trait for handling seal encryptions that can be either symmetric or asymmetric.
+trait SealEncrypt {
+    type Key;
+    /// Components returned from seal_fhe
+    type IntermediaryComponents;
+    /// Components returned at runtime layer
+    type Components;
+
+    /// Create a new encryptor
+    fn new(ctx: &SealContext, key: &Self::Key) -> Result<Self>
+    where
+        Self: std::marker::Sized;
+
+    /// Perform encryption
+    fn encrypt(&self, plaintext: &SealPlaintext) -> Result<SealCiphertext>;
+
+    /// Perform encryption returning components
+    fn encrypt_return_components(
+        &self,
+        plaintext: &SealPlaintext,
+    ) -> Result<Self::IntermediaryComponents>;
+
+    /// Perform deterministic encryption
+    #[cfg(feature = "deterministic")]
+    fn encrypt_deterministic(
+        &self,
+        plaintext: &SealPlaintext,
+        seed: &[u64; 8],
+    ) -> Result<SealCiphertext>;
+
+    /// Perform deterministic encryption returning components
+    #[cfg(feature = "deterministic")]
+    fn encrypt_return_components_deterministic(
+        &self,
+        plaintext: &SealPlaintext,
+        seed: &[u64; 8],
+    ) -> Result<Self::IntermediaryComponents>;
+
+    /// Aggregate a runtime level ciphertext across multiple inner plaintexts
+    fn aggregate_ciphertexts<'a, F, I>(
+        &self,
+        pt_type: &Type,
+        pts: I,
+        enc_fn: F,
+    ) -> Result<Ciphertext>
+    where
+        I: IntoIterator<Item = &'a WithContext<SealPlaintext>>,
+        F: Fn(&Self, &SealPlaintext) -> Result<SealCiphertext>,
+    {
+        let cts = pts
+            .into_iter()
+            .map(|pt| {
+                let ct = WithContext {
+                    params: pt.params.clone(),
+                    data: enc_fn(self, &pt.data)?,
+                };
+                Ok(ct)
+            })
+            .collect::<Result<Vec<_>>>()?;
+        Ok(Ciphertext {
+            data_type: Type {
+                is_encrypted: true,
+                ..pt_type.clone()
+            },
+            inner: InnerCiphertext::Seal(cts),
+        })
     }
 
-    pub(crate) fn encrypt_symmetric_return_components_internal(
+    /// Aggregate the runtime level components across multiple inner plaintexts
+    fn aggregate_components<'a, F, I>(
         &self,
-        plaintext: &Plaintext,
-        plaintext_type: &Type,
-        private_key: &PrivateKey,
-        seed: Option<&[u64; 8]>,
-    ) -> Result<BFVSymmetricEncryptionComponents> {
-        let fhe_data = self.runtime_data.unwrap_fhe();
-        let (ciphertext, e, r) = match (&fhe_data.context, &plaintext.inner) {
-            (Context::Seal(context), InnerPlaintext::Seal(inner_plain)) => {
-                let encryptor = Encryptor::with_secret_key(context, &private_key.0.data)?;
-                let enc_fn = |pt: &SealPlaintext, _seed: Option<&[u64; 8]>| {
-                    #[cfg(feature = "deterministic")]
-                    if let Some(seed) = seed {
-                        encryptor.encrypt_symmetric_return_components_deterministic(&pt, seed)
-                    } else {
-                        encryptor.encrypt_symmetric_return_components(&pt)
-                    }
-                    #[cfg(not(feature = "deterministic"))]
-                    encryptor.encrypt_symmetric_return_components(&pt)
-                };
+        pt_type: &Type,
+        pts: I,
+        enc_fn: F,
+    ) -> Result<Self::Components>
+    where
+        I: IntoIterator<Item = &'a WithContext<SealPlaintext>>,
+        F: Fn(&Self, &SealPlaintext) -> Result<Self::IntermediaryComponents>;
+}
 
-                let capacity = inner_plain.len();
-                let mut es = Vec::with_capacity(capacity);
-                let mut rs = Vec::with_capacity(capacity);
+impl SealEncrypt for Asymmetric {
+    type Key = PublicKey;
+    type IntermediaryComponents = (
+        SealCiphertext,
+        PolynomialArray,
+        PolynomialArray,
+        SealPlaintext,
+    );
+    type Components = BFVEncryptionComponents;
+    fn new(ctx: &SealContext, key: &Self::Key) -> Result<Self> {
+        Ok(Self(Encryptor::with_public_key(ctx, &key.public_key.data)?))
+    }
+    fn encrypt(&self, plaintext: &SealPlaintext) -> Result<SealCiphertext> {
+        Ok(self.0.encrypt(plaintext)?)
+    }
 
-                let ciphertexts = inner_plain
-                    .iter()
-                    .map(|p| {
-                        let (ciphertext, e, r) = enc_fn(p, seed)?;
+    fn encrypt_return_components(
+        &self,
+        plaintext: &SealPlaintext,
+    ) -> Result<Self::IntermediaryComponents> {
+        Ok(self.0.encrypt_return_components(plaintext)?)
+    }
 
-                        let r_context = WithContext {
-                            params: fhe_data.params.clone(),
-                            data: r,
-                        };
-                        let r = Plaintext {
-                            data_type: plaintext_type.clone(),
-                            inner: InnerPlaintext::Seal(vec![r_context]),
-                        };
-                        es.push(e);
-                        rs.push(r);
+    #[cfg(feature = "deterministic")]
+    fn encrypt_deterministic(
+        &self,
+        plaintext: &SealPlaintext,
+        seed: &[u64; 8],
+    ) -> Result<SealCiphertext> {
+        Ok(self.0.encrypt_deterministic(plaintext, seed)?)
+    }
 
-                        Ok(WithContext {
-                            params: fhe_data.params.clone(),
-                            data: ciphertext,
-                        })
-                    })
-                    .collect::<Result<Vec<_>>>()?;
+    #[cfg(feature = "deterministic")]
+    fn encrypt_return_components_deterministic(
+        &self,
+        plaintext: &SealPlaintext,
+        seed: &[u64; 8],
+    ) -> Result<Self::IntermediaryComponents> {
+        Ok(self
+            .0
+            .encrypt_return_components_deterministic(plaintext, seed)?)
+    }
 
-                (
-                    Ciphertext {
-                        data_type: Type {
-                            is_encrypted: true,
-                            ..plaintext_type.clone()
-                        },
-                        inner: InnerCiphertext::Seal(ciphertexts),
-                    },
-                    es,
-                    rs,
-                )
-            }
-        };
+    fn aggregate_components<'a, F, I>(
+        &self,
+        pt_type: &Type,
+        pts: I,
+        enc_fn: F,
+    ) -> Result<Self::Components>
+    where
+        I: IntoIterator<Item = &'a WithContext<SealPlaintext>>,
+        F: Fn(&Self, &SealPlaintext) -> Result<Self::IntermediaryComponents>,
+    {
+        let mut us = Vec::new();
+        let mut es = Vec::new();
+        let mut rs = Vec::new();
+        let mut cts = Vec::new();
+        for pt in pts {
+            let (ct, u, e, r) = enc_fn(self, pt)?;
+            let r = Plaintext {
+                data_type: pt_type.clone(),
+                inner: InnerPlaintext::Seal(vec![WithContext {
+                    params: pt.params.clone(),
+                    data: r,
+                }]),
+            };
+            us.push(u);
+            es.push(e);
+            rs.push(r);
+            cts.push(WithContext {
+                params: pt.params.clone(),
+                data: ct,
+            });
+        }
+        Ok(BFVEncryptionComponents {
+            ciphertext: Ciphertext {
+                data_type: Type {
+                    is_encrypted: true,
+                    ..pt_type.clone()
+                },
+                inner: InnerCiphertext::Seal(cts),
+            },
+            u: us,
+            e: es,
+            r: rs,
+        })
+    }
+}
 
-        Ok(BFVSymmetricEncryptionComponents { ciphertext, e, r })
+impl SealEncrypt for Symmetric {
+    type Key = PrivateKey;
+    type IntermediaryComponents = (SealCiphertext, PolynomialArray, SealPlaintext);
+    type Components = BFVSymmetricEncryptionComponents;
+
+    fn new(ctx: &SealContext, key: &Self::Key) -> Result<Self> {
+        Ok(Self(Encryptor::with_secret_key(ctx, &key.0.data)?))
+    }
+
+    fn encrypt(&self, plaintext: &SealPlaintext) -> Result<SealCiphertext> {
+        Ok(self.0.encrypt_symmetric(plaintext)?)
+    }
+
+    fn encrypt_return_components(
+        &self,
+        plaintext: &SealPlaintext,
+    ) -> Result<Self::IntermediaryComponents> {
+        Ok(self.0.encrypt_symmetric_return_components(plaintext)?)
+    }
+
+    #[cfg(feature = "deterministic")]
+    fn encrypt_deterministic(
+        &self,
+        plaintext: &SealPlaintext,
+        seed: &[u64; 8],
+    ) -> Result<SealCiphertext> {
+        Ok(self.0.encrypt_symmetric_deterministic(plaintext, seed)?)
+    }
+
+    #[cfg(feature = "deterministic")]
+    fn encrypt_return_components_deterministic(
+        &self,
+        plaintext: &SealPlaintext,
+        seed: &[u64; 8],
+    ) -> Result<Self::IntermediaryComponents> {
+        Ok(self
+            .0
+            .encrypt_symmetric_return_components_deterministic(plaintext, seed)?)
+    }
+
+    fn aggregate_components<'a, F, I>(
+        &self,
+        pt_type: &Type,
+        pts: I,
+        enc_fn: F,
+    ) -> Result<Self::Components>
+    where
+        I: IntoIterator<Item = &'a WithContext<SealPlaintext>>,
+        F: Fn(&Self, &SealPlaintext) -> Result<Self::IntermediaryComponents>,
+    {
+        let mut es = Vec::new();
+        let mut rs = Vec::new();
+        let mut cts = Vec::new();
+        for pt in pts {
+            let (ct, e, r) = enc_fn(self, pt)?;
+            let r = Plaintext {
+                data_type: pt_type.clone(),
+                inner: InnerPlaintext::Seal(vec![WithContext {
+                    params: pt.params.clone(),
+                    data: r,
+                }]),
+            };
+            es.push(e);
+            rs.push(r);
+            cts.push(WithContext {
+                params: pt.params.clone(),
+                data: ct,
+            });
+        }
+        Ok(BFVSymmetricEncryptionComponents {
+            ciphertext: Ciphertext {
+                data_type: Type {
+                    is_encrypted: true,
+                    ..pt_type.clone()
+                },
+                inner: InnerCiphertext::Seal(cts),
+            },
+            e: es,
+            r: rs,
+        })
     }
 }
 

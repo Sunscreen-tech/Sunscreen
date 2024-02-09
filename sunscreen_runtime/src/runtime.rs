@@ -85,6 +85,7 @@ pub(crate) struct BFVEncryptionComponents {
 }
 
 // TODO remove the plaintext wrapper type from r, its useless and not necessary given that polynomial array types also come from seal layer.
+// Or, since we're exposing secretkey -> polyarray and that requires plaintext -> polyarray, just have r be exported as a polyarray as well.
 
 /// Components needed to perform BFV symmetric encryption. Specifically, BFV is defined by the
 /// following equation in SEAL:
@@ -791,6 +792,7 @@ trait SealEncrypt {
         F: Fn(&Self, &SealPlaintext) -> Result<Self::IntermediaryComponents>;
 }
 
+// This impl should have all asymmetric encryption methods.
 impl SealEncrypt for Asymmetric {
     type Key = PublicKey;
     type IntermediaryComponents = (
@@ -880,6 +882,7 @@ impl SealEncrypt for Asymmetric {
     }
 }
 
+// This impl should have all symmetric encryption methods.
 impl SealEncrypt for Symmetric {
     type Key = PrivateKey;
     type IntermediaryComponents = (SealCiphertext, PolynomialArray, SealPlaintext);

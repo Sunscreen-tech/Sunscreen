@@ -736,7 +736,7 @@ mod tests {
         use std::collections::hash_map::DefaultHasher;
         use std::hash::{Hash, Hasher};
 
-        use crate::*;
+        use super::*;
 
         #[test]
         fn encrypt_deterministic() {

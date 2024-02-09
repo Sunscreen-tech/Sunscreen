@@ -218,7 +218,7 @@ where
         .collect::<Vec<_>>();
     let vk = generate_verifier_knowledge(statements, &bounds, params, ctx);
 
-    let s = compute_s(statements, messages, witness);
+    let s = compute_s(statements, messages, witness, ctx);
 
     LogProofProverKnowledge { vk, s }
 }
@@ -311,6 +311,7 @@ fn compute_s<B, const N: usize>(
     statements: &[BfvProofStatement<'_>],
     messages: &[BfvMessage],
     witness: &[BfvWitness<'_>],
+    ctx: &Context,
 ) -> PolynomialMatrix<Z<N, B>>
 where
     B: BarrettConfig<N>,
@@ -329,7 +330,7 @@ where
             // sk, e
             BfvWitness::PrivateKeyEncryption { private_key, e, r } => {
                 let r = r.as_poly();
-                let sk = private_key.as_ref().as_poly();
+                let sk = (ctx, private_key.as_ref()).as_poly();
                 let e = e.as_poly_vec().pop().unwrap();
                 s.set(offsets.remainder, 0, r);
                 s.set(offsets.private_a, 0, sk.neg());
@@ -535,9 +536,10 @@ impl<const N: usize, B: BarrettConfig<N>> AsPolynomial<Z<N, B>> for Plaintext {
     }
 }
 
-impl<const N: usize, B: BarrettConfig<N>> AsPolynomial<Z<N, B>> for SecretKey {
+impl<const N: usize, B: BarrettConfig<N>> AsPolynomial<Z<N, B>> for (&Context, &SecretKey) {
     fn as_poly(&self) -> Polynomial<Z<N, B>> {
-        todo!()
+        let poly_array = PolynomialArray::new_from_secret_key(self.0, self.1).unwrap();
+        poly_array.as_poly_vec().pop().unwrap()
     }
 }
 
@@ -675,17 +677,16 @@ mod tests {
 
     #[test]
     fn idx_offsets() {
-        // TODO create the example in the docs after symmetric unlocked. for now, just public.
         let ctx = BFVTestContext::new();
-        let test_fixture = ctx.random_fixture_with(3, 1);
+        let test_fixture = ctx.random_fixture_with(2, 0, 0, 1);
         let idx_offsets = IdxOffsets::new(&test_fixture.statements);
 
         assert_eq!(idx_offsets.remainder, 2);
         assert_eq!(idx_offsets.public_key, 2 + 3);
-        assert_eq!(idx_offsets.public_e_0, 2 + 3 + 3);
-        assert_eq!(idx_offsets.public_e_1, 2 + 3 + 3 + 3);
-        assert_eq!(idx_offsets.private_a, 2 + 3 + 3 + 3 + 3);
-        assert_eq!(idx_offsets.private_e, 2 + 3 + 3 + 3 + 3);
+        assert_eq!(idx_offsets.public_e_0, 2 + 3 + 2);
+        assert_eq!(idx_offsets.public_e_1, 2 + 3 + 2 + 2);
+        assert_eq!(idx_offsets.private_a, 2 + 3 + 2 + 2 + 2);
+        assert_eq!(idx_offsets.private_e, 2 + 3 + 2 + 2 + 2 + 1);
     }
 
     #[test]
@@ -699,23 +700,38 @@ mod tests {
     }
 
     #[test]
-    fn one_statement() {
-        test_statements_with(1, 0)
+    fn one_public_statement() {
+        test_statements_with(1, 0, 0, 0)
     }
 
     #[test]
-    fn two_separate_statements() {
-        test_statements_with(2, 0)
+    fn one_private_statement() {
+        test_statements_with(0, 1, 0, 0)
     }
 
     #[test]
-    fn two_statements_about_same_msg() {
-        test_statements_with(2, 1)
+    fn private_and_public_statement_about_separate_msgs() {
+        test_statements_with(1, 1, 0, 0)
     }
 
-    fn test_statements_with(num_statements: usize, num_duplicate_msgs: usize) {
+    #[test]
+    fn private_and_public_statement_about_same_msg() {
+        test_statements_with(1, 0, 0, 1)
+    }
+
+    fn test_statements_with(
+        num_public_statements: usize,
+        num_private_statements: usize,
+        num_duplicate_public_msgs: usize,
+        num_duplicate_private_msgs: usize,
+    ) {
         let ctx = BFVTestContext::new();
-        let test_fixture = ctx.random_fixture_with(num_statements, num_duplicate_msgs);
+        let test_fixture = ctx.random_fixture_with(
+            num_public_statements,
+            num_private_statements,
+            num_duplicate_public_msgs,
+            num_duplicate_private_msgs,
+        );
         let prover_knowledge = generate_prover_knowledge(
             &test_fixture.statements,
             &test_fixture.messages,
@@ -759,6 +775,7 @@ mod tests {
         ctx: Context,
         params: EncryptionParameters,
         public_key: PublicKey,
+        secret_key: SecretKey,
         encryptor: Encryptor,
     }
 
@@ -784,6 +801,7 @@ mod tests {
                 ctx,
                 params,
                 public_key,
+                secret_key,
                 encryptor,
             }
         }
@@ -792,23 +810,28 @@ mod tests {
         #[allow(unused)]
         fn random_fixture(&self) -> TestFixture {
             let mut rng = rand::thread_rng();
-            let num_statements = rng.gen_range(1..=3);
-            let num_duplicate_msgs = rng.gen_range(0..num_statements);
-            self.random_fixture_with(num_statements, num_duplicate_msgs)
+            let num_public_statements = rng.gen_range(1..=3);
+            let num_private_statements = rng.gen_range(1..=3);
+            let num_duplicate_public_msgs = rng.gen_range(0..num_public_statements);
+            let num_duplicate_private_msgs = rng.gen_range(0..num_private_statements);
+            self.random_fixture_with(
+                num_public_statements,
+                num_private_statements,
+                num_duplicate_public_msgs,
+                num_duplicate_private_msgs,
+            )
         }
 
-        /// Note that `num_duplicate_msgs` is in _addition_ to the first message about a given
-        /// index. So [0, 0, 0] contains `num_duplicate_msgs == 2`.
-        //
-        // TODO add private statements once we have a way to generate them, accepting
-        // num_public_statements, num_private_statements.
         fn random_fixture_with(
             &self,
-            num_statements: usize,
-            num_duplicate_msgs: usize,
+            num_unique_public_statements: usize,
+            num_unique_private_statements: usize,
+            num_duplicate_public_msgs: usize,
+            num_duplicate_private_msgs: usize,
         ) -> TestFixture {
-            assert!(num_duplicate_msgs < num_statements);
-            let num_msgs = num_statements - num_duplicate_msgs;
+            let num_msgs = num_unique_public_statements + num_unique_private_statements;
+            let num_duplicate_msgs = num_duplicate_public_msgs + num_duplicate_private_msgs;
+            let num_statements = num_msgs + num_duplicate_msgs;
 
             // all the messages
             let messages = (0..num_msgs)
@@ -823,21 +846,37 @@ mod tests {
 
             // statements without duplicate messages
             for (i, m) in messages.iter().enumerate() {
-                let (ct, u, e, r) = self
-                    .encryptor
-                    .encrypt_return_components(&m.plaintext)
-                    .unwrap();
-                statements.push(BfvProofStatement::PublicKeyEncryption {
-                    message_id: i,
-                    ciphertext: ct,
-                    public_key: Cow::Borrowed(&self.public_key),
-                });
-                witness.push(BfvWitness::PublicKeyEncryption { u, e, r });
+                if i < num_unique_public_statements {
+                    let (ct, u, e, r) = self
+                        .encryptor
+                        .encrypt_return_components(&m.plaintext)
+                        .unwrap();
+                    statements.push(BfvProofStatement::PublicKeyEncryption {
+                        message_id: i,
+                        ciphertext: ct,
+                        public_key: Cow::Borrowed(&self.public_key),
+                    });
+                    witness.push(BfvWitness::PublicKeyEncryption { u, e, r });
+                } else {
+                    let (ct, e, r) = self
+                        .encryptor
+                        .encrypt_symmetric_return_components(&m.plaintext)
+                        .unwrap();
+                    statements.push(BfvProofStatement::PrivateKeyEncryption {
+                        message_id: i,
+                        ciphertext: ct,
+                    });
+                    witness.push(BfvWitness::PrivateKeyEncryption {
+                        private_key: Cow::Borrowed(&self.secret_key),
+                        e,
+                        r,
+                    });
+                }
             }
 
-            // add in the statements about existing messages
+            // add in the public statements about existing messages
             let mut rng = rand::thread_rng();
-            for _ in 0..num_duplicate_msgs {
+            for _ in 0..num_duplicate_public_msgs {
                 let i = rng.gen_range(0..num_msgs);
                 let (ct, u, e, r) = self
                     .encryptor
@@ -849,6 +888,22 @@ mod tests {
                     public_key: Cow::Borrowed(&self.public_key),
                 });
                 witness.push(BfvWitness::PublicKeyEncryption { u, e, r });
+            }
+            for _ in 0..num_duplicate_private_msgs {
+                let i = rng.gen_range(0..num_msgs);
+                let (ct, e, r) = self
+                    .encryptor
+                    .encrypt_symmetric_return_components(&messages[i].plaintext)
+                    .unwrap();
+                statements.push(BfvProofStatement::PrivateKeyEncryption {
+                    message_id: i,
+                    ciphertext: ct,
+                });
+                witness.push(BfvWitness::PrivateKeyEncryption {
+                    private_key: Cow::Borrowed(&self.secret_key),
+                    e,
+                    r,
+                });
             }
 
             TestFixture {

@@ -556,7 +556,7 @@ mod tests {
         Context,
         PublicKey,
         SecretKey,
-        Encryptor,
+        Encryptor<SymAsym>,
         Decryptor,
         BFVEvaluator,
     ) {

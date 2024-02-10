@@ -254,7 +254,7 @@ mod tests {
 
     fn run_bfv_test<F>(test: F)
     where
-        F: FnOnce(Decryptor, BFVEncoder, Encryptor, BFVEvaluator, KeyGenerator),
+        F: FnOnce(Decryptor, BFVEncoder, Encryptor<SymAsym>, BFVEvaluator, KeyGenerator),
     {
         let params = BfvEncryptionParametersBuilder::new()
             .set_poly_modulus_degree(8192)

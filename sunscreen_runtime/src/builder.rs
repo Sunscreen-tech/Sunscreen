@@ -523,7 +523,6 @@ mod linked {
                     self.witness
                         .push(BfvWitness::PublicKeyEncryption(components));
                     i += 1;
-                    Ok(())
                 })
         }
 
@@ -559,7 +558,6 @@ mod linked {
                         components,
                     });
                     i += 1;
-                    Ok(())
                 },
             )
         }

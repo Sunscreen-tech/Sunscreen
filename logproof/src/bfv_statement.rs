@@ -650,7 +650,7 @@ mod tests {
     use rand::Rng;
     use seal_fhe::{
         BfvEncryptionParametersBuilder, CoefficientModulus, Context, Encryptor, KeyGenerator,
-        PlainModulus, SecurityLevel,
+        PlainModulus, SecurityLevel, SymAsym,
     };
 
     use crate::{
@@ -761,7 +761,7 @@ mod tests {
         params: EncryptionParameters,
         public_key: PublicKey,
         secret_key: SecretKey,
-        encryptor: Encryptor,
+        encryptor: Encryptor<SymAsym>,
     }
 
     impl BFVTestContext {

@@ -418,7 +418,7 @@ where
             &val.try_into_plaintext(&fhe_data.params)?.inner,
         ) {
             (Context::Seal(context), InnerPlaintext::Seal(inner_plain)) => {
-                let encryptor = Asymmetric::new(context, public_key)?;
+                let encryptor = Encryptor::with_public_key(context, &public_key.public_key.data)?;
                 Self::aggregate_ciphertexts(&P::type_name(), inner_plain, |p| encryptor.encrypt(p))
             }
         }
@@ -439,8 +439,10 @@ where
             &val.try_into_plaintext(&fhe_data.params)?.inner,
         ) {
             (Context::Seal(context), InnerPlaintext::Seal(inner_plain)) => {
-                let encryptor = Symmetric::new(context, private_key)?;
-                Self::aggregate_ciphertexts(&P::type_name(), inner_plain, |p| encryptor.encrypt(p))
+                let encryptor = Encryptor::with_secret_key(context, &private_key.0.data)?;
+                Self::aggregate_ciphertexts(&P::type_name(), inner_plain, |p| {
+                    encryptor.encrypt_symmetric(p)
+                })
             }
         }
     }
@@ -471,7 +473,7 @@ where
             &val.try_into_plaintext(&fhe_data.params)?.inner,
         ) {
             (Context::Seal(context), InnerPlaintext::Seal(inner_plain)) => {
-                let encryptor = Asymmetric::new(context, public_key)?;
+                let encryptor = Encryptor::with_public_key(context, &public_key.public_key.data)?;
                 Self::aggregate_ciphertexts(&P::type_name(), inner_plain, |p| {
                     encryptor.encrypt_deterministic(p, seed)
                 })
@@ -505,9 +507,9 @@ where
             &val.try_into_plaintext(&fhe_data.params)?.inner,
         ) {
             (Context::Seal(context), InnerPlaintext::Seal(inner_plain)) => {
-                let encryptor = Symmetric::new(context, private_key)?;
+                let encryptor = Encryptor::with_secret_key(context, &private_key.0.data)?;
                 Self::aggregate_ciphertexts(&P::type_name(), inner_plain, |p| {
-                    encryptor.encrypt_deterministic(p, seed)
+                    encryptor.encrypt_symmetric_deterministic(p, seed)
                 })
             }
         }
@@ -525,7 +527,7 @@ where
         &self,
         val: &P,
         public_key: &PublicKey,
-        mut f: impl FnMut(&SealPlaintext, &SealCiphertext, AsymmetricComponents) -> Result<()>,
+        mut f: impl FnMut(&SealPlaintext, &SealCiphertext, AsymmetricComponents),
     ) -> Result<Ciphertext>
     where
         P: TryIntoPlaintext + TypeNameInstance,
@@ -536,10 +538,10 @@ where
             &val.try_into_plaintext(&fhe_data.params)?.inner,
         ) {
             (Context::Seal(context), InnerPlaintext::Seal(inner_plain)) => {
-                let encryptor = Asymmetric::new(context, public_key)?;
+                let encryptor = Encryptor::with_public_key(context, &public_key.public_key.data)?;
                 Self::aggregate_ciphertexts(&val.type_name_instance(), inner_plain, move |p| {
                     let (ct, components) = encryptor.encrypt_return_components(p)?;
-                    f(p, &ct, components)?;
+                    f(p, &ct, components);
                     Ok(ct)
                 })
             }
@@ -558,7 +560,7 @@ where
         &self,
         val: &P,
         private_key: &PrivateKey,
-        mut f: impl FnMut(&SealPlaintext, &SealCiphertext, SymmetricComponents) -> Result<()>,
+        mut f: impl FnMut(&SealPlaintext, &SealCiphertext, SymmetricComponents),
     ) -> Result<Ciphertext>
     where
         P: TryIntoPlaintext + TypeNameInstance,
@@ -569,23 +571,26 @@ where
             &val.try_into_plaintext(&fhe_data.params)?.inner,
         ) {
             (Context::Seal(context), InnerPlaintext::Seal(inner_plain)) => {
-                let encryptor = Symmetric::new(context, private_key)?;
+                let encryptor = Encryptor::with_secret_key(context, &private_key.0.data)?;
                 Self::aggregate_ciphertexts(&val.type_name_instance(), inner_plain, move |p| {
-                    let (ct, components) = encryptor.encrypt_return_components(p)?;
-                    f(p, &ct, components)?;
+                    let (ct, components) = encryptor.encrypt_symmetric_return_components(p)?;
+                    f(p, &ct, components);
                     Ok(ct)
                 })
             }
         }
     }
 
+    // Use a seal encryption function to encrypt a list of inner seal plaintexts `pts`,
+    // representing a runtime level plaintext of type `pt_type`, and return a runtime ciphertext
+    // consisting of the list of respective inner seal ciphertexts.
     fn aggregate_ciphertexts<F>(
         pt_type: &Type,
         pts: &[WithContext<SealPlaintext>],
         mut enc_fn: F,
     ) -> Result<Ciphertext>
     where
-        F: FnMut(&SealPlaintext) -> Result<SealCiphertext>,
+        F: FnMut(&SealPlaintext) -> seal_fhe::Result<SealCiphertext>,
     {
         let cts = pts
             .iter()
@@ -603,96 +608,6 @@ where
             },
             inner: InnerCiphertext::Seal(cts),
         })
-    }
-}
-
-struct Asymmetric(Encryptor);
-struct Symmetric(Encryptor);
-
-/// Internal trait for handling seal encryptions that can be either symmetric or asymmetric.
-trait SealEncrypt {
-    type Key;
-    /// Components returned from seal_fhe
-    type Components;
-
-    /// Create a new encryptor
-    fn new(ctx: &SealContext, key: &Self::Key) -> Result<Self>
-    where
-        Self: std::marker::Sized;
-
-    /// Perform encryption
-    fn encrypt(&self, plaintext: &SealPlaintext) -> Result<SealCiphertext>;
-
-    /// Perform encryption returning components
-    fn encrypt_return_components(
-        &self,
-        plaintext: &SealPlaintext,
-    ) -> Result<(SealCiphertext, Self::Components)>;
-
-    /// Perform deterministic encryption
-    #[cfg(feature = "deterministic")]
-    fn encrypt_deterministic(
-        &self,
-        plaintext: &SealPlaintext,
-        seed: &[u64; 8],
-    ) -> Result<SealCiphertext>;
-}
-
-// This impl should have all asymmetric encryption methods.
-impl SealEncrypt for Asymmetric {
-    type Key = PublicKey;
-    type Components = AsymmetricComponents;
-    fn new(ctx: &SealContext, key: &Self::Key) -> Result<Self> {
-        Ok(Self(Encryptor::with_public_key(ctx, &key.public_key.data)?))
-    }
-    fn encrypt(&self, plaintext: &SealPlaintext) -> Result<SealCiphertext> {
-        Ok(self.0.encrypt(plaintext)?)
-    }
-
-    fn encrypt_return_components(
-        &self,
-        plaintext: &SealPlaintext,
-    ) -> Result<(SealCiphertext, Self::Components)> {
-        Ok(self.0.encrypt_return_components(plaintext)?)
-    }
-
-    #[cfg(feature = "deterministic")]
-    fn encrypt_deterministic(
-        &self,
-        plaintext: &SealPlaintext,
-        seed: &[u64; 8],
-    ) -> Result<SealCiphertext> {
-        Ok(self.0.encrypt_deterministic(plaintext, seed)?)
-    }
-}
-
-// This impl should have all symmetric encryption methods.
-impl SealEncrypt for Symmetric {
-    type Key = PrivateKey;
-    type Components = SymmetricComponents;
-
-    fn new(ctx: &SealContext, key: &Self::Key) -> Result<Self> {
-        Ok(Self(Encryptor::with_secret_key(ctx, &key.0.data)?))
-    }
-
-    fn encrypt(&self, plaintext: &SealPlaintext) -> Result<SealCiphertext> {
-        Ok(self.0.encrypt_symmetric(plaintext)?)
-    }
-
-    fn encrypt_return_components(
-        &self,
-        plaintext: &SealPlaintext,
-    ) -> Result<(SealCiphertext, Self::Components)> {
-        Ok(self.0.encrypt_symmetric_return_components(plaintext)?)
-    }
-
-    #[cfg(feature = "deterministic")]
-    fn encrypt_deterministic(
-        &self,
-        plaintext: &SealPlaintext,
-        seed: &[u64; 8],
-    ) -> Result<SealCiphertext> {
-        Ok(self.0.encrypt_symmetric_deterministic(plaintext, seed)?)
     }
 }
 

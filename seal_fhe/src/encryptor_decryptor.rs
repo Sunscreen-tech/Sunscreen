@@ -1,4 +1,5 @@
 use std::ffi::c_void;
+use std::marker::PhantomData;
 use std::ptr::null_mut;
 
 use crate::bindgen;
@@ -53,14 +54,11 @@ impl core::fmt::Debug for SymmetricComponents {
 }
 
 /**
- *
  * Encrypts Plaintext objects into Ciphertext objects.
  *
- * Encrypts Plaintext objects into Ciphertext objects. Constructing an Encryptor
- * requires a SEALContext with valid encryption parameters, the public key and/or
- * the secret key. If an Encrytor is given a secret key, it supports symmetric-key
- * encryption. If an Encryptor is given a public key, it supports asymmetric-key
- * encryption.
+ * Constructing an Encryptor requires a SEALContext with valid encryption parameters, the public
+ * key and/or the secret key. If an Encrytor is given a secret key, it supports symmetric-key
+ * encryption. If an Encryptor is given a public key, it supports asymmetric-key encryption.
  *
  * Overloads
  * For the encrypt function we provide two overloads concerning the memory pool used in
@@ -81,9 +79,47 @@ impl core::fmt::Debug for SymmetricComponents {
  * "default NTT form". Decryption requires the input ciphertexts to be in the default
  * NTT form, and will throw an exception if this is not the case.
  */
-pub struct Encryptor {
+pub struct Encryptor<T = ()> {
     handle: *mut c_void,
+    _marker: PhantomData<T>,
 }
+
+/// An encryptor capable of symmetric encryptions.
+pub type SymmetricEncryptor = Encryptor<Sym>;
+
+/// An encryptor capable of asymmetric encryptions.
+pub type AsymmetricEncryptor = Encryptor<Asym>;
+
+mod sealed {
+    pub trait Sealed {}
+    impl Sealed for super::Sym {}
+    impl Sealed for super::Asym {}
+    impl Sealed for super::SymAsym {}
+}
+
+/// Marker traits to signify what types of enryptions are supported
+pub mod marker {
+    /// Supports symmetric encryptions.
+    pub trait Sym: super::sealed::Sealed {}
+    /// Supports asymmetric encryptions.
+    pub trait Asym: super::sealed::Sealed {}
+}
+
+/// Symmetric encryptions marker
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct Sym;
+impl marker::Sym for Sym {}
+
+/// Asymmetric encryptions marker
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct Asym;
+impl marker::Asym for Asym {}
+
+/// Both symmetric and asymmetric encryptions marker
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct SymAsym;
+impl marker::Sym for SymAsym {}
+impl marker::Asym for SymAsym {}
 
 unsafe impl Sync for Encryptor {}
 unsafe impl Send for Encryptor {}
@@ -101,7 +137,7 @@ impl Encryptor {
         ctx: &Context,
         public_key: &PublicKey,
         secret_key: &SecretKey,
-    ) -> Result<Encryptor> {
+    ) -> Result<Encryptor<SymAsym>> {
         let mut handle: *mut c_void = null_mut();
 
         convert_seal_error(unsafe {
@@ -113,14 +149,17 @@ impl Encryptor {
             )
         })?;
 
-        Ok(Encryptor { handle })
+        Ok(Encryptor {
+            handle,
+            _marker: PhantomData,
+        })
     }
 
     /**
      * Creates an Encryptor instance initialized with the specified SEALContext,
      * public key.
      */
-    pub fn with_public_key(ctx: &Context, public_key: &PublicKey) -> Result<Encryptor> {
+    pub fn with_public_key(ctx: &Context, public_key: &PublicKey) -> Result<AsymmetricEncryptor> {
         let mut handle: *mut c_void = null_mut();
 
         convert_seal_error(unsafe {
@@ -132,12 +171,15 @@ impl Encryptor {
             )
         })?;
 
-        Ok(Encryptor { handle })
+        Ok(Encryptor {
+            handle,
+            _marker: PhantomData,
+        })
     }
 
     /// Creates an Encryptor instance initialized with the specified SEALContext and
     /// secret key.
-    pub fn with_secret_key(ctx: &Context, secret_key: &SecretKey) -> Result<Encryptor> {
+    pub fn with_secret_key(ctx: &Context, secret_key: &SecretKey) -> Result<SymmetricEncryptor> {
         let mut handle: *mut c_void = null_mut();
 
         convert_seal_error(unsafe {
@@ -149,9 +191,28 @@ impl Encryptor {
             )
         })?;
 
-        Ok(Encryptor { handle })
+        Ok(Encryptor {
+            handle,
+            _marker: PhantomData,
+        })
     }
+}
 
+impl AsymmetricEncryptor {
+    /// Create a new asymmetric encryptor.
+    pub fn new(ctx: &Context, public_key: &PublicKey) -> Result<Self> {
+        Encryptor::with_public_key(ctx, public_key)
+    }
+}
+
+impl SymmetricEncryptor {
+    /// Create a new symmetric encryptor.
+    pub fn new(ctx: &Context, secret_key: &SecretKey) -> Result<Self> {
+        Encryptor::with_secret_key(ctx, secret_key)
+    }
+}
+
+impl<T: marker::Asym> Encryptor<T> {
     /**
      * Encrypts a plaintext with the public key and returns the ciphertext as
      * a serializable object.
@@ -327,7 +388,9 @@ impl Encryptor {
             },
         ))
     }
+}
 
+impl<T: marker::Sym> Encryptor<T> {
     /**
      * Encrypts a plaintext with the secret key and returns the ciphertext as
      * a serializable object.
@@ -492,7 +555,7 @@ impl Encryptor {
     }
 }
 
-impl Drop for Encryptor {
+impl<T> Drop for Encryptor<T> {
     fn drop(&mut self) {
         convert_seal_error(unsafe { bindgen::Encryptor_Destroy(self.handle) })
             .expect("Internal error in Enryptor::drop");

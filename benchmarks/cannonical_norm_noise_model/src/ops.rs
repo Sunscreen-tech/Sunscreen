@@ -66,7 +66,7 @@ fn make_seal_things(
     SecretKey,
     Option<RelinearizationKeys>,
     Option<GaloisKeys>,
-    Encryptor,
+    AsymmetricEncryptor,
     Decryptor,
     BFVEvaluator,
 ) {

@@ -61,7 +61,10 @@ pub use context::Context;
 pub use data_structures::PolynomialArray;
 pub use encoder::{BFVEncoder, BFVScalarEncoder};
 pub use encryption_parameters::*;
-pub use encryptor_decryptor::{AsymmetricComponents, Decryptor, Encryptor, SymmetricComponents};
+pub use encryptor_decryptor::{
+    marker as enc_marker, Asym, AsymmetricComponents, AsymmetricEncryptor, Decryptor, Encryptor,
+    Sym, SymAsym, SymmetricComponents, SymmetricEncryptor,
+};
 pub use error::{Error, Result};
 pub use evaluator::Evaluator;
 pub use key_generator::{GaloisKeys, KeyGenerator, PublicKey, RelinearizationKeys, SecretKey};

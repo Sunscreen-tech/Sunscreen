@@ -47,6 +47,16 @@ pub type ZqRistretto = Zq<4, BarrettBackend<4, RistrettoConfig>>;
     num_limbs = 3
 )]
 pub struct SealQ128_8192 {}
+impl SealQ128_8192 {
+    /// The SEAL modulus chain
+    pub const Q: &'static [u64] = &[
+        0x7fffffd8001,
+        0x7fffffc8001,
+        0xfffffffc001,
+        0xffffff6c001,
+        0xfffffebc001,
+    ];
+}
 
 /**
  * The configuration type for q modulus SEAL BFV uses with 128-bit security
@@ -65,6 +75,10 @@ pub struct SealQ128_8192 {}
 #[derive(BarrettConfig)]
 #[barrett_config(modulus = "4722344527977019809793", num_limbs = 2)]
 pub struct SealQ128_4096 {}
+impl SealQ128_4096 {
+    /// The SEAL modulus chain
+    pub const Q: &'static [u64] = &[0xffffee001, 0xffffc4001, 0x1ffffe0001];
+}
 
 /**
  * The configuration type for q modulus SEAL BFV uses with 128-bit security
@@ -83,6 +97,10 @@ pub struct SealQ128_4096 {}
 #[derive(BarrettConfig)]
 #[barrett_config(modulus = "18014398492704769", num_limbs = 1)]
 pub struct SealQ128_2048 {}
+impl SealQ128_2048 {
+    /// The SEAL modulus chain
+    pub const Q: &'static [u64] = &[0x3fffffff000001];
+}
 
 /**
  * The configuration type for q modulus SEAL BFV uses with 128-bit security
@@ -101,6 +119,10 @@ pub struct SealQ128_2048 {}
 #[derive(BarrettConfig)]
 #[barrett_config(modulus = "132120577", num_limbs = 1)]
 pub struct SealQ128_1024 {}
+impl SealQ128_1024 {
+    /// The SEAL modulus chain
+    pub const Q: &'static [u64] = &[0x7e00001];
+}
 
 #[allow(unused)]
 /**

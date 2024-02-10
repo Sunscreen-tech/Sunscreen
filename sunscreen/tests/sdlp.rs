@@ -1,16 +1,17 @@
 #[cfg(feature = "linkedproofs")]
 mod sdlp_tests {
     use lazy_static::lazy_static;
-    use sunscreen::types::bfv::Signed;
+    use logproof::rings::SealQ128_1024;
+    use sunscreen::types::bfv::{Signed, Unsigned64};
     use sunscreen_fhe_program::SchemeType;
 
     use sunscreen_runtime::{FheRuntime, LogProofBuilder, Params};
 
     lazy_static! {
-        static ref SMALL_PARAMS: Params = Params {
-            lattice_dimension: 1024,
-            coeff_modulus: vec![0x7e00001],
-            plain_modulus: 4_096,
+        static ref TEST_PARAMS: Params = Params {
+            lattice_dimension: 128,
+            coeff_modulus: SealQ128_1024::Q.to_vec(),
+            plain_modulus: 32,
             scheme_type: SchemeType::Bfv,
             security_level: sunscreen::SecurityLevel::TC128,
         };
@@ -18,7 +19,7 @@ mod sdlp_tests {
 
     #[test]
     fn prove_one_asymmetric_statement() {
-        let rt = FheRuntime::new(&SMALL_PARAMS).unwrap();
+        let rt = FheRuntime::new(&TEST_PARAMS).unwrap();
         let (public_key, _secret_key) = rt.generate_keys().unwrap();
         let mut logproof_builder = LogProofBuilder::new(&rt);
 
@@ -32,12 +33,12 @@ mod sdlp_tests {
 
     #[test]
     fn prove_one_symmetric_statement() {
-        let rt = FheRuntime::new(&SMALL_PARAMS).unwrap();
+        let rt = FheRuntime::new(&TEST_PARAMS).unwrap();
         let (_public_key, private_key) = rt.generate_keys().unwrap();
         let mut logproof_builder = LogProofBuilder::new(&rt);
 
         let _ct = logproof_builder
-            .encrypt_symmetric(&Signed::from(3), &private_key)
+            .encrypt_symmetric(&Unsigned64::from(3), &private_key)
             .unwrap();
 
         let sdlp = logproof_builder.build_logproof().unwrap();
@@ -46,7 +47,7 @@ mod sdlp_tests {
 
     #[test]
     fn prove_linked_statements() {
-        let rt = FheRuntime::new(&SMALL_PARAMS).unwrap();
+        let rt = FheRuntime::new(&TEST_PARAMS).unwrap();
         let (public_key, private_key) = rt.generate_keys().unwrap();
         let mut logproof_builder = LogProofBuilder::new(&rt);
 

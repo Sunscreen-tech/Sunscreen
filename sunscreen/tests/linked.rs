@@ -1,6 +1,7 @@
 #[cfg(feature = "linkedproofs")]
 mod linked_tests {
     use lazy_static::lazy_static;
+    use logproof::rings::SealQ128_1024;
     use num::Rational64;
     use sunscreen::types::bfv::{Rational, Signed, Unsigned64};
     use sunscreen::types::zkp::{AsFieldElement, BfvRational, BfvSigned, BulletproofsField};
@@ -15,10 +16,10 @@ mod linked_tests {
     use sunscreen_zkp_backend::bulletproofs::BulletproofsBackend;
 
     lazy_static! {
-        static ref SMALL_PARAMS: Params = Params {
-            lattice_dimension: 1024,
-            coeff_modulus: vec![0x7e00001],
-            plain_modulus: 4_096,
+        static ref TEST_PARAMS: Params = Params {
+            lattice_dimension: 128,
+            coeff_modulus: SealQ128_1024::Q.to_vec(),
+            plain_modulus: 32,
             scheme_type: SchemeType::Bfv,
             security_level: sunscreen::SecurityLevel::TC128,
         };
@@ -45,7 +46,7 @@ mod linked_tests {
     fn test_valid_transaction_example() {
         let app = Compiler::new()
             .fhe_program(doggie)
-            .with_params(&SMALL_PARAMS)
+            .with_params(&TEST_PARAMS)
             .zkp_backend::<BulletproofsBackend>()
             .zkp_program(valid_transaction)
             .compile()
@@ -90,7 +91,7 @@ mod linked_tests {
     fn test_invalid_transaction_example() {
         let app = Compiler::new()
             .fhe_program(doggie)
-            .with_params(&SMALL_PARAMS)
+            .with_params(&TEST_PARAMS)
             .zkp_backend::<BulletproofsBackend>()
             .zkp_program(valid_transaction)
             .compile()
@@ -127,7 +128,7 @@ mod linked_tests {
     fn test_signed_encoding() {
         let app = Compiler::new()
             .fhe_program(doggie)
-            .with_params(&SMALL_PARAMS)
+            .with_params(&TEST_PARAMS)
             .zkp_backend::<BulletproofsBackend>()
             .zkp_program(is_eq_signed)
             .compile()
@@ -178,7 +179,7 @@ mod linked_tests {
     fn test_rational_encoding() {
         let app = Compiler::new()
             .fhe_program(doggie)
-            .with_params(&SMALL_PARAMS)
+            .with_params(&TEST_PARAMS)
             .zkp_backend::<BulletproofsBackend>()
             .zkp_program(is_eq_rational)
             .compile()
@@ -221,7 +222,7 @@ mod linked_tests {
     fn can_compare_signed() {
         let app = Compiler::new()
             .fhe_program(doggie)
-            .with_params(&SMALL_PARAMS)
+            .with_params(&TEST_PARAMS)
             .zkp_backend::<BulletproofsBackend>()
             .zkp_program(compare_signed)
             .compile()
@@ -270,7 +271,7 @@ mod linked_tests {
     fn can_compare_rationals() {
         let app = Compiler::new()
             .fhe_program(doggie)
-            .with_params(&SMALL_PARAMS)
+            .with_params(&TEST_PARAMS)
             .zkp_backend::<BulletproofsBackend>()
             .zkp_program(compare_rational)
             .compile()
@@ -326,7 +327,7 @@ mod linked_tests {
         // proves equivalence of pt x, pt y, and field elem z within ZKP
         let app = Compiler::new()
             .fhe_program(doggie)
-            .with_params(&SMALL_PARAMS)
+            .with_params(&TEST_PARAMS)
             .zkp_backend::<BulletproofsBackend>()
             .zkp_program(is_eq_3)
             .compile()
@@ -385,7 +386,7 @@ mod linked_tests {
         let is_eq_zkp = app.get_zkp_program(is_eq_signed).unwrap();
 
         // but use runtime with modulus 4096
-        let rt = FheZkpRuntime::new(&SMALL_PARAMS, &BulletproofsBackend::new()).unwrap();
+        let rt = FheZkpRuntime::new(&TEST_PARAMS, &BulletproofsBackend::new()).unwrap();
 
         let mut proof_builder = LogProofBuilder::new(&rt);
         let res = proof_builder.zkp_program(is_eq_zkp);
@@ -400,7 +401,7 @@ mod linked_tests {
         fn test_case(num_linked_inputs: usize, num_private_inputs: usize) {
             let app = Compiler::new()
                 .fhe_program(doggie)
-                .with_params(&SMALL_PARAMS)
+                .with_params(&TEST_PARAMS)
                 .zkp_backend::<BulletproofsBackend>()
                 .zkp_program(is_eq_3)
                 .compile()
@@ -436,7 +437,7 @@ mod linked_tests {
     fn throws_linked_arg_type_mismatch() {
         let app = Compiler::new()
             .fhe_program(doggie)
-            .with_params(&SMALL_PARAMS)
+            .with_params(&TEST_PARAMS)
             .zkp_backend::<BulletproofsBackend>()
             .zkp_program(compare_signed)
             .compile()

@@ -768,16 +768,16 @@ mod tests {
 
     impl BFVTestContext {
         fn new() -> Self {
-            let plain_modulus = PlainModulus::raw(1153).unwrap();
+            let plain_modulus = PlainModulus::raw(32).unwrap();
             let coeff_modulus =
                 CoefficientModulus::bfv_default(1024, SecurityLevel::TC128).unwrap();
             let params = BfvEncryptionParametersBuilder::new()
-                .set_poly_modulus_degree(1024)
+                .set_poly_modulus_degree(64)
                 .set_coefficient_modulus(coeff_modulus)
                 .set_plain_modulus(plain_modulus)
                 .build()
                 .unwrap();
-            let ctx = Context::new(&params, false, SecurityLevel::TC128).unwrap();
+            let ctx = Context::new_insecure(&params, false).unwrap();
             let gen = KeyGenerator::new(&ctx).unwrap();
             let public_key = gen.create_public_key();
             let secret_key = gen.secret_key();
@@ -902,8 +902,9 @@ mod tests {
             let mut rng = rand::thread_rng();
             let mut pt = Plaintext::new().unwrap();
             let modulus = self.params.plain_modulus();
+            let len = self.params.get_poly_modulus_degree() as usize;
 
-            let size = rng.gen_range(0..100);
+            let size = rng.gen_range(0..len);
             pt.resize(size);
 
             for i in 0..size {

@@ -52,3 +52,4 @@ linkedproofs = [
   "dep:paste",
 ]
 deterministic = ["seal_fhe/deterministic"]
+insecure-params = ["seal_fhe/insecure-params"]

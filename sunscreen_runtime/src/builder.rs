@@ -219,7 +219,6 @@ mod linked {
         rings::{SealQ128_1024, SealQ128_2048, SealQ128_4096, SealQ128_8192},
         Bounds, LogProofProverKnowledge,
     };
-    use seal_fhe::SecurityLevel;
     use sunscreen_compiler_common::{Type, TypeName};
     use sunscreen_math::ring::{BarrettBackend, BarrettConfig, Zq};
     use sunscreen_zkp_backend::{
@@ -583,17 +582,17 @@ mod linked {
 
         fn build_sdlp_pk(&self) -> Result<SealSdlpProverKnowledge> {
             let params = self.runtime.params();
-            match (params.lattice_dimension, params.security_level) {
-                (1024, SecurityLevel::TC128) => Ok(SealSdlpProverKnowledge::from(
+            match &params.coeff_modulus[..] {
+                SealQ128_1024::Q => Ok(SealSdlpProverKnowledge::from(
                     self.build_sdlp_pk_generic::<1, SealQ128_1024>()?,
                 )),
-                (2048, SecurityLevel::TC128) => Ok(SealSdlpProverKnowledge::from(
+                SealQ128_2048::Q => Ok(SealSdlpProverKnowledge::from(
                     self.build_sdlp_pk_generic::<1, SealQ128_2048>()?,
                 )),
-                (4096, SecurityLevel::TC128) => Ok(SealSdlpProverKnowledge::from(
+                SealQ128_4096::Q => Ok(SealSdlpProverKnowledge::from(
                     self.build_sdlp_pk_generic::<2, SealQ128_4096>()?,
                 )),
-                (8192, SecurityLevel::TC128) => Ok(SealSdlpProverKnowledge::from(
+                SealQ128_8192::Q => Ok(SealSdlpProverKnowledge::from(
                     self.build_sdlp_pk_generic::<3, SealQ128_8192>()?,
                 )),
                 _ => Err(BuilderError::UnsupportedParameters(Box::new(params.clone())).into()),

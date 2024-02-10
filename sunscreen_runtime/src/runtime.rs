@@ -19,8 +19,8 @@ use sunscreen_fhe_program::FheProgramTrait;
 use sunscreen_fhe_program::SchemeType;
 
 use seal_fhe::{
-    BFVEvaluator, BfvEncryptionParametersBuilder, Context as SealContext, Decryptor, Encryptor,
-    KeyGenerator, Modulus, PolynomialArray,
+    AsymmetricComponents, BFVEvaluator, BfvEncryptionParametersBuilder, Context as SealContext,
+    Decryptor, Encryptor, KeyGenerator, Modulus, SymmetricComponents,
 };
 
 pub use sunscreen_compiler_common::{Type, TypeName};
@@ -525,13 +525,7 @@ where
         &self,
         val: &P,
         public_key: &PublicKey,
-        mut f: impl FnMut(
-            &SealPlaintext,
-            &SealCiphertext,
-            PolynomialArray,
-            PolynomialArray,
-            SealPlaintext,
-        ) -> Result<()>,
+        mut f: impl FnMut(&SealPlaintext, &SealCiphertext, AsymmetricComponents) -> Result<()>,
     ) -> Result<Ciphertext>
     where
         P: TryIntoPlaintext + TypeNameInstance,
@@ -547,8 +541,8 @@ where
                     &val.type_name_instance(),
                     inner_plain,
                     move |e, p| {
-                        let (ct, u, e, r) = e.encrypt_return_components(p)?;
-                        f(p, &ct, u, e, r)?;
+                        let (ct, components) = e.encrypt_return_components(p)?;
+                        f(p, &ct, components)?;
                         Ok(ct)
                     },
                 )
@@ -568,7 +562,7 @@ where
         &self,
         val: &P,
         private_key: &PrivateKey,
-        mut f: impl FnMut(&SealPlaintext, &SealCiphertext, PolynomialArray, SealPlaintext) -> Result<()>,
+        mut f: impl FnMut(&SealPlaintext, &SealCiphertext, SymmetricComponents) -> Result<()>,
     ) -> Result<Ciphertext>
     where
         P: TryIntoPlaintext + TypeNameInstance,
@@ -584,8 +578,8 @@ where
                     &val.type_name_instance(),
                     inner_plain,
                     move |e, p| {
-                        let (ct, e, r) = e.encrypt_return_components(p)?;
-                        f(p, &ct, e, r)?;
+                        let (ct, components) = e.encrypt_return_components(p)?;
+                        f(p, &ct, components)?;
                         Ok(ct)
                     },
                 )
@@ -612,7 +606,10 @@ trait SealEncrypt {
     fn encrypt(&self, plaintext: &SealPlaintext) -> Result<SealCiphertext>;
 
     /// Perform encryption returning components
-    fn encrypt_return_components(&self, plaintext: &SealPlaintext) -> Result<Self::Components>;
+    fn encrypt_return_components(
+        &self,
+        plaintext: &SealPlaintext,
+    ) -> Result<(SealCiphertext, Self::Components)>;
 
     /// Perform deterministic encryption
     #[cfg(feature = "deterministic")]
@@ -656,12 +653,7 @@ trait SealEncrypt {
 // This impl should have all asymmetric encryption methods.
 impl SealEncrypt for Asymmetric {
     type Key = PublicKey;
-    type Components = (
-        SealCiphertext,
-        PolynomialArray,
-        PolynomialArray,
-        SealPlaintext,
-    );
+    type Components = AsymmetricComponents;
     fn new(ctx: &SealContext, key: &Self::Key) -> Result<Self> {
         Ok(Self(Encryptor::with_public_key(ctx, &key.public_key.data)?))
     }
@@ -669,7 +661,10 @@ impl SealEncrypt for Asymmetric {
         Ok(self.0.encrypt(plaintext)?)
     }
 
-    fn encrypt_return_components(&self, plaintext: &SealPlaintext) -> Result<Self::Components> {
+    fn encrypt_return_components(
+        &self,
+        plaintext: &SealPlaintext,
+    ) -> Result<(SealCiphertext, Self::Components)> {
         Ok(self.0.encrypt_return_components(plaintext)?)
     }
 
@@ -686,7 +681,7 @@ impl SealEncrypt for Asymmetric {
 // This impl should have all symmetric encryption methods.
 impl SealEncrypt for Symmetric {
     type Key = PrivateKey;
-    type Components = (SealCiphertext, PolynomialArray, SealPlaintext);
+    type Components = SymmetricComponents;
 
     fn new(ctx: &SealContext, key: &Self::Key) -> Result<Self> {
         Ok(Self(Encryptor::with_secret_key(ctx, &key.0.data)?))
@@ -696,7 +691,10 @@ impl SealEncrypt for Symmetric {
         Ok(self.0.encrypt_symmetric(plaintext)?)
     }
 
-    fn encrypt_return_components(&self, plaintext: &SealPlaintext) -> Result<Self::Components> {
+    fn encrypt_return_components(
+        &self,
+        plaintext: &SealPlaintext,
+    ) -> Result<(SealCiphertext, Self::Components)> {
         Ok(self.0.encrypt_symmetric_return_components(plaintext)?)
     }
 

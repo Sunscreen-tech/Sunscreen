@@ -6,6 +6,52 @@ use crate::data_structures::PolynomialArray;
 use crate::error::*;
 use crate::{Ciphertext, Context, Plaintext, PublicKey, SecretKey};
 
+/// The components to an asymmetric encryption.
+pub struct AsymmetricComponents {
+    /// Uniform ternary polynomial.
+    ///
+    /// This polynomial array should always have size one, i.e. it is a single
+    /// polynomial.
+    pub u: PolynomialArray,
+    /// Error polynomial.
+    ///
+    /// This will generally have length two, if relinearization is performed after every
+    /// multiplication.
+    pub e: PolynomialArray,
+    /// Rounding component after scaling the message by delta.
+    pub r: Plaintext,
+}
+
+/// The components to a symmetric encryption.
+pub struct SymmetricComponents {
+    /// Error polynomial.
+    ///
+    /// This polynomial array should always have size one, i.e. it is a single
+    /// polynomial.
+    pub e: PolynomialArray,
+    /// Rounding component after scaling the message by delta.
+    pub r: Plaintext,
+}
+
+impl core::fmt::Debug for AsymmetricComponents {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+        f.debug_struct("AsymmetricComponents")
+            .field("u", &"<ELIDED>")
+            .field("e", &"<ELIDED>")
+            .field("r", &"<ELIDED>")
+            .finish()
+    }
+}
+
+impl core::fmt::Debug for SymmetricComponents {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+        f.debug_struct("SymmetricComponents")
+            .field("e", &"<ELIDED>")
+            .field("r", &"<ELIDED>")
+            .finish()
+    }
+}
+
 /**
  *
  * Encrypts Plaintext objects into Ciphertext objects.
@@ -152,11 +198,11 @@ impl Encryptor {
     pub fn encrypt_return_components(
         &self,
         plaintext: &Plaintext,
-    ) -> Result<(Ciphertext, PolynomialArray, PolynomialArray, Plaintext)> {
+    ) -> Result<(Ciphertext, AsymmetricComponents)> {
         let ciphertext = Ciphertext::new()?;
         let u_destination = PolynomialArray::new()?;
         let e_destination = PolynomialArray::new()?;
-        let fix_destination = Plaintext::new()?;
+        let r_destination = Plaintext::new()?;
 
         convert_seal_error(unsafe {
             bindgen::Encryptor_EncryptReturnComponents(
@@ -166,12 +212,19 @@ impl Encryptor {
                 ciphertext.get_handle(),
                 u_destination.get_handle(),
                 e_destination.get_handle(),
-                fix_destination.get_handle(),
+                r_destination.get_handle(),
                 null_mut(),
             )
         })?;
 
-        Ok((ciphertext, u_destination, e_destination, fix_destination))
+        Ok((
+            ciphertext,
+            AsymmetricComponents {
+                u: u_destination,
+                e: e_destination,
+                r: r_destination,
+            },
+        ))
     }
 
     /**
@@ -200,7 +253,7 @@ impl Encryptor {
         let ciphertext = Ciphertext::new()?;
         let u_destination = PolynomialArray::new()?;
         let e_destination = PolynomialArray::new()?;
-        let fix_destination = Plaintext::new()?;
+        let r_destination = Plaintext::new()?;
 
         // We do not need the components so we do not export them.
         convert_seal_error(unsafe {
@@ -211,7 +264,7 @@ impl Encryptor {
                 ciphertext.get_handle(),
                 u_destination.get_handle(),
                 e_destination.get_handle(),
-                fix_destination.get_handle(),
+                r_destination.get_handle(),
                 seed.as_ptr() as *mut c_void,
                 null_mut(),
             )
@@ -244,11 +297,11 @@ impl Encryptor {
         &self,
         plaintext: &Plaintext,
         seed: &[u64; 8],
-    ) -> Result<(Ciphertext, PolynomialArray, PolynomialArray, Plaintext)> {
+    ) -> Result<(Ciphertext, AsymmetricComponents)> {
         let ciphertext = Ciphertext::new()?;
         let u_destination = PolynomialArray::new()?;
         let e_destination = PolynomialArray::new()?;
-        let fix_destination = Plaintext::new()?;
+        let r_destination = Plaintext::new()?;
 
         // We do not need the components so we do not export them.
         convert_seal_error(unsafe {
@@ -259,13 +312,20 @@ impl Encryptor {
                 ciphertext.get_handle(),
                 u_destination.get_handle(),
                 e_destination.get_handle(),
-                fix_destination.get_handle(),
+                r_destination.get_handle(),
                 seed.as_ptr() as *mut c_void,
                 null_mut(),
             )
         })?;
 
-        Ok((ciphertext, u_destination, e_destination, fix_destination))
+        Ok((
+            ciphertext,
+            AsymmetricComponents {
+                u: u_destination,
+                e: e_destination,
+                r: r_destination,
+            },
+        ))
     }
 
     /**
@@ -356,7 +416,7 @@ impl Encryptor {
     pub fn encrypt_symmetric_return_components(
         &self,
         plaintext: &Plaintext,
-    ) -> Result<(Ciphertext, PolynomialArray, Plaintext)> {
+    ) -> Result<(Ciphertext, SymmetricComponents)> {
         let ciphertext = Ciphertext::new()?;
         let e_destination = PolynomialArray::new()?;
         let r_destination = Plaintext::new()?;
@@ -372,7 +432,13 @@ impl Encryptor {
             )
         })?;
 
-        Ok((ciphertext, e_destination, r_destination))
+        Ok((
+            ciphertext,
+            SymmetricComponents {
+                e: e_destination,
+                r: r_destination,
+            },
+        ))
     }
 
     /**
@@ -398,7 +464,7 @@ impl Encryptor {
         &self,
         plaintext: &Plaintext,
         seed: &[u64; 8],
-    ) -> Result<(Ciphertext, PolynomialArray, Plaintext)> {
+    ) -> Result<(Ciphertext, SymmetricComponents)> {
         let ciphertext = Ciphertext::new()?;
         let e_destination = PolynomialArray::new()?;
         let r_destination = Plaintext::new()?;
@@ -416,7 +482,13 @@ impl Encryptor {
             )
         })?;
 
-        Ok((ciphertext, e_destination, r_destination))
+        Ok((
+            ciphertext,
+            SymmetricComponents {
+                e: e_destination,
+                r: r_destination,
+            },
+        ))
     }
 }
 

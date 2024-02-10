@@ -71,7 +71,7 @@ where
     // Generate plaintext data
     let plaintext = encoder.encode_unsigned(message).unwrap();
 
-    let (ciphertext, u, e, r) = encryptor.encrypt_return_components(&plaintext).unwrap();
+    let (ciphertext, components) = encryptor.encrypt_return_components(&plaintext).unwrap();
 
     let decrypted = decryptor.decrypt(&ciphertext).unwrap();
     let data = encoder.decode_unsigned(&decrypted).unwrap();
@@ -86,6 +86,6 @@ where
         ciphertext,
         public_key: Cow::Borrowed(&public_key),
     };
-    let witness = BfvWitness::PublicKeyEncryption { u, e, r };
+    let witness = BfvWitness::PublicKeyEncryption(components);
     generate_prover_knowledge(&[statement], &[message], &[witness], &params, &ctx)
 }

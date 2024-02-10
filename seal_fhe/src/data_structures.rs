@@ -314,8 +314,8 @@ impl Drop for PolynomialArray {
 #[cfg(test)]
 mod tests {
     use crate::{
-        BFVEncoder, BfvEncryptionParametersBuilder, CoefficientModulus, Encryptor, KeyGenerator,
-        Modulus, PlainModulus, Plaintext, SecurityLevel,
+        AsymmetricComponents, BFVEncoder, BfvEncryptionParametersBuilder, CoefficientModulus,
+        Encryptor, KeyGenerator, Modulus, PlainModulus, Plaintext, SecurityLevel,
     };
 
     use super::*;
@@ -388,7 +388,8 @@ mod tests {
         let encryptor =
             Encryptor::with_public_and_secret_key(&ctx, &public_key, &secret_key).unwrap();
 
-        let (ciphertext, u, e, r) = encryptor.encrypt_return_components(&plaintext).unwrap();
+        let (ciphertext, AsymmetricComponents { u, e, r }) =
+            encryptor.encrypt_return_components(&plaintext).unwrap();
 
         (ctx, coeff_modulus, public_key, ciphertext, u, e, r)
     }

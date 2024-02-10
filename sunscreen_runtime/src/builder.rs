@@ -503,7 +503,7 @@ mod linked {
             let existing_idx = message.linked_id();
             let mut i = 0;
             self.runtime
-                .encrypt_map_components(&message, public_key, |m, ct, u, e, r| {
+                .encrypt_map_components(&message, public_key, |m, ct, components| {
                     let message_id = if let Some(idx) = existing_idx {
                         idx + i
                     } else {
@@ -521,7 +521,7 @@ mod linked {
                             public_key: Cow::Borrowed(&public_key.public_key.data),
                         });
                     self.witness
-                        .push(BfvWitness::PublicKeyEncryption { u, e, r: r.clone() });
+                        .push(BfvWitness::PublicKeyEncryption(components));
                     i += 1;
                     Ok(())
                 })
@@ -535,8 +535,10 @@ mod linked {
         ) -> Result<Ciphertext> {
             let existing_idx = message.linked_id();
             let mut i = 0;
-            self.runtime
-                .encrypt_symmetric_map_components(&message, private_key, |m, ct, e, r| {
+            self.runtime.encrypt_symmetric_map_components(
+                &message,
+                private_key,
+                |m, ct, components| {
                     let message_id = if let Some(idx) = existing_idx {
                         idx + i
                     } else {
@@ -554,12 +556,12 @@ mod linked {
                         });
                     self.witness.push(BfvWitness::PrivateKeyEncryption {
                         private_key: Cow::Borrowed(&private_key.0.data),
-                        e,
-                        r,
+                        components,
                     });
                     i += 1;
                     Ok(())
-                })
+                },
+            )
         }
 
         fn plaintext_typed<P>(&self, pt: &P) -> Result<PlaintextTyped>

@@ -5,7 +5,8 @@ use std::{borrow::Cow, fmt::Debug, ops::Neg};
 
 use crypto_bigint::{NonZero, Uint};
 use seal_fhe::{
-    Ciphertext, Context, EncryptionParameters, Plaintext, PolynomialArray, PublicKey, SecretKey,
+    AsymmetricComponents, Ciphertext, Context, EncryptionParameters, Plaintext, PolynomialArray,
+    PublicKey, SecretKey, SymmetricComponents,
 };
 use sunscreen_math::{
     poly::Polynomial,
@@ -88,30 +89,11 @@ pub enum BfvWitness<'s> {
     PrivateKeyEncryption {
         /// The private key used for the encryption.
         private_key: Cow<'s, SecretKey>,
-        /// Gaussian error polynomial
-        ///
-        /// N.B. this polynomial array should always have size one, see note below.
-        e: PolynomialArray,
-        /// Rounding component after scaling the message by delta.
-        r: Plaintext,
+        /// The symmetric encryption components.
+        components: SymmetricComponents,
     },
     /// A witness for the [`BfvProofStatement::PublicKeyEncryption`] variant.
-    PublicKeyEncryption {
-        /// Uniform ternary polynomial.
-        ///
-        /// N.B. this polynomial array should always have size one, i.e. it is a single
-        /// polynomial. I believe the type is simply the only reasonable one exported by
-        /// `seal_fhe`.
-        u: PolynomialArray,
-        /// Gaussian error polynomial.
-        ///
-        /// Note that we currently assume that ciphertexts have length two, i.e.
-        /// relinearization happens after every multiplication, and hence this error
-        /// polynomial array should also have size two.
-        e: PolynomialArray,
-        /// Rounding component after scaling the message by delta.
-        r: Plaintext,
-    },
+    PublicKeyEncryption(AsymmetricComponents),
 }
 
 /// A BFV message, which is a SEAL plaintext and an optional coefficient bound.
@@ -328,7 +310,10 @@ where
     for w in witness {
         match w {
             // sk, e
-            BfvWitness::PrivateKeyEncryption { private_key, e, r } => {
+            BfvWitness::PrivateKeyEncryption {
+                private_key,
+                components: SymmetricComponents { e, r },
+            } => {
                 let r = r.as_poly();
                 let sk = (ctx, private_key.as_ref()).as_poly();
                 let e = e.as_poly_vec().pop().unwrap();
@@ -338,7 +323,7 @@ where
                 offsets.inc_private();
             }
             // r_i, u_i, e_i
-            BfvWitness::PublicKeyEncryption { u, e, r } => {
+            BfvWitness::PublicKeyEncryption(AsymmetricComponents { u, e, r }) => {
                 let r = r.as_poly();
                 let u = u.as_poly_vec().pop().unwrap();
                 let mut e = e.as_poly_vec();
@@ -847,7 +832,7 @@ mod tests {
             // statements without duplicate messages
             for (i, m) in messages.iter().enumerate() {
                 if i < num_unique_public_statements {
-                    let (ct, u, e, r) = self
+                    let (ct, components) = self
                         .encryptor
                         .encrypt_return_components(&m.plaintext)
                         .unwrap();
@@ -856,9 +841,9 @@ mod tests {
                         ciphertext: ct,
                         public_key: Cow::Borrowed(&self.public_key),
                     });
-                    witness.push(BfvWitness::PublicKeyEncryption { u, e, r });
+                    witness.push(BfvWitness::PublicKeyEncryption(components));
                 } else {
-                    let (ct, e, r) = self
+                    let (ct, components) = self
                         .encryptor
                         .encrypt_symmetric_return_components(&m.plaintext)
                         .unwrap();
@@ -868,8 +853,7 @@ mod tests {
                     });
                     witness.push(BfvWitness::PrivateKeyEncryption {
                         private_key: Cow::Borrowed(&self.secret_key),
-                        e,
-                        r,
+                        components,
                     });
                 }
             }
@@ -878,7 +862,7 @@ mod tests {
             let mut rng = rand::thread_rng();
             for _ in 0..num_duplicate_public_msgs {
                 let i = rng.gen_range(0..num_msgs);
-                let (ct, u, e, r) = self
+                let (ct, components) = self
                     .encryptor
                     .encrypt_return_components(&messages[i].plaintext)
                     .unwrap();
@@ -887,11 +871,11 @@ mod tests {
                     ciphertext: ct,
                     public_key: Cow::Borrowed(&self.public_key),
                 });
-                witness.push(BfvWitness::PublicKeyEncryption { u, e, r });
+                witness.push(BfvWitness::PublicKeyEncryption(components));
             }
             for _ in 0..num_duplicate_private_msgs {
                 let i = rng.gen_range(0..num_msgs);
-                let (ct, e, r) = self
+                let (ct, components) = self
                     .encryptor
                     .encrypt_symmetric_return_components(&messages[i].plaintext)
                     .unwrap();
@@ -901,8 +885,7 @@ mod tests {
                 });
                 witness.push(BfvWitness::PrivateKeyEncryption {
                     private_key: Cow::Borrowed(&self.secret_key),
-                    e,
-                    r,
+                    components,
                 });
             }
 

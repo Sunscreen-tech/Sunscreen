@@ -419,7 +419,7 @@ where
         ) {
             (Context::Seal(context), InnerPlaintext::Seal(inner_plain)) => {
                 let encryptor = Asymmetric::new(context, public_key)?;
-                encryptor.aggregate_ciphertexts(&P::type_name(), inner_plain, |e, p| e.encrypt(p))
+                Self::aggregate_ciphertexts(&P::type_name(), inner_plain, |p| encryptor.encrypt(p))
             }
         }
     }
@@ -440,7 +440,7 @@ where
         ) {
             (Context::Seal(context), InnerPlaintext::Seal(inner_plain)) => {
                 let encryptor = Symmetric::new(context, private_key)?;
-                encryptor.aggregate_ciphertexts(&P::type_name(), inner_plain, |e, p| e.encrypt(p))
+                Self::aggregate_ciphertexts(&P::type_name(), inner_plain, |p| encryptor.encrypt(p))
             }
         }
     }
@@ -471,9 +471,9 @@ where
             &val.try_into_plaintext(&fhe_data.params)?.inner,
         ) {
             (Context::Seal(context), InnerPlaintext::Seal(inner_plain)) => {
-                let encryptor = <Asymmetric as SealEncrypt>::new(context, public_key)?;
-                encryptor.aggregate_ciphertexts(&P::type_name(), inner_plain, |e, p| {
-                    e.encrypt_deterministic(p, seed)
+                let encryptor = Asymmetric::new(context, public_key)?;
+                Self::aggregate_ciphertexts(&P::type_name(), inner_plain, |p| {
+                    encryptor.encrypt_deterministic(p, seed)
                 })
             }
         }
@@ -505,9 +505,9 @@ where
             &val.try_into_plaintext(&fhe_data.params)?.inner,
         ) {
             (Context::Seal(context), InnerPlaintext::Seal(inner_plain)) => {
-                let encryptor = <Symmetric as SealEncrypt>::new(context, private_key)?;
-                encryptor.aggregate_ciphertexts(&P::type_name(), inner_plain, |e, p| {
-                    e.encrypt_deterministic(p, seed)
+                let encryptor = Symmetric::new(context, private_key)?;
+                Self::aggregate_ciphertexts(&P::type_name(), inner_plain, |p| {
+                    encryptor.encrypt_deterministic(p, seed)
                 })
             }
         }
@@ -537,15 +537,11 @@ where
         ) {
             (Context::Seal(context), InnerPlaintext::Seal(inner_plain)) => {
                 let encryptor = Asymmetric::new(context, public_key)?;
-                encryptor.aggregate_ciphertexts(
-                    &val.type_name_instance(),
-                    inner_plain,
-                    move |e, p| {
-                        let (ct, components) = e.encrypt_return_components(p)?;
-                        f(p, &ct, components)?;
-                        Ok(ct)
-                    },
-                )
+                Self::aggregate_ciphertexts(&val.type_name_instance(), inner_plain, move |p| {
+                    let (ct, components) = encryptor.encrypt_return_components(p)?;
+                    f(p, &ct, components)?;
+                    Ok(ct)
+                })
             }
         }
     }
@@ -574,17 +570,39 @@ where
         ) {
             (Context::Seal(context), InnerPlaintext::Seal(inner_plain)) => {
                 let encryptor = Symmetric::new(context, private_key)?;
-                encryptor.aggregate_ciphertexts(
-                    &val.type_name_instance(),
-                    inner_plain,
-                    move |e, p| {
-                        let (ct, components) = e.encrypt_return_components(p)?;
-                        f(p, &ct, components)?;
-                        Ok(ct)
-                    },
-                )
+                Self::aggregate_ciphertexts(&val.type_name_instance(), inner_plain, move |p| {
+                    let (ct, components) = encryptor.encrypt_return_components(p)?;
+                    f(p, &ct, components)?;
+                    Ok(ct)
+                })
             }
         }
+    }
+
+    fn aggregate_ciphertexts<F>(
+        pt_type: &Type,
+        pts: &[WithContext<SealPlaintext>],
+        mut enc_fn: F,
+    ) -> Result<Ciphertext>
+    where
+        F: FnMut(&SealPlaintext) -> Result<SealCiphertext>,
+    {
+        let cts = pts
+            .iter()
+            .map(|pt| {
+                Ok(WithContext {
+                    params: pt.params.clone(),
+                    data: enc_fn(&pt.data)?,
+                })
+            })
+            .collect::<Result<Vec<_>>>()?;
+        Ok(Ciphertext {
+            data_type: Type {
+                is_encrypted: true,
+                ..pt_type.clone()
+            },
+            inner: InnerCiphertext::Seal(cts),
+        })
     }
 }
 
@@ -618,36 +636,6 @@ trait SealEncrypt {
         plaintext: &SealPlaintext,
         seed: &[u64; 8],
     ) -> Result<SealCiphertext>;
-
-    /// Aggregate a runtime level ciphertext across multiple inner plaintexts
-    fn aggregate_ciphertexts<'a, F, I>(
-        &self,
-        pt_type: &Type,
-        pts: I,
-        mut enc_fn: F,
-    ) -> Result<Ciphertext>
-    where
-        I: IntoIterator<Item = &'a WithContext<SealPlaintext>>,
-        F: FnMut(&Self, &SealPlaintext) -> Result<SealCiphertext>,
-    {
-        let cts = pts
-            .into_iter()
-            .map(|pt| {
-                let ct = WithContext {
-                    params: pt.params.clone(),
-                    data: enc_fn(self, &pt.data)?,
-                };
-                Ok(ct)
-            })
-            .collect::<Result<Vec<_>>>()?;
-        Ok(Ciphertext {
-            data_type: Type {
-                is_encrypted: true,
-                ..pt_type.clone()
-            },
-            inner: InnerCiphertext::Seal(cts),
-        })
-    }
 }
 
 // This impl should have all asymmetric encryption methods.

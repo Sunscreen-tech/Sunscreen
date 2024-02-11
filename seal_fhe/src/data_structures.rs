@@ -6,6 +6,7 @@ use crate::error::*;
 use crate::Ciphertext;
 use crate::Context;
 use crate::PublicKey;
+use crate::SecretKey;
 
 /**
  * A SEAL array storing a number of polynomials. In particular, type implements
@@ -89,6 +90,25 @@ impl PolynomialArray {
                 null_mut(),
                 context.get_handle(),
                 public_key.get_handle(),
+                &mut handle,
+            )
+        })?;
+
+        Ok(Self { handle })
+    }
+
+    /**
+     * Creates a polynomial array from a reference to a secret key.
+     */
+    pub fn new_from_secret_key(context: &Context, secret_key: &SecretKey) -> Result<Self> {
+        let mut handle: *mut c_void = null_mut();
+
+        // By giving an empty pool handle we acquire the global one (first argument to create).
+        convert_seal_error(unsafe {
+            bindgen::PolynomialArray_CreateFromSecretKey(
+                null_mut(),
+                context.get_handle(),
+                secret_key.get_handle(),
                 &mut handle,
             )
         })?;
@@ -294,8 +314,8 @@ impl Drop for PolynomialArray {
 #[cfg(test)]
 mod tests {
     use crate::{
-        BFVEncoder, BfvEncryptionParametersBuilder, CoefficientModulus, Encryptor, KeyGenerator,
-        Modulus, PlainModulus, Plaintext, SecurityLevel,
+        AsymmetricComponents, BFVEncoder, BfvEncryptionParametersBuilder, CoefficientModulus,
+        Encryptor, KeyGenerator, Modulus, PlainModulus, Plaintext, SecurityLevel,
     };
 
     use super::*;
@@ -368,7 +388,8 @@ mod tests {
         let encryptor =
             Encryptor::with_public_and_secret_key(&ctx, &public_key, &secret_key).unwrap();
 
-        let (ciphertext, u, e, r) = encryptor.encrypt_return_components(&plaintext).unwrap();
+        let (ciphertext, AsymmetricComponents { u, e, r }) =
+            encryptor.encrypt_return_components(&plaintext).unwrap();
 
         (ctx, coeff_modulus, public_key, ciphertext, u, e, r)
     }

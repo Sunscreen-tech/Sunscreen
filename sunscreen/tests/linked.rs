@@ -229,7 +229,7 @@ mod linked_tests {
         let rt = FheZkpRuntime::new(app.params(), &BulletproofsBackend::new()).unwrap();
         let compare_signed_zkp = app.get_zkp_program(compare_signed).unwrap();
 
-        let (public_key, _secret_key) = rt.generate_keys().unwrap();
+        let (public_key, private_key) = rt.generate_keys().unwrap();
 
         // To slow to run in a loop :/ if we eventually expose small params for testing, do more
         // cases
@@ -240,7 +240,9 @@ mod linked_tests {
 
             let mut proof_builder = LogProofBuilder::new(&rt);
             let (_ct, x_msg) = proof_builder.encrypt_and_link(&x, &public_key).unwrap();
-            let (_ct, y_msg) = proof_builder.encrypt_and_link(&y, &public_key).unwrap();
+            let (_ct, y_msg) = proof_builder
+                .encrypt_symmetric_and_link(&y, &private_key)
+                .unwrap();
             proof_builder
                 .zkp_program(compare_signed_zkp)
                 .unwrap()
@@ -332,7 +334,7 @@ mod linked_tests {
         let rt = FheZkpRuntime::new(app.params(), &BulletproofsBackend::new()).unwrap();
         let is_eq_zkp = app.get_zkp_program(is_eq_3).unwrap();
 
-        let (public_key, _secret_key) = rt.generate_keys().unwrap();
+        let (public_key, private_key) = rt.generate_keys().unwrap();
 
         for val in [3, 0, -3] {
             let mut proof_builder = LogProofBuilder::new(&rt);
@@ -343,7 +345,7 @@ mod linked_tests {
             let _ct_x1 = proof_builder.encrypt_linked(&x_msg, &public_key).unwrap();
             // proves same value within ZKP
             let (_ct_y, y_msg) = proof_builder
-                .encrypt_and_link(&Signed::from(val), &public_key)
+                .encrypt_symmetric_and_link(&Signed::from(val), &private_key)
                 .unwrap();
             proof_builder
                 .zkp_program(is_eq_zkp)

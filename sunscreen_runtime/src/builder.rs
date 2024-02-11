@@ -372,7 +372,7 @@ mod linked {
             P: TryIntoPlaintext + TypeName,
         {
             let pt = self.plaintext_typed(message)?;
-            self.encrypt_internal(Message::Plain(pt), public_key, None)
+            self.encrypt_asymmetric_internal(Message::Plain(pt), public_key, None)
         }
 
         /// Encrypt a plaintext symmetrically, adding the encryption statement to the proof.
@@ -435,7 +435,7 @@ mod linked {
             let plaintext_typed = self.plaintext_typed(message)?;
             let idx_start = self.messages.len();
             let ct = match key {
-                Key::Public(public_key) => self.encrypt_internal(
+                Key::Public(public_key) => self.encrypt_asymmetric_internal(
                     Message::Plain(plaintext_typed.clone()),
                     public_key,
                     Some(self.mk_bounds::<P>()),
@@ -474,7 +474,7 @@ mod linked {
         ) -> Result<Ciphertext> {
             // The existing message already has bounds, no need to recompute them.
             let bounds = None;
-            self.encrypt_internal(Message::Linked(message.clone()), public_key, bounds)
+            self.encrypt_asymmetric_internal(Message::Linked(message.clone()), public_key, bounds)
         }
 
         /// Encrypt a linked message symmetrically, adding the new encryption statement to the
@@ -494,7 +494,7 @@ mod linked {
             self.encrypt_symmetric_internal(Message::Linked(message.clone()), private_key, bounds)
         }
 
-        fn encrypt_internal(
+        fn encrypt_asymmetric_internal(
             &mut self,
             message: Message,
             public_key: &'k PublicKey,

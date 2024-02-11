@@ -80,6 +80,26 @@ impl Context {
     }
 
     /**
+     * Creates an instance of SEALContext and performs several pre-computations
+     * on the given EncryptionParameters. This function explicitly allows insecure parameters,
+     * and is only for testing!
+     *
+     * * `params` - The encryption parameters.
+     * * `expand_mod_chain` - Determines whether the modulus switching chain
+     * should be created.
+     */
+    #[cfg(feature = "insecure-params")]
+    pub fn new_insecure(params: &EncryptionParameters, expand_mod_chain: bool) -> Result<Self> {
+        let mut handle: *mut c_void = null_mut();
+
+        convert_seal_error(unsafe {
+            bindgen::SEALContext_Create(params.get_handle(), expand_mod_chain, 0, &mut handle)
+        })?;
+
+        Ok(Context { handle })
+    }
+
+    /**
      * Returns handle to the underlying SEAL object.
      */
     pub fn get_handle(&self) -> *mut c_void {

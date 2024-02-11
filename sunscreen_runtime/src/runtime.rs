@@ -840,6 +840,10 @@ impl GenericRuntime<(), ()> {
                     )
                     .build()?;
 
+                #[cfg(feature = "insecure-params")]
+                let context = SealContext::new_insecure(&bfv_params, true)?;
+
+                #[cfg(not(feature = "insecure-params"))]
                 let context = SealContext::new(&bfv_params, true, params.security_level)?;
 
                 Ok(FheRuntimeData {

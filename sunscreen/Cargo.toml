@@ -58,6 +58,7 @@ proptest = { workspace = true }
 rand = { workspace = true }
 sunscreen_zkp_backend = { workspace = true, features = ["bulletproofs"] }
 sunscreen_compiler_common = { workspace = true }
+sunscreen_runtime = { workspace = true, features = ["insecure-params"] }
 serde_json = { workspace = true }
 
 [features]

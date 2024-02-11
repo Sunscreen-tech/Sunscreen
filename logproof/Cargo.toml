@@ -24,6 +24,7 @@ thiserror = { workspace = true }
 bincode = { workspace = true }
 criterion = { workspace = true }
 once_cell = { workspace = true }
+seal_fhe = { workspace = true, features = ["insecure-params"] }
 
 [features]
 default = []

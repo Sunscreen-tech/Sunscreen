@@ -56,7 +56,7 @@ fn main() -> Result<()> {
     println!("Building linkedproof...");
     let lp = proof_builder
         .zkp_program(valid_tx_zkp)?
-        .linked_input(&tx_msg)
+        .linked_input(tx_msg)
         .public_input(balance)
         .build_linkedproof()?;
 

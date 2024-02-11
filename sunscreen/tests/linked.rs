@@ -69,7 +69,7 @@ mod linked_tests {
             let lp = proof_builder
                 .zkp_program(valid_transaction_zkp)
                 .unwrap()
-                .linked_input(&tx_msg)
+                .linked_input(tx_msg)
                 .public_input(BulletproofsField::from(balance))
                 .build_linkedproof()
                 .unwrap();
@@ -110,7 +110,7 @@ mod linked_tests {
             proof_builder
                 .zkp_program(valid_transaction_zkp)
                 .unwrap()
-                .linked_input(&tx_msg)
+                .linked_input(tx_msg)
                 .public_input(BulletproofsField::from(balance));
 
             let lp = proof_builder.build_linkedproof();
@@ -145,7 +145,7 @@ mod linked_tests {
             proof_builder
                 .zkp_program(is_eq_zkp)
                 .unwrap()
-                .linked_input(&val_msg)
+                .linked_input(val_msg)
                 .public_input(BulletproofsField::from(val));
 
             let lp = proof_builder.build_linkedproof().unwrap_or_else(|e| {
@@ -199,7 +199,7 @@ mod linked_tests {
             proof_builder
                 .zkp_program(is_eq_zkp)
                 .unwrap()
-                .linked_input(&x_msg)
+                .linked_input(x_msg)
                 .private_input(BulletproofsField::from(x_n))
                 .private_input(BulletproofsField::from(x_d));
 
@@ -246,8 +246,8 @@ mod linked_tests {
             proof_builder
                 .zkp_program(compare_signed_zkp)
                 .unwrap()
-                .linked_input(&x_msg)
-                .linked_input(&y_msg);
+                .linked_input(x_msg)
+                .linked_input(y_msg);
 
             let lp = proof_builder
                 .build_linkedproof()
@@ -297,8 +297,8 @@ mod linked_tests {
             proof_builder
                 .zkp_program(compare_rational_zkp)
                 .unwrap()
-                .linked_input(&x_msg)
-                .linked_input(&y_msg);
+                .linked_input(x_msg)
+                .linked_input(y_msg);
 
             let lp = proof_builder
                 .build_linkedproof()
@@ -350,8 +350,8 @@ mod linked_tests {
             proof_builder
                 .zkp_program(is_eq_zkp)
                 .unwrap()
-                .linked_input(&x_msg)
-                .linked_input(&y_msg)
+                .linked_input(x_msg)
+                .linked_input(y_msg)
                 .private_input(BulletproofsField::from(val));
 
             let lp = proof_builder.build_linkedproof().unwrap();
@@ -415,7 +415,7 @@ mod linked_tests {
                 let (_ct, msg) = proof_builder
                     .encrypt_and_link(&Signed::from(1), &public_key)
                     .unwrap();
-                proof_builder.linked_input(&msg);
+                proof_builder.linked_input(msg);
             }
             for _ in 0..num_private_inputs {
                 proof_builder.private_input(BulletproofsField::from(1));
@@ -454,8 +454,8 @@ mod linked_tests {
             .encrypt_and_link(&Unsigned64::from(1), &public_key)
             .unwrap();
         proof_builder
-            .linked_input(&signed_msg)
-            .linked_input(&unsigned_msg);
+            .linked_input(signed_msg)
+            .linked_input(unsigned_msg);
         let res = proof_builder.build_linkedproof();
         assert!(matches!(
             res,

@@ -274,11 +274,22 @@ mod linked {
     }
 
     /// A [`Plaintext`] message that can be linked. Create this with [`LogProofBuilder::encrypt_and_link`].
-    #[derive(Debug, Clone)]
+    #[derive(Debug)]
     pub struct LinkedMessage {
         pub(crate) id: usize,
         pub(crate) message: Arc<LinkedPlaintextTyped>,
         pub(crate) len: usize,
+    }
+
+    impl LinkedMessage {
+        // Only allow cloning internally.
+        fn clone(&self) -> Self {
+            LinkedMessage {
+                id: self.id,
+                message: self.message.clone(),
+                len: self.len,
+            }
+        }
     }
 
     enum Message {
@@ -644,8 +655,8 @@ mod linked {
         /// Add a linked private input to the ZKP program.
         ///
         /// This method assumes that you've created the `message` argument with _this_ builder.
-        pub fn linked_input(&mut self, message: &LinkedMessage) -> &mut Self {
-            self.linked_inputs.push(message.clone());
+        pub fn linked_input(&mut self, message: LinkedMessage) -> &mut Self {
+            self.linked_inputs.push(message);
             self
         }
 

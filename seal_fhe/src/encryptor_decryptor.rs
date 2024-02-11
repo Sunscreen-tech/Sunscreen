@@ -90,6 +90,9 @@ pub type SymmetricEncryptor = Encryptor<Sym>;
 /// An encryptor capable of asymmetric encryptions.
 pub type AsymmetricEncryptor = Encryptor<Asym>;
 
+/// An encryptor capable of both symmetric and asymmetric encryptions.
+pub type SymAsymEncryptor = Encryptor<SymAsym>;
+
 mod sealed {
     pub trait Sealed {}
     impl Sealed for super::Sym {}
@@ -209,6 +212,13 @@ impl SymmetricEncryptor {
     /// Create a new symmetric encryptor.
     pub fn new(ctx: &Context, secret_key: &SecretKey) -> Result<Self> {
         Encryptor::with_secret_key(ctx, secret_key)
+    }
+}
+
+impl SymAsymEncryptor {
+    /// Create a new encryptor capable of both symmetric and asymmetric encryption.
+    pub fn new(ctx: &Context, public_key: &PublicKey, secret_key: &SecretKey) -> Result<Self> {
+        Encryptor::with_public_and_secret_key(ctx, public_key, secret_key)
     }
 }
 

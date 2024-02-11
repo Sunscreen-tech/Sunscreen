@@ -263,7 +263,7 @@ where
         match s {
             // sk, e blocks
             BfvProofStatement::PrivateKeyEncryption { ciphertext, .. } => {
-                let c1 = (ctx, ciphertext).as_poly_vec().pop().unwrap();
+                let c1 = WithCtx(ctx, ciphertext).as_poly_vec().pop().unwrap();
                 a.set(row, offsets.private_a, c1);
                 a.set(row, offsets.private_e, Polynomial::one());
                 offsets.inc_private();
@@ -272,7 +272,7 @@ where
             }
             // pk, e0, e1 blocks
             BfvProofStatement::PublicKeyEncryption { public_key, .. } => {
-                let mut pk = (ctx, public_key.as_ref()).as_poly_vec();
+                let mut pk = WithCtx(ctx, public_key.as_ref()).as_poly_vec();
                 let p1 = pk.pop().unwrap();
                 let p0 = pk.pop().unwrap();
                 a.set(row, offsets.public_key, p0);
@@ -315,7 +315,7 @@ where
                 components: SymmetricComponents { e, r },
             } => {
                 let r = r.as_poly();
-                let sk = (ctx, private_key.as_ref()).as_poly();
+                let sk = WithCtx(ctx, private_key.as_ref()).as_poly();
                 let e = e.as_poly_vec().pop().unwrap();
                 s.set(offsets.remainder, 0, r);
                 s.set(offsets.private_a, 0, sk.neg());
@@ -352,7 +352,7 @@ where
     let rows = statements
         .iter()
         .flat_map(|s| {
-            let mut c = (ctx, s.ciphertext()).as_poly_vec();
+            let mut c = WithCtx(ctx, s.ciphertext()).as_poly_vec();
             // only include first ciphertext element for private statements
             if s.is_private() {
                 c.pop().unwrap();
@@ -508,6 +508,8 @@ trait AsPolynomials<R: Ring> {
     fn as_poly_vec(&self) -> Vec<Polynomial<R>>;
 }
 
+struct WithCtx<'a, T>(&'a Context, &'a T);
+
 impl<const N: usize, B: BarrettConfig<N>> AsPolynomial<Z<N, B>> for Plaintext {
     fn as_poly(&self) -> Polynomial<Z<N, B>> {
         Polynomial {
@@ -521,7 +523,7 @@ impl<const N: usize, B: BarrettConfig<N>> AsPolynomial<Z<N, B>> for Plaintext {
     }
 }
 
-impl<const N: usize, B: BarrettConfig<N>> AsPolynomial<Z<N, B>> for (&Context, &SecretKey) {
+impl<const N: usize, B: BarrettConfig<N>> AsPolynomial<Z<N, B>> for WithCtx<'_, SecretKey> {
     fn as_poly(&self) -> Polynomial<Z<N, B>> {
         let poly_array = PolynomialArray::new_from_secret_key(self.0, self.1).unwrap();
         poly_array.as_poly_vec().pop().unwrap()
@@ -557,14 +559,14 @@ impl<const N: usize, B: BarrettConfig<N>> AsPolynomials<Z<N, B>> for PolynomialA
     }
 }
 
-impl<const N: usize, B: BarrettConfig<N>> AsPolynomials<Z<N, B>> for (&Context, &Ciphertext) {
+impl<const N: usize, B: BarrettConfig<N>> AsPolynomials<Z<N, B>> for WithCtx<'_, Ciphertext> {
     fn as_poly_vec(&self) -> Vec<Polynomial<Z<N, B>>> {
         let poly_array = PolynomialArray::new_from_ciphertext(self.0, self.1).unwrap();
         poly_array.as_poly_vec()
     }
 }
 
-impl<const N: usize, B: BarrettConfig<N>> AsPolynomials<Z<N, B>> for (&Context, &PublicKey) {
+impl<const N: usize, B: BarrettConfig<N>> AsPolynomials<Z<N, B>> for WithCtx<'_, PublicKey> {
     fn as_poly_vec(&self) -> Vec<Polynomial<Z<N, B>>> {
         let poly_array = PolynomialArray::new_from_public_key(self.0, self.1).unwrap();
         poly_array.as_poly_vec()

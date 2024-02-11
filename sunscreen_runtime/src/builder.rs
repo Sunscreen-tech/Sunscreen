@@ -253,47 +253,87 @@ mod linked {
         const DEGREE_BOUND: usize;
     }
 
-    #[derive(Debug, Clone)]
-    /// We pass this around for both plain and linked messages, as we need both the plaintext and
-    /// its type information to perform encryption.
+    /// We pass this around for both plain and linked messages. This type exists because we need
+    /// both the plaintext and its type information to perform encryption.
     ///
     /// Essentially we store the output from TryIntoPlaintext and TypeName.
-    pub(crate) struct PlaintextTyped {
+    #[derive(Debug, Clone)]
+    struct PlaintextTyped {
         plaintext: Plaintext,
         type_name: Type,
     }
 
-    /// We pass this around for just linked messages, as also need the zkp type information.
-    ///
-    /// Essentially we store the output from LinkWithZkp
-    #[derive(Debug, Clone)]
-    pub(crate) struct LinkedPlaintextTyped {
-        plaintext_typed: PlaintextTyped,
-        zkp_type: Type,
+    /// This is the internal type used for existing messages which have been added to the SDLP already.
+    /// The two public types [`Message`] and [`LinkedMessage`] are wrappers around this one.
+    #[derive(Clone, Debug)]
+    struct MessageInternal<Z = ()> {
+        id: usize,
+        len: usize,
+        pt: Arc<PlaintextTyped>,
+        zkp_type: Z,
     }
 
-    /// A [`Plaintext`] message that can be linked. Create this with [`LogProofBuilder::encrypt_and_link`].
+    /// A [`Plaintext`] message that can be [encrypted again](`LogProofBuilder::encrypt_again`).
+    #[derive(Clone, Debug)]
+    pub struct Message(MessageInternal<()>);
+
+    /// A [`Plaintext`] message that can be [encrypted again](`LogProofBuilder::encrypt_again`) or
+    /// [linked to a ZKP](`LogProofBuilder::linked_input`). Create this with
+    /// [`LogProofBuilder::encrypt_and_link`].
     #[derive(Debug)]
-    pub struct LinkedMessage {
-        pub(crate) id: usize,
-        pub(crate) message: Arc<LinkedPlaintextTyped>,
-        pub(crate) len: usize,
-    }
+    pub struct LinkedMessage(MessageInternal<Type>);
 
     impl LinkedMessage {
-        // Only allow cloning internally.
-        fn clone(&self) -> Self {
-            LinkedMessage {
-                id: self.id,
-                message: self.message.clone(),
-                len: self.len,
+        fn from_message(msg: Message, zkp_type: Type) -> Self {
+            LinkedMessage(MessageInternal {
+                id: msg.0.id,
+                len: msg.0.len,
+                pt: msg.0.pt,
+                zkp_type,
+            })
+        }
+    }
+
+    mod sealed {
+        pub trait Sealed {}
+        impl Sealed for super::Message {}
+        impl Sealed for super::LinkedMessage {}
+    }
+
+    /// Indicates that the message is already added to the SDLP, and hence can be used as an
+    /// argument to [`LogProofBuilder::encrypt_again`].
+    pub trait ExistingMessage: sealed::Sealed {
+        #[allow(private_interfaces)]
+        /// Convert the message to the internal type.
+        fn as_internal(&self) -> MessageInternal<()>;
+    }
+
+    impl ExistingMessage for Message {
+        #[allow(private_interfaces)]
+        fn as_internal(&self) -> MessageInternal<()> {
+            self.0.clone()
+        }
+    }
+
+    impl ExistingMessage for LinkedMessage {
+        #[allow(private_interfaces)]
+        fn as_internal(&self) -> MessageInternal<()> {
+            let msg = self.0.clone();
+            MessageInternal {
+                id: msg.id,
+                len: msg.len,
+                pt: msg.pt,
+                zkp_type: (),
             }
         }
     }
 
-    enum Message {
-        Plain(PlaintextTyped),
-        Linked(LinkedMessage),
+    /// This is an internal type used as arguments for the internal encryption methods.
+    enum Msg<Z> {
+        // Not yet added to SDLP
+        Initial(PlaintextTyped),
+        // Already added to SDLP
+        Existing(MessageInternal<Z>),
     }
 
     enum Key<'a> {
@@ -301,11 +341,11 @@ mod linked {
         Private(&'a PrivateKey),
     }
 
-    impl Message {
+    impl<Z> Msg<Z> {
         fn pt_typed(&self) -> &PlaintextTyped {
             match self {
-                Message::Plain(m) => m,
-                Message::Linked(m) => &m.message.plaintext_typed,
+                Msg::Initial(pt) => pt,
+                Msg::Existing(mi) => mi.pt.as_ref(),
             }
         }
         fn pt(&self) -> &Plaintext {
@@ -314,23 +354,29 @@ mod linked {
         fn type_name(&self) -> &Type {
             &self.pt_typed().type_name
         }
-        fn linked_id(&self) -> Option<usize> {
+        fn existing_id(&self) -> Option<usize> {
             match self {
-                Message::Linked(LinkedMessage { id, .. }) => Some(*id),
-                _ => None,
+                Msg::Initial(_) => None,
+                Msg::Existing(mi) => Some(mi.id),
             }
         }
     }
 
+    impl From<PlaintextTyped> for Msg<()> {
+        fn from(pt: PlaintextTyped) -> Self {
+            Msg::Initial(pt)
+        }
+    }
+
     // Infallible since we've already obtained the plaintext
-    impl TryIntoPlaintext for Message {
+    impl<Z> TryIntoPlaintext for Msg<Z> {
         fn try_into_plaintext(&self, _params: &Params) -> Result<Plaintext> {
             Ok(self.pt().clone())
         }
     }
 
     // Forward to the underlying plaintext type
-    impl crate::TypeNameInstance for Message {
+    impl<Z> crate::TypeNameInstance for Msg<Z> {
         fn type_name_instance(&self) -> Type {
             self.type_name().clone()
         }
@@ -382,7 +428,7 @@ mod linked {
             P: TryIntoPlaintext + TypeName,
         {
             let pt = self.plaintext_typed(message)?;
-            self.encrypt_asymmetric_internal(Message::Plain(pt), public_key, None)
+            self.encrypt_asymmetric_internal(Msg::from(pt), public_key, None)
         }
 
         /// Encrypt a plaintext symmetrically, adding the encryption statement to the proof.
@@ -398,93 +444,90 @@ mod linked {
             P: TryIntoPlaintext + TypeName,
         {
             let pt = self.plaintext_typed(message)?;
-            self.encrypt_symmetric_internal(Message::Plain(pt), private_key, None)
+            self.encrypt_symmetric_internal(Msg::from(pt), private_key, None)
         }
 
-        /// Encrypt a plaintext intended for sharing.
+        /// Encrypt a plaintext, adding the encryption statement to the proof and returning the
+        /// message to optionally be [encrypted again](`Self::encrypt_again`).
         ///
-        /// The returned `LinkedMessage` can be used:
-        /// 1. to add an encryption statement of ciphertext equality to the proof (see [`Self::encrypt_linked`]).
-        /// 2. as a linked input to a ZKP program (see [`Self::linked_input`]).
-        pub fn encrypt_and_link<P>(
+        /// If you do not want to add the encryption statement to the proof, just use [the
+        /// runtime](`crate::GenericRuntime::encrypt`) directly.
+        pub fn encrypt_initial<P>(
             &mut self,
             message: &P,
             public_key: &'k PublicKey,
-        ) -> Result<(Ciphertext, LinkedMessage)>
+        ) -> Result<(Ciphertext, Message)>
         where
-            P: LinkWithZkp + TryIntoPlaintext + TypeName,
+            P: TryIntoPlaintext + TypeName,
         {
-            self.encrypt_and_link_internal(message, Key::Public(public_key))
+            self.encrypt_returning_msg(message, Key::Public(public_key), None)
         }
 
-        /// Symmetrically encrypt a plaintext intended for sharing.
+        /// Encrypt a plaintext symmetrically, adding the encryption statement to the proof and
+        /// returning the message to optionally be [encrypted again](`Self::encrypt_again`).
         ///
-        /// The returned `LinkedMessage` can be used:
-        /// 1. to add an encryption statement of ciphertext equality to the proof (see [`Self::encrypt_linked`]).
-        /// 2. as a linked input to a ZKP program (see [`Self::linked_input`]).
-        pub fn encrypt_symmetric_and_link<P>(
+        /// If you do not want to add the encryption statement to the proof, just use [the
+        /// runtime](`crate::GenericRuntime::encrypt`) directly.
+        pub fn encrypt_symmetric_initial<P>(
             &mut self,
             message: &P,
             private_key: &'k PrivateKey,
-        ) -> Result<(Ciphertext, LinkedMessage)>
+        ) -> Result<(Ciphertext, Message)>
         where
-            P: LinkWithZkp + TryIntoPlaintext + TypeName,
+            P: TryIntoPlaintext + TypeName,
         {
-            self.encrypt_and_link_internal(message, Key::Private(private_key))
+            self.encrypt_returning_msg(message, Key::Private(private_key), None)
         }
 
-        fn encrypt_and_link_internal<P>(
+        fn encrypt_returning_msg<P>(
             &mut self,
             message: &P,
             key: Key<'k>,
-        ) -> Result<(Ciphertext, LinkedMessage)>
+            bounds: Option<Bounds>,
+        ) -> Result<(Ciphertext, Message)>
         where
-            P: LinkWithZkp + TryIntoPlaintext + TypeName,
+            P: TryIntoPlaintext + TypeName,
         {
-            // The user intends to link this message, so add a more conservative bound
             let plaintext_typed = self.plaintext_typed(message)?;
             let idx_start = self.messages.len();
             let ct = match key {
-                Key::Public(public_key) => self.encrypt_asymmetric_internal(
-                    Message::Plain(plaintext_typed.clone()),
-                    public_key,
-                    Some(self.mk_bounds::<P>()),
-                ),
+                Key::Public(public_key) => {
+                    self.encrypt_asymmetric_internal(Msg::from(plaintext_typed.clone()), public_key, bounds)
+                }
                 Key::Private(private_key) => self.encrypt_symmetric_internal(
-                    Message::Plain(plaintext_typed.clone()),
+                    Msg::from(plaintext_typed.clone()),
                     private_key,
-                    Some(self.mk_bounds::<P>()),
+                    bounds,
                 ),
             }?;
             let idx_end = self.messages.len();
-            // TODO shouldn't be assuming bulletproofs here...
-            // need to separate the notion of sharing duplicate messages and sharing to ZKP
-            let zkp_type = P::ZkpType::<BulletproofsFieldSpec>::type_name();
-            let linked_message = LinkedMessage {
+            let msg_internal = MessageInternal {
                 id: idx_start,
-                message: Arc::new(LinkedPlaintextTyped {
-                    plaintext_typed,
-                    zkp_type,
-                }),
+                pt: Arc::new(plaintext_typed),
                 len: idx_end - idx_start,
+                zkp_type: (),
             };
-            Ok((ct, linked_message))
+            Ok((ct, Message(msg_internal)))
         }
 
-        /// Encrypt a linked message, adding the new encryption statement to the proof.
+        /// Encrypt an existing message, adding the new encryption statement to the proof.
         ///
         /// This method purposefully reveals that two ciphertexts enrypt the same underlying value. If
         /// this is not what you want, use [`Self::encrypt`].
         ///
         /// This method assumes that you've created the `message` argument with _this_ builder.
-        pub fn encrypt_linked(
+        pub fn encrypt_again<E: ExistingMessage>(
             &mut self,
-            message: &LinkedMessage,
+            message: &E,
             public_key: &'k PublicKey,
         ) -> Result<Ciphertext> {
             // The existing message already has bounds, no need to recompute them.
             let bounds = None;
-            self.encrypt_asymmetric_internal(Message::Linked(message.clone()), public_key, bounds)
+            self.encrypt_asymmetric_internal(
+                Msg::Existing(message.as_internal().clone()),
+                public_key,
+                bounds,
+            )
         }
 
         /// Encrypt a linked message symmetrically, adding the new encryption statement to the
@@ -494,23 +537,27 @@ mod linked {
         /// this is not what you want, use [`Self::encrypt`].
         ///
         /// This method assumes that you've created the `message` argument with _this_ builder.
-        pub fn encrypt_symmetric_linked(
+        pub fn encrypt_symmetric_again<E: ExistingMessage>(
             &mut self,
-            message: &LinkedMessage,
+            message: &E,
             private_key: &'k PrivateKey,
         ) -> Result<Ciphertext> {
             // The existing message already has bounds, no need to recompute them.
             let bounds = None;
-            self.encrypt_symmetric_internal(Message::Linked(message.clone()), private_key, bounds)
+            self.encrypt_symmetric_internal(
+                Msg::Existing(message.as_internal().clone()),
+                private_key,
+                bounds,
+            )
         }
 
-        fn encrypt_asymmetric_internal(
+        fn encrypt_asymmetric_internal<T>(
             &mut self,
-            message: Message,
+            message: Msg<T>,
             public_key: &'k PublicKey,
             bounds: Option<Bounds>,
         ) -> Result<Ciphertext> {
-            let existing_idx = message.linked_id();
+            let existing_idx = message.existing_id();
             let mut i = 0;
             self.runtime
                 .encrypt_map_components(&message, public_key, |m, ct, components| {
@@ -536,13 +583,13 @@ mod linked {
                 })
         }
 
-        fn encrypt_symmetric_internal(
+        fn encrypt_symmetric_internal<T>(
             &mut self,
-            message: Message,
+            message: Msg<T>,
             private_key: &'k PrivateKey,
             bounds: Option<Bounds>,
         ) -> Result<Ciphertext> {
-            let existing_idx = message.linked_id();
+            let existing_idx = message.existing_id();
             let mut i = 0;
             self.runtime.encrypt_symmetric_map_components(
                 &message,
@@ -633,6 +680,48 @@ mod linked {
     }
 
     impl<'r, 'k, 'z, M: marker::Fhe + marker::Zkp> LogProofBuilder<'r, 'k, 'z, M, BulletproofsBackend> {
+        /// Encrypt a plaintext intended for linking.
+        ///
+        /// The returned `LinkedMessage` can be used:
+        /// 1. to add an encryption statement of ciphertext equality to the proof (see [`Self::encrypt_again`]).
+        /// 2. as a linked input to a ZKP program (see [`Self::linked_input`]).
+        pub fn encrypt_and_link<P>(
+            &mut self,
+            message: &P,
+            public_key: &'k PublicKey,
+        ) -> Result<(Ciphertext, LinkedMessage)>
+        where
+            P: LinkWithZkp + TryIntoPlaintext + TypeName,
+        {
+            // The user intends to link this message, so add a more conservative bound
+            let bounds = self.mk_bounds::<P>();
+            let (ct, msg) =
+                self.encrypt_returning_msg(message, Key::Public(public_key), Some(bounds))?;
+            let zkp_type = P::ZkpType::<BulletproofsFieldSpec>::type_name();
+            Ok((ct, LinkedMessage::from_message(msg, zkp_type)))
+        }
+
+        /// Symmetrically encrypt a plaintext intended for linking.
+        ///
+        /// The returned `LinkedMessage` can be used:
+        /// 1. to add an encryption statement of ciphertext equality to the proof (see [`Self::encrypt_again`]).
+        /// 2. as a linked input to a ZKP program (see [`Self::linked_input`]).
+        pub fn encrypt_symmetric_and_link<P>(
+            &mut self,
+            message: &P,
+            private_key: &'k PrivateKey,
+        ) -> Result<(Ciphertext, LinkedMessage)>
+        where
+            P: LinkWithZkp + TryIntoPlaintext + TypeName,
+        {
+            // The user intends to link this message, so add a more conservative bound
+            let bounds = self.mk_bounds::<P>();
+            let (ct, msg) =
+                self.encrypt_returning_msg(message, Key::Private(private_key), Some(bounds))?;
+            let zkp_type = P::ZkpType::<BulletproofsFieldSpec>::type_name();
+            Ok((ct, LinkedMessage::from_message(msg, zkp_type)))
+        }
+
         /// Add a ZKP program to be linked with the logproof.
         ///
         /// This method is required to call [`Self::build_linkedproof`].
@@ -687,12 +776,12 @@ mod linked {
             let linked_indices = self
                 .linked_inputs
                 .iter()
-                .flat_map(|m| (m.id..m.id + m.len).map(|ix| (ix, 0)))
+                .flat_map(|m| (m.0.id..m.0.id + m.0.len).map(|ix| (ix, 0)))
                 .collect::<Vec<_>>();
             let linked_types = self
                 .linked_inputs
                 .iter()
-                .map(|m| m.message.zkp_type.clone())
+                .map(|m| m.0.zkp_type.clone())
                 .collect::<Vec<_>>();
 
             LinkedProof::create(

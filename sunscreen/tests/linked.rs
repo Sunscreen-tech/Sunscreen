@@ -343,7 +343,7 @@ mod linked_tests {
                 .encrypt_and_link(&Signed::from(val), &public_key)
                 .unwrap();
             // proves same plaintext within SDLP
-            let _ct_x1 = proof_builder.encrypt_linked(&x_msg, &public_key).unwrap();
+            let _ct_x1 = proof_builder.encrypt_again(&x_msg, &public_key).unwrap();
             // proves same value within ZKP
             let (_ct_y, y_msg) = proof_builder
                 .encrypt_symmetric_and_link(&Signed::from(val), &private_key)

@@ -206,7 +206,7 @@ impl<'r, 'p, 'a, T: marker::Zkp, B: ZkpBackend> VerificationBuilder<'r, 'p, 'a, 
 }
 
 #[cfg(feature = "linkedproofs")]
-pub use linked::*;
+pub use linked::{ExistingMessage, LinkWithZkp, LinkedMessage, LogProofBuilder, Message};
 
 #[cfg(feature = "linkedproofs")]
 mod linked {
@@ -265,8 +265,11 @@ mod linked {
 
     /// This is the internal type used for existing messages which have been added to the SDLP already.
     /// The two public types [`Message`] and [`LinkedMessage`] are wrappers around this one.
+    ///
+    /// Due to some quirks in the visibility warnings, this is marked `pub` and manually excluded
+    /// from the `pub use linked::{}` export above.
     #[derive(Clone, Debug)]
-    struct MessageInternal<Z = ()> {
+    pub struct MessageInternal<Z = ()> {
         id: usize,
         len: usize,
         pt: Arc<PlaintextTyped>,
@@ -294,7 +297,8 @@ mod linked {
         }
     }
 
-    mod sealed {
+    mod private {
+
         pub trait Sealed {}
         impl Sealed for super::Message {}
         impl Sealed for super::LinkedMessage {}
@@ -302,21 +306,18 @@ mod linked {
 
     /// Indicates that the message is already added to the SDLP, and hence can be used as an
     /// argument to [`LogProofBuilder::encrypt_again`].
-    pub trait ExistingMessage: sealed::Sealed {
-        #[allow(private_interfaces)]
+    pub trait ExistingMessage: private::Sealed {
         /// Convert the message to the internal type.
         fn as_internal(&self) -> MessageInternal<()>;
     }
 
     impl ExistingMessage for Message {
-        #[allow(private_interfaces)]
         fn as_internal(&self) -> MessageInternal<()> {
             self.0.clone()
         }
     }
 
     impl ExistingMessage for LinkedMessage {
-        #[allow(private_interfaces)]
         fn as_internal(&self) -> MessageInternal<()> {
             let msg = self.0.clone();
             MessageInternal {
@@ -491,9 +492,11 @@ mod linked {
             let plaintext_typed = self.plaintext_typed(message)?;
             let idx_start = self.messages.len();
             let ct = match key {
-                Key::Public(public_key) => {
-                    self.encrypt_asymmetric_internal(Msg::from(plaintext_typed.clone()), public_key, bounds)
-                }
+                Key::Public(public_key) => self.encrypt_asymmetric_internal(
+                    Msg::from(plaintext_typed.clone()),
+                    public_key,
+                    bounds,
+                ),
                 Key::Private(private_key) => self.encrypt_symmetric_internal(
                     Msg::from(plaintext_typed.clone()),
                     private_key,

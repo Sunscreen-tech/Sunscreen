@@ -52,7 +52,7 @@ mod sdlp_tests {
         let mut logproof_builder = LogProofBuilder::new(&rt);
 
         let (_a1, linked_a) = logproof_builder
-            .encrypt_initial(&Fractional::<64>::from(3.23), &public_key)
+            .encrypt_and_share(&Fractional::<64>::from(3.23), &public_key)
             .unwrap();
         let _a2 = logproof_builder
             .encrypt_symmetric_again(&linked_a, &private_key)

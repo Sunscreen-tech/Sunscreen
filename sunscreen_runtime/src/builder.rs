@@ -449,11 +449,12 @@ mod linked {
         }
 
         /// Encrypt a plaintext, adding the encryption statement to the proof and returning the
-        /// message to optionally be [encrypted again](`Self::encrypt_again`).
+        /// message to optionally be [encrypted again](`Self::encrypt_again`), that is, _shared_
+        /// with another proof statement.
         ///
         /// If you do not want to add the encryption statement to the proof, just use [the
         /// runtime](`crate::GenericRuntime::encrypt`) directly.
-        pub fn encrypt_initial<P>(
+        pub fn encrypt_and_share<P>(
             &mut self,
             message: &P,
             public_key: &'k PublicKey,
@@ -464,12 +465,13 @@ mod linked {
             self.encrypt_returning_msg(message, Key::Public(public_key), None)
         }
 
-        /// Encrypt a plaintext symmetrically, adding the encryption statement to the proof and
-        /// returning the message to optionally be [encrypted again](`Self::encrypt_again`).
+        /// Encrypt a plaintext, adding the encryption statement to the proof and returning the
+        /// message to optionally be [encrypted again](`Self::encrypt_again`), that is, _shared_
+        /// with another proof statement.
         ///
         /// If you do not want to add the encryption statement to the proof, just use [the
-        /// runtime](`crate::GenericRuntime::encrypt`) directly.
-        pub fn encrypt_symmetric_initial<P>(
+        /// runtime](`crate::GenericRuntime::encrypt_symmetric`) directly.
+        pub fn encrypt_symmetric_and_share<P>(
             &mut self,
             message: &P,
             private_key: &'k PrivateKey,
@@ -515,7 +517,7 @@ mod linked {
 
         /// Encrypt an existing message, adding the new encryption statement to the proof.
         ///
-        /// This method purposefully reveals that two ciphertexts enrypt the same underlying value. If
+        /// This method purposefully reveals that two ciphertexts encrypt the same underlying value. If
         /// this is not what you want, use [`Self::encrypt`].
         ///
         /// This method assumes that you've created the `message` argument with _this_ builder.
@@ -536,8 +538,8 @@ mod linked {
         /// Encrypt a linked message symmetrically, adding the new encryption statement to the
         /// proof.
         ///
-        /// This method purposefully reveals that two ciphertexts enrypt the same underlying value. If
-        /// this is not what you want, use [`Self::encrypt`].
+        /// This method purposefully reveals that two ciphertexts encrypt the same underlying value. If
+        /// this is not what you want, use [`Self::encrypt_symmetric`].
         ///
         /// This method assumes that you've created the `message` argument with _this_ builder.
         pub fn encrypt_symmetric_again<E: ExistingMessage>(

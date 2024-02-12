@@ -24,4 +24,6 @@
 //! encryption](crate::FheRuntime::encrypt), while also opting to _share_ a message with a linked
 //! ZKP program. Under the hood, we'll handle the complicated bits of generating a linear relation
 //! for SDLP and sharing the secrets with the [`zkp_program`](crate::zkp_program).
-pub use sunscreen_runtime::{LinkedProof, LogProofBuilder, Sdlp, Message, LinkedMessage, ExistingMessage, LinkWithZkp};
+pub use sunscreen_runtime::{
+    ExistingMessage, LinkWithZkp, LinkedMessage, LinkedProof, LogProofBuilder, Message, Sdlp,
+};

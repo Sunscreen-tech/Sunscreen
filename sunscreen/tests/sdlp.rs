@@ -2,7 +2,7 @@
 mod sdlp_tests {
     use lazy_static::lazy_static;
     use logproof::rings::SealQ128_1024;
-    use sunscreen::types::bfv::{Signed, Unsigned64};
+    use sunscreen::types::bfv::{Fractional, Signed, Unsigned64};
     use sunscreen_fhe_program::SchemeType;
 
     use sunscreen_runtime::{FheRuntime, LogProofBuilder, Params};
@@ -52,13 +52,13 @@ mod sdlp_tests {
         let mut logproof_builder = LogProofBuilder::new(&rt);
 
         let (_a1, linked_a) = logproof_builder
-            .encrypt_and_link(&Signed::from(2), &public_key)
+            .encrypt_returning_msg(&Fractional::<64>::from(3.23), &public_key)
             .unwrap();
         let _a2 = logproof_builder
-            .encrypt_symmetric_linked(&linked_a, &private_key)
+            .encrypt_symmetric_msg(&linked_a, &private_key)
             .unwrap();
         let _other = logproof_builder
-            .encrypt(&Signed::from(3), &public_key)
+            .encrypt(&Signed::from(2), &public_key)
             .unwrap();
         let sdlp = logproof_builder.build_logproof().unwrap();
         sdlp.verify().unwrap();

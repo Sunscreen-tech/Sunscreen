@@ -51,7 +51,7 @@ fn main() -> Result<()> {
     let mut proof_builder = LogProofBuilder::new(&rt);
 
     println!("Encrypting and sharing transaction...");
-    let (_ct, tx_msg) = proof_builder.encrypt_and_link(&tx, &public_key)?;
+    let (_ct, tx_msg) = proof_builder.encrypt_returning_link(&tx, &public_key)?;
 
     println!("Building linkedproof...");
     let lp = proof_builder

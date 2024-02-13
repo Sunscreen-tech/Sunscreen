@@ -276,13 +276,13 @@ mod linked {
         zkp_type: Z,
     }
 
-    /// A [`Plaintext`] message that can be [encrypted again](`LogProofBuilder::encrypt_again`).
+    /// A [`Plaintext`] message that can be [encrypted again](`LogProofBuilder::encrypt_msg`).
     #[derive(Clone, Debug)]
     pub struct Message(MessageInternal<()>);
 
-    /// A [`Plaintext`] message that can be [encrypted again](`LogProofBuilder::encrypt_again`) or
+    /// A [`Plaintext`] message that can be [encrypted again](`LogProofBuilder::encrypt_msg`) or
     /// [linked to a ZKP](`LogProofBuilder::linked_input`). Create this with
-    /// [`LogProofBuilder::encrypt_and_link`].
+    /// [`LogProofBuilder::encrypt_returning_link`].
     #[derive(Debug)]
     pub struct LinkedMessage(MessageInternal<Type>);
 
@@ -305,7 +305,7 @@ mod linked {
     }
 
     /// Indicates that the message is already added to the SDLP, and hence can be used as an
-    /// argument to [`LogProofBuilder::encrypt_again`].
+    /// argument to [`LogProofBuilder::encrypt_msg`].
     pub trait ExistingMessage: private::Sealed {
         /// Convert the message to the internal type.
         fn as_internal(&self) -> MessageInternal<()>;
@@ -420,7 +420,7 @@ mod linked {
             }
         }
 
-        /// Encrypt a plaintext, adding the encryption statement to the proof.
+        /// Encrypt a plaintext, adding the encryption statement to the logproof.
         ///
         /// If you do not want to add the encryption statement to the proof, just use [the
         /// runtime](`crate::GenericRuntime::encrypt`) directly.
@@ -432,7 +432,7 @@ mod linked {
             self.encrypt_asymmetric_internal(Msg::from(pt), public_key, None)
         }
 
-        /// Encrypt a plaintext symmetrically, adding the encryption statement to the proof.
+        /// Encrypt a plaintext symmetrically, adding the encryption statement to the logproof.
         ///
         /// If you do not want to add the encryption statement to the proof, just use [the
         /// runtime](`crate::GenericRuntime::encrypt_symmetric`) directly.
@@ -448,13 +448,13 @@ mod linked {
             self.encrypt_symmetric_internal(Msg::from(pt), private_key, None)
         }
 
-        /// Encrypt a plaintext, adding the encryption statement to the proof and returning the
-        /// message to optionally be [encrypted again](`Self::encrypt_again`), that is, _shared_
+        /// Encrypt a plaintext, adding the encryption statement to the logproof and returning the
+        /// message to optionally be [encrypted again](`Self::encrypt_msg`), that is, _shared_
         /// with another proof statement.
         ///
         /// If you do not want to add the encryption statement to the proof, just use [the
         /// runtime](`crate::GenericRuntime::encrypt`) directly.
-        pub fn encrypt_and_share<P>(
+        pub fn encrypt_returning_msg<P>(
             &mut self,
             message: &P,
             public_key: &'k PublicKey,
@@ -462,16 +462,16 @@ mod linked {
         where
             P: TryIntoPlaintext + TypeName,
         {
-            self.encrypt_returning_msg(message, Key::Public(public_key), None)
+            self.encrypt_returning_msg_internal(message, Key::Public(public_key), None)
         }
 
-        /// Encrypt a plaintext, adding the encryption statement to the proof and returning the
-        /// message to optionally be [encrypted again](`Self::encrypt_again`), that is, _shared_
+        /// Encrypt a plaintext, adding the encryption statement to the logproof and returning the
+        /// message to optionally be [encrypted again](`Self::encrypt_msg`), that is, _shared_
         /// with another proof statement.
         ///
         /// If you do not want to add the encryption statement to the proof, just use [the
         /// runtime](`crate::GenericRuntime::encrypt_symmetric`) directly.
-        pub fn encrypt_symmetric_and_share<P>(
+        pub fn encrypt_symmetric_returning_msg<P>(
             &mut self,
             message: &P,
             private_key: &'k PrivateKey,
@@ -479,10 +479,10 @@ mod linked {
         where
             P: TryIntoPlaintext + TypeName,
         {
-            self.encrypt_returning_msg(message, Key::Private(private_key), None)
+            self.encrypt_returning_msg_internal(message, Key::Private(private_key), None)
         }
 
-        fn encrypt_returning_msg<P>(
+        fn encrypt_returning_msg_internal<P>(
             &mut self,
             message: &P,
             key: Key<'k>,
@@ -515,13 +515,13 @@ mod linked {
             Ok((ct, Message(msg_internal)))
         }
 
-        /// Encrypt an existing message, adding the new encryption statement to the proof.
+        /// Encrypt an existing message, adding the new encryption statement to the logproof.
         ///
         /// This method purposefully reveals that two ciphertexts encrypt the same underlying value. If
         /// this is not what you want, use [`Self::encrypt`].
         ///
         /// This method assumes that you've created the `message` argument with _this_ builder.
-        pub fn encrypt_again<E: ExistingMessage>(
+        pub fn encrypt_msg<E: ExistingMessage>(
             &mut self,
             message: &E,
             public_key: &'k PublicKey,
@@ -542,7 +542,7 @@ mod linked {
         /// this is not what you want, use [`Self::encrypt_symmetric`].
         ///
         /// This method assumes that you've created the `message` argument with _this_ builder.
-        pub fn encrypt_symmetric_again<E: ExistingMessage>(
+        pub fn encrypt_symmetric_msg<E: ExistingMessage>(
             &mut self,
             message: &E,
             private_key: &'k PrivateKey,
@@ -688,9 +688,9 @@ mod linked {
         /// Encrypt a plaintext intended for linking.
         ///
         /// The returned `LinkedMessage` can be used:
-        /// 1. to add an encryption statement of ciphertext equality to the proof (see [`Self::encrypt_again`]).
+        /// 1. to add an encryption statement of ciphertext equality to the logproof (see [`Self::encrypt_msg`]).
         /// 2. as a linked input to a ZKP program (see [`Self::linked_input`]).
-        pub fn encrypt_and_link<P>(
+        pub fn encrypt_returning_link<P>(
             &mut self,
             message: &P,
             public_key: &'k PublicKey,
@@ -700,8 +700,11 @@ mod linked {
         {
             // The user intends to link this message, so add a more conservative bound
             let bounds = self.mk_bounds::<P>();
-            let (ct, msg) =
-                self.encrypt_returning_msg(message, Key::Public(public_key), Some(bounds))?;
+            let (ct, msg) = self.encrypt_returning_msg_internal(
+                message,
+                Key::Public(public_key),
+                Some(bounds),
+            )?;
             let zkp_type = P::ZkpType::<BulletproofsFieldSpec>::type_name();
             Ok((ct, LinkedMessage::from_message(msg, zkp_type)))
         }
@@ -709,9 +712,9 @@ mod linked {
         /// Symmetrically encrypt a plaintext intended for linking.
         ///
         /// The returned `LinkedMessage` can be used:
-        /// 1. to add an encryption statement of ciphertext equality to the proof (see [`Self::encrypt_again`]).
+        /// 1. to add an encryption statement of ciphertext equality to the logproof (see [`Self::encrypt_msg`]).
         /// 2. as a linked input to a ZKP program (see [`Self::linked_input`]).
-        pub fn encrypt_symmetric_and_link<P>(
+        pub fn encrypt_symmetric_returning_link<P>(
             &mut self,
             message: &P,
             private_key: &'k PrivateKey,
@@ -721,8 +724,11 @@ mod linked {
         {
             // The user intends to link this message, so add a more conservative bound
             let bounds = self.mk_bounds::<P>();
-            let (ct, msg) =
-                self.encrypt_returning_msg(message, Key::Private(private_key), Some(bounds))?;
+            let (ct, msg) = self.encrypt_returning_msg_internal(
+                message,
+                Key::Private(private_key),
+                Some(bounds),
+            )?;
             let zkp_type = P::ZkpType::<BulletproofsFieldSpec>::type_name();
             Ok((ct, LinkedMessage::from_message(msg, zkp_type)))
         }
@@ -765,7 +771,7 @@ mod linked {
             self
         }
 
-        /// Add a constant input to the proof builder.
+        /// Add a constant input to the ZKP program.
         pub fn constant_input(&mut self, input: impl Into<ZkpProgramInput>) -> &mut Self {
             self.constant_inputs.push(input.into());
             self

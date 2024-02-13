@@ -63,7 +63,7 @@ mod linked_tests {
             let mut proof_builder = LogProofBuilder::new(&rt);
 
             let (_ct, tx_msg) = proof_builder
-                .encrypt_and_link(&Signed::from(tx), &public_key)
+                .encrypt_returning_link(&Signed::from(tx), &public_key)
                 .unwrap();
 
             println!("Performing linked proof");
@@ -106,7 +106,7 @@ mod linked_tests {
         for tx in [-1, balance + 1] {
             let mut proof_builder = LogProofBuilder::new(&rt);
             let (_ct, tx_msg) = proof_builder
-                .encrypt_and_link(&Signed::from(tx), &public_key)
+                .encrypt_returning_link(&Signed::from(tx), &public_key)
                 .unwrap();
             proof_builder
                 .zkp_program(valid_transaction_zkp)
@@ -141,7 +141,7 @@ mod linked_tests {
         for val in [3, 0, -3] {
             let mut proof_builder = LogProofBuilder::new(&rt);
             let (_ct, val_msg) = proof_builder
-                .encrypt_and_link(&Signed::from(val), &public_key)
+                .encrypt_returning_link(&Signed::from(val), &public_key)
                 .unwrap();
             proof_builder
                 .zkp_program(is_eq_zkp)
@@ -196,7 +196,9 @@ mod linked_tests {
             let x_d = rand::random::<i32>().saturating_abs().saturating_add(1) as i64;
             let x = Rational::from(Rational64::new_raw(x_n, x_d));
             let mut proof_builder = LogProofBuilder::new(&rt);
-            let (_ct, x_msg) = proof_builder.encrypt_and_link(&x, &public_key).unwrap();
+            let (_ct, x_msg) = proof_builder
+                .encrypt_returning_link(&x, &public_key)
+                .unwrap();
             proof_builder
                 .zkp_program(is_eq_zkp)
                 .unwrap()
@@ -240,9 +242,11 @@ mod linked_tests {
             let (x, y) = (Signed::from(x.min(y)), Signed::from(x.max(y)));
 
             let mut proof_builder = LogProofBuilder::new(&rt);
-            let (_ct, x_msg) = proof_builder.encrypt_and_link(&x, &public_key).unwrap();
+            let (_ct, x_msg) = proof_builder
+                .encrypt_returning_link(&x, &public_key)
+                .unwrap();
             let (_ct, y_msg) = proof_builder
-                .encrypt_symmetric_and_link(&y, &private_key)
+                .encrypt_symmetric_returning_link(&y, &private_key)
                 .unwrap();
             proof_builder
                 .zkp_program(compare_signed_zkp)
@@ -293,8 +297,12 @@ mod linked_tests {
             let (x, y) = (Rational::from(x.min(y)), Rational::from(x.max(y)));
 
             let mut proof_builder = LogProofBuilder::new(&rt);
-            let (_ct, x_msg) = proof_builder.encrypt_and_link(&x, &public_key).unwrap();
-            let (_ct, y_msg) = proof_builder.encrypt_and_link(&y, &public_key).unwrap();
+            let (_ct, x_msg) = proof_builder
+                .encrypt_returning_link(&x, &public_key)
+                .unwrap();
+            let (_ct, y_msg) = proof_builder
+                .encrypt_returning_link(&y, &public_key)
+                .unwrap();
             proof_builder
                 .zkp_program(compare_rational_zkp)
                 .unwrap()
@@ -340,13 +348,13 @@ mod linked_tests {
         for val in [3, 0, -3] {
             let mut proof_builder = LogProofBuilder::new(&rt);
             let (_ct_x, x_msg) = proof_builder
-                .encrypt_and_link(&Signed::from(val), &public_key)
+                .encrypt_returning_link(&Signed::from(val), &public_key)
                 .unwrap();
             // proves same plaintext within SDLP
-            let _ct_x1 = proof_builder.encrypt_again(&x_msg, &public_key).unwrap();
+            let _ct_x1 = proof_builder.encrypt_msg(&x_msg, &public_key).unwrap();
             // proves same value within ZKP
             let (_ct_y, y_msg) = proof_builder
-                .encrypt_symmetric_and_link(&Signed::from(val), &private_key)
+                .encrypt_symmetric_returning_link(&Signed::from(val), &private_key)
                 .unwrap();
             proof_builder
                 .zkp_program(is_eq_zkp)
@@ -414,7 +422,7 @@ mod linked_tests {
             proof_builder.zkp_program(is_eq_zkp).unwrap();
             for _ in 0..num_linked_inputs {
                 let (_ct, msg) = proof_builder
-                    .encrypt_and_link(&Signed::from(1), &public_key)
+                    .encrypt_returning_link(&Signed::from(1), &public_key)
                     .unwrap();
                 proof_builder.linked_input(msg);
             }
@@ -449,10 +457,10 @@ mod linked_tests {
         let mut proof_builder = LogProofBuilder::new(&rt);
         proof_builder.zkp_program(compare_signed_zkp).unwrap();
         let (_ct, signed_msg) = proof_builder
-            .encrypt_and_link(&Signed::from(1), &public_key)
+            .encrypt_returning_link(&Signed::from(1), &public_key)
             .unwrap();
         let (_ct, unsigned_msg) = proof_builder
-            .encrypt_and_link(&Unsigned64::from(1), &public_key)
+            .encrypt_returning_link(&Unsigned64::from(1), &public_key)
             .unwrap();
         proof_builder
             .linked_input(signed_msg)

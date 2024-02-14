@@ -1263,8 +1263,12 @@ impl LogProof {
             for j in 0..x.cols {
                 let poly = &x[(i, j)];
 
-                for c in &poly.coeffs {
+                for c in poly.coeffs.iter().take(d) {
                     result.push(c.mod_switch_signed());
+                }
+
+                for c in poly.coeffs.iter().skip(d) {
+                    debug_assert_eq!(*c, Q::zero(), "polynomial exceeds expected degree");
                 }
 
                 for _ in poly.coeffs.len()..d {

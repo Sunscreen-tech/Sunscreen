@@ -10,7 +10,7 @@ use std::{
 use crypto_bigint::{NonZero, Uint};
 use seal_fhe::{
     AsymmetricComponents, Ciphertext, Context, EncryptionParameters, Plaintext, PolynomialArray,
-    PublicKey, SecretKey, SymmetricComponents,
+    PublicKey, SecretKey, SymmetricComponents, SymmetricEncryptor,
 };
 use sunscreen_math::{
     poly::Polynomial,
@@ -114,11 +114,12 @@ pub enum BfvWitness<'s> {
     /// A witness for the [`BfvProofStatement::PublicKeyEncryption`] variant.
     PublicKeyEncryption(AsymmetricComponents),
     /// A witness for the [`BfvProofStatement::Decryption`] variant.
+    // N.B. There should really be symmetric encryption components here; we can add them after
+    // modifying seal decryption to return this information. For now, we compute the components
+    // manually (see the handling of this variant in `compute_s` below).
     Decryption {
         /// The private key used for the decryption.
         private_key: Cow<'s, SecretKey>,
-        /// The remainder after scaling by delta.
-        r: Plaintext,
     },
 }
 
@@ -367,12 +368,19 @@ where
                 s.set(offsets.public_e_1, 0, e1);
                 offsets.inc_public();
             }
-            BfvWitness::Decryption { private_key, r } => {
-                let r = r.as_poly();
+            BfvWitness::Decryption { private_key } => {
+                let pt = &messages[statements[i].message_id()].plaintext;
+                let r = SymmetricEncryptor::new(ctx, private_key)
+                    .unwrap()
+                    .encrypt_symmetric_return_components(pt)
+                    .unwrap()
+                    .1
+                    .r
+                    .as_poly();
                 let sk = WithCtx(ctx, private_key.as_ref()).as_poly();
                 let ct = WithCtx(ctx, statements[i].ciphertext()).as_poly_vec();
+                let m = pt.as_poly();
                 let delta = params.delta();
-                let m = messages[statements[i].message_id()].plaintext.as_poly();
                 let e = m * delta + &r - &ct[0] - &ct[1] * &sk;
                 let e = e.vartime_div_rem_restricted_rhs(&f).1;
                 s.set(offsets.remainder, 0, r);
@@ -799,15 +807,8 @@ mod tests {
             message_id: ix,
             ciphertext: ct,
         });
-        let r = match &test_fixture.witness[ix] {
-            BfvWitness::PrivateKeyEncryption { components, .. } => &components.r,
-            BfvWitness::PublicKeyEncryption(AsymmetricComponents { r, .. }) => r,
-            BfvWitness::Decryption { r, .. } => r,
-        }
-        .clone();
         test_fixture.witness.push(BfvWitness::Decryption {
             private_key: Cow::Borrowed(&ctx.secret_key),
-            r,
         });
 
         ctx.prove_and_verify(&test_fixture).unwrap();

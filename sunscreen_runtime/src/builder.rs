@@ -230,7 +230,7 @@ mod linked {
     use crate::{
         marker, Ciphertext, CompiledZkpProgram, GenericRuntime, LinkedProof, NumCiphertexts,
         Params, Plaintext, PrivateKey, PublicKey, Result, Sdlp, SealSdlpProverKnowledge,
-        TryFromPlaintext, TryIntoPlaintext, TypeNameInstance, ZkpProgramInput,
+        TryFromPlaintext, TryIntoPlaintext, ZkpProgramInput,
     };
 
     /// All FHE plaintext types can be used in a [`Sdlp`]. This trait indicates further that a
@@ -568,7 +568,7 @@ mod linked {
             private_key: &'k PrivateKey,
         ) -> Result<(P, Message)>
         where
-            P: TryIntoPlaintext + TryFromPlaintext + TypeName + TypeNameInstance,
+            P: TryIntoPlaintext + TryFromPlaintext + TypeName,
         {
             self.decrypt_internal::<P>(ciphertext, private_key, None, None)
         }
@@ -585,7 +585,7 @@ mod linked {
             existing_message: E,
         ) -> Result<()>
         where
-            P: TryIntoPlaintext + TryFromPlaintext + TypeName + TypeNameInstance,
+            P: TryIntoPlaintext + TryFromPlaintext + TypeName,
         {
             self.decrypt_internal::<P>(
                 ciphertext,
@@ -604,7 +604,7 @@ mod linked {
             bounds: Option<Bounds>,
         ) -> Result<(P, Message)>
         where
-            P: TryIntoPlaintext + TryFromPlaintext + TypeName + TypeNameInstance,
+            P: TryIntoPlaintext + TryFromPlaintext + TypeName,
         {
             let start_idx = self.messages.len();
             let existing_idx = existing_message.as_ref().map(|m| m.id);
@@ -626,6 +626,9 @@ mod linked {
                             message_id,
                             ciphertext: ct.clone(),
                         });
+                        self.witness.push(BfvWitness::Decryption {
+                            private_key: Cow::Borrowed(&private_key.0.data),
+                        });
                         i += 1;
                     })?;
             let end_idx = self.messages.len();
@@ -639,20 +642,8 @@ mod linked {
                 }
             }
 
-            // Currently janky, just re-encrypt to find r
-            // we could improve this with modifications to seal
+            // Decode to the expected type and return the message
             let p = P::try_from_plaintext(&plaintext, self.runtime.params())?;
-            self.runtime.encrypt_symmetric_map_components::<P>(
-                &p,
-                private_key,
-                |_m, _ct, components| {
-                    self.witness.push(BfvWitness::Decryption {
-                        private_key: Cow::Borrowed(&private_key.0.data),
-                        r: components.r,
-                    });
-                },
-            )?;
-
             let pt = Arc::new(self.plaintext_typed(&p)?);
             let msg_internal = existing_message.unwrap_or(MessageInternal {
                 id: start_idx,
@@ -848,7 +839,7 @@ mod linked {
             private_key: &'k PrivateKey,
         ) -> Result<(P, LinkedMessage)>
         where
-            P: LinkWithZkp + TryIntoPlaintext + TryFromPlaintext + TypeName + TypeNameInstance,
+            P: LinkWithZkp + TryIntoPlaintext + TryFromPlaintext + TypeName,
         {
             let bounds = self.mk_bounds::<P>();
             let (pt, msg) =

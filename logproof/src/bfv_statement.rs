@@ -901,7 +901,6 @@ mod tests {
         }
 
         // If we ever speed up SDLP, this would be nice to run in a loop. As is, it's too slow.
-        #[allow(unused)]
         fn random_fixture(&self) -> TestFixture {
             let mut rng = rand::thread_rng();
             let num_public_statements = rng.gen_range(1..=3);

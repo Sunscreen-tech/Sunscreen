@@ -63,4 +63,21 @@ mod sdlp_tests {
         let sdlp = logproof_builder.build_logproof().unwrap();
         sdlp.verify().unwrap();
     }
+
+    #[test]
+    fn prove_refreshing_existing_ciphertext() {
+        let rt = FheRuntime::new(&TEST_PARAMS).unwrap();
+        let (public_key, private_key) = rt.generate_keys().unwrap();
+        let mut logproof_builder = LogProofBuilder::new(&rt);
+
+        let existing_ct = rt.encrypt(Signed::from(100), &public_key).unwrap();
+
+        let (_existing_val, msg) = logproof_builder
+            .decrypt_returning_msg::<Signed>(&existing_ct, &private_key)
+            .unwrap();
+        let _refreshed_ct = logproof_builder.encrypt_msg(&msg, &public_key).unwrap();
+
+        let sdlp = logproof_builder.build_logproof().unwrap();
+        sdlp.verify().unwrap();
+    }
 }

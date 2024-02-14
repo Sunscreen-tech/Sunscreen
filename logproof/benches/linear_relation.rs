@@ -76,7 +76,7 @@ where
     // e_1 = q / 2p
     // c_1 = s * a + e_1 + del * m
     // c_2 = a
-    const BIT_SIZE: u64 = 2 << 8;
+    const BIT_SIZE: usize = 2 << 8;
 
     println!("Generating data...");
 
@@ -96,7 +96,7 @@ where
             .clone()
             .into_iter()
             .map(|x| if x == 0 { 0 } else { BIT_SIZE })
-            .collect::<Vec<u64>>(),
+            .collect::<Vec<_>>(),
     );
 
     let delta = make_poly::<R>(&[1234]);

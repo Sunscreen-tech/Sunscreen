@@ -50,10 +50,10 @@ use crate::{
 type MatrixPoly<Q> = Matrix<Polynomial<Q>>;
 
 /**
- * Bounds on the coefficients in the secret S
+ * Bounds on the coefficients in the secret S (specified in number of bits).
  */
 #[derive(Clone, Debug, PartialEq)]
-pub struct Bounds(pub Vec<u64>);
+pub struct Bounds(pub Vec<usize>);
 
 impl Zero for Bounds {
     // The empty vector could be seen as no bounds. Also follows the field
@@ -69,7 +69,7 @@ impl Zero for Bounds {
 }
 
 impl std::ops::Deref for Bounds {
-    type Target = [u64];
+    type Target = [usize];
 
     fn deref(&self) -> &Self::Target {
         &self.0
@@ -155,19 +155,14 @@ where
      * coefficients in the polynomials in `S`.
      */
     pub fn b(&self) -> Matrix<Bounds> {
-        // Note the odd case here: if the bounds are zero then by the formula in
-        // the original paper we should get an undefined value. Here we say that
-        // a zero bound produces a zero `b` value from the paper. This is later
-        // used to ignore coefficients that have a bound of zero.
-        fn calculate_bound(v: &Bounds) -> Bounds {
-            Bounds(
-                v.iter()
-                    .map(|b| if *b > 0 { Log2::ceil_log2(b) + 1 } else { 0 })
-                    .collect(),
-            )
+        // If the bound is zero, leave zero. Else bump by 1.
+        // We have users specify the number of bits of an unsigned bound, so we add a bit to
+        // account for the signed encoding.
+        fn bump_bound(v: &Bounds) -> Bounds {
+            Bounds(v.iter().map(|b| if *b > 0 { b + 1 } else { 0 }).collect())
         }
 
-        self.bounds.map(calculate_bound)
+        self.bounds.map(bump_bound)
     }
 
     /**
@@ -177,7 +172,7 @@ where
         self.b()
             .as_slice()
             .iter()
-            .map(|v| v.iter().sum::<u64>())
+            .map(|v| v.iter().sum::<usize>() as u64)
             .sum()
     }
 
@@ -194,7 +189,7 @@ where
         let mut last_end_range = 0;
 
         for (k, b_piece) in b.as_slice().iter().enumerate() {
-            let bits = b_piece.iter().sum::<u64>() as usize;
+            let bits = b_piece.iter().sum::<usize>();
 
             // Get the orginal matrix index
             let i = k / self.bounds.cols;
@@ -248,7 +243,10 @@ where
             .map(|c| {
                 let mut column_bound_sum: u64 = 0;
                 for r in 0..self.bounds.rows {
-                    column_bound_sum += self.bounds[(r, c)].iter().sum::<u64>();
+                    column_bound_sum += self.bounds[(r, c)]
+                        .iter()
+                        .map(|b| if *b > 0 { 2u64.pow(*b as u32) } else { 0 })
+                        .sum::<u64>();
                 }
                 column_bound_sum
             })
@@ -1219,7 +1217,11 @@ impl LogProof {
      * coefficients being contiguous.
      */
     pub fn serialize_bounds(bounds: &Matrix<Bounds>) -> Vec<u64> {
-        bounds.as_slice().iter().flat_map(|x| x.0.clone()).collect()
+        bounds
+            .as_slice()
+            .iter()
+            .flat_map(|x| x.0.iter().map(|x| *x as u64))
+            .collect()
     }
 
     /**
@@ -1396,10 +1398,11 @@ mod test {
                                         if x == 0 {
                                             0
                                         } else {
-                                            next_higher_power_of_two(x.unsigned_abs())
+                                            next_higher_power_of_two(x.unsigned_abs()).ilog2()
+                                                as usize
                                         }
                                     })
-                                    .collect::<Vec<u64>>(),
+                                    .collect::<Vec<_>>(),
                             )
                         })
                         .collect::<Vec<Bounds>>()

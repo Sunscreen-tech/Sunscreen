@@ -704,7 +704,8 @@ where
                 ParamsMode::Search => None,
                 ParamsMode::Manual(p) => Some(p),
             });
-        Application::new(self.compile_fhe()?, self.compile_zkp(params)?)
+        let zkp_programs = self.compile_zkp(params)?;
+        Application::new(fhe_programs, zkp_programs)
     }
 }
 

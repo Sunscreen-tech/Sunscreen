@@ -776,7 +776,7 @@ mod linked {
 
         fn mk_bounds<P: LinkWithZkp>(&self) -> Bounds {
             let params = self.runtime.params();
-            let mut bounds = vec![Log2::ceil_log2(&params.plain_modulus) as usize; P::DEGREE_BOUND];
+            let mut bounds = vec![params.plain_modulus.ceil_log2() as usize; P::DEGREE_BOUND];
             bounds.resize(params.lattice_dimension as usize, 0);
             Bounds(bounds)
         }

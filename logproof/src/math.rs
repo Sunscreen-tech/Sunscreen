@@ -133,7 +133,7 @@ pub trait Log2 {
      * # Panics
      * When the given value is zero.
      */
-    fn log2(x: &Self) -> u64;
+    fn log2(&self) -> u64;
 
     /**
      * Compute the ceiling of the log2 of the given value.
@@ -141,18 +141,18 @@ pub trait Log2 {
      * # Panics
      * When the given value is zero.
      */
-    fn ceil_log2(x: &Self) -> u64;
+    fn ceil_log2(&self) -> u64;
 }
 
 impl Log2 for u64 {
     /**
      * An implementation of log2 that works on stable.
      */
-    fn log2(x: &Self) -> u64 {
+    fn log2(&self) -> u64 {
         let mut mask = 0x8000_0000_0000_0000;
 
         for i in 0..64 {
-            if mask & x != 0 {
+            if mask & self != 0 {
                 return 63 - i;
             }
 
@@ -162,9 +162,9 @@ impl Log2 for u64 {
         panic!("Value was zero.");
     }
 
-    fn ceil_log2(x: &Self) -> u64 {
-        let ceil_factor = if x.is_power_of_two() { 0 } else { 1 };
-        Self::log2(x) + ceil_factor
+    fn ceil_log2(&self) -> u64 {
+        let ceil_factor = if self.is_power_of_two() { 0 } else { 1 };
+        self.log2() + ceil_factor
     }
 }
 
@@ -173,10 +173,10 @@ fn is_power_of_two_bigint<const N: usize>(b: &Uint<N>) -> bool {
 }
 
 impl<const N: usize> Log2 for Uint<N> {
-    fn log2(x: &Self) -> u64 {
-        for i in 0..x.as_limbs().len() {
-            let i = x.as_limbs().len() - i - 1;
-            let limb = x.as_limbs()[i];
+    fn log2(&self) -> u64 {
+        for i in 0..self.as_limbs().len() {
+            let i = self.as_limbs().len() - i - 1;
+            let limb = self.as_limbs()[i];
 
             if limb.0 == 0 {
                 continue;
@@ -188,20 +188,20 @@ impl<const N: usize> Log2 for Uint<N> {
         panic!("Value was zero.");
     }
 
-    fn ceil_log2(x: &Self) -> u64 {
-        let ceil_factor = if is_power_of_two_bigint(x) { 0 } else { 1 };
+    fn ceil_log2(&self) -> u64 {
+        let ceil_factor = if is_power_of_two_bigint(self) { 0 } else { 1 };
 
-        Self::log2(x) + ceil_factor
+        self.log2() + ceil_factor
     }
 }
 
 impl<const N: usize, B: ArithmeticBackend<N>> Log2 for Zq<N, B> {
-    fn log2(x: &Self) -> u64 {
-        Uint::<N>::log2(&x.val)
+    fn log2(&self) -> u64 {
+        Uint::<N>::log2(&self.val)
     }
 
-    fn ceil_log2(x: &Self) -> u64 {
-        Uint::<N>::ceil_log2(&x.val)
+    fn ceil_log2(&self) -> u64 {
+        Uint::<N>::ceil_log2(&self.val)
     }
 }
 

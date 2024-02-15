@@ -434,18 +434,16 @@ where
     let degree = params.degree() as usize;
 
     // calculate bounds
-    let m_default_bound = Bounds(vec![
-        Log2::ceil_log2(&params.plain_modulus()) as usize;
-        degree
-    ]);
+    let m_default_bound = Bounds(vec![params.plain_modulus().ceil_log2() as usize; degree]);
     let r_bound = m_default_bound.clone();
     let u_bound = Bounds(vec![U_COEFFICIENT_BOUND; degree]);
     let e_bound = Bounds(vec![E_COEFFICIENT_BOUND; degree]);
     let s_bound = Bounds(vec![S_COEFFICIENT_BOUND; degree]);
-    // very conservative bound, the max error satisfying correctness
-    let q_div_2 = calculate_ciphertext_modulus(params.ciphertext_modulus())
-        .div(NonZero::from_uint(Uint::from(2u8)));
-    let decrypt_e_bound = Bounds(vec![Log2::ceil_log2(&q_div_2) as usize; degree]);
+    // very liberal bound, the max that satisfies correctness
+    let q_div_2_bits = calculate_ciphertext_modulus(params.ciphertext_modulus())
+        .div(NonZero::from_uint(Uint::from(2u8)))
+        .ceil_log2();
+    let decrypt_e_bound = Bounds(vec![q_div_2_bits as usize; degree]);
 
     // insert them
     for i in 0..IdxOffsets::num_messages(statements) {

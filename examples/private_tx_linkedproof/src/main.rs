@@ -403,10 +403,7 @@ impl Chain {
     pub fn print_ledger(&self) {
         for (i, tx) in self.ledger.iter().enumerate() {
             match tx {
-                Transaction::Register(r) => println!(
-                    "{i}. User {} registered with initial deposit {}",
-                    r.deposit.name, r.deposit.public_amount
-                ),
+                Transaction::Register(r) => println!("{i}. User {} registered", r.deposit.name,),
                 Transaction::Deposit(d) => {
                     println!("{i}. User {} deposited {}", d.name, d.public_amount)
                 }

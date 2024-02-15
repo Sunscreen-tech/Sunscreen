@@ -2200,6 +2200,8 @@ dependencies = [
 name = "private_tx_linkedproof"
 version = "0.1.0"
 dependencies = [
+ "env_logger",
+ "once_cell",
  "sunscreen",
 ]
 

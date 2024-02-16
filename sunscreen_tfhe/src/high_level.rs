@@ -166,7 +166,8 @@ pub mod keygen {
 
     /// Generate a new bootstrapping key, which is used in bootstrapping operations.
     ///
-    /// See also [`programmable_bootstrap`](super::evaluation::programmable_bootstrap)
+    /// See also
+    /// [`univariate_programmable_bootstrap`](super::evaluation::univariate_programmable_bootstrap)
     /// and [`circuit_bootstrap`](super::evaluation::circuit_bootstrap).
     ///
     /// # Remarks
@@ -178,8 +179,9 @@ pub mod keygen {
     ///
     /// `radix` specifies the decomposition to use during bootstrapping.
     ///
-    /// You should use the same `lwe`, `glwe`, `radix` values here as when you call
-    /// [`programmable_bootstrap`](super::evaluation::programmable_bootstrap).
+    /// You should use the same `lwe`, `glwe`, `radix` values here as when you
+    /// call
+    /// [`univariate_programmable_bootstrap`](super::evaluation::univariate_programmable_bootstrap).
     ///
     /// The returned bootstrapping key is not immediately useful outside of serialization.
     /// You need to FFT transform is first (see [fft_bootstrap_key](super::fft::fft_bootstrap_key)).
@@ -728,8 +730,9 @@ pub mod fft {
 
     /// Take the fourier transform of a [BootstrapKey](crate::entities::BootstrapKey).
     /// The resulting [`BootstrapKeyFft`] may be used in
-    /// [`programmable_bootstrap`](super::evaluation::programmable_bootstrap) and
-    /// [`circuit_bootstrap`](super::evaluation::circuit_bootstrap) operations.
+    /// [`univariate_programmable_bootstrap`](super::evaluation::univariate_programmable_bootstrap)
+    /// and [`circuit_bootstrap`](super::evaluation::circuit_bootstrap)
+    /// operations.
     ///
     /// # Remarks
     /// `glwe` and `radix` must be the same parameters that produced `bsk`.

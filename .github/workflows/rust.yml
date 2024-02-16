@@ -60,7 +60,7 @@ jobs:
 
     # Build package in prep for user docs
     - name: Build sunscreen and bincode
-      run: cargo build --release --features bulletproofs,linkedproofs --package sunscreen --package bincode
+      run: cargo build --profile mdbook --features bulletproofs,linkedproofs --package sunscreen --package bincode
     # Build mdbook
     - name: Build mdBook
       run: cargo build --release

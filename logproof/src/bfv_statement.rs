@@ -9,8 +9,8 @@ use std::{
 
 use crypto_bigint::{NonZero, Uint};
 use seal_fhe::{
-    AsymmetricComponents, Ciphertext, Context, EncryptionParameters, Plaintext, PolynomialArray,
-    PublicKey, SecretKey, SymmetricComponents, SymmetricEncryptor,
+    AsymmetricComponents, Ciphertext, Context, Decryptor, EncryptionParameters, Plaintext,
+    PolynomialArray, PublicKey, SecretKey, SymmetricComponents, SymmetricEncryptor,
 };
 use sunscreen_math::{
     poly::Polynomial,
@@ -20,7 +20,7 @@ use sunscreen_math::{
 
 use crate::{
     linear_algebra::{Matrix, PolynomialMatrix},
-    math::Log2,
+    math::{InfinityNorm, Log2},
     rings::ZqRistretto,
     Bounds, LogProofProverKnowledge, LogProofVerifierKnowledge,
 };
@@ -329,9 +329,9 @@ where
     B: BarrettConfig<N>,
     P: StatementParams,
 {
+    let f = compute_f(params);
     let mut offsets = IdxOffsets::new(statements);
     let mut s = PolynomialMatrix::new(offsets.a_shape().1, 1);
-    let f = compute_f(params);
 
     // m_i block
     for (i, m) in messages.iter().enumerate() {
@@ -369,7 +369,12 @@ where
                 offsets.inc_public();
             }
             BfvWitness::Decryption { private_key } => {
+                let ct = statements[i].ciphertext();
                 let pt = &messages[statements[i].message_id()].plaintext;
+
+                // debug/investigate
+                investigate::<P, B, N>(pt, ct, private_key, ctx, params);
+
                 let r = SymmetricEncryptor::new(ctx, private_key)
                     .unwrap()
                     .encrypt_symmetric_return_components(pt)
@@ -377,12 +382,18 @@ where
                     .1
                     .r
                     .as_poly();
-                let sk = WithCtx(ctx, private_key.as_ref()).as_poly();
-                let ct = WithCtx(ctx, statements[i].ciphertext()).as_poly_vec();
                 let m = pt.as_poly();
+                let sk = WithCtx(ctx, private_key.as_ref()).as_poly();
+                let ct = WithCtx(ctx, ct).as_poly_vec();
                 let delta = params.delta();
-                let e = m * delta + &r - &ct[0] - &ct[1] * &sk;
+                let e = &m * delta + &r - (&ct[0] + &ct[1] * &sk);
                 let e = e.vartime_div_rem_restricted_rhs(&f).1;
+
+                // Assert AS = T
+                let lhs = m * delta + &r - &ct[1] * &sk - &e;
+                let lhs = lhs.vartime_div_rem_restricted_rhs(&f).1;
+                assert_eq!(lhs, ct[0], "the AS=T equation");
+
                 s.set(offsets.remainder, 0, r);
                 s.set(offsets.private_a, 0, sk.neg());
                 s.set(offsets.private_e, 0, e.neg());
@@ -495,6 +506,53 @@ where
             cs
         },
     }
+}
+
+fn investigate<P, B, const N: usize>(
+    pt: &Plaintext,
+    ct: &Ciphertext,
+    sk: &SecretKey,
+    ctx: &Context,
+    params: &P,
+) where
+    B: BarrettConfig<N>,
+    P: StatementParams,
+{
+    let f: Polynomial<Z<N, B>> = compute_f(params);
+    let decryptor = Decryptor::new(ctx, sk).unwrap();
+    let (decrypted_pt, noise_ct) = decryptor.decrypt_and_extract_noise(ct).unwrap();
+    let noise = WithCtx(ctx, &noise_ct).as_poly_vec().remove(0);
+    let r: Polynomial<Z<N, B>> = SymmetricEncryptor::new(ctx, sk)
+        .unwrap()
+        .encrypt_symmetric_return_components(pt)
+        .unwrap()
+        .1
+        .r
+        .as_poly();
+
+    // sanity: msg == decrypted msg
+    let m = pt.as_poly();
+    let m_decrypted = decrypted_pt.as_poly();
+    assert_eq!(m, m_decrypted);
+
+    // sanity: what comes back from seal?
+    let sk = WithCtx(ctx, sk).as_poly();
+    let ct = WithCtx(ctx, ct).as_poly_vec();
+    let expected_noise = &ct[0] + &ct[1] * &sk;
+    let expected_noise = expected_noise.vartime_div_rem_restricted_rhs(&f).1;
+    assert_eq!(&expected_noise - &noise, Polynomial::zero());
+
+    // assert error term fits in bounds
+    let delta = params.delta();
+    let e = m * delta + &r - (&ct[0] + &ct[1] * &sk);
+    let e = e.vartime_div_rem_restricted_rhs(&f).1;
+    let norm = e.infinity_norm();
+    let mut limbs = norm.val.as_words().to_vec();
+    limbs.resize(4, 0);
+    let norm = Uint::<4>::from_words(limbs.try_into().unwrap());
+    let q_div_2 = calculate_ciphertext_modulus(params.ciphertext_modulus())
+        .div(NonZero::from_uint(Uint::from(2u8)));
+    assert!(norm < q_div_2, "norm {norm} < q/2 {q_div_2} failed");
 }
 
 /// Represents the column offsets in `A` and the row offsets in `S` for the various fields.

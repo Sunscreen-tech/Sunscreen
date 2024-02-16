@@ -67,7 +67,7 @@ jobs:
       working-directory: ./mdBook
     # Build user documentation
     - name: Test docs
-      run: ../mdBook/target/release/mdbook test -L dependency=../target/release/deps --extern sunscreen=../target/release/libsunscreen.rlib --extern bincode=../target/release/libbincode.rlib
+      run: ../mdBook/target/release/mdbook test -L dependency=../target/mdbook/deps --extern sunscreen=../target/mdbook/libsunscreen.rlib --extern bincode=../target/mdbook/libbincode.rlib
       working-directory: ./sunscreen_docs
 
   lint:

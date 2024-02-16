@@ -12,7 +12,6 @@ members = [
     "sunscreen_bulletproofs",
     "sunscreen_compiler_common",
     "sunscreen_compiler_macros",
-    "sunscreen_compiler_common",
     "sunscreen_curve25519",
     "sunscreen_fhe_program",
     "sunscreen_math",
@@ -26,12 +25,17 @@ exclude = ["mdBook", "rust-playground"]
 [profile.release]
 split-debuginfo = "packed"
 debug = true
-lto="fat"
+lto = "fat"
 codegen-units = 1
 
 [profile.bench]
-lto="fat"
+lto = "fat"
 codegen-units = 1
+
+[profile.mdbook]
+inherits = "release"
+lto = false
+codegen-units = 16
 
 [workspace.dependencies]
 bytemuck = "1.13.0"

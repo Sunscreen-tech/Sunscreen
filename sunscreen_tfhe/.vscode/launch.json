@@ -1,0 +1,81 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'sunscreen_tfhe'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=sunscreen_tfhe"
+                ],
+                "filter": {
+                    "name": "sunscreen_tfhe",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug benchmark 'tfhe_proof'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bench=tfhe_proof",
+                    "--package=sunscreen_tfhe"
+                ],
+                "filter": {
+                    "name": "tfhe_proof",
+                    "kind": "bench"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug benchmark 'fft'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bench=fft",
+                    "--package=sunscreen_tfhe"
+                ],
+                "filter": {
+                    "name": "fft",
+                    "kind": "bench"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug benchmark 'ops'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bench=ops",
+                    "--package=sunscreen_tfhe"
+                ],
+                "filter": {
+                    "name": "ops",
+                    "kind": "bench"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        }
+    ]
+}

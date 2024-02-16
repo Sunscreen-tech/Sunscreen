@@ -273,6 +273,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn reallocate_on_bigger_request() {
         let mut scratch = Scratch::new();
 

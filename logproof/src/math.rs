@@ -92,14 +92,20 @@ pub trait InfinityNorm {
 
 impl<R> InfinityNorm for Polynomial<R>
 where
-    R: Ring + Ord,
+    R: Ring + Ord + Clone,
 {
     type Output = R;
 
     fn infinity_norm(&self) -> Self::Output {
-        self.coeffs
-            .iter()
-            .fold(R::zero(), |max, x| if x > &max { x.clone() } else { max })
+        self.coeffs.iter().fold(R::zero(), |max, x| {
+            let x_neg = x.clone().neg();
+            let x_abs = x.min(&x_neg);
+            if x_abs > &max {
+                x_abs.clone()
+            } else {
+                max
+            }
+        })
     }
 }
 

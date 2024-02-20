@@ -90,7 +90,7 @@ fn programmable_bootstrapping(c: &mut Criterion) {
         let bsk = keygen::generate_bootstrapping_key(&lwe_sk, &glwe_sk, lwe, glwe, bs_radix);
         let bsk = fft::fft_bootstrap_key(&bsk, lwe, glwe, bs_radix);
 
-        let ct = lwe_sk.encrypt(1, &lwe, PlaintextBits(1)).0;
+        let ct = lwe_sk.encrypt(1, lwe, PlaintextBits(1)).0;
         let lut = UnivariateLookupTable::trivial_from_fn(|x| x, glwe, PlaintextBits(1));
 
         g.bench_function(name, |b| {

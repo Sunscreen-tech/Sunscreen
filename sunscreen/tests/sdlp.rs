@@ -69,7 +69,6 @@ mod sdlp_tests {
     }
 
     #[test]
-    #[ignore = "requires seal fix"]
     fn prove_refreshing_existing_ciphertext() {
         let rt = FheRuntime::new(&TEST_PARAMS).unwrap();
         let (public_key, private_key) = rt.generate_keys().unwrap();

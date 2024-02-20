@@ -21,7 +21,7 @@ use std::{
 };
 
 use bitvec::{slice::BitSlice, vec::BitVec};
-use crypto_bigint::Uint;
+use crypto_bigint::{CheckedAdd, Uint};
 use curve25519_dalek::{ristretto::RistrettoPoint, scalar::Scalar, traits::Identity};
 use log::trace;
 use merlin::Transcript;
@@ -246,8 +246,8 @@ where
                     let row_coeffs = self.bounds[(r, c)]
                         .iter()
                         .map(|b| Uint::<4>::ONE << *b as usize)
-                        .fold(Uint::<4>::ZERO, |a, b| a.saturating_add(&b));
-                    column_bound_sum = column_bound_sum.saturating_add(&row_coeffs);
+                        .fold(Uint::<4>::ZERO, |a, b| a.checked_add(&b).unwrap());
+                    column_bound_sum = column_bound_sum.checked_add(&row_coeffs).unwrap();
                 }
                 column_bound_sum
             })

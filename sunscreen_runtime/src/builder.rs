@@ -561,7 +561,8 @@ mod linked {
         /// message to be shared with another proof statement.
         ///
         /// Use this method if you have an existing ciphertext and want to prove that it is well
-        /// formed, or that you have another ciphertext that encrypts the same value.
+        /// formed, and you intend to re-encrypt it, refreshing the noise but not the plaintext
+        /// polynomial encoding.
         pub fn decrypt_returning_msg<P>(
             &mut self,
             ciphertext: &Ciphertext,
@@ -570,61 +571,27 @@ mod linked {
         where
             P: TryIntoPlaintext + TryFromPlaintext + TypeName,
         {
-            self.decrypt_internal::<P>(ciphertext, private_key, None, None)
-        }
-
-        /// Add a decryption statement to the logproof that `ciphertext` decrypts to the
-        /// `existing_message`.
-        ///
-        /// Warning: this method will error if the [types](`TypeName`) of the `existing_message`,
-        /// `P`, and `ciphertext` do not match. However, this method _does not check_ that the
-        /// ciphertext decrypts to the existing message value, so the caller must ensure this is
-        /// the case. If this is not the case, an error will occur when attempting to build the
-        /// proof or verify it.
-        pub fn decrypt_known_msg<P, E: ExistingMessage>(
-            &mut self,
-            ciphertext: &Ciphertext,
-            private_key: &'k PrivateKey,
-            existing_message: E,
-        ) -> Result<()>
-        where
-            P: TryIntoPlaintext + TryFromPlaintext + TypeName,
-        {
-            self.decrypt_internal::<P>(
-                ciphertext,
-                private_key,
-                Some(existing_message.as_internal()),
-                None,
-            )?;
-            Ok(())
+            self.decrypt_internal::<P>(ciphertext, private_key, None)
         }
 
         fn decrypt_internal<P>(
             &mut self,
             ciphertext: &Ciphertext,
             private_key: &'k PrivateKey,
-            existing_message: Option<MessageInternal<()>>,
             bounds: Option<Bounds>,
         ) -> Result<(P, Message)>
         where
             P: TryIntoPlaintext + TryFromPlaintext + TypeName,
         {
             let start_idx = self.messages.len();
-            let existing_idx = existing_message.as_ref().map(|m| m.id);
-            let mut i = 0;
             let plaintext =
                 self.runtime
                     .decrypt_map_components::<P>(ciphertext, private_key, |m, ct| {
-                        let message_id = if let Some(idx) = existing_idx {
-                            idx + i
-                        } else {
-                            let idx = self.messages.len();
-                            self.messages.push(BfvMessage {
-                                plaintext: m.clone(),
-                                bounds: bounds.clone(),
-                            });
-                            idx
-                        };
+                        let message_id = self.messages.len();
+                        self.messages.push(BfvMessage {
+                            plaintext: m.clone(),
+                            bounds: bounds.clone(),
+                        });
                         self.statements.push(BfvProofStatement::Decryption {
                             message_id,
                             ciphertext: ct.clone(),
@@ -632,22 +599,8 @@ mod linked {
                         self.witness.push(BfvWitness::Decryption {
                             private_key: Cow::Borrowed(&private_key.0.data),
                         });
-                        i += 1;
                     })?;
             let end_idx = self.messages.len();
-
-            // Make sure the plaintext type matches the existing message, if relevant
-            // Note that we cannot check the actual plaintext equality, as these encodings may (and
-            // likely will) differ for a given encoded value.
-            // Enforcing this for the user probably requires storing a Box<dyn _> to hold onto the
-            // actual `P` value.
-            if let Some(ref msg) = existing_message {
-                if P::type_name() != msg.pt.type_name {
-                    return Err(BuilderError::user_error(
-                        "The decrypted plaintext type does not match the existing message type",
-                    ));
-                }
-            }
 
             // Decode to the expected type and return the message
             let p = P::try_from_plaintext(&plaintext, self.runtime.params())?;
@@ -658,12 +611,12 @@ mod linked {
                 plaintext,
                 type_name: P::type_name(),
             });
-            let msg_internal = existing_message.unwrap_or(MessageInternal {
+            let msg_internal = MessageInternal {
                 id: start_idx,
                 pt,
                 len: end_idx - start_idx,
                 zkp_type: (),
-            });
+            };
             Ok((p, Message(msg_internal)))
         }
 
@@ -855,8 +808,7 @@ mod linked {
             P: LinkWithZkp + TryIntoPlaintext + TryFromPlaintext + TypeName,
         {
             let bounds = self.mk_bounds::<P>();
-            let (pt, msg) =
-                self.decrypt_internal::<P>(ciphertext, private_key, None, Some(bounds))?;
+            let (pt, msg) = self.decrypt_internal::<P>(ciphertext, private_key, Some(bounds))?;
             let zkp_type = P::ZkpType::<BulletproofsFieldSpec>::type_name();
             Ok((pt, LinkedMessage::from_message(msg, zkp_type)))
         }

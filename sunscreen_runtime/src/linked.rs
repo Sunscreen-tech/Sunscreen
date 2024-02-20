@@ -453,7 +453,7 @@ impl SealSdlpVerifierKnowledge {
     /// Get the length in bits of the binary expansion of the serialized secret * vectors.
     ///
     /// Delegate to [`LogProofVerifierKnowledge::l`].
-    pub fn l(&self) -> u64 {
+    pub fn l(&self) -> u32 {
         seq_zq!({
             match &self.0 {
                 #(

@@ -53,7 +53,7 @@ type MatrixPoly<Q> = Matrix<Polynomial<Q>>;
  * Bounds on the coefficients in the secret S (specified in number of bits).
  */
 #[derive(Clone, Debug, PartialEq)]
-pub struct Bounds(pub Vec<usize>);
+pub struct Bounds(pub Vec<u32>);
 
 impl Zero for Bounds {
     // The empty vector could be seen as no bounds. Also follows the field
@@ -69,7 +69,7 @@ impl Zero for Bounds {
 }
 
 impl std::ops::Deref for Bounds {
-    type Target = [usize];
+    type Target = [u32];
 
     fn deref(&self) -> &Self::Target {
         &self.0
@@ -132,22 +132,22 @@ where
     /**
      * The number of rows in a.
      */
-    pub fn n(&self) -> u64 {
-        self.a.rows as u64
+    pub fn n(&self) -> u32 {
+        self.a.rows as u32
     }
 
     /**
      * The number of cols in a and the number rows in s.
      */
-    pub fn m(&self) -> u64 {
-        self.a.cols as u64
+    pub fn m(&self) -> u32 {
+        self.a.cols as u32
     }
 
     /**
      * The number of cols in t.
      */
-    pub fn k(&self) -> u64 {
-        self.t.cols as u64
+    pub fn k(&self) -> u32 {
+        self.t.cols as u32
     }
 
     /**
@@ -168,11 +168,11 @@ where
     /**
      * Sum of all the bounds
      */
-    pub fn b_sum(&self) -> u64 {
+    pub fn b_sum(&self) -> u32 {
         self.b()
             .as_slice()
             .iter()
-            .map(|v| v.iter().sum::<usize>() as u64)
+            .map(|v| v.iter().sum::<u32>())
             .sum()
     }
 
@@ -189,7 +189,7 @@ where
         let mut last_end_range = 0;
 
         for (k, b_piece) in b.as_slice().iter().enumerate() {
-            let bits = b_piece.iter().sum::<usize>();
+            let bits = b_piece.iter().sum::<u32>() as usize;
 
             // Get the orginal matrix index
             let i = k / self.bounds.cols;
@@ -210,28 +210,28 @@ where
     /**
      * The degree of `f`.
      */
-    pub fn d(&self) -> u64 {
-        self.f.vartime_degree() as u64
+    pub fn d(&self) -> u32 {
+        self.f.vartime_degree() as u32
     }
 
     /**
      * Number of coefficients in secret vector s
      */
-    pub fn number_coeff_in_s(&self) -> u64 {
+    pub fn number_coeff_in_s(&self) -> u32 {
         self.m() * self.d()
     }
 
     /**
      * Computes the nk(d-1)b_2 term in l.
      */
-    pub fn nk_d_min_1_b_2(&self) -> u64 {
+    pub fn nk_d_min_1_b_2(&self) -> u32 {
         self.n() * self.k() * (self.d() - 1) * self.b_2()
     }
 
     /**
      * Computes the nk(2d-1)b_1 term in l.
      */
-    pub fn nk_2d_min_1_b_1(&self) -> u64 {
+    pub fn nk_2d_min_1_b_1(&self) -> u32 {
         self.n() * self.k() * (2 * self.d() - 1) * self.b_1()
     }
 
@@ -245,7 +245,7 @@ where
                 for r in 0..self.bounds.rows {
                     column_bound_sum += self.bounds[(r, c)]
                         .iter()
-                        .map(|b| if *b > 0 { 2u64.pow(*b as u32) } else { 0 })
+                        .map(|b| if *b > 0 { 2u64.pow(*b) } else { 0 })
                         .sum::<u64>();
                 }
                 column_bound_sum
@@ -256,7 +256,7 @@ where
     /**
      * The number of bits needed to store the elements of R1.
      */
-    pub fn b_1(&self) -> u64 {
+    pub fn b_1(&self) -> u32 {
         let d_big = ZqRistretto::from(self.d());
         let max_bounds_column_sum = ZqRistretto::from(self.max_bounds_column_sum());
 
@@ -270,14 +270,14 @@ where
     /**
      * The number of bits needed to store values in `Fp<Q>`.
      */
-    pub fn b_2(&self) -> u64 {
+    pub fn b_2(&self) -> u32 {
         Log2::ceil_log2(&Q::field_modulus())
     }
 
     /**
      * The length in bits of the binary expansion of the serialized secret * vectors.
      */
-    pub fn l(&self) -> u64 {
+    pub fn l(&self) -> u32 {
         let total_bounds_all_equations = self.b_sum();
         let nk = self.n().checked_mul(self.k()).unwrap();
 
@@ -496,19 +496,19 @@ impl LogProof {
         let r_1_serialized = Self::serialize(&r_1, (2 * d - 1) as usize);
         let r_2_serialized = Self::serialize(&r_2, (d - 1) as usize);
 
-        assert_eq!(s_serialized.len() as u64, m * k * d);
+        assert_eq!(s_serialized.len() as u32, m * k * d);
 
-        assert_eq!(r_1_serialized.len() as u64, n * k * (2 * d - 1));
-        assert_eq!(r_2_serialized.len() as u64, n * k * (d - 1));
+        assert_eq!(r_1_serialized.len() as u32, n * k * (2 * d - 1));
+        assert_eq!(r_2_serialized.len() as u32, n * k * (d - 1));
 
         let s_binary: BitVec = Self::to_2s_complement_multibound(&s_serialized, &b_serialized);
-        assert_eq!(s_binary.len() as u64, total_bounds_all_equations);
+        assert_eq!(s_binary.len() as u32, total_bounds_all_equations);
 
         let r_1_binary = Self::to_2s_complement(&r_1_serialized, b_1);
-        assert_eq!(r_1_binary.len() as u64, n * k * (2 * d - 1) * b_1);
+        assert_eq!(r_1_binary.len() as u32, n * k * (2 * d - 1) * b_1);
 
         let r_2_binary = Self::to_2s_complement(&r_2_serialized, b_2);
-        assert_eq!(r_2_binary.len() as u64, n * k * (d - 1) * b_2);
+        assert_eq!(r_2_binary.len() as u32, n * k * (d - 1) * b_2);
 
         let mut s_1 = s_binary.clone();
         s_1.extend(r_1_binary.iter());
@@ -903,7 +903,7 @@ impl LogProof {
             two_b.as_slice(),
         );
 
-        assert_eq!(term_1.len() as u64, b_sum);
+        assert_eq!(term_1.len() as u32, b_sum);
 
         // Compute term 2
         let q = ZqRistretto::try_from(Q::field_modulus()).unwrap();
@@ -919,7 +919,7 @@ impl LogProof {
             .tensor(alpha_2d_minus_1)
             .tensor(two_b_1);
 
-        assert_eq!(term_2.len() as u64, b_1 * (2 * d - 1) * n * k);
+        assert_eq!(term_2.len() as u32, b_1 * (2 * d - 1) * n * k);
 
         // Compute term 3
         let d_min_1 = d as usize - 1;
@@ -935,7 +935,7 @@ impl LogProof {
             .tensor(alpha_d_minus_1)
             .tensor(two_b_2);
 
-        assert_eq!(term_3.len() as u64, b_2 * (d - 1) * n * k);
+        assert_eq!(term_3.len() as u32, b_2 * (d - 1) * n * k);
 
         let mut result = vec![];
 
@@ -1121,7 +1121,7 @@ impl LogProof {
      * panic on any other input.
      *
      */
-    fn to_2s_complement_single<B, const N: usize>(value: &Zq<N, B>, log_b: u64, bitvec: &mut BitVec)
+    fn to_2s_complement_single<B, const N: usize>(value: &Zq<N, B>, log_b: u32, bitvec: &mut BitVec)
     where
         B: ArithmeticBackend<N>,
     {
@@ -1168,7 +1168,7 @@ impl LogProof {
      * `value` is the element in Zq and `b` is the number of bits needed
      * to represent the signed value.
      */
-    fn to_2s_complement<B, const N: usize>(values: &[Zq<N, B>], log_b: u64) -> BitVec
+    fn to_2s_complement<B, const N: usize>(values: &[Zq<N, B>], log_b: u32) -> BitVec
     where
         B: ArithmeticBackend<N>,
     {
@@ -1192,14 +1192,14 @@ impl LogProof {
      * `value` is the element in Zq and `b` is the number of bits needed
      * to represent the signed value.
      */
-    fn to_2s_complement_multibound<B, const N: usize>(values: &[Zq<N, B>], log_b: &[u64]) -> BitVec
+    fn to_2s_complement_multibound<B, const N: usize>(values: &[Zq<N, B>], log_b: &[u32]) -> BitVec
     where
         B: ArithmeticBackend<N>,
     {
         // Make sure we have an equal number of values and bounds to serialize
         assert_eq!(values.len(), log_b.len());
 
-        let mut bitvec = BitVec::with_capacity(log_b.iter().sum::<u64>() as usize);
+        let mut bitvec = BitVec::with_capacity(log_b.iter().sum::<u32>() as usize);
 
         // This code should not feature timing side-channels.
         for (value, bound) in zip(values.iter(), log_b.iter()) {
@@ -1216,11 +1216,11 @@ impl LogProof {
      * The matrix is serialized in row-major order, with bound
      * coefficients being contiguous.
      */
-    pub fn serialize_bounds(bounds: &Matrix<Bounds>) -> Vec<u64> {
+    pub fn serialize_bounds(bounds: &Matrix<Bounds>) -> Vec<u32> {
         bounds
             .as_slice()
             .iter()
-            .flat_map(|x| x.0.iter().map(|x| *x as u64))
+            .flat_map(|x| x.0.iter().copied())
             .collect()
     }
 
@@ -1403,7 +1403,7 @@ mod test {
                                             0
                                         } else {
                                             next_higher_power_of_two(x.unsigned_abs()).ilog2()
-                                                as usize
+                                                as u32
                                         }
                                     })
                                     .collect::<Vec<_>>(),

@@ -221,7 +221,7 @@ fn compute_bounds<S: TorusOps + TorusZq>(
     // Bounds for messages
     for i in 0..num_messages {
         let mut b = Bounds(vec![0; num_coeffs]);
-        b.0[0] = 0x1u64 << plaintext_bits.0;
+        b.0[0] = plaintext_bits.0;
         debug_assert_eq!(bounds[(i, 0)].0, &[]);
         bounds[(i, 0)] = b;
     }
@@ -232,7 +232,7 @@ fn compute_bounds<S: TorusOps + TorusZq>(
             let mut b = Bounds(vec![0; num_coeffs]);
 
             // Values of r are binary
-            b.0[0] = 0x1u64 << plaintext_bits.0;
+            b.0[0] = plaintext_bits.0;
             debug_assert_eq!(
                 bounds[(offsets.public_keys + i * lwe_dimension + j, 0)].0,
                 &[]
@@ -242,7 +242,7 @@ fn compute_bounds<S: TorusOps + TorusZq>(
 
         // e is normal distributed over the torus.
         // TODO: This bound is too high. Get a tighter bound.
-        let b = Bounds(vec![0x1u64 << (60 - plaintext_bits.0); num_coeffs]);
+        let b = Bounds(vec![60 - plaintext_bits.0; num_coeffs]);
 
         debug_assert_eq!(bounds[(offsets.public_e + i, 0)].0, &[]);
         bounds[(offsets.public_e + i, 0)] = b;
@@ -254,7 +254,7 @@ fn compute_bounds<S: TorusOps + TorusZq>(
             let mut b = Bounds(vec![0; num_coeffs]);
 
             // Values of s are binary
-            b.0[0] = 0x1u64 << plaintext_bits.0;
+            b.0[0] = plaintext_bits.0;
             debug_assert_eq!(
                 bounds[(offsets.private_a + j + i * lwe_dimension, 0)].0,
                 &[]
@@ -266,7 +266,7 @@ fn compute_bounds<S: TorusOps + TorusZq>(
 
         // e is normal distributed over the torus.
         // TODO: This bound is too high. Get a tighter bound.
-        b.0[0] = 0x1u64 << (62 - plaintext_bits.0);
+        b.0[0] = 62 - plaintext_bits.0;
         debug_assert_eq!(bounds[(offsets.private_e + i, 0)].0, &[]);
         bounds[(offsets.private_e + i, 0)] = b;
     }

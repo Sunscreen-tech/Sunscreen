@@ -26,12 +26,12 @@ use crate::{
 };
 
 /// In SEAL, `u` is sampled from a ternary distribution. The number of bits is 1.
-const U_COEFFICIENT_BOUND: usize = 1;
+const U_COEFFICIENT_BOUND: u32 = 1;
 /// In SEAL, `e` is sampled from a centered binomial distribution with std dev 3.2, and a maximum
 /// width multiplier of 6, so max bound is 19.2. 19.2.ceil_log2() == 5
-const E_COEFFICIENT_BOUND: usize = 5;
+const E_COEFFICIENT_BOUND: u32 = 5;
 /// In SEAL, secret keys are sampled from a ternary distribution. The number of bits is 1.
-const S_COEFFICIENT_BOUND: usize = 1;
+const S_COEFFICIENT_BOUND: u32 = 1;
 
 /// A proof statement verifying that a ciphertext is an encryption of a known plaintext message.
 /// Note that these statements are per SEAL plain/ciphertexts, where Sunscreen encodings are at a
@@ -440,7 +440,7 @@ where
     let degree = params.degree() as usize;
 
     // calculate bounds
-    let m_default_bound = Bounds(vec![params.plain_modulus().ceil_log2() as usize; degree]);
+    let m_default_bound = Bounds(vec![params.plain_modulus().ceil_log2(); degree]);
     let r_bound = m_default_bound.clone();
     let u_bound = Bounds(vec![U_COEFFICIENT_BOUND; degree]);
     let e_bound = Bounds(vec![E_COEFFICIENT_BOUND; degree]);
@@ -449,7 +449,7 @@ where
     let q_div_2_bits = calculate_ciphertext_modulus(params.ciphertext_modulus())
         .div(NonZero::from_uint(Uint::from(2u8)))
         .ceil_log2();
-    let decrypt_e_bound = Bounds(vec![q_div_2_bits as usize; degree]);
+    let decrypt_e_bound = Bounds(vec![q_div_2_bits as u32; degree]);
 
     // insert them
     for i in 0..IdxOffsets::num_messages(statements) {

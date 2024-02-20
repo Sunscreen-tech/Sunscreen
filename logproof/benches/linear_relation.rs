@@ -76,7 +76,7 @@ where
     // e_1 = q / 2p
     // c_1 = s * a + e_1 + del * m
     // c_2 = a
-    const BIT_SIZE: usize = 2 << 8;
+    const BIT_SIZE: u32 = 2 << 8;
 
     println!("Generating data...");
 

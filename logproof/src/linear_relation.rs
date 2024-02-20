@@ -1403,7 +1403,6 @@ mod test {
                                             0
                                         } else {
                                             next_higher_power_of_two(x.unsigned_abs()).ilog2()
-                                                as u32
                                         }
                                     })
                                     .collect::<Vec<_>>(),

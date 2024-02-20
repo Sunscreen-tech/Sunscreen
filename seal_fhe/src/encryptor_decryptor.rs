@@ -625,26 +625,6 @@ impl Decryptor {
         Ok(plaintext)
     }
 
-    /// Decrypts a ciphertext and returns the noise polynomial as a ciphertext.
-    pub fn decrypt_and_extract_noise(
-        &self,
-        ciphertext: &Ciphertext,
-    ) -> Result<(Plaintext, Ciphertext)> {
-        let plaintext = Plaintext::new()?;
-        let noise = Ciphertext::new()?;
-
-        convert_seal_error(unsafe {
-            bindgen::Decryptor_DecryptAndExtractNoise(
-                self.handle,
-                ciphertext.get_handle(),
-                plaintext.get_handle(),
-                noise.get_handle(),
-            )
-        })?;
-
-        Ok((plaintext, noise))
-    }
-
     /**
      * Computes the invariant noise budget (in bits) of a ciphertext. The invariant noise
      * budget measures the amount of room there is for the noise to grow while ensuring

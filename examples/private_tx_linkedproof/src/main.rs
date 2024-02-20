@@ -1,5 +1,3 @@
-#![allow(unused)]
-
 //! In this example, we demonstrate how to use a [`LinkedProof`] to verify a private transaction.
 //! We assume the private transactions are implemented on a transparent system like a blockchain,
 //! where deterministic computation is performed on encrypted data. The linked proofs allow us to
@@ -18,8 +16,7 @@ use sunscreen::{
         Cipher,
     },
     zkp_program, zkp_var, Ciphertext, CompiledFheProgram, CompiledZkpProgram, Compiler,
-    FheZkpApplication, FheZkpRuntime, Params, PlainModulusConstraint, PrivateKey, PublicKey,
-    Result, ZkpProgramInput,
+    FheZkpApplication, FheZkpRuntime, Params, PrivateKey, PublicKey, Result, ZkpProgramInput,
 };
 
 /// Subtract the transaction amount from the sender's balance.
@@ -232,14 +229,14 @@ pub struct Transfer {
 
 /// A refresh private balance transaction.
 ///
-/// The SDLP proves that the fresh balance is a valid, fresh encryption and also that the
-/// underlying value matches the current on chain balance.
+/// The SDLP proves that the fresh balance is a valid, fresh encryption (i.e. the noise budget is
+/// reset) and also that the underlying value matches the current on chain balance.
 ///
 /// Note that this proof is not a linked proof, as these validations can be proven by an
 /// [`Sdlp`] alone.
 //
-// TODO do we need a BfvSigned::constrain_is_fresh_encryption that proves each coefficient's
-// absolute value <= 1 and degree is less than 64?
+// TODO we need a BfvSigned::constrain_fresh_encoding that proves each coefficient's
+// absolute value <= 1 and degree is less than 64.
 #[derive(Clone)]
 pub struct RefreshBalance {
     proof: Sdlp,
@@ -390,8 +387,7 @@ impl Chain {
         } = refresh_balance;
 
         // Verify the balance refresh is valid
-        // TODO fix logproofs for computed ciphertexts
-        // proof.verify()?;
+        proof.verify()?;
 
         // Use the freshly encrypted balance
         self.balances

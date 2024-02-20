@@ -15,6 +15,7 @@
 - [What's in an FHE program?](fhe/fhe_programs/fhe_programs.md)
   - [Types](fhe/fhe_programs/types/types.md)
     - [Signed](fhe/fhe_programs/types/signed.md)
+    - [Unsigned](fhe/fhe_programs/types/unsigned.md)
     - [Fractional](fhe/fhe_programs/types/fractional.md)
     - [Rational](fhe/fhe_programs/types/rational.md)
   - [How to write an FHE program](fhe/fhe_programs/writing_an_fhe_program/writing_an_fhe_program.md)
@@ -47,6 +48,8 @@
     - [Funky math: carryless arithmetic](fhe/advanced/carryless_arithmetic.md)
     - [Batching]()
 
+---
+
 # ZKP
 
 - [Introduction](zkp/intro/intro.md)
@@ -77,3 +80,25 @@
     - [Constant inputs](zkp/advanced/constant_inputs.md)
     - [Creating ZKP types](zkp/advanced/zkp_type.md)
   - [WASM support](zkp/advanced/wasm.md)
+
+---
+
+# FHE + ZKP
+
+- [Introduction](linked/intro/intro.md)
+  - [How does this work?](linked/intro/how.md)
+  - [TODO RM THIS](linked/intro/TODO.md)
+- [What's in a Linked ZKP program?](linked/linked_programs/linked_programs.md)
+  - [Types](linked/linked_programs/types.md)
+  - [Limitations](linked/linked_programs/limitations.md)
+- [Compiling](linked/compiling/compiling.md)
+- [Runtime](linked/runtime/runtime.md)
+  - [Proving](linked/runtime/prove.md)
+  - [Verifying](linked/runtime/verify.md)
+  - [Serialization](linked/runtime/serialization.md)
+- [Applications](linked/applications/applications.md)
+  - [Private transactions](linked/applications/private_tx.md)
+- [FAQ](linked/faq/faq.md)
+- [Advanced topics](linked/advanced/advanced.md)
+  - [Plaintext modulus](linked/advanced/plain_modulus.md)
+  - [Custom bounds](linked/advanced/custom_bounds.md)

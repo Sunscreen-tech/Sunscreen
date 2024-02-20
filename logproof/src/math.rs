@@ -1,6 +1,6 @@
 use std::{borrow::Borrow, ops::Mul};
 
-use crypto_bigint::Uint;
+use crypto_bigint::{Limb, Uint};
 use curve25519_dalek::{ristretto::RistrettoPoint, scalar::Scalar, traits::VartimeMultiscalarMul};
 use rand::Rng;
 use rayon::prelude::{IndexedParallelIterator, IntoParallelRefIterator, ParallelIterator};
@@ -92,14 +92,20 @@ pub trait InfinityNorm {
 
 impl<R> InfinityNorm for Polynomial<R>
 where
-    R: Ring + Ord,
+    R: Ring + Ord + Clone,
 {
     type Output = R;
 
     fn infinity_norm(&self) -> Self::Output {
-        self.coeffs
-            .iter()
-            .fold(R::zero(), |max, x| if x > &max { x.clone() } else { max })
+        self.coeffs.iter().fold(R::zero(), |max, x| {
+            let x_neg = x.clone().neg();
+            let x_abs = x.min(&x_neg);
+            if x_abs > &max {
+                x_abs.clone()
+            } else {
+                max
+            }
+        })
     }
 }
 
@@ -133,7 +139,7 @@ pub trait Log2 {
      * # Panics
      * When the given value is zero.
      */
-    fn log2(x: &Self) -> u64;
+    fn log2(&self) -> u32;
 
     /**
      * Compute the ceiling of the log2 of the given value.
@@ -141,18 +147,18 @@ pub trait Log2 {
      * # Panics
      * When the given value is zero.
      */
-    fn ceil_log2(x: &Self) -> u64;
+    fn ceil_log2(&self) -> u32;
 }
 
 impl Log2 for u64 {
     /**
      * An implementation of log2 that works on stable.
      */
-    fn log2(x: &Self) -> u64 {
+    fn log2(&self) -> u32 {
         let mut mask = 0x8000_0000_0000_0000;
 
         for i in 0..64 {
-            if mask & x != 0 {
+            if mask & self != 0 {
                 return 63 - i;
             }
 
@@ -162,9 +168,9 @@ impl Log2 for u64 {
         panic!("Value was zero.");
     }
 
-    fn ceil_log2(x: &Self) -> u64 {
-        let ceil_factor = if x.is_power_of_two() { 0 } else { 1 };
-        Self::log2(x) + ceil_factor
+    fn ceil_log2(&self) -> u32 {
+        let ceil_factor = if self.is_power_of_two() { 0 } else { 1 };
+        self.log2() + ceil_factor
     }
 }
 
@@ -173,35 +179,37 @@ fn is_power_of_two_bigint<const N: usize>(b: &Uint<N>) -> bool {
 }
 
 impl<const N: usize> Log2 for Uint<N> {
-    fn log2(x: &Self) -> u64 {
-        for i in 0..x.as_limbs().len() {
-            let i = x.as_limbs().len() - i - 1;
-            let limb = x.as_limbs()[i];
+    fn log2(&self) -> u32 {
+        let limb_bits = Limb::BITS as u32;
+
+        for i in 0..self.as_limbs().len() {
+            let i = self.as_limbs().len() - i - 1;
+            let limb = self.as_limbs()[i];
 
             if limb.0 == 0 {
                 continue;
             }
 
-            return Log2::log2(&limb.0) + (i as u64) * 64;
+            return Log2::log2(&limb.0) + (i as u32) * limb_bits;
         }
 
         panic!("Value was zero.");
     }
 
-    fn ceil_log2(x: &Self) -> u64 {
-        let ceil_factor = if is_power_of_two_bigint(x) { 0 } else { 1 };
+    fn ceil_log2(&self) -> u32 {
+        let ceil_factor = if is_power_of_two_bigint(self) { 0 } else { 1 };
 
-        Self::log2(x) + ceil_factor
+        self.log2() + ceil_factor
     }
 }
 
 impl<const N: usize, B: ArithmeticBackend<N>> Log2 for Zq<N, B> {
-    fn log2(x: &Self) -> u64 {
-        Uint::<N>::log2(&x.val)
+    fn log2(&self) -> u32 {
+        Uint::<N>::log2(&self.val)
     }
 
-    fn ceil_log2(x: &Self) -> u64 {
-        Uint::<N>::ceil_log2(&x.val)
+    fn ceil_log2(&self) -> u32 {
+        Uint::<N>::ceil_log2(&self.val)
     }
 }
 
@@ -657,7 +665,7 @@ mod test {
 
         for value in options {
             let f = value as f64;
-            let expected = f.log2().ceil() as u64;
+            let expected = f.log2().ceil() as u32;
 
             let calculated = Log2::ceil_log2(&value);
 
@@ -671,7 +679,7 @@ mod test {
 
         for value in options {
             let f = value as f64;
-            let expected = f.log2().ceil() as u64;
+            let expected = f.log2().ceil() as u32;
 
             let b: Uint<1> = Uint::from(value);
             let calculated = Log2::ceil_log2(&b);

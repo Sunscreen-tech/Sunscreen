@@ -1,12 +1,16 @@
 //! This module provides a mid-level API for generating SDLP prover and verifier knowledge from BFV
 //! encryptions, all at the [`seal_fhe`] layer.
 
-use std::{borrow::Cow, fmt::Debug, ops::Neg};
+use std::{
+    borrow::Cow,
+    fmt::Debug,
+    ops::{Div, Neg},
+};
 
-use crypto_bigint::{NonZero, Uint};
+use crypto_bigint::{CheckedMul, NonZero, Uint};
 use seal_fhe::{
     AsymmetricComponents, Ciphertext, Context, EncryptionParameters, Plaintext, PolynomialArray,
-    PublicKey, SecretKey, SymmetricComponents,
+    PublicKey, SecretKey, SymmetricComponents, SymmetricEncryptor,
 };
 use sunscreen_math::{
     poly::Polynomial,
@@ -16,17 +20,17 @@ use sunscreen_math::{
 
 use crate::{
     linear_algebra::{Matrix, PolynomialMatrix},
-    rings::ZqRistretto,
+    math::Log2,
     Bounds, LogProofProverKnowledge, LogProofVerifierKnowledge,
 };
 
-/// In SEAL, `u` is sampled from a ternary distribution.
-const U_COEFFICIENT_BOUND: u64 = 2;
+/// In SEAL, `u` is sampled from a ternary distribution. The number of bits is 1.
+const U_COEFFICIENT_BOUND: u32 = 1;
 /// In SEAL, `e` is sampled from a centered binomial distribution with std dev 3.2, and a maximum
-/// width multiplier of 6, so max bound is 19.2.
-const E_COEFFICIENT_BOUND: u64 = 19;
-/// In SEAL, secret keys are sampled from a ternary distribution.
-const S_COEFFICIENT_BOUND: u64 = 2;
+/// width multiplier of 6, so max bound is 19.2. 19.2.ceil_log2() == 5
+const E_COEFFICIENT_BOUND: u32 = 5;
+/// In SEAL, secret keys are sampled from a ternary distribution. The number of bits is 1.
+const S_COEFFICIENT_BOUND: u32 = 1;
 
 /// A proof statement verifying that a ciphertext is an encryption of a known plaintext message.
 /// Note that these statements are per SEAL plain/ciphertexts, where Sunscreen encodings are at a
@@ -52,6 +56,17 @@ pub enum BfvProofStatement<'p> {
         /// The public key of the encryption statement.
         public_key: Cow<'p, PublicKey>,
     },
+    /// A statement that the ciphertext decrypts to the identified message. This is really the same
+    /// thing as a private key encryption statement, however the creation of the statement is
+    /// different when starting from a known ciphertext, as are the bounds, so we separate this
+    /// case for convenience.
+    Decryption {
+        /// Column index in the A matrix, or equivalently the index of the message slice provided
+        /// when generating the prover knowledge.
+        message_id: usize,
+        /// The ciphertext of the encryption statement.
+        ciphertext: Ciphertext,
+    },
 }
 
 impl<'p> BfvProofStatement<'p> {
@@ -60,6 +75,7 @@ impl<'p> BfvProofStatement<'p> {
         match self {
             BfvProofStatement::PrivateKeyEncryption { message_id, .. } => *message_id,
             BfvProofStatement::PublicKeyEncryption { message_id, .. } => *message_id,
+            BfvProofStatement::Decryption { message_id, .. } => *message_id,
         }
     }
 
@@ -68,6 +84,7 @@ impl<'p> BfvProofStatement<'p> {
         match self {
             BfvProofStatement::PrivateKeyEncryption { ciphertext, .. } => ciphertext,
             BfvProofStatement::PublicKeyEncryption { ciphertext, .. } => ciphertext,
+            BfvProofStatement::Decryption { ciphertext, .. } => ciphertext,
         }
     }
 
@@ -76,9 +93,10 @@ impl<'p> BfvProofStatement<'p> {
         matches!(self, BfvProofStatement::PublicKeyEncryption { .. })
     }
 
-    /// Return whether or not this is a private encryption statement.
+    /// Return whether or not this is a private encryption statement. Note that decryption
+    /// statements are technically private encryption statements.
     pub fn is_private(&self) -> bool {
-        matches!(self, BfvProofStatement::PrivateKeyEncryption { .. })
+        !self.is_public()
     }
 }
 
@@ -94,6 +112,14 @@ pub enum BfvWitness<'s> {
     },
     /// A witness for the [`BfvProofStatement::PublicKeyEncryption`] variant.
     PublicKeyEncryption(AsymmetricComponents),
+    /// A witness for the [`BfvProofStatement::Decryption`] variant.
+    // N.B. There should really be symmetric encryption components here; we can add them after
+    // modifying seal decryption to return this information. For now, we compute the components
+    // manually (see the handling of this variant in `compute_s` below).
+    Decryption {
+        /// The private key used for the decryption.
+        private_key: Cow<'s, SecretKey>,
+    },
 }
 
 /// A BFV message, which is a SEAL plaintext and an optional coefficient bound.
@@ -194,15 +220,16 @@ where
     B: BarrettConfig<N>,
     P: StatementParams,
 {
-    let bounds = messages
+    let msg_bounds = messages
         .iter()
         .map(|m| m.bounds.clone())
         .collect::<Vec<_>>();
-    let vk = generate_verifier_knowledge(statements, &bounds, params, ctx);
+    let LogProofVerifierKnowledge { a, t, bounds, f } =
+        generate_verifier_knowledge(statements, &msg_bounds, params, ctx);
 
-    let s = compute_s(statements, messages, witness, ctx);
+    let s = compute_s(statements, messages, witness, params, ctx);
 
-    LogProofProverKnowledge { vk, s }
+    LogProofProverKnowledge::new(&a, &s, &t, &bounds, &f)
 }
 
 /// Generate only the [`LogProofVerifierKnowledge`] for a given set of [`BfvProofStatement`]s.
@@ -220,18 +247,10 @@ where
 {
     let a = compute_a(statements, params, ctx);
     let t = compute_t(statements, ctx);
-    let bounds = compute_bounds(statements, msg_bounds, params);
-    let f = Polynomial {
-        coeffs: {
-            let degree = params.degree() as usize;
-            let mut cs = vec![Zq::zero(); degree + 1];
-            cs[0] = Zq::one();
-            cs[degree] = Zq::one();
-            cs
-        },
-    };
+    let bounds = compute_bounds::<P, B, N>(statements, msg_bounds, params);
+    let f = compute_f(params);
 
-    LogProofVerifierKnowledge { a, t, bounds, f }
+    LogProofVerifierKnowledge::new(a, t, f, bounds)
 }
 
 fn compute_a<P, B, const N: usize>(
@@ -283,23 +302,35 @@ where
 
                 row += 2;
             }
+            // sk, e blocks from decryption
+            BfvProofStatement::Decryption { ciphertext, .. } => {
+                let c1 = WithCtx(ctx, ciphertext).as_poly_vec().pop().unwrap();
+                a.set(row, offsets.private_a, c1);
+                a.set(row, offsets.private_e, Polynomial::one());
+                offsets.inc_private();
+
+                row += 1;
+            }
         }
     }
 
     a
 }
 
-fn compute_s<B, const N: usize>(
+fn compute_s<P, B, const N: usize>(
     statements: &[BfvProofStatement<'_>],
     messages: &[BfvMessage],
     witness: &[BfvWitness<'_>],
+    params: &P,
     ctx: &Context,
 ) -> PolynomialMatrix<Z<N, B>>
 where
     B: BarrettConfig<N>,
+    P: StatementParams,
 {
     let mut offsets = IdxOffsets::new(statements);
     let mut s = PolynomialMatrix::new(offsets.a_shape().1, 1);
+    let f = compute_f(params);
 
     // m_i block
     for (i, m) in messages.iter().enumerate() {
@@ -307,7 +338,7 @@ where
     }
 
     // r_i, u_i, e_i, sk, e blocks
-    for w in witness {
+    for (i, w) in witness.iter().enumerate() {
         match w {
             // sk, e
             BfvWitness::PrivateKeyEncryption {
@@ -335,6 +366,32 @@ where
                 s.set(offsets.public_e_0, 0, e0);
                 s.set(offsets.public_e_1, 0, e1);
                 offsets.inc_public();
+            }
+            BfvWitness::Decryption { private_key } => {
+                let pt = &messages[statements[i].message_id()].plaintext;
+                let r = SymmetricEncryptor::new(ctx, private_key)
+                    .unwrap()
+                    .encrypt_symmetric_return_components(pt)
+                    .unwrap()
+                    .1
+                    .r
+                    .as_poly();
+                let sk = WithCtx(ctx, private_key.as_ref()).as_poly();
+                let ct = WithCtx(ctx, statements[i].ciphertext()).as_poly_vec();
+                let m = pt.as_poly();
+                let delta = params.delta();
+                let e = &m * delta + &r - &ct[0] - &ct[1] * &sk;
+                let e = e.vartime_div_rem_restricted_rhs(&f).1;
+                // Assert AS = T
+                if cfg!(debug_assertions) {
+                    let lhs = m * delta + &r - &ct[1] * &sk - &e;
+                    let lhs = lhs.vartime_div_rem_restricted_rhs(&f).1;
+                    debug_assert_eq!(lhs, ct[0], "the AS=T equation");
+                }
+                s.set(offsets.remainder, 0, r);
+                s.set(offsets.private_a, 0, sk.neg());
+                s.set(offsets.private_e, 0, e.neg());
+                offsets.inc_private();
             }
         }
     }
@@ -369,24 +426,32 @@ where
     t
 }
 
-fn compute_bounds<P>(
+fn compute_bounds<P, B, const N: usize>(
     statements: &[BfvProofStatement<'_>],
     msg_bounds: &[Option<Bounds>],
     params: &P,
 ) -> Matrix<Bounds>
 where
     P: StatementParams,
+    B: BarrettConfig<N>,
 {
     let mut offsets = IdxOffsets::new(statements);
     let mut bounds = Matrix::<Bounds>::new(offsets.a_shape().1, 1);
     let degree = params.degree() as usize;
 
     // calculate bounds
-    let m_default_bound = Bounds(vec![params.plain_modulus(); degree]);
+    let m_default_bound = Bounds(vec![params.plain_modulus().ceil_log2(); degree]);
     let r_bound = m_default_bound.clone();
     let u_bound = Bounds(vec![U_COEFFICIENT_BOUND; degree]);
     let e_bound = Bounds(vec![E_COEFFICIENT_BOUND; degree]);
     let s_bound = Bounds(vec![S_COEFFICIENT_BOUND; degree]);
+    // very liberal bound, the max that satisfies correctness
+    let delta_div_2_bits = params
+        .delta::<N, B>()
+        .into_bigint()
+        .div(NonZero::from_uint(Uint::from(2u8)))
+        .ceil_log2();
+    let decrypt_e_bound = Bounds(vec![delta_div_2_bits; degree]);
 
     // insert them
     for i in 0..IdxOffsets::num_messages(statements) {
@@ -402,18 +467,42 @@ where
     }
     for s in statements {
         bounds.set(offsets.remainder, 0, r_bound.clone());
-        if s.is_private() {
-            bounds.set(offsets.private_a, 0, s_bound.clone());
-            bounds.set(offsets.private_e, 0, e_bound.clone());
-            offsets.inc_private();
-        } else {
-            bounds.set(offsets.public_key, 0, u_bound.clone());
-            bounds.set(offsets.public_e_0, 0, e_bound.clone());
-            bounds.set(offsets.public_e_1, 0, e_bound.clone());
-            offsets.inc_public();
+        match s {
+            BfvProofStatement::PrivateKeyEncryption { .. } => {
+                bounds.set(offsets.private_a, 0, s_bound.clone());
+                bounds.set(offsets.private_e, 0, e_bound.clone());
+                offsets.inc_private();
+            }
+            BfvProofStatement::PublicKeyEncryption { .. } => {
+                bounds.set(offsets.public_key, 0, u_bound.clone());
+                bounds.set(offsets.public_e_0, 0, e_bound.clone());
+                bounds.set(offsets.public_e_1, 0, e_bound.clone());
+                offsets.inc_public();
+            }
+            BfvProofStatement::Decryption { .. } => {
+                bounds.set(offsets.private_a, 0, s_bound.clone());
+                bounds.set(offsets.private_e, 0, decrypt_e_bound.clone());
+                offsets.inc_private();
+            }
         }
     }
     bounds
+}
+
+fn compute_f<P, B, const N: usize>(params: &P) -> Polynomial<Z<N, B>>
+where
+    B: BarrettConfig<N>,
+    P: StatementParams,
+{
+    Polynomial {
+        coeffs: {
+            let degree = params.degree() as usize;
+            let mut cs = vec![Zq::zero(); degree + 1];
+            cs[0] = Zq::one();
+            cs[degree] = Zq::one();
+            cs
+        },
+    }
 }
 
 /// Represents the column offsets in `A` and the row offsets in `S` for the various fields.
@@ -616,20 +705,27 @@ impl<T: Zero + Clone + Debug + PartialEq> MatrixSet<T> for Matrix<T> {
     }
 }
 
-fn calculate_delta<const N: usize, B: BarrettConfig<N>>(p: u64, qs: Vec<u64>) -> Z<N, B> {
+fn calculate_ciphertext_modulus(qs: Vec<u64>) -> Uint<4> {
     // Calculate the data coefficient modulus, which for fields with more
     // that one modulus in the coefficient modulus set is equal to the
     // product of all but the last moduli in the set.
-    let mut data_modulus = ZqRistretto::from(1);
+    let mut data_modulus = Uint::<4>::from_u8(1);
     if qs.len() == 1 {
-        data_modulus = data_modulus * ZqRistretto::from(qs[0]);
+        data_modulus = data_modulus
+            .checked_mul(&Uint::<1>::from_u64(qs[0]))
+            .unwrap();
     } else {
         for q in qs.iter().take(qs.len() - 1) {
-            data_modulus = data_modulus * ZqRistretto::from(*q);
+            data_modulus = data_modulus.checked_mul(&Uint::<1>::from_u64(*q)).unwrap();
         }
     }
+    data_modulus
+}
+
+fn calculate_delta<const N: usize, B: BarrettConfig<N>>(p: u64, qs: Vec<u64>) -> Z<N, B> {
+    let q_bigint = calculate_ciphertext_modulus(qs);
     let p_bigint = NonZero::new(Uint::from(p)).unwrap();
-    let delta = data_modulus.into_bigint().div_rem(&p_bigint).0;
+    let delta = q_bigint.div_rem(&p_bigint).0;
     let limbs = delta.as_limbs().map(|l| l.into());
     let delta_uint = Uint::<N>::from_words(limbs[0..N].try_into().unwrap());
     Zq::try_from(delta_uint).unwrap()
@@ -704,6 +800,26 @@ mod tests {
     #[test]
     fn private_and_public_statement_about_same_msg() {
         test_statements_with(1, 0, 0, 1)
+    }
+
+    #[test]
+    fn decryption_statement() {
+        let ctx = BFVTestContext::new();
+        let mut test_fixture = ctx.random_fixture();
+        let ix = 0;
+        let ct = ctx
+            .encryptor
+            .encrypt(&test_fixture.messages[ix].plaintext)
+            .unwrap();
+        test_fixture.statements.push(BfvProofStatement::Decryption {
+            message_id: ix,
+            ciphertext: ct,
+        });
+        test_fixture.witness.push(BfvWitness::Decryption {
+            private_key: Cow::Borrowed(&ctx.secret_key),
+        });
+
+        ctx.prove_and_verify(&test_fixture).unwrap();
     }
 
     fn test_statements_with(
@@ -794,7 +910,6 @@ mod tests {
         }
 
         // If we ever speed up SDLP, this would be nice to run in a loop. As is, it's too slow.
-        #[allow(unused)]
         fn random_fixture(&self) -> TestFixture {
             let mut rng = rand::thread_rng();
             let num_public_statements = rng.gen_range(1..=3);
@@ -912,6 +1027,17 @@ mod tests {
             }
 
             pt
+        }
+
+        fn prove_and_verify(&self, fixture: &TestFixture) -> Result<(), ProofError> {
+            let pk = generate_prover_knowledge(
+                &fixture.statements,
+                &fixture.messages,
+                &fixture.witness,
+                &self.params,
+                &self.ctx,
+            );
+            prove_and_verify(&pk)
         }
     }
 }

@@ -216,6 +216,7 @@ mod linked {
 
     use logproof::{
         bfv_statement::{self, BfvMessage, BfvProofStatement, BfvWitness, StatementParams},
+        math::Log2,
         rings::{SealQ128_1024, SealQ128_2048, SealQ128_4096, SealQ128_8192},
         Bounds, LogProofProverKnowledge,
     };
@@ -229,7 +230,7 @@ mod linked {
     use crate::{
         marker, Ciphertext, CompiledZkpProgram, GenericRuntime, LinkedProof, NumCiphertexts,
         Params, Plaintext, PrivateKey, PublicKey, Result, Sdlp, SealSdlpProverKnowledge,
-        TryIntoPlaintext, ZkpProgramInput,
+        TryFromPlaintext, TryIntoPlaintext, ZkpProgramInput,
     };
 
     /// All FHE plaintext types can be used in a [`Sdlp`]. This trait indicates further that a
@@ -450,7 +451,7 @@ mod linked {
 
         /// Encrypt a plaintext, adding the encryption statement to the logproof and returning the
         /// message to optionally be [encrypted again](`Self::encrypt_msg`), that is, _shared_
-        /// with another proof statement.
+        /// with another logproof statement.
         ///
         /// If you do not want to add the encryption statement to the proof, just use [the
         /// runtime](`crate::GenericRuntime::encrypt`) directly.
@@ -467,7 +468,7 @@ mod linked {
 
         /// Encrypt a plaintext, adding the encryption statement to the logproof and returning the
         /// message to optionally be [encrypted again](`Self::encrypt_msg`), that is, _shared_
-        /// with another proof statement.
+        /// with another logproof statement.
         ///
         /// If you do not want to add the encryption statement to the proof, just use [the
         /// runtime](`crate::GenericRuntime::encrypt_symmetric`) directly.
@@ -535,8 +536,8 @@ mod linked {
             )
         }
 
-        /// Encrypt a linked message symmetrically, adding the new encryption statement to the
-        /// proof.
+        /// Encrypt an existing message symmetrically, adding the new encryption statement to the
+        /// logproof.
         ///
         /// This method purposefully reveals that two ciphertexts encrypt the same underlying value. If
         /// this is not what you want, use [`Self::encrypt_symmetric`].
@@ -554,6 +555,69 @@ mod linked {
                 private_key,
                 bounds,
             )
+        }
+
+        /// Decrypt a ciphertext, adding the decryption statement to the logproof and returning the
+        /// message to be shared with another proof statement.
+        ///
+        /// Use this method if you have an existing ciphertext and want to prove that it is well
+        /// formed, and you intend to re-encrypt it, refreshing the noise but not the plaintext
+        /// polynomial encoding.
+        pub fn decrypt_returning_msg<P>(
+            &mut self,
+            ciphertext: &Ciphertext,
+            private_key: &'k PrivateKey,
+        ) -> Result<(P, Message)>
+        where
+            P: TryIntoPlaintext + TryFromPlaintext + TypeName,
+        {
+            self.decrypt_internal::<P>(ciphertext, private_key, None)
+        }
+
+        fn decrypt_internal<P>(
+            &mut self,
+            ciphertext: &Ciphertext,
+            private_key: &'k PrivateKey,
+            bounds: Option<Bounds>,
+        ) -> Result<(P, Message)>
+        where
+            P: TryIntoPlaintext + TryFromPlaintext + TypeName,
+        {
+            let start_idx = self.messages.len();
+            let plaintext =
+                self.runtime
+                    .decrypt_map_components::<P>(ciphertext, private_key, |m, ct| {
+                        let message_id = self.messages.len();
+                        self.messages.push(BfvMessage {
+                            plaintext: m.clone(),
+                            bounds: bounds.clone(),
+                        });
+                        self.statements.push(BfvProofStatement::Decryption {
+                            message_id,
+                            ciphertext: ct.clone(),
+                        });
+                        self.witness.push(BfvWitness::Decryption {
+                            private_key: Cow::Borrowed(&private_key.0.data),
+                        });
+                    })?;
+            let end_idx = self.messages.len();
+
+            // Decode to the expected type and return the message
+            let p = P::try_from_plaintext(&plaintext, self.runtime.params())?;
+            // Make sure we use the decrypted plaintext here, and not a new
+            // `P::try_into_plaintext`, which will always result in a _fresh_ plaintext encoding
+            // and may be different from the decrypted ciphertext.
+            let pt = Arc::new(PlaintextTyped {
+                plaintext,
+                type_name: P::type_name(),
+            });
+            let msg_internal = MessageInternal {
+                id: start_idx,
+                pt,
+                len: end_idx - start_idx,
+                zkp_type: (),
+            };
+            Ok((p, Message(msg_internal)))
         }
 
         fn encrypt_asymmetric_internal<T>(
@@ -678,7 +742,7 @@ mod linked {
 
         fn mk_bounds<P: LinkWithZkp>(&self) -> Bounds {
             let params = self.runtime.params();
-            let mut bounds = vec![params.plain_modulus; P::DEGREE_BOUND];
+            let mut bounds = vec![params.plain_modulus.ceil_log2(); P::DEGREE_BOUND];
             bounds.resize(params.lattice_dimension as usize, 0);
             Bounds(bounds)
         }
@@ -731,6 +795,22 @@ mod linked {
             )?;
             let zkp_type = P::ZkpType::<BulletproofsFieldSpec>::type_name();
             Ok((ct, LinkedMessage::from_message(msg, zkp_type)))
+        }
+
+        /// Decrypt a ciphertext, adding the decryption statement to the logproof and returning the
+        /// linked message to be shared with another logproof statement or linked to a ZKP program.
+        pub fn decrypt_returning_link<P>(
+            &mut self,
+            ciphertext: &Ciphertext,
+            private_key: &'k PrivateKey,
+        ) -> Result<(P, LinkedMessage)>
+        where
+            P: LinkWithZkp + TryIntoPlaintext + TryFromPlaintext + TypeName,
+        {
+            let bounds = self.mk_bounds::<P>();
+            let (pt, msg) = self.decrypt_internal::<P>(ciphertext, private_key, Some(bounds))?;
+            let zkp_type = P::ZkpType::<BulletproofsFieldSpec>::type_name();
+            Ok((pt, LinkedMessage::from_message(msg, zkp_type)))
         }
 
         /// Add a ZKP program to be linked with the logproof.

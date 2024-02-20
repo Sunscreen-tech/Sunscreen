@@ -146,15 +146,30 @@ where
     where
         P: TryFromPlaintext + TypeName,
     {
+        let fhe_data = self.runtime_data.unwrap_fhe();
+        let pt = self.decrypt_map_components::<P>(ciphertext, private_key, |_, _| ())?;
+        P::try_from_plaintext(&pt, &fhe_data.params)
+    }
+
+    /**
+     * Decrypts the given ciphertext into the type P, mapping over the inner seal decryptions.
+     */
+    pub(crate) fn decrypt_map_components<P>(
+        &self,
+        ciphertext: &Ciphertext,
+        private_key: &PrivateKey,
+        mut f: impl FnMut(&SealPlaintext, &SealCiphertext),
+    ) -> Result<Plaintext>
+    where
+        P: TypeName,
+    {
         let expected_type = Type {
             is_encrypted: true,
             ..P::type_name()
         };
-
         if expected_type != ciphertext.data_type {
             return Err(Error::type_mismatch(&expected_type, &ciphertext.data_type));
         }
-
         let fhe_data = self.runtime_data.unwrap_fhe();
 
         let val = match (&fhe_data.context, &ciphertext.inner) {
@@ -172,7 +187,9 @@ where
                             return Err(Error::TooMuchNoise);
                         }
 
-                        decryptor.decrypt(c).map_err(Error::SealError)
+                        let pt = decryptor.decrypt(c).map_err(Error::SealError)?;
+                        f(&pt, c);
+                        Ok(pt)
                     })
                     .collect::<Result<Vec<SealPlaintext>>>()?
                     .drain(0..)
@@ -181,14 +198,10 @@ where
                         data: p,
                     })
                     .collect();
-
-                P::try_from_plaintext(
-                    &Plaintext {
-                        data_type: P::type_name(),
-                        inner: InnerPlaintext::Seal(plaintexts),
-                    },
-                    &fhe_data.params,
-                )?
+                Plaintext {
+                    data_type: P::type_name(),
+                    inner: InnerPlaintext::Seal(plaintexts),
+                }
             }
         };
 

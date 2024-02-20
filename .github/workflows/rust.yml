@@ -52,11 +52,11 @@ jobs:
     - name: Core compile check
       run: cargo check --release
     - name: Full compile check
-      run: cargo check --release --features deterministic,linkedproofs
+      run: cargo check --release --features deterministic,linkedproofs,logproof
 
     # Build and run the tests
     - name: Build and run tests
-      run: cargo test --workspace --verbose --release --features deterministic,linkedproofs
+      run: cargo test --workspace --verbose --release --features deterministic,linkedproofs,logproof
 
     # Build package in prep for user docs
     - name: Build sunscreen and bincode
@@ -114,7 +114,7 @@ jobs:
     - name: Cargo doc
       env:
         RUSTDOCFLAGS: -D warnings
-      run: cargo doc --release --no-deps --features bulletproofs,linkedproofs
+      run: cargo doc --release --no-deps --features bulletproofs,linkedproofs,logproof
   emscripten:
     runs-on: linux-8core
     steps:

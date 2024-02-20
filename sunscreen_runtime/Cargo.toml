@@ -46,7 +46,7 @@ serde_json = { workspace = true }
 [features]
 linkedproofs = [
   "bulletproofs",
-  "dep:logproof",
+  "logproof",
   "dep:bitvec",
   "dep:seq-macro",
   "dep:paste",

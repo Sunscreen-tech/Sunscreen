@@ -21,7 +21,7 @@ use std::{
 };
 
 use bitvec::{slice::BitSlice, vec::BitVec};
-use crypto_bigint::Uint;
+use crypto_bigint::{CheckedAdd, Uint};
 use curve25519_dalek::{ristretto::RistrettoPoint, scalar::Scalar, traits::Identity};
 use log::trace;
 use merlin::Transcript;
@@ -50,10 +50,10 @@ use crate::{
 type MatrixPoly<Q> = Matrix<Polynomial<Q>>;
 
 /**
- * Bounds on the coefficients in the secret S
+ * Bounds on the coefficients in the secret S (specified in number of bits).
  */
 #[derive(Clone, Debug, PartialEq)]
-pub struct Bounds(pub Vec<u64>);
+pub struct Bounds(pub Vec<u32>);
 
 impl Zero for Bounds {
     // The empty vector could be seen as no bounds. Also follows the field
@@ -69,7 +69,7 @@ impl Zero for Bounds {
 }
 
 impl std::ops::Deref for Bounds {
-    type Target = [u64];
+    type Target = [u32];
 
     fn deref(&self) -> &Self::Target {
         &self.0
@@ -132,22 +132,22 @@ where
     /**
      * The number of rows in a.
      */
-    pub fn n(&self) -> u64 {
-        self.a.rows as u64
+    pub fn n(&self) -> u32 {
+        self.a.rows as u32
     }
 
     /**
      * The number of cols in a and the number rows in s.
      */
-    pub fn m(&self) -> u64 {
-        self.a.cols as u64
+    pub fn m(&self) -> u32 {
+        self.a.cols as u32
     }
 
     /**
      * The number of cols in t.
      */
-    pub fn k(&self) -> u64 {
-        self.t.cols as u64
+    pub fn k(&self) -> u32 {
+        self.t.cols as u32
     }
 
     /**
@@ -155,29 +155,24 @@ where
      * coefficients in the polynomials in `S`.
      */
     pub fn b(&self) -> Matrix<Bounds> {
-        // Note the odd case here: if the bounds are zero then by the formula in
-        // the original paper we should get an undefined value. Here we say that
-        // a zero bound produces a zero `b` value from the paper. This is later
-        // used to ignore coefficients that have a bound of zero.
-        fn calculate_bound(v: &Bounds) -> Bounds {
-            Bounds(
-                v.iter()
-                    .map(|b| if *b > 0 { Log2::ceil_log2(b) + 1 } else { 0 })
-                    .collect(),
-            )
+        // If the bound is zero, leave zero. Else bump by 1.
+        // We have users specify the number of bits of an unsigned bound, so we add a bit to
+        // account for the signed encoding.
+        fn bump_bound(v: &Bounds) -> Bounds {
+            Bounds(v.iter().map(|b| if *b > 0 { b + 1 } else { 0 }).collect())
         }
 
-        self.bounds.map(calculate_bound)
+        self.bounds.map(bump_bound)
     }
 
     /**
      * Sum of all the bounds
      */
-    pub fn b_sum(&self) -> u64 {
+    pub fn b_sum(&self) -> u32 {
         self.b()
             .as_slice()
             .iter()
-            .map(|v| v.iter().sum::<u64>())
+            .map(|v| v.iter().sum::<u32>())
             .sum()
     }
 
@@ -194,7 +189,7 @@ where
         let mut last_end_range = 0;
 
         for (k, b_piece) in b.as_slice().iter().enumerate() {
-            let bits = b_piece.iter().sum::<u64>() as usize;
+            let bits = b_piece.iter().sum::<u32>() as usize;
 
             // Get the orginal matrix index
             let i = k / self.bounds.cols;
@@ -215,71 +210,73 @@ where
     /**
      * The degree of `f`.
      */
-    pub fn d(&self) -> u64 {
-        self.f.vartime_degree() as u64
+    pub fn d(&self) -> u32 {
+        self.f.vartime_degree() as u32
     }
 
     /**
      * Number of coefficients in secret vector s
      */
-    pub fn number_coeff_in_s(&self) -> u64 {
+    pub fn number_coeff_in_s(&self) -> u32 {
         self.m() * self.d()
     }
 
     /**
      * Computes the nk(d-1)b_2 term in l.
      */
-    pub fn nk_d_min_1_b_2(&self) -> u64 {
+    pub fn nk_d_min_1_b_2(&self) -> u32 {
         self.n() * self.k() * (self.d() - 1) * self.b_2()
     }
 
     /**
      * Computes the nk(2d-1)b_1 term in l.
      */
-    pub fn nk_2d_min_1_b_1(&self) -> u64 {
+    pub fn nk_2d_min_1_b_1(&self) -> u32 {
         self.n() * self.k() * (2 * self.d() - 1) * self.b_1()
     }
 
     /**
      * Maximum column bound for the columns in S.
      */
-    pub fn max_bounds_column_sum(&self) -> u64 {
+    pub fn max_bounds_column_sum(&self) -> Uint<4> {
         (0..self.bounds.cols)
             .map(|c| {
-                let mut column_bound_sum: u64 = 0;
+                let mut column_bound_sum = Uint::<4>::ZERO;
                 for r in 0..self.bounds.rows {
-                    column_bound_sum += self.bounds[(r, c)].iter().sum::<u64>();
+                    let row_coeffs = self.bounds[(r, c)]
+                        .iter()
+                        .map(|b| Uint::<4>::ONE << *b as usize)
+                        .fold(Uint::<4>::ZERO, |a, b| a.checked_add(&b).unwrap());
+                    column_bound_sum = column_bound_sum.checked_add(&row_coeffs).unwrap();
                 }
                 column_bound_sum
             })
-            .fold(0, max)
+            .fold(Uint::<4>::ZERO, max)
     }
 
     /**
      * The number of bits needed to store the elements of R1.
      */
-    pub fn b_1(&self) -> u64 {
+    pub fn b_1(&self) -> u32 {
         let d_big = ZqRistretto::from(self.d());
-        let max_bounds_column_sum = ZqRistretto::from(self.max_bounds_column_sum());
-
+        let col_bound = ZqRistretto::try_from(self.max_bounds_column_sum()).unwrap();
         let inf_norm_f: ZqRistretto = self.f.infinity_norm().mod_switch_signed();
 
-        let b1 = max_bounds_column_sum + d_big * inf_norm_f;
-
+        let b1 = col_bound + d_big * inf_norm_f;
         Log2::ceil_log2(&b1)
     }
 
     /**
      * The number of bits needed to store values in `Fp<Q>`.
      */
-    pub fn b_2(&self) -> u64 {
+    pub fn b_2(&self) -> u32 {
         Log2::ceil_log2(&Q::field_modulus())
     }
 
     /**
      * The length in bits of the binary expansion of the serialized secret * vectors.
      */
-    pub fn l(&self) -> u64 {
+    pub fn l(&self) -> u32 {
         let total_bounds_all_equations = self.b_sum();
         let nk = self.n().checked_mul(self.k()).unwrap();
 
@@ -498,19 +495,19 @@ impl LogProof {
         let r_1_serialized = Self::serialize(&r_1, (2 * d - 1) as usize);
         let r_2_serialized = Self::serialize(&r_2, (d - 1) as usize);
 
-        assert_eq!(s_serialized.len() as u64, m * k * d);
+        assert_eq!(s_serialized.len() as u32, m * k * d);
 
-        assert_eq!(r_1_serialized.len() as u64, n * k * (2 * d - 1));
-        assert_eq!(r_2_serialized.len() as u64, n * k * (d - 1));
+        assert_eq!(r_1_serialized.len() as u32, n * k * (2 * d - 1));
+        assert_eq!(r_2_serialized.len() as u32, n * k * (d - 1));
 
         let s_binary: BitVec = Self::to_2s_complement_multibound(&s_serialized, &b_serialized);
-        assert_eq!(s_binary.len() as u64, total_bounds_all_equations);
+        assert_eq!(s_binary.len() as u32, total_bounds_all_equations);
 
         let r_1_binary = Self::to_2s_complement(&r_1_serialized, b_1);
-        assert_eq!(r_1_binary.len() as u64, n * k * (2 * d - 1) * b_1);
+        assert_eq!(r_1_binary.len() as u32, n * k * (2 * d - 1) * b_1);
 
         let r_2_binary = Self::to_2s_complement(&r_2_serialized, b_2);
-        assert_eq!(r_2_binary.len() as u64, n * k * (d - 1) * b_2);
+        assert_eq!(r_2_binary.len() as u32, n * k * (d - 1) * b_2);
 
         let mut s_1 = s_binary.clone();
         s_1.extend(r_1_binary.iter());
@@ -905,7 +902,7 @@ impl LogProof {
             two_b.as_slice(),
         );
 
-        assert_eq!(term_1.len() as u64, b_sum);
+        assert_eq!(term_1.len() as u32, b_sum);
 
         // Compute term 2
         let q = ZqRistretto::try_from(Q::field_modulus()).unwrap();
@@ -921,7 +918,7 @@ impl LogProof {
             .tensor(alpha_2d_minus_1)
             .tensor(two_b_1);
 
-        assert_eq!(term_2.len() as u64, b_1 * (2 * d - 1) * n * k);
+        assert_eq!(term_2.len() as u32, b_1 * (2 * d - 1) * n * k);
 
         // Compute term 3
         let d_min_1 = d as usize - 1;
@@ -937,7 +934,7 @@ impl LogProof {
             .tensor(alpha_d_minus_1)
             .tensor(two_b_2);
 
-        assert_eq!(term_3.len() as u64, b_2 * (d - 1) * n * k);
+        assert_eq!(term_3.len() as u32, b_2 * (d - 1) * n * k);
 
         let mut result = vec![];
 
@@ -1123,7 +1120,7 @@ impl LogProof {
      * panic on any other input.
      *
      */
-    fn to_2s_complement_single<B, const N: usize>(value: &Zq<N, B>, log_b: u64, bitvec: &mut BitVec)
+    fn to_2s_complement_single<B, const N: usize>(value: &Zq<N, B>, log_b: u32, bitvec: &mut BitVec)
     where
         B: ArithmeticBackend<N>,
     {
@@ -1170,7 +1167,7 @@ impl LogProof {
      * `value` is the element in Zq and `b` is the number of bits needed
      * to represent the signed value.
      */
-    fn to_2s_complement<B, const N: usize>(values: &[Zq<N, B>], log_b: u64) -> BitVec
+    fn to_2s_complement<B, const N: usize>(values: &[Zq<N, B>], log_b: u32) -> BitVec
     where
         B: ArithmeticBackend<N>,
     {
@@ -1194,14 +1191,14 @@ impl LogProof {
      * `value` is the element in Zq and `b` is the number of bits needed
      * to represent the signed value.
      */
-    fn to_2s_complement_multibound<B, const N: usize>(values: &[Zq<N, B>], log_b: &[u64]) -> BitVec
+    fn to_2s_complement_multibound<B, const N: usize>(values: &[Zq<N, B>], log_b: &[u32]) -> BitVec
     where
         B: ArithmeticBackend<N>,
     {
         // Make sure we have an equal number of values and bounds to serialize
         assert_eq!(values.len(), log_b.len());
 
-        let mut bitvec = BitVec::with_capacity(log_b.iter().sum::<u64>() as usize);
+        let mut bitvec = BitVec::with_capacity(log_b.iter().sum::<u32>() as usize);
 
         // This code should not feature timing side-channels.
         for (value, bound) in zip(values.iter(), log_b.iter()) {
@@ -1218,8 +1215,12 @@ impl LogProof {
      * The matrix is serialized in row-major order, with bound
      * coefficients being contiguous.
      */
-    pub fn serialize_bounds(bounds: &Matrix<Bounds>) -> Vec<u64> {
-        bounds.as_slice().iter().flat_map(|x| x.0.clone()).collect()
+    pub fn serialize_bounds(bounds: &Matrix<Bounds>) -> Vec<u32> {
+        bounds
+            .as_slice()
+            .iter()
+            .flat_map(|x| x.0.iter().copied())
+            .collect()
     }
 
     /**
@@ -1261,8 +1262,12 @@ impl LogProof {
             for j in 0..x.cols {
                 let poly = &x[(i, j)];
 
-                for c in &poly.coeffs {
+                for c in poly.coeffs.iter().take(d) {
                     result.push(c.mod_switch_signed());
+                }
+
+                for c in poly.coeffs.iter().skip(d) {
+                    debug_assert_eq!(*c, Q::zero(), "polynomial exceeds expected degree");
                 }
 
                 for _ in poly.coeffs.len()..d {
@@ -1317,12 +1322,15 @@ impl LogProof {
 
 #[cfg(test)]
 mod test {
+    use std::ops::Div;
+
     use super::*;
+    use crypto_bigint::NonZero;
     use sunscreen_math::ring::BarrettBackend;
 
     use crate::{
         math::{make_poly, next_higher_power_of_two},
-        rings::ZqSeal128_8192,
+        rings::{SealQ128_8192, ZqSeal128_8192},
         test::LatticeProblem,
         LogProofGenerators,
     };
@@ -1396,10 +1404,10 @@ mod test {
                                         if x == 0 {
                                             0
                                         } else {
-                                            next_higher_power_of_two(x.unsigned_abs())
+                                            next_higher_power_of_two(x.unsigned_abs()).ilog2()
                                         }
                                     })
-                                    .collect::<Vec<u64>>(),
+                                    .collect::<Vec<_>>(),
                             )
                         })
                         .collect::<Vec<Bounds>>()
@@ -1593,5 +1601,25 @@ mod test {
     #[test]
     fn transcripts_match_k_4() {
         transcripts_match(4);
+    }
+
+    #[test]
+    fn can_compute_b_1() {
+        type Fq = ZqSeal128_8192;
+        let LatticeProblem { a, t, f, mut b, .. } = test_lattice::<Fq>(2);
+
+        // modify one of the bounds to q/2
+        let mut modulus = Uint::<4>::from_u8(1);
+        for q in &SealQ128_8192::Q[..4] {
+            modulus = modulus.saturating_mul(&Uint::<1>::from_u64(*q));
+        }
+        modulus = modulus.div(NonZero::from_uint(Uint::from(2u8)));
+        let modulus_bits = modulus.ceil_log2();
+        b[(0, 0)] = Bounds(vec![modulus_bits; f.vartime_degree()]);
+
+        let vk = VerifierKnowledge::new(a, t, f, b);
+        // This test was created to fix an overflow, but if the calculation of 177 changes, we
+        // should know about it!
+        assert_eq!(vk.b_1(), 177);
     }
 }

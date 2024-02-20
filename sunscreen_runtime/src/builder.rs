@@ -576,8 +576,11 @@ mod linked {
         /// Add a decryption statement to the logproof that `ciphertext` decrypts to the
         /// `existing_message`.
         ///
-        /// This method will error if the ciphertext does not decrypt to the existing message.
-        // Unfortunately this requires providing type parameter `P` :/
+        /// Warning: this method will error if the [types](`TypeName`) of the `existing_message`,
+        /// `P`, and `ciphertext` do not match. However, this method _does not check_ that the
+        /// ciphertext decrypts to the existing message value, so the caller must ensure this is
+        /// the case. If this is not the case, an error will occur when attempting to build the
+        /// proof or verify it.
         pub fn decrypt_known_msg<P, E: ExistingMessage>(
             &mut self,
             ciphertext: &Ciphertext,
@@ -633,18 +636,28 @@ mod linked {
                     })?;
             let end_idx = self.messages.len();
 
-            // Make sure the plaintext matches the existing message, if relevant:
+            // Make sure the plaintext type matches the existing message, if relevant
+            // Note that we cannot check the actual plaintext equality, as these encodings may (and
+            // likely will) differ for a given encoded value.
+            // Enforcing this for the user probably requires storing a Box<dyn _> to hold onto the
+            // actual `P` value.
             if let Some(ref msg) = existing_message {
-                if plaintext.inner != msg.pt.plaintext.inner || P::type_name() != msg.pt.type_name {
+                if P::type_name() != msg.pt.type_name {
                     return Err(BuilderError::user_error(
-                        "The decrypted plaintext does not match the existing message",
+                        "The decrypted plaintext type does not match the existing message type",
                     ));
                 }
             }
 
             // Decode to the expected type and return the message
             let p = P::try_from_plaintext(&plaintext, self.runtime.params())?;
-            let pt = Arc::new(self.plaintext_typed(&p)?);
+            // Make sure we use the decrypted plaintext here, and not a new
+            // `P::try_into_plaintext`, which will always result in a _fresh_ plaintext encoding
+            // and may be different from the decrypted ciphertext.
+            let pt = Arc::new(PlaintextTyped {
+                plaintext,
+                type_name: P::type_name(),
+            });
             let msg_internal = existing_message.unwrap_or(MessageInternal {
                 id: start_idx,
                 pt,

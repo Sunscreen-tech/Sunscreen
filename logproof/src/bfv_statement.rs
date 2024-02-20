@@ -247,7 +247,7 @@ where
 {
     let a = compute_a(statements, params, ctx);
     let t = compute_t(statements, ctx);
-    let bounds = compute_bounds(statements, msg_bounds, params);
+    let bounds = compute_bounds::<P, B, N>(statements, msg_bounds, params);
     let f = compute_f(params);
 
     LogProofVerifierKnowledge::new(a, t, f, bounds)
@@ -426,13 +426,14 @@ where
     t
 }
 
-fn compute_bounds<P>(
+fn compute_bounds<P, B, const N: usize>(
     statements: &[BfvProofStatement<'_>],
     msg_bounds: &[Option<Bounds>],
     params: &P,
 ) -> Matrix<Bounds>
 where
     P: StatementParams,
+    B: BarrettConfig<N>,
 {
     let mut offsets = IdxOffsets::new(statements);
     let mut bounds = Matrix::<Bounds>::new(offsets.a_shape().1, 1);
@@ -445,10 +446,12 @@ where
     let e_bound = Bounds(vec![E_COEFFICIENT_BOUND; degree]);
     let s_bound = Bounds(vec![S_COEFFICIENT_BOUND; degree]);
     // very liberal bound, the max that satisfies correctness
-    let q_div_2_bits = calculate_ciphertext_modulus(params.ciphertext_modulus())
+    let delta_div_2_bits = params
+        .delta::<N, B>()
+        .into_bigint()
         .div(NonZero::from_uint(Uint::from(2u8)))
         .ceil_log2();
-    let decrypt_e_bound = Bounds(vec![q_div_2_bits; degree]);
+    let decrypt_e_bound = Bounds(vec![delta_div_2_bits; degree]);
 
     // insert them
     for i in 0..IdxOffsets::num_messages(statements) {

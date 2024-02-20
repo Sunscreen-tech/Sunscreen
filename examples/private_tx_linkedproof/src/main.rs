@@ -423,6 +423,17 @@ impl App {
             Compiler::new()
                 .fhe_program(update_balance_sender)
                 .fhe_program(update_balance_receiver)
+                // These params are not necessary to run the example, but they do shave a few
+                // minutes off the runtime. In practice, you probably want to use the default
+                // parameters provided by the compiler. The ones set here will result in balances
+                // needing to be refreshed more often.
+                .with_params(&Params {
+                    lattice_dimension: 1024,
+                    coeff_modulus: vec![0x7e00001],
+                    plain_modulus: 512,
+                    scheme_type: sunscreen::SchemeType::Bfv,
+                    security_level: sunscreen::SecurityLevel::TC128,
+                })
                 .zkp_backend::<BulletproofsBackend>()
                 .zkp_program(validate_transfer)
                 .zkp_program(validate_deposit)

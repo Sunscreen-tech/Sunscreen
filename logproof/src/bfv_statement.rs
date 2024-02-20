@@ -7,7 +7,7 @@ use std::{
     ops::{Div, Neg},
 };
 
-use crypto_bigint::{NonZero, Uint};
+use crypto_bigint::{CheckedMul, NonZero, Uint};
 use seal_fhe::{
     AsymmetricComponents, Ciphertext, Context, EncryptionParameters, Plaintext, PolynomialArray,
     PublicKey, SecretKey, SymmetricComponents, SymmetricEncryptor,
@@ -21,7 +21,6 @@ use sunscreen_math::{
 use crate::{
     linear_algebra::{Matrix, PolynomialMatrix},
     math::Log2,
-    rings::ZqRistretto,
     Bounds, LogProofProverKnowledge, LogProofVerifierKnowledge,
 };
 
@@ -707,15 +706,17 @@ fn calculate_ciphertext_modulus(qs: Vec<u64>) -> Uint<4> {
     // Calculate the data coefficient modulus, which for fields with more
     // that one modulus in the coefficient modulus set is equal to the
     // product of all but the last moduli in the set.
-    let mut data_modulus = ZqRistretto::from(1);
+    let mut data_modulus = Uint::<4>::from_u8(1);
     if qs.len() == 1 {
-        data_modulus = data_modulus * ZqRistretto::from(qs[0]);
+        data_modulus = data_modulus
+            .checked_mul(&Uint::<1>::from_u64(qs[0]))
+            .unwrap();
     } else {
         for q in qs.iter().take(qs.len() - 1) {
-            data_modulus = data_modulus * ZqRistretto::from(*q);
+            data_modulus = data_modulus.checked_mul(&Uint::<1>::from_u64(*q)).unwrap();
         }
     }
-    data_modulus.into_bigint()
+    data_modulus
 }
 
 fn calculate_delta<const N: usize, B: BarrettConfig<N>>(p: u64, qs: Vec<u64>) -> Z<N, B> {

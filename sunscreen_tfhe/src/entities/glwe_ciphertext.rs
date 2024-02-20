@@ -153,7 +153,8 @@ where
     }
 
     #[inline(always)]
-    pub(crate) fn assert_valid(&self, params: &GlweDef) {
+    /// Asserts that this entity is valid for the given `params`
+    pub fn assert_valid(&self, params: &GlweDef) {
         assert_eq!(
             self.as_slice().len(),
             GlweCiphertextRef::<S>::size(params.dim)

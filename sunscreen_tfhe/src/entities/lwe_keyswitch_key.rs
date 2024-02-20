@@ -83,7 +83,7 @@ where
 
     /// Asserts that the keyswitch key is valid for the given parameters.
     #[inline(always)]
-    pub(crate) fn assert_valid(
+    pub fn assert_valid(
         &self,
         original_params: &LweDef,
         new_params: &LweDef,

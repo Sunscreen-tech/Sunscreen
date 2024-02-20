@@ -65,12 +65,7 @@ impl<S: TorusOps> PublicFunctionalKeyswitchKeyRef<S> {
     }
 
     /// Asserts that the key is valid for the given parameters.
-    pub(crate) fn assert_valid(
-        &self,
-        from_lwe: &LweDef,
-        to_glwe: &GlweDef,
-        radix: &RadixDecomposition,
-    ) {
+    pub fn assert_valid(&self, from_lwe: &LweDef, to_glwe: &GlweDef, radix: &RadixDecomposition) {
         assert_eq!(
             self.as_slice().len(),
             PublicFunctionalKeyswitchKeyRef::<S>::size((from_lwe.dim, to_glwe.dim, radix.count))

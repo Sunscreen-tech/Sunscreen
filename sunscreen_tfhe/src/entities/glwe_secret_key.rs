@@ -146,12 +146,17 @@ where
     /// Returns a representation of a GLWE secret key as an LWE secret key.
     /// This is a LWE secret key with dimension `N * k` where `N` is the
     /// polynomial degree and `k` is the size of the GLWE secret key.
+    ///
+    /// # Remarks
+    /// This is useful when decrypting or keyswitching values after calling
+    /// [`sample_extract`](crate::ops::ciphertext::sample_extract).
     pub fn to_lwe_secret_key(&self) -> &LweSecretKeyRef<S> {
         LweSecretKeyRef::from_slice(&self.data)
     }
 
     #[inline(always)]
-    pub(crate) fn assert_valid(&self, params: &GlweDef) {
+    /// Asserts that this entity is valid for the given `params`
+    pub fn assert_valid(&self, params: &GlweDef) {
         assert_eq!(
             self.as_slice().len(),
             GlweSecretKeyRef::<S>::size(params.dim)

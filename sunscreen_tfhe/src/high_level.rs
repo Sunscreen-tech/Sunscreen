@@ -957,6 +957,8 @@ pub mod evaluation {
     /// [`GlweSecretKey`](crate::entities::GlweSecretKey) as `ct` reinterpreted
     /// as an [`LweSecretKey`](crate::entities::LweSecretKey).
     ///
+    /// One performs this reinterpretation using [`GlweSecretKeyRef::to_lwe_secret_key()`](crate::entities::GlweSecretKeyRef::to_lwe_secret_key).
+    ///
     /// # Panics
     /// If `coeff_idx >= glwe_def.dim.polynomial_degree.0`.
     /// If `glwe_def` doesn't correspond with `ct`.

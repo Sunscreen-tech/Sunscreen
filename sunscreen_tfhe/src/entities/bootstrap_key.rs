@@ -164,7 +164,7 @@ impl BootstrapKeyFftRef<Complex<f64>> {
 
     /// Asserts that the [BootstrapKeyFft] is valid for the given parameters.
     #[inline(always)]
-    pub(crate) fn assert_valid(&self, lwe: &LweDef, glwe: &GlweDef, radix: &RadixDecomposition) {
+    pub fn assert_valid(&self, lwe: &LweDef, glwe: &GlweDef, radix: &RadixDecomposition) {
         assert_eq!(
             self.as_slice().len(),
             BootstrapKeyFftRef::size((lwe.dim, glwe.dim, radix.count))

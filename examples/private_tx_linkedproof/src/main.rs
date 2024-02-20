@@ -264,7 +264,6 @@ pub struct Chain {
     /// The user's public keys
     keys: HashMap<Username, PublicKey>,
     /// Ledger of transactions
-    // TODO log transactions
     ledger: Vec<Transaction>,
     /// App holding FHE and ZKP programs
     app: App,

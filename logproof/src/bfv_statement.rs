@@ -449,7 +449,7 @@ where
     let q_div_2_bits = calculate_ciphertext_modulus(params.ciphertext_modulus())
         .div(NonZero::from_uint(Uint::from(2u8)))
         .ceil_log2();
-    let decrypt_e_bound = Bounds(vec![q_div_2_bits as u32; degree]);
+    let decrypt_e_bound = Bounds(vec![q_div_2_bits; degree]);
 
     // insert them
     for i in 0..IdxOffsets::num_messages(statements) {

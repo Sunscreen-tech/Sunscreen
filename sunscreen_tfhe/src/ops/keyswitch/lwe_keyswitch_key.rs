@@ -17,11 +17,20 @@ pub fn generate_keyswitch_key_lwe<S>(
     keyswitch_key: &mut LweKeyswitchKeyRef<S>,
     original_lwe_secret_key: &LweSecretKeyRef<S>,
     new_lwe_secret_key: &LweSecretKeyRef<S>,
+    old_params: &LweDef,
     new_params: &LweDef,
     radix: &RadixDecomposition,
 ) where
     S: TorusOps,
 {
+    old_params.assert_valid();
+    new_params.assert_valid();
+    radix.assert_valid::<S>();
+    new_lwe_secret_key.assert_valid(new_params);
+    original_lwe_secret_key.assert_valid(old_params);
+    new_lwe_secret_key.assert_valid(new_params);
+    keyswitch_key.assert_valid(old_params, new_params, radix);
+
     let decomposition_radix_log = radix.radix_log.0;
 
     for (i, row) in keyswitch_key.rows_mut(new_params, radix).enumerate() {

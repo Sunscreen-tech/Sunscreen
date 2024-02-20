@@ -142,6 +142,9 @@ where
 
     /// Create an FFT transformed version of `self` stored to result.
     pub fn fft(&self, result: &mut GlweCiphertextFftRef<Complex<f64>>, params: &GlweDef) {
+        self.assert_valid(params);
+        result.assert_valid(params);
+
         for (a, fft) in self.a(params).zip(result.a_mut(params)) {
             a.fft(fft);
         }
@@ -150,7 +153,8 @@ where
     }
 
     #[inline(always)]
-    pub(crate) fn assert_valid(&self, params: &GlweDef) {
+    /// Asserts that this entity is valid for the given `params`
+    pub fn assert_valid(&self, params: &GlweDef) {
         assert_eq!(
             self.as_slice().len(),
             GlweCiphertextRef::<S>::size(params.dim)

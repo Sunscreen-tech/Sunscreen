@@ -231,6 +231,25 @@
         {
             "type": "lldb",
             "request": "launch",
+            "name": "Debug integration test 'sdlp'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=sdlp",
+                    "--package=sunscreen"
+                ],
+                "filter": {
+                    "name": "sdlp",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
             "name": "Debug integration test 'multi_program'",
             "cargo": {
                 "args": [
@@ -241,6 +260,25 @@
                 ],
                 "filter": {
                     "name": "multi_program",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'linked'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=linked",
+                    "--package=sunscreen"
+                ],
+                "filter": {
+                    "name": "linked",
                     "kind": "test"
                 }
             },
@@ -535,25 +573,6 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug unit tests in library 'sunscreen_zkp_backend'",
-            "cargo": {
-                "args": [
-                    "test",
-                    "--no-run",
-                    "--lib",
-                    "--package=sunscreen_zkp_backend"
-                ],
-                "filter": {
-                    "name": "sunscreen_zkp_backend",
-                    "kind": "lib"
-                }
-            },
-            "args": [],
-            "cwd": "${workspaceFolder}"
-        },
-        {
-            "type": "lldb",
-            "request": "launch",
             "name": "Debug unit tests in library 'sunscreen_bulletproofs'",
             "cargo": {
                 "args": [
@@ -725,6 +744,139 @@
         {
             "type": "lldb",
             "request": "launch",
+            "name": "Debug unit tests in library 'logproof'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=logproof"
+                ],
+                "filter": {
+                    "name": "logproof",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'seal'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=seal",
+                    "--package=logproof"
+                ],
+                "filter": {
+                    "name": "seal",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug benchmark 'linear_relation'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bench=linear_relation",
+                    "--package=logproof"
+                ],
+                "filter": {
+                    "name": "linear_relation",
+                    "kind": "bench"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'sunscreen_math'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=sunscreen_math"
+                ],
+                "filter": {
+                    "name": "sunscreen_math",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug benchmark 'gpu'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bench=gpu",
+                    "--package=sunscreen_math"
+                ],
+                "filter": {
+                    "name": "gpu",
+                    "kind": "bench"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug benchmark 'cpu'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bench=cpu",
+                    "--package=sunscreen_math"
+                ],
+                "filter": {
+                    "name": "cpu",
+                    "kind": "bench"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'sunscreen_zkp_backend'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=sunscreen_zkp_backend"
+                ],
+                "filter": {
+                    "name": "sunscreen_zkp_backend",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
             "name": "Debug executable 'cannonical_norm_noise_model'",
             "cargo": {
                 "args": [
@@ -753,6 +905,99 @@
                 ],
                 "filter": {
                     "name": "cannonical_norm_noise_model",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'allowlist_zkp'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=allowlist_zkp"
+                ],
+                "filter": {
+                    "name": "allowlist_zkp",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'verifier'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=verifier",
+                    "--package=allowlist_zkp"
+                ],
+                "filter": {
+                    "name": "verifier",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'verifier'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=verifier",
+                    "--package=allowlist_zkp"
+                ],
+                "filter": {
+                    "name": "verifier",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'prover'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=prover",
+                    "--package=allowlist_zkp"
+                ],
+                "filter": {
+                    "name": "prover",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'prover'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=prover",
+                    "--package=allowlist_zkp"
+                ],
+                "filter": {
+                    "name": "prover",
                     "kind": "bin"
                 }
             },
@@ -1132,6 +1377,43 @@
         {
             "type": "lldb",
             "request": "launch",
+            "name": "Debug executable 'private_tx_linkedproof'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=private_tx_linkedproof",
+                    "--package=private_tx_linkedproof"
+                ],
+                "filter": {
+                    "name": "private_tx_linkedproof",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'private_tx_linkedproof'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=private_tx_linkedproof",
+                    "--package=private_tx_linkedproof"
+                ],
+                "filter": {
+                    "name": "private_tx_linkedproof",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
             "name": "Debug executable 'simple_multiply'",
             "cargo": {
                 "args": [
@@ -1206,16 +1488,16 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug unit tests in library 'logproof'",
+            "name": "Debug unit tests in library 'sunscreen_tfhe'",
             "cargo": {
                 "args": [
                     "test",
                     "--no-run",
                     "--lib",
-                    "--package=logproof"
+                    "--package=sunscreen_tfhe"
                 ],
                 "filter": {
-                    "name": "logproof",
+                    "name": "sunscreen_tfhe",
                     "kind": "lib"
                 }
             },
@@ -1225,35 +1507,16 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug integration test 'seal'",
+            "name": "Debug benchmark 'tfhe_proof'",
             "cargo": {
                 "args": [
                     "test",
                     "--no-run",
-                    "--test=seal",
-                    "--package=logproof"
+                    "--bench=tfhe_proof",
+                    "--package=sunscreen_tfhe"
                 ],
                 "filter": {
-                    "name": "seal",
-                    "kind": "test"
-                }
-            },
-            "args": [],
-            "cwd": "${workspaceFolder}"
-        },
-        {
-            "type": "lldb",
-            "request": "launch",
-            "name": "Debug benchmark 'linear_relation'",
-            "cargo": {
-                "args": [
-                    "test",
-                    "--no-run",
-                    "--bench=linear_relation",
-                    "--package=logproof"
-                ],
-                "filter": {
-                    "name": "linear_relation",
+                    "name": "tfhe_proof",
                     "kind": "bench"
                 }
             },
@@ -1263,35 +1526,16 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug unit tests in library 'sunscreen_math'",
+            "name": "Debug benchmark 'fft'",
             "cargo": {
                 "args": [
                     "test",
                     "--no-run",
-                    "--lib",
-                    "--package=sunscreen_math"
+                    "--bench=fft",
+                    "--package=sunscreen_tfhe"
                 ],
                 "filter": {
-                    "name": "sunscreen_math",
-                    "kind": "lib"
-                }
-            },
-            "args": [],
-            "cwd": "${workspaceFolder}"
-        },
-        {
-            "type": "lldb",
-            "request": "launch",
-            "name": "Debug benchmark 'gpu'",
-            "cargo": {
-                "args": [
-                    "test",
-                    "--no-run",
-                    "--bench=gpu",
-                    "--package=sunscreen_math"
-                ],
-                "filter": {
-                    "name": "gpu",
+                    "name": "fft",
                     "kind": "bench"
                 }
             },
@@ -1301,16 +1545,16 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug benchmark 'cpu'",
+            "name": "Debug benchmark 'ops'",
             "cargo": {
                 "args": [
                     "test",
                     "--no-run",
-                    "--bench=cpu",
-                    "--package=sunscreen_math"
+                    "--bench=ops",
+                    "--package=sunscreen_tfhe"
                 ],
                 "filter": {
-                    "name": "cpu",
+                    "name": "ops",
                     "kind": "bench"
                 }
             },

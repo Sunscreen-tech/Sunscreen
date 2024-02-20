@@ -95,7 +95,7 @@ impl<S: TorusOps> LweCiphertextRef<S> {
 
     /// Asserts that the LWE ciphertext is valid for a given LWE dimension.
     #[inline(always)]
-    pub(crate) fn assert_valid(&self, params: &LweDef) {
+    pub fn assert_valid(&self, params: &LweDef) {
         assert_eq!(
             self.as_slice().len(),
             LweCiphertextRef::<S>::size(params.dim)

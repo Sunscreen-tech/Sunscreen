@@ -83,7 +83,7 @@ where
 
     /// Asserts that the keyswitch key is valid for the given parameters.
     #[inline(always)]
-    pub(crate) fn assert_valid(
+    pub fn assert_valid(
         &self,
         original_params: &LweDef,
         new_params: &LweDef,
@@ -122,7 +122,14 @@ mod tests {
             let new_sk = keygen::generate_binary_lwe_sk(&to_lwe);
 
             let mut ksk = LweKeyswitchKey::<u64>::new(&from_lwe, &to_lwe, &TEST_RADIX);
-            generate_keyswitch_key_lwe(&mut ksk, &original_sk, &new_sk, &to_lwe, &TEST_RADIX);
+            generate_keyswitch_key_lwe(
+                &mut ksk,
+                &original_sk,
+                &new_sk,
+                &from_lwe,
+                &to_lwe,
+                &TEST_RADIX,
+            );
 
             let msg = thread_rng().next_u64() % (1 << bits.0);
 
@@ -154,7 +161,7 @@ mod tests {
             let sk_2 = keygen::generate_binary_lwe_sk(&to_lwe);
 
             let mut ksk = LweKeyswitchKey::<u64>::new(&from_lwe, &to_lwe, &TEST_RADIX);
-            generate_keyswitch_key_lwe(&mut ksk, &sk_1, &sk_2, &to_lwe, &TEST_RADIX);
+            generate_keyswitch_key_lwe(&mut ksk, &sk_1, &sk_2, &from_lwe, &to_lwe, &TEST_RADIX);
 
             for (i, r) in ksk.rows(&to_lwe, &TEST_RADIX).enumerate() {
                 for (j, l) in r.lwe_ciphertexts(&to_lwe).enumerate() {

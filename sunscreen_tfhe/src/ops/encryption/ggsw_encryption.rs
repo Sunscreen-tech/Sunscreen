@@ -132,6 +132,12 @@ pub fn encrypt_ggsw_ciphertext_scalar<S>(
 ) where
     S: TorusOps,
 {
+    assert!(plaintext_bits.0 < S::BITS);
+    radix.assert_valid::<S>();
+    glwe_def.assert_valid();
+    glwe_secret_key.assert_valid(glwe_def);
+    ggsw_ciphertext.assert_valid(glwe_def, radix);
+
     let max_val = S::from_u64(0x1 << plaintext_bits.0);
     assert!(msg < max_val);
 
@@ -226,6 +232,12 @@ pub fn decrypt_ggsw_ciphertext<S>(
 ) where
     S: TorusOps,
 {
+    assert_eq!(msg.len(), params.dim.polynomial_degree.0);
+    params.assert_valid();
+    radix.assert_valid::<S>();
+    ggsw_ciphertext.assert_valid(params, radix);
+    glwe_secret_key.assert_valid(params);
+
     let row = params.dim.size.0;
 
     decrypt_glwe_in_ggsw(msg, ggsw_ciphertext, glwe_secret_key, params, radix, row, 0).unwrap();

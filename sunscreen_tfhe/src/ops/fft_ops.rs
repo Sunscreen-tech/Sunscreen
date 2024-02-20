@@ -141,6 +141,13 @@ pub fn cmux<S>(
 ) where
     S: TorusOps,
 {
+    params.assert_valid();
+    radix.assert_valid::<S>();
+    c.assert_valid(params);
+    d_0.assert_valid(params);
+    d_1.assert_valid(params);
+    b_fft.assert_valid(params, radix);
+
     allocate_scratch_ref!(diff, GlweCiphertextRef<S>, (params.dim));
 
     sub_glwe_ciphertexts(diff, d_1, d_0, params);

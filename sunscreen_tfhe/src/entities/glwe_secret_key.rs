@@ -50,7 +50,7 @@ where
     S: TorusOps,
 {
     fn generate(params: &GlweDef, torus_element_generator: impl Fn() -> S) -> GlweSecretKey<S> {
-        params.dim.assert_valid();
+        params.assert_valid();
 
         let len = GlweSecretKeyRef::<S>::size(params.dim);
 
@@ -95,6 +95,10 @@ where
     where
         S: TorusOps,
     {
+        params.assert_valid();
+        assert!(plaintext_bits.0 < S::BITS);
+        ct.assert_valid(params);
+
         let mut result = Polynomial::zero(ct.a_b(params).1.len());
 
         decrypt_glwe_ciphertext(&mut result, ct, self, params);
@@ -142,12 +146,17 @@ where
     /// Returns a representation of a GLWE secret key as an LWE secret key.
     /// This is a LWE secret key with dimension `N * k` where `N` is the
     /// polynomial degree and `k` is the size of the GLWE secret key.
+    ///
+    /// # Remarks
+    /// This is useful when decrypting or keyswitching values after calling
+    /// [`sample_extract`](crate::ops::ciphertext::sample_extract).
     pub fn to_lwe_secret_key(&self) -> &LweSecretKeyRef<S> {
         LweSecretKeyRef::from_slice(&self.data)
     }
 
     #[inline(always)]
-    pub(crate) fn assert_valid(&self, params: &GlweDef) {
+    /// Asserts that this entity is valid for the given `params`
+    pub fn assert_valid(&self, params: &GlweDef) {
         assert_eq!(
             self.as_slice().len(),
             GlweSecretKeyRef::<S>::size(params.dim)

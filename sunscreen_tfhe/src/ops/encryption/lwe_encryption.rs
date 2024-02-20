@@ -16,6 +16,9 @@ pub fn trivially_encrypt_lwe_ciphertext<S>(
 ) where
     S: TorusOps,
 {
+    params.assert_valid();
+    c.assert_valid(params);
+
     let (a, b) = c.a_b_mut(params);
 
     // tmp = A_i * S_i
@@ -38,6 +41,8 @@ pub fn encrypt_lwe_ciphertext<S>(
 where
     S: TorusOps,
 {
+    params.assert_valid();
+
     let (a, b) = ct.a_b_mut(params);
 
     for (a_i, d_i) in a.iter_mut().zip(sk.as_slice().iter()) {

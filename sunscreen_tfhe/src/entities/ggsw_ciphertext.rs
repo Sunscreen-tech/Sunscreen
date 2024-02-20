@@ -101,14 +101,17 @@ where
         params: &GlweDef,
         radix: &RadixDecomposition,
     ) {
+        self.assert_valid(params, radix);
+        result.assert_valid(params, radix);
+
         for (s, r) in self.rows(params, radix).zip(result.rows_mut(params, radix)) {
             s.fft(r, params);
         }
     }
 
-    /// Assert that the GGSW ciphertext is valid for the given parameters.
     #[inline(always)]
-    pub(crate) fn assert_valid(&self, glwe: &GlweDef, radix: &RadixDecomposition) {
+    /// Assert that the GGSW ciphertext is valid for the given parameters.
+    pub fn assert_valid(&self, glwe: &GlweDef, radix: &RadixDecomposition) {
         assert_eq!(self.as_slice().len(), Self::size((glwe.dim, radix.count)));
     }
 }

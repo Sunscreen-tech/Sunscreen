@@ -208,7 +208,7 @@ pub mod keygen {
     ) -> BootstrapKey<u64> {
         let mut bsk = BootstrapKey::new(lwe, glwe, radix);
 
-        generate_bootstrap_key(&mut bsk, sk, glwe_key, glwe, radix);
+        generate_bootstrap_key(&mut bsk, sk, glwe_key, lwe, glwe, radix);
 
         bsk
     }
@@ -244,7 +244,7 @@ pub mod keygen {
     ) -> LweKeyswitchKey<u64> {
         let mut ksk = LweKeyswitchKey::new(from_lwe, to_lwe, radix);
 
-        generate_keyswitch_key_lwe(&mut ksk, from_sk, to_sk, to_lwe, radix);
+        generate_keyswitch_key_lwe(&mut ksk, from_sk, to_sk, from_lwe, to_lwe, radix);
 
         ksk
     }
@@ -525,6 +525,9 @@ pub mod encryption {
         plaintext_bits: PlaintextBits,
         carry_bits: CarryBits,
     ) -> u64 {
+        assert!(plaintext_bits.0 < u64::BITS);
+        assert!(plaintext_bits.0 + carry_bits.0 < u64::BITS);
+
         let decrypted = sk.decrypt_without_decode(ct, params);
 
         // We manually decode here because the padding bit.
@@ -592,6 +595,10 @@ pub mod encryption {
         params: &GlweDef,
         plaintext_bits: PlaintextBits,
     ) -> GlweCiphertext<u64> {
+        assert!(plaintext_bits.0 < u64::BITS);
+        params.assert_valid();
+        assert_eq!(pt.len(), params.dim.polynomial_degree.0);
+
         let mut result = GlweCiphertext::new(params);
 
         for (b_out, b_in) in result
@@ -655,6 +662,7 @@ pub mod encryption {
     /// `radix` should correspond with `ct`.
     ///
     /// # Panics
+    /// If `msg.len() != params.dim.polynomial_degree.0`.
     /// If `params` or `radix` are invalid.
     /// If `params` or `radix` don't correspond to `ct`
     /// If `params` don't correspond to `sk`.
@@ -748,7 +756,7 @@ pub mod fft {
     ) -> BootstrapKeyFft<Complex<f64>> {
         let mut bsk_fft = BootstrapKeyFft::new(lwe, glwe, radix);
 
-        bsk.fft(&mut bsk_fft, glwe, radix);
+        bsk.fft(&mut bsk_fft, lwe, glwe, radix);
 
         bsk_fft
     }
@@ -917,6 +925,11 @@ pub mod evaluation {
     /// values: a `from_sk` and `to_sk`. `ct` should be encrypted under the
     /// same `from_sk` and ciphertext this function returns will be encrypted
     /// under `to_sk`.
+    ///
+    /// # Panics
+    /// If `keyswitch_key` is not valid under `from_lwe` and `to_lwe`.
+    /// If `ct` is not valid under `from_lwe`.
+    /// If `radix`, `from_lwe`, or `to_lwe` are invalid.
     pub fn keyswitch_lwe_to_lwe(
         ct: &LweCiphertextRef<u64>,
         ksk: &LweKeyswitchKeyRef<u64>,
@@ -935,5 +948,29 @@ pub mod evaluation {
         );
 
         new_ct
+    }
+
+    /// Create an [`LweCiphertext`] encrypting the `coeff_idx`-th coefficient in `ct`'s message.
+    ///
+    /// # Remarks
+    /// The returned ciphertext is encrypted under the same
+    /// [`GlweSecretKey`](crate::entities::GlweSecretKey) as `ct` reinterpreted
+    /// as an [`LweSecretKey`](crate::entities::LweSecretKey).
+    ///
+    /// One performs this reinterpretation using [`GlweSecretKeyRef::to_lwe_secret_key()`](crate::entities::GlweSecretKeyRef::to_lwe_secret_key).
+    ///
+    /// # Panics
+    /// If `coeff_idx >= glwe_def.dim.polynomial_degree.0`.
+    /// If `glwe_def` doesn't correspond with `ct`.
+    pub fn sample_extract(
+        ct: &GlweCiphertextRef<u64>,
+        glwe_def: &GlweDef,
+        coeff_idx: usize,
+    ) -> LweCiphertext<u64> {
+        let mut result = LweCiphertext::new(&glwe_def.as_lwe_def());
+
+        crate::ops::ciphertext::sample_extract(&mut result, ct, coeff_idx, glwe_def);
+
+        result
     }
 }

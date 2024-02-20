@@ -238,19 +238,20 @@ where
     /**
      * Maximum column bound for the columns in S.
      */
-    pub fn max_bounds_column_sum(&self) -> u64 {
+    pub fn max_bounds_column_sum(&self) -> Uint<4> {
         (0..self.bounds.cols)
             .map(|c| {
-                let mut column_bound_sum: u64 = 0;
+                let mut column_bound_sum = Uint::<4>::ZERO;
                 for r in 0..self.bounds.rows {
-                    column_bound_sum += self.bounds[(r, c)]
+                    let row_coeffs = self.bounds[(r, c)]
                         .iter()
-                        .map(|b| if *b > 0 { 2u64.pow(*b) } else { 0 })
-                        .sum::<u64>();
+                        .map(|b| Uint::<4>::ONE << *b as usize)
+                        .fold(Uint::<4>::ZERO, |a, b| a.saturating_add(&b));
+                    column_bound_sum = column_bound_sum.saturating_add(&row_coeffs);
                 }
                 column_bound_sum
             })
-            .fold(0, max)
+            .fold(Uint::<4>::ZERO, max)
     }
 
     /**
@@ -258,12 +259,10 @@ where
      */
     pub fn b_1(&self) -> u32 {
         let d_big = ZqRistretto::from(self.d());
-        let max_bounds_column_sum = ZqRistretto::from(self.max_bounds_column_sum());
-
+        let col_bound = ZqRistretto::try_from(self.max_bounds_column_sum()).unwrap();
         let inf_norm_f: ZqRistretto = self.f.infinity_norm().mod_switch_signed();
 
-        let b1 = max_bounds_column_sum + d_big * inf_norm_f;
-
+        let b1 = col_bound + d_big * inf_norm_f;
         Log2::ceil_log2(&b1)
     }
 
@@ -1323,12 +1322,15 @@ impl LogProof {
 
 #[cfg(test)]
 mod test {
+    use std::ops::Div;
+
     use super::*;
+    use crypto_bigint::NonZero;
     use sunscreen_math::ring::BarrettBackend;
 
     use crate::{
         math::{make_poly, next_higher_power_of_two},
-        rings::ZqSeal128_8192,
+        rings::{SealQ128_8192, ZqSeal128_8192},
         test::LatticeProblem,
         LogProofGenerators,
     };
@@ -1599,5 +1601,25 @@ mod test {
     #[test]
     fn transcripts_match_k_4() {
         transcripts_match(4);
+    }
+
+    #[test]
+    fn can_compute_b_1() {
+        type Fq = ZqSeal128_8192;
+        let LatticeProblem { a, t, f, mut b, .. } = test_lattice::<Fq>(2);
+
+        // modify one of the bounds to q/2
+        let mut modulus = Uint::<4>::from_u8(1);
+        for q in &SealQ128_8192::Q[..4] {
+            modulus = modulus.saturating_mul(&Uint::<1>::from_u64(*q));
+        }
+        modulus = modulus.div(NonZero::from_uint(Uint::from(2u8)));
+        let modulus_bits = modulus.ceil_log2();
+        b[(0, 0)] = Bounds(vec![modulus_bits; f.vartime_degree()]);
+
+        let vk = VerifierKnowledge::new(a, t, f, b);
+        // This test was created to fix an overflow, but if the calculation of 177 changes, we
+        // should know about it!
+        assert_eq!(vk.b_1(), 177);
     }
 }

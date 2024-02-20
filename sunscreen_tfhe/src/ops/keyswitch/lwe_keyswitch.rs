@@ -30,6 +30,11 @@ pub fn keyswitch_lwe_to_lwe<S>(
 ) where
     S: TorusOps,
 {
+    old_params.assert_valid();
+    new_params.assert_valid();
+    radix.assert_valid::<S>();
+    output.assert_valid(new_params);
+    ciphertext_under_original_key.assert_valid(old_params);
     keyswitch_key.assert_valid(old_params, new_params, radix);
 
     let (ciphertext_a, ciphertext_b) = ciphertext_under_original_key.a_b(old_params);

@@ -36,6 +36,9 @@ pub fn sample_extract<S>(
 ) where
     S: TorusOps,
 {
+    glwe.assert_valid(params);
+    assert!(h < params.dim.polynomial_degree.0);
+
     // We are copying parts of the GLWE ciphertext out according to the following rule:
     // a_{N*i + j} =  a_{i, h - j} for 0 <= i < k, 0 <= j <= h
     // a_{N*i + j} = -a_{i, h - j + n} for 0 <= i < k, n + 1 <= j < N

@@ -266,6 +266,14 @@ pub fn programmable_bootstrap<S>(
 ) where
     S: TorusOps,
 {
+    lwe_params.assert_valid();
+    glwe_params.assert_valid();
+    radix.assert_valid::<S>();
+    bootstrap_key.assert_valid(lwe_params, glwe_params, radix);
+    lut.assert_valid(glwe_params);
+    input.assert_valid(lwe_params);
+    output.assert_valid(&glwe_params.as_lwe_def());
+
     // Steps:
     // 1. Modulus switch the ciphertext to 2N.
     // 2. Use a cmux tree to blind rotate V using the elements of the bootstrap key (the input LWE secret key bits).
@@ -639,7 +647,7 @@ mod tests {
         generate_bootstrap_key(&mut bsk_nonfft, &original_sk, &glwe_sk, &glwe, &radix);
 
         let mut bsk = BootstrapKeyFft::new(&lwe, &glwe, &radix);
-        bsk_nonfft.fft(&mut bsk, &glwe, &radix);
+        bsk_nonfft.fft(&mut bsk, &lwe, &glwe, &radix);
 
         // Generate the LUT
         let lut = UnivariateLookupTable::trivial_from_fn(&map, &glwe, bits);
@@ -715,7 +723,7 @@ mod tests {
         generate_bootstrap_key(&mut bsk_nonfft, &original_sk, &glwe_sk, &glwe, &radix);
 
         let mut bsk = BootstrapKeyFft::new(&lwe, &glwe, &radix);
-        bsk_nonfft.fft(&mut bsk, &glwe, &radix);
+        bsk_nonfft.fft(&mut bsk, &lwe, &glwe, &radix);
 
         // Generate the LUT
         let lut = BivariateLookupTable::trivial_from_fn(&map, &glwe, bits, carry_bits);

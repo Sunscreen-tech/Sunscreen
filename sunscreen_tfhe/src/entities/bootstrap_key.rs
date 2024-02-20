@@ -73,6 +73,7 @@ impl<S: TorusOps> BootstrapKeyRef<S> {
         glwe: &GlweDef,
         radix: &RadixDecomposition,
     ) {
+        self.assert_valid(lwe, glwe, radix);
         result.assert_valid(lwe, glwe, radix);
 
         for (s, r) in self.rows(glwe, radix).zip(result.rows_mut(glwe, radix)) {

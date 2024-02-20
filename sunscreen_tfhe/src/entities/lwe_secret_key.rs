@@ -77,6 +77,9 @@ where
         params: &LweDef,
         plaintext_bits: PlaintextBits,
     ) -> (LweCiphertext<S>, Torus<S>) {
+        params.assert_valid();
+        assert!(plaintext_bits.0 < S::BITS);
+
         let mut ct = LweCiphertext::<S>::zero(params);
 
         let e = encode_and_encrypt_lwe_ciphertext(&mut ct, self, msg, params, plaintext_bits);
@@ -89,6 +92,7 @@ where
     /// performing operations like shifting by delta and rounding. See
     /// [Self::decrypt] for a function that performs the decoding automatically.
     pub fn decrypt_without_decode(&self, ct: &LweCiphertextRef<S>, params: &LweDef) -> Torus<S> {
+        params.assert_valid();
         ct.assert_valid(params);
 
         let (a, b) = ct.a_b(params);
@@ -112,6 +116,10 @@ where
         params: &LweDef,
         plaintext_bits: PlaintextBits,
     ) -> S {
+        params.assert_valid();
+        assert!(plaintext_bits.0 < S::BITS);
+        ct.assert_valid(params);
+
         let msg = self.decrypt_without_decode(ct, params);
 
         msg.decode(plaintext_bits)

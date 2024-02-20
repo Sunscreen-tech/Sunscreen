@@ -31,20 +31,25 @@ pub fn generate_bootstrap_key<S>(
     bootstrap_key: &mut BootstrapKeyRef<S>,
     sk_to_encrypt: &LweSecretKeyRef<S>,
     sk: &GlweSecretKeyRef<S>,
-    params: &GlweDef,
+    lwe: &LweDef,
+    glwe: &GlweDef,
     radix: &RadixDecomposition,
 ) where
     S: TorusOps,
 {
-    sk.assert_valid(params);
+    lwe.assert_valid();
+    glwe.assert_valid();
     radix.assert_valid::<S>();
+    bootstrap_key.assert_valid(lwe, glwe, radix);
+    sk.assert_valid(glwe);
+    sk_to_encrypt.assert_valid(lwe);
 
     for (s_i, ggsw) in sk_to_encrypt
         .s()
         .iter()
-        .zip(bootstrap_key.rows_mut(params, radix))
+        .zip(bootstrap_key.rows_mut(glwe, radix))
     {
-        encrypt_ggsw_ciphertext_scalar(ggsw, *s_i, sk, params, radix, PlaintextBits(1));
+        encrypt_ggsw_ciphertext_scalar(ggsw, *s_i, sk, glwe, radix, PlaintextBits(1));
     }
 }
 
@@ -609,7 +614,14 @@ mod tests {
         let glwe_sk = keygen::generate_binary_glwe_sk(&glwe_params);
 
         let mut bootstrap_key = BootstrapKey::new(&lwe_params, &glwe_params, &radix);
-        generate_bootstrap_key(&mut bootstrap_key, &sk, &glwe_sk, &glwe_params, &radix);
+        generate_bootstrap_key(
+            &mut bootstrap_key,
+            &sk,
+            &glwe_sk,
+            &lwe_params,
+            &glwe_params,
+            &radix,
+        );
 
         let mut count = 0;
         for (s_i, ct) in sk.s().iter().zip(bootstrap_key.rows(&glwe_params, &radix)) {
@@ -639,12 +651,13 @@ mod tests {
             &mut ksk,
             glwe_sk.to_lwe_secret_key(),
             &original_sk,
+            &glwe.as_lwe_def(),
             &lwe,
             &radix,
         );
 
         let mut bsk_nonfft = BootstrapKey::new(&lwe, &glwe, &radix);
-        generate_bootstrap_key(&mut bsk_nonfft, &original_sk, &glwe_sk, &glwe, &radix);
+        generate_bootstrap_key(&mut bsk_nonfft, &original_sk, &glwe_sk, &lwe, &glwe, &radix);
 
         let mut bsk = BootstrapKeyFft::new(&lwe, &glwe, &radix);
         bsk_nonfft.fft(&mut bsk, &lwe, &glwe, &radix);
@@ -715,12 +728,13 @@ mod tests {
             &mut ksk,
             glwe_sk.to_lwe_secret_key(),
             &original_sk,
+            &glwe.as_lwe_def(),
             &lwe,
             &radix,
         );
 
         let mut bsk_nonfft = BootstrapKey::new(&lwe, &glwe, &radix);
-        generate_bootstrap_key(&mut bsk_nonfft, &original_sk, &glwe_sk, &glwe, &radix);
+        generate_bootstrap_key(&mut bsk_nonfft, &original_sk, &glwe_sk, &lwe, &glwe, &radix);
 
         let mut bsk = BootstrapKeyFft::new(&lwe, &glwe, &radix);
         bsk_nonfft.fft(&mut bsk, &lwe, &glwe, &radix);

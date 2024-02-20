@@ -142,6 +142,9 @@ where
 
     /// Create an FFT transformed version of `self` stored to result.
     pub fn fft(&self, result: &mut GlweCiphertextFftRef<Complex<f64>>, params: &GlweDef) {
+        self.assert_valid(params);
+        result.assert_valid(params);
+
         for (a, fft) in self.a(params).zip(result.a_mut(params)) {
             a.fft(fft);
         }

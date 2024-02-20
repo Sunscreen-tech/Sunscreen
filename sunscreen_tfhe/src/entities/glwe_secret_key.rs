@@ -50,7 +50,7 @@ where
     S: TorusOps,
 {
     fn generate(params: &GlweDef, torus_element_generator: impl Fn() -> S) -> GlweSecretKey<S> {
-        params.dim.assert_valid();
+        params.assert_valid();
 
         let len = GlweSecretKeyRef::<S>::size(params.dim);
 
@@ -95,6 +95,10 @@ where
     where
         S: TorusOps,
     {
+        params.assert_valid();
+        assert!(plaintext_bits.0 < S::BITS);
+        ct.assert_valid(params);
+
         let mut result = Polynomial::zero(ct.a_b(params).1.len());
 
         decrypt_glwe_ciphertext(&mut result, ct, self, params);

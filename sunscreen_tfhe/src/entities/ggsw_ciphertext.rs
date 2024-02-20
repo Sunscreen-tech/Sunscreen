@@ -101,6 +101,9 @@ where
         params: &GlweDef,
         radix: &RadixDecomposition,
     ) {
+        self.assert_valid(params, radix);
+        result.assert_valid(params, radix);
+
         for (s, r) in self.rows(params, radix).zip(result.rows_mut(params, radix)) {
             s.fft(r, params);
         }

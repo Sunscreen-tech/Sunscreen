@@ -1,4 +1,5 @@
 use paste::paste;
+use petgraph::prelude::NodeIndex;
 use sunscreen_compiler_macros::TypeName;
 use sunscreen_runtime::LinkWithZkp;
 use sunscreen_zkp_backend::{BigInt, FieldSpec};
@@ -49,10 +50,17 @@ pub trait AsFieldElement<F: FieldSpec> {
     fn into_field_elem(self) -> Self::Output;
 }
 
-impl<const N: usize, F: FieldSpec> AsFieldElement<F> for ProgramNode<BfvSignedEncoding<F, N>> {
-    type Output = ProgramNode<Field<F>>;
+/// Constrain a fresh encoding.
+pub trait ConstrainFresh {
+    /// Bound on the coefficients in the encoding.
+    const BOUND: usize;
 
-    fn into_field_elem(self) -> Self::Output {
+    /// Constrain a fresh encoding to the specified bound.
+    fn constrain_fresh_encoding(&self);
+}
+
+impl<const N: usize, F: FieldSpec> ProgramNode<BfvSignedEncoding<F, N>> {
+    fn extract_coefficients(&self) -> Vec<NodeIndex> {
         let bound = self.ids.len() / N;
         let plain_modulus = 2u64.pow(bound as u32 - 1);
 
@@ -94,6 +102,16 @@ impl<const N: usize, F: FieldSpec> AsFieldElement<F> for ProgramNode<BfvSignedEn
             });
         }
 
+        coeffs
+    }
+}
+
+impl<const N: usize, F: FieldSpec> AsFieldElement<F> for ProgramNode<BfvSignedEncoding<F, N>> {
+    type Output = ProgramNode<Field<F>>;
+
+    fn into_field_elem(self) -> Self::Output {
+        let coeffs = self.extract_coefficients();
+
         ProgramNode::new(&[with_zkp_ctx(|ctx| {
             // Get signed value by decoding according to Signed implementation.
             let mut x = ctx.add_constant(&BigInt::ZERO);
@@ -104,6 +122,15 @@ impl<const N: usize, F: FieldSpec> AsFieldElement<F> for ProgramNode<BfvSignedEn
             }
             x
         })])
+    }
+}
+
+impl<const N: usize, F: FieldSpec> ConstrainFresh for ProgramNode<BfvSignedEncoding<F, N>> {
+    const BOUND: usize = 1;
+
+    fn constrain_fresh_encoding(&self) {
+        let coeffs = self.extract_coefficients();
+        todo!()
     }
 }
 

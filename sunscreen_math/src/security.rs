@@ -341,30 +341,29 @@ mod tests {
 
         for dimension in 368..=2048 {
             for security_level in 80..=128 {
-                let std = lwe_security_level_to_std(dimension, security_level as f64);
-
-                if std.is_err() {
+                let std = if let Ok(value) =
+                    lwe_security_level_to_std(dimension, security_level as f64)
+                {
+                    value
+                } else {
                     continue;
-                }
+                };
 
-                let std = std.unwrap();
+                let recovered_security_level =
+                    if let Ok(value) = lwe_std_to_security_level(dimension, std) {
+                        value
+                    } else {
+                        continue;
+                    };
 
-                let recovered_security_level = lwe_std_to_security_level(dimension, std);
-
-                if recovered_security_level.is_err() {
-                    continue;
-                }
-
-                let recovered_level = recovered_security_level.unwrap();
-
-                let diff = (recovered_level - security_level as f64).abs();
+                let diff = (recovered_security_level - security_level as f64).abs();
                 assert!(
                             diff < tolerance,
                             "Security level tolerance violated. Dimension: {}, std: {}, security_level: {}, recovered_level: {}",
                             dimension,
                             std,
                             security_level,
-                            recovered_level
+                            recovered_security_level
                         );
             }
         }

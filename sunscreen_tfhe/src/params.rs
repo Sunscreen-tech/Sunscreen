@@ -3,15 +3,15 @@ use serde::{Deserialize, Serialize};
 use crate::rand::Stddev;
 use crate::TorusOps;
 
-use sunscreen_math::security::{lwe_std_to_security_level, SecurityLevelResults};
+use sunscreen_math::security::lwe_std_to_security_level;
 
 trait SecurityLevel {
     fn security_level(&self) -> f64;
 
     fn assert_security_level(&self, specified_security_level: usize) {
-        // Note that the underlying approximation is accurate up to 4 bits, so
-        // that is what we use here.
-        let tolerance = 4.0;
+        // Our security level should be within 0.5 bits of the specified
+        // security level (so +- 0.25 of the desired level).
+        let tolerance = 0.25;
 
         let security_level = self.security_level();
         let security_difference = (security_level - specified_security_level as f64).abs();
@@ -22,18 +22,6 @@ trait SecurityLevel {
             specified_security_level,
             security_level
         )
-    }
-}
-
-fn generic_security_level(dimension: usize, std: f64) -> f64 {
-    match lwe_std_to_security_level(dimension, std) {
-        SecurityLevelResults::Level(level) => level,
-        SecurityLevelResults::BelowStandardDeviationBound => {
-            panic!("Standard deviation is too small for the given dimension")
-        }
-        SecurityLevelResults::AboveStandardDeviationBound => {
-            panic!("Standard deviation is too large for the given dimension")
-        }
     }
 }
 
@@ -186,7 +174,7 @@ impl LweDef {
 
 impl SecurityLevel for LweDef {
     fn security_level(&self) -> f64 {
-        generic_security_level(self.dim.0, self.std.0)
+        lwe_std_to_security_level(self.dim.0, self.std.0).unwrap()
     }
 }
 
@@ -262,7 +250,7 @@ pub const GLWE_5_256_80: GlweDef = GlweDef {
         size: GlweSize(5),
         polynomial_degree: PolynomialDegree(256),
     },
-    std: Stddev(0.000000000000002106764669572764),
+    std: Stddev(0.0000000000000007794169597948335),
 };
 
 /// 80-bit secure parameters for a GLWE instance with 1 polynomial of degree 1024.
@@ -283,27 +271,27 @@ mod tests {
 
     #[test]
     fn check_security_levels() {
-        let actual_lwe_std = lwe_security_level_to_std(512, 128.0);
+        let actual_lwe_std = lwe_security_level_to_std(512, 128.0).unwrap();
         println!("LWE 512 128: {}", actual_lwe_std);
         LWE_512_128.assert_security_level(128);
 
-        let actual_glwe_std = lwe_security_level_to_std(1024, 128.0);
+        let actual_glwe_std = lwe_security_level_to_std(1024, 128.0).unwrap();
         println!("GLWE 1 1024 128: {}", actual_glwe_std);
         GLWE_1_1024_128.assert_security_level(128);
 
-        let actual_glwe_std = lwe_security_level_to_std(2048, 128.0);
+        let actual_glwe_std = lwe_security_level_to_std(2048, 128.0).unwrap();
         println!("GLWE 1 2048 128: {}", actual_glwe_std);
         GLWE_1_2048_128.assert_security_level(128);
 
-        let actual_lwe_std = lwe_security_level_to_std(512, 80.0);
+        let actual_lwe_std = lwe_security_level_to_std(512, 80.0).unwrap();
         println!("LWE 512 80: {}", actual_lwe_std);
         LWE_512_80.assert_security_level(80);
 
-        let actual_glwe_std = lwe_security_level_to_std(256 * 5, 80.0);
+        let actual_glwe_std = lwe_security_level_to_std(256 * 5, 80.0).unwrap();
         println!("GLWE 5 256 80: {}", actual_glwe_std);
         GLWE_5_256_80.assert_security_level(80);
 
-        let actual_glwe_std = lwe_security_level_to_std(1024, 80.0);
+        let actual_glwe_std = lwe_security_level_to_std(1024, 80.0).unwrap();
         println!("GLWE 1 1024 80: {}", actual_glwe_std);
         GLWE_1_1024_80.assert_security_level(80);
     }

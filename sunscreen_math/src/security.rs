@@ -1,6 +1,54 @@
 use log::warn;
 use statrs::distribution::{ContinuousCDF, Normal};
 
+use crate::geometry::{ConvexPolytope2D, HalfSpace2D, Point2D};
+
+/// Error for when a value is outside the constraints of a polytope.
+#[derive(Debug)]
+pub struct OutsideConstraintsError {
+    /// The name of the dimensions that were outside the constraints.
+    dimensions: [String; 2],
+
+    /// The value that was outside the constraints.
+    value: (f64, f64),
+
+    /// The polytope it was supposed to be in.
+    polytope: ConvexPolytope2D,
+}
+
+impl OutsideConstraintsError {
+    /// The name of the dimensions that were outside the constraints.
+    pub fn dimensions(&self) -> &[String; 2] {
+        &self.dimensions
+    }
+
+    /// The value that was outside the constraints.
+    pub fn value(&self) -> (f64, f64) {
+        self.value
+    }
+
+    /// The polytope it was supposed to be in.
+    pub fn polytope(&self) -> &ConvexPolytope2D {
+        &self.polytope
+    }
+}
+
+impl std::fmt::Display for OutsideConstraintsError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "Value {:?} is outside the constraints of polytope {:?}",
+            self.value, self.polytope
+        )
+    }
+}
+
+/// Result type for [`lwe_security_level_to_std`].
+pub type StandardDeviationResult = Result<f64, OutsideConstraintsError>;
+
+/// Result type for [`lwe_std_to_security_level`].
+pub type SecurityLevelResult = Result<f64, OutsideConstraintsError>;
+
 /// Evaluate a polynomial with coefficients in increasing order of degree.
 fn evaluate_polynomial(coeffs: &[f64], x: f64) -> f64 {
     let mut result = 0.0;
@@ -104,63 +152,69 @@ pub fn probability_away_from_mean_gaussian(x: f64, std: f64) -> f64 {
 /// normalized to the ciphertext modulus (calculated with 2^64 as the modulus).
 /// Valid from 368 to 2048 dimensions and 78 to 130 bits of security.
 ///
-/// The fit is most accurate in the region of 368 to 1024, while anything above
-/// 1024 is approximated over a sparse set of inputs. Testing has indicated that
-/// interpolated over the sparser fit data above 1024 matches quite well, but
-/// this has not been robustly tested.
+/// There are constraints on the input space above 1472 dimensions, where the
+/// security level at the smallest amount of noise possible is higher than 78
+/// bits.
 ///
-/// Some high dimensions will return a standard deviation below 1/modulus, which
-/// is problematic because potentially no random discrete numbers besides 0 would
-/// be sampled. You should check if the returned standard deviation is too low
-/// for your dimension and the modulus in case it was too low to generate any
-/// random numbers. For example, at dimension 2048 the effective lowest security
-/// is 102.2 bits for a modulus of 2^64.
+/// This approximation has an error of 0.021% +- 0.014%, max error 0.11%.
 ///
-/// This approximation has an error of 0.032% +- 0.024%, max error 0.17%.
 /// Simulation data used for fit from
 /// lattice-estimator commit 25f9e88 (Nov 8th 2023).
 /// <https://github.com/malb/lattice-estimator>
-pub fn lwe_security_level_to_std(dimension: usize, security_level: f64) -> f64 {
-    if !(368..=2048).contains(&dimension) {
-        warn!(
-            "Dimension {} is outside of the well behaved \
-            range of 368 to 2048 for the LWE standard deviation \
-            to security level conversion",
-            dimension
-        );
-    }
+pub fn lwe_security_level_to_std(dimension: usize, security_level: f64) -> StandardDeviationResult {
+    let security_polytope = ConvexPolytope2D {
+        half_spaces: vec![
+            HalfSpace2D::new((-1.0, 0.0), -368.0),
+            HalfSpace2D::new((1.0, 0.0), 2048.0),
+            HalfSpace2D::new((0.0, -1.0), -78.0),
+            HalfSpace2D::new((0.0, 1.0), 130.0),
+            // Above 1472 dimensions the security level at the smallest amount of
+            // noise possible is higher than 78 bits.
+            HalfSpace2D::new((0.05678074392712544, -1.0), 3.5151045883938177),
+        ],
+    };
 
-    if !(78.0..=130.0).contains(&security_level) {
-        warn!(
-            "Security level {} is outside of the well behaved \
-            range of 78 to 130 bits for the LWE standard deviation \
-            to security level conversion",
-            security_level
-        );
+    if !security_polytope.inside(Point2D::new(dimension as f64, security_level)) {
+        return Err(OutsideConstraintsError {
+            dimensions: ["dimension".to_string(), "security_level".to_string()],
+            value: (dimension as f64, security_level),
+            polytope: security_polytope,
+        });
     }
 
     let coeffs = [
         [
-            -7.62764572e-01,
-            2.50356801e-02,
-            -1.68801365e-04,
-            5.03161614e-07,
+            2.89630547e+00,
+            -1.26321873e-01,
+            2.13993467e-03,
+            -1.49515549e-05,
+            3.84468453e-08,
         ],
         [
-            -3.73831468e-02,
-            5.56885396e-04,
-            -3.70805717e-06,
-            9.04035707e-09,
+            -5.60568533e-02,
+            1.33311189e-03,
+            -1.56200244e-05,
+            8.93067686e-08,
+            -2.00996854e-10,
         ],
         [
-            -5.86726042e-07,
-            6.11446398e-09,
-            -1.14293199e-11,
+            7.39088707e-07,
+            -9.61269520e-08,
+            2.15766569e-09,
+            -1.82462028e-11,
+            5.45243818e-14,
+        ],
+        [
+            1.49456164e-09,
+            -4.28264022e-11,
+            4.30538855e-13,
+            -1.50621118e-15,
             0.00000000e+00,
         ],
         [
-            6.43204217e-11,
-            -5.54856202e-13,
+            9.49334890e-14,
+            -2.17539853e-15,
+            1.22195316e-17,
             0.00000000e+00,
             0.00000000e+00,
         ],
@@ -168,116 +222,113 @@ pub fn lwe_security_level_to_std(dimension: usize, security_level: f64) -> f64 {
 
     let log_std = evaluate_polynomial_2d(&coeffs, dimension as f64, security_level);
 
-    10.0f64.powf(log_std)
-}
-
-/// The result of the standard deviation to security level conversion.
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub enum SecurityLevelResults {
-    /// The standard deviation input is within the well-behaved range, and hence
-    /// we can calculate the security level.
-    Level(f64),
-
-    /// The standard deviation input is below the well-behaved range.
-    BelowStandardDeviationBound,
-
-    /// The standard deviation input is above the well-behaved range.
-    AboveStandardDeviationBound,
+    Ok(10.0f64.powf(log_std))
 }
 
 /// Returns the LWE security level for a given dimension and standard deviation,
 /// normalized to the ciphertext modulus (calculated with 2^64 as the modulus).
 /// Valid from 368 to 2048 dimensions and 78 to 130 bits of security.
 ///
-/// The fit is most accurate in the region of 368 to 1024, while anything above
-/// 1024 is approximated over a sparse set of inputs. Testing has indicated that
-/// interpolated over the sparser fit data above 1024 matches quite well, but
-/// this has not been robustly tested.
+/// The valid standard deviations are functions of the dimension, and hence not
+/// all standard deviations are valid for all dimensions. If a standard
+/// deviation is not valid for a given dimension, an error is returned defining
+/// the valid region of standard deviations.
 ///
-/// This approximation has an error of 0.030% +- 0.027%, max error 0.237% up to
-/// 1024 dimensions. Above 1024 dimensions the error is higher due to the
-/// sparser fit data, up to 4 bits of discrepancy.
+/// This approximation has an error of 0.019% +- 0.014%, max error 0.11%.
 ///
 /// Simulation data used for fit from
 /// lattice-estimator commit 25f9e88 (Nov 8th 2023).
 /// <https://github.com/malb/lattice-estimator>
-pub fn lwe_std_to_security_level(dimension: usize, std: f64) -> SecurityLevelResults {
-    if !(368..=2048).contains(&dimension) {
-        warn!(
-            "Dimension {} is outside of the well behaved \
-            range of 368 to 2048 for the LWE standard deviation \
-            to security level conversion",
-            dimension
-        );
-    }
-
+pub fn lwe_std_to_security_level(dimension: usize, std: f64) -> SecurityLevelResult {
     let log_std = std.log10();
 
-    // The original approximation was done on a modulus of 2^64, so any value
-    // below 2^-64 cannot be calculated properly as no random numbers can be
-    // generated in the simulation that produced this fit.
-    let absolute_lower_bound = 2.0f64.powi(-64).log10();
+    let std_polytope = ConvexPolytope2D {
+        half_spaces: vec![
+            HalfSpace2D::new((-1.0, 0.0), -386.0),
+            HalfSpace2D::new((1.0, 0.0), 2048.0),
+            // Half spaces to define the general region where the standard deviation is valid.
+            HalfSpace2D::new((-0.012501482876757172, -1.0), -0.5040411014606384),
+            HalfSpace2D::new((0.0077927720025765665, 1.0), 0.7390928205510939),
+            // Minimum bound on the standard deviation
+            HalfSpace2D::new((0.0, -1.0), 17.67),
+        ],
+    };
 
-    if log_std < absolute_lower_bound {
-        return SecurityLevelResults::BelowStandardDeviationBound;
-    }
-
-    let low_bound_check = evaluate_polynomial(
-        &[0.4684078248019203, -0.012433416778389538],
-        dimension as f64,
-    );
-    let high_bound_check = evaluate_polynomial(
-        &[0.7428966000870061, -0.007783548255438252],
-        dimension as f64,
-    );
-
-    if log_std < low_bound_check {
-        return SecurityLevelResults::BelowStandardDeviationBound;
-    }
-
-    if log_std > high_bound_check {
-        return SecurityLevelResults::AboveStandardDeviationBound;
+    if !std_polytope.inside(Point2D::new(dimension as f64, log_std)) {
+        return Err(OutsideConstraintsError {
+            dimensions: ["dimension".to_string(), "log_std".to_string()],
+            value: (dimension as f64, log_std),
+            polytope: std_polytope,
+        });
     }
 
     let coeffs = [
         [
-            7.15195109e+01,
-            4.54730939e+01,
-            1.49843216e+01,
-            1.95312316e+00,
-            7.93110773e-02,
+            6.90381015e+01,
+            5.02853460e+01,
+            1.94568148e+01,
+            4.20275108e+00,
+            5.70115313e-01,
+            3.84445029e-02,
+            1.01123781e-03,
         ],
         [
-            5.14361091e-01,
-            1.75904243e-01,
-            1.36623125e-02,
-            -1.16877608e-03,
-            -1.03232507e-04,
+            5.74446364e-01,
+            2.16090358e-01,
+            4.33027422e-02,
+            5.96469779e-03,
+            3.47705471e-05,
+            -3.75600129e-05,
+            -1.73396859e-06,
         ],
         [
-            1.86929626e-04,
-            -1.17102619e-04,
-            -2.75236481e-05,
-            -8.12027694e-07,
-            3.57735664e-08,
+            1.38947894e-04,
+            -1.97798175e-06,
+            6.18022031e-06,
+            -8.44553282e-06,
+            -9.87061302e-07,
+            -1.98799589e-08,
+            7.73239565e-10,
         ],
         [
-            -5.32306964e-07,
-            -5.43087594e-08,
-            6.98712160e-09,
-            5.78164454e-10,
+            -1.76700147e-07,
+            4.46397961e-08,
+            -8.48859329e-08,
+            -6.50906497e-09,
+            2.29684491e-10,
+            2.23006735e-11,
             0.00000000e+00,
         ],
         [
-            2.28281489e-10,
-            4.76124667e-11,
-            2.20783430e-12,
+            2.73798876e-10,
+            -4.27647020e-10,
+            -1.56129840e-12,
+            5.18444880e-12,
+            2.50320308e-13,
+            0.00000000e+00,
+            0.00000000e+00,
+        ],
+        [
+            -9.58735744e-13,
+            1.71390444e-13,
+            3.36603110e-14,
+            1.30767385e-15,
+            0.00000000e+00,
+            0.00000000e+00,
+            0.00000000e+00,
+        ],
+        [
+            5.98968287e-16,
+            7.74296283e-17,
+            2.66615159e-18,
+            0.00000000e+00,
+            0.00000000e+00,
             0.00000000e+00,
             0.00000000e+00,
         ],
     ];
 
-    SecurityLevelResults::Level(evaluate_polynomial_2d(&coeffs, dimension as f64, log_std))
+    Ok(evaluate_polynomial_2d(&coeffs, dimension as f64, log_std))
 }
 
 #[cfg(test)]
@@ -286,35 +337,34 @@ mod tests {
 
     #[test]
     fn lwe_security_to_std_and_back() {
-        // This is too high due to the lack of samples in the higher dimensions.
-        // At some point the simulator needs to be rerun to better sample the
-        // region above 1024.
-        let tolerance = 4.0;
+        let tolerance = 0.05;
 
         for dimension in 368..=2048 {
             for security_level in 80..=128 {
-                let std = lwe_security_level_to_std(dimension, security_level as f64);
-                let recovered_security_level = lwe_std_to_security_level(dimension, std);
+                let std = if let Ok(value) =
+                    lwe_security_level_to_std(dimension, security_level as f64)
+                {
+                    value
+                } else {
+                    continue;
+                };
 
-                match recovered_security_level {
-                    super::SecurityLevelResults::Level(recovered_level) => {
-                        let diff = (recovered_level - security_level as f64).abs();
-                        assert!(
+                let recovered_security_level =
+                    if let Ok(value) = lwe_std_to_security_level(dimension, std) {
+                        value
+                    } else {
+                        continue;
+                    };
+
+                let diff = (recovered_security_level - security_level as f64).abs();
+                assert!(
                             diff < tolerance,
                             "Security level tolerance violated. Dimension: {}, std: {}, security_level: {}, recovered_level: {}",
                             dimension,
                             std,
                             security_level,
-                            recovered_level
+                            recovered_security_level
                         );
-                    }
-                    e => {
-                        if std < 2.0f64.powi(-64) {
-                            continue;
-                        }
-                        panic!("Failed to recover security level: {:?}", e);
-                    }
-                }
             }
         }
     }

@@ -43,8 +43,11 @@ impl std::fmt::Display for OutsideConstraintsError {
     }
 }
 
-type StandardDeviationResult = Result<f64, OutsideConstraintsError>;
-type SecurityLevelResult = Result<f64, OutsideConstraintsError>;
+/// Result type for [`lwe_security_level_to_std`].
+pub type StandardDeviationResult = Result<f64, OutsideConstraintsError>;
+
+/// Result type for [`lwe_std_to_security_level`].
+pub type SecurityLevelResult = Result<f64, OutsideConstraintsError>;
 
 /// Evaluate a polynomial with coefficients in increasing order of degree.
 fn evaluate_polynomial(coeffs: &[f64], x: f64) -> f64 {

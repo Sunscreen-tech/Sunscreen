@@ -9,9 +9,9 @@ trait SecurityLevel {
     fn security_level(&self) -> f64;
 
     fn assert_security_level(&self, specified_security_level: usize) {
-        // Note that the underlying approximation is accurate up to 4 bits, so
-        // that is what we use here.
-        let tolerance = 0.5;
+        // Our security level should be within 0.5 bits of the specified
+        // security level (so +- 0.25 of the desired level).
+        let tolerance = 0.25;
 
         let security_level = self.security_level();
         let security_difference = (security_level - specified_security_level as f64).abs();

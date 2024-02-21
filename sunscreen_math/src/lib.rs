@@ -36,6 +36,9 @@ pub mod stats;
 /// Functions related to calculating security and correctness parameters.
 pub mod security;
 
+/// Functions and data structures related to geometry
+pub mod geometry;
+
 #[cfg(feature = "pina")]
 mod pina;
 use curve25519_dalek::ristretto::RistrettoPoint;

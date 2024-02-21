@@ -3079,6 +3079,7 @@ dependencies = [
  "proptest",
  "rand",
  "rand_distr",
+ "rayon",
  "realfft",
  "rustfft",
  "serde",

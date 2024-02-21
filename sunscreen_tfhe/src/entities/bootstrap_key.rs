@@ -6,6 +6,7 @@ use crate::{
     entities::{
         GgswCiphertextFftIterator, GgswCiphertextFftIteratorMut, GgswCiphertextFftRef,
         GgswCiphertextIterator, GgswCiphertextIteratorMut, GgswCiphertextRef,
+        ParallelGgswCiphertextIterator, ParallelGgswCiphertextIteratorMut,
     },
     GlweDef, GlweDimension, LweDef, LweDimension, RadixCount, RadixDecomposition, Torus, TorusOps,
 };
@@ -54,6 +55,17 @@ impl<S: TorusOps> BootstrapKeyRef<S> {
         GgswCiphertextIterator::new(self.as_slice(), stride)
     }
 
+    /// Iterate in parallel over the rows of the [BootstrapKey].
+    pub fn rows_par(
+        &self,
+        params: &GlweDef,
+        radix: &RadixDecomposition,
+    ) -> ParallelGgswCiphertextIterator<S> {
+        let stride = GgswCiphertextRef::<S>::size((params.dim, radix.count));
+
+        ParallelGgswCiphertextIterator::new(self.as_slice(), stride)
+    }
+
     /// Iterate over the rows of the [BootstrapKey] mutably.
     pub fn rows_mut(
         &mut self,
@@ -63,6 +75,17 @@ impl<S: TorusOps> BootstrapKeyRef<S> {
         let stride = GgswCiphertextRef::<S>::size((params.dim, radix.count));
 
         GgswCiphertextIteratorMut::new(self.as_mut_slice(), stride)
+    }
+
+    /// Iterate in parallel over the rows of the [BootstrapKey].
+    pub fn rows_par_mut(
+        &mut self,
+        params: &GlweDef,
+        radix: &RadixDecomposition,
+    ) -> ParallelGgswCiphertextIteratorMut<S> {
+        let stride = GgswCiphertextRef::<S>::size((params.dim, radix.count));
+
+        ParallelGgswCiphertextIteratorMut::new(self.as_mut_slice(), stride)
     }
 
     /// Perform an FFT on the [BootstrapKey] to obtain a [BootstrapKeyFft].

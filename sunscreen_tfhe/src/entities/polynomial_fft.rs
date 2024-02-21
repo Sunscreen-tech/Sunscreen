@@ -21,6 +21,8 @@ dst! {
 dst_iter!(
     PolynomialFftIterator,
     PolynomialFftIteratorMut,
+    ParallelPolynomialFftIterator,
+    ParallelPolynomialFftIteratorMut,
     NoWrapper,
     PolynomialFftRef,
     ()

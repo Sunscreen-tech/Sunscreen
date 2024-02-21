@@ -17,6 +17,7 @@ macro_rules! dst {
             }
 
             impl<T> $ref_t<T> where T: Clone $(+ $t_bounds)* {
+                #[allow(unused)]
                 /// Clones the contents of rhs into self
                 pub fn clone_from_ref(&mut self, rhs: &$ref_t<T>) {
                     for (l, r) in self.data.iter_mut().zip(rhs.data.iter()) {
@@ -24,16 +25,19 @@ macro_rules! dst {
                     }
                 }
 
+                #[allow(unused)]
                 /// Returns a slice view of the data representing a $t.
                 pub fn as_slice(&self) -> &[$wrapper<T>] {
                     &self.data
                 }
 
+                #[allow(unused)]
                 /// Returns a mutable slice view of the data representing a $t.
                 pub fn as_mut_slice(&mut self) -> &mut [$wrapper<T>] {
                     &mut self.data
                 }
 
+                #[allow(unused)]
                 /// Move the contents of rhs into self.
                 pub fn move_from(&mut self, rhs: $t<T>) {
                     for (l, r) in self.data.iter_mut().zip(rhs.data.into_iter()) {
@@ -55,6 +59,7 @@ macro_rules! dst {
             }
 
             impl<T> $ref_t<T> where T: Clone $(+ $t_bounds)*, $wrapper<T>: num::Zero {
+                #[allow(unused)]
                 /// Clears the contents of self to contain zero
                 pub fn clear(&mut self) {
 
@@ -115,7 +120,7 @@ macro_rules! dst {
 }
 
 macro_rules! dst_iter {
-    ($t:ty, $t_mut:ty, $wrapper_type: ty, $item_ref:ty, ($($t_bounds:ty,)*)) => {
+    ($t:ty, $t_mut:ty, $par_t:ty, $par_t_mut:ty, $wrapper_type: ty, $item_ref:ty, ($($t_bounds:ty,)*)) => {
         paste::paste!{
             /// An iterator to access references to an underlying type.
             pub struct $t<'a, T> where T: Clone $(+ $t_bounds)* {
@@ -138,23 +143,12 @@ macro_rules! dst_iter {
                         back_idx: (data.len() as i64) - (stride as i64)
                     }
                 }
+            }
 
-                #[inline]
-                /// The total number of items this iterator will emit and has emitted.
-                ///
-                /// # Remarks
-                /// This method returns the same value regardless of how many times
-                /// `next` has been called.
-                ///
-                /// This operation does not consume the iterator.
-                pub fn len(&self) -> usize {
+            impl<'a, T> std::iter::ExactSizeIterator for $t<'a, T> where T: Clone $(+ $t_bounds)* {
+                #[inline(always)]
+                fn len(&self) -> usize {
                     self.data.len() / self.stride
-                }
-
-                /// Returns true if the iterator is empty.
-                #[inline]
-                pub fn is_empty(&self) -> bool {
-                    self.data.is_empty()
                 }
             }
 
@@ -202,13 +196,103 @@ macro_rules! dst_iter {
                 }
             }
 
+            /// A parallel iterator over the underlying type
+            pub struct $par_t<'a, T> where T: Send + Sync + Clone $(+ $t_bounds)* {
+                data: &'a [$wrapper_type<T>],
+                stride: usize,
+                count: usize
+            }
+
+            impl<'a, T> $par_t<'a, T> where T: Send + Sync + Clone $(+ $t_bounds)* {
+                #[inline(always)]
+                #[allow(unused)]
+                /// Create a new parallel iterator.
+                pub fn new(data: &'a [$wrapper_type<T>], stride: usize) -> Self {
+                    assert_eq!(data.len() % stride, 0);
+
+                    let count = data.len() / stride;
+
+                    Self {
+                        data,
+                        stride,
+                        count
+                    }
+                }
+            }
+
+            impl<'a, T> rayon::iter::plumbing::Producer for $par_t<'a, T>
+            where T: Send + Sync + Clone $(+ $t_bounds)* {
+                type Item = &'a $item_ref<T>;
+                type IntoIter = $t<'a, T>;
+
+                #[inline(always)]
+                fn split_at(self, index: usize) -> (Self, Self) {
+                    let len = <Self as rayon::iter::IndexedParallelIterator>::len(&self);
+
+                    let (left, right) = self.data.split_at(index * self.stride);
+
+                    let left = Self {
+                        data: left,
+                        stride: self.stride,
+                        count: index,
+                    };
+
+                    let right = Self {
+                        data: right,
+                        stride: self.stride,
+                        count: len - index
+                    };
+
+                    (left, right)
+                }
+
+                #[inline(always)]
+                fn into_iter(self) -> Self::IntoIter {
+                    $t::new(self.data, self.stride)
+                }
+            }
+
+            impl<'a, T> rayon::iter::ParallelIterator for $par_t<'a, T> where T: Send + Sync + Clone $(+ $t_bounds)* {
+                type Item = &'a $item_ref<T>;
+
+                fn drive_unindexed<C>(self, consumer: C) -> C::Result
+                    where
+                        C: rayon::iter::plumbing::UnindexedConsumer<Self::Item>,
+                {
+                    rayon::iter::plumbing::bridge(self, consumer)
+                }
+            }
+
+            impl<'a, T> rayon::iter::IndexedParallelIterator for $par_t<'a, T> where
+            T: Send + Sync + Clone $(+ $t_bounds)* {
+                #[inline(always)]
+                fn len(&self) -> usize {
+                    self.count
+                }
+
+                fn drive<C>(self, consumer: C) -> C::Result
+                    where C: rayon::iter::plumbing::Consumer<Self::Item>
+                {
+                    rayon::iter::plumbing::bridge(self, consumer)
+                }
+
+                fn with_producer<CB>(
+                    self,
+                    callback: CB
+                ) -> CB::Output
+                    where CB: rayon::iter::plumbing::ProducerCallback<Self::Item>
+                {
+                    callback.callback(self)
+                }
+            }
+
             /// A mutable iterator to access references to an underlying type.
             pub struct $t_mut<'a, T> where T: Clone $(+ $t_bounds)* {
-                data: *mut $wrapper_type<T>,
-                len: usize,
+                start: *mut $wrapper_type<T>,
+                front: isize,
+                back: isize,
                 stride: usize,
-                idx: usize,
-                _phantom: std::marker::PhantomData<&'a T>,
+                _phantom: std::marker::PhantomData<&'a T>
             }
 
             impl<'a, T> $t_mut<'a, T> where T: Clone $(+ $t_bounds)* {
@@ -217,31 +301,15 @@ macro_rules! dst_iter {
                 pub fn new(data: &'a mut [$wrapper_type<T>], stride: usize) -> Self {
                     assert_eq!(data.len() % stride, 0);
 
+                    let len = (data.len() - stride) as isize;
+
                     Self {
-                        idx: 0,
+                        start: data.as_mut_ptr(),
+                        front: 0,
+                        back: len,
                         stride,
-                        data: data.as_mut_ptr(),
-                        len: data.len(),
                         _phantom: std::marker::PhantomData
                     }
-                }
-
-                #[inline]
-                /// The total number of items this iterator will emit and has emitted.
-                ///
-                /// # Remarks
-                /// This method returns the same value regardless of how many times
-                /// `next` has been called.
-                ///
-                /// This operation does not consume the iterator.
-                pub fn len(&self) -> usize {
-                    self.len / self.stride
-                }
-
-                /// Returns true if the iterator is empty.
-                #[inline]
-                pub fn is_empty(&self) -> bool {
-                    self.len == 0
                 }
             }
 
@@ -249,19 +317,133 @@ macro_rules! dst_iter {
                 type Item = &'a mut $item_ref<T>;
 
                 fn next(&mut self) -> Option<Self::Item> {
-                    if self.idx == self.len {
+                    if self.front > self.back {
                         return None;
                     }
 
-                    // Since the slices emitted by this iterator don't overlap, this is sound.
-                    let data = unsafe {
-                        let slice = self.data.add(self.idx);
-                        std::slice::from_raw_parts_mut(slice, self.stride)
+                    let slice = unsafe {
+                        let ptr = self.start.offset(self.front);
+                        std::slice::from_raw_parts_mut(ptr, self.stride)
                     };
 
-                    self.idx += self.stride;
+                    self.front += self.stride as isize;
 
-                    Some(<$item_ref<T> as crate::dst::FromMutSlice<$wrapper_type<T>>>::from_mut_slice(data))
+                    Some(<$item_ref<T> as crate::dst::FromMutSlice<$wrapper_type<T>>>::from_mut_slice(slice))
+                }
+            }
+
+            impl<'a, T> std::iter::ExactSizeIterator for $t_mut<'a, T> where T: Clone $(+ $t_bounds)* {
+                #[inline(always)]
+                fn len(&self) -> usize {
+                    (self.back - self.front + self.stride as isize) as usize / self.stride
+                }
+            }
+
+            impl<'a, T> std::iter::DoubleEndedIterator for $t_mut<'a, T> where T: Clone $(+ $t_bounds)* {
+                fn next_back(&mut self) -> Option<Self::Item> {
+                    if self.front > self.back {
+                        return None;
+                    }
+
+                    let slice = unsafe {
+                        let ptr = self.start.offset(self.back);
+                        std::slice::from_raw_parts_mut(ptr, self.stride)
+                    };
+
+                    self.back -= self.stride as isize;
+
+                    Some(<$item_ref<T> as crate::dst::FromMutSlice<$wrapper_type<T>>>::from_mut_slice(slice))
+                }
+            }
+
+            /// A mutable parallel iterator over the underlying type
+            pub struct $par_t_mut<'a, T> where T: Send + Sync + Clone $(+ $t_bounds)* {
+                data: &'a mut [$wrapper_type<T>],
+                stride: usize,
+                count: usize
+            }
+
+            impl<'a, T> $par_t_mut<'a, T> where T: Send + Sync + Clone $(+ $t_bounds)* {
+                #[inline(always)]
+                #[allow(unused)]
+                /// Create a new mutable parallel iterator.
+                pub fn new(data: &'a mut [$wrapper_type<T>], stride: usize) -> Self {
+                    assert_eq!(data.len() % stride, 0);
+
+                    let count = data.len() / stride;
+
+                    Self {
+                        data,
+                        stride,
+                        count
+                    }
+                }
+            }
+
+            impl<'a, T> rayon::iter::plumbing::Producer for $par_t_mut<'a, T>
+            where T: Send + Sync + Clone $(+ $t_bounds)* {
+                type Item = &'a mut $item_ref<T>;
+                type IntoIter = $t_mut<'a, T>;
+
+                #[inline(always)]
+                fn split_at(self, index: usize) -> (Self, Self) {
+                    let len = <Self as rayon::iter::IndexedParallelIterator>::len(&self);
+
+                    let (left, right) = self.data.split_at_mut(index * self.stride);
+
+                    let left = Self {
+                        data: left,
+                        stride: self.stride,
+                        count: index,
+                    };
+
+                    let right = Self {
+                        data: right,
+                        stride: self.stride,
+                        count: len - index
+                    };
+
+                    (left, right)
+                }
+
+                #[inline(always)]
+                fn into_iter(self) -> Self::IntoIter {
+                    $t_mut::new(self.data, self.stride)
+                }
+            }
+
+            impl<'a, T> rayon::iter::ParallelIterator for $par_t_mut<'a, T> where T: Send + Sync + Clone $(+ $t_bounds)* {
+                type Item = &'a mut $item_ref<T>;
+
+                fn drive_unindexed<C>(self, consumer: C) -> C::Result
+                    where
+                        C: rayon::iter::plumbing::UnindexedConsumer<Self::Item>,
+                {
+                    rayon::iter::plumbing::bridge(self, consumer)
+                }
+            }
+
+
+            impl<'a, T> rayon::iter::IndexedParallelIterator for $par_t_mut<'a, T> where
+            T: Send + Sync + Clone $(+ $t_bounds)* {
+                #[inline(always)]
+                fn len(&self) -> usize {
+                    self.count
+                }
+
+                fn drive<C>(self, consumer: C) -> C::Result
+                    where C: rayon::iter::plumbing::Consumer<Self::Item>
+                {
+                    rayon::iter::plumbing::bridge(self, consumer)
+                }
+
+                fn with_producer<CB>(
+                    self,
+                    callback: CB
+                ) -> CB::Output
+                    where CB: rayon::iter::plumbing::ProducerCallback<Self::Item>
+                {
+                    callback.callback(self)
                 }
             }
         }
@@ -290,4 +472,129 @@ pub trait FromSlice<T> {
 
 pub trait FromMutSlice<T> {
     fn from_mut_slice(data: &mut [T]) -> &mut Self;
+}
+
+#[cfg(test)]
+mod tests {
+    use std::sync::atomic::{AtomicUsize, Ordering};
+
+    use rayon::iter::{IndexedParallelIterator, ParallelIterator};
+
+    use super::*;
+
+    dst! {
+        /// The FFT variant of a GGSW ciphertext. See
+        /// [`GgswCiphertext`](crate::entities::GgswCiphertext) for more details.
+        Foo,
+        FooRef,
+        NoWrapper,
+        (Clone, Debug),
+        ()
+    }
+
+    dst_iter! { FooIter, FooIterMut, ParallelFooIter, ParallelFooIterMut, NoWrapper, FooRef, () }
+
+    #[test]
+    fn forward_iterate() {
+        let data = (0..30).collect::<Vec<_>>();
+
+        for (i, x) in FooIter::new(&data, 3).enumerate() {
+            assert_eq!(x.as_slice()[0], 3 * i);
+            assert_eq!(x.as_slice()[1], 3 * i + 1);
+            assert_eq!(x.as_slice()[2], 3 * i + 2);
+        }
+    }
+
+    #[test]
+    fn reverse_iterate() {
+        let data = (0..30).rev().collect::<Vec<_>>();
+
+        for (i, x) in FooIter::new(&data, 3).rev().enumerate() {
+            assert_eq!(x.as_slice()[0], 3 * i + 2);
+            assert_eq!(x.as_slice()[1], 3 * i + 1);
+            assert_eq!(x.as_slice()[2], 3 * i);
+        }
+    }
+
+    #[test]
+    #[should_panic]
+    fn iter_stride_mismatch() {
+        let data = (0..31).collect::<Vec<_>>();
+
+        FooIter::new(&data, 3);
+    }
+
+    #[test]
+    #[should_panic]
+    fn iter_mut_stride_mismatch() {
+        let mut data = (0..31).collect::<Vec<_>>();
+
+        FooIterMut::new(&mut data, 3);
+    }
+
+    #[test]
+    fn forward_iterate_mut() {
+        let mut data = vec![0; 3 * 10];
+
+        for (i, x) in FooIterMut::new(&mut data, 3).enumerate() {
+            x.as_mut_slice()[0] = 3 * i;
+            x.as_mut_slice()[1] = 3 * i + 1;
+            x.as_mut_slice()[2] = 3 * i + 2;
+        }
+
+        let expected = (0..30).collect::<Vec<_>>();
+
+        assert_eq!(data, expected);
+    }
+
+    #[test]
+    fn reverse_iterate_mut() {
+        let mut data = vec![0; 3 * 10];
+
+        for (i, x) in FooIterMut::new(&mut data, 3).rev().enumerate() {
+            x.as_mut_slice()[2] = 3 * i;
+            x.as_mut_slice()[1] = 3 * i + 1;
+            x.as_mut_slice()[0] = 3 * i + 2;
+        }
+
+        let expected = (0..30).rev().collect::<Vec<_>>();
+
+        assert_eq!(data, expected);
+    }
+
+    #[test]
+    fn parallel_iterate() {
+        let data = (0..30).collect::<Vec<_>>();
+
+        let items_iterated = AtomicUsize::new(0);
+
+        ParallelFooIter::new(&data, 3)
+            .enumerate()
+            .for_each(|(i, x)| {
+                assert_eq!(x.as_slice()[0], 3 * i);
+                assert_eq!(x.as_slice()[1], 3 * i + 1);
+                assert_eq!(x.as_slice()[2], 3 * i + 2);
+
+                items_iterated.fetch_add(1, Ordering::Relaxed);
+            });
+
+        assert_eq!(items_iterated.load(Ordering::Relaxed), 10);
+    }
+
+    #[test]
+    fn parallel_iterate_mut() {
+        let mut data = vec![0; 30];
+
+        ParallelFooIterMut::new(&mut data, 3)
+            .enumerate()
+            .for_each(|(i, x)| {
+                x.as_mut_slice()[0] = 3 * i;
+                x.as_mut_slice()[1] = 3 * i + 1;
+                x.as_mut_slice()[2] = 3 * i + 2;
+            });
+
+        let expected = (0..30).collect::<Vec<_>>();
+
+        assert_eq!(data, expected);
+    }
 }

@@ -77,6 +77,8 @@ pub trait TorusOps:
     + FromF64
     + ToU64
     + NumBits
+    + Sync
+    + Send
 {
 }
 

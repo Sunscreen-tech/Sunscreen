@@ -15,7 +15,7 @@ dst! {
     (Clone, Debug,Serialize, Deserialize),
     (TorusOps)
 }
-dst_iter! { LweCiphertextIterator, LweCiphertextIteratorMut, Torus, LweCiphertextRef, (TorusOps,) }
+dst_iter! { LweCiphertextIterator, LweCiphertextIteratorMut, ParallelLweCiphertextIterator, ParallelLweCiphertextIteratorMut, Torus, LweCiphertextRef, (TorusOps,) }
 
 impl_binary_op!(Add, LweCiphertext, (TorusOps,));
 impl_binary_op!(Sub, LweCiphertext, (TorusOps,));

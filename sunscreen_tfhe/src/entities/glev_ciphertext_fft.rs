@@ -20,7 +20,7 @@ dst! {
     (Clone, Debug, Serialize, Deserialize),
     ()
 }
-dst_iter! { GlevCiphertextFftIterator, GlevCiphertextFftIteratorMut, NoWrapper, GlevCiphertextFftRef, ()}
+dst_iter! { GlevCiphertextFftIterator, GlevCiphertextFftIteratorMut, ParallelGlevCiphertextFftIterator, ParallelGlevCiphertextFftIteratorMut, NoWrapper, GlevCiphertextFftRef, ()}
 
 impl OverlaySize for GlevCiphertextFftRef<Complex<f64>> {
     type Inputs = (GlweDimension, RadixCount);

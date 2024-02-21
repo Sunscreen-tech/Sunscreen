@@ -22,7 +22,7 @@ dst! {
     (Debug, Clone, Serialize, Deserialize),
     (TorusOps)
 }
-dst_iter! { GlweCiphertextIterator, GlweCiphertextIteratorMut, Torus, GlweCiphertextRef, (TorusOps,) }
+dst_iter! { GlweCiphertextIterator, GlweCiphertextIteratorMut, ParallelGlweCiphertextIterator, ParallelGlweCiphertextIteratorMut, Torus, GlweCiphertextRef, (TorusOps,) }
 
 // Also implements the assign operators.
 impl_binary_op!(Add, GlweCiphertext, (TorusOps,));

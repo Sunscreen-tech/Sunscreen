@@ -13,10 +13,7 @@ use crate::{
     zkp::{with_zkp_ctx, ZkpContextOps},
 };
 
-use super::{
-    gadgets::{self, SignedModulus},
-    DynamicNumFieldElements, Field, ToNativeFields,
-};
+use super::{gadgets::SignedModulus, DynamicNumFieldElements, Field, ToNativeFields};
 
 use crate as sunscreen;
 
@@ -134,7 +131,20 @@ impl<const N: usize, F: FieldSpec> ConstrainFresh for ProgramNode<BfvSignedEncod
     fn constrain_fresh_encoding(&self) {
         let coeffs = self.extract_coefficients();
 
-        invoke_gadget(gadgets::AssertBinary, &coeffs);
+        with_zkp_ctx(|ctx| {
+            let one = ctx.add_constant(&BigInt::ONE);
+
+            for c in coeffs.iter() {
+                let c_minus_1 = ctx.add_subtraction(*c, one);
+
+                let c_plus_1 = ctx.add_addition(*c, one);
+
+                let poly = ctx.add_multiplication(*c, c_minus_1);
+                let poly = ctx.add_multiplication(poly, c_plus_1);
+
+                ctx.add_constraint(poly, &BigInt::ZERO);
+            }
+        });
     }
 }
 

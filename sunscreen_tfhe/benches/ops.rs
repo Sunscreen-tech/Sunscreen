@@ -258,6 +258,21 @@ fn keygen(c: &mut Criterion) {
             );
         })
     });
+
+    c.bench_function("CBS PFKS keyswitch keygen", |b| {
+        let lwe_sk = high_level::keygen::generate_binary_lwe_sk(&LWE_512_80);
+        let glwe_sk = high_level::keygen::generate_binary_glwe_sk(&GLWE_5_256_80);
+
+        b.iter(|| {
+            let _ = high_level::keygen::generate_cbs_ksk(
+                &lwe_sk,
+                &glwe_sk,
+                &LWE_512_80,
+                &GLWE_5_256_80,
+                &radix,
+            );
+        });
+    });
 }
 
 criterion_group!(

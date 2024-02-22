@@ -12,8 +12,8 @@ use crate::{
 };
 
 use super::{
-    GlweCiphertext, GlweCiphertextRef, LweSecretKeyRef, Polynomial, PolynomialIterator,
-    PolynomialIteratorMut, PolynomialRef,
+    GlweCiphertext, GlweCiphertextRef, LweSecretKeyRef, ParallelPolynomialIterator, Polynomial,
+    PolynomialIterator, PolynomialIteratorMut, PolynomialRef,
 };
 
 dst! {
@@ -83,6 +83,11 @@ where
     /// Returns an iterator over the `s` polynomials in a GLWE secret key.
     pub fn s(&self, params: &GlweDef) -> PolynomialIterator<S> {
         PolynomialIterator::new(&self.data, params.dim.polynomial_degree.0)
+    }
+
+    /// Returns a parallel iterator over the `s` polynomials in a GLWE secret key.
+    pub fn s_par(&self, params: &GlweDef) -> ParallelPolynomialIterator<S> {
+        ParallelPolynomialIterator::new(&self.data, params.dim.polynomial_degree.0)
     }
 
     /// Decrypts and decodes a GLWE ciphertext into a polynomial.

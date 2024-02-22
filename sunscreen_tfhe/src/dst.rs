@@ -483,8 +483,6 @@ mod tests {
     use super::*;
 
     dst! {
-        /// The FFT variant of a GGSW ciphertext. See
-        /// [`GgswCiphertext`](crate::entities::GgswCiphertext) for more details.
         Foo,
         FooRef,
         NoWrapper,

@@ -51,7 +51,8 @@ In order to enforce these checks, we can use the following ZKP.
 #    FheZkpApplication, FheZkpRuntime, Params, PrivateKey, PublicKey, Result, ZkpProgramInput,
 # };
 
-// Property 1 is proven before this ZKP is executed
+// Property 1: The encrypted data is well formed. This is proven before this ZKP
+// is executed.
 #[zkp_program]
 fn valid_transaction<F: FieldSpec>(#[linked] tx: BfvSigned<F>, #[public] balance: Field<F>) {
     // Convert the message encoded in the encrypted value into a signed value
@@ -96,15 +97,19 @@ fn update_balance(balance: Signed, tx: Cipher<Signed>) -> Cipher<Signed> {
     balance - tx
 }
 
+// Property 1: The encrypted data is well formed. This is proven before this ZKP
+// is executed.
 #[zkp_program]
 fn valid_transaction<F: FieldSpec>(#[linked] tx: BfvSigned<F>, #[public] balance: Field<F>) {
-    // Reconstruct the transaction
+    // Convert the message encoded in the encrypted value into a signed value
+    // the ZKP can understand.
     let tx_recon = tx.into_field_elem();
 
-    // Constraint that x is less than or equal to balance
+    // Property 2: The user has a high enough balance so they don't spend more
+    // than they have.
     balance.constrain_ge_bounded(tx_recon, 64);
 
-    // Constraint that x is greater than or equal to zero
+    // Property 3: The transaction amount is positive.
     zkp_var!(0).constrain_le_bounded(tx_recon, 64);
 }
 

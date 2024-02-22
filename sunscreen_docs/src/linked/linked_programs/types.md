@@ -46,7 +46,7 @@ argument types (private, public, and constant).
 
 ## Signed
 
-The counterpart of the [FHE Signed][signed] type is
+The counterpart of the FHE [Signed][signed] type is
 `BfvSigned`:
 
 ```rust
@@ -67,21 +67,40 @@ The counterpart of the FHE [Unsigned64][unsigned] and [Unsigned128][unsigned] ty
 
 ```rust
 # use sunscreen::{
-#     types::zkp::{AsFieldElement, BfvUnsigned64, BfvUnsigned128, ConstrainEq, Field, FieldSpec}, zkp_program
+#     types::zkp::{AsFieldElement, BfvUnsigned64, BfvUnsigned128, ConstrainCmp, Field, FieldSpec}, zkp_program
 # };
 #
 #[zkp_program]
 fn exceeds<F: FieldSpec>(#[linked] a: BfvUnsigned64<F>, #[linked] b: BfvUnsigned128<F>) {
-    zkp_var!(u32::MAX).constrain_le(a.into_field_elem());
-    zkp_var!(u64::MAX).constrain_le(b.into_field_elem());
+    zkp_var!(u32::MAX).constrain_le_bounded(a.into_field_elem(), 64);
+    zkp_var!(u64::MAX).constrain_le_bounded(b.into_field_elem(), 128);
 }
 ```
 
 ## Rational
 
+The counterpart of the FHE [Rational][rational] type is `BfvRational`. This one
+is a bit different from the others because the rational type actually encodes
+two signed integers, a numerator and a denominator. Consequently, the
+`into_field_elem` actually returns two field elements for this type:
 
+```rust
+# use sunscreen::{
+#     types::zkp::{AsFieldElement, BfvRational, ConstrainCmp, Field, FieldSpec}, zkp_program
+# };
+#
+#[zkp_program]
+fn compare_rational<F: FieldSpec>(#[linked] x: BfvRational<F>, #[linked] y: BfvRational<F>) {
+    let (x_num, x_den) = x.into_field_elem();
+    let (y_num, y_den) = y.into_field_elem();
+    let x = x_num * y_den;
+    let y = y_num * x_den;
+    x.constrain_le_bounded(y, 128);
+}
+```
 
 [^1]: Note the absence of ZKP types corresponding to larger unsigned integers like `Unsigned256`. This is because a native field element can only be so large, and while the field modulus will vary depending on the proof system, the current default bulletproofs backend has a field modulus around \\( 2^{252} \\) thus won't fit all 256-bit integers.
 
 [signed]: /fhe/fhe_programs/types/signed.md
 [unsigned]: /fhe/fhe_programs/types/unsigned.md
+[rational]: /fhe/fhe_programs/types/rational.md

@@ -15,7 +15,7 @@ mod linked_tests {
         zkp_program, zkp_var, Compiler,
     };
     use sunscreen_fhe_program::SchemeType;
-    use sunscreen_runtime::{FheZkpRuntime, LogProofBuilder, Params, ZkpProgramInput};
+    use sunscreen_runtime::{FheZkpRuntime, LinkedProofBuilder, Params, ZkpProgramInput};
     use sunscreen_zkp_backend::bulletproofs::BulletproofsBackend;
 
     lazy_static! {
@@ -63,7 +63,7 @@ mod linked_tests {
 
         // Try valid cases
         for tx in [5, 10] {
-            let mut proof_builder = LogProofBuilder::new(&rt);
+            let mut proof_builder = LinkedProofBuilder::new(&rt);
 
             let (_ct, tx_msg) = proof_builder
                 .encrypt_returning_link(&Signed::from(tx), &public_key)
@@ -75,7 +75,7 @@ mod linked_tests {
                 .unwrap()
                 .linked_input(tx_msg)
                 .public_input(BulletproofsField::from(balance))
-                .build_linkedproof()
+                .build()
                 .unwrap();
             println!("Linked proof done");
 
@@ -107,7 +107,7 @@ mod linked_tests {
         let balance = 10i64;
 
         for tx in [-1, balance + 1] {
-            let mut proof_builder = LogProofBuilder::new(&rt);
+            let mut proof_builder = LinkedProofBuilder::new(&rt);
             let (_ct, tx_msg) = proof_builder
                 .encrypt_returning_link(&Signed::from(tx), &public_key)
                 .unwrap();
@@ -117,7 +117,7 @@ mod linked_tests {
                 .linked_input(tx_msg)
                 .public_input(BulletproofsField::from(balance));
 
-            let lp = proof_builder.build_linkedproof();
+            let lp = proof_builder.build();
             assert!(lp.is_err());
         }
     }
@@ -142,7 +142,7 @@ mod linked_tests {
         let (public_key, _secret_key) = rt.generate_keys().unwrap();
 
         for val in [3, 0, -3] {
-            let mut proof_builder = LogProofBuilder::new(&rt);
+            let mut proof_builder = LinkedProofBuilder::new(&rt);
             let (_ct, val_msg) = proof_builder
                 .encrypt_returning_link(&Signed::from(val), &public_key)
                 .unwrap();
@@ -152,7 +152,7 @@ mod linked_tests {
                 .linked_input(val_msg)
                 .public_input(BulletproofsField::from(val));
 
-            let lp = proof_builder.build_linkedproof().unwrap_or_else(|e| {
+            let lp = proof_builder.build().unwrap_or_else(|e| {
                 panic!(
                     "Failed to encode {} value; {e}",
                     if val.is_positive() {
@@ -197,7 +197,7 @@ mod linked_tests {
             // ensure denominator is positive
             let x_d = rand::random::<i64>().saturating_abs().saturating_add(1);
             let x = Rational::from(Rational64::new_raw(x_n, x_d));
-            let mut proof_builder = LogProofBuilder::new(&rt);
+            let mut proof_builder = LinkedProofBuilder::new(&rt);
             let (_ct, x_msg) = proof_builder
                 .encrypt_returning_link(&x, &public_key)
                 .unwrap();
@@ -209,7 +209,7 @@ mod linked_tests {
                 .private_input(BulletproofsField::from(x_d));
 
             let lp = proof_builder
-                .build_linkedproof()
+                .build()
                 .unwrap_or_else(|e| panic!("Failed to prove encoding of {x:?}; {e}"));
             lp.verify::<ZkpProgramInput>(is_eq_zkp, vec![], vec![])
                 .unwrap_or_else(|e| panic!("Failed to verify encoding of {x:?}; {e}"));
@@ -243,7 +243,7 @@ mod linked_tests {
             let y = rand::random::<i32>() as i64;
             let (x, y) = (Signed::from(x.min(y)), Signed::from(x.max(y)));
 
-            let mut proof_builder = LogProofBuilder::new(&rt);
+            let mut proof_builder = LinkedProofBuilder::new(&rt);
             let (_ct, x_msg) = proof_builder
                 .encrypt_returning_link(&x, &public_key)
                 .unwrap();
@@ -257,7 +257,7 @@ mod linked_tests {
                 .linked_input(y_msg);
 
             let lp = proof_builder
-                .build_linkedproof()
+                .build()
                 .unwrap_or_else(|e| panic!("Failed to prove {x:?} <= {y:?}, {e}"));
             lp.verify::<ZkpProgramInput>(compare_signed_zkp, vec![], vec![])
                 .unwrap_or_else(|e| panic!("Failed to verify {x:?} <= {y:?}; {e}"));
@@ -298,7 +298,7 @@ mod linked_tests {
             let y = Rational64::new_raw(y_n, y_d);
             let (x, y) = (Rational::from(x.min(y)), Rational::from(x.max(y)));
 
-            let mut proof_builder = LogProofBuilder::new(&rt);
+            let mut proof_builder = LinkedProofBuilder::new(&rt);
             let (_ct, x_msg) = proof_builder
                 .encrypt_returning_link(&x, &public_key)
                 .unwrap();
@@ -312,7 +312,7 @@ mod linked_tests {
                 .linked_input(y_msg);
 
             let lp = proof_builder
-                .build_linkedproof()
+                .build()
                 .unwrap_or_else(|e| panic!("Failed to prove {x:?} <= {y:?}, {e}"));
             lp.verify::<ZkpProgramInput>(compare_rational_zkp, vec![], vec![])
                 .unwrap_or_else(|e| panic!("Failed to verify {x:?} <= {y:?}; {e}"));
@@ -348,7 +348,7 @@ mod linked_tests {
         let (public_key, private_key) = rt.generate_keys().unwrap();
 
         for val in [3, 0, -3] {
-            let mut proof_builder = LogProofBuilder::new(&rt);
+            let mut proof_builder = LinkedProofBuilder::new(&rt);
             let (_ct_x, x_msg) = proof_builder
                 .encrypt_returning_link(&Signed::from(val), &public_key)
                 .unwrap();
@@ -365,7 +365,7 @@ mod linked_tests {
                 .linked_input(y_msg)
                 .private_input(BulletproofsField::from(val));
 
-            let lp = proof_builder.build_linkedproof().unwrap();
+            let lp = proof_builder.build().unwrap();
             lp.verify::<ZkpProgramInput>(is_eq_zkp, vec![], vec![])
                 .expect("Failed to verify linked proof");
         }
@@ -533,7 +533,7 @@ mod linked_tests {
         // but use runtime with modulus 4096
         let rt = FheZkpRuntime::new(&TEST_PARAMS, &BulletproofsBackend::new()).unwrap();
 
-        let mut proof_builder = LogProofBuilder::new(&rt);
+        let mut proof_builder = LinkedProofBuilder::new(&rt);
         let res = proof_builder.zkp_program(is_eq_zkp);
         assert!(matches!(
             res,
@@ -555,7 +555,7 @@ mod linked_tests {
             let is_eq_zkp = app.get_zkp_program(is_eq_3).unwrap();
 
             let (public_key, _secret_key) = rt.generate_keys().unwrap();
-            let mut proof_builder = LogProofBuilder::new(&rt);
+            let mut proof_builder = LinkedProofBuilder::new(&rt);
             proof_builder.zkp_program(is_eq_zkp).unwrap();
             for _ in 0..num_linked_inputs {
                 let (_ct, msg) = proof_builder
@@ -566,7 +566,7 @@ mod linked_tests {
             for _ in 0..num_private_inputs {
                 proof_builder.private_input(BulletproofsField::from(1));
             }
-            let res = proof_builder.build_linkedproof();
+            let res = proof_builder.build();
             assert!(matches!(
                 res,
                 Err(sunscreen::RuntimeError::ArgumentMismatch(_))
@@ -591,7 +591,7 @@ mod linked_tests {
         let compare_signed_zkp = app.get_zkp_program(compare_signed).unwrap();
 
         let (public_key, _secret_key) = rt.generate_keys().unwrap();
-        let mut proof_builder = LogProofBuilder::new(&rt);
+        let mut proof_builder = LinkedProofBuilder::new(&rt);
         proof_builder.zkp_program(compare_signed_zkp).unwrap();
         let (_ct, signed_msg) = proof_builder
             .encrypt_returning_link(&Signed::from(1), &public_key)
@@ -602,7 +602,7 @@ mod linked_tests {
         proof_builder
             .linked_input(signed_msg)
             .linked_input(unsigned_msg);
-        let res = proof_builder.build_linkedproof();
+        let res = proof_builder.build();
         assert!(matches!(
             res,
             Err(sunscreen::RuntimeError::ArgumentMismatch(_))

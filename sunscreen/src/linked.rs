@@ -19,11 +19,12 @@
 //! the value in an encrypted transaction and that the sender has enough funds to cover the
 //! transaction, without decrypting the transaction.
 //!
-//! How does this work in practice? If you use our [builder](`LogProofBuilder`), you
+//! How does this work in practice? If you use our [builder](`LinkedProofBuilder`), you
 //! can encrypt messages in a very similar way to our typical [runtime
 //! encryption](crate::FheRuntime::encrypt), while also opting to _share_ a message with a linked
 //! ZKP program. Under the hood, we'll handle the complicated bits of generating a linear relation
 //! for SDLP and sharing the secrets with the [`zkp_program`](crate::zkp_program).
 pub use sunscreen_runtime::{
-    ExistingMessage, LinkWithZkp, LinkedMessage, LinkedProof, LogProofBuilder, Message, Sdlp,
+    ExistingMessage, LinkWithZkp, LinkedMessage, LinkedProof, LinkedProofBuilder, Message, Sdlp,
+    SdlpBuilder,
 };

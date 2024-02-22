@@ -96,7 +96,7 @@ impl LinkedProof {
     const TRANSCRIPT_LABEL: &'static [u8] = b"linked-sdlp-and-r1cs-bp";
     /// This function creates a linked proof.
     ///
-    /// Note that the [builder methods](`crate::LogProofBuilder`) offer an easier way to construct this
+    /// Note that the [builder methods](`crate::LinkedProofBuilder`) offer an easier way to construct this
     /// proof. See the user documentation for more information.
     ///
     /// Arguments:
@@ -297,7 +297,7 @@ impl Sdlp {
     /// used when only proving valid encryptions of known values, but _not_ for proving any
     /// properties of those underlying values.
     ///
-    /// The [builder methods](`crate::LogProofBuilder`) offer an easier way to construct this proof.
+    /// The [builder methods](`crate::SdlpBuilder`) offer an easier way to construct this proof.
     pub fn create(prover_knowledge: &SealSdlpProverKnowledge) -> Result<Self> {
         let mut transcript = Transcript::new(Self::TRANSCRIPT_LABEL);
         let vk = prover_knowledge.vk();

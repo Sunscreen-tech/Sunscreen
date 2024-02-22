@@ -9,7 +9,7 @@ use once_cell::sync::Lazy;
 use sunscreen::{
     bulletproofs::BulletproofsBackend,
     fhe_program,
-    linked::{LinkedProof, LogProofBuilder},
+    linked::{LinkedProof, LinkedProofBuilder},
     types::{
         bfv::Signed,
         zkp::{
@@ -109,7 +109,7 @@ impl User {
         receiver: U,
     ) -> Result<Transfer> {
         let receiver = receiver.into();
-        let mut builder = LogProofBuilder::new(&self.runtime);
+        let mut builder = LinkedProofBuilder::new(&self.runtime);
 
         // Encrypt tx amount under sender's public key.
         println!("    {}: encrypting {} under own key", self.name, amount);
@@ -139,7 +139,7 @@ impl User {
             .zkp_program(self.app.get_transfer_zkp())?
             .linked_input(amount_linked)
             .linked_input(balance_linked)
-            .build_linkedproof()?;
+            .build()?;
 
         Ok(Transfer {
             proof,
@@ -152,7 +152,7 @@ impl User {
 
     /// Create a public deposit to a private balance.
     pub fn create_deposit(&self, amount: i64) -> Result<Deposit> {
-        let mut builder = LogProofBuilder::new(&self.runtime);
+        let mut builder = LinkedProofBuilder::new(&self.runtime);
 
         // Encrypt deposit amount
         println!("    {}: encrypting and linking {}", self.name, amount);
@@ -165,7 +165,7 @@ impl User {
             .zkp_program(self.app.get_deposit_zkp())?
             .linked_input(amount_linked)
             .public_input(BulletproofsField::from(amount))
-            .build_linkedproof()?;
+            .build()?;
 
         Ok(Deposit {
             proof,
@@ -177,7 +177,7 @@ impl User {
 
     /// Create a refresh balance transaction.
     pub fn create_refresh_balance(&self, chain: &Chain) -> Result<RefreshBalance> {
-        let mut builder = LogProofBuilder::new(&self.runtime);
+        let mut builder = LinkedProofBuilder::new(&self.runtime);
 
         // Decrypt current balance, returning a link to the underlying message
         let balance_encrypted = chain.balances.get(&self.name).unwrap();

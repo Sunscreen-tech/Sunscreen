@@ -9,7 +9,7 @@ mod sdlp_tests {
     use sunscreen_compiler_macros::fhe_program;
     use sunscreen_fhe_program::SchemeType;
 
-    use sunscreen_runtime::{FheRuntime, LogProofBuilder, Params};
+    use sunscreen_runtime::{FheRuntime, Params, SdlpBuilder};
 
     lazy_static! {
         static ref TEST_PARAMS: Params = Params {
@@ -25,13 +25,13 @@ mod sdlp_tests {
     fn prove_one_asymmetric_statement() {
         let rt = FheRuntime::new(&TEST_PARAMS).unwrap();
         let (public_key, _secret_key) = rt.generate_keys().unwrap();
-        let mut logproof_builder = LogProofBuilder::new(&rt);
+        let mut logproof_builder = SdlpBuilder::new(&rt);
 
         let _ct = logproof_builder
             .encrypt(&Signed::from(3), &public_key)
             .unwrap();
 
-        let sdlp = logproof_builder.build_logproof().unwrap();
+        let sdlp = logproof_builder.build().unwrap();
         sdlp.verify().unwrap();
     }
 
@@ -39,13 +39,13 @@ mod sdlp_tests {
     fn prove_one_symmetric_statement() {
         let rt = FheRuntime::new(&TEST_PARAMS).unwrap();
         let (_public_key, private_key) = rt.generate_keys().unwrap();
-        let mut logproof_builder = LogProofBuilder::new(&rt);
+        let mut logproof_builder = SdlpBuilder::new(&rt);
 
         let _ct = logproof_builder
             .encrypt_symmetric(&Unsigned64::from(3), &private_key)
             .unwrap();
 
-        let sdlp = logproof_builder.build_logproof().unwrap();
+        let sdlp = logproof_builder.build().unwrap();
         sdlp.verify().unwrap();
     }
 
@@ -53,7 +53,7 @@ mod sdlp_tests {
     fn prove_linked_statements() {
         let rt = FheRuntime::new(&TEST_PARAMS).unwrap();
         let (public_key, private_key) = rt.generate_keys().unwrap();
-        let mut logproof_builder = LogProofBuilder::new(&rt);
+        let mut logproof_builder = SdlpBuilder::new(&rt);
 
         let (_a1, linked_a) = logproof_builder
             .encrypt_returning_msg(&Fractional::<64>::from(3.23), &public_key)
@@ -64,7 +64,7 @@ mod sdlp_tests {
         let _other = logproof_builder
             .encrypt(&Signed::from(2), &public_key)
             .unwrap();
-        let sdlp = logproof_builder.build_logproof().unwrap();
+        let sdlp = logproof_builder.build().unwrap();
         sdlp.verify().unwrap();
     }
 
@@ -72,7 +72,7 @@ mod sdlp_tests {
     fn prove_refreshing_existing_ciphertext() {
         let rt = FheRuntime::new(&TEST_PARAMS).unwrap();
         let (public_key, private_key) = rt.generate_keys().unwrap();
-        let mut logproof_builder = LogProofBuilder::new(&rt);
+        let mut logproof_builder = SdlpBuilder::new(&rt);
 
         let initial_ct = rt.encrypt(Signed::from(100), &public_key).unwrap();
 
@@ -93,7 +93,7 @@ mod sdlp_tests {
             .unwrap();
         let _refreshed_ct = logproof_builder.encrypt_msg(&msg, &public_key).unwrap();
 
-        let sdlp = logproof_builder.build_logproof().unwrap();
+        let sdlp = logproof_builder.build().unwrap();
         sdlp.verify().unwrap();
     }
 }

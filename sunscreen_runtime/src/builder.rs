@@ -206,7 +206,10 @@ impl<'r, 'p, 'a, T: marker::Zkp, B: ZkpBackend> VerificationBuilder<'r, 'p, 'a, 
 }
 
 #[cfg(feature = "linkedproofs")]
-pub use linked::{ExistingMessage, LinkWithZkp, LinkedMessage, LogProofBuilder, Message};
+pub use linked::{
+    ExistingMessage, LinkWithZkp, LinkedMessage, LinkedProofBuilder, LogProofBuilder, Message,
+    SdlpBuilder,
+};
 
 #[cfg(feature = "linkedproofs")]
 mod linked {
@@ -228,9 +231,9 @@ mod linked {
     };
 
     use crate::{
-        marker, Ciphertext, CompiledZkpProgram, GenericRuntime, LinkedProof, NumCiphertexts,
-        Params, Plaintext, PrivateKey, PublicKey, Result, Sdlp, SealSdlpProverKnowledge,
-        TryFromPlaintext, TryIntoPlaintext, ZkpProgramInput,
+        marker, Ciphertext, CompiledZkpProgram, Fhe, FheRuntime, FheZkp, FheZkpRuntime,
+        GenericRuntime, LinkedProof, NumCiphertexts, Params, Plaintext, PrivateKey, PublicKey,
+        Result, Sdlp, SealSdlpProverKnowledge, TryFromPlaintext, TryIntoPlaintext, ZkpProgramInput,
     };
 
     /// All FHE plaintext types can be used in a [`Sdlp`]. This trait indicates further that a
@@ -405,9 +408,45 @@ mod linked {
         constant_inputs: Vec<ZkpProgramInput>,
     }
 
+    /// A builder for an [`Sdlp`] (without any linked ZKP program).
+    pub type SdlpBuilder<'r, 'k> = LogProofBuilder<'r, 'k, 'static, Fhe, ()>;
+
+    impl<'r, 'k> SdlpBuilder<'r, 'k> {
+        /// Create a new [`SdlpBuilder`].
+        pub fn new(runtime: &'r FheRuntime) -> Self {
+            LogProofBuilder::new_internal(runtime)
+        }
+
+        /// Build the [`Sdlp`].
+        pub fn build(self) -> Result<Sdlp> {
+            self.build_logproof()
+        }
+    }
+
+    /// A builder for a [`LinkedProof`].
+    pub type LinkedProofBuilder<'r, 'k, 'z> =
+        LogProofBuilder<'r, 'k, 'z, FheZkp, BulletproofsBackend>;
+
+    impl<'r, 'k, 'z> LinkedProofBuilder<'r, 'k, 'z> {
+        /// Create a new [`LinkedProofBuilder`].
+        pub fn new(runtime: &'r FheZkpRuntime<BulletproofsBackend>) -> Self {
+            LogProofBuilder::new_internal(runtime)
+        }
+
+        /// Build just the [`Sdlp`] portion of the linked proof.
+        pub fn build_sdlp(&self) -> Result<Sdlp> {
+            self.build_logproof()
+        }
+
+        /// Build the [`LinkedProof`].
+        pub fn build(&mut self) -> Result<LinkedProof> {
+            self.build_linkedproof()
+        }
+    }
+
     impl<'r, 'k, 'z, M: marker::Fhe, Z> LogProofBuilder<'r, 'k, 'z, M, Z> {
         /// Create a new [`LogProofBuilder`].
-        pub fn new(runtime: &'r GenericRuntime<M, Z>) -> Self {
+        fn new_internal(runtime: &'r GenericRuntime<M, Z>) -> Self {
             Self {
                 runtime,
                 statements: vec![],
@@ -699,11 +738,7 @@ mod linked {
         }
 
         /// Build the [`Sdlp`] for the statements added to this builder.
-        ///
-        /// You can use this as a standalone proof, or alternatively see
-        /// [`Self::build_linkedproof`] to prove additional properties about the underlying
-        /// plaintexts.
-        pub fn build_logproof(&self) -> Result<Sdlp> {
+        fn build_logproof(&self) -> Result<Sdlp> {
             Sdlp::create(&self.build_sdlp_pk()?)
         }
 
@@ -815,7 +850,7 @@ mod linked {
 
         /// Add a ZKP program to be linked with the logproof.
         ///
-        /// This method is required to call [`Self::build_linkedproof`].
+        /// This method is required to call [`LinkedProofBuilder::build`].
         pub fn zkp_program(&mut self, program: &'z CompiledZkpProgram) -> Result<&mut Self> {
             let params = program.metadata.params.as_ref().ok_or_else(|| {
                 BuilderError::user_error(
@@ -859,7 +894,7 @@ mod linked {
 
         /// Output a [`LinkedProof`] from the encryption statements and ZKP program and inputs added to
         /// this builder.
-        pub fn build_linkedproof(&mut self) -> Result<crate::linked::LinkedProof> {
+        fn build_linkedproof(&self) -> Result<crate::linked::LinkedProof> {
             let sdlp = self.build_sdlp_pk()?;
             let program = self.compiled_zkp_program.ok_or_else(|| {
                 BuilderError::user_error("Cannot build linked proof without a compiled ZKP program. Use the `.zkp_program()` method")

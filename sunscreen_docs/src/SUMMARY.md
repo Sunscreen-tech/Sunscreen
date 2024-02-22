@@ -87,7 +87,6 @@
 
 - [Introduction](linked/intro/intro.md)
   - [How does this work?](linked/intro/how.md)
-  - [TODO RM THIS](linked/intro/TODO.md)
 - [What's in a Linked ZKP program?](linked/linked_programs/linked_programs.md)
   - [Types](linked/linked_programs/types.md)
   - [Limitations](linked/linked_programs/limitations.md)

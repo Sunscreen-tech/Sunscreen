@@ -1,3 +1,4 @@
+use rayon::iter::{IndexedParallelIterator, ParallelIterator};
 use sunscreen_math::Zero;
 
 use crate::{
@@ -146,28 +147,28 @@ pub fn generate_circuit_bootstrapping_pfks_keys<S: TorusOps>(
 
     // Fill in k pfks keys that multiply each of the "a" GLEVs by the corresponding
     // polynomial in the GLWE secret key.
-    for (pfksk, s) in output
-        .keys_mut(from_lwe, to_glwe, radix)
-        .zip(to_key.s(to_glwe))
+    output
+        .keys_par_mut(from_lwe, to_glwe, radix)
+        .zip(to_key.s_par(to_glwe))
         .take(to_glwe.dim.size.0)
-    {
-        let map = |poly: &mut PolynomialRef<Torus<S>>, x: &[Torus<S>]| {
-            for (c, a) in poly.coeffs_mut().iter_mut().zip(s.coeffs().iter()) {
-                *c = -x[0] * a;
-            }
-        };
+        .for_each(|(pfksk, s)| {
+            let map = |poly: &mut PolynomialRef<Torus<S>>, x: &[Torus<S>]| {
+                for (c, a) in poly.coeffs_mut().iter_mut().zip(s.coeffs().iter()) {
+                    *c = -x[0] * a;
+                }
+            };
 
-        generate_private_functional_keyswitch_key(
-            pfksk,
-            from_key,
-            to_key,
-            map,
-            from_lwe,
-            to_glwe,
-            radix,
-            &PrivateFunctionalKeyswitchLweCount(1),
-        );
-    }
+            generate_private_functional_keyswitch_key(
+                pfksk,
+                from_key,
+                to_key,
+                map,
+                from_lwe,
+                to_glwe,
+                radix,
+                &PrivateFunctionalKeyswitchLweCount(1),
+            );
+        });
 
     // Now fill in the "b" GLEV.
     // TODO: We could compute this row with public key switching. Is it worth it?

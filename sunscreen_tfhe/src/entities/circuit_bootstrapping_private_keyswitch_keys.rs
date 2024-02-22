@@ -7,6 +7,7 @@ use crate::{
 };
 
 use super::{
+    ParallelPrivateFunctionalKeyswitchKeyIter, ParallelPrivateFunctionalKeyswitchKeyIterMut,
     PrivateFunctionalKeyswitchKeyIter, PrivateFunctionalKeyswitchKeyIterMut,
     PrivateFunctionalKeyswitchKeyRef,
 };
@@ -66,6 +67,23 @@ impl<S: TorusOps> CircuitBootstrappingKeyswitchKeysRef<S> {
         PrivateFunctionalKeyswitchKeyIter::new(self.as_slice(), stride)
     }
 
+    /// Get a parallel iterator over the contained [`PrivateFunctionalKeyswitchKey`](crate::entities::PrivateFunctionalKeyswitchKey)s.
+    pub fn keys_par(
+        &self,
+        lwe: &LweDef,
+        glwe: &GlweDef,
+        radix: &RadixDecomposition,
+    ) -> ParallelPrivateFunctionalKeyswitchKeyIter<S> {
+        let stride = PrivateFunctionalKeyswitchKeyRef::<S>::size((
+            lwe.dim,
+            glwe.dim,
+            radix.count,
+            PrivateFunctionalKeyswitchLweCount(1),
+        ));
+
+        ParallelPrivateFunctionalKeyswitchKeyIter::new(self.as_slice(), stride)
+    }
+
     /// Get a mutable iterator over the contained [`PrivateFunctionalKeyswitchKey`](crate::entities::PrivateFunctionalKeyswitchKey)s.
     pub fn keys_mut(
         &mut self,
@@ -81,6 +99,23 @@ impl<S: TorusOps> CircuitBootstrappingKeyswitchKeysRef<S> {
         ));
 
         PrivateFunctionalKeyswitchKeyIterMut::new(self.as_mut_slice(), stride)
+    }
+
+    /// Get a mutable parallel iterator over the contained [`PrivateFunctionalKeyswitchKey`](crate::entities::PrivateFunctionalKeyswitchKey)s.
+    pub fn keys_par_mut(
+        &mut self,
+        lwe: &LweDef,
+        glwe: &GlweDef,
+        radix: &RadixDecomposition,
+    ) -> ParallelPrivateFunctionalKeyswitchKeyIterMut<S> {
+        let stride = PrivateFunctionalKeyswitchKeyRef::<S>::size((
+            lwe.dim,
+            glwe.dim,
+            radix.count,
+            PrivateFunctionalKeyswitchLweCount(1),
+        ));
+
+        ParallelPrivateFunctionalKeyswitchKeyIterMut::new(self.as_mut_slice(), stride)
     }
 
     #[inline(always)]

@@ -18,7 +18,7 @@ dst! {
     (Clone, Debug, Serialize, Deserialize),
     ()
 }
-dst_iter! { GgswCiphertextFftIterator, GgswCiphertextFftIteratorMut, NoWrapper, GgswCiphertextFftRef, ()}
+dst_iter! { GgswCiphertextFftIterator, GgswCiphertextFftIteratorMut, ParallelGgswCiphertextFftIterator, ParallelGgswCiphertextFftIteratorMut, NoWrapper, GgswCiphertextFftRef, ()}
 
 impl OverlaySize for GgswCiphertextFftRef<Complex<f64>> {
     type Inputs = (GlweDimension, RadixCount);

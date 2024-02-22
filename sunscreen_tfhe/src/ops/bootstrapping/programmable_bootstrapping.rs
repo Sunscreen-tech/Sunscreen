@@ -1,4 +1,5 @@
 use num::Complex;
+use rayon::iter::{IndexedParallelIterator, IntoParallelRefIterator, ParallelIterator};
 
 use crate::{
     dst::FromMutSlice,
@@ -44,13 +45,13 @@ pub fn generate_bootstrap_key<S>(
     sk.assert_valid(glwe);
     sk_to_encrypt.assert_valid(lwe);
 
-    for (s_i, ggsw) in sk_to_encrypt
+    sk_to_encrypt
         .s()
-        .iter()
-        .zip(bootstrap_key.rows_mut(glwe, radix))
-    {
-        encrypt_ggsw_ciphertext_scalar(ggsw, *s_i, sk, glwe, radix, PlaintextBits(1));
-    }
+        .par_iter()
+        .zip(bootstrap_key.rows_par_mut(glwe, radix))
+        .for_each(|(s_i, ggsw)| {
+            encrypt_ggsw_ciphertext_scalar(ggsw, *s_i, sk, glwe, radix, PlaintextBits(1));
+        });
 }
 
 /// Generate a negacyclic LUT for bootstrapping. Another name for this structure

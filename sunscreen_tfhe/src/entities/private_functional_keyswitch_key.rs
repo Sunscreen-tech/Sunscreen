@@ -23,6 +23,8 @@ dst! {
 dst_iter!(
     PrivateFunctionalKeyswitchKeyIter,
     PrivateFunctionalKeyswitchKeyIterMut,
+    ParallelPrivateFunctionalKeyswitchKeyIter,
+    ParallelPrivateFunctionalKeyswitchKeyIterMut,
     Torus,
     PrivateFunctionalKeyswitchKeyRef,
     (TorusOps,)

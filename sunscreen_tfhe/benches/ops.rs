@@ -6,7 +6,7 @@ use sunscreen_tfhe::{
     entities::{
         GgswCiphertext, GgswCiphertextFft, GlweCiphertext, Polynomial, UnivariateLookupTable,
     },
-    high_level::*,
+    high_level::{self, *},
     ops::bootstrapping::circuit_bootstrap,
     rand::Stddev,
     GlweDef, GlweDimension, GlweSize, LweDef, LweDimension, PlaintextBits, PolynomialDegree,
@@ -226,10 +226,45 @@ fn circuit_bootstrapping(c: &mut Criterion) {
     });
 }
 
+fn keygen(c: &mut Criterion) {
+    c.bench_function("LWE Secret keygen", |b| {
+        b.iter(|| {
+            let _ = high_level::keygen::generate_binary_lwe_sk(&LWE_512_80);
+        })
+    });
+
+    c.bench_function("GLWE Secret keygen", |b| {
+        b.iter(|| {
+            let _ = high_level::keygen::generate_binary_glwe_sk(&GLWE_5_256_80);
+        })
+    });
+
+    let radix = RadixDecomposition {
+        count: RadixCount(2),
+        radix_log: RadixLog(16),
+    };
+
+    c.bench_function("BSK keygen", |b| {
+        let lwe_sk = high_level::keygen::generate_binary_lwe_sk(&LWE_512_80);
+        let glwe_sk = high_level::keygen::generate_binary_glwe_sk(&GLWE_5_256_80);
+
+        b.iter(|| {
+            let _ = high_level::keygen::generate_bootstrapping_key(
+                &lwe_sk,
+                &glwe_sk,
+                &LWE_512_80,
+                &GLWE_5_256_80,
+                &radix,
+            );
+        })
+    });
+}
+
 criterion_group!(
     benches,
     cmux,
     programmable_bootstrapping,
-    circuit_bootstrapping
+    circuit_bootstrapping,
+    keygen
 );
 criterion_main!(benches);

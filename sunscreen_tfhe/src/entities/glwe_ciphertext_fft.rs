@@ -17,7 +17,7 @@ dst! {
     (Clone, Debug, Serialize, Deserialize),
     ()
 }
-dst_iter! { GlweCiphertextFftIterator, GlweCiphertextFftIteratorMut, NoWrapper, GlweCiphertextFftRef, ()}
+dst_iter! { GlweCiphertextFftIterator, GlweCiphertextFftIteratorMut, ParallelGlweCiphertextFftIterator, ParallelGlweCiphertextFftIteratorMut, NoWrapper, GlweCiphertextFftRef, ()}
 
 impl OverlaySize for GlweCiphertextFftRef<Complex<f64>> {
     type Inputs = GlweDimension;

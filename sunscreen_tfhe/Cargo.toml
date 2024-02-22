@@ -24,6 +24,7 @@ num = { workspace = true }
 paste = { workspace = true }
 rand = { workspace = true }
 rand_distr = { workspace = true }
+rayon = { workspace = true }
 realfft = "3.3.0"
 rustfft = "6.1.0"
 serde = { workspace = true }

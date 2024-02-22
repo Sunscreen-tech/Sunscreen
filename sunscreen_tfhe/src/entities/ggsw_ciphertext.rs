@@ -20,7 +20,7 @@ dst! {
     (Clone, Debug, Serialize, Deserialize),
     (TorusOps)
 }
-dst_iter! { GgswCiphertextIterator, GgswCiphertextIteratorMut, Torus, GgswCiphertextRef, (TorusOps,)}
+dst_iter! { GgswCiphertextIterator, GgswCiphertextIteratorMut, ParallelGgswCiphertextIterator, ParallelGgswCiphertextIteratorMut, Torus, GgswCiphertextRef, (TorusOps,)}
 
 impl<S> OverlaySize for GgswCiphertextRef<S>
 where

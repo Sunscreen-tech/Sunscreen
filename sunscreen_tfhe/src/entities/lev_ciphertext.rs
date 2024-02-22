@@ -13,7 +13,7 @@ dst! {
     (Clone, Debug, Serialize, Deserialize),
     (TorusOps,)
 }
-dst_iter! { LevCiphertextIterator, LevCiphertextIteratorMut, Torus, LevCiphertextRef, (TorusOps,)}
+dst_iter! { LevCiphertextIterator, LevCiphertextIteratorMut, ParallelLevCiphertextIterator, ParallelLevCiphertextIteratorMut, Torus, LevCiphertextRef, (TorusOps,)}
 
 impl<S> OverlaySize for LevCiphertextRef<S>
 where

@@ -16,7 +16,7 @@ dst! {
     (Clone, Debug, Serialize, Deserialize),
     (TorusOps,)
 }
-dst_iter! { GlevCiphertextIterator, GlevCiphertextIteratorMut, Torus, GlevCiphertextRef, (TorusOps,)}
+dst_iter! { GlevCiphertextIterator, GlevCiphertextIteratorMut, ParallelGlevCiphertextIterator, ParallelGlevCiphertextIteratorMut, Torus, GlevCiphertextRef, (TorusOps,)}
 
 impl<S> OverlaySize for GlevCiphertextRef<S>
 where

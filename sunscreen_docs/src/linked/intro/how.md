@@ -132,17 +132,17 @@ fn main() {
     // Generate the runtime that we can use to encrypt data.
     let rt = FheZkpRuntime::new(app.params(), &BulletproofsBackend::new()).unwrap();
 
-    // Generate the BFV encryption keys
+    // Generate the BFV encryption keys.
     let (public_key, _secret_key) = rt.generate_keys().unwrap();
 
-    // Extract the ZKP program
+    // Extract the ZKP program.
     let valid_transaction_zkp = app.get_zkp_program(valid_transaction).unwrap();
     let update_balance_fhe = app.get_fhe_program(update_balance).unwrap();
 
     // The public balance we want to check against.
     let balance = 10i64;
 
-    // The privaet transaction a user wants to submit.
+    // The private transaction a user wants to submit.
     let tx = 5;
 
     let mut proof_builder = LogProofBuilder::new(&rt);

@@ -87,6 +87,7 @@ use sunscreen::{
     },
     zkp_program, zkp_var, Ciphertext, CompiledFheProgram, CompiledZkpProgram, Compiler,
     FheZkpApplication, FheZkpRuntime, Params, PrivateKey, PublicKey, Result, ZkpProgramInput,
+    FheProgramInput
 };
 
 /// Subtract a transaction amount from a user's balance
@@ -185,9 +186,11 @@ fn main() {
     // can execute the transaction. This example is contrived as the same secret
     // and public key are used for a transaction, whereas in practice multiple
     // keys would be involved depending on the system.
+    let args: Vec<FheProgramInput> = 
+        vec![Signed::from(balance).into(), encrypted_transaction.into()];
     let new_balance = rt.run(
         update_balance_fhe,
-        vec![balance.clone(), encrypted_transaction],
+        args,
         &public_key,
     ).unwrap();
 }

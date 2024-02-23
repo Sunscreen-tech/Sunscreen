@@ -397,7 +397,7 @@ mod linked_tests {
             // ensure denominator is positive
             let y_d = rand::random::<i64>().saturating_abs().saturating_add(1);
             let y = Rational::from(Rational64::new_raw(y_n, y_d));
-            let mut proof_builder = LogProofBuilder::new(&rt);
+            let mut proof_builder = LinkedProofBuilder::new(&rt);
             let (_ct, x_msg) = proof_builder
                 .encrypt_returning_link(&x, &public_key)
                 .unwrap();
@@ -409,7 +409,7 @@ mod linked_tests {
                 .unwrap()
                 .linked_input(x_msg)
                 .linked_input(y_msg)
-                .build_linkedproof()
+                .build()
                 .unwrap_or_else(|e| {
                     panic!("Failed to prove fresh encodings of {x:?} and {y:?}; Error: {e}")
                 });
@@ -479,7 +479,7 @@ mod linked_tests {
                     .remove(0);
             }
 
-            let mut proof_builder = LogProofBuilder::new(&rt);
+            let mut proof_builder = LinkedProofBuilder::new(&rt);
             let (_, x_msg) = proof_builder
                 .decrypt_returning_link::<Signed>(&x_ct, &private_key)
                 .unwrap();
@@ -491,7 +491,7 @@ mod linked_tests {
                 .unwrap()
                 .linked_input(x_msg)
                 .linked_input(y_msg)
-                .build_linkedproof();
+                .build();
             let (x, y) = if ix % 2 == 0 {
                 (format!("double({x:?})"), format!("{y:?}"))
             } else {

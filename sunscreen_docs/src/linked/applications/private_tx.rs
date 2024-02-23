@@ -443,6 +443,7 @@ impl Chain {
     }
 }
 
+// ANCHOR: app_1
 pub struct App(FheZkpApplication);
 
 impl App {
@@ -451,6 +452,7 @@ impl App {
             .fhe_program(transfer_to)
             .fhe_program(transfer_from)
             .fhe_program(deposit_to)
+// ANCHOR_END: app_1
             // These params are not necessary to run the example, but they do shave a few
             // minutes off the runtime. In practice, you probably want to use the default
             // parameters provided by the compiler. The ones set here will result in balances
@@ -462,6 +464,7 @@ impl App {
                 scheme_type: sunscreen::SchemeType::Bfv,
                 security_level: sunscreen::SecurityLevel::TC128,
             })
+// ANCHOR: app_2
             .zkp_backend::<BulletproofsBackend>()
             .zkp_program(validate_transfer)
             .zkp_program(validate_registration)
@@ -498,6 +501,7 @@ impl App {
         self.0.params()
     }
 }
+// ANCHOR_END: app_2
 
 // ANCHOR: main
 fn main() -> Result<()> {

@@ -89,6 +89,17 @@ value as the existing one:
 {{#include private_tx.rs:validate_refresh_balance}}
 ```
 
+### App
+
+For convenience, we'll wrap up the FHE and ZKP programs into an application
+type, this way each party can instantiate the same programs and run operations
+with the same paramaters.
+
+```rust,no_run,no_playground
+{{#include private_tx.rs:app_1}}
+{{#include private_tx.rs:app_2}}
+```
+
 ### User
 
 Now let's go over the user's perspective and how they'll construct these kinds

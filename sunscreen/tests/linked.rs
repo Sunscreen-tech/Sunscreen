@@ -1,7 +1,7 @@
 #[cfg(feature = "linkedproofs")]
 mod linked_tests {
     use lazy_static::lazy_static;
-    use logproof::rings::SealQ128_1024;
+    use logproof::rings::{SealQ128_1024, SealQ128_4096};
     use num::Rational64;
     use sunscreen::types::bfv::{Rational, Signed, Unsigned64};
     use sunscreen::types::zkp::{
@@ -428,10 +428,16 @@ mod linked_tests {
         fn double_rational(x: Cipher<Rational>) -> Cipher<Rational> {
             x + x
         }
+        env_logger::init();
+        let params = Params {
+            coeff_modulus: SealQ128_4096::Q.to_vec(),
+            // plain_modulus: 32,
+            ..*TEST_PARAMS
+        };
         let app = Compiler::new()
             .fhe_program(double_signed)
             .fhe_program(double_rational)
-            .with_params(&TEST_PARAMS)
+            .with_params(&params)
             .zkp_backend::<BulletproofsBackend>()
             .zkp_program(is_fresh)
             .compile()
@@ -485,7 +491,17 @@ mod linked_tests {
                 .linked_input(x_msg)
                 .linked_input(y_msg)
                 .build_linkedproof();
-            assert!(lp_res.is_err());
+            let (x, y) = if ix % 2 == 0 {
+                (format!("double({x:?})"), format!("{y:?}"))
+            } else {
+                (format!("{x:?}"), format!("double({y:?})"))
+            };
+            assert!(
+                lp_res.is_err(),
+                "Unexpected success proving fresh encoding of {} and {}",
+                x,
+                y
+            );
         }
     }
 

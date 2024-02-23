@@ -414,7 +414,9 @@ mod linked_tests {
                     panic!("Failed to prove fresh encodings of {x:?} and {y:?}; Error: {e}")
                 });
             lp.verify::<ZkpProgramInput>(is_fresh_zkp, vec![], vec![])
-                .unwrap_or_else(|e| panic!("Failed to verify encoding of {x:?}; {e}"));
+                .unwrap_or_else(|e| {
+                    panic!("Failed to verify fresh encodings of {x:?} and {y:?}; Error: {e}")
+                });
         }
     }
 
@@ -431,7 +433,6 @@ mod linked_tests {
         env_logger::init();
         let params = Params {
             coeff_modulus: SealQ128_4096::Q.to_vec(),
-            // plain_modulus: 32,
             ..*TEST_PARAMS
         };
         let app = Compiler::new()

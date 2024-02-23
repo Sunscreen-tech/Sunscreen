@@ -1,4 +1,5 @@
 use paste::paste;
+use petgraph::prelude::NodeIndex;
 use sunscreen_compiler_macros::TypeName;
 use sunscreen_runtime::LinkWithZkp;
 use sunscreen_zkp_backend::{BigInt, FieldSpec};
@@ -22,19 +23,23 @@ use crate as sunscreen;
 ///
 /// Here `N` is the degree of the _linked_ polynomial, which may be less than the full lattice
 /// dimension. See [`Link::DEGREE_BOUND`](sunscreen_runtime::Link).
+///
+/// On the other hand, `M` is a degree bound for a freshly encrypted polynomial, where `M <= N`.
 #[derive(Debug, Clone)]
-struct BfvSignedEncoding<F: FieldSpec, const N: usize> {
+struct BfvSignedEncoding<F: FieldSpec, const N: usize, const M: usize> {
     data: Vec<Field<F>>,
 }
 
-impl<F: FieldSpec, const N: usize> DynamicNumFieldElements for BfvSignedEncoding<F, N> {
+impl<F: FieldSpec, const N: usize, const M: usize> DynamicNumFieldElements
+    for BfvSignedEncoding<F, N, M>
+{
     fn num_native_field_elements(plaintext_modulus: u64) -> usize {
         let log_p = plaintext_modulus.ilog2() + 1;
         log_p as usize * N
     }
 }
 
-impl<F: FieldSpec, const N: usize> ToNativeFields for BfvSignedEncoding<F, N> {
+impl<F: FieldSpec, const N: usize, const M: usize> ToNativeFields for BfvSignedEncoding<F, N, M> {
     fn to_native_fields(&self) -> Vec<BigInt> {
         self.data.iter().map(|x| x.val).collect()
     }
@@ -49,10 +54,14 @@ pub trait AsFieldElement<F: FieldSpec> {
     fn into_field_elem(self) -> Self::Output;
 }
 
-impl<const N: usize, F: FieldSpec> AsFieldElement<F> for ProgramNode<BfvSignedEncoding<F, N>> {
-    type Output = ProgramNode<Field<F>>;
+/// Constrain a fresh encoding.
+pub trait ConstrainFresh {
+    /// Add a constraint that the plaintext polynomial is freshly encoded.
+    fn constrain_fresh_encoding(&self);
+}
 
-    fn into_field_elem(self) -> Self::Output {
+impl<const N: usize, const M: usize, F: FieldSpec> ProgramNode<BfvSignedEncoding<F, N, M>> {
+    fn extract_coefficients(&self) -> Vec<NodeIndex> {
         let bound = self.ids.len() / N;
         let plain_modulus = 2u64.pow(bound as u32 - 1);
 
@@ -94,6 +103,18 @@ impl<const N: usize, F: FieldSpec> AsFieldElement<F> for ProgramNode<BfvSignedEn
             });
         }
 
+        coeffs
+    }
+}
+
+impl<const N: usize, const M: usize, F: FieldSpec> AsFieldElement<F>
+    for ProgramNode<BfvSignedEncoding<F, N, M>>
+{
+    type Output = ProgramNode<Field<F>>;
+
+    fn into_field_elem(self) -> Self::Output {
+        let coeffs = self.extract_coefficients();
+
         ProgramNode::new(&[with_zkp_ctx(|ctx| {
             // Get signed value by decoding according to Signed implementation.
             let mut x = ctx.add_constant(&BigInt::ZERO);
@@ -107,12 +128,40 @@ impl<const N: usize, F: FieldSpec> AsFieldElement<F> for ProgramNode<BfvSignedEn
     }
 }
 
+impl<const N: usize, const M: usize, F: FieldSpec> ConstrainFresh
+    for ProgramNode<BfvSignedEncoding<F, N, M>>
+{
+    fn constrain_fresh_encoding(&self) {
+        let coeffs = self.extract_coefficients();
+
+        with_zkp_ctx(|ctx| {
+            let one = ctx.add_constant(&BigInt::ONE);
+
+            for (i, c) in coeffs.iter().enumerate() {
+                // Constrain coefficients within the fresh degree bound to ternary
+                if i < M {
+                    let c_minus_1 = ctx.add_subtraction(*c, one);
+                    let c_plus_1 = ctx.add_addition(*c, one);
+                    let poly = ctx.add_multiplication(*c, c_minus_1);
+                    let poly = ctx.add_multiplication(poly, c_plus_1);
+                    ctx.add_constraint(poly, &BigInt::ZERO);
+                // Constrain coefficients greater than the degree bound to zero
+                } else {
+                    ctx.add_constraint(*c, &BigInt::ZERO);
+                }
+            }
+        });
+    }
+}
+
 /// A [BFV signed integer](Signed) that has been linked to a ZKP program.
 ///
 /// Use the [`AsFieldElement::into_field_elem`] method to decode the value into a field
 /// element within a ZKP program.
 #[derive(Debug, Clone, TypeName)]
-pub struct BfvSigned<F: FieldSpec>(BfvSignedEncoding<F, { <Signed as LinkWithZkp>::DEGREE_BOUND }>);
+pub struct BfvSigned<F: FieldSpec>(
+    BfvSignedEncoding<F, { <Signed as LinkWithZkp>::DEGREE_BOUND }, 64>,
+);
 
 /// A [BFV unsigned 64-bit integer](Unsigned64) that has been linked to a ZKP program.
 ///
@@ -120,7 +169,7 @@ pub struct BfvSigned<F: FieldSpec>(BfvSignedEncoding<F, { <Signed as LinkWithZkp
 /// element within a ZKP program.
 #[derive(Debug, Clone, TypeName)]
 pub struct BfvUnsigned64<F: FieldSpec>(
-    BfvSignedEncoding<F, { <Unsigned64 as LinkWithZkp>::DEGREE_BOUND }>,
+    BfvSignedEncoding<F, { <Unsigned64 as LinkWithZkp>::DEGREE_BOUND }, 64>,
 );
 
 /// A [BFV unsigned 128-bit integer](Unsigned128) that has been linked to a ZKP program.
@@ -129,7 +178,7 @@ pub struct BfvUnsigned64<F: FieldSpec>(
 /// element within a ZKP program.
 #[derive(Debug, Clone, TypeName)]
 pub struct BfvUnsigned128<F: FieldSpec>(
-    BfvSignedEncoding<F, { <Unsigned128 as LinkWithZkp>::DEGREE_BOUND }>,
+    BfvSignedEncoding<F, { <Unsigned128 as LinkWithZkp>::DEGREE_BOUND }, 128>,
 );
 
 /// A [BFV rational](crate::types::bfv::Rational) that has been linked to a ZKP program.
@@ -140,12 +189,12 @@ pub struct BfvUnsigned128<F: FieldSpec>(
 pub struct BfvRational<F: FieldSpec>(BfvSigned<F>, BfvSigned<F>);
 
 macro_rules! impl_linked_zkp_type {
-    ($($int_type:ident),+) => {
+    ($(($int_type:ident, $m:literal)),+) => {
         $(
             paste! {
                 impl<F: FieldSpec> DynamicNumFieldElements for [<Bfv $int_type>]<F> {
                     fn num_native_field_elements(plaintext_modulus: u64) -> usize {
-                        <BfvSignedEncoding<F, { <$int_type as LinkWithZkp>::DEGREE_BOUND }> as DynamicNumFieldElements>::
+                        <BfvSignedEncoding<F, { <$int_type as LinkWithZkp>::DEGREE_BOUND }, $m> as DynamicNumFieldElements>::
                             num_native_field_elements(plaintext_modulus)
                     }
                 }
@@ -160,9 +209,17 @@ macro_rules! impl_linked_zkp_type {
                     type Output = ProgramNode<Field<F>>;
 
                     fn into_field_elem(self) -> Self::Output {
-                        let cast: ProgramNode<BfvSignedEncoding<F, { <$int_type as LinkWithZkp>::DEGREE_BOUND }>> =
+                        let cast: ProgramNode<BfvSignedEncoding<F, { <$int_type as LinkWithZkp>::DEGREE_BOUND }, $m>> =
                             ProgramNode::new(&self.ids);
                         cast.into_field_elem()
+                    }
+                }
+
+                impl<F: FieldSpec> ConstrainFresh for ProgramNode<[<Bfv $int_type>]<F>> {
+                    fn constrain_fresh_encoding(&self) {
+                        let cast: ProgramNode<BfvSignedEncoding<F, { <$int_type as LinkWithZkp>::DEGREE_BOUND }, $m>> =
+                            ProgramNode::new(&self.ids);
+                        cast.constrain_fresh_encoding()
                     }
                 }
             }
@@ -171,7 +228,7 @@ macro_rules! impl_linked_zkp_type {
 }
 
 impl_linked_zkp_type! {
-    Signed, Unsigned64, Unsigned128
+    (Signed, 64), (Unsigned64, 64), (Unsigned128, 128)
 }
 
 impl<F: FieldSpec> DynamicNumFieldElements for BfvRational<F> {
@@ -194,6 +251,16 @@ impl<F: FieldSpec> AsFieldElement<F> for ProgramNode<BfvRational<F>> {
         let num: ProgramNode<BfvSigned<F>> = ProgramNode::new(&self.ids[..len]);
         let den: ProgramNode<BfvSigned<F>> = ProgramNode::new(&self.ids[len..]);
         (num.into_field_elem(), den.into_field_elem())
+    }
+}
+
+impl<F: FieldSpec> ConstrainFresh for ProgramNode<BfvRational<F>> {
+    fn constrain_fresh_encoding(&self) {
+        let len = self.ids.len() / 2;
+        let num: ProgramNode<BfvSigned<F>> = ProgramNode::new(&self.ids[..len]);
+        let den: ProgramNode<BfvSigned<F>> = ProgramNode::new(&self.ids[len..]);
+        num.constrain_fresh_encoding();
+        den.constrain_fresh_encoding();
     }
 }
 

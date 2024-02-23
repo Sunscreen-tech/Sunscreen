@@ -622,15 +622,25 @@ impl<const N: usize, B: BarrettConfig<N>> AsPolynomial<Z<N, B>> for WithCtx<'_, 
 impl<const N: usize, B: BarrettConfig<N>> AsPolynomials<Z<N, B>> for PolynomialArray {
     fn as_poly_vec(&self) -> Vec<Polynomial<Z<N, B>>> {
         let chunk_size = self.coeff_modulus_size() as usize;
-
         let bigint_values = self
             .as_multiprecision_u64s()
             .unwrap()
             .chunks(chunk_size)
-            // SEAL sometimes encodes a multiprecision integer with more limbs
-            // than needed. The trailing limbs can be safely removed since they
-            // are 0.
-            .map(|x| Uint::<N>::from_words(x[0..N].try_into().unwrap()))
+            .map(|x| {
+                // If this is a plaintext, it likely only has one limb, so we need to extend
+                // it with zero limbs.
+                if x.len() < N {
+                    let mut words = [0; N];
+                    words[0..x.len()].copy_from_slice(x);
+                    Uint::<N>::from_words(words)
+                } else {
+                    // On the other hand, SEAL sometimes encodes a multiprecision integer
+                    // with more limbs than needed. The trailing limbs can be safely removed
+                    // since they are 0.
+                    let words = x[0..N].try_into().unwrap();
+                    Uint::<N>::from_words(words)
+                }
+            })
             .collect::<Vec<_>>();
 
         bigint_values

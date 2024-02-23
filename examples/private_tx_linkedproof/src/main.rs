@@ -9,10 +9,13 @@ use once_cell::sync::Lazy;
 use sunscreen::{
     bulletproofs::BulletproofsBackend,
     fhe_program,
-    linked::{LinkedProof, LogProofBuilder, Sdlp},
+    linked::{LinkedProof, LogProofBuilder},
     types::{
         bfv::Signed,
-        zkp::{AsFieldElement, BfvSigned, BulletproofsField, ConstrainCmp, Field, FieldSpec},
+        zkp::{
+            AsFieldElement, BfvSigned, BulletproofsField, ConstrainCmp, ConstrainFresh, Field,
+            FieldSpec,
+        },
         Cipher,
     },
     zkp_program, zkp_var, Ciphertext, CompiledFheProgram, CompiledZkpProgram, Compiler,
@@ -55,6 +58,19 @@ fn validate_deposit<F: FieldSpec>(
 ) {
     let encrypted_deposit = encrypted_deposit.into_field_elem();
     encrypted_deposit.constrain_eq(public_deposit);
+}
+
+/// Validate a balance refresh. We must prove that the two values are equal and that the fresh
+/// balance is freshly encoded.
+#[zkp_program]
+fn validate_refresh_balance<F: FieldSpec>(
+    #[linked] existing_balance: BfvSigned<F>,
+    #[linked] fresh_balance: BfvSigned<F>,
+) {
+    fresh_balance.constrain_fresh_encoding();
+    fresh_balance
+        .into_field_elem()
+        .constrain_eq(existing_balance.into_field_elem());
 }
 
 /// A way to identify a user.
@@ -163,18 +179,24 @@ impl User {
     pub fn create_refresh_balance(&self, chain: &Chain) -> Result<RefreshBalance> {
         let mut builder = LogProofBuilder::new(&self.runtime);
 
-        // Decrypt current balance, returning a reference to the underlying message
+        // Decrypt current balance, returning a link to the underlying message
         let balance_encrypted = chain.balances.get(&self.name).unwrap();
-        let (balance, msg) =
-            builder.decrypt_returning_msg::<Signed>(balance_encrypted, &self.private_key)?;
+        let (balance, existing_link) =
+            builder.decrypt_returning_link::<Signed>(balance_encrypted, &self.private_key)?;
 
-        // Re-encrypt the current balance
+        // Re-encrypt the current balance, returning a link to the underlying message
         println!("    {}: re-encrypting balance of {}", self.name, balance);
-        let fresh_balance = builder.encrypt_msg(&msg, &self.public_key)?;
+        let (fresh_balance, fresh_link) =
+            builder.encrypt_returning_link(&balance, &self.public_key)?;
 
-        // Generate proof that the ciphertexts encrypt the same underlying message
+        // Generate proof that the ciphertexts encrypt the same underlying message and that
+        // the new one has a fresh noise budget and fresh encoding.
         println!("    {}: creating refresh balance logproof", self.name);
-        let proof = builder.build_logproof()?;
+        let proof = builder
+            .zkp_program(self.app.get_refresh_balance_zkp())?
+            .linked_input(existing_link)
+            .linked_input(fresh_link)
+            .build_linkedproof()?;
 
         Ok(RefreshBalance {
             proof,
@@ -229,17 +251,13 @@ pub struct Transfer {
 
 /// A refresh private balance transaction.
 ///
-/// The SDLP proves that the fresh balance is a valid, fresh encryption (i.e. the noise budget is
-/// reset) and also that the underlying value matches the current on chain balance.
-///
-/// Note that this proof is not a linked proof, as these validations can be proven by an
-/// [`Sdlp`] alone.
-//
-// TODO we need a BfvSigned::constrain_fresh_encoding that proves each coefficient's
-// absolute value <= 1 and degree is less than 64.
+/// The SDLP in the linked proof proves that the fresh balance is a valid, fresh encryption (to
+/// avoid overflowing the noise budget). The R1CS ZKP in the linked proof proves that the new
+/// encryption is also _freshly encoded_ (to avoid overflowing the plaintext modulus) and that it
+/// matches the existing value on chain.
 #[derive(Clone)]
 pub struct RefreshBalance {
-    proof: Sdlp,
+    proof: LinkedProof,
     fresh_balance: Ciphertext,
     name: Username,
 }
@@ -386,7 +404,7 @@ impl Chain {
         } = refresh_balance;
 
         // Verify the balance refresh is valid
-        proof.verify()?;
+        proof.verify::<ZkpProgramInput>(self.app.get_refresh_balance_zkp(), vec![], vec![])?;
 
         // Use the freshly encrypted balance
         self.balances
@@ -436,6 +454,7 @@ impl App {
                 .zkp_backend::<BulletproofsBackend>()
                 .zkp_program(validate_transfer)
                 .zkp_program(validate_deposit)
+                .zkp_program(validate_refresh_balance)
                 .compile()
                 .unwrap()
         });
@@ -448,6 +467,10 @@ impl App {
 
     pub fn get_deposit_zkp(&self) -> &CompiledZkpProgram {
         self.0.get_zkp_program(validate_deposit).unwrap()
+    }
+
+    pub fn get_refresh_balance_zkp(&self) -> &CompiledZkpProgram {
+        self.0.get_zkp_program(validate_refresh_balance).unwrap()
     }
 
     pub fn get_update_balance_sender_fhe(&self) -> &CompiledFheProgram {

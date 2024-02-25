@@ -86,10 +86,12 @@ fn validate_refresh_balance<F: FieldSpec>(
 // ANCHOR_END: validate_refresh_balance
 // ANCHOR_END: zkp_programs
 
-// ANCHOR: user_type
+// ANCHOR: username_type
 /// A way to identify a user.
 type Username = String;
+// ANCHOR_END: username_type
 
+// ANCHOR: user_type
 /// Perspective of a user.
 pub struct User {
     pub name: Username,
@@ -103,6 +105,7 @@ pub struct User {
 // ANCHOR_END: user_type
 
 impl User {
+// ANCHOR: user_new
     pub fn new(name: &str) -> Result<Self> {
         let app = App::new()?;
         let runtime = FheZkpRuntime::new(app.params(), &BulletproofsBackend::new())?;
@@ -115,7 +118,9 @@ impl User {
             app,
         })
     }
+// ANCHOR_END: user_new
 
+// ANCHOR: user_transfer
     /// Create a private, validated transfer to send to another user.
     pub fn create_transfer<U: Into<Username>>(
         &self,
@@ -164,7 +169,9 @@ impl User {
             encrypted_amount_receiver,
         })
     }
+// ANCHOR_END: user_transfer
 
+// ANCHOR: user_deposit
     /// Create a public deposit to a private balance.
     pub fn create_deposit(&self, amount: i64) -> Deposit {
         Deposit {
@@ -172,7 +179,9 @@ impl User {
             name: self.name.clone(),
         }
     }
+// ANCHOR_END: user_deposit
 
+// ANCHOR: user_refresh
     /// Create a refresh balance transaction.
     pub fn create_refresh_balance(&self, chain: &Chain) -> Result<RefreshBalance> {
         let mut builder = LinkedProofBuilder::new(&self.runtime);
@@ -202,7 +211,10 @@ impl User {
             name: self.name.clone(),
         })
     }
+// ANCHOR_END: user_refresh
 
+// ANCHOR: user_register
+    /// Create a register transaction.
     pub fn create_register(&self, initial_deposit: i64) -> Result<Register> {
         let mut builder = LinkedProofBuilder::new(&self.runtime);
 
@@ -229,8 +241,10 @@ impl User {
             deposit: self.create_deposit(initial_deposit),
         })
     }
+// ANCHOR_END: user_register
 }
 
+// ANCHOR: register_type
 /// A register transaction.
 ///
 /// The SDLP in the linked proof proves that the ciphertext is a valid, fresh encryption. The R1CS
@@ -242,14 +256,18 @@ pub struct Register {
     encrypted_amount: Ciphertext,
     deposit: Deposit,
 }
+// ANCHOR_END: register_type
 
+// ANCHOR: deposit_type
 /// A public deposit transaction.
 #[derive(Clone)]
 pub struct Deposit {
     public_amount: i64,
     name: Username,
 }
+// ANCHOR_END: deposit_type
 
+// ANCHOR: transfer_type
 /// A private transfer transaction.
 ///
 /// The SDLP in the linked proof proves that the ciphertexts are valid, fresh encryptions of the
@@ -265,7 +283,9 @@ pub struct Transfer {
     sender: Username,
     receiver: Username,
 }
+// ANCHOR_END: transfer_type
 
+// ANCHOR: refresh_type
 /// A refresh private balance transaction.
 ///
 /// The SDLP in the linked proof proves that the fresh balance is a valid, fresh encryption (to
@@ -278,7 +298,9 @@ pub struct RefreshBalance {
     fresh_balance: Ciphertext,
     name: Username,
 }
+// ANCHOR_END: refresh_type
 
+// ANCHOR: transaction_type
 /// A chain transaction.
 pub enum Transaction {
     Register(Register),
@@ -286,7 +308,9 @@ pub enum Transaction {
     Transfer(Transfer),
     RefreshBalance(RefreshBalance),
 }
+// ANCHOR_END: transaction_type
 
+// ANCHOR: chain_type
 /// Perspective of the blockchain, basically just a place where user's encrypted balances are
 /// stored and transparent FHE computations take place in the form of atomic transactions.
 ///
@@ -305,8 +329,10 @@ pub struct Chain {
     /// Runtime to run FHE programs and verify proofs
     runtime: FheZkpRuntime<BulletproofsBackend>,
 }
+// ANCHOR_END: chain_type
 
 impl Chain {
+// ANCHOR: chain_new
     pub fn new() -> Result<Self> {
         let app = App::new()?;
         let runtime = FheZkpRuntime::new(app.params(), &BulletproofsBackend::new())?;
@@ -318,7 +344,9 @@ impl Chain {
             app,
         })
     }
+// ANCHOR_END: chain_new
 
+// ANCHOR: chain_register
     pub fn register(&mut self, register: Register) -> Result<()> {
         self.ledger.push(Transaction::Register(register.clone()));
         let Register {
@@ -342,7 +370,9 @@ impl Chain {
         self.balances.insert(deposit.name, encrypted_amount);
         Ok(())
     }
+// ANCHOR_END: chain_register
 
+// ANCHOR: chain_deposit
     pub fn deposit(&mut self, deposit: Deposit) -> Result<()> {
         self.ledger.push(Transaction::Deposit(deposit.clone()));
         let Deposit {
@@ -350,7 +380,7 @@ impl Chain {
             name,
         } = deposit;
 
-        // Then deposit into the user's balance
+        // Deposit into the user's balance
         let pk = self.keys.get(&name).unwrap();
         let curr_bal = self.balances.get_mut(&name).unwrap();
         *curr_bal = self
@@ -363,7 +393,9 @@ impl Chain {
             .remove(0);
         Ok(())
     }
+// ANCHOR_END: chain_deposit
 
+// ANCHOR: chain_transfer
     pub fn transfer(&mut self, transfer: Transfer) -> Result<()> {
         self.ledger.push(Transaction::Transfer(transfer.clone()));
         let Transfer {
@@ -380,7 +412,7 @@ impl Chain {
         // Update the sender's balance:
         let sender_pk = self.keys.get(&sender).unwrap();
         let sender_balance = self.balances.get_mut(&sender).unwrap();
-        let new_balance = self
+        *sender_balance = self
             .runtime
             .run(
                 self.app.get_transfer_from_fhe(),
@@ -388,12 +420,11 @@ impl Chain {
                 sender_pk,
             )?
             .remove(0);
-        *sender_balance = new_balance;
 
         // Update receiver's balance
         let receiver_pk = self.keys.get(&receiver).unwrap();
         let receiver_balance = self.balances.get_mut(&receiver).unwrap();
-        let new_balance = self
+        *receiver_balance = self
             .runtime
             .run(
                 self.app.get_transfer_to_fhe(),
@@ -401,10 +432,11 @@ impl Chain {
                 receiver_pk,
             )?
             .remove(0);
-        *receiver_balance = new_balance;
         Ok(())
     }
+// ANCHOR_END: chain_transfer
 
+// ANCHOR: chain_refresh
     pub fn refresh_balance(&mut self, refresh_balance: RefreshBalance) -> Result<()> {
         self.ledger
             .push(Transaction::RefreshBalance(refresh_balance.clone()));
@@ -423,6 +455,7 @@ impl Chain {
             .expect("User should be registered");
         Ok(())
     }
+// ANCHOR_END: chain_refresh
 
     pub fn print_ledger(&self) {
         for (i, tx) in self.ledger.iter().enumerate() {

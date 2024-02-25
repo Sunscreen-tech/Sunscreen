@@ -341,7 +341,7 @@ impl Chain {
             name,
         } = deposit;
 
-        // Then deposit into the user's balance
+        // Deposit into the user's balance
         let pk = self.keys.get(&name).unwrap();
         let curr_bal = self.balances.get_mut(&name).unwrap();
         *curr_bal = self
@@ -371,7 +371,7 @@ impl Chain {
         // Update the sender's balance:
         let sender_pk = self.keys.get(&sender).unwrap();
         let sender_balance = self.balances.get_mut(&sender).unwrap();
-        let new_balance = self
+        *sender_balance = self
             .runtime
             .run(
                 self.app.get_transfer_from_fhe(),
@@ -379,12 +379,11 @@ impl Chain {
                 sender_pk,
             )?
             .remove(0);
-        *sender_balance = new_balance;
 
         // Update receiver's balance
         let receiver_pk = self.keys.get(&receiver).unwrap();
         let receiver_balance = self.balances.get_mut(&receiver).unwrap();
-        let new_balance = self
+        *receiver_balance = self
             .runtime
             .run(
                 self.app.get_transfer_to_fhe(),
@@ -392,7 +391,6 @@ impl Chain {
                 receiver_pk,
             )?
             .remove(0);
-        *receiver_balance = new_balance;
         Ok(())
     }
 

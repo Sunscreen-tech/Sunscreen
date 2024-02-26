@@ -52,7 +52,7 @@ type MatrixPoly<Q> = Matrix<Polynomial<Q>>;
 /**
  * Bounds on the coefficients in the secret S (specified in number of bits).
  */
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Bounds(pub Vec<u32>);
 
 impl Zero for Bounds {
@@ -76,7 +76,7 @@ impl std::ops::Deref for Bounds {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 /// The artifacts known to both the prover and verifier.
 pub struct VerifierKnowledge<Q>
 where

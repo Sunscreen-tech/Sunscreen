@@ -29,6 +29,7 @@ cust = { workspace = true, optional = true }
 num = { workspace = true }
 crypto-bigint = { workspace = true }
 thiserror = { workspace = true }
+serde = { workspace = true }
 sunscreen_math_macros = { workspace = true }
 subtle = { workspace = true }
 log.workspace = true

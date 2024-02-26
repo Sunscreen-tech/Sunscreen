@@ -4,9 +4,9 @@ Serializing works just like [unlinked proofs](/zkp/runtime/serialization.md),
 but for the sake of completeness, below is an example of serialization and
 deserialization of a linked proof:
 
-```rust,no_run,ignore
+```rust,no_run
 {{#rustdoc_include ../basic_prog.rs:none}}
-# fn main() -> Result<(), Error> {
+# fn main() -> Result<(), Box<dyn std::error::Error>> {
 # let app = Compiler::new()
 #     .fhe_program(increase_by_factor)
 #     .zkp_backend::<BulletproofsBackend>()
@@ -20,11 +20,9 @@ let (ct, link) = builder.encrypt_returning_link(&Signed::from(2), &public_key)?;
 let proof = builder
     .zkp_program(app.get_zkp_program(is_greater_than_one).unwrap())?
     .linked_input(link)
-    .build();
+    .build()?;
 let serialized_proof = bincode::serialize(&proof)?;
 let deserialized_proof: LinkedProof = bincode::deserialize(&serialized_proof)?;
 #     Ok(())
 # }
 ```
-
-> ST: TODO this actually doesn't work quite yet. We need to do a small bit of work to get serialization working; when we do we should remove the `ignore` above. 

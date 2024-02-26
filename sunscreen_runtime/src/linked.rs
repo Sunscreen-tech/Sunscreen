@@ -16,6 +16,7 @@ use logproof::{
 use merlin::Transcript;
 use paste::paste;
 use seq_macro::seq;
+use serde::{Deserialize, Serialize};
 use sunscreen_compiler_common::Type;
 use sunscreen_zkp_backend::{
     bulletproofs::{
@@ -26,7 +27,7 @@ use sunscreen_zkp_backend::{
 
 use crate::{CompiledZkpProgram, Result, TypeNameInstance, ZkpProgramInput, ZkpRuntime};
 
-#[derive(Debug, Clone)]
+#[derive(Serialize, Deserialize, Clone)]
 /// SDLP proof and associated information for verification
 pub struct Sdlp {
     proof: LogProof,
@@ -36,14 +37,14 @@ pub struct Sdlp {
     u: RistrettoPoint,
 }
 
-#[derive(Clone)]
+#[derive(Serialize, Deserialize, Clone)]
 /// R1CS BP proof and associated information for verification
 struct BP {
     proof: Proof,
     verifier_parameters: BulletproofVerifierParameters,
 }
 
-#[derive(Clone)]
+#[derive(Serialize, Deserialize, Clone)]
 /// A linked proof between an SDLP and R1CS BP
 pub struct LinkedProof {
     sdlp: Sdlp,
@@ -345,7 +346,7 @@ impl Sdlp {
 pub struct SealSdlpProverKnowledge(pub(crate) SealSdlpProverKnowledgeInternal);
 
 /// The verifier knowledge of an [`Sdlp`].
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SealSdlpVerifierKnowledge(pub(crate) SealSdlpVerifierKnowledgeInternal);
 
 pub(crate) enum SealSdlpProverKnowledgeInternal {
@@ -355,7 +356,7 @@ pub(crate) enum SealSdlpProverKnowledgeInternal {
     LP4(LogProofProverKnowledge<ZqSeal128_8192>),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub(crate) enum SealSdlpVerifierKnowledgeInternal {
     LP1(LogProofVerifierKnowledge<ZqSeal128_1024>),
     LP2(LogProofVerifierKnowledge<ZqSeal128_2048>),

@@ -1,10 +1,11 @@
 use std::ops::{Add, Index, IndexMut, Mul, Neg, Sub};
 
+use serde::{Deserialize, Serialize};
 use sunscreen_math_macros::refify_binary_op;
 
 use crate::{ring::Ring, One, Zero};
 
-#[derive(Debug, Clone, Eq)]
+#[derive(Debug, Clone, Eq, Serialize, Deserialize)]
 /// A polynomial over the ring `T`.
 ///
 /// # Remarks

@@ -49,7 +49,7 @@ tokio = { version = "1.25.0", features = ["rt"] }
 wgpu = "0.17.0"
 cust = "0.3.2"
 num = "0.4.1"
-crypto-bigint = "0.5.2"
+crypto-bigint = { version = "0.5.2", features = ["serde"] }
 paste = "1.0.14"
 thiserror = "1.0.44"
 naga = { version = "0.13.0", features = ["wgsl-in"] }

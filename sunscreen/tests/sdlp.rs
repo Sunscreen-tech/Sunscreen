@@ -59,7 +59,7 @@ mod sdlp_tests {
             .encrypt_returning_msg(&Fractional::<64>::from(3.23), &public_key)
             .unwrap();
         let _a2 = logproof_builder
-            .encrypt_symmetric_msg(&linked_a, &private_key)
+            .reencrypt_symmetric(&linked_a, &private_key)
             .unwrap();
         let _other = logproof_builder
             .encrypt(&Signed::from(2), &public_key)
@@ -91,7 +91,7 @@ mod sdlp_tests {
         let (_, msg) = logproof_builder
             .decrypt_returning_msg::<Signed>(&computed_ct, &private_key)
             .unwrap();
-        let _refreshed_ct = logproof_builder.encrypt_msg(&msg, &public_key).unwrap();
+        let _refreshed_ct = logproof_builder.reencrypt(&msg, &public_key).unwrap();
 
         let sdlp = logproof_builder.build().unwrap();
         sdlp.verify().unwrap();

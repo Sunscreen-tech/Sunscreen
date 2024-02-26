@@ -280,12 +280,12 @@ mod linked {
         zkp_type: Z,
     }
 
-    /// A [`Plaintext`] message that can be [encrypted again](`LogProofBuilder::encrypt_msg`).
+    /// A [`Plaintext`] message that can be [encrypted again](`LogProofBuilder::reencrypt`).
     #[derive(Clone, Debug)]
     pub struct Message(MessageInternal<()>);
 
-    /// A [`Plaintext`] message that can be [encrypted again](`LogProofBuilder::encrypt_msg`) or
-    /// [linked to a ZKP](`LogProofBuilder::linked_input`). Create this with
+    /// A [`Plaintext`] message that can be [encrypted again](`LogProofBuilder::reencrypt`) or
+    /// [linked to a ZKP program](`LogProofBuilder::linked_input`). Create this with
     /// [`LogProofBuilder::encrypt_returning_link`].
     #[derive(Debug)]
     pub struct LinkedMessage(MessageInternal<Type>);
@@ -309,7 +309,7 @@ mod linked {
     }
 
     /// Indicates that the message is already added to the SDLP, and hence can be used as an
-    /// argument to [`LogProofBuilder::encrypt_msg`].
+    /// argument to [`LogProofBuilder::reencrypt`].
     pub trait ExistingMessage: private::Sealed {
         /// Convert the message to the internal type.
         fn as_internal(&self) -> MessageInternal<()>;
@@ -489,7 +489,7 @@ mod linked {
         }
 
         /// Encrypt a plaintext, adding the encryption statement to the logproof and returning the
-        /// message to optionally be [encrypted again](`Self::encrypt_msg`), that is, _shared_
+        /// message to optionally be [encrypted again](`Self::reencrypt`), that is, _shared_
         /// with another logproof statement.
         ///
         /// If you do not want to add the encryption statement to the proof, just use [the
@@ -506,7 +506,7 @@ mod linked {
         }
 
         /// Encrypt a plaintext, adding the encryption statement to the logproof and returning the
-        /// message to optionally be [encrypted again](`Self::encrypt_msg`), that is, _shared_
+        /// message to optionally be [encrypted again](`Self::reencrypt_symmetric`), that is, _shared_
         /// with another logproof statement.
         ///
         /// If you do not want to add the encryption statement to the proof, just use [the
@@ -555,13 +555,13 @@ mod linked {
             Ok((ct, Message(msg_internal)))
         }
 
-        /// Encrypt an existing message, adding the new encryption statement to the logproof.
+        /// Re-encrypt an existing message, adding the new encryption statement to the logproof.
         ///
-        /// This method purposefully reveals that two ciphertexts encrypt the same underlying value. If
-        /// this is not what you want, use [`Self::encrypt`].
+        /// This method purposefully reveals that two ciphertexts encrypt the same underlying
+        /// plaintext. If this is not what you want, use [`Self::encrypt`].
         ///
         /// This method assumes that you've created the `message` argument with _this_ builder.
-        pub fn encrypt_msg<E: ExistingMessage>(
+        pub fn reencrypt<E: ExistingMessage>(
             &mut self,
             message: &E,
             public_key: &'k PublicKey,
@@ -575,14 +575,14 @@ mod linked {
             )
         }
 
-        /// Encrypt an existing message symmetrically, adding the new encryption statement to the
+        /// Re-encrypt an existing message symmetrically, adding the new encryption statement to the
         /// logproof.
         ///
-        /// This method purposefully reveals that two ciphertexts encrypt the same underlying value. If
-        /// this is not what you want, use [`Self::encrypt_symmetric`].
+        /// This method purposefully reveals that two ciphertexts encrypt the same underlying
+        /// plaintext. If this is not what you want, use [`Self::encrypt_symmetric`].
         ///
         /// This method assumes that you've created the `message` argument with _this_ builder.
-        pub fn encrypt_symmetric_msg<E: ExistingMessage>(
+        pub fn reencrypt_symmetric<E: ExistingMessage>(
             &mut self,
             message: &E,
             private_key: &'k PrivateKey,
@@ -600,8 +600,14 @@ mod linked {
         /// message to be shared with another proof statement.
         ///
         /// Use this method if you have an existing ciphertext and want to prove that it is well
-        /// formed, and you intend to re-encrypt it, refreshing the noise but not the plaintext
-        /// polynomial encoding.
+        /// formed, and you intend to [reencrypt](Self::reencrypt) it, refreshing the noise but _not_
+        /// the plaintext polynomial encoding.
+        ///
+        /// # Remarks
+        /// This method is only useful in niche scenarios; you probably want to [return a
+        /// link](Self::decrypt_returning_link) instead, encrypt a new ciphertext with [fresh
+        /// noise and a fresh encoding](Self::encrypt_returning_link), and prove equality within a
+        /// linked ZKP program.
         pub fn decrypt_returning_msg<P>(
             &mut self,
             ciphertext: &Ciphertext,
@@ -787,7 +793,7 @@ mod linked {
         /// Encrypt a plaintext intended for linking.
         ///
         /// The returned `LinkedMessage` can be used:
-        /// 1. to add an encryption statement of ciphertext equality to the logproof (see [`Self::encrypt_msg`]).
+        /// 1. to add an encryption statement of ciphertext equality to the logproof (see [`Self::reencrypt`]).
         /// 2. as a linked input to a ZKP program (see [`Self::linked_input`]).
         pub fn encrypt_returning_link<P>(
             &mut self,
@@ -811,7 +817,7 @@ mod linked {
         /// Symmetrically encrypt a plaintext intended for linking.
         ///
         /// The returned `LinkedMessage` can be used:
-        /// 1. to add an encryption statement of ciphertext equality to the logproof (see [`Self::encrypt_msg`]).
+        /// 1. to add an encryption statement of ciphertext equality to the logproof (see [`Self::reencrypt_symmetric`]).
         /// 2. as a linked input to a ZKP program (see [`Self::linked_input`]).
         pub fn encrypt_symmetric_returning_link<P>(
             &mut self,
@@ -833,7 +839,13 @@ mod linked {
         }
 
         /// Decrypt a ciphertext, adding the decryption statement to the logproof and returning the
-        /// linked message to be shared with another logproof statement or linked to a ZKP program.
+        /// linked message to be [linked to a ZKP program](Self::linked_input).
+        ///
+        /// # Remarks
+        /// You can [reencrypt](Self::reencrypt) the returned linked message, however while this
+        /// will reset the noise level it will not refresh the plaintext polynomial encoding. Most likely,
+        /// you want to use [`Self::encrypt_returning_link`] to encrypt a _new_ plaintext encoding
+        /// instead, and prove equality within a linked ZKP program.
         pub fn decrypt_returning_link<P>(
             &mut self,
             ciphertext: &Ciphertext,

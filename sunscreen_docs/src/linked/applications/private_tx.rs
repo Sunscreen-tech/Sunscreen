@@ -143,7 +143,7 @@ impl User {
             self.name, amount
         );
         let recv_pk = chain.keys.get(&receiver).unwrap();
-        let encrypted_amount_receiver = builder.encrypt_msg(&amount_linked, recv_pk)?;
+        let encrypted_amount_receiver = builder.reencrypt(&amount_linked, recv_pk)?;
 
         // Decrypt current balance, needed to prove tx validity
         let balance_enc = chain.balances.get(&self.name).unwrap();

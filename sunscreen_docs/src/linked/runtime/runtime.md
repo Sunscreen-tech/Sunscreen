@@ -9,23 +9,8 @@ requires some FHE context. Thus, instead of using a `ZkpRuntime`, we'll use an
 `FheZkpRuntime`:
 
 ```rust
-# use sunscreen::{
-#     bulletproofs::BulletproofsBackend,
-#     fhe_program, zkp_program, zkp_var,
-#     types::{bfv::Signed, Cipher, zkp::{Field, FieldSpec, BfvSigned}},
-#     Compiler, Error, FheZkpRuntime,
-# };
+{{#rustdoc_include ../basic_prog.rs:none}}
 # fn main() -> Result<(), Error> {
-#[fhe_program]
-fn increase_by_factor(x: Signed, scale: Cipher<Signed>) -> Cipher<Signed> {
-    x * scale
-}
-
-#[zkp_program]
-fn is_greater_than_one<F: FieldSpec>(scale: BfvSigned<F>) {
-    scale.into_field_elem().constrain_gt_bounded(zkp_var!(1), 64);
-}
-
 let app = Compiler::new()
     .fhe_program(increase_by_factor)
     .zkp_backend::<BulletproofsBackend>()

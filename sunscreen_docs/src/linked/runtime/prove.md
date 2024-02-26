@@ -3,33 +3,17 @@
 Now that we know how to construct an `FheZkpRuntime`, we can use it to instantiate a `LinkedProofBuilder`:
 
 ```rust
-# use sunscreen::{
-#     bulletproofs::BulletproofsBackend,
-#     fhe_program, zkp_program, zkp_var,
-#     types::{bfv::Signed, Cipher, zkp::{Field, FieldSpec, BfvSigned}},
-#     Compiler, Error, FheZkpRuntime,
-#      linked::{LinkedProof, LinkedProofBuilder},
-# };
+{{#rustdoc_include ../basic_prog.rs:none}}
 # fn main() -> Result<(), Error> {
-# #[fhe_program]
-# fn increase_by_factor(x: Signed, scale: Cipher<Signed>) -> Cipher<Signed> {
-#     x * scale
-# }
-# 
-# #[zkp_program]
-# fn is_greater_than_one<F: FieldSpec>(scale: BfvSigned<F>) {
-#     scale.into_field_elem().constrain_gt_bounded(zkp_var!(1), 64);
-# }
-# 
-# let app = Compiler::new()
-#     .fhe_program(increase_by_factor)
-#     .zkp_backend::<BulletproofsBackend>()
-#     .zkp_program(is_greater_than_one)
-#     .compile()?;
-# 
+let app = Compiler::new()
+    .fhe_program(increase_by_factor)
+    .zkp_backend::<BulletproofsBackend>()
+    .zkp_program(is_greater_than_one)
+    .compile()?;
+
 let runtime = FheZkpRuntime::new(app.params(), &BulletproofsBackend::new())?;
-let (public_key, private_key) = runtime.generate_keys();
-let mut builder = LinkedProofBuilder::new(&runtime);
+let (public_key, private_key) = runtime.generate_keys()?;
+let mut builder = runtime.linkedproof_builder();
 #     Ok(())
 # }
 ```
@@ -46,18 +30,18 @@ ciphertext is freshly encrypted, (2) the ciphertext is well formed, and (3) you
 know the underlying encrypted message. However, do _not_ use this method if you
 also need to link the input to a ZKP program.
 
-```rust,no_run
-# use sunscreen::{
-#     bulletproofs::BulletproofsBackend,
-#     fhe_program, zkp_program, zkp_var,
-#     types::{bfv::Signed, Cipher, zkp::{Field, FieldSpec, BfvSigned}},
-#     Compiler, Error, FheZkpRuntime,
-#      linked::{LinkedProof, LinkedProofBuilder},
-# };
+```rust
+{{#rustdoc_include ../basic_prog.rs:none}}
 # fn main() -> Result<(), Error> {
-# let runtime: FheZkpRuntime = todo!();
-# let (public_key, private_key) = runtime.generate_keys();
-# let mut builder: LinkedProofBuilder = todo!();
+# let app = Compiler::new()
+#     .fhe_program(increase_by_factor)
+#     .zkp_backend::<BulletproofsBackend>()
+#     .zkp_program(is_greater_than_one)
+#     .compile()?;
+# 
+# let runtime = FheZkpRuntime::new(app.params(), &BulletproofsBackend::new())?;
+# let (public_key, private_key) = runtime.generate_keys()?;
+# let mut builder = runtime.linkedproof_builder();
 let ct = builder.encrypt(&Signed::from(1), &public_key)?;
 #     Ok(())
 # }
@@ -66,18 +50,18 @@ let ct = builder.encrypt(&Signed::from(1), &public_key)?;
 Similarly you can call `encrypt_symmetric` and provide a private key, if you'd
 like to use a symmetric encryption.
 
-```rust,no_run
-# use sunscreen::{
-#     bulletproofs::BulletproofsBackend,
-#     fhe_program, zkp_program, zkp_var,
-#     types::{bfv::Signed, Cipher, zkp::{Field, FieldSpec, BfvSigned}},
-#     Compiler, Error, FheZkpRuntime,
-#      linked::{LinkedProof, LinkedProofBuilder},
-# };
+```rust
+{{#rustdoc_include ../basic_prog.rs:none}}
 # fn main() -> Result<(), Error> {
-# let runtime: FheZkpRuntime = todo!();
-# let (public_key, private_key) = runtime.generate_keys();
-# let mut builder: LinkedProofBuilder = todo!();
+# let app = Compiler::new()
+#     .fhe_program(increase_by_factor)
+#     .zkp_backend::<BulletproofsBackend>()
+#     .zkp_program(is_greater_than_one)
+#     .compile()?;
+# 
+# let runtime = FheZkpRuntime::new(app.params(), &BulletproofsBackend::new())?;
+# let (public_key, private_key) = runtime.generate_keys()?;
+# let mut builder = runtime.linkedproof_builder();
 let ct = builder.encrypt_symmetric(&Signed::from(1), &private_key)?;
 #     Ok(())
 # }
@@ -92,24 +76,20 @@ underlying encrypted message, and (4) you want to link the message as an input
 to a ZKP program.
 
 ```rust,no_run
-# use sunscreen::{
-#     bulletproofs::BulletproofsBackend,
-#     fhe_program, zkp_program, zkp_var,
-#     types::{bfv::Signed, Cipher, zkp::{Field, FieldSpec, BfvSigned}},
-#     Compiler, Error, FheZkpRuntime,
-#      linked::{LinkedProof, LinkedProofBuilder},
-# };
+{{#rustdoc_include ../basic_prog.rs:none}}
 # fn main() -> Result<(), Error> {
-# #[zkp_program]
-# fn is_greater_than_one<F: FieldSpec>(scale: BfvSigned<F>) {
-#     scale.into_field_elem().constrain_gt_bounded(zkp_var!(1), 64);
-# }
-# let runtime: FheZkpRuntime = todo!();
-# let (public_key, private_key) = runtime.generate_keys();
-# let mut builder: LinkedProofBuilder = todo!();
+# let app = Compiler::new()
+#     .fhe_program(increase_by_factor)
+#     .zkp_backend::<BulletproofsBackend>()
+#     .zkp_program(is_greater_than_one)
+#     .compile()?;
+# 
+# let runtime = FheZkpRuntime::new(app.params(), &BulletproofsBackend::new())?;
+# let (public_key, private_key) = runtime.generate_keys()?;
+# let mut builder = runtime.linkedproof_builder();
 let (ct, link) = builder.encrypt_returning_link(&Signed::from(2), &public_key)?;
 let proof = builder
-    .zkp_program(is_greater_than_one)?
+    .zkp_program(app.get_zkp_program(is_greater_than_one).unwrap())?
     .linked_input(link)
     .build();
 #     Ok(())
@@ -127,34 +107,30 @@ perhaps the result of some FHE program computation, and you want to prove that
 message, and (3) you want to link the message as an input to a ZKP program.
 
 ```rust,no_run
-# use sunscreen::{
-#     bulletproofs::BulletproofsBackend,
-#     fhe_program, zkp_program, zkp_var,
-#     types::{bfv::Signed, Cipher, zkp::{Field, FieldSpec, BfvSigned}},
-#     Ciphertext, Compiler, Error, FheZkpRuntime,
-#      linked::{LinkedProof, LinkedProofBuilder},
-# };
+{{#rustdoc_include ../basic_prog.rs:none}}
 # fn main() -> Result<(), Error> {
-# #[zkp_program]
-# fn is_greater_than_one<F: FieldSpec>(scale: BfvSigned<F>) {
-#     scale.into_field_elem().constrain_gt_bounded(zkp_var!(1), 64);
-# }
-# let runtime: FheZkpRuntime = todo!();
-# let (public_key, private_key) = runtime.generate_keys();
-# let mut builder: LinkedProofBuilder = todo!();
-# let existing_ct: Ciphertext = todo!();
-let (pt, link) = builder.decrypt_returning_link(existing_ct, &private_key)?;
+# let app = Compiler::new()
+#     .fhe_program(increase_by_factor)
+#     .zkp_backend::<BulletproofsBackend>()
+#     .zkp_program(is_greater_than_one)
+#     .compile()?;
+# 
+# let runtime = FheZkpRuntime::new(app.params(), &BulletproofsBackend::new())?;
+# let (public_key, private_key) = runtime.generate_keys()?;
+# let mut builder = runtime.linkedproof_builder();
+# let existing_ct = runtime.encrypt(Signed::from(1), &public_key)?;
+let (pt, link) = builder.decrypt_returning_link::<Signed>(&existing_ct, &private_key)?;
 let proof = builder
-    .zkp_program(is_greater_than_one)?
+    .zkp_program(app.get_zkp_program(is_greater_than_one).unwrap())?
     .linked_input(link)
     .build();
 #     Ok(())
 # }
 ```
 
-#### Encrypt message
+#### Re-encrypt
 
-Lastly, you can use `encrypt_msg` to take an existing `LinkedMessage` and encrypt it
+Lastly, you can use `reencrypt` to take an existing `LinkedMessage` and encrypt it
 _again_. This might seem strange at first, but you may find cases where this is
 useful. For example, if you need to encrypt the same value under multiple public
 keys and you want to show that those ciphertexts are in fact (1) well formed, (2)
@@ -163,27 +139,23 @@ will come in handy. Conveniently, all encryptions of a single link will still be
 _one message_ to link to the ZKP, so you don't have to provide all of them as
 separate linked inputs.
 
-```rust
-# use sunscreen::{
-#     bulletproofs::BulletproofsBackend,
-#     fhe_program, zkp_program, zkp_var,
-#     types::{bfv::Signed, Cipher, zkp::{Field, FieldSpec, BfvSigned}},
-#     Compiler, Error, FheZkpRuntime, PublicKey,
-#     linked::{LinkedProof, LinkedProofBuilder},
-# };
+```rust,no_run
+{{#rustdoc_include ../basic_prog.rs:none}}
 # fn main() -> Result<(), Error> {
-# #[zkp_program]
-# fn is_greater_than_one<F: FieldSpec>(scale: BfvSigned<F>) {
-#     scale.into_field_elem().constrain_gt_bounded(zkp_var!(1), 64);
-# }
-# let runtime: FheZkpRuntime = todo!();
-# let (my_public_key, my_private_key) = runtime.generate_keys();
-# let (other_public_key, other_private_key) = runtime.generate_keys();
+# let app = Compiler::new()
+#     .fhe_program(increase_by_factor)
+#     .zkp_backend::<BulletproofsBackend>()
+#     .zkp_program(is_greater_than_one)
+#     .compile()?;
+# 
+# let runtime = FheZkpRuntime::new(app.params(), &BulletproofsBackend::new())?;
+# let (my_public_key, my_private_key) = runtime.generate_keys()?;
+# let (other_public_key, other_private_key) = runtime.generate_keys()?;
 # let mut builder: LinkedProofBuilder = todo!();
-let (ct_my_key, link) = builder.encrypt_returning_link(&Signed::from(2), &public_key)?;
-let ct_other_key = builder.encrypt_msg(&link, &other_public_key)?;
+let (ct_my_key, link) = builder.encrypt_returning_link(&Signed::from(2), &my_public_key)?;
+let ct_other_key = builder.reencrypt(&link, &other_public_key)?;
 let proof = builder
-    .zkp_program(is_greater_than_one)?
+    .zkp_program(app.get_zkp_program(is_greater_than_one).unwrap())?
     .linked_input(link)
     .build();
 #     Ok(())

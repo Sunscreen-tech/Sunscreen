@@ -10,18 +10,9 @@ otherwise will result in a Rust compile-time error.
 
 This will not compile:
 ```rust,no_run,compile_fail
-# use sunscreen::{
-#     bulletproofs::BulletproofsBackend,
-#     fhe_program, zkp_program, zkp_var,
-#     types::{bfv::Signed, Cipher, zkp::{Field, FieldSpec, BfvSigned}},
-#     Compiler, Error, FheZkpRuntime,
-# };
-# fn main() -> Result<(), Error> {
-#[zkp_program]
-fn is_greater_than_one<F: FieldSpec>(scale: BfvSigned<F>) {
-    scale.into_field_elem().constrain_gt_bounded(zkp_var!(1), 64);
-}
+{{#rustdoc_include ../basic_prog.rs:zkp_prog}}
 
+# fn main() -> Result<(), Error> {
 let app = Compiler::new()
     .zkp_backend::<BulletproofsBackend>()
     .zkp_program(is_greater_than_one) // This is a (rust) compile-time error!
@@ -33,23 +24,9 @@ let app = Compiler::new()
 but this will:
 
 ```rust
-# use sunscreen::{
-#     bulletproofs::BulletproofsBackend,
-#     fhe_program, zkp_program, zkp_var,
-#     types::{bfv::Signed, Cipher, zkp::{Field, FieldSpec, BfvSigned}},
-#     Compiler, Error, FheZkpRuntime,
-# };
+{{#rustdoc_include ../basic_prog.rs:progs}}
+
 # fn main() -> Result<(), Error> {
-#[fhe_program]
-fn increase_by_factor(x: Signed, scale: Cipher<Signed>) -> Cipher<Signed> {
-    x * scale
-}
-
-#[zkp_program]
-fn is_greater_than_one<F: FieldSpec>(scale: BfvSigned<F>) {
-    scale.into_field_elem().constrain_gt_bounded(zkp_var!(1), 64);
-}
-
 let app = Compiler::new()
     .fhe_program(increase_by_factor)
     .zkp_backend::<BulletproofsBackend>()

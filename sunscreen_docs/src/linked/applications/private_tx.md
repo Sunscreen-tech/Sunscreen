@@ -15,7 +15,7 @@ The complete example lives [on GitHub](https://github.com/Sunscreen-tech/Sunscre
 
 First, let's import everything we need:
 
-```rust,no_run,no_playground
+```ignore
 {{#include private_tx.rs:imports}}
 ```
 
@@ -28,7 +28,7 @@ deposit into their private accounts from a public account (perhaps the native
 currency of a blockchain, like `ETH`), so we'll make use of the fact that we can
 perform addition on mixed ciphertext and plaintext values.
 
-```rust,no_run,no_playground
+```ignore
 {{#include private_tx.rs:fhe_programs}}
 ```
 
@@ -57,7 +57,7 @@ As we'll see below, the last two properties are handled outside of the ZKP
 program (by the [SDLP](/linked/intro/how.md)), so let's validate the first two
 properties.
 
-```rust,no_run,no_playground
+```ignore
 {{#include private_tx.rs:validate_transfer}}
 ```
 
@@ -70,7 +70,7 @@ consensus-driven setting, as encryptions are randomized. Instead, we'll have the
 user send over their encrypted initial balance with a ZKP proving that the encrypted
 amount is equal to the public deposit. 
 
-```rust,no_run,no_playground
+```ignore
 {{#include private_tx.rs:validate_registration}}
 ```
 
@@ -85,7 +85,7 @@ operation. We refresh a balance so that
 We need to prove that the fresh balance does indeed have a fresh encoding, and
 that it encrypts the same value as the existing one.[^2]
 
-```rust,no_run,no_playground
+```ignore
 {{#include private_tx.rs:validate_refresh_balance}}
 ```
 
@@ -95,7 +95,7 @@ For convenience, we'll wrap up the FHE and ZKP programs into an application
 type, this way each party can instantiate the same programs and run operations
 with the same paramaters.
 
-```rust,no_run,no_playground
+```ignore
 {{#include private_tx.rs:app_1}}
 {{#include private_tx.rs:app_2}}
 ```
@@ -112,7 +112,7 @@ Recall a user needs to send over two ciphertexts encrypting the transaction amou
 Of course, they'll also need to send the validity proof and a way to identify the
 sender and receiver.
 
-```rust,no_run,no_playground
+```ignore
 {{#include private_tx.rs:username_type}}
 
 {{#include private_tx.rs:transfer_type}}
@@ -124,7 +124,7 @@ A registration will rely on a deposit, so let's define this type first. Since
 the amount is public, depositing into an existing account doesn't have any proof
 requirements.
 
-```rust,no_run,no_playground
+```ignore
 {{#include private_tx.rs:deposit_type}}
 ```
 
@@ -134,7 +134,7 @@ As mentioned, the registration is an initial deposit _with_ a matching initial
 encrypted balance. In addition, the computing party needs to know the user's
 public key to run FHE programs on their ciphertexts.
 
-```rust,no_run,no_playground
+```ignore
 {{#include private_tx.rs:register_type}}
 ```
 
@@ -143,7 +143,7 @@ public key to run FHE programs on their ciphertexts.
 Lastly, refreshing a balance requires the new ciphertext and its accompanying
 proof of validity.
 
-```rust,no_run,no_playground
+```ignore
 {{#include private_tx.rs:refresh_type}}
 ```
 
@@ -151,7 +151,7 @@ proof of validity.
 
 Next up let's define a "chain" type to mimic a hypothetical blockchain perspective.
 
-```rust,no_run,no_playground
+```ignore
 {{#include private_tx.rs:transaction_type}}
 
 {{#include private_tx.rs:chain_type}}
@@ -165,7 +165,7 @@ impl Chain {
 
 Here's how the chain will verify a registration and, if successful, update its state.
 
-```rust,no_run,no_playground
+```ignore
 impl Chain {
 {{#include private_tx.rs:chain_register}}
 }
@@ -177,7 +177,7 @@ Once a user is registered, they can make more deposits. The chain will use the
 `deposit_to` FHE program, adding the public plaintext amount to the encrypted
 balance.
 
-```rust,no_run,no_playground
+```ignore
 impl Chain {
 {{#include private_tx.rs:chain_deposit}}
 }
@@ -189,7 +189,7 @@ For a private transfer, the chain needs to verify the inputs by verifying the
 accompanying proof, and then run two FHE programs, one for the sender and one
 for the receiver. 
 
-```rust,no_run,no_playground
+```ignore
 impl Chain {
 {{#include private_tx.rs:chain_transfer}}
 }
@@ -200,7 +200,7 @@ impl Chain {
 Finally, to refresh a balance the chain simply needs to verify the proof and
 then overwrite the existing balance.
 
-```rust,no_run,no_playground
+```ignore
 impl Chain {
 {{#include private_tx.rs:chain_refresh}}
 }
@@ -211,7 +211,7 @@ impl Chain {
 Now let's go over the user's perspective and how they'll construct these kinds
 of transactions. First we'll define a user type
 
-```rust,no_run,no_playground
+```ignore
 {{#include private_tx.rs:user_type}}
 
 impl User {
@@ -226,7 +226,7 @@ deposit and link it to the ZKP proving its equality to the public amount. We'll
 also add some print statements in so that we can watch what happens when we run
 `main` below.
 
-```rust,no_run,no_playground
+```ignore
 impl User {
 {{#include private_tx.rs:user_deposit}}
 
@@ -243,11 +243,11 @@ current encrypted balance to link it to the `validate_transfer` proof.
 
 Here, we'll make use of some of the more exotic methods of the `LinkedProofBuilder`;
 after calling `encrypt_returning_link` to link the transaction amount to the
-ZKP, we'll also call `encrypt_msg` which implicitly proves that the returned
+ZKP, we'll also call `reencrypt` which implicitly proves that the returned
 ciphertexts encrypt the same plaintext message. Finally we'll call
 `decrypt_returning_link` to link the current balance to the ZKP.
 
-```rust,no_run,no_playground
+```ignore
 impl User {
 {{#include private_tx.rs:user_transfer}}
 }
@@ -258,17 +258,17 @@ impl User {
 Refreshing a balance requires linking both the fresh encryption and the existing
 ciphertext. We'll again read the existing ciphertext off the chain.
 
-```rust,no_run,no_playground
+```ignore
 impl User {
 {{#include private_tx.rs:user_refresh}}
 }
 ```
 
 Astute readers may have noticed that we've proven ciphertext equality within the
-ZKP program, rather than calling `builder.encrypt_msg(existing_link)` as we did
+ZKP program, rather than calling `builder.reencrypt(existing_link)` as we did
 for the transfer linked proof. By calling `encrypt_returning_link` we are
 creating a new _freshly encoded_ plaintext, and then creating a _freshly
-encrypted_ ciphertext of it. The `encrypt_msg` does _not_ create a freshly
+encrypted_ ciphertext of it. The `reencrypt` method does _not_ create a freshly
 encoded plaintext, rather it re-encrypts the exact plaintext of the existing
 message. (And since our ZKP program constrains the linked value to a fresh
 encoding, this would fail for anything but initial balances.)

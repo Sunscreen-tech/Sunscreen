@@ -97,3 +97,4 @@
 - [Advanced topics](linked/advanced/advanced.md)
   - [Plaintext modulus](linked/advanced/plain_modulus.md)
   - [Custom bounds](linked/advanced/custom_bounds.md)
+  - [Short discrete log proof](linked/advanced/sdlp.md)

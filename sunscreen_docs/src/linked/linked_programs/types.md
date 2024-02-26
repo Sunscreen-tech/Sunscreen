@@ -12,11 +12,7 @@ Before we enumerate those types, there are a few traits and attributes to be awa
 
 The `LinkWithZkp` trait is implemented for FHE types (like [Signed][signed], [Unsigned][unsigned], etc.) that supporting linking the private encrypted values as inputs to a ZKP program. This trait uniquely defines the ZKP counterpart type; for example, the following impl
 
-```rust
-# trait FieldSpec {}
-# trait LinkWithZkp {
-#     type ZkpType<F: FieldSpec>;
-# }
+```rust,ignore
 impl LinkWithZkp for sunscreen::types::bfv::Signed {
     type ZkpType<F: FieldSpec> = sunscreen::types::zkp::BfvSigned<F>;
 }
@@ -53,6 +49,7 @@ The counterpart of the FHE [Signed][signed] type is
 # use sunscreen::{
 #     types::zkp::{AsFieldElement, BfvSigned, ConstrainEq, Field, FieldSpec}, zkp_program
 # };
+# use std::ops::Neg;
 #
 #[zkp_program]
 fn is_negation<F: FieldSpec>(#[linked] a: BfvSigned<F>, b: Field<F>) {
@@ -67,7 +64,7 @@ The counterpart of the FHE [Unsigned64][unsigned] and [Unsigned128][unsigned] ty
 
 ```rust
 # use sunscreen::{
-#     types::zkp::{AsFieldElement, BfvUnsigned64, BfvUnsigned128, ConstrainCmp, Field, FieldSpec}, zkp_program
+#     types::zkp::{AsFieldElement, BfvUnsigned64, BfvUnsigned128, ConstrainCmp, Field, FieldSpec}, zkp_program, zkp_var
 # };
 #
 #[zkp_program]

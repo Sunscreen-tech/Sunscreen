@@ -12,6 +12,7 @@ How does this work in practice? The sunscreen library provides a [builder](`crat
 > ST: I was thinking this section would basically just be the above paragraphs, maybe with a bit more detail. I don't think it makes sense to dive into the example below at this point in the docs, and a lot of the stuff that has to get explained below is explained further in the user docs. If we do want to keep it here, we should go through the text carefully because some of it is still out of date (i.e. `LinkedProof::create`).
 
 
+<!--
 # Example
 
 Let's perform a transaction where the transaction amount and balance are private. We want to prove that the transaction is valid (i.e. the transaction amount is positive and less than or equal to the balance) without revealing the transaction amount. Let's first define a relevant FHE program for computing the new balance.
@@ -202,3 +203,4 @@ fn main() {
     ).unwrap();
 }
 ```
+-->

@@ -8,19 +8,23 @@ bound up to the plaintext modulus for coefficients under degree 256, and zero
 for greater coefficients). For this reason, we expressly discourage changing the
 bounds for any messages that are linked to ZKP programs. However, you may wish
 to change the bound on noise terms for computed ciphertexts; we use a liberal
-bound of $\Delta/2$, which is the maximum noise permitted for a valid
-decryption. If you want to ensure that a computed ciphertext has much less noise,
-perhaps to use it as an input for further computation, you can lower this bound.
+bound of $\Delta/2$ for each coefficient in the noise polynomial, which is the
+maximum noise permitted for a valid decryption. If you want to ensure that a
+computed ciphertext has much less noise, perhaps to use it as an input for
+further computation, you can lower this bound.
 
 To do this, first familiarize yourself with the [documentation](https://docs.rs/logproof/latest/logproof/bfv_statement/fn.generate_prover_knowledge.html) concerning the shape of `S`.
 Then you can modify its bounds with the code below.
 
 
-```rust,no_run,no_playground
+```rust,no_run
+# use sunscreen::linked::Bounds;
 # let linkedproof: sunscreen::linked::LinkedProof = todo!();
-bounds = linkedproof.sdlp_mut().vk_mut().bounds_mut();
+# let params: sunscreen::Params = todo!();
+let degree = params.lattice_dimension as usize;
+let bounds = linkedproof.sdlp_mut().vk_mut().bounds_mut();
 // For a single decryption statement, S will have one column and four rows, with
-// the last entry containing the noise. Let's lower the bound to 32 bits.
-*bounds[(3, 0)] = 32;
+// the last entry containing the noise. Let's lower the bound on each
+// coefficient in the noise polynomial to 32 bits.
+bounds[(3, 0)] = Bounds(vec![32; degree]);
 ```
-

@@ -185,7 +185,7 @@ impl User {
             .zkp_program(self.app.get_refresh_balance_zkp())?
             .linked_input(existing_link)
             .linked_input(fresh_link)
-            .build_linkedproof()?;
+            .build()?;
 
         Ok(RefreshBalance {
             proof,

@@ -10,7 +10,10 @@ use crate::{
     },
     ops::{
         bootstrapping::rotate_glwe_positive_monomial_negacyclic,
-        ciphertext::{add_lwe_inplace, modulus_switch, sample_extract, scalar_mul_ciphertext_mad},
+        ciphertext::{
+            add_lwe_inplace, lwe_ciphertext_modulus_switch, sample_extract,
+            scalar_mul_ciphertext_mad,
+        },
         encryption::encrypt_ggsw_ciphertext_scalar,
         fft_ops::cmux,
     },
@@ -292,7 +295,7 @@ pub fn programmable_bootstrap<S>(
 
     // 1. Modulus switch the ciphertext to 2N.
     let mut ct = input.to_owned();
-    modulus_switch(&mut ct, S::BITS, two_n, lwe_params);
+    lwe_ciphertext_modulus_switch(&mut ct, S::BITS, two_n, lwe_params);
 
     let (ct_a, ct_b) = ct.a_b(lwe_params);
 

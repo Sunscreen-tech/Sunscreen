@@ -7,9 +7,10 @@ use bulletproofs::{BulletproofGens, GeneratorsChain, PedersenGens};
 use curve25519_dalek::{ristretto::RistrettoPoint, scalar::Scalar};
 use log::trace;
 use logproof::{
+    linear_algebra::Matrix,
     math::rand256,
     rings::{ZqSeal128_1024, ZqSeal128_2048, ZqSeal128_4096, ZqSeal128_8192},
-    InnerProductVerifierKnowledge, LogProof, LogProofGenerators, LogProofProverKnowledge,
+    Bounds, InnerProductVerifierKnowledge, LogProof, LogProofGenerators, LogProofProverKnowledge,
     LogProofVerifierKnowledge, ProofError,
 };
 use merlin::Transcript;
@@ -289,6 +290,16 @@ impl LinkedProof {
 
         Ok(())
     }
+
+    /// Get a reference to the SDLP.
+    pub fn sdlp(&self) -> &Sdlp {
+        &self.sdlp
+    }
+
+    /// Get a mutable reference to the SDLP.
+    pub fn sdlp_mut(&mut self) -> &mut Sdlp {
+        &mut self.sdlp
+    }
 }
 
 impl Sdlp {
@@ -312,6 +323,11 @@ impl Sdlp {
             h: gen.h,
             u,
         })
+    }
+
+    /// Get a mutable reference to the verifier knowledge.
+    pub fn vk_mut(&mut self) -> &mut SealSdlpVerifierKnowledge {
+        &mut self.vk
     }
 
     /// This function verifies a solo SDLP.
@@ -463,7 +479,7 @@ impl SealSdlpVerifierKnowledge {
         })
     }
 
-    /// Get the ranges in the serialized coefficients of `S` corresponding to the bounds
+    /// Get the ranges in the serialized coefficients of `S` corresponding to the bounds.
     ///
     /// Delegate to [`LogProofVerifierKnowledge::b_slices`].
     pub fn b_slices(&self) -> Vec<Vec<Range<usize>>> {
@@ -471,6 +487,28 @@ impl SealSdlpVerifierKnowledge {
             match &self.0 {
                 #(
                     SealSdlpVerifierKnowledgeInternal::LP~N(vk) => vk.b_slices(),
+                )*
+            }
+        })
+    }
+
+    /// Get the bounds on the secret `S`.
+    pub fn bounds(&self) -> &Matrix<Bounds> {
+        seq_zq!({
+            match &self.0 {
+                #(
+                    SealSdlpVerifierKnowledgeInternal::LP~N(vk) => &vk.bounds,
+                )*
+            }
+        })
+    }
+
+    /// Get a mutable reference to the bounds on the secret `S`.
+    pub fn bounds_mut(&mut self) -> &mut Matrix<Bounds> {
+        seq_zq!({
+            match &mut self.0 {
+                #(
+                    SealSdlpVerifierKnowledgeInternal::LP~N(vk) => &mut vk.bounds,
                 )*
             }
         })

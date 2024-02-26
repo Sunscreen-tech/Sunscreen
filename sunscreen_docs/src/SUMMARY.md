@@ -48,8 +48,6 @@
     - [Funky math: carryless arithmetic](fhe/advanced/carryless_arithmetic.md)
     - [Batching]()
 
----
-
 # ZKP
 
 - [Introduction](zkp/intro/intro.md)
@@ -80,8 +78,6 @@
     - [Constant inputs](zkp/advanced/constant_inputs.md)
     - [Creating ZKP types](zkp/advanced/zkp_type.md)
   - [WASM support](zkp/advanced/wasm.md)
-
----
 
 # FHE + ZKP
 

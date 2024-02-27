@@ -207,8 +207,9 @@ impl<'r, 'p, 'a, T: marker::Zkp, B: ZkpBackend> VerificationBuilder<'r, 'p, 'a, 
 
 #[cfg(feature = "linkedproofs")]
 pub use linked::{
-    ExistingMessage, LinkWithZkp, LinkedMessage, LinkedProofBuilder, LogProofBuilder, Message,
-    SdlpBuilder,
+    ExistingMessage, LinkWithZkp, LinkedMessage, LinkedProofBuilder,
+    LinkedProofVerificationBuilder, LogProofBuilder, LogProofVerificationBuilder, Message,
+    SdlpBuilder, SdlpVerificationBuilder,
 };
 
 #[cfg(feature = "linkedproofs")]
@@ -221,7 +222,7 @@ mod linked {
         bfv_statement::{self, BfvMessage, BfvProofStatement, BfvWitness, StatementParams},
         math::Log2,
         rings::{SealQ128_1024, SealQ128_2048, SealQ128_4096, SealQ128_8192},
-        Bounds, LogProofProverKnowledge,
+        Bounds, LogProofProverKnowledge, LogProofVerifierKnowledge,
     };
     use sunscreen_compiler_common::{Type, TypeName};
     use sunscreen_math::ring::{BarrettBackend, BarrettConfig, Zq};
@@ -233,7 +234,8 @@ mod linked {
     use crate::{
         marker, Ciphertext, CompiledZkpProgram, Fhe, FheRuntime, FheZkp, FheZkpRuntime,
         GenericRuntime, LinkedProof, NumCiphertexts, Params, Plaintext, PrivateKey, PublicKey,
-        Result, Sdlp, SealSdlpProverKnowledge, TryFromPlaintext, TryIntoPlaintext, ZkpProgramInput,
+        Result, Sdlp, SealSdlpProverKnowledge, SealSdlpVerifierKnowledge, TryFromPlaintext,
+        TryIntoPlaintext, ZkpProgramInput,
     };
 
     /// All FHE plaintext types can be used in a [`Sdlp`]. This trait indicates further that a
@@ -780,13 +782,6 @@ mod linked {
                 ctx,
             ))
         }
-
-        fn mk_bounds<P: LinkWithZkp>(&self) -> Bounds {
-            let params = self.runtime.params();
-            let mut bounds = vec![params.plain_modulus.ceil_log2(); P::DEGREE_BOUND];
-            bounds.resize(params.lattice_dimension as usize, 0);
-            Bounds(bounds)
-        }
     }
 
     impl<'r, 'k, 'z, M: marker::Fhe + marker::Zkp> LogProofBuilder<'r, 'k, 'z, M, BulletproofsBackend> {
@@ -804,7 +799,7 @@ mod linked {
             P: LinkWithZkp + TryIntoPlaintext + TypeName,
         {
             // The user intends to link this message, so add a more conservative bound
-            let bounds = self.mk_bounds::<P>();
+            let bounds = mk_bounds::<P>(self.runtime.params());
             let (ct, msg) = self.encrypt_returning_msg_internal(
                 message,
                 Key::Public(public_key),
@@ -828,7 +823,7 @@ mod linked {
             P: LinkWithZkp + TryIntoPlaintext + TypeName,
         {
             // The user intends to link this message, so add a more conservative bound
-            let bounds = self.mk_bounds::<P>();
+            let bounds = mk_bounds::<P>(self.runtime.params());
             let (ct, msg) = self.encrypt_returning_msg_internal(
                 message,
                 Key::Private(private_key),
@@ -854,7 +849,7 @@ mod linked {
         where
             P: LinkWithZkp + TryIntoPlaintext + TryFromPlaintext + TypeName,
         {
-            let bounds = self.mk_bounds::<P>();
+            let bounds = mk_bounds::<P>(self.runtime.params());
             let (pt, msg) = self.decrypt_internal::<P>(ciphertext, private_key, Some(bounds))?;
             let zkp_type = P::ZkpType::<BulletproofsFieldSpec>::type_name();
             Ok((pt, LinkedMessage::from_message(msg, zkp_type)))
@@ -934,6 +929,12 @@ mod linked {
         }
     }
 
+    fn mk_bounds<P: LinkWithZkp>(params: &Params) -> Bounds {
+        let mut bounds = vec![params.plain_modulus.ceil_log2(); P::DEGREE_BOUND];
+        bounds.resize(params.lattice_dimension as usize, 0);
+        Bounds(bounds)
+    }
+
     impl StatementParams for Params {
         fn degree(&self) -> u64 {
             self.lattice_dimension
@@ -945,6 +946,368 @@ mod linked {
 
         fn ciphertext_modulus(&self) -> Vec<u64> {
             self.coeff_modulus.clone()
+        }
+    }
+
+    /// This message type is used as an analog to the `Message` and `LinkedMessage` of the proof
+    /// builder. While the proof builder actually takes in the private messages, the verifier simply
+    /// deals with "references" to messages, i.e. their indicies and ordering.
+    #[derive(Clone, Debug)]
+    pub struct MessageRef {
+        id: usize,
+        len: usize,
+    }
+
+    /// A builder for verifying an [`Sdlp`] or [`LinkedProof`].
+    ///
+    /// The idea is that you call the same methods, in the same order, on the verification builder
+    /// as you do on the proof builder. Library or protocol authors can add wrappers around this,
+    /// via labels or other semantic attachments, but at this level, all that matters is the
+    /// ordering.
+    pub struct LogProofVerificationBuilder<'r, 'k, 'z, M, B> {
+        runtime: &'r GenericRuntime<M, B>,
+
+        // log proof fields
+        statements: Vec<BfvProofStatement<'k>>,
+        message_bounds: Vec<Option<Bounds>>,
+        sdlp: Option<Sdlp>,
+
+        // linked proof fields
+        compiled_zkp_program: Option<&'z CompiledZkpProgram>,
+        public_inputs: Vec<ZkpProgramInput>,
+        constant_inputs: Vec<ZkpProgramInput>,
+        linkedproof: Option<LinkedProof>,
+    }
+
+    /// A builder for [`SealSdlpVerifierKnowledge`].
+    pub type SdlpVerificationBuilder<'r, 'k> =
+        LogProofVerificationBuilder<'r, 'k, 'static, Fhe, ()>;
+
+    impl<'r, 'k> SdlpVerificationBuilder<'r, 'k> {
+        /// Create a new [`SdlpVerificationBuilder`].
+        pub fn new(runtime: &'r FheRuntime) -> Self {
+            LogProofVerificationBuilder::new_internal(runtime)
+        }
+
+        /// Build the SDLP verifier knowledge.
+        pub fn build(&self) -> Result<SealSdlpVerifierKnowledge> {
+            self.build_sdlp_vk()
+        }
+
+        /// Set the SDLP to prove.
+        pub fn proof(&mut self, proof: Sdlp) -> &mut Self {
+            self.sdlp = Some(proof);
+            self
+        }
+
+        /// Verify the SDLP.
+        pub fn verify(self) -> Result<()> {
+            // TODO do I need to match up params of proof and self.runtime?
+            let vk = self.build_sdlp_vk()?;
+            let mut sdlp = self.sdlp.ok_or_else(|| {
+                BuilderError::user_error(
+                    "You must supply a proof to the verification builder before calling `verify`. Use the `.proof()` method.",
+                )
+            })?;
+            *sdlp.vk_mut() = vk;
+            sdlp.verify()
+        }
+    }
+
+    /// A builder for verifying a [`LinkedProof`].
+    pub type LinkedProofVerificationBuilder<'r, 'k, 'z> =
+        LogProofVerificationBuilder<'r, 'k, 'z, FheZkp, BulletproofsBackend>;
+
+    impl<'r, 'k, 'z> LinkedProofVerificationBuilder<'r, 'k, 'z> {
+        /// Create a new [`LinkedProofVerificationBuilder`].
+        pub fn new(runtime: &'r FheZkpRuntime<BulletproofsBackend>) -> Self {
+            LogProofVerificationBuilder::new_internal(runtime)
+        }
+
+        /// Set the linked proof to prove.
+        pub fn proof(&mut self, proof: LinkedProof) -> &mut Self {
+            self.linkedproof = Some(proof);
+            self
+        }
+
+        /// Verify the linked proof.
+        pub fn verify(&mut self) -> Result<()> {
+            // TODO do I need to match up params of proof and self.runtime?
+            let vk = self.build_sdlp_vk()?;
+            let linkedproof = self.linkedproof.as_mut().ok_or_else(|| {
+                BuilderError::user_error(
+                    "You must supply a proof to the verification builder before calling `verify`. Use the `.proof()` method.",
+                )
+            })?;
+            let program = self.compiled_zkp_program.ok_or_else(|| {
+                BuilderError::user_error("Cannot build linked proof without a compiled ZKP program. Use the `.zkp_program()` method")
+            })?;
+            *linkedproof.sdlp_mut().vk_mut() = vk;
+            linkedproof.verify(
+                program,
+                self.public_inputs.clone(),
+                self.constant_inputs.clone(),
+            )
+        }
+    }
+
+    impl<'r, 'k, 'z, M: marker::Fhe, Z> LogProofVerificationBuilder<'r, 'k, 'z, M, Z> {
+        fn new_internal(runtime: &'r GenericRuntime<M, Z>) -> Self {
+            Self {
+                runtime,
+                statements: vec![],
+                message_bounds: vec![],
+                compiled_zkp_program: None,
+                public_inputs: vec![],
+                constant_inputs: vec![],
+                sdlp: None,
+                linkedproof: None,
+            }
+        }
+
+        /// Add verifier knowledge for [`LogProofBuilder::decrypt_returning_msg`].
+        pub fn decrypt_returning_msg(&mut self, ciphertext: &Ciphertext) -> Result<MessageRef> {
+            self.decrypt_internal(ciphertext, None)
+        }
+
+        fn decrypt_internal(
+            &mut self,
+            ciphertext: &Ciphertext,
+            bounds: Option<Bounds>,
+        ) -> Result<MessageRef> {
+            let start_idx = self.message_bounds.len();
+            for ct in ciphertext.inner_as_seal_ciphertext()? {
+                self.statements.push(BfvProofStatement::Decryption {
+                    message_id: self.message_bounds.len(),
+                    ciphertext: ct.data.clone(),
+                });
+                self.message_bounds.push(bounds.clone());
+            }
+            let end_idx = self.message_bounds.len();
+
+            Ok(MessageRef {
+                id: start_idx,
+                len: end_idx - start_idx,
+            })
+        }
+
+        /// Add verifier knowledge for [`LogProofBuilder::encrypt`].
+        pub fn encrypt(
+            &mut self,
+            ciphertext: &Ciphertext,
+            public_key: &'k PublicKey,
+        ) -> Result<()> {
+            self.encrypt_internal(ciphertext, public_key, None)?;
+            Ok(())
+        }
+
+        /// Add verifier knowledge for [`LogProofBuilder::encrypt_returning_msg`].
+        pub fn encrypt_returning_msg(
+            &mut self,
+            ciphertext: &Ciphertext,
+            public_key: &'k PublicKey,
+        ) -> Result<MessageRef> {
+            self.encrypt_internal(ciphertext, public_key, None)
+        }
+
+        fn encrypt_internal(
+            &mut self,
+            ciphertext: &Ciphertext,
+            public_key: &'k PublicKey,
+            bounds: Option<Bounds>,
+        ) -> Result<MessageRef> {
+            let start_idx = self.message_bounds.len();
+            for ct in ciphertext.inner_as_seal_ciphertext()? {
+                self.statements
+                    .push(BfvProofStatement::PublicKeyEncryption {
+                        message_id: self.message_bounds.len(),
+                        ciphertext: ct.data.clone(),
+                        public_key: Cow::Borrowed(&public_key.public_key.data),
+                    });
+                self.message_bounds.push(bounds.clone());
+            }
+            let end_idx = self.message_bounds.len();
+
+            Ok(MessageRef {
+                id: start_idx,
+                len: end_idx - start_idx,
+            })
+        }
+
+        /// Add verifier knowledge for [`LogProofBuilder::encrypt_symmetric`].
+        pub fn encrypt_symmetric(&mut self, ciphertext: &Ciphertext) -> Result<()> {
+            self.encrypt_symmetric_internal(ciphertext, None)?;
+            Ok(())
+        }
+
+        /// Add verifier knowledge for [`LogProofBuilder::encrypt_symmetric_returning_msg`].
+        pub fn encrypt_symmetric_returning_msg(
+            &mut self,
+            ciphertext: &Ciphertext,
+        ) -> Result<MessageRef> {
+            self.encrypt_symmetric_internal(ciphertext, None)
+        }
+
+        fn encrypt_symmetric_internal(
+            &mut self,
+            ciphertext: &Ciphertext,
+            bounds: Option<Bounds>,
+        ) -> Result<MessageRef> {
+            let start_idx = self.message_bounds.len();
+            for ct in ciphertext.inner_as_seal_ciphertext()? {
+                self.statements
+                    .push(BfvProofStatement::PrivateKeyEncryption {
+                        message_id: self.message_bounds.len(),
+                        ciphertext: ct.data.clone(),
+                    });
+                self.message_bounds.push(bounds.clone());
+            }
+            let end_idx = self.message_bounds.len();
+
+            Ok(MessageRef {
+                id: start_idx,
+                len: end_idx - start_idx,
+            })
+        }
+
+        /// Add verifier knowledge for [`LogProofBuilder::reencrypt`].
+        pub fn reencrypt(
+            &mut self,
+            message: &MessageRef,
+            ciphertext: &Ciphertext,
+            public_key: &'k PublicKey,
+        ) -> Result<()> {
+            let mut ct_size = 0;
+            for (i, ct) in ciphertext.inner_as_seal_ciphertext()?.iter().enumerate() {
+                self.statements
+                    .push(BfvProofStatement::PublicKeyEncryption {
+                        message_id: message.id + i,
+                        ciphertext: ct.data.clone(),
+                        public_key: Cow::Borrowed(&public_key.public_key.data),
+                    });
+                ct_size += 1;
+            }
+            if ct_size != message.len {
+                return Err(BuilderError::user_error(
+                    "The ciphertext's length does not match the existing message ref. This is likely a type mismatch.",
+                ));
+            }
+            Ok(())
+        }
+
+        /// Add verifier knowledge for [`LogProofBuilder::reencrypt_symmetric`].
+        pub fn reencrypt_symmetric(
+            &mut self,
+            message: &MessageRef,
+            ciphertext: &Ciphertext,
+        ) -> Result<()> {
+            let mut ct_size = 0;
+            for (i, ct) in ciphertext.inner_as_seal_ciphertext()?.iter().enumerate() {
+                self.statements
+                    .push(BfvProofStatement::PrivateKeyEncryption {
+                        message_id: message.id + i,
+                        ciphertext: ct.data.clone(),
+                    });
+                ct_size += 1;
+            }
+            if ct_size != message.len {
+                return Err(BuilderError::user_error(
+                    "The ciphertext's length does not match the existing message ref. This is likely a type mismatch.",
+                ));
+            }
+            Ok(())
+        }
+
+        /// Build the [`SealSdlpVerifierKnowledge`] for the statements added to this builder.
+        pub fn build_sdlp_vk(&self) -> Result<SealSdlpVerifierKnowledge> {
+            let params = self.runtime.params();
+            match &params.coeff_modulus[..] {
+                SealQ128_1024::Q => Ok(self.build_sdlp_vk_generic::<1, SealQ128_1024>()?.into()),
+                SealQ128_2048::Q => Ok(self.build_sdlp_vk_generic::<1, SealQ128_2048>()?.into()),
+                SealQ128_4096::Q => Ok(self.build_sdlp_vk_generic::<2, SealQ128_4096>()?.into()),
+                SealQ128_8192::Q => Ok(self.build_sdlp_vk_generic::<3, SealQ128_8192>()?.into()),
+                _ => Err(BuilderError::UnsupportedParameters(Box::new(params.clone())).into()),
+            }
+        }
+
+        fn build_sdlp_vk_generic<const N: usize, B: BarrettConfig<N>>(
+            &self,
+        ) -> Result<LogProofVerifierKnowledge<Zq<N, BarrettBackend<N, B>>>> {
+            Ok(bfv_statement::generate_verifier_knowledge(
+                &self.statements,
+                &self.message_bounds,
+                self.runtime.params(),
+                self.runtime.context(),
+            ))
+        }
+    }
+
+    impl<'r, 'k, 'z, M: marker::Fhe + marker::Zkp>
+        LogProofVerificationBuilder<'r, 'k, 'z, M, BulletproofsBackend>
+    {
+        /// Add verifier knowledge for [`LogProofBuilder::encrypt_returning_link`].
+        pub fn encrypt_returning_link<P>(
+            &mut self,
+            ciphertext: &Ciphertext,
+            public_key: &'k PublicKey,
+        ) -> Result<MessageRef>
+        where
+            P: LinkWithZkp,
+        {
+            self.encrypt_internal(
+                ciphertext,
+                public_key,
+                Some(mk_bounds::<P>(self.runtime.params())),
+            )
+        }
+
+        /// Add verifier knowledge for [`LogProofBuilder::encrypt_symmetric_returning_link`].
+        pub fn encrypt_symmetric_returning_link<P>(
+            &mut self,
+            ciphertext: &Ciphertext,
+        ) -> Result<MessageRef>
+        where
+            P: LinkWithZkp,
+        {
+            self.encrypt_symmetric_internal(ciphertext, Some(mk_bounds::<P>(self.runtime.params())))
+        }
+
+        /// Add verifier knowledge for [`LogProofBuilder::decrypt_returning_link`].
+        pub fn decrypt_returning_link<P>(&mut self, ciphertext: &Ciphertext) -> Result<MessageRef>
+        where
+            P: LinkWithZkp,
+        {
+            self.decrypt_internal(ciphertext, Some(mk_bounds::<P>(self.runtime.params())))
+        }
+
+        /// Add the ZKP program to verify.
+        ///
+        /// This method is required to call [`Self::verify`].
+        pub fn zkp_program(&mut self, program: &'z CompiledZkpProgram) -> Result<&mut Self> {
+            let params = program.metadata.params.as_ref().ok_or_else(|| {
+                BuilderError::user_error(
+                    "Cannot link a ZKP program without associated FHE parameters. Make sure your ZKP program has #[linked] parameters and is compiled alongside an FHE program.",
+                )
+            })?;
+            if params != self.runtime.params() {
+                return Err(BuilderError::user_error(
+                    "The FHE parameters of the ZKP program do not match the FHE parameters of the runtime.",
+                ));
+            }
+            self.compiled_zkp_program = Some(program);
+            Ok(self)
+        }
+
+        /// Add a public input to the ZKP program.
+        pub fn public_input(&mut self, input: impl Into<ZkpProgramInput>) -> &mut Self {
+            self.public_inputs.push(input.into());
+            self
+        }
+
+        /// Add a constant input to the ZKP program.
+        pub fn constant_input(&mut self, input: impl Into<ZkpProgramInput>) -> &mut Self {
+            self.constant_inputs.push(input.into());
+            self
         }
     }
 }

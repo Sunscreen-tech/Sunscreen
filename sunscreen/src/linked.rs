@@ -26,6 +26,7 @@
 //! for SDLP and sharing the secrets with the [`zkp_program`](crate::zkp_program).
 pub use logproof::Bounds;
 pub use sunscreen_runtime::{
-    ExistingMessage, LinkWithZkp, LinkedMessage, LinkedProof, LinkedProofBuilder, Message, Sdlp,
-    SdlpBuilder, SealSdlpProverKnowledge, SealSdlpVerifierKnowledge,
+    ExistingMessage, LinkWithZkp, LinkedMessage, LinkedProof, LinkedProofBuilder,
+    LinkedProofVerificationBuilder, Message, Sdlp, SdlpBuilder, SdlpVerificationBuilder,
+    SealSdlpProverKnowledge, SealSdlpVerifierKnowledge,
 };

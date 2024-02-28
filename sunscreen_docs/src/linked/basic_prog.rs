@@ -12,9 +12,9 @@ use sunscreen::{
         },
         Cipher,
     },
-    zkp_program, zkp_var, Ciphertext, CompiledFheProgram, CompiledZkpProgram, Compiler,
-    FheProgramInput, FheZkpApplication, FheZkpRuntime, Params, PrivateKey, PublicKey, Result,
-    ZkpProgramInput, Error
+    zkp_program, zkp_var, Ciphertext, CompiledFheProgram, CompiledZkpProgram, Compiler, Error,
+    FheProgramInput, FheRuntime, FheZkpApplication, FheZkpRuntime, Params, PrivateKey, PublicKey,
+    Result, ZkpProgramInput,
 };
 // ANCHOR_END: imports
 
@@ -29,7 +29,9 @@ fn increase_by_factor(x: Signed, scale: Cipher<Signed>) -> Cipher<Signed> {
 // ANCHOR: zkp_prog
 #[zkp_program]
 fn is_greater_than_one<F: FieldSpec>(#[linked] scale: BfvSigned<F>) {
-    scale.into_field_elem().constrain_gt_bounded(zkp_var!(1), 64);
+    scale
+        .into_field_elem()
+        .constrain_gt_bounded(zkp_var!(1), 64);
 }
 // ANCHOR_END: zkp_prog
 // ANCHOR_END: progs

@@ -27,6 +27,6 @@
 pub use logproof::Bounds;
 pub use sunscreen_runtime::{
     ExistingMessage, LinkWithZkp, LinkedMessage, LinkedProof, LinkedProofBuilder,
-    LinkedProofVerificationBuilder, Message, Sdlp, SdlpBuilder, SdlpVerificationBuilder,
-    SealSdlpProverKnowledge, SealSdlpVerifierKnowledge,
+    LinkedProofVerificationBuilder, Message, Sdlp, SdlpBuilder, SdlpProverKnowledge,
+    SdlpVerificationBuilder, SdlpVerifierKnowledge,
 };

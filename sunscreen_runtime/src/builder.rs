@@ -234,7 +234,7 @@ mod linked {
     use crate::{
         marker, Ciphertext, CompiledZkpProgram, Fhe, FheRuntime, FheZkp, FheZkpRuntime,
         GenericRuntime, LinkedProof, NumCiphertexts, Params, Plaintext, PrivateKey, PublicKey,
-        Result, Sdlp, SealSdlpProverKnowledge, SealSdlpVerifierKnowledge, TryFromPlaintext,
+        Result, Sdlp, SdlpProverKnowledge, SdlpVerifierKnowledge, TryFromPlaintext,
         TryIntoPlaintext, ZkpProgramInput,
     };
 
@@ -763,9 +763,9 @@ mod linked {
             Sdlp::create(&self.build_sdlp_pk()?)
         }
 
-        fn build_sdlp_pk(&self) -> Result<SealSdlpProverKnowledge> {
+        fn build_sdlp_pk(&self) -> Result<SdlpProverKnowledge> {
             let params = self.runtime.params();
-            let mut pk: SealSdlpProverKnowledge = match &params.coeff_modulus[..] {
+            let mut pk: SdlpProverKnowledge = match &params.coeff_modulus[..] {
                 SealQ128_1024::Q => Ok(self.build_sdlp_pk_generic::<1, SealQ128_1024>()?.into()),
                 SealQ128_2048::Q => Ok(self.build_sdlp_pk_generic::<1, SealQ128_2048>()?.into()),
                 SealQ128_4096::Q => Ok(self.build_sdlp_pk_generic::<2, SealQ128_4096>()?.into()),
@@ -995,7 +995,7 @@ mod linked {
         linkedproof: Option<LinkedProof>,
     }
 
-    /// A builder for [`SealSdlpVerifierKnowledge`].
+    /// A builder for [`SdlpVerifierKnowledge`].
     pub type SdlpVerificationBuilder<'r, 'k> =
         LogProofVerificationBuilder<'r, 'k, 'static, Fhe, ()>;
 
@@ -1006,7 +1006,7 @@ mod linked {
         }
 
         /// Build the SDLP verifier knowledge.
-        pub fn build(&self) -> Result<SealSdlpVerifierKnowledge> {
+        pub fn build(&self) -> Result<SdlpVerifierKnowledge> {
             self.build_sdlp_vk()
         }
 
@@ -1243,10 +1243,10 @@ mod linked {
             self
         }
 
-        /// Build the [`SealSdlpVerifierKnowledge`] for the statements added to this builder.
-        pub fn build_sdlp_vk(&self) -> Result<SealSdlpVerifierKnowledge> {
+        /// Build the [`SdlpVerifierKnowledge`] for the statements added to this builder.
+        pub fn build_sdlp_vk(&self) -> Result<SdlpVerifierKnowledge> {
             let params = self.runtime.params();
-            let mut vk: SealSdlpVerifierKnowledge = match &params.coeff_modulus[..] {
+            let mut vk: SdlpVerifierKnowledge = match &params.coeff_modulus[..] {
                 SealQ128_1024::Q => Ok(self.build_sdlp_vk_generic::<1, SealQ128_1024>()?.into()),
                 SealQ128_2048::Q => Ok(self.build_sdlp_vk_generic::<1, SealQ128_2048>()?.into()),
                 SealQ128_4096::Q => Ok(self.build_sdlp_vk_generic::<2, SealQ128_4096>()?.into()),

@@ -1009,8 +1009,7 @@ mod linked {
                     "You must supply a proof to the verification builder before calling `verify`. Use the `.proof()` method.",
                 )
             })?;
-            *sdlp.vk_mut() = vk;
-            sdlp.verify()
+            sdlp.verify(&vk)
         }
     }
 
@@ -1042,8 +1041,8 @@ mod linked {
             let program = self.compiled_zkp_program.ok_or_else(|| {
                 BuilderError::user_error("Cannot build linked proof without a compiled ZKP program. Use the `.zkp_program()` method")
             })?;
-            *linkedproof.sdlp_mut().vk_mut() = vk;
             linkedproof.verify(
+                &vk,
                 program,
                 self.public_inputs.clone(),
                 self.constant_inputs.clone(),

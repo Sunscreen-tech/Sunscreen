@@ -28,10 +28,9 @@ use sunscreen_zkp_backend::{
 use crate::{CompiledZkpProgram, Result, TypeNameInstance, ZkpProgramInput, ZkpRuntime};
 
 #[derive(Serialize, Deserialize, Clone)]
-/// SDLP proof and associated information for verification
+/// SDLP proof
 pub struct Sdlp {
     proof: LogProof,
-    vk: SealSdlpVerifierKnowledge,
     g: Vec<RistrettoPoint>,
     h: Vec<RistrettoPoint>,
     u: RistrettoPoint,
@@ -161,7 +160,6 @@ impl LinkedProof {
 
         let sdlp_package = Sdlp {
             proof: sdlp_proof,
-            vk,
             g: gens.g,
             h: gens.h,
             u,
@@ -247,8 +245,9 @@ impl LinkedProof {
     /// * `public_inputs`: The public inputs to the ZKP program
     /// * `constant_inputs`: The constant inputs to the ZKP program
     ///
-    pub(crate) fn verify<I>(
+    pub fn verify<I>(
         &self,
+        sdlp_vk: &SealSdlpVerifierKnowledge,
         program: &CompiledZkpProgram,
         public_inputs: Vec<I>,
         constant_inputs: Vec<I>,
@@ -260,8 +259,7 @@ impl LinkedProof {
 
         let mut transcript = Transcript::new(Self::TRANSCRIPT_LABEL);
 
-        self.sdlp
-            .vk
+        sdlp_vk
             .verify(
                 &self.sdlp.proof,
                 &mut transcript,
@@ -319,24 +317,17 @@ impl Sdlp {
 
         Ok(Self {
             proof,
-            vk,
             g: gen.g,
             h: gen.h,
             u,
         })
     }
 
-    /// Get a mutable reference to the verifier knowledge.
-    pub fn vk_mut(&mut self) -> &mut SealSdlpVerifierKnowledge {
-        &mut self.vk
-    }
-
     /// This function verifies a solo SDLP.
-    pub(crate) fn verify(&self) -> Result<()> {
+    pub fn verify(&self, vk: &SealSdlpVerifierKnowledge) -> Result<()> {
         let mut transcript = Transcript::new(Self::TRANSCRIPT_LABEL);
 
-        self.vk
-            .verify(&self.proof, &mut transcript, &self.g, &self.h, &self.u)?;
+        vk.verify(&self.proof, &mut transcript, &self.g, &self.h, &self.u)?;
 
         Ok(())
     }

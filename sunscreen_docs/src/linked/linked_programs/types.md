@@ -70,12 +70,10 @@ The counterpart of the FHE [Unsigned64][unsigned] and [Unsigned128][unsigned] ty
 #
 #[zkp_program]
 fn exceeds<F: FieldSpec>(#[linked] a: BfvUnsigned64<F>, #[linked] b: BfvUnsigned128<F>) {
-    zkp_var!(u32::MAX).constrain_le_bounded(a.into_field_elem(), 64);
-    zkp_var!(u64::MAX).constrain_le_bounded(b.into_field_elem(), 128);
+    a.into_field_elem().constrain_le_bounded(zkp_var!(u64::MAX), 64);
+    b.into_field_elem().constrain_le_bounded(zkp_var!(u128::MAX), 128);
 }
 ```
-> NS: Fix the u32::MAX to a u64 so it looks more logical.
-
 ## Rational
 
 The counterpart of the FHE [Rational][rational] type is `BfvRational`. This one

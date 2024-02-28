@@ -53,52 +53,56 @@ impl<F: FieldSpec> Field<F> {
      * Converts a big-endian hex string into a native field.
      */
     pub fn from_be_hex(hex_str: &str) -> Self {
-        Self {
-            val: BigInt::from_be_hex(hex_str),
-            _phantom: PhantomData,
-        }
+        from_unsigned(BigInt::from_be_hex(hex_str))
     }
 }
 
 impl<F: FieldSpec> From<BigInt> for Field<F> {
-    fn from(val: BigInt) -> Self {
-        Self {
-            val,
-            _phantom: PhantomData,
-        }
+    fn from(x: BigInt) -> Self {
+        from_unsigned(x)
     }
 }
 
 impl<F: FieldSpec> From<u8> for Field<F> {
     fn from(x: u8) -> Self {
-        (u64::from(x)).into()
+        from_unsigned(x)
     }
 }
 
 impl<F: FieldSpec> From<u16> for Field<F> {
     fn from(x: u16) -> Self {
-        (u64::from(x)).into()
+        from_unsigned(x)
     }
 }
 
 impl<F: FieldSpec> From<u32> for Field<F> {
     fn from(x: u32) -> Self {
-        (u64::from(x)).into()
+        from_unsigned(x)
     }
 }
 
 impl<F: FieldSpec> From<u64> for Field<F> {
     fn from(x: u64) -> Self {
-        assert!(F::FIELD_MODULUS != BigInt::ZERO);
+        from_unsigned(x)
+    }
+}
 
-        let m = NonZero::from_uint(*F::FIELD_MODULUS);
+impl<F: FieldSpec> From<u128> for Field<F> {
+    fn from(x: u128) -> Self {
+        from_unsigned(x)
+    }
+}
 
-        // unwrap is okay here as we've ensured FIELD_MODULUS is
-        // non-zero.
-        Self {
-            val: BigInt::from(BigInt::from(x).rem(&m)),
-            _phantom: PhantomData,
-        }
+fn from_unsigned<T: Into<BigInt>, F: FieldSpec>(x: T) -> Field<F> {
+    assert!(F::FIELD_MODULUS != BigInt::ZERO);
+
+    let m = NonZero::from_uint(*F::FIELD_MODULUS);
+
+    // unwrap is okay here as we've ensured FIELD_MODULUS is
+    // non-zero.
+    Field {
+        val: BigInt::from(x.into().rem(&m)),
+        _phantom: PhantomData,
     }
 }
 

@@ -53,15 +53,13 @@ want a bad actor to be able to send an encrypted transaction with a ton of
 [noise](/fhe/advanced/noise_margin.md) that causes the receiver's balance to be
 un-decryptable. 
 
-As we'll see below, the last two properties are handled outside of the ZKP
+As we'll see [below](#transfer-3), the last two properties are handled outside of the ZKP
 program (by the [SDLP](/linked/intro/how.md)), so let's validate the first two
 properties.
 
 ```rust,ignore
 {{#include private_tx.rs:validate_transfer}}
 ```
-
-> NS: It is not clear where the last 2 properties are being handled by SDLP. Can you make it more explicit?
 
 #### Registration
 
@@ -245,9 +243,10 @@ current encrypted balance to link it to the `validate_transfer` proof.
 
 Here, we'll make use of some of the more exotic methods of the `LinkedProofBuilder`;
 after calling `encrypt_returning_link` to link the transaction amount to the
-ZKP, we'll also call `reencrypt` which implicitly proves that the returned
-ciphertexts encrypt the same plaintext message. Finally we'll call
-`decrypt_returning_link` to link the current balance to the ZKP.
+ZKP, we'll call `reencrypt` which implicitly proves that the returned
+ciphertexts encrypt the same plaintext message. Both of these methods also
+implicitly prove that the returned ciphertexts are fresh encryptions. Finally
+we'll call `decrypt_returning_link` to link the current balance to the ZKP.
 
 ```rust,ignore
 impl User {

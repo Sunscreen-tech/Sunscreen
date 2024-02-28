@@ -247,7 +247,7 @@ impl LinkedProof {
     /// * `public_inputs`: The public inputs to the ZKP program
     /// * `constant_inputs`: The constant inputs to the ZKP program
     ///
-    pub fn verify<I>(
+    pub(crate) fn verify<I>(
         &self,
         program: &CompiledZkpProgram,
         public_inputs: Vec<I>,
@@ -332,7 +332,7 @@ impl Sdlp {
     }
 
     /// This function verifies a solo SDLP.
-    pub fn verify(&self) -> Result<()> {
+    pub(crate) fn verify(&self) -> Result<()> {
         let mut transcript = Transcript::new(Self::TRANSCRIPT_LABEL);
 
         self.vk

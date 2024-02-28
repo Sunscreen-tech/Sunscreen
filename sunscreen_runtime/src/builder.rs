@@ -1001,10 +1001,10 @@ mod linked {
         }
 
         /// Verify the SDLP.
-        pub fn verify(self) -> Result<()> {
+        pub fn verify(&mut self) -> Result<()> {
             // TODO do I need to match up params of proof and self.runtime?
             let vk = self.build_sdlp_vk()?;
-            let mut sdlp = self.sdlp.ok_or_else(|| {
+            let sdlp = self.sdlp.as_mut().ok_or_else(|| {
                 BuilderError::user_error(
                     "You must supply a proof to the verification builder before calling `verify`. Use the `.proof()` method.",
                 )

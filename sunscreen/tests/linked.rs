@@ -28,9 +28,6 @@ mod linked_tests {
         };
     }
 
-    #[fhe_program(scheme = "bfv")]
-    fn doggie() {}
-
     #[zkp_program]
     fn valid_transaction<F: FieldSpec>(#[linked] tx: BfvSigned<F>, #[public] balance: Field<F>) {
         let lower_bound = zkp_var!(0);
@@ -48,7 +45,6 @@ mod linked_tests {
     #[test]
     fn test_valid_transaction_example() {
         let app = Compiler::new()
-            .fhe_program(doggie)
             .with_params(&TEST_PARAMS)
             .zkp_backend::<BulletproofsBackend>()
             .zkp_program(valid_transaction)
@@ -93,7 +89,6 @@ mod linked_tests {
     #[test]
     fn test_invalid_transaction_example() {
         let app = Compiler::new()
-            .fhe_program(doggie)
             .with_params(&TEST_PARAMS)
             .zkp_backend::<BulletproofsBackend>()
             .zkp_program(valid_transaction)
@@ -130,7 +125,6 @@ mod linked_tests {
     #[test]
     fn test_signed_encoding() {
         let app = Compiler::new()
-            .fhe_program(doggie)
             .with_params(&TEST_PARAMS)
             .zkp_backend::<BulletproofsBackend>()
             .zkp_program(is_eq_signed)
@@ -181,7 +175,6 @@ mod linked_tests {
     #[test]
     fn test_rational_encoding() {
         let app = Compiler::new()
-            .fhe_program(doggie)
             .with_params(&TEST_PARAMS)
             .zkp_backend::<BulletproofsBackend>()
             .zkp_program(is_eq_rational)
@@ -225,7 +218,6 @@ mod linked_tests {
     #[test]
     fn can_compare_signed() {
         let app = Compiler::new()
-            .fhe_program(doggie)
             .with_params(&TEST_PARAMS)
             .zkp_backend::<BulletproofsBackend>()
             .zkp_program(compare_signed)
@@ -276,7 +268,6 @@ mod linked_tests {
     #[test]
     fn can_compare_rationals() {
         let app = Compiler::new()
-            .fhe_program(doggie)
             .with_params(&TEST_PARAMS)
             .zkp_backend::<BulletproofsBackend>()
             .zkp_program(compare_rational)
@@ -336,7 +327,6 @@ mod linked_tests {
         // proves equivalence of pt x and pt x1 within SDLP
         // proves equivalence of pt x, pt y, and field elem z within ZKP
         let app = Compiler::new()
-            .fhe_program(doggie)
             .with_params(&TEST_PARAMS)
             .zkp_backend::<BulletproofsBackend>()
             .zkp_program(is_eq_3)
@@ -380,7 +370,6 @@ mod linked_tests {
     #[test]
     fn valid_fresh_encodings() {
         let app = Compiler::new()
-            .fhe_program(doggie)
             .with_params(&TEST_PARAMS)
             .zkp_backend::<BulletproofsBackend>()
             .zkp_program(is_fresh)
@@ -510,7 +499,6 @@ mod linked_tests {
     fn compiler_enforces_moduli_pow_2() {
         // try to compile zkp program with plain modulus 100
         let res = Compiler::new()
-            .fhe_program(doggie)
             .plain_modulus_constraint(PlainModulusConstraint::Raw(100))
             .zkp_backend::<BulletproofsBackend>()
             .zkp_program(is_eq_signed)
@@ -522,7 +510,6 @@ mod linked_tests {
     fn builder_enforces_moduli_match() {
         // compile zkp program with plain modulus 512
         let app = Compiler::new()
-            .fhe_program(doggie)
             .plain_modulus_constraint(PlainModulusConstraint::Raw(512))
             .zkp_backend::<BulletproofsBackend>()
             .zkp_program(is_eq_signed)
@@ -545,7 +532,6 @@ mod linked_tests {
     fn throws_private_linked_arg_mismatch() {
         fn test_case(num_linked_inputs: usize, num_private_inputs: usize) {
             let app = Compiler::new()
-                .fhe_program(doggie)
                 .with_params(&TEST_PARAMS)
                 .zkp_backend::<BulletproofsBackend>()
                 .zkp_program(is_eq_3)
@@ -581,7 +567,6 @@ mod linked_tests {
     #[test]
     fn throws_linked_arg_type_mismatch() {
         let app = Compiler::new()
-            .fhe_program(doggie)
             .with_params(&TEST_PARAMS)
             .zkp_backend::<BulletproofsBackend>()
             .zkp_program(compare_signed)

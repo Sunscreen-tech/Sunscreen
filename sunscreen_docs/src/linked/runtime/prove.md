@@ -99,8 +99,6 @@ let proof = builder
 Again, you can also use `encrypt_symmetric_returning_link` to do the same thing
 for a symmetric encryption.
 
-> NS: Can we change it so the linked_input is provided as an input to 'verify' rather than part ofthe builder?
-
 #### Decrypt returning link
 
 Use the `decrypt_returning_link` method if you have an existing ciphertext,

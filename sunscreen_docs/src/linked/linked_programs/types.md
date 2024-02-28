@@ -28,7 +28,6 @@ link an FHE type to a ZKP program, it is actually this plaintext polynomial that
 inserted into the ZKP circuit. 
 
 Of course, if you are linking this value to your ZKP program, you _probably_ don't care about the actual encoding (i.e., the plaintext polynomial coefficients), but rather the _underlying value_ being encoded, whether that's a signed, unsigned, or rational value. This is where the `AsFieldElement` trait comes in: given a `linked_input`, the trait method `linked_input.into_field_elem()` decodes the input into a native field element.
-> NS: Can we get rid of the "into_field_elem" ?
 
 ### Specifying linked inputs
 

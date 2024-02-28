@@ -310,8 +310,7 @@ impl Sdlp {
     /// The [builder methods](`crate::SdlpBuilder`) offer an easier way to construct this proof.
     pub fn create(prover_knowledge: &SealSdlpProverKnowledge) -> Result<Self> {
         let mut transcript = Transcript::new(Self::TRANSCRIPT_LABEL);
-        let vk = prover_knowledge.vk();
-        let gen = LogProofGenerators::new(vk.l() as usize);
+        let gen = LogProofGenerators::new(prover_knowledge.vk().l() as usize);
         let u = InnerProductVerifierKnowledge::get_u();
         let proof = prover_knowledge.create_logproof(&mut transcript, &gen.g, &gen.h, &u);
 
@@ -409,6 +408,17 @@ impl SealSdlpProverKnowledge {
                     SealSdlpProverKnowledgeInternal::LP~N(pk) => {
                         SealSdlpVerifierKnowledge(SealSdlpVerifierKnowledgeInternal::LP~N(pk.vk.clone()))
                     }
+                )*
+            }
+        })
+    }
+
+    /// Get a mutable reference to the bounds on the secret `S`.
+    pub fn bounds_mut(&mut self) -> &mut Matrix<Bounds> {
+        seq_zq!({
+            match &mut self.0 {
+                #(
+                    SealSdlpProverKnowledgeInternal::LP~N(pk) => &mut pk.vk.bounds,
                 )*
             }
         })

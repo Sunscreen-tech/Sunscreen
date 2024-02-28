@@ -401,6 +401,7 @@ mod linked {
         statements: Vec<BfvProofStatement<'k>>,
         messages: Vec<BfvMessage>,
         witness: Vec<BfvWitness<'k>>,
+        custom_bounds: Vec<((usize, usize), Bounds)>,
 
         // linked proof fields
         compiled_zkp_program: Option<&'z CompiledZkpProgram>,
@@ -454,6 +455,7 @@ mod linked {
                 statements: vec![],
                 messages: vec![],
                 witness: vec![],
+                custom_bounds: vec![],
                 compiled_zkp_program: None,
                 linked_inputs: vec![],
                 private_inputs: vec![],
@@ -745,6 +747,17 @@ mod linked {
             })
         }
 
+        /// Customize bounds for a given entry in the secret `S`. Note the verifier must also
+        /// provide the same custom bounds when building the verifier knowledge.
+        ///
+        /// # Remarks
+        /// This is for advanced users that are familiar with the shape of the matrices documented
+        /// in [`logproof::bfv_statement::generate_prover_knowledge`].
+        pub fn add_custom_bounds(&mut self, row: usize, col: usize, bounds: Bounds) -> &mut Self {
+            self.custom_bounds.push(((row, col), bounds));
+            self
+        }
+
         /// Build the [`Sdlp`] for the statements added to this builder.
         fn build_logproof(&self) -> Result<Sdlp> {
             Sdlp::create(&self.build_sdlp_pk()?)
@@ -752,21 +765,23 @@ mod linked {
 
         fn build_sdlp_pk(&self) -> Result<SealSdlpProverKnowledge> {
             let params = self.runtime.params();
-            match &params.coeff_modulus[..] {
-                SealQ128_1024::Q => Ok(SealSdlpProverKnowledge::from(
-                    self.build_sdlp_pk_generic::<1, SealQ128_1024>()?,
-                )),
-                SealQ128_2048::Q => Ok(SealSdlpProverKnowledge::from(
-                    self.build_sdlp_pk_generic::<1, SealQ128_2048>()?,
-                )),
-                SealQ128_4096::Q => Ok(SealSdlpProverKnowledge::from(
-                    self.build_sdlp_pk_generic::<2, SealQ128_4096>()?,
-                )),
-                SealQ128_8192::Q => Ok(SealSdlpProverKnowledge::from(
-                    self.build_sdlp_pk_generic::<3, SealQ128_8192>()?,
-                )),
-                _ => Err(BuilderError::UnsupportedParameters(Box::new(params.clone())).into()),
+            let mut pk: SealSdlpProverKnowledge = match &params.coeff_modulus[..] {
+                SealQ128_1024::Q => Ok(self.build_sdlp_pk_generic::<1, SealQ128_1024>()?.into()),
+                SealQ128_2048::Q => Ok(self.build_sdlp_pk_generic::<1, SealQ128_2048>()?.into()),
+                SealQ128_4096::Q => Ok(self.build_sdlp_pk_generic::<2, SealQ128_4096>()?.into()),
+                SealQ128_8192::Q => Ok(self.build_sdlp_pk_generic::<3, SealQ128_8192>()?.into()),
+                _ => Err(BuilderError::UnsupportedParameters(Box::new(
+                    params.clone(),
+                ))),
+            }?;
+
+            // Add the custom bounds, if any
+            let bounds = pk.bounds_mut();
+            for ((row, col), bound) in &self.custom_bounds {
+                bounds[(*row, *col)] = bound.clone();
             }
+
+            Ok(pk)
         }
 
         fn build_sdlp_pk_generic<const N: usize, B: BarrettConfig<N>>(
@@ -971,6 +986,7 @@ mod linked {
         statements: Vec<BfvProofStatement<'k>>,
         message_bounds: Vec<Option<Bounds>>,
         sdlp: Option<Sdlp>,
+        custom_bounds: Vec<((usize, usize), Bounds)>,
 
         // linked proof fields
         compiled_zkp_program: Option<&'z CompiledZkpProgram>,
@@ -1002,7 +1018,6 @@ mod linked {
 
         /// Verify the SDLP.
         pub fn verify(&mut self) -> Result<()> {
-            // TODO do I need to match up params of proof and self.runtime?
             let vk = self.build_sdlp_vk()?;
             let sdlp = self.sdlp.as_mut().ok_or_else(|| {
                 BuilderError::user_error(
@@ -1031,7 +1046,6 @@ mod linked {
 
         /// Verify the linked proof.
         pub fn verify(&mut self) -> Result<()> {
-            // TODO do I need to match up params of proof and self.runtime?
             let vk = self.build_sdlp_vk()?;
             let linkedproof = self.linkedproof.as_mut().ok_or_else(|| {
                 BuilderError::user_error(
@@ -1044,8 +1058,8 @@ mod linked {
             linkedproof.verify(
                 &vk,
                 program,
-                self.public_inputs.clone(),
-                self.constant_inputs.clone(),
+                self.public_inputs.drain(0..).collect(),
+                self.constant_inputs.drain(0..).collect(),
             )
         }
     }
@@ -1056,6 +1070,7 @@ mod linked {
                 runtime,
                 statements: vec![],
                 message_bounds: vec![],
+                custom_bounds: vec![],
                 compiled_zkp_program: None,
                 public_inputs: vec![],
                 constant_inputs: vec![],
@@ -1217,16 +1232,37 @@ mod linked {
             Ok(())
         }
 
+        /// Customize bounds for a given entry in the secret `S`. Note these custom bounds must
+        /// match those provided during the proof generation.
+        ///
+        /// # Remarks
+        /// This is for advanced users that are familiar with the shape of the matrices documented
+        /// in [`logproof::bfv_statement::generate_prover_knowledge`].
+        pub fn add_custom_bounds(&mut self, row: usize, col: usize, bounds: Bounds) -> &mut Self {
+            self.custom_bounds.push(((row, col), bounds));
+            self
+        }
+
         /// Build the [`SealSdlpVerifierKnowledge`] for the statements added to this builder.
         pub fn build_sdlp_vk(&self) -> Result<SealSdlpVerifierKnowledge> {
             let params = self.runtime.params();
-            match &params.coeff_modulus[..] {
+            let mut vk: SealSdlpVerifierKnowledge = match &params.coeff_modulus[..] {
                 SealQ128_1024::Q => Ok(self.build_sdlp_vk_generic::<1, SealQ128_1024>()?.into()),
                 SealQ128_2048::Q => Ok(self.build_sdlp_vk_generic::<1, SealQ128_2048>()?.into()),
                 SealQ128_4096::Q => Ok(self.build_sdlp_vk_generic::<2, SealQ128_4096>()?.into()),
                 SealQ128_8192::Q => Ok(self.build_sdlp_vk_generic::<3, SealQ128_8192>()?.into()),
-                _ => Err(BuilderError::UnsupportedParameters(Box::new(params.clone())).into()),
+                _ => Err(BuilderError::UnsupportedParameters(Box::new(
+                    params.clone(),
+                ))),
+            }?;
+
+            // Add the custom bounds, if any
+            let bounds = vk.bounds_mut();
+            for ((row, col), bound) in &self.custom_bounds {
+                bounds[(*row, *col)] = bound.clone();
             }
+
+            Ok(vk)
         }
 
         fn build_sdlp_vk_generic<const N: usize, B: BarrettConfig<N>>(

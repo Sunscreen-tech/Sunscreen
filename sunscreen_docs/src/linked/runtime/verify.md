@@ -20,18 +20,18 @@ let (public_key, private_key) = runtime.generate_keys()?;
 
 let mut proof_builder = runtime.linkedproof_builder();
 
-let (ct, link) = builder.encrypt_returning_link(&Signed::from(2), &public_key)?;
-let proof = builder
+let (ct, link) = proof_builder.encrypt_returning_link(&Signed::from(2), &public_key)?;
+let proof = proof_builder
     .zkp_program(app.get_zkp_program(is_greater_than_one).unwrap())?
     .linked_input(link)
     .build()?;
 
 let mut verify_builder = runtime.linkedproof_verification_builder();
-verify_builder.encrypt_returning_link(&ct, &public_key)?;
+verify_builder.encrypt_returning_link::<Signed>(&ct, &public_key)?;
 verify_builder
     .proof(proof)
     .zkp_program(app.get_zkp_program(is_greater_than_one).unwrap())?
-    .prove()?;
+    .verify()?;
 #     Ok(())
 # }
 ```

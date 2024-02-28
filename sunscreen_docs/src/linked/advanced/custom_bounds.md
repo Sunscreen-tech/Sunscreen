@@ -18,13 +18,42 @@ Then you can modify its bounds with the code below.
 
 
 ```rust,no_run
-# use sunscreen::linked::Bounds;
-# let linkedproof: sunscreen::linked::LinkedProof = todo!();
-# let params: sunscreen::Params = todo!();
-let degree = params.lattice_dimension as usize;
-let bounds = linkedproof.sdlp_mut().vk_mut().bounds_mut();
+{{#rustdoc_include ../basic_prog.rs:none}}
+use sunscreen::linked::Bounds;
+
+# fn main() -> Result<(), Error> {
+let app = Compiler::new()
+    .fhe_program(increase_by_factor)
+    .zkp_backend::<BulletproofsBackend>()
+    .zkp_program(is_greater_than_one)
+    .compile()?;
+let runtime = FheZkpRuntime::new(app.params(), &BulletproofsBackend::new())?;
+let (public_key, private_key) = runtime.generate_keys()?;
+# let existing_ct = runtime.encrypt(Signed::from(2), &public_key)?;
+
+let mut proof_builder = runtime.linkedproof_builder();
+
+// Assume existing ciphertext comes out of a computation
+let (pt, link) = proof_builder.decrypt_returning_link::<Signed>(&existing_ct, &private_key)?;
+
 // For a single decryption statement, S will have one column and four rows, with
 // the last entry containing the noise. Let's lower the bound on each
 // coefficient in the noise polynomial to 32 bits.
-bounds[(3, 0)] = Bounds(vec![32; degree]);
+let degree = app.params().lattice_dimension as usize;
+let proof = proof_builder
+    .add_custom_bounds(3, 0, Bounds(vec![32; degree]))
+    .zkp_program(app.get_zkp_program(is_greater_than_one).unwrap())?
+    .linked_input(link)
+    .build()?;
+
+let mut verify_builder = runtime.linkedproof_verification_builder();
+verify_builder.decrypt_returning_link::<Signed>(&existing_ct)?;
+// The verifier must specify the same bounds!
+verify_builder
+    .add_custom_bounds(3, 0, Bounds(vec![32; degree]))
+    .proof(proof)
+    .zkp_program(app.get_zkp_program(is_greater_than_one).unwrap())?
+    .verify()?;
+#     Ok(())
+# }
 ```

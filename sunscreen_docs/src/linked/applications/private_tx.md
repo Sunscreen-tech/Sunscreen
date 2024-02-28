@@ -61,6 +61,8 @@ properties.
 {{#include private_tx.rs:validate_transfer}}
 ```
 
+> NS: It is not clear where the last 2 properties are being handled by SDLP. Can you make it more explicit?
+
 #### Registration
 
 As we noted above, we're assuming a deposit to a private account occurs from a

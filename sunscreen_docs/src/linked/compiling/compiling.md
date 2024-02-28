@@ -35,3 +35,5 @@ let app = Compiler::new()
 #     Ok(())
 # }
 ```
+
+> NS: Can I specify the fhe params and just a junk fhe program to compile the zkp?

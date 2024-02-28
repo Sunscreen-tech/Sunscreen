@@ -36,4 +36,5 @@ let app = Compiler::new()
 # }
 ```
 
-> NS: Can I specify the fhe params and just a junk fhe program to compile the zkp?
+If you already have FHE parameters for your application, you can specify them
+directly using the method [`Compiler::with_params`](https://docs.rs/sunscreen/latest/sunscreen/struct.GenericCompiler.html#method.with_params).

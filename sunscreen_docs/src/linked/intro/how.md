@@ -5,9 +5,13 @@ interest for anyone curious what's going on under the hood.
 
 # Linked SDLP and R1CS proofs
 
-A linked proof consists of a short discrete log proof (SDLP) and an R1CS bulletproof (BP). It allows you to simultaneously prove an encryption is valid (SDLP) and that the encrypted message has some property (BP). Specifically, the SDLP proves a linear relation while keeping part of that relation secret, while BPs enables proving arbitrary arithmetic circuits, which can be used to prove that a secret satisfies some property. For example, one can prove that a private transaction can occur because the sender has enough funds to cover the transaction, without revealing what the transaction is. This combination of proof systems is powerful because we can now operate on encrypted data using FHE while knowing the person who provided the data encrypted valid information such as a transaction amount.
+A linked proof consists of a short discrete log proof (SDLP) and an R1CS bulletproof (BP). It allows you to simultaneously prove an encryption is valid (SDLP) and that the encrypted message has some property (BP). Specifically, the SDLP proves a linear relation while keeping part of that relation secret, while BPs enables proving arbitrary arithmetic circuits, which can be used to prove that a secret satisfies some property. For example, one can prove that a private transaction can occur because the sender has enough funds to cover the transaction, without revealing what the transaction is or what their current balance is. This combination of proof systems is powerful because we can now operate on encrypted data using FHE while ensuring the encrypted data doesn't violate any properties of the system of interest such as a negative balance.
 
 How does this work in practice? The sunscreen library provides a [builder](`crate::linked::LogProofBuilder`) that allows you can encrypt messages in a very similar way to our typical [`FheRuntime::encrypt`](crate::FheRuntime::encrypt), while also opting to _share_ a message with a linked ZKP program. Under the hood, we'll handle the complicated bits of generating the SDLP and sharing the secrets with the [`zkp_program`](crate::zkp_program).
+
+# The nitty gritty
+
+
 
 > ST: I was thinking this section would basically just be the above paragraphs, maybe with a bit more detail. I don't think it makes sense to dive into the example below at this point in the docs, and a lot of the stuff that has to get explained below is explained further in the user docs. If we do want to keep it here, we should go through the text carefully because some of it is still out of date (i.e. `LinkedProof::create`).
 

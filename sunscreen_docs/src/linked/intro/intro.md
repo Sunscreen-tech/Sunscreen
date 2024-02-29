@@ -4,7 +4,7 @@ As we've alluded to, the power of our FHE and ZKP compilers is fully realized wh
 
 ## Trust and Validation
 
-*Rs: likely need to rework the "trust in trustless settings" piece to better capture the spirit of how fhe+zkp combine. may want to remove the part that alludes to verifiable fhe since we don't support that*
+*RS: likely need to rework the "trust in trustless settings" piece to better capture the spirit of how fhe+zkp combine. may want to remove the part that alludes to verifiable fhe since we don't support that*
 
 Our main motivation for linking these concepts together is to allow trust in trustless settings. We've already seen how FHE enables private computation; that is, how one party can encrypt their private data, and how another party can compute on those encrypted inputs and return an encrypted result, with only a public key, and no knowledge of the underlying private data.
 

@@ -15,7 +15,9 @@ mod linked_tests {
         zkp_program, zkp_var, Compiler,
     };
     use sunscreen_fhe_program::SchemeType;
-    use sunscreen_runtime::{FheZkpRuntime, LinkedProofBuilder, Params, ZkpProgramInput};
+    use sunscreen_runtime::{
+        FheZkpRuntime, LinkedProofBuilder, LinkedProofVerificationBuilder, Params,
+    };
     use sunscreen_zkp_backend::bulletproofs::BulletproofsBackend;
 
     lazy_static! {
@@ -65,7 +67,7 @@ mod linked_tests {
         for tx in [5, 10] {
             let mut proof_builder = LinkedProofBuilder::new(&rt);
 
-            let (_ct, tx_msg) = proof_builder
+            let (ct, tx_msg) = proof_builder
                 .encrypt_returning_link(&Signed::from(tx), &public_key)
                 .unwrap();
 
@@ -80,12 +82,17 @@ mod linked_tests {
             println!("Linked proof done");
 
             println!("Performing linked verify");
-            lp.verify(
-                valid_transaction_zkp,
-                vec![BulletproofsField::from(balance)],
-                vec![],
-            )
-            .expect("Failed to verify linked proof");
+            let mut verify_builder = LinkedProofVerificationBuilder::new(&rt);
+            verify_builder
+                .encrypt_returning_link::<Signed>(&ct, &public_key)
+                .unwrap();
+            verify_builder
+                .proof(lp)
+                .zkp_program(valid_transaction_zkp)
+                .unwrap()
+                .public_input(BulletproofsField::from(balance))
+                .verify()
+                .expect("Failed to verify linked proof");
             println!("Linked verify done");
         }
     }
@@ -143,7 +150,7 @@ mod linked_tests {
 
         for val in [3, 0, -3] {
             let mut proof_builder = LinkedProofBuilder::new(&rt);
-            let (_ct, val_msg) = proof_builder
+            let (ct, val_msg) = proof_builder
                 .encrypt_returning_link(&Signed::from(val), &public_key)
                 .unwrap();
             proof_builder
@@ -162,7 +169,16 @@ mod linked_tests {
                     }
                 )
             });
-            lp.verify(is_eq_zkp, vec![BulletproofsField::from(val)], vec![])
+            let mut verify_builder = LinkedProofVerificationBuilder::new(&rt);
+            verify_builder
+                .encrypt_returning_link::<Signed>(&ct, &public_key)
+                .unwrap();
+            verify_builder
+                .proof(lp)
+                .zkp_program(is_eq_zkp)
+                .unwrap()
+                .public_input(BulletproofsField::from(val))
+                .verify()
                 .expect("Failed to verify linked proof");
         }
     }
@@ -198,7 +214,7 @@ mod linked_tests {
             let x_d = rand::random::<i64>().saturating_abs().saturating_add(1);
             let x = Rational::from(Rational64::new_raw(x_n, x_d));
             let mut proof_builder = LinkedProofBuilder::new(&rt);
-            let (_ct, x_msg) = proof_builder
+            let (ct, x_msg) = proof_builder
                 .encrypt_returning_link(&x, &public_key)
                 .unwrap();
             proof_builder
@@ -211,7 +227,16 @@ mod linked_tests {
             let lp = proof_builder
                 .build()
                 .unwrap_or_else(|e| panic!("Failed to prove encoding of {x:?}; {e}"));
-            lp.verify::<ZkpProgramInput>(is_eq_zkp, vec![], vec![])
+
+            let mut verify_builder = LinkedProofVerificationBuilder::new(&rt);
+            verify_builder
+                .encrypt_returning_link::<Rational>(&ct, &public_key)
+                .unwrap();
+            verify_builder
+                .proof(lp)
+                .zkp_program(is_eq_zkp)
+                .unwrap()
+                .verify()
                 .unwrap_or_else(|e| panic!("Failed to verify encoding of {x:?}; {e}"));
         }
     }
@@ -244,10 +269,10 @@ mod linked_tests {
             let (x, y) = (Signed::from(x.min(y)), Signed::from(x.max(y)));
 
             let mut proof_builder = LinkedProofBuilder::new(&rt);
-            let (_ct, x_msg) = proof_builder
+            let (x_ct, x_msg) = proof_builder
                 .encrypt_returning_link(&x, &public_key)
                 .unwrap();
-            let (_ct, y_msg) = proof_builder
+            let (y_ct, y_msg) = proof_builder
                 .encrypt_symmetric_returning_link(&y, &private_key)
                 .unwrap();
             proof_builder
@@ -259,7 +284,19 @@ mod linked_tests {
             let lp = proof_builder
                 .build()
                 .unwrap_or_else(|e| panic!("Failed to prove {x:?} <= {y:?}, {e}"));
-            lp.verify::<ZkpProgramInput>(compare_signed_zkp, vec![], vec![])
+
+            let mut verify_builder = LinkedProofVerificationBuilder::new(&rt);
+            verify_builder
+                .encrypt_returning_link::<Signed>(&x_ct, &public_key)
+                .unwrap();
+            verify_builder
+                .encrypt_symmetric_returning_link::<Signed>(&y_ct)
+                .unwrap();
+            verify_builder
+                .proof(lp)
+                .zkp_program(compare_signed_zkp)
+                .unwrap()
+                .verify()
                 .unwrap_or_else(|e| panic!("Failed to verify {x:?} <= {y:?}; {e}"));
         }
     }
@@ -299,10 +336,10 @@ mod linked_tests {
             let (x, y) = (Rational::from(x.min(y)), Rational::from(x.max(y)));
 
             let mut proof_builder = LinkedProofBuilder::new(&rt);
-            let (_ct, x_msg) = proof_builder
+            let (x_ct, x_msg) = proof_builder
                 .encrypt_returning_link(&x, &public_key)
                 .unwrap();
-            let (_ct, y_msg) = proof_builder
+            let (y_ct, y_msg) = proof_builder
                 .encrypt_returning_link(&y, &public_key)
                 .unwrap();
             proof_builder
@@ -314,7 +351,19 @@ mod linked_tests {
             let lp = proof_builder
                 .build()
                 .unwrap_or_else(|e| panic!("Failed to prove {x:?} <= {y:?}, {e}"));
-            lp.verify::<ZkpProgramInput>(compare_rational_zkp, vec![], vec![])
+
+            let mut verify_builder = LinkedProofVerificationBuilder::new(&rt);
+            verify_builder
+                .encrypt_returning_link::<Rational>(&x_ct, &public_key)
+                .unwrap();
+            verify_builder
+                .encrypt_returning_link::<Rational>(&y_ct, &public_key)
+                .unwrap();
+            verify_builder
+                .proof(lp)
+                .zkp_program(compare_rational_zkp)
+                .unwrap()
+                .verify()
                 .unwrap_or_else(|e| panic!("Failed to verify {x:?} <= {y:?}; {e}"));
         }
     }
@@ -349,13 +398,13 @@ mod linked_tests {
 
         for val in [3, 0, -3] {
             let mut proof_builder = LinkedProofBuilder::new(&rt);
-            let (_ct_x, x_msg) = proof_builder
+            let (x_ct, x_msg) = proof_builder
                 .encrypt_returning_link(&Signed::from(val), &public_key)
                 .unwrap();
             // proves same plaintext within SDLP
-            let _ct_x1 = proof_builder.reencrypt(&x_msg, &public_key).unwrap();
+            let x1_ct = proof_builder.reencrypt(&x_msg, &public_key).unwrap();
             // proves same value within ZKP
-            let (_ct_y, y_msg) = proof_builder
+            let (y_ct, y_msg) = proof_builder
                 .encrypt_symmetric_returning_link(&Signed::from(val), &private_key)
                 .unwrap();
             proof_builder
@@ -366,7 +415,22 @@ mod linked_tests {
                 .private_input(BulletproofsField::from(val));
 
             let lp = proof_builder.build().unwrap();
-            lp.verify::<ZkpProgramInput>(is_eq_zkp, vec![], vec![])
+
+            let mut verify_builder = LinkedProofVerificationBuilder::new(&rt);
+            let x_msg = verify_builder
+                .encrypt_returning_link::<Signed>(&x_ct, &public_key)
+                .unwrap();
+            verify_builder
+                .reencrypt(&x_msg, &x1_ct, &public_key)
+                .unwrap();
+            verify_builder
+                .encrypt_symmetric_returning_link::<Signed>(&y_ct)
+                .unwrap();
+            verify_builder
+                .proof(lp)
+                .zkp_program(is_eq_zkp)
+                .unwrap()
+                .verify()
                 .expect("Failed to verify linked proof");
         }
     }
@@ -398,10 +462,10 @@ mod linked_tests {
             let y_d = rand::random::<i64>().saturating_abs().saturating_add(1);
             let y = Rational::from(Rational64::new_raw(y_n, y_d));
             let mut proof_builder = LinkedProofBuilder::new(&rt);
-            let (_ct, x_msg) = proof_builder
+            let (x_ct, x_msg) = proof_builder
                 .encrypt_returning_link(&x, &public_key)
                 .unwrap();
-            let (_ct, y_msg) = proof_builder
+            let (y_ct, y_msg) = proof_builder
                 .encrypt_returning_link(&y, &public_key)
                 .unwrap();
             let lp = proof_builder
@@ -413,7 +477,19 @@ mod linked_tests {
                 .unwrap_or_else(|e| {
                     panic!("Failed to prove fresh encodings of {x:?} and {y:?}; Error: {e}")
                 });
-            lp.verify::<ZkpProgramInput>(is_fresh_zkp, vec![], vec![])
+
+            let mut verify_builder = LinkedProofVerificationBuilder::new(&rt);
+            verify_builder
+                .encrypt_returning_link::<Signed>(&x_ct, &public_key)
+                .unwrap();
+            verify_builder
+                .encrypt_returning_link::<Rational>(&y_ct, &public_key)
+                .unwrap();
+            verify_builder
+                .proof(lp)
+                .zkp_program(is_fresh_zkp)
+                .unwrap()
+                .verify()
                 .unwrap_or_else(|e| {
                     panic!("Failed to verify fresh encodings of {x:?} and {y:?}; Error: {e}")
                 });

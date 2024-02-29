@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use sunscreen::{
     bulletproofs::BulletproofsBackend,
     fhe_program,
-    linked::{LinkedProof, LinkedProofBuilder},
+    linked::LinkedProof,
     types::{
         bfv::Signed,
         zkp::{
@@ -129,7 +129,7 @@ impl User {
         receiver: U,
     ) -> Result<Transfer> {
         let receiver = receiver.into();
-        let mut builder = LinkedProofBuilder::new(&self.runtime);
+        let mut builder = self.runtime.linkedproof_builder();
 
         // Encrypt tx amount under sender's public key.
         println!("    {}: encrypting {} under own key", self.name, amount);
@@ -184,7 +184,7 @@ impl User {
 // ANCHOR: user_refresh
     /// Create a refresh balance transaction.
     pub fn create_refresh_balance(&self, chain: &Chain) -> Result<RefreshBalance> {
-        let mut builder = LinkedProofBuilder::new(&self.runtime);
+        let mut builder = self.runtime.linkedproof_builder();
 
         // Decrypt current balance, returning a link to the underlying message
         let balance_encrypted = chain.balances.get(&self.name).unwrap();
@@ -216,7 +216,7 @@ impl User {
 // ANCHOR: user_register
     /// Create a register transaction.
     pub fn create_register(&self, initial_deposit: i64) -> Result<Register> {
-        let mut builder = LinkedProofBuilder::new(&self.runtime);
+        let mut builder = self.runtime.linkedproof_builder();
 
         // Encrypt deposit amount
         println!(
@@ -357,11 +357,13 @@ impl Chain {
         } = register;
 
         // First, verify that the encrypted amount matches the public amount
-        proof.verify(
-            self.app.get_registration_zkp(),
-            vec![BulletproofsField::from(deposit.public_amount)],
-            vec![],
-        )?;
+        let mut builder = self.runtime.linkedproof_verification_builder();
+        builder.encrypt_returning_link::<Signed>(&encrypted_amount, &public_key)?;
+        builder
+            .zkp_program(self.app.get_registration_zkp())?
+            .proof(proof)
+            .public_input(BulletproofsField::from(deposit.public_amount))
+            .verify()?;
 
         // Register the user's public key
         self.keys.insert(deposit.name.clone(), public_key);
@@ -407,7 +409,21 @@ impl Chain {
         } = transfer;
 
         // First verify the transfer is valid
-        proof.verify::<ZkpProgramInput>(self.app.get_transfer_zkp(), vec![], vec![])?;
+        let mut builder = self.runtime.linkedproof_verification_builder();
+        let link = builder.encrypt_returning_link::<Signed>(
+            &encrypted_amount_sender,
+            self.keys.get(&sender).unwrap(),
+        )?;
+        builder.reencrypt(
+            &link,
+            &encrypted_amount_receiver,
+            self.keys.get(&receiver).unwrap(),
+        )?;
+        builder.decrypt_returning_link::<Signed>(self.balances.get(&sender).unwrap())?;
+        builder
+            .zkp_program(self.app.get_transfer_zkp())?
+            .proof(proof)
+            .verify()?;
 
         // Update the sender's balance:
         let sender_pk = self.keys.get(&sender).unwrap();
@@ -447,7 +463,13 @@ impl Chain {
         } = refresh_balance;
 
         // Verify the balance refresh is valid
-        proof.verify::<ZkpProgramInput>(self.app.get_refresh_balance_zkp(), vec![], vec![])?;
+        let mut builder = self.runtime.linkedproof_verification_builder();
+        builder.decrypt_returning_link::<Signed>(self.balances.get(&name).unwrap())?;
+        builder.encrypt_returning_link::<Signed>(&fresh_balance, self.keys.get(&name).unwrap())?;
+        builder
+            .zkp_program(self.app.get_refresh_balance_zkp())?
+            .proof(proof)
+            .verify()?;
 
         // Use the freshly encrypted balance
         self.balances

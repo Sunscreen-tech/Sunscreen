@@ -939,6 +939,13 @@ impl FheZkpRuntime<sunscreen_zkp_backend::bulletproofs::BulletproofsBackend> {
     pub fn linkedproof_builder<'k, 'z>(&self) -> crate::LinkedProofBuilder<'_, 'k, 'z> {
         crate::LinkedProofBuilder::new(self)
     }
+
+    /// Create a new [`LinkedProofVerificationBuilder`](crate::LinkedProofVerificationBuilder).
+    pub fn linkedproof_verification_builder<'k, 'z>(
+        &self,
+    ) -> crate::LinkedProofVerificationBuilder<'_, 'k, 'z> {
+        crate::LinkedProofVerificationBuilder::new(self)
+    }
 }
 
 /**
@@ -960,6 +967,11 @@ impl FheRuntime {
     /// Create a new [`SdlpBuilder`](crate::SdlpBuilder).
     pub fn sdlp_builder<'k>(&self) -> crate::SdlpBuilder<'_, 'k> {
         crate::SdlpBuilder::new(self)
+    }
+
+    /// Create a new [`SdlpVerificationBuilder`](crate::SdlpVerificationBuilder).
+    pub fn sdlp_verification_builder<'k>(&self) -> crate::SdlpVerificationBuilder<'_, 'k> {
+        crate::SdlpVerificationBuilder::new(self)
     }
 }
 

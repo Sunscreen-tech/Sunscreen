@@ -53,7 +53,7 @@ want a bad actor to be able to send an encrypted transaction with a ton of
 [noise](/fhe/advanced/noise_margin.md) that causes the receiver's balance to be
 un-decryptable. 
 
-As we'll see [below](#transfer-3), the last two properties are handled outside of the ZKP
+As we'll see [below](#transfer-2), the last two properties are handled outside of the ZKP
 program (by the [SDLP](/linked/intro/how.md)), so let's validate the first two
 properties.
 
@@ -147,11 +147,19 @@ proof of validity.
 {{#include private_tx.rs:refresh_type}}
 ```
 
-### Chain
+### Parties
 
-Next up let's define a "chain" type to mimic a hypothetical blockchain perspective.
+Let's first define the different parties. Well have `User` struct for parties
+that wish to use the private transactions system, and we'll have a `Chain`
+struct for the computing party, in this case mimicking a blockchain.
 
 ```rust,ignore
+{{#include private_tx.rs:user_type}}
+
+impl User {
+{{#include private_tx.rs:user_new}}
+}
+
 {{#include private_tx.rs:transaction_type}}
 
 {{#include private_tx.rs:chain_type}}
@@ -161,63 +169,10 @@ impl Chain {
 }
 ```
 
-#### Registration
-
-Here's how the chain will verify a registration and, if successful, update its state.
-
-```rust,ignore
-impl Chain {
-{{#include private_tx.rs:chain_register}}
-}
-```
-
-#### Deposit
-
-Once a user is registered, they can make more deposits. The chain will use the
-`deposit_to` FHE program, adding the public plaintext amount to the encrypted
-balance.
-
-```rust,ignore
-impl Chain {
-{{#include private_tx.rs:chain_deposit}}
-}
-```
-
-#### Transfer
-
-For a private transfer, the chain needs to verify the inputs by verifying the
-accompanying proof, and then run two FHE programs, one for the sender and one
-for the receiver. 
-
-```rust,ignore
-impl Chain {
-{{#include private_tx.rs:chain_transfer}}
-}
-```
-
-#### Refresh balance
-
-Finally, to refresh a balance the chain simply needs to verify the proof and
-then overwrite the existing balance.
-
-```rust,ignore
-impl Chain {
-{{#include private_tx.rs:chain_refresh}}
-}
-```
-
 ### User
 
-Now let's go over the user's perspective and how they'll construct these kinds
-of transactions. First we'll define a user type
-
-```rust,ignore
-{{#include private_tx.rs:user_type}}
-
-impl User {
-{{#include private_tx.rs:user_new}}
-}
-```
+Now let's go over the user's perspective and how they'll construct the various
+transactions.
 
 #### Registration
 
@@ -273,6 +228,56 @@ encrypted_ ciphertext of it. The `reencrypt` method does _not_ create a freshly
 encoded plaintext, rather it re-encrypts the exact plaintext of the existing
 message. (And since our ZKP program constrains the linked value to a fresh
 encoding, this would fail for anything but initial balances.)
+
+### Chain
+
+Next we'll show how the chain will process these transactions.
+
+#### Registration
+
+Here's how the chain will verify a registration and, if successful, update its state.
+
+```rust,ignore
+impl Chain {
+{{#include private_tx.rs:chain_register}}
+}
+```
+
+#### Deposit
+
+Once a user is registered, they can make more deposits. The chain will use the
+`deposit_to` FHE program, adding the public plaintext amount to the encrypted
+balance.
+
+```rust,ignore
+impl Chain {
+{{#include private_tx.rs:chain_deposit}}
+}
+```
+
+#### Transfer
+
+For a private transfer, the chain needs to verify the inputs by verifying the
+accompanying proof, and then run two FHE programs, one for the sender and one
+for the receiver. 
+
+```rust,ignore
+impl Chain {
+{{#include private_tx.rs:chain_transfer}}
+}
+```
+
+#### Refresh balance
+
+Finally, to refresh a balance the chain simply needs to verify the proof and
+then overwrite the existing balance.
+
+```rust,ignore
+impl Chain {
+{{#include private_tx.rs:chain_refresh}}
+}
+```
+
 
 ### Run it!
 

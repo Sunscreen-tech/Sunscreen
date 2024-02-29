@@ -209,7 +209,7 @@ impl<'r, 'p, 'a, T: marker::Zkp, B: ZkpBackend> VerificationBuilder<'r, 'p, 'a, 
 pub use linked::{
     ExistingMessage, LinkWithZkp, LinkedMessage, LinkedProofBuilder,
     LinkedProofVerificationBuilder, LogProofBuilder, LogProofVerificationBuilder, Message,
-    SdlpBuilder, SdlpVerificationBuilder,
+    MessageRef, SdlpBuilder, SdlpVerificationBuilder,
 };
 
 #[cfg(feature = "linkedproofs")]
@@ -995,7 +995,7 @@ mod linked {
         linkedproof: Option<LinkedProof>,
     }
 
-    /// A builder for [`SdlpVerifierKnowledge`].
+    /// A builder for verifying an [`Sdlp`].
     pub type SdlpVerificationBuilder<'r, 'k> =
         LogProofVerificationBuilder<'r, 'k, 'static, Fhe, ()>;
 
@@ -1003,11 +1003,6 @@ mod linked {
         /// Create a new [`SdlpVerificationBuilder`].
         pub fn new(runtime: &'r FheRuntime) -> Self {
             LogProofVerificationBuilder::new_internal(runtime)
-        }
-
-        /// Build the SDLP verifier knowledge.
-        pub fn build(&self) -> Result<SdlpVerifierKnowledge> {
-            self.build_sdlp_vk()
         }
 
         /// Set the SDLP to prove.
@@ -1244,7 +1239,7 @@ mod linked {
         }
 
         /// Build the [`SdlpVerifierKnowledge`] for the statements added to this builder.
-        pub fn build_sdlp_vk(&self) -> Result<SdlpVerifierKnowledge> {
+        pub(crate) fn build_sdlp_vk(&self) -> Result<SdlpVerifierKnowledge> {
             let params = self.runtime.params();
             let mut vk: SdlpVerifierKnowledge = match &params.coeff_modulus[..] {
                 SealQ128_1024::Q => Ok(self.build_sdlp_vk_generic::<1, SealQ128_1024>()?.into()),

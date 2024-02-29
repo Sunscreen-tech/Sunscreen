@@ -38,6 +38,7 @@ proptest = "1.4.0"
 
 [features]
 logproof = ["dep:logproof"]
+metal = ["logproof/metal"]
 
 [[bench]]
 name = "tfhe_proof"

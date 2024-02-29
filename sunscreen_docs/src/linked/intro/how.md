@@ -11,6 +11,21 @@ How does this work in practice? The sunscreen library provides a [builder](`crat
 
 # The nitty gritty
 
+The SDLP proves linear equations of the form `A*S = T`, where `A` and `T` are public information, while `S` is only known by the prover. The BFV equations can be written in this linear form, where the message and associated randomness can be contained in the private `S` matrix.
+
+In order to link this to BPs, we pass the values in `S` that the user would like to share with BPs as inputs to the BPs circuit. If one just does this without any other modifications, the result is not secure as there is not a guarantee that the inputs to the SDLP were the same as the inputs to the BP. To rectify this, we form commitments to the parts of `S` that are shared between SDLP and BPs and check that the inputs that are linked between the two proof systems produce the same commitment. 
+
+Written out in steps, we perform the following as a prover:
+
+1. Generate a SDLP that the user requested. The parts of `S` that the user would like to link between SDLP and BPs are committed to, and these values and the associated generators are stored by the prover.
+2. The prover passes the inputs and generators to BPs.
+3. The SDLP and BP proofs are stored together, along with the commitment to the linked inputs.
+
+A verifier will then perform the following steps:
+
+1. The verifier will run the SDLP verification with the public inputs `A` and `T` and verify the result. As part of this process, a commitment to the linked inputs is derived.
+2. The verifier will run the BP verification with its public inputs and verify the result. As part of this process, a commitment to the linked inputs is derived.
+3. The verifier checks that the commitments generated in the prior steps match.
 
 
 > ST: I was thinking this section would basically just be the above paragraphs, maybe with a bit more detail. I don't think it makes sense to dive into the example below at this point in the docs, and a lot of the stuff that has to get explained below is explained further in the user docs. If we do want to keep it here, we should go through the text carefully because some of it is still out of date (i.e. `LinkedProof::create`).

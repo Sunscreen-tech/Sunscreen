@@ -4,11 +4,23 @@ use num::Complex;
 use sunscreen_math::Zero;
 
 use crate::{
-    dst::FromMutSlice, entities::{
-        BootstrapKeyFftRef, CircuitBootstrappingKeyswitchKeysRef, GgswCiphertextRef, GlweCiphertext, GlweCiphertextRef, GlweSecretKeyRef, LweCiphertextListRef, LweCiphertextRef, Polynomial, UnivariateLookupTableRef
-    }, high_level::encryption::{self, decrypt_glwe, decrypt_lwe}, ops::{
-        bootstrapping::{generalized_programmable_bootstrap, programmable_bootstrap_univariate}, ciphertext::sample_extract, encryption::decrypt_glwe_ciphertext, homomorphisms::rotate, keyswitch::private_functional_keyswitch::private_functional_keyswitch
-    }, scratch::allocate_scratch_ref, GlweDef, LweDef, PlaintextBits, PrivateFunctionalKeyswitchLweCount, RadixDecomposition, Torus, TorusOps
+    dst::FromMutSlice,
+    entities::{
+        BootstrapKeyFftRef, CircuitBootstrappingKeyswitchKeysRef, GgswCiphertextRef,
+        GlweCiphertext, GlweCiphertextRef, GlweSecretKeyRef, LweCiphertextListRef,
+        LweCiphertextRef, Polynomial, UnivariateLookupTableRef,
+    },
+    high_level::encryption::{self, decrypt_glwe, decrypt_lwe},
+    ops::{
+        bootstrapping::{generalized_programmable_bootstrap, programmable_bootstrap_univariate},
+        ciphertext::sample_extract,
+        encryption::decrypt_glwe_ciphertext,
+        homomorphisms::rotate,
+        keyswitch::private_functional_keyswitch::private_functional_keyswitch,
+    },
+    scratch::allocate_scratch_ref,
+    GlweDef, LweDef, PlaintextBits, PrivateFunctionalKeyswitchLweCount, RadixDecomposition, Torus,
+    TorusOps,
 };
 
 /// Bootstraps a LWE ciphertext to a GGSW ciphertext.
@@ -225,8 +237,18 @@ fn level_0_to_level_2<S: TorusOps>(
 
     fill_multifunctional_cbs_decomposition_lut(lut, glwe_2, cbs_radix);
 
-    generalized_programmable_bootstrap(glwe_out, lwe_rotated, lut, bsk, 0, log_v, lwe_0, glwe_2, pbs_radix);
-    
+    generalized_programmable_bootstrap(
+        glwe_out,
+        lwe_rotated,
+        lut,
+        bsk,
+        0,
+        log_v,
+        lwe_0,
+        glwe_2,
+        pbs_radix,
+    );
+
     for (i, lwe_2) in lwes_2.ciphertexts_mut(&glwe_2.as_lwe_def()).enumerate() {
         let cur_level = i + 1;
         let plaintext_bits = PlaintextBits((cbs_radix.radix_log.0 * cur_level + 1) as u32);
@@ -265,7 +287,7 @@ fn fill_multifunctional_cbs_decomposition_lut<S: TorusOps>(
         let i = i + 1;
         if i * cbs_radix.radix_log.0 + 1 < S::BITS as usize {
             let plaintext_bits = PlaintextBits((cbs_radix.radix_log.0 * i + 1) as u32);
-        
+
             let minus_one = (S::one() << plaintext_bits.0 as usize) - S::one();
             *x = Torus::encode(minus_one, plaintext_bits);
         }
@@ -280,7 +302,13 @@ fn fill_multifunctional_cbs_decomposition_lut<S: TorusOps>(
 
     let v = 0x1usize << log_v;
 
-    for (i, x) in lut.glwe_mut().b_mut(glwe).coeffs_mut().iter_mut().enumerate() {
+    for (i, x) in lut
+        .glwe_mut()
+        .b_mut(glwe)
+        .coeffs_mut()
+        .iter_mut()
+        .enumerate()
+    {
         let fn_id = i % v;
 
         *x = if fn_id < cbs_radix.count.0 {
@@ -328,7 +356,15 @@ mod tests {
     use rand::{thread_rng, RngCore};
 
     use crate::{
-        entities::{GgswCiphertext, GlweSecretKey, GlweSecretKeyRef, LweCiphertextList, LweSecretKey, LweSecretKeyRef}, high_level::{self, encryption, fft, keygen, TEST_LWE_DEF_1}, scratch::allocate_scratch_ref, PlaintextBits, RadixCount, RadixDecomposition, RadixLog, GLWE_1_1024_80, GLWE_5_256_80, LWE_512_80, dst::FromMutSlice
+        dst::FromMutSlice,
+        entities::{
+            GgswCiphertext, GlweSecretKey, GlweSecretKeyRef, LweCiphertextList, LweSecretKey,
+            LweSecretKeyRef,
+        },
+        high_level::{self, encryption, fft, keygen, TEST_LWE_DEF_1},
+        scratch::allocate_scratch_ref,
+        PlaintextBits, RadixCount, RadixDecomposition, RadixLog, GLWE_1_1024_80, GLWE_5_256_80,
+        LWE_512_80,
     };
 
     use super::{circuit_bootstrap, level_0_to_level_2};

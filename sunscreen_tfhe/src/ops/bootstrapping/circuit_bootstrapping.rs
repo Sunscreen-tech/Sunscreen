@@ -1,14 +1,15 @@
+use std::array;
+
 use num::Complex;
+use sunscreen_math::Zero;
 
 use crate::{
     dst::FromMutSlice,
     entities::{
-        BootstrapKeyFftRef, CircuitBootstrappingKeyswitchKeysRef, GgswCiphertextRef,
-        LweCiphertextListRef, LweCiphertextRef, UnivariateLookupTableRef,
+        BootstrapKeyFftRef, CircuitBootstrappingKeyswitchKeysRef, GgswCiphertextRef, GlweCiphertextRef, LweCiphertextListRef, LweCiphertextRef, UnivariateLookupTableRef
     },
     ops::{
-        bootstrapping::programmable_bootstrap_univariate, homomorphisms::rotate,
-        keyswitch::private_functional_keyswitch::private_functional_keyswitch,
+        bootstrapping::{generalized_programmable_bootstrap, programmable_bootstrap_univariate}, ciphertext::sample_extract, homomorphisms::rotate, keyswitch::private_functional_keyswitch::private_functional_keyswitch
     },
     scratch::allocate_scratch_ref,
     GlweDef, LweDef, PlaintextBits, PrivateFunctionalKeyswitchLweCount, RadixDecomposition, Torus,
@@ -206,13 +207,11 @@ fn level_0_to_level_2<S: TorusOps>(
     pbs_radix: &RadixDecomposition,
     cbs_radix: &RadixDecomposition,
 ) {
+    allocate_scratch_ref!(glwe_out, GlweCiphertextRef<S>, (glwe_2.dim));
     allocate_scratch_ref!(lut, UnivariateLookupTableRef<S>, (glwe_2.dim));
     allocate_scratch_ref!(lwe_rotated, LweCiphertextRef<S>, (lwe_0.dim));
-    allocate_scratch_ref!(
-        lwe_bootstrapped,
-        LweCiphertextRef<S>,
-        (glwe_2.as_lwe_def().dim)
-    );
+    allocate_scratch_ref!(extracted, LweCiphertextRef<S>, (glwe_2.as_lwe_def().dim));
+    assert!(cbs_radix.count.0 < 8);
 
     // Rotate our input by q/4, putting 0 centered on q/4 and 1 centered on
     // -q/4.
@@ -223,39 +222,74 @@ fn level_0_to_level_2<S: TorusOps>(
         lwe_0,
     );
 
-    for (i, lwe_2) in lwes_2.ciphertexts_mut(&glwe_2.as_lwe_def()).enumerate() {
-        let cur_level = i + 1;
+    let log_v = if cbs_radix.count.0.is_power_of_two() {
+        cbs_radix.count.0.ilog2()
+    } else {
+        cbs_radix.count.0.ilog2() + 1
+    };
 
-        // Treat value as a T_{b^l+1} with one extra place for rounding as the last
-        // step.
-        let plaintext_bits = PlaintextBits((cbs_radix.radix_log.0 * cur_level + 1) as u32);
+    fill_multifunctional_cbs_decomposition_lut(lut, glwe_2, cbs_radix);
 
-        // Exploiting the fact that our LUT is negacyclic, we can encode -1 in T_{b^l+1}
-        // everywhere. Any lookup < q/2 will give -1 and any lookup > q/2 will
-        // give 1. Since we've shifted our input lwe by q/4, a 1 plaintext
-        // value will map to 1 and a 0 will map to -1.
-        let minus_one = (S::one() << plaintext_bits.0 as usize) - S::one();
+    generalized_programmable_bootstrap(glwe_out, input, lut, bsk, 0, log_v, lwe_0, glwe_2, pbs_radix);
 
-        lut.fill_with_constant(minus_one, glwe_2, plaintext_bits);
+    for (cur_level, lwe_2) in lwes_2.ciphertexts_mut(&glwe_2.as_lwe_def()).enumerate() {
+        let plaintext_bits = PlaintextBits((cbs_radix.radix_log.0 * (cur_level + 1) + 1) as u32);
 
-        programmable_bootstrap_univariate(
-            lwe_bootstrapped,
-            lwe_rotated,
-            lut,
-            bsk,
-            lwe_0,
-            glwe_2,
-            pbs_radix,
-        );
+        sample_extract(extracted, &glwe_out, cur_level, glwe_2);
 
         // Now we rotate our message containing -1 or 1 by 1 (wrt plaintext_bits).
         // This will overflow -1 to 0 and cause 1 to wrap to 2.
         rotate(
             lwe_2,
-            lwe_bootstrapped,
+            extracted,
             Torus::encode(S::one(), plaintext_bits),
             &glwe_2.as_lwe_def(),
         );
+    }
+}
+
+fn fill_multifunctional_cbs_decomposition_lut<S: TorusOps>(
+    lut: &mut UnivariateLookupTableRef<S>,
+    glwe: &GlweDef,
+    cbs_radix: &RadixDecomposition,
+) {
+    // Pick a largish number of levels nobody would ever exceed.
+    let mut levels = [Torus::zero(); 16];
+
+    assert!(cbs_radix.count.0 < levels.len());
+
+    // Compute our base decomposition factors.
+    // Exploiting the fact that our LUT is negacyclic, we can encode -1 in T_{b^l+1}
+    // everywhere. Any lookup < q/2 will give -1 and any lookup > q/2 will
+    // give 1. Since we've shifted our input lwe by q/4, a 1 plaintext
+    // value will map to 1 and a 0 will map to -1.
+    for (i, x) in levels.iter_mut().enumerate() {
+        let i = i + 1;
+        if i * cbs_radix.radix_log.0 + 1 < S::BITS as usize {
+            let plaintext_bits = PlaintextBits((cbs_radix.radix_log.0 * i + 1) as u32);
+        
+            let minus_one = (S::one() << plaintext_bits.0 as usize) - S::one();
+            *x = Torus::encode(minus_one, plaintext_bits);
+        }
+    }
+
+    // Fill the table with alternating factors padded with zeros to a power of 2
+    let log_v = if cbs_radix.count.0.is_power_of_two() {
+        cbs_radix.count.0.ilog2()
+    } else {
+        cbs_radix.count.0.ilog2() + 1
+    };
+
+    let v = 0x1usize << log_v;
+
+    for (i, x) in lut.glwe_mut().b_mut(glwe).coeffs_mut().iter_mut().enumerate() {
+        let fn_id = i % v;
+
+        *x = if fn_id < cbs_radix.count.0 {
+            levels[fn_id]
+        } else {
+            Torus::zero()
+        };
     }
 }
 
@@ -296,10 +330,7 @@ mod tests {
     use rand::{thread_rng, RngCore};
 
     use crate::{
-        entities::{GgswCiphertext, LweCiphertextList},
-        high_level::{self, encryption, fft, keygen, TEST_LWE_DEF_1},
-        PlaintextBits, RadixCount, RadixDecomposition, RadixLog, GLWE_1_1024_80, GLWE_5_256_80,
-        LWE_512_80,
+        entities::{GgswCiphertext, GlweSecretKey, GlweSecretKeyRef, LweCiphertextList, LweSecretKey, LweSecretKeyRef}, high_level::{self, encryption, fft, keygen, TEST_LWE_DEF_1}, scratch::allocate_scratch_ref, PlaintextBits, RadixCount, RadixDecomposition, RadixLog, GLWE_1_1024_80, GLWE_5_256_80, LWE_512_80, dst::FromMutSlice
     };
 
     use super::{circuit_bootstrap, level_0_to_level_2};
@@ -320,11 +351,16 @@ mod tests {
         let mut level_2 =
             LweCiphertextList::<u64>::new(&glwe_params.as_lwe_def(), cbs_radix.count.0);
 
-        let sk = keygen::generate_binary_lwe_sk(&TEST_LWE_DEF_1);
-        let glwe_sk = keygen::generate_binary_glwe_sk(&glwe_params);
+        //let sk = keygen::generate_binary_lwe_sk(&TEST_LWE_DEF_1);
+        //let glwe_sk = keygen::generate_binary_glwe_sk(&glwe_params);
+        allocate_scratch_ref!(sk, LweSecretKeyRef<u64>, (TEST_LWE_DEF_1.dim));
+        allocate_scratch_ref!(glwe_sk, GlweSecretKeyRef<u64>, (glwe_params.dim));
+        sk.clear();
+        glwe_sk.clear();
+
         let bsk = keygen::generate_bootstrapping_key(
-            &sk,
-            &glwe_sk,
+            sk,
+            glwe_sk,
             &TEST_LWE_DEF_1,
             &glwe_params,
             &pbs_radix,

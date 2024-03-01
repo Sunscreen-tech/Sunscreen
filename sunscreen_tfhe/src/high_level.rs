@@ -200,8 +200,8 @@ pub mod keygen {
     /// However, anyone who possesses `glwe_key` can easily use the returned
     /// [`BootstrapKey`] to recover `sk`.
     pub fn generate_bootstrapping_key(
-        sk: &LweSecretKey<u64>,
-        glwe_key: &GlweSecretKey<u64>,
+        sk: &LweSecretKeyRef<u64>,
+        glwe_key: &GlweSecretKeyRef<u64>,
         lwe: &LweDef,
         glwe: &GlweDef,
         radix: &RadixDecomposition,

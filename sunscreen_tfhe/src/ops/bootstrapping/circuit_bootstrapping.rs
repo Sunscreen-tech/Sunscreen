@@ -250,7 +250,7 @@ fn level_0_to_level_2<S: TorusOps>(
         let cur_level = i + 1;
         let plaintext_bits = PlaintextBits((cbs_radix.radix_log.0 * cur_level + 1) as u32);
 
-        sample_extract(extracted, &glwe_out, i, glwe_2);
+        sample_extract(extracted, glwe_out, i, glwe_2);
 
         // Now we rotate our message containing -1 or 1 by 1 (wrt plaintext_bits).
         // This will overflow -1 to 0 and cause 1 to wrap to 2.

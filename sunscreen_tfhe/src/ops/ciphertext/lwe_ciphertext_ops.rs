@@ -151,15 +151,15 @@ mod tests {
         let x = 0xDEADBEEF_BEEFDEADu64;
 
         let y = modulus_switch(x, 0, 0, 10);
-        assert_eq!(y, 0b1101_1110_11);
+        assert_eq!(y, 0b11_0111_1011);
 
         let y = modulus_switch(x, 2, 0, 10);
-        assert_eq!(y, 0b0111_1010_11);
+        assert_eq!(y, 0b01_1110_1011);
 
         let y = modulus_switch(x, 0, 3, 10);
-        assert_eq!(y, 0b1101_1110_00);
+        assert_eq!(y, 0b11_0111_1000);
 
         let y = modulus_switch(x, 2, 3, 10);
-        assert_eq!(y, 0b0111_1010_00);
+        assert_eq!(y, 0b01_1110_1000);
     }
 }

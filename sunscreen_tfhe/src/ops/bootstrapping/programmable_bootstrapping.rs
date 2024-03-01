@@ -364,6 +364,7 @@ pub fn programmable_bootstrap_univariate<S>(
     sample_extract(output, cmux_output, 0, glwe_params);
 }
 
+#[allow(clippy::too_many_arguments)]
 /// A generalized version of programmable bootstrapping.
 /// Computes a function `lut` of the encrypted `input`.
 /// However, this generalization features the ability to select which

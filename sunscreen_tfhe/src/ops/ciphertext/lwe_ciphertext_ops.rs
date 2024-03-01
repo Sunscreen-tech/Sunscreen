@@ -131,7 +131,7 @@ pub fn lwe_ciphertext_modulus_switch<S>(
 fn modulus_switch<S: TorusOps>(x: S, log_chi: usize, log_v: usize, log_modulus: usize) -> S {
     let one = S::one();
     let mask = (one << log_modulus) - one;
-    let x = x << log_chi as usize;
+    let x = x << log_chi;
     let shift_amount = S::BITS as usize - (log_modulus - log_v);
 
     let round = (x >> (shift_amount - 1)) & one;

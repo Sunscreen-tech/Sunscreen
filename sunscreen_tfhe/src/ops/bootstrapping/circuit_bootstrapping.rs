@@ -10,7 +10,7 @@ use crate::{
         LweCiphertextRef, UnivariateLookupTableRef,
     },
     ops::{
-        bootstrapping::{generalized_programmable_bootstrap},
+        bootstrapping::generalized_programmable_bootstrap,
         ciphertext::sample_extract,
         homomorphisms::rotate,
         keyswitch::private_functional_keyswitch::private_functional_keyswitch,

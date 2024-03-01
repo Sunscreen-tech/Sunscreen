@@ -404,7 +404,7 @@ pub fn generalized_programmable_bootstrap<S>(
     bootstrap_key.assert_valid(lwe_params, glwe_params, radix);
     lut.assert_valid(glwe_params);
     input.assert_valid(lwe_params);
-    output.assert_valid(&glwe_params);
+    output.assert_valid(glwe_params);
 
     // Steps:
     // 1. Modulus switch the ciphertext to 2N.
@@ -985,7 +985,7 @@ mod tests {
         // Fill the LUT with nonsense and we'll overwrite it with
         // the correct encoding.
         let lut = UnivariateLookupTable::trivivial_multifunctional(
-            &[|x| x % 2, |x| (x + 1) % 2, |x| x % 2].as_slice(),
+            [|x| x % 2, |x| (x + 1) % 2, |x| x % 2].as_slice(),
             glwe,
             bits,
         );

@@ -3,13 +3,12 @@
 //! where deterministic computation is performed on encrypted data. The linked proofs allow us to
 //! validate the encrypted inputs.
 
-use std::collections::{hash_map::Entry, HashMap};
+use std::collections::HashMap;
 
-use once_cell::sync::Lazy;
 use sunscreen::{
     bulletproofs::BulletproofsBackend,
     fhe_program,
-    linked::{LinkedProof, LogProofBuilder},
+    linked::LinkedProof,
     types::{
         bfv::Signed,
         zkp::{
@@ -19,19 +18,25 @@ use sunscreen::{
         Cipher,
     },
     zkp_program, zkp_var, Ciphertext, CompiledFheProgram, CompiledZkpProgram, Compiler,
-    FheZkpApplication, FheZkpRuntime, Params, PrivateKey, PublicKey, Result, ZkpProgramInput,
+    FheProgramInput, FheZkpApplication, FheZkpRuntime, Params, PrivateKey, PublicKey, Result,
 };
 
 /// Subtract the transaction amount from the sender's balance.
 #[fhe_program(scheme = "bfv")]
-fn update_balance_sender(balance: Cipher<Signed>, tx: Cipher<Signed>) -> Cipher<Signed> {
+fn transfer_from(balance: Cipher<Signed>, tx: Cipher<Signed>) -> Cipher<Signed> {
     balance - tx
 }
 
 /// Add the transaction amount to the receiver's balance.
 #[fhe_program(scheme = "bfv")]
-fn update_balance_receiver(balance: Cipher<Signed>, tx: Cipher<Signed>) -> Cipher<Signed> {
+fn transfer_to(balance: Cipher<Signed>, tx: Cipher<Signed>) -> Cipher<Signed> {
     balance + tx
+}
+
+/// Add the public transaction amount to a user's balance.
+#[fhe_program(scheme = "bfv")]
+fn deposit_to(balance: Cipher<Signed>, deposit: Signed) -> Cipher<Signed> {
+    balance + deposit
 }
 
 /// Validate a transfer transaction.
@@ -49,10 +54,10 @@ fn validate_transfer<F: FieldSpec>(
     tx.constrain_le_bounded(sender_balance, 64);
 }
 
-/// Validate deposit/registration. The deposit amount is public, but we must prove that the
-/// provided ciphertext encrypts the deposit amount.
+/// Validate registration. The deposit amount is public, but we must prove that the provided
+/// ciphertext encrypts the deposit amount.
 #[zkp_program]
-fn validate_deposit<F: FieldSpec>(
+fn validate_registration<F: FieldSpec>(
     #[linked] encrypted_deposit: BfvSigned<F>,
     #[public] public_deposit: Field<F>,
 ) {
@@ -109,7 +114,7 @@ impl User {
         receiver: U,
     ) -> Result<Transfer> {
         let receiver = receiver.into();
-        let mut builder = LogProofBuilder::new(&self.runtime);
+        let mut builder = self.runtime.linkedproof_builder();
 
         // Encrypt tx amount under sender's public key.
         println!("    {}: encrypting {} under own key", self.name, amount);
@@ -123,7 +128,7 @@ impl User {
             self.name, amount
         );
         let recv_pk = chain.keys.get(&receiver).unwrap();
-        let encrypted_amount_receiver = builder.encrypt_msg(&amount_linked, recv_pk)?;
+        let encrypted_amount_receiver = builder.reencrypt(&amount_linked, recv_pk)?;
 
         // Decrypt current balance, needed to prove tx validity
         let balance_enc = chain.balances.get(&self.name).unwrap();
@@ -139,7 +144,7 @@ impl User {
             .zkp_program(self.app.get_transfer_zkp())?
             .linked_input(amount_linked)
             .linked_input(balance_linked)
-            .build_linkedproof()?;
+            .build()?;
 
         Ok(Transfer {
             proof,
@@ -151,33 +156,16 @@ impl User {
     }
 
     /// Create a public deposit to a private balance.
-    pub fn create_deposit(&self, amount: i64) -> Result<Deposit> {
-        let mut builder = LogProofBuilder::new(&self.runtime);
-
-        // Encrypt deposit amount
-        println!("    {}: encrypting and linking {}", self.name, amount);
-        let (amount_enc, amount_linked) =
-            builder.encrypt_returning_link(&Signed::from(amount), &self.public_key)?;
-
-        // Create deposit proof
-        println!("    {}: creating deposit linkedproof", self.name);
-        let proof = builder
-            .zkp_program(self.app.get_deposit_zkp())?
-            .linked_input(amount_linked)
-            .public_input(BulletproofsField::from(amount))
-            .build_linkedproof()?;
-
-        Ok(Deposit {
-            proof,
-            encrypted_amount: amount_enc,
+    pub fn create_deposit(&self, amount: i64) -> Deposit {
+        Deposit {
             public_amount: amount,
             name: self.name.clone(),
-        })
+        }
     }
 
     /// Create a refresh balance transaction.
     pub fn create_refresh_balance(&self, chain: &Chain) -> Result<RefreshBalance> {
-        let mut builder = LogProofBuilder::new(&self.runtime);
+        let mut builder = self.runtime.linkedproof_builder();
 
         // Decrypt current balance, returning a link to the underlying message
         let balance_encrypted = chain.balances.get(&self.name).unwrap();
@@ -191,12 +179,12 @@ impl User {
 
         // Generate proof that the ciphertexts encrypt the same underlying message and that
         // the new one has a fresh noise budget and fresh encoding.
-        println!("    {}: creating refresh balance logproof", self.name);
+        println!("    {}: creating refresh balance linkedproof", self.name);
         let proof = builder
             .zkp_program(self.app.get_refresh_balance_zkp())?
             .linked_input(existing_link)
             .linked_input(fresh_link)
-            .build_linkedproof()?;
+            .build()?;
 
         Ok(RefreshBalance {
             proof,
@@ -206,29 +194,48 @@ impl User {
     }
 
     pub fn create_register(&self, initial_deposit: i64) -> Result<Register> {
-        let deposit = self.create_deposit(initial_deposit)?;
+        let mut builder = self.runtime.linkedproof_builder();
+
+        // Encrypt deposit amount
+        println!(
+            "    {}: encrypting and linking {}",
+            self.name, initial_deposit
+        );
+        let (amount_enc, amount_linked) =
+            builder.encrypt_returning_link(&Signed::from(initial_deposit), &self.public_key)?;
+
+        // Create registration proof
+        println!("    {}: creating registration linkedproof", self.name);
+        let proof = builder
+            .zkp_program(self.app.get_registration_zkp())?
+            .linked_input(amount_linked)
+            .public_input(BulletproofsField::from(initial_deposit))
+            .build()?;
+
         Ok(Register {
+            proof,
+            encrypted_amount: amount_enc,
             public_key: self.public_key.clone(),
-            deposit,
+            deposit: self.create_deposit(initial_deposit),
         })
     }
 }
 
-/// A register transaction is an initial deposit plus an identifying public key.
-#[derive(Clone)]
-pub struct Register {
-    public_key: PublicKey,
-    deposit: Deposit,
-}
-
-/// A deposit transaction.
+/// A register transaction.
 ///
 /// The SDLP in the linked proof proves that the ciphertext is a valid, fresh encryption. The R1CS
 /// ZKP in the linked proof proves that the amount encrypted matches the public amount deposited.
 #[derive(Clone)]
-pub struct Deposit {
+pub struct Register {
     proof: LinkedProof,
+    public_key: PublicKey,
     encrypted_amount: Ciphertext,
+    deposit: Deposit,
+}
+
+/// A public deposit transaction.
+#[derive(Clone)]
+pub struct Deposit {
     public_amount: i64,
     name: Username,
 }
@@ -305,51 +312,47 @@ impl Chain {
     pub fn register(&mut self, register: Register) -> Result<()> {
         self.ledger.push(Transaction::Register(register.clone()));
         let Register {
+            proof,
+            encrypted_amount,
             public_key,
             deposit,
         } = register;
 
+        // First, verify that the encrypted amount matches the public amount
+        let mut builder = self.runtime.linkedproof_verification_builder();
+        builder.encrypt_returning_link::<Signed>(&encrypted_amount, &public_key)?;
+        builder
+            .zkp_program(self.app.get_registration_zkp())?
+            .proof(proof)
+            .public_input(BulletproofsField::from(deposit.public_amount))
+            .verify()?;
+
+        // Register the user's public key
         self.keys.insert(deposit.name.clone(), public_key);
-        self.deposit(deposit)
+
+        // Set the initial encrypted balance
+        self.balances.insert(deposit.name, encrypted_amount);
+        Ok(())
     }
 
     pub fn deposit(&mut self, deposit: Deposit) -> Result<()> {
         self.ledger.push(Transaction::Deposit(deposit.clone()));
         let Deposit {
-            proof,
-            encrypted_amount,
             public_amount,
             name,
         } = deposit;
 
-        // First, verify that the encrypted amount matches the public amount
-        proof.verify(
-            self.app.get_deposit_zkp(),
-            vec![BulletproofsField::from(public_amount)],
-            vec![],
-        )?;
-
-        // Then deposit into the user's balance
+        // Deposit into the user's balance
         let pk = self.keys.get(&name).unwrap();
-        match self.balances.entry(name) {
-            // Update existing balance
-            Entry::Occupied(mut entry) => {
-                let curr = entry.get().clone();
-                let updated = self
-                    .runtime
-                    .run(
-                        self.app.get_update_balance_receiver_fhe(),
-                        vec![curr, encrypted_amount],
-                        pk,
-                    )?
-                    .remove(0);
-                entry.insert(updated);
-            }
-            // Or insert the amount if this is an initial deposit
-            Entry::Vacant(entry) => {
-                entry.insert(encrypted_amount);
-            }
-        }
+        let curr_bal = self.balances.get_mut(&name).unwrap();
+        *curr_bal = self
+            .runtime
+            .run::<FheProgramInput>(
+                self.app.get_deposit_to_fhe(),
+                vec![curr_bal.clone().into(), Signed::from(public_amount).into()],
+                pk,
+            )?
+            .remove(0);
         Ok(())
     }
 
@@ -364,33 +367,45 @@ impl Chain {
         } = transfer;
 
         // First verify the transfer is valid
-        proof.verify::<ZkpProgramInput>(self.app.get_transfer_zkp(), vec![], vec![])?;
+        let mut builder = self.runtime.linkedproof_verification_builder();
+        let link = builder.encrypt_returning_link::<Signed>(
+            &encrypted_amount_sender,
+            self.keys.get(&sender).unwrap(),
+        )?;
+        builder.reencrypt(
+            &link,
+            &encrypted_amount_receiver,
+            self.keys.get(&receiver).unwrap(),
+        )?;
+        builder.decrypt_returning_link::<Signed>(self.balances.get(&sender).unwrap())?;
+        builder
+            .zkp_program(self.app.get_transfer_zkp())?
+            .proof(proof)
+            .verify()?;
 
         // Update the sender's balance:
         let sender_pk = self.keys.get(&sender).unwrap();
         let sender_balance = self.balances.get_mut(&sender).unwrap();
-        let new_balance = self
+        *sender_balance = self
             .runtime
             .run(
-                self.app.get_update_balance_sender_fhe(),
+                self.app.get_transfer_from_fhe(),
                 vec![sender_balance.clone(), encrypted_amount_sender],
                 sender_pk,
             )?
             .remove(0);
-        *sender_balance = new_balance;
 
         // Update receiver's balance
         let receiver_pk = self.keys.get(&receiver).unwrap();
         let receiver_balance = self.balances.get_mut(&receiver).unwrap();
-        let new_balance = self
+        *receiver_balance = self
             .runtime
             .run(
-                self.app.get_update_balance_receiver_fhe(),
+                self.app.get_transfer_to_fhe(),
                 vec![receiver_balance.clone(), encrypted_amount_receiver],
                 receiver_pk,
             )?
             .remove(0);
-        *receiver_balance = new_balance;
         Ok(())
     }
 
@@ -404,7 +419,13 @@ impl Chain {
         } = refresh_balance;
 
         // Verify the balance refresh is valid
-        proof.verify::<ZkpProgramInput>(self.app.get_refresh_balance_zkp(), vec![], vec![])?;
+        let mut builder = self.runtime.linkedproof_verification_builder();
+        builder.decrypt_returning_link::<Signed>(self.balances.get(&name).unwrap())?;
+        builder.encrypt_returning_link::<Signed>(&fresh_balance, self.keys.get(&name).unwrap())?;
+        builder
+            .zkp_program(self.app.get_refresh_balance_zkp())?
+            .proof(proof)
+            .verify()?;
 
         // Use the freshly encrypted balance
         self.balances
@@ -432,53 +453,55 @@ impl Chain {
     }
 }
 
-pub struct App(&'static Lazy<FheZkpApplication>);
+pub struct App(FheZkpApplication);
 
 impl App {
     pub fn new() -> Result<Self> {
-        static APP: Lazy<FheZkpApplication> = Lazy::new(|| {
-            Compiler::new()
-                .fhe_program(update_balance_sender)
-                .fhe_program(update_balance_receiver)
-                // These params are not necessary to run the example, but they do shave a few
-                // minutes off the runtime. In practice, you probably want to use the default
-                // parameters provided by the compiler. The ones set here will result in balances
-                // needing to be refreshed more often.
-                .with_params(&Params {
-                    lattice_dimension: 1024,
-                    coeff_modulus: vec![0x7e00001],
-                    plain_modulus: 512,
-                    scheme_type: sunscreen::SchemeType::Bfv,
-                    security_level: sunscreen::SecurityLevel::TC128,
-                })
-                .zkp_backend::<BulletproofsBackend>()
-                .zkp_program(validate_transfer)
-                .zkp_program(validate_deposit)
-                .zkp_program(validate_refresh_balance)
-                .compile()
-                .unwrap()
-        });
-        Ok(Self(&APP))
+        let app = Compiler::new()
+            .fhe_program(transfer_to)
+            .fhe_program(transfer_from)
+            .fhe_program(deposit_to)
+            // These params are not necessary to run the example, but they do shave a few
+            // minutes off the runtime. In practice, you probably want to use the default
+            // parameters provided by the compiler. The ones set here will result in balances
+            // needing to be refreshed more often.
+            .with_params(&Params {
+                lattice_dimension: 1024,
+                coeff_modulus: vec![0x7e00001],
+                plain_modulus: 512,
+                scheme_type: sunscreen::SchemeType::Bfv,
+                security_level: sunscreen::SecurityLevel::TC128,
+            })
+            .zkp_backend::<BulletproofsBackend>()
+            .zkp_program(validate_transfer)
+            .zkp_program(validate_registration)
+            .zkp_program(validate_refresh_balance)
+            .compile()?;
+        Ok(Self(app))
     }
 
     pub fn get_transfer_zkp(&self) -> &CompiledZkpProgram {
         self.0.get_zkp_program(validate_transfer).unwrap()
     }
 
-    pub fn get_deposit_zkp(&self) -> &CompiledZkpProgram {
-        self.0.get_zkp_program(validate_deposit).unwrap()
+    pub fn get_registration_zkp(&self) -> &CompiledZkpProgram {
+        self.0.get_zkp_program(validate_registration).unwrap()
     }
 
     pub fn get_refresh_balance_zkp(&self) -> &CompiledZkpProgram {
         self.0.get_zkp_program(validate_refresh_balance).unwrap()
     }
 
-    pub fn get_update_balance_sender_fhe(&self) -> &CompiledFheProgram {
-        self.0.get_fhe_program(update_balance_sender).unwrap()
+    pub fn get_transfer_to_fhe(&self) -> &CompiledFheProgram {
+        self.0.get_fhe_program(transfer_to).unwrap()
     }
 
-    pub fn get_update_balance_receiver_fhe(&self) -> &CompiledFheProgram {
-        self.0.get_fhe_program(update_balance_receiver).unwrap()
+    pub fn get_transfer_from_fhe(&self) -> &CompiledFheProgram {
+        self.0.get_fhe_program(transfer_from).unwrap()
+    }
+
+    pub fn get_deposit_to_fhe(&self) -> &CompiledFheProgram {
+        self.0.get_fhe_program(deposit_to).unwrap()
     }
 
     pub fn params(&self) -> &Params {
@@ -501,7 +524,7 @@ fn main() -> Result<()> {
     chain.register(alice.create_register(deposit)?)?;
     let deposit = 50;
     println!("Depositing an extra {deposit}");
-    chain.deposit(alice.create_deposit(deposit)?)?;
+    chain.deposit(alice.create_deposit(deposit))?;
 
     println!();
 

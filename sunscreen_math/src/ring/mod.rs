@@ -3,6 +3,7 @@ use crypto_bigint::NonZero;
 pub use crypto_bigint::Uint;
 use curve25519_dalek::scalar::Scalar;
 use num::traits::{ToBytes, WrappingAdd, WrappingMul, WrappingNeg, WrappingSub};
+use serde::{Deserialize, Deserializer, Serialize};
 use std::{
     marker::PhantomData,
     ops::{Add, Mul, Neg, Sub},
@@ -404,6 +405,97 @@ impl<const N: usize, B: ArithmeticBackend<N>> Clone for Zq<N, B> {
 }
 
 impl<const N: usize, B: ArithmeticBackend<N>> Copy for Zq<N, B> {}
+
+impl<const N: usize, B: ArithmeticBackend<N>> Serialize for Zq<N, B> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        // Helper method that is valid when `N == M`, even though the compiler doesn't realize it.
+        fn cast<const M: usize, const N: usize, B: ArithmeticBackend<N>>(x: &Zq<N, B>) -> Uint<M> {
+            Uint::<M>::new(x.into_bigint().to_limbs()[..].try_into().unwrap())
+        }
+        // Support up to 16 limbs (U1024 on 64-bit, U512 on 32-bit), and panic loudly if we
+        // ever exceed this.
+        // Note that on 32-bit builds, Uint<LIMBS> impls the Encoding trait necessary for
+        // serialization only for even LIMBS.
+        match N {
+            #[cfg(target_pointer_width = "64")]
+            1 => cast::<1, N, B>(self).serialize(serializer),
+            2 => cast::<2, N, B>(self).serialize(serializer),
+            #[cfg(target_pointer_width = "64")]
+            3 => cast::<3, N, B>(self).serialize(serializer),
+            4 => cast::<4, N, B>(self).serialize(serializer),
+            #[cfg(target_pointer_width = "64")]
+            5 => cast::<5, N, B>(self).serialize(serializer),
+            6 => cast::<6, N, B>(self).serialize(serializer),
+            #[cfg(target_pointer_width = "64")]
+            7 => cast::<7, N, B>(self).serialize(serializer),
+            8 => cast::<8, N, B>(self).serialize(serializer),
+            #[cfg(target_pointer_width = "64")]
+            9 => cast::<9, N, B>(self).serialize(serializer),
+            10 => cast::<10, N, B>(self).serialize(serializer),
+            #[cfg(target_pointer_width = "64")]
+            11 => cast::<11, N, B>(self).serialize(serializer),
+            12 => cast::<12, N, B>(self).serialize(serializer),
+            #[cfg(target_pointer_width = "64")]
+            13 => cast::<13, N, B>(self).serialize(serializer),
+            14 => cast::<14, N, B>(self).serialize(serializer),
+            #[cfg(target_pointer_width = "64")]
+            15 => cast::<15, N, B>(self).serialize(serializer),
+            16 => cast::<16, N, B>(self).serialize(serializer),
+            _ => unimplemented!(),
+        }
+    }
+}
+
+impl<'de, const N: usize, B: ArithmeticBackend<N>> Deserialize<'de> for Zq<N, B> {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        // Helper method that is valid when `N == M`, even though the compiler doesn't realize it.
+        fn cast<'de, const M: usize, const N: usize, B, D>(x: Uint<M>) -> Result<Zq<N, B>, D::Error>
+        where
+            B: ArithmeticBackend<N>,
+            D: Deserializer<'de>,
+        {
+            Zq::try_from(Uint::<N>::new(x.to_limbs()[..].try_into().unwrap()))
+                .map_err(serde::de::Error::custom)
+        }
+        // Support up to 16 limbs (U1024 on 64-bit, U512 on 32-bit), and panic loudly if we
+        // ever exceed this.
+        // Note that on 32-bit builds, Uint<LIMBS> impls the Encoding trait necessary for
+        // deserialization only for even LIMBS.
+        match N {
+            #[cfg(target_pointer_width = "64")]
+            1 => cast::<'_, 1, N, B, D>(Uint::deserialize(deserializer)?),
+            2 => cast::<'_, 2, N, B, D>(Uint::deserialize(deserializer)?),
+            #[cfg(target_pointer_width = "64")]
+            3 => cast::<'_, 3, N, B, D>(Uint::deserialize(deserializer)?),
+            4 => cast::<'_, 4, N, B, D>(Uint::deserialize(deserializer)?),
+            #[cfg(target_pointer_width = "64")]
+            5 => cast::<'_, 5, N, B, D>(Uint::deserialize(deserializer)?),
+            6 => cast::<'_, 6, N, B, D>(Uint::deserialize(deserializer)?),
+            #[cfg(target_pointer_width = "64")]
+            7 => cast::<'_, 7, N, B, D>(Uint::deserialize(deserializer)?),
+            8 => cast::<'_, 8, N, B, D>(Uint::deserialize(deserializer)?),
+            #[cfg(target_pointer_width = "64")]
+            9 => cast::<'_, 9, N, B, D>(Uint::deserialize(deserializer)?),
+            10 => cast::<'_, 10, N, B, D>(Uint::deserialize(deserializer)?),
+            #[cfg(target_pointer_width = "64")]
+            11 => cast::<'_, 11, N, B, D>(Uint::deserialize(deserializer)?),
+            12 => cast::<'_, 12, N, B, D>(Uint::deserialize(deserializer)?),
+            #[cfg(target_pointer_width = "64")]
+            13 => cast::<'_, 13, N, B, D>(Uint::deserialize(deserializer)?),
+            14 => cast::<'_, 14, N, B, D>(Uint::deserialize(deserializer)?),
+            #[cfg(target_pointer_width = "64")]
+            15 => cast::<'_, 15, N, B, D>(Uint::deserialize(deserializer)?),
+            16 => cast::<'_, 16, N, B, D>(Uint::deserialize(deserializer)?),
+            _ => unimplemented!(),
+        }
+    }
+}
 
 #[refify_binary_op]
 impl<const N: usize, B> Add<&Zq<N, B>> for &Zq<N, B>

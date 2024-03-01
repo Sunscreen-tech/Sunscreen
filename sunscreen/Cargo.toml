@@ -30,6 +30,7 @@ rustdoc-args = ["--html-in-header", "docs/assets/katex-header.html"]
 bumpalo = { workspace = true }
 crypto-bigint = { workspace = true }
 log = { workspace = true }
+logproof = { workspace = true, optional = true }
 num = { workspace = true }
 paste = { workspace = true }
 petgraph = { workspace = true }
@@ -64,7 +65,7 @@ serde_json = { workspace = true }
 [features]
 bulletproofs = ["sunscreen_zkp_backend/bulletproofs"]
 hexl = ["seal_fhe/hexl"]
-linkedproofs = ["bulletproofs", "sunscreen_runtime/linkedproofs"]
+linkedproofs = ["bulletproofs", "sunscreen_runtime/linkedproofs", "logproof"]
 transparent-ciphertexts = ["seal_fhe/transparent-ciphertexts"]
 deterministic = ["seal_fhe/deterministic", "sunscreen_runtime/deterministic"]
 

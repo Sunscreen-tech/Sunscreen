@@ -7,14 +7,16 @@ use bulletproofs::{BulletproofGens, GeneratorsChain, PedersenGens};
 use curve25519_dalek::{ristretto::RistrettoPoint, scalar::Scalar};
 use log::trace;
 use logproof::{
+    linear_algebra::Matrix,
     math::rand256,
     rings::{ZqSeal128_1024, ZqSeal128_2048, ZqSeal128_4096, ZqSeal128_8192},
-    InnerProductVerifierKnowledge, LogProof, LogProofGenerators, LogProofProverKnowledge,
+    Bounds, InnerProductVerifierKnowledge, LogProof, LogProofGenerators, LogProofProverKnowledge,
     LogProofVerifierKnowledge, ProofError,
 };
 use merlin::Transcript;
 use paste::paste;
 use seq_macro::seq;
+use serde::{Deserialize, Serialize};
 use sunscreen_compiler_common::Type;
 use sunscreen_zkp_backend::{
     bulletproofs::{
@@ -25,24 +27,23 @@ use sunscreen_zkp_backend::{
 
 use crate::{CompiledZkpProgram, Result, TypeNameInstance, ZkpProgramInput, ZkpRuntime};
 
-#[derive(Debug, Clone)]
-/// SDLP proof and associated information for verification
+#[derive(Serialize, Deserialize, Clone)]
+/// SDLP proof
 pub struct Sdlp {
     proof: LogProof,
-    vk: SealSdlpVerifierKnowledge,
     g: Vec<RistrettoPoint>,
     h: Vec<RistrettoPoint>,
     u: RistrettoPoint,
 }
 
-#[derive(Clone)]
+#[derive(Serialize, Deserialize, Clone)]
 /// R1CS BP proof and associated information for verification
 struct BP {
     proof: Proof,
     verifier_parameters: BulletproofVerifierParameters,
 }
 
-#[derive(Clone)]
+#[derive(Serialize, Deserialize, Clone)]
 /// A linked proof between an SDLP and R1CS BP
 pub struct LinkedProof {
     sdlp: Sdlp,
@@ -96,7 +97,7 @@ impl LinkedProof {
     const TRANSCRIPT_LABEL: &'static [u8] = b"linked-sdlp-and-r1cs-bp";
     /// This function creates a linked proof.
     ///
-    /// Note that the [builder methods](`crate::LogProofBuilder`) offer an easier way to construct this
+    /// Note that the [builder methods](`crate::LinkedProofBuilder`) offer an easier way to construct this
     /// proof. See the user documentation for more information.
     ///
     /// Arguments:
@@ -109,8 +110,8 @@ impl LinkedProof {
     /// * `private_inputs`: The private inputs to the ZKP program, not including the shared values
     /// * `public_inputs`: The public inputs to the ZKP program
     /// * `constant_inputs`: The constant inputs to the ZKP program
-    pub fn create<I>(
-        prover_knowledge: &SealSdlpProverKnowledge,
+    pub(crate) fn create<I>(
+        prover_knowledge: &SdlpProverKnowledge,
         shared_indices: &[(usize, usize)],
         shared_types: &[Type],
         program: &CompiledZkpProgram,
@@ -159,7 +160,6 @@ impl LinkedProof {
 
         let sdlp_package = Sdlp {
             proof: sdlp_proof,
-            vk,
             g: gens.g,
             h: gens.h,
             u,
@@ -245,8 +245,9 @@ impl LinkedProof {
     /// * `public_inputs`: The public inputs to the ZKP program
     /// * `constant_inputs`: The constant inputs to the ZKP program
     ///
-    pub fn verify<I>(
+    pub(crate) fn verify<I>(
         &self,
+        sdlp_vk: &SdlpVerifierKnowledge,
         program: &CompiledZkpProgram,
         public_inputs: Vec<I>,
         constant_inputs: Vec<I>,
@@ -258,8 +259,7 @@ impl LinkedProof {
 
         let mut transcript = Transcript::new(Self::TRANSCRIPT_LABEL);
 
-        self.sdlp
-            .vk
+        sdlp_vk
             .verify(
                 &self.sdlp.proof,
                 &mut transcript,
@@ -297,17 +297,15 @@ impl Sdlp {
     /// used when only proving valid encryptions of known values, but _not_ for proving any
     /// properties of those underlying values.
     ///
-    /// The [builder methods](`crate::LogProofBuilder`) offer an easier way to construct this proof.
-    pub fn create(prover_knowledge: &SealSdlpProverKnowledge) -> Result<Self> {
+    /// The [builder methods](`crate::SdlpBuilder`) offer an easier way to construct this proof.
+    pub(crate) fn create(prover_knowledge: &SdlpProverKnowledge) -> Result<Self> {
         let mut transcript = Transcript::new(Self::TRANSCRIPT_LABEL);
-        let vk = prover_knowledge.vk();
-        let gen = LogProofGenerators::new(vk.l() as usize);
+        let gen = LogProofGenerators::new(prover_knowledge.vk().l() as usize);
         let u = InnerProductVerifierKnowledge::get_u();
         let proof = prover_knowledge.create_logproof(&mut transcript, &gen.g, &gen.h, &u);
 
         Ok(Self {
             proof,
-            vk,
             g: gen.g,
             h: gen.h,
             u,
@@ -315,32 +313,31 @@ impl Sdlp {
     }
 
     /// This function verifies a solo SDLP.
-    pub fn verify(&self) -> Result<()> {
+    pub(crate) fn verify(&self, vk: &SdlpVerifierKnowledge) -> Result<()> {
         let mut transcript = Transcript::new(Self::TRANSCRIPT_LABEL);
 
-        self.vk
-            .verify(&self.proof, &mut transcript, &self.g, &self.h, &self.u)?;
+        vk.verify(&self.proof, &mut transcript, &self.g, &self.h, &self.u)?;
 
         Ok(())
     }
 }
 
 /// The prover knowledge of an [`Sdlp`].
-pub struct SealSdlpProverKnowledge(pub(crate) SealSdlpProverKnowledgeInternal);
+pub(crate) struct SdlpProverKnowledge(pub(crate) SdlpProverKnowledgeInternal);
 
 /// The verifier knowledge of an [`Sdlp`].
-#[derive(Debug, Clone)]
-pub struct SealSdlpVerifierKnowledge(pub(crate) SealSdlpVerifierKnowledgeInternal);
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub(crate) struct SdlpVerifierKnowledge(pub(crate) SdlpVerifierKnowledgeInternal);
 
-pub(crate) enum SealSdlpProverKnowledgeInternal {
+pub(crate) enum SdlpProverKnowledgeInternal {
     LP1(LogProofProverKnowledge<ZqSeal128_1024>),
     LP2(LogProofProverKnowledge<ZqSeal128_2048>),
     LP3(LogProofProverKnowledge<ZqSeal128_4096>),
     LP4(LogProofProverKnowledge<ZqSeal128_8192>),
 }
 
-#[derive(Debug, Clone)]
-pub(crate) enum SealSdlpVerifierKnowledgeInternal {
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub(crate) enum SdlpVerifierKnowledgeInternal {
     LP1(LogProofVerifierKnowledge<ZqSeal128_1024>),
     LP2(LogProofVerifierKnowledge<ZqSeal128_2048>),
     LP3(LogProofVerifierKnowledge<ZqSeal128_4096>),
@@ -350,14 +347,14 @@ pub(crate) enum SealSdlpVerifierKnowledgeInternal {
 macro_rules! impl_from {
     ($zq_type:ty, $variant:ident) => {
         paste! {
-            impl From<LogProofProverKnowledge<$zq_type>> for SealSdlpProverKnowledge {
+            impl From<LogProofProverKnowledge<$zq_type>> for SdlpProverKnowledge {
                 fn from(k: LogProofProverKnowledge<$zq_type>) -> Self {
-                    Self(SealSdlpProverKnowledgeInternal::$variant(k))
+                    Self(SdlpProverKnowledgeInternal::$variant(k))
                 }
             }
-            impl From<LogProofVerifierKnowledge<$zq_type>> for SealSdlpVerifierKnowledge {
+            impl From<LogProofVerifierKnowledge<$zq_type>> for SdlpVerifierKnowledge {
                 fn from(k: LogProofVerifierKnowledge<$zq_type>) -> Self {
-                    Self(SealSdlpVerifierKnowledgeInternal::$variant(k))
+                    Self(SdlpVerifierKnowledgeInternal::$variant(k))
                 }
             }
         }
@@ -377,15 +374,15 @@ macro_rules! seq_zq {
     )
 }
 
-impl SealSdlpProverKnowledge {
+impl SdlpProverKnowledge {
     /// Get the binary expansion of a component of the witness matrix `S`.
     ///
     /// Delegation to [`LogProofProverKnowledge::s_binary_by_index`].
-    pub fn s_binary_by_index(&self, index: (usize, usize)) -> BitVec {
+    pub(crate) fn s_binary_by_index(&self, index: (usize, usize)) -> BitVec {
         seq_zq!({
             match &self.0 {
                 #(
-                    SealSdlpProverKnowledgeInternal::LP~N(pk) => pk.s_binary_by_index(index),
+                    SdlpProverKnowledgeInternal::LP~N(pk) => pk.s_binary_by_index(index),
                 )*
             }
         })
@@ -394,13 +391,24 @@ impl SealSdlpProverKnowledge {
     /// Get the verifier knowledge component.
     ///
     /// Delegation to [`LogProofProverKnowledge::vk`].
-    pub fn vk(&self) -> SealSdlpVerifierKnowledge {
+    pub(crate) fn vk(&self) -> SdlpVerifierKnowledge {
         seq_zq!({
             match &self.0 {
                 #(
-                    SealSdlpProverKnowledgeInternal::LP~N(pk) => {
-                        SealSdlpVerifierKnowledge(SealSdlpVerifierKnowledgeInternal::LP~N(pk.vk.clone()))
+                    SdlpProverKnowledgeInternal::LP~N(pk) => {
+                        SdlpVerifierKnowledge(SdlpVerifierKnowledgeInternal::LP~N(pk.vk.clone()))
                     }
+                )*
+            }
+        })
+    }
+
+    /// Get a mutable reference to the bounds on the secret `S`.
+    pub(crate) fn bounds_mut(&mut self) -> &mut Matrix<Bounds> {
+        seq_zq!({
+            match &mut self.0 {
+                #(
+                    SdlpProverKnowledgeInternal::LP~N(pk) => &mut pk.vk.bounds,
                 )*
             }
         })
@@ -421,7 +429,7 @@ impl SealSdlpProverKnowledge {
         seq_zq!({
             match &self.0 {
                 #(
-                    SealSdlpProverKnowledgeInternal::LP~N(pk) => {
+                    SdlpProverKnowledgeInternal::LP~N(pk) => {
                         LogProof::create_with_shared(transcript, pk, g, h, u, half_rho, shared_indices)
                     }
                 )*
@@ -442,14 +450,14 @@ impl SealSdlpProverKnowledge {
         seq_zq!({
             match &self.0 {
                 #(
-                    SealSdlpProverKnowledgeInternal::LP~N(pk) => LogProof::create(transcript, pk, g, h, u),
+                    SdlpProverKnowledgeInternal::LP~N(pk) => LogProof::create(transcript, pk, g, h, u),
                 )*
             }
         })
     }
 }
 
-impl SealSdlpVerifierKnowledge {
+impl SdlpVerifierKnowledge {
     /// Get the length in bits of the binary expansion of the serialized secret * vectors.
     ///
     /// Delegate to [`LogProofVerifierKnowledge::l`].
@@ -457,20 +465,31 @@ impl SealSdlpVerifierKnowledge {
         seq_zq!({
             match &self.0 {
                 #(
-                    SealSdlpVerifierKnowledgeInternal::LP~N(vk) => vk.l(),
+                    SdlpVerifierKnowledgeInternal::LP~N(vk) => vk.l(),
                 )*
             }
         })
     }
 
-    /// Get the ranges in the serialized coefficients of `S` corresponding to the bounds
+    /// Get the ranges in the serialized coefficients of `S` corresponding to the bounds.
     ///
     /// Delegate to [`LogProofVerifierKnowledge::b_slices`].
     pub fn b_slices(&self) -> Vec<Vec<Range<usize>>> {
         seq_zq!({
             match &self.0 {
                 #(
-                    SealSdlpVerifierKnowledgeInternal::LP~N(vk) => vk.b_slices(),
+                    SdlpVerifierKnowledgeInternal::LP~N(vk) => vk.b_slices(),
+                )*
+            }
+        })
+    }
+
+    /// Get a mutable reference to the bounds on the secret `S`.
+    pub fn bounds_mut(&mut self) -> &mut Matrix<Bounds> {
+        seq_zq!({
+            match &mut self.0 {
+                #(
+                    SdlpVerifierKnowledgeInternal::LP~N(vk) => &mut vk.bounds,
                 )*
             }
         })
@@ -490,7 +509,7 @@ impl SealSdlpVerifierKnowledge {
         seq_zq!({
             match &self.0 {
                 #(
-                    SealSdlpVerifierKnowledgeInternal::LP~N(vk) => logproof.verify(transcript, vk, g, h, u),
+                    SdlpVerifierKnowledgeInternal::LP~N(vk) => logproof.verify(transcript, vk, g, h, u),
                 )*
             }
         })

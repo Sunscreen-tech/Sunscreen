@@ -440,7 +440,7 @@ fn constraint_count(graph: &ExecutableZkpProgram) -> Result<usize> {
 }
 
 /// Parameters for verifying Bulletproof circuit.
-#[derive(Clone)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct BulletproofVerifierParameters {
     pedersen_generators: PedersenGens,
     bulletproof_generators: BulletproofGens,

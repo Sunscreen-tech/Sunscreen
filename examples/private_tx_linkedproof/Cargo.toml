@@ -6,4 +6,3 @@ edition = "2021"
 [dependencies]
 sunscreen = { path = "../../sunscreen", features = ["linkedproofs"] }
 env_logger = { workspace = true }
-once_cell = { workspace = true }

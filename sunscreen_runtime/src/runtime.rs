@@ -933,6 +933,21 @@ impl<B> FheZkpRuntime<B> {
     }
 }
 
+#[cfg(feature = "linkedproofs")]
+impl FheZkpRuntime<sunscreen_zkp_backend::bulletproofs::BulletproofsBackend> {
+    /// Create a new [`LinkedProofBuilder`](crate::LinkedProofBuilder).
+    pub fn linkedproof_builder<'k, 'z>(&self) -> crate::LinkedProofBuilder<'_, 'k, 'z> {
+        crate::LinkedProofBuilder::new(self)
+    }
+
+    /// Create a new [`LinkedProofVerificationBuilder`](crate::LinkedProofVerificationBuilder).
+    pub fn linkedproof_verification_builder<'k, 'z>(
+        &self,
+    ) -> crate::LinkedProofVerificationBuilder<'_, 'k, 'z> {
+        crate::LinkedProofVerificationBuilder::new(self)
+    }
+}
+
 /**
  * A runtime capable of only FHE operations.
  */
@@ -944,6 +959,19 @@ impl FheRuntime {
      */
     pub fn new(params: &Params) -> Result<Self> {
         Runtime::new_fhe(params)
+    }
+}
+
+#[cfg(feature = "linkedproofs")]
+impl FheRuntime {
+    /// Create a new [`SdlpBuilder`](crate::SdlpBuilder).
+    pub fn sdlp_builder<'k>(&self) -> crate::SdlpBuilder<'_, 'k> {
+        crate::SdlpBuilder::new(self)
+    }
+
+    /// Create a new [`SdlpVerificationBuilder`](crate::SdlpVerificationBuilder).
+    pub fn sdlp_verification_builder<'k>(&self) -> crate::SdlpVerificationBuilder<'_, 'k> {
+        crate::SdlpVerificationBuilder::new(self)
     }
 }
 

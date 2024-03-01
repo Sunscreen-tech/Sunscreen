@@ -3,6 +3,7 @@ use bitvec::slice::BitSlice;
 use curve25519_dalek::scalar::Scalar;
 use digest::Digest;
 use rayon::prelude::*;
+use serde::{Deserialize, Serialize};
 use std::borrow::Borrow;
 use std::ops::{Add, Div, Index, IndexMut, Mul, Sub};
 use sunscreen_math::field::Field;
@@ -14,7 +15,7 @@ use crate::crypto::CryptoHash;
 use crate::math::{ModSwitch, Tensor};
 use crate::rings::{FieldFrom, ZqRistretto};
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 /**
  * An `m x n` matrix of elements.
  *

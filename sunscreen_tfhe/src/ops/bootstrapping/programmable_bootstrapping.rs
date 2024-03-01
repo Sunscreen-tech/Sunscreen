@@ -143,7 +143,7 @@ pub(crate) fn generate_lut<S, F>(
         v.ilog2() + 1
     };
 
-    let ciel_v = 0x1usize << log_v;
+    let ceil_v = 0x1usize << log_v;
 
     assert!(n >= p);
 
@@ -156,7 +156,7 @@ pub(crate) fn generate_lut<S, F>(
     for (j, p_i_unmapped) in (0..=p - 1).enumerate() {
         // Insert a stride amount into the LUT
         c[j * stride..(j + 1) * stride].iter_mut().enumerate().for_each(|(k, c)| {
-            let fn_id = k % ciel_v;
+            let fn_id = k % ceil_v;
 
             let p_i = if fn_id < v {
                 maps[fn_id](p_i_unmapped as u64)
@@ -296,72 +296,22 @@ pub fn programmable_bootstrap_univariate<S>(
 ) where
     S: TorusOps,
 {
-    lwe_params.assert_valid();
-    glwe_params.assert_valid();
-    radix.assert_valid::<S>();
-    bootstrap_key.assert_valid(lwe_params, glwe_params, radix);
-    lut.assert_valid(glwe_params);
-    input.assert_valid(lwe_params);
-    output.assert_valid(&glwe_params.as_lwe_def());
+    allocate_scratch_ref!(glwe, GlweCiphertextRef<S>, (glwe_params.dim));
 
-    // Steps:
-    // 1. Modulus switch the ciphertext to 2N.
-    // 2. Use a cmux tree to blind rotate V using the elements of the bootstrap key (the input LWE secret key bits).
-    // 3. Sample extract.
-    // 4. (Optional, done outside of this method) Key switch to the output LWE
-    // secret key (should be the one extracted from the GLWE key).
-
-    let degree = glwe_params.dim.polynomial_degree.0;
-    let two_n = degree.ilog2() + 1;
-
-    // 1. Modulus switch the ciphertext to 2N.
-    let mut ct = input.to_owned();
-    lwe_ciphertext_modulus_switch(&mut ct, 0, 0, two_n, lwe_params);
-
-    let (ct_a, ct_b) = ct.a_b(lwe_params);
-
-    // 2. Use a cmux tree to blind rotate V using the elements of the bootstrap
-    // key (the input LWE secret key bits).
-
-    // Perform V_0 ^ X^{-b}
-    allocate_scratch_ref!(cmux_output, GlweCiphertextRef<S>, (glwe_params.dim));
-    cmux_output.clear();
-
-    rotate_glwe_negative_monomial_negacyclic(
-        cmux_output,
-        lut.glwe(),
-        ct_b.inner().to_u64() as usize,
+    generalized_programmable_bootstrap(
+        glwe,
+        input,
+        lut,
+        bootstrap_key,
+        0,
+        0,
+        lwe_params,
         glwe_params,
+        radix,
     );
 
-    allocate_scratch_ref!(rotated_ct, GlweCiphertextRef<S>, (glwe_params.dim));
-
-    // Perform the cmux tree from the bootstrap key with the relation
-    // V_n = V_{n-1} ^ X^{a_{n-1} s_{n-1}}
-    for (a_i, index_select) in ct_a.iter().zip(bootstrap_key.rows(glwe_params, radix)) {
-        let tmp = cmux_output.to_owned();
-
-        // This operation performs a copy so the rotated_ct doesn't need to be
-        // cleared.
-        rotate_glwe_positive_monomial_negacyclic(
-            rotated_ct,
-            cmux_output,
-            a_i.inner().to_u64() as usize,
-            glwe_params,
-        );
-
-        cmux(
-            cmux_output,
-            &tmp,
-            rotated_ct,
-            index_select,
-            glwe_params,
-            radix,
-        );
-    }
-
     // 3. Sample extract.
-    sample_extract(output, cmux_output, 0, glwe_params);
+    sample_extract(output, glwe, 0, glwe_params);
 }
 
 #[allow(clippy::too_many_arguments)]

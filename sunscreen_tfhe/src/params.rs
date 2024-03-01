@@ -241,8 +241,7 @@ pub const GLWE_1_2048_128: GlweDef = GlweDef {
 /// 80-bit secure parameters for an LWE instance with a dimension of 512.
 pub const LWE_512_80: LweDef = LweDef {
     dim: LweDimension(512),
-    //std: Stddev(0.000001842343446823844),
-    std: Stddev(0.0),
+    std: Stddev(0.000001842343446823844),
 };
 
 /// 80-bit secure parameters for a GLWE instance with 5 polynomials of degree 256.
@@ -251,8 +250,7 @@ pub const GLWE_5_256_80: GlweDef = GlweDef {
         size: GlweSize(5),
         polynomial_degree: PolynomialDegree(256),
     },
-    //std: Stddev(0.0000000000000007794169597948335),
-    std: Stddev(0.0),
+    std: Stddev(0.0000000000000007794169597948335),
 };
 
 /// 80-bit secure parameters for a GLWE instance with 1 polynomial of degree 1024.

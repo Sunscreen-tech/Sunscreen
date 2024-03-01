@@ -13,7 +13,7 @@ use super::GlweCiphertextRef;
 
 dst! {
     /// Lookup table for a univariate function used during
-    /// [`programmable_bootstrap`](crate::ops::bootstrapping::programmable_bootstrap)
+    /// [`programmable_bootstrap_univariate`](crate::ops::bootstrapping::programmable_bootstrap_univariate)
     /// and [`circuit_bootstrap`](crate::ops::bootstrapping::circuit_bootstrap).
     UnivariateLookupTable,
     UnivariateLookupTableRef,

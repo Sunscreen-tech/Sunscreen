@@ -29,7 +29,7 @@ use super::rotate_glwe_negative_monomial_negacyclic;
 /// the secret key being encrypted.
 ///
 /// See
-/// [`programmable_bootstrap`](crate::ops::bootstrapping::programmable_bootstrap)
+/// [`programmable_bootstrap_univariate`](crate::ops::bootstrapping::programmable_bootstrap_univariate)
 /// for an example of how to use this key.
 pub fn generate_bootstrap_key<S>(
     bootstrap_key: &mut BootstrapKeyRef<S>,
@@ -616,7 +616,7 @@ pub(crate) fn generate_bivariate_lut<S, F>(
 /// # See also
 ///
 /// For the univariate version of programmable bootstrapping, see
-/// [`programmable_bootstrap`](programmable_bootstrap) and its associated LUT
+/// [`programmable_bootstrap_univariate`](programmable_bootstrap_univariate) and its associated LUT
 /// [`UnivariateLookupTable`](crate::entities::UnivariateLookupTable).
 #[allow(clippy::too_many_arguments)]
 pub fn programmable_bootstrap_bivariate<S>(

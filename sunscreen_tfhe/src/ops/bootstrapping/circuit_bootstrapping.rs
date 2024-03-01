@@ -7,7 +7,7 @@ use crate::{
         LweCiphertextListRef, LweCiphertextRef, UnivariateLookupTableRef,
     },
     ops::{
-        bootstrapping::programmable_bootstrap, homomorphisms::rotate,
+        bootstrapping::programmable_bootstrap_univariate, homomorphisms::rotate,
         keyswitch::private_functional_keyswitch::private_functional_keyswitch,
     },
     scratch::allocate_scratch_ref,
@@ -238,7 +238,7 @@ fn level_0_to_level_2<S: TorusOps>(
 
         lut.fill_with_constant(minus_one, glwe_2, plaintext_bits);
 
-        programmable_bootstrap(
+        programmable_bootstrap_univariate(
             lwe_bootstrapped,
             lwe_rotated,
             lut,

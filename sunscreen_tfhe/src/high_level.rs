@@ -844,7 +844,7 @@ pub mod evaluation {
     ) -> LweCiphertext<u64> {
         let mut out = LweCiphertext::new(&glwe.as_lwe_def());
 
-        crate::ops::bootstrapping::programmable_bootstrap(
+        crate::ops::bootstrapping::programmable_bootstrap_univariate(
             &mut out, input, lut, bsk, lwe, glwe, radix,
         );
 

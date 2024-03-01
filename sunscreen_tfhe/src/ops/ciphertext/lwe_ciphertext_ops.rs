@@ -73,6 +73,7 @@ pub(crate) fn scalar_mul_ciphertext_mad<S>(
 /// When performing the mod switch, the first `log_chi` MSBs are skipped in the input and
 /// the message is padded with `log_v` bits in the LSB. Example:
 ///
+/// ```ignore
 ///   chi       x       r       dropped
 /// ---------------------------------------------       
 /// | 0 0 | 1 1 0 1 0 | 1 | 1 0 1 0 1 1 0 1 0 ...
@@ -81,6 +82,7 @@ pub(crate) fn scalar_mul_ciphertext_mad<S>(
 ///         V
 ///
 /// | 1 1 0 1 1 | 0 0 0 |
+/// ```
 ///
 /// We drop the first `log_chi` bits then round the `x` section using the `r` bit. We copy
 /// down the bits in the rounded `x` value and append `log_v` 0s as LSBs.
@@ -94,7 +96,8 @@ pub(crate) fn scalar_mul_ciphertext_mad<S>(
 /// by Chillotti et al.
 pub fn lwe_ciphertext_modulus_switch<S>(
     ct: &mut LweCiphertextRef<S>,
-    original_bits: u32,
+    log_chi: u32,
+    log_v: u32,
     log_modulus: u32,
     params: &LweDef,
 ) where
@@ -105,15 +108,23 @@ pub fn lwe_ciphertext_modulus_switch<S>(
     // We specifically want to zero out the MSBs instead of shifting them back
     // around.
     for a in c_a {
-        let c: u128 = a.inner().to_u64() as u128;
-        let res = (c * (1 << log_modulus)).div_rounded(1 << original_bits as u128);
-        *a = Torus::from(S::from_u64(res as u64));
+        let res = modulus_switch(
+            a.inner(),
+            log_chi as usize,
+            log_v as usize,
+            log_modulus as usize,
+        );
+        *a = Torus::from(res);
     }
 
-    let c = c_b.inner().to_u64() as u128;
-    let res = (c * (1 << log_modulus)).div_rounded(1 << original_bits as u128);
+    let res = modulus_switch(
+        c_b.inner(),
+        log_chi as usize,
+        log_v as usize,
+        log_modulus as usize,
+    );
 
-    *c_b = Torus::from(S::from_u64(res as u64));
+    *c_b = Torus::from(res);
 }
 
 #[inline(never)]

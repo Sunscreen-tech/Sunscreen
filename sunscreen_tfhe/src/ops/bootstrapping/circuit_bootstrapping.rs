@@ -1,4 +1,4 @@
-use std::array;
+
 
 use num::Complex;
 use sunscreen_math::Zero;
@@ -6,15 +6,12 @@ use sunscreen_math::Zero;
 use crate::{
     dst::FromMutSlice,
     entities::{
-        BootstrapKeyFftRef, CircuitBootstrappingKeyswitchKeysRef, GgswCiphertextRef,
-        GlweCiphertext, GlweCiphertextRef, GlweSecretKeyRef, LweCiphertextListRef,
-        LweCiphertextRef, Polynomial, UnivariateLookupTableRef,
+        BootstrapKeyFftRef, CircuitBootstrappingKeyswitchKeysRef, GgswCiphertextRef, GlweCiphertextRef, LweCiphertextListRef,
+        LweCiphertextRef, UnivariateLookupTableRef,
     },
-    high_level::encryption::{self, decrypt_glwe, decrypt_lwe},
     ops::{
-        bootstrapping::{generalized_programmable_bootstrap, programmable_bootstrap_univariate},
+        bootstrapping::{generalized_programmable_bootstrap},
         ciphertext::sample_extract,
-        encryption::decrypt_glwe_ciphertext,
         homomorphisms::rotate,
         keyswitch::private_functional_keyswitch::private_functional_keyswitch,
     },
@@ -356,13 +353,10 @@ mod tests {
     use rand::{thread_rng, RngCore};
 
     use crate::{
-        dst::FromMutSlice,
         entities::{
-            GgswCiphertext, GlweSecretKey, GlweSecretKeyRef, LweCiphertextList, LweSecretKey,
-            LweSecretKeyRef,
+            GgswCiphertext, LweCiphertextList,
         },
         high_level::{self, encryption, fft, keygen, TEST_LWE_DEF_1},
-        scratch::allocate_scratch_ref,
         PlaintextBits, RadixCount, RadixDecomposition, RadixLog, GLWE_1_1024_80, GLWE_5_256_80,
         LWE_512_80,
     };

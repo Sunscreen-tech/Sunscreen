@@ -677,7 +677,6 @@ mod tests {
         high_level::{encryption, fft, keygen, TEST_GLWE_DEF_1, TEST_LWE_DEF_1, TEST_RADIX},
         ops::{
             encryption::{decrypt_ggsw_ciphertext, encrypt_lwe_ciphertext},
-            homomorphisms::rotate,
             keyswitch::lwe_keyswitch_key::generate_keyswitch_key_lwe,
         },
         RoundedDiv, GLWE_1_1024_80, LWE_512_80,

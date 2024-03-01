@@ -1,4 +1,4 @@
-use crate::{entities::LweCiphertextRef, LweDef, RoundedDiv, Torus, TorusOps};
+use crate::{entities::LweCiphertextRef, LweDef, Torus, TorusOps};
 
 /// Add the coefficients of a to the coefficients of c in place.
 pub fn add_lwe_inplace<S>(c: &mut LweCiphertextRef<S>, a: &LweCiphertextRef<S>, params: &LweDef)

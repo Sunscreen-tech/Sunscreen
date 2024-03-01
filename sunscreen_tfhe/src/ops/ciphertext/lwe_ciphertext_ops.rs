@@ -129,12 +129,12 @@ pub fn lwe_ciphertext_modulus_switch<S>(
 
 #[inline(never)]
 fn modulus_switch<S: TorusOps>(x: S, log_chi: usize, log_v: usize, log_modulus: usize) -> S {
-    let one = S::from_u64(1);
+    let one = S::one();
     let mask = (one << log_modulus) - one;
     let x = x << log_chi as usize;
     let shift_amount = S::BITS as usize - (log_modulus - log_v);
 
-    let round = (x >> (shift_amount - 1)) & S::from_u64(1);
+    let round = (x >> (shift_amount - 1)) & one;
     let x = x >> shift_amount;
 
     // TODO: Non-power-of_two input moduli

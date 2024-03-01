@@ -154,7 +154,6 @@ pub(crate) fn generate_lut<S, F>(
     let c = output.coeffs_mut();
 
     for (j, p_i_unmapped) in (0..=p - 1).enumerate() {
-        
         // Insert a stride amount into the LUT
         c[j * stride..(j + 1) * stride].iter_mut().enumerate().for_each(|(k, c)| {
             let fn_id = k % ciel_v;
@@ -987,11 +986,7 @@ mod tests {
         // Fill the LUT with nonsense and we'll overwrite it with
         // the correct encoding.
         let lut = UnivariateLookupTable::trivivial_multifunctional(
-            &[
-                |x| x % 2,
-                |x| (x + 1) % 2,
-                |x| x % 2
-            ].as_slice(),
+            &[|x| x % 2, |x| (x + 1) % 2, |x| x % 2].as_slice(),
             glwe,
             bits,
         );

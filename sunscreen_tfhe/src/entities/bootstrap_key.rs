@@ -14,7 +14,7 @@ use crate::{
 dst! {
     /// Keys used for bootstrapping. The [BootstrapKeyFft] variant of this type
     /// is used by the bootstrapping functions such as
-    /// [`programmable_bootstrap_univariate`](crate::ops::bootstrapping::programmable_bootstrap_univariate).
+    /// [`programmable_bootstrap`](crate::ops::bootstrapping::programmable_bootstrap).
     BootstrapKey,
     BootstrapKeyRef,
     Torus,
@@ -116,7 +116,7 @@ impl<S: TorusOps> BootstrapKeyRef<S> {
 
 dst! {
     /// Keys used for bootstrapping. Used by the bootstrapping functions such as
-    /// [`programmable_bootstrap_univariate`](crate::ops::bootstrapping::programmable_bootstrap_univariate).
+    /// [`programmable_bootstrap`](crate::ops::bootstrapping::programmable_bootstrap).
     /// The non-FFT variant of this type is [BootstrapKey].
     BootstrapKeyFft,
     BootstrapKeyFftRef,
@@ -140,7 +140,7 @@ impl BootstrapKeyFft<Complex<f64>> {
     /// encrypts a single bit of an LWE secret key. In this representation, the
     /// GGSW ciphertexts are in the frequency domain and can be used directly by
     /// the bootstrapping functions such as
-    /// [`programmable_bootstrap_univariate`](crate::ops::bootstrapping::programmable_bootstrap_univariate).
+    /// [`programmable_bootstrap`](crate::ops::bootstrapping::programmable_bootstrap).
     pub fn new(lwe_params: &LweDef, glwe_params: &GlweDef, radix: &RadixDecomposition) -> Self {
         let len = BootstrapKeyFftRef::size((lwe_params.dim, glwe_params.dim, radix.count));
 

@@ -1,15 +1,13 @@
 use num::Complex;
-use sunscreen_math::Zero;
 
 use crate::{
     dst::FromMutSlice,
     entities::{
         BootstrapKeyFftRef, CircuitBootstrappingKeyswitchKeysRef, GgswCiphertextRef,
-        GlweCiphertextRef, LweCiphertextListRef, LweCiphertextRef, UnivariateLookupTableRef,
+        LweCiphertextListRef, LweCiphertextRef, UnivariateLookupTableRef,
     },
     ops::{
-        bootstrapping::generalized_programmable_bootstrap, ciphertext::sample_extract,
-        homomorphisms::rotate,
+        bootstrapping::programmable_bootstrap, homomorphisms::rotate,
         keyswitch::private_functional_keyswitch::private_functional_keyswitch,
     },
     scratch::allocate_scratch_ref,
@@ -208,11 +206,13 @@ fn level_0_to_level_2<S: TorusOps>(
     pbs_radix: &RadixDecomposition,
     cbs_radix: &RadixDecomposition,
 ) {
-    allocate_scratch_ref!(glwe_out, GlweCiphertextRef<S>, (glwe_2.dim));
     allocate_scratch_ref!(lut, UnivariateLookupTableRef<S>, (glwe_2.dim));
     allocate_scratch_ref!(lwe_rotated, LweCiphertextRef<S>, (lwe_0.dim));
-    allocate_scratch_ref!(extracted, LweCiphertextRef<S>, (glwe_2.as_lwe_def().dim));
-    assert!(cbs_radix.count.0 < 8);
+    allocate_scratch_ref!(
+        lwe_bootstrapped,
+        LweCiphertextRef<S>,
+        (glwe_2.as_lwe_def().dim)
+    );
 
     // Rotate our input by q/4, putting 0 centered on q/4 and 1 centered on
     // -q/4.
@@ -223,93 +223,39 @@ fn level_0_to_level_2<S: TorusOps>(
         lwe_0,
     );
 
-    let log_v = if cbs_radix.count.0.is_power_of_two() {
-        cbs_radix.count.0.ilog2()
-    } else {
-        cbs_radix.count.0.ilog2() + 1
-    };
-
-    fill_multifunctional_cbs_decomposition_lut(lut, glwe_2, cbs_radix);
-
-    generalized_programmable_bootstrap(
-        glwe_out,
-        lwe_rotated,
-        lut,
-        bsk,
-        0,
-        log_v,
-        lwe_0,
-        glwe_2,
-        pbs_radix,
-    );
-
     for (i, lwe_2) in lwes_2.ciphertexts_mut(&glwe_2.as_lwe_def()).enumerate() {
         let cur_level = i + 1;
+
+        // Treat value as a T_{b^l+1} with one extra place for rounding as the last
+        // step.
         let plaintext_bits = PlaintextBits((cbs_radix.radix_log.0 * cur_level + 1) as u32);
 
-        sample_extract(extracted, glwe_out, i, glwe_2);
+        // Exploiting the fact that our LUT is negacyclic, we can encode -1 in T_{b^l+1}
+        // everywhere. Any lookup < q/2 will give -1 and any lookup > q/2 will
+        // give 1. Since we've shifted our input lwe by q/4, a 1 plaintext
+        // value will map to 1 and a 0 will map to -1.
+        let minus_one = (S::one() << plaintext_bits.0 as usize) - S::one();
+
+        lut.fill_with_constant(minus_one, glwe_2, plaintext_bits);
+
+        programmable_bootstrap(
+            lwe_bootstrapped,
+            lwe_rotated,
+            lut,
+            bsk,
+            lwe_0,
+            glwe_2,
+            pbs_radix,
+        );
 
         // Now we rotate our message containing -1 or 1 by 1 (wrt plaintext_bits).
         // This will overflow -1 to 0 and cause 1 to wrap to 2.
         rotate(
             lwe_2,
-            extracted,
+            lwe_bootstrapped,
             Torus::encode(S::one(), plaintext_bits),
             &glwe_2.as_lwe_def(),
         );
-    }
-}
-
-fn fill_multifunctional_cbs_decomposition_lut<S: TorusOps>(
-    lut: &mut UnivariateLookupTableRef<S>,
-    glwe: &GlweDef,
-    cbs_radix: &RadixDecomposition,
-) {
-    lut.clear();
-
-    // Pick a largish number of levels nobody would ever exceed.
-    let mut levels = [Torus::zero(); 16];
-
-    assert!(cbs_radix.count.0 < levels.len());
-
-    // Compute our base decomposition factors.
-    // Exploiting the fact that our LUT is negacyclic, we can encode -1 in T_{b^l+1}
-    // everywhere. Any lookup < q/2 will give -1 and any lookup > q/2 will
-    // give 1. Since we've shifted our input lwe by q/4, a 1 plaintext
-    // value will map to 1 and a 0 will map to -1.
-    for (i, x) in levels.iter_mut().enumerate() {
-        let i = i + 1;
-        if i * cbs_radix.radix_log.0 + 1 < S::BITS as usize {
-            let plaintext_bits = PlaintextBits((cbs_radix.radix_log.0 * i + 1) as u32);
-
-            let minus_one = (S::one() << plaintext_bits.0 as usize) - S::one();
-            *x = Torus::encode(minus_one, plaintext_bits);
-        }
-    }
-
-    // Fill the table with alternating factors padded with zeros to a power of 2
-    let log_v = if cbs_radix.count.0.is_power_of_two() {
-        cbs_radix.count.0.ilog2()
-    } else {
-        cbs_radix.count.0.ilog2() + 1
-    };
-
-    let v = 0x1usize << log_v;
-
-    for (i, x) in lut
-        .glwe_mut()
-        .b_mut(glwe)
-        .coeffs_mut()
-        .iter_mut()
-        .enumerate()
-    {
-        let fn_id = i % v;
-
-        *x = if fn_id < cbs_radix.count.0 {
-            levels[fn_id]
-        } else {
-            Torus::zero()
-        };
     }
 }
 
@@ -376,7 +322,6 @@ mod tests {
 
         let sk = keygen::generate_binary_lwe_sk(&TEST_LWE_DEF_1);
         let glwe_sk = keygen::generate_binary_glwe_sk(&glwe_params);
-
         let bsk = keygen::generate_bootstrapping_key(
             &sk,
             &glwe_sk,

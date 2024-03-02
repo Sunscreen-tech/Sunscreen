@@ -10,10 +10,7 @@ use crate::{
     },
     ops::{
         bootstrapping::rotate_glwe_positive_monomial_negacyclic,
-        ciphertext::{
-            add_lwe_inplace, lwe_ciphertext_modulus_switch, sample_extract,
-            scalar_mul_ciphertext_mad,
-        },
+        ciphertext::{add_lwe_inplace, modulus_switch, sample_extract, scalar_mul_ciphertext_mad},
         encryption::encrypt_ggsw_ciphertext_scalar,
         fft_ops::cmux,
     },
@@ -29,7 +26,7 @@ use super::rotate_glwe_negative_monomial_negacyclic;
 /// the secret key being encrypted.
 ///
 /// See
-/// [`programmable_bootstrap_univariate`](crate::ops::bootstrapping::programmable_bootstrap_univariate)
+/// [`programmable_bootstrap`](crate::ops::bootstrapping::programmable_bootstrap)
 /// for an example of how to use this key.
 pub fn generate_bootstrap_key<S>(
     bootstrap_key: &mut BootstrapKeyRef<S>,
@@ -118,14 +115,9 @@ fn generate_negacyclic_lut<S, F>(
 /// The input `map` is used for generating programmable bootstrapping LUTs. This
 /// function takes an element in the plaintext space and must produce another
 /// element in the plaintext space.
-///
-/// # Remarks
-/// This function supports multiple functions, which appear as adjacent
-/// entries in the ciphertext (padded with 0 up to a power of 2). This
-/// pattern repeats until `n/p` terms have been filled.
 pub(crate) fn generate_lut<S, F>(
     output: &mut PolynomialRef<Torus<S>>,
-    maps: &[F],
+    map: F,
     params: &GlweDef,
     plaintext_bits: PlaintextBits,
 ) where
@@ -134,16 +126,6 @@ pub(crate) fn generate_lut<S, F>(
 {
     let p = (1 << plaintext_bits.0) as usize;
     let n = params.dim.polynomial_degree.0;
-
-    let v = maps.len();
-
-    let log_v = if v.is_power_of_two() {
-        v.ilog2()
-    } else {
-        v.ilog2() + 1
-    };
-
-    let ceil_v = 0x1usize << log_v;
 
     assert!(n >= p);
 
@@ -154,20 +136,14 @@ pub(crate) fn generate_lut<S, F>(
     let c = output.coeffs_mut();
 
     for (j, p_i_unmapped) in (0..=p - 1).enumerate() {
+        let p_i = map(p_i_unmapped as u64);
+
+        assert!(p_i < (p as u64), "The map function must produce a value less than p. Map produced the relation ({} -> {})", p_i_unmapped, p_i);
+
+        let p_i = p_i << delta;
+
         // Insert a stride amount into the LUT
-        c[j * stride..(j + 1) * stride].iter_mut().enumerate().for_each(|(k, c)| {
-            let fn_id = k % ceil_v;
-
-            let p_i = if fn_id < v {
-                maps[fn_id](p_i_unmapped as u64)
-            } else {
-                0u64
-            };
-
-            assert!(p_i < (p as u64), "The map function must produce a value less than p. Map produced the relation ({} -> {})", p_i_unmapped, p_i);
-
-            let p_i = p_i << delta;
-
+        c[j * stride..(j + 1) * stride].iter_mut().for_each(|c| {
             *c = Torus::from(S::from_u64(p_i));
         });
     }
@@ -201,7 +177,7 @@ pub(crate) fn generate_lut<S, F>(
 /// use sunscreen_tfhe::{
 ///   high_level::{keygen, encryption, fft},
 ///   entities::{UnivariateLookupTable, LweCiphertext},
-///   ops::bootstrapping::programmable_bootstrap_univariate,
+///   ops::bootstrapping::programmable_bootstrap,
 ///   params::{
 ///     GLWE_1_1024_80,
 ///     LWE_512_80,
@@ -257,7 +233,7 @@ pub(crate) fn generate_lut<S, F>(
 ///
 /// // Perform the programmable bootstrapping
 /// let mut result = LweCiphertext::new(&glwe_params.as_lwe_def());
-/// programmable_bootstrap_univariate(
+/// programmable_bootstrap(
 ///     &mut result,
 ///     &input,
 ///     &lut,
@@ -285,64 +261,11 @@ pub(crate) fn generate_lut<S, F>(
 /// [`programmable_bootstrap_bivariate`](programmable_bootstrap_bivariate) and
 /// its associated LUT
 /// [`BivariateLookupTable`](crate::entities::BivariateLookupTable).
-pub fn programmable_bootstrap_univariate<S>(
+pub fn programmable_bootstrap<S>(
     output: &mut LweCiphertextRef<S>,
     input: &LweCiphertextRef<S>,
     lut: &UnivariateLookupTableRef<S>,
     bootstrap_key: &BootstrapKeyFftRef<Complex<f64>>,
-    lwe_params: &LweDef,
-    glwe_params: &GlweDef,
-    radix: &RadixDecomposition,
-) where
-    S: TorusOps,
-{
-    allocate_scratch_ref!(glwe, GlweCiphertextRef<S>, (glwe_params.dim));
-
-    generalized_programmable_bootstrap(
-        glwe,
-        input,
-        lut,
-        bootstrap_key,
-        0,
-        0,
-        lwe_params,
-        glwe_params,
-        radix,
-    );
-
-    // 3. Sample extract.
-    sample_extract(output, glwe, 0, glwe_params);
-}
-
-#[allow(clippy::too_many_arguments)]
-/// A generalized version of programmable bootstrapping.
-/// Computes a function `lut` of the encrypted `input`.
-/// However, this generalization features the ability to select which
-/// bits to take during modulus switching. This capability enables
-/// encoding multiple functions into `lut` and bootstrapping each of them
-/// simultaneously.
-///
-/// # Remarks
-/// While [`programmable_bootstrap_univariate`] and
-/// [`programmable_bootstrap_bivariate`] compute a single function of the
-/// input ciphertext, this can compute multiple functions. To do this,
-/// create a [`UnivariateLookupTable`](crate::entities::UnivariateLookupTable) using
-/// [`UnivariateLookupTable::trivivial_multifunctional`](crate::entities::UnivariateLookupTable::trivivial_multifunctional).
-///
-/// `log_v` should equal `ceil(log2(maps.len()))` for the `maps` you
-/// used when creating the LUT.
-///
-/// `log_chi` is the number of most-significant bits to drop during
-/// bootstrapping. Generally, you should set this to zero unless building
-/// other cryptographic primitives, such as Without Padding Bootstrapping
-/// (WoP-PBS)
-pub fn generalized_programmable_bootstrap<S>(
-    output: &mut GlweCiphertextRef<S>,
-    input: &LweCiphertextRef<S>,
-    lut: &UnivariateLookupTableRef<S>,
-    bootstrap_key: &BootstrapKeyFftRef<Complex<f64>>,
-    log_chi: u32,
-    log_v: u32,
     lwe_params: &LweDef,
     glwe_params: &GlweDef,
     radix: &RadixDecomposition,
@@ -355,7 +278,7 @@ pub fn generalized_programmable_bootstrap<S>(
     bootstrap_key.assert_valid(lwe_params, glwe_params, radix);
     lut.assert_valid(glwe_params);
     input.assert_valid(lwe_params);
-    output.assert_valid(glwe_params);
+    output.assert_valid(&glwe_params.as_lwe_def());
 
     // Steps:
     // 1. Modulus switch the ciphertext to 2N.
@@ -369,7 +292,7 @@ pub fn generalized_programmable_bootstrap<S>(
 
     // 1. Modulus switch the ciphertext to 2N.
     let mut ct = input.to_owned();
-    lwe_ciphertext_modulus_switch(&mut ct, log_chi, log_v, two_n, lwe_params);
+    modulus_switch(&mut ct, S::BITS, two_n, lwe_params);
 
     let (ct_a, ct_b) = ct.a_b(lwe_params);
 
@@ -377,10 +300,11 @@ pub fn generalized_programmable_bootstrap<S>(
     // key (the input LWE secret key bits).
 
     // Perform V_0 ^ X^{-b}
-    output.clear();
+    allocate_scratch_ref!(cmux_output, GlweCiphertextRef<S>, (glwe_params.dim));
+    cmux_output.clear();
 
     rotate_glwe_negative_monomial_negacyclic(
-        output,
+        cmux_output,
         lut.glwe(),
         ct_b.inner().to_u64() as usize,
         glwe_params,
@@ -391,19 +315,29 @@ pub fn generalized_programmable_bootstrap<S>(
     // Perform the cmux tree from the bootstrap key with the relation
     // V_n = V_{n-1} ^ X^{a_{n-1} s_{n-1}}
     for (a_i, index_select) in ct_a.iter().zip(bootstrap_key.rows(glwe_params, radix)) {
-        let tmp = output.to_owned();
+        let tmp = cmux_output.to_owned();
 
         // This operation performs a copy so the rotated_ct doesn't need to be
         // cleared.
         rotate_glwe_positive_monomial_negacyclic(
             rotated_ct,
-            output,
+            cmux_output,
             a_i.inner().to_u64() as usize,
             glwe_params,
         );
 
-        cmux(output, &tmp, rotated_ct, index_select, glwe_params, radix);
+        cmux(
+            cmux_output,
+            &tmp,
+            rotated_ct,
+            index_select,
+            glwe_params,
+            radix,
+        );
     }
+
+    // 3. Sample extract.
+    sample_extract(output, cmux_output, 0, glwe_params);
 }
 
 /// Evaluate a bivariate function on a packed input.
@@ -445,7 +379,7 @@ pub(crate) fn generate_bivariate_lut<S, F>(
 
     generate_lut(
         output,
-        &[wrapped_func],
+        wrapped_func,
         params,
         PlaintextBits(plaintext_bits.0 + carry_bits.0),
     );
@@ -566,7 +500,7 @@ pub(crate) fn generate_bivariate_lut<S, F>(
 /// # See also
 ///
 /// For the univariate version of programmable bootstrapping, see
-/// [`programmable_bootstrap_univariate`](programmable_bootstrap_univariate) and its associated LUT
+/// [`programmable_bootstrap`](programmable_bootstrap) and its associated LUT
 /// [`UnivariateLookupTable`](crate::entities::UnivariateLookupTable).
 #[allow(clippy::too_many_arguments)]
 pub fn programmable_bootstrap_bivariate<S>(
@@ -606,7 +540,7 @@ pub fn programmable_bootstrap_bivariate<S>(
     scalar_mul_ciphertext_mad(pbs_input, &S::from_u64(shift), left_input, lwe_params);
     add_lwe_inplace(pbs_input, right_input, lwe_params);
 
-    programmable_bootstrap_univariate(
+    programmable_bootstrap(
         output,
         pbs_input,
         lut.as_univariate(),
@@ -622,15 +556,15 @@ mod tests {
 
     use crate::{
         entities::{
-            BivariateLookupTable, BootstrapKey, BootstrapKeyFft, GlweCiphertext, LweCiphertext,
-            LweKeyswitchKey, UnivariateLookupTable,
+            BivariateLookupTable, BootstrapKey, BootstrapKeyFft, LweCiphertext, LweKeyswitchKey,
+            UnivariateLookupTable,
         },
-        high_level::{encryption, fft, keygen, TEST_GLWE_DEF_1, TEST_LWE_DEF_1, TEST_RADIX},
+        high_level::{keygen, TEST_GLWE_DEF_1, TEST_LWE_DEF_1, TEST_RADIX},
         ops::{
             encryption::{decrypt_ggsw_ciphertext, encrypt_lwe_ciphertext},
             keyswitch::lwe_keyswitch_key::generate_keyswitch_key_lwe,
         },
-        RoundedDiv, GLWE_1_1024_80, LWE_512_80,
+        RoundedDiv, GLWE_1_1024_80,
     };
 
     use super::*;
@@ -747,15 +681,7 @@ mod tests {
 
             let mut new_ct = LweCiphertext::new(&glwe.as_lwe_def());
 
-            programmable_bootstrap_univariate(
-                &mut new_ct,
-                &original_ct,
-                &lut,
-                &bsk,
-                &lwe,
-                &glwe,
-                &radix,
-            );
+            programmable_bootstrap(&mut new_ct, &original_ct, &lut, &bsk, &lwe, &glwe, &radix);
 
             let decoded = glwe_sk
                 .to_lwe_secret_key()
@@ -915,69 +841,6 @@ mod tests {
                 let result = bivariate_function(map, input, plaintext_bits);
 
                 assert_eq!(result, map(left, right));
-            }
-        }
-    }
-
-    #[test]
-    fn can_generalized_bootstrap() {
-        let radix = &TEST_RADIX;
-        let lwe = &LWE_512_80;
-        let glwe = &GLWE_1_1024_80;
-
-        // 1 message bit + 1 padding
-        let bits = PlaintextBits(1);
-
-        let lwe_sk = keygen::generate_binary_lwe_sk(lwe);
-        let glwe_sk = keygen::generate_binary_glwe_sk(glwe);
-        let bs_key = keygen::generate_bootstrapping_key(&lwe_sk, &glwe_sk, lwe, glwe, radix);
-        let bs_key = fft::fft_bootstrap_key(&bs_key, lwe, glwe, radix);
-
-        // Fill the LUT with nonsense and we'll overwrite it with
-        // the correct encoding.
-        let lut = UnivariateLookupTable::trivivial_multifunctional(
-            [|x| x % 2, |x| (x + 1) % 2, |x| x % 2].as_slice(),
-            glwe,
-            bits,
-        );
-
-        for i in [0, 1] {
-            //let input = encryption::encrypt_lwe_secret(i, &lwe_sk, lwe, bits);
-            let input = encryption::trivial_lwe(i, lwe, PlaintextBits(2));
-            let mut output = GlweCiphertext::new(glwe);
-
-            generalized_programmable_bootstrap(
-                &mut output,
-                &input,
-                &lut,
-                &bs_key,
-                0,
-                3,
-                lwe,
-                glwe,
-                radix,
-            );
-
-            let res = encryption::decrypt_glwe(&output, &glwe_sk, glwe, bits);
-
-            if i == 0 {
-                assert_eq!(res.coeffs()[0], 0);
-                assert_eq!(res.coeffs()[1], 1);
-                assert_eq!(res.coeffs()[2], 0);
-                assert_eq!(res.coeffs()[3], 0);
-                assert_eq!(res.coeffs()[4], 0);
-                assert_eq!(res.coeffs()[5], 1);
-                assert_eq!(res.coeffs()[6], 0);
-                assert_eq!(res.coeffs()[7], 0);
-            } else {
-                assert_eq!(res.coeffs()[0], 1);
-                assert_eq!(res.coeffs()[1], 0);
-                assert_eq!(res.coeffs()[2], 1);
-                assert_eq!(res.coeffs()[3], 0);
-                assert_eq!(res.coeffs()[4], 1);
-                assert_eq!(res.coeffs()[5], 0);
-                assert_eq!(res.coeffs()[6], 1);
-                assert_eq!(res.coeffs()[7], 0);
             }
         }
     }

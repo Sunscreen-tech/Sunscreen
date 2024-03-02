@@ -13,7 +13,7 @@ use super::GlweCiphertextRef;
 
 dst! {
     /// Lookup table for a univariate function used during
-    /// [`programmable_bootstrap_univariate`](crate::ops::bootstrapping::programmable_bootstrap_univariate)
+    /// [`programmable_bootstrap`](crate::ops::bootstrapping::programmable_bootstrap)
     /// and [`circuit_bootstrap`](crate::ops::bootstrapping::circuit_bootstrap).
     UnivariateLookupTable,
     UnivariateLookupTableRef,
@@ -31,11 +31,7 @@ impl<S: TorusOps> OverlaySize for UnivariateLookupTableRef<S> {
 }
 
 impl<S: TorusOps> UnivariateLookupTable<S> {
-    /// Creates a trivially encrypted lookup table that computes a single function `map`.
-    ///
-    /// # Remarks
-    /// The result of this can be used with
-    /// [`programmable_bootstrap_univariate`](crate::ops::bootstrapping::programmable_bootstrap_univariate).
+    /// Creates a lookup table that is trivially encrypted.
     pub fn trivial_from_fn<F>(map: F, glwe: &GlweDef, plaintext_bits: PlaintextBits) -> Self
     where
         F: Fn(u64) -> u64,
@@ -44,32 +40,7 @@ impl<S: TorusOps> UnivariateLookupTable<S> {
             data: vec![Torus::zero(); UnivariateLookupTableRef::<S>::size(glwe.dim)],
         };
 
-        lut.fill_trivial_from_fns(&[map], glwe, plaintext_bits);
-
-        lut
-    }
-
-    /// Creates a trivially encrypted lookup table that computes multiple functions
-    /// given by `maps`.
-    ///
-    /// # Remarks
-    /// The result of this should be used with
-    /// [`generalized_programmable_bootstrap`](crate::ops::bootstrapping::generalized_programmable_bootstrap).
-    pub fn trivivial_multifunctional<F>(
-        maps: &[F],
-        glwe: &GlweDef,
-        plaintext_bits: PlaintextBits,
-    ) -> Self
-    where
-        F: Fn(u64) -> u64,
-    {
-        assert!(maps.len() > 1);
-
-        let mut lut = UnivariateLookupTable {
-            data: vec![Torus::zero(); UnivariateLookupTableRef::<S>::size(glwe.dim)],
-        };
-
-        lut.fill_trivial_from_fns(maps, glwe, plaintext_bits);
+        lut.fill_trivial_from_fn(map, glwe, plaintext_bits);
 
         lut
     }
@@ -89,15 +60,15 @@ impl<S: TorusOps> UnivariateLookupTableRef<S> {
 
     /// Generates a look up table filled with the values from the provided map,
     /// and trivially encrypts the lookup table.
-    pub fn fill_trivial_from_fns<F: Fn(u64) -> u64>(
+    pub fn fill_trivial_from_fn<F: Fn(u64) -> u64>(
         &mut self,
-        maps: &[F],
+        map: F,
         glwe: &GlweDef,
         plaintext_bits: PlaintextBits,
     ) {
         allocate_scratch_ref!(poly, PolynomialRef<Torus<S>>, (glwe.dim.polynomial_degree));
 
-        generate_lut(poly, maps, glwe, plaintext_bits);
+        generate_lut(poly, map, glwe, plaintext_bits);
 
         trivially_encrypt_glwe_ciphertext(self.glwe_mut(), poly, glwe);
     }

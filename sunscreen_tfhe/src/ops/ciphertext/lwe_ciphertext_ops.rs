@@ -1,4 +1,4 @@
-use crate::{entities::LweCiphertextRef, LweDef, Torus, TorusOps};
+use crate::{entities::LweCiphertextRef, LweDef, RoundedDiv, Torus, TorusOps};
 
 /// Add the coefficients of a to the coefficients of c in place.
 pub fn add_lwe_inplace<S>(c: &mut LweCiphertextRef<S>, a: &LweCiphertextRef<S>, params: &LweDef)
@@ -68,37 +68,10 @@ pub(crate) fn scalar_mul_ciphertext_mad<S>(
 /// Perform modulus switching on a ciphertext. We are assuming that moduli are
 /// both powers of two, and that the original number of bits is greater than the
 /// new number of bits.
-///
-/// # Remarks
-/// When performing the mod switch, the first `log_chi` MSBs are skipped in the input and
-/// the message is padded with `log_v` bits in the LSB. Example:
-///
-/// ```ignore
-///   chi       x       r       dropped
-/// ---------------------------------------------       
-/// | 0 0 | 1 1 0 1 0 | 1 | 1 0 1 0 1 1 0 1 0 ...
-///
-///         |
-///         V
-///
-/// | 1 1 0 1 1 | 0 0 0 |
-/// ```
-///
-/// We drop the first `log_chi` bits then round the `x` section using the `r` bit. We copy
-/// down the bits in the rounded `x` value and append `log_v` 0s as LSBs.
-///
-/// When performing vanilla programmable bootstrapping, `log_chi` and `log_v` will be zero.
-/// `log_chi` and `log_v` are used when performing multi-output PBS.
-///
-/// For more information on generalized bootstrapping, see
-/// "Improved Programmable Bootstrapping with Larger Precision and Efficient Arithmetic
-/// Circuits for TFHE"
-/// by Chillotti et al.
-pub fn lwe_ciphertext_modulus_switch<S>(
+pub fn modulus_switch<S>(
     ct: &mut LweCiphertextRef<S>,
-    log_chi: u32,
-    log_v: u32,
-    log_modulus: u32,
+    original_bits: u32,
+    new_bits: u32,
     params: &LweDef,
 ) where
     S: TorusOps,
@@ -108,58 +81,13 @@ pub fn lwe_ciphertext_modulus_switch<S>(
     // We specifically want to zero out the MSBs instead of shifting them back
     // around.
     for a in c_a {
-        let res = modulus_switch(
-            a.inner(),
-            log_chi as usize,
-            log_v as usize,
-            log_modulus as usize,
-        );
-        *a = Torus::from(res);
+        let c = a.inner().to_u64() as u128;
+        let res = (c * (1 << new_bits)).div_rounded(1 << original_bits as u128);
+        *a = Torus::from(S::from_u64(res as u64));
     }
 
-    let res = modulus_switch(
-        c_b.inner(),
-        log_chi as usize,
-        log_v as usize,
-        log_modulus as usize,
-    );
+    let c = c_b.inner().to_u64() as u128;
+    let res = (c * (1 << new_bits)).div_rounded(1 << original_bits as u128);
 
-    *c_b = Torus::from(res);
-}
-
-#[inline(never)]
-fn modulus_switch<S: TorusOps>(x: S, log_chi: usize, log_v: usize, log_modulus: usize) -> S {
-    let one = S::one();
-    let mask = (one << log_modulus) - one;
-    let x = x << log_chi;
-    let shift_amount = S::BITS as usize - (log_modulus - log_v);
-
-    let round = (x >> (shift_amount - 1)) & one;
-    let x = x >> shift_amount;
-
-    // TODO: Non-power-of_two input moduli
-
-    (x.wrapping_add(&round) & mask) << log_v
-}
-
-#[cfg(test)]
-mod tests {
-    use super::modulus_switch;
-
-    #[test]
-    fn can_modulus_switch() {
-        let x = 0xDEADBEEF_BEEFDEADu64;
-
-        let y = modulus_switch(x, 0, 0, 10);
-        assert_eq!(y, 0b11_0111_1011);
-
-        let y = modulus_switch(x, 2, 0, 10);
-        assert_eq!(y, 0b01_1110_1011);
-
-        let y = modulus_switch(x, 0, 3, 10);
-        assert_eq!(y, 0b11_0111_1000);
-
-        let y = modulus_switch(x, 2, 3, 10);
-        assert_eq!(y, 0b01_1110_1000);
-    }
+    *c_b = Torus::from(S::from_u64(res as u64));
 }

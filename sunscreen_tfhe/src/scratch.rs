@@ -110,6 +110,13 @@ struct Scratch {
     stack: *mut LinkedList<*mut Allocation>,
 }
 
+impl Drop for Scratch {
+    fn drop(&mut self) {
+        let drop_box = unsafe { Box::from_raw(self.stack) };
+        std::mem::drop(drop_box);
+    }
+}
+
 impl Scratch {
     /// We require this to be private. [`allocate_scratch`] should be
     /// the only way to use scratch memory, which will allocate memory

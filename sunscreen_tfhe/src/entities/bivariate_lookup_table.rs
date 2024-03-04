@@ -5,7 +5,7 @@ use crate::{
     dst::{FromMutSlice, FromSlice, OverlaySize},
     entities::PolynomialRef,
     ops::{bootstrapping::generate_bivariate_lut, encryption::trivially_encrypt_glwe_ciphertext},
-    scratch::{allocate_scratch_ref, SIMD_ALIGN},
+    scratch::{allocate_scratch_ref},
     CarryBits, GlweDef, GlweDimension, PlaintextBits, Torus, TorusOps,
 };
 

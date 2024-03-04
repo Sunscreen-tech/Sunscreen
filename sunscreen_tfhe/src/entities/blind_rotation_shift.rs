@@ -5,7 +5,7 @@ use crate::{
     dst::{NoWrapper, OverlaySize}, entities::{
         GgswCiphertextFftIterator, GgswCiphertextFftIteratorMut, GgswCiphertextFftRef,
         GgswCiphertextIterator, GgswCiphertextIteratorMut, GgswCiphertextRef,
-    }, scratch::SIMD_ALIGN, GlweDef, GlweDimension, RadixCount, RadixDecomposition, Torus, TorusOps
+    }, GlweDef, GlweDimension, RadixCount, RadixDecomposition, Torus, TorusOps
 };
 
 dst! {

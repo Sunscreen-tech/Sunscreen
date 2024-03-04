@@ -6,7 +6,7 @@ use crate::{
         GgswCiphertextFftIterator, GgswCiphertextFftIteratorMut, GgswCiphertextFftRef,
         GgswCiphertextIterator, GgswCiphertextIteratorMut, GgswCiphertextRef,
         ParallelGgswCiphertextIterator, ParallelGgswCiphertextIteratorMut,
-    }, scratch::SIMD_ALIGN, GlweDef, GlweDimension, LweDef, LweDimension, RadixCount, RadixDecomposition, Torus, TorusOps
+    }, GlweDef, GlweDimension, LweDef, LweDimension, RadixCount, RadixDecomposition, Torus, TorusOps
 };
 
 dst! {

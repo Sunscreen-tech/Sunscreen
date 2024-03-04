@@ -1,4 +1,4 @@
-use aligned_vec::AVec;
+
 use num::{Complex, Zero};
 use serde::{Deserialize, Serialize};
 
@@ -7,7 +7,6 @@ use crate::{
     entities::GgswCiphertextRef,
     macros::{impl_binary_op, impl_unary_op},
     ops::ciphertext::external_product_ggsw_glwe,
-    scratch::SIMD_ALIGN,
     GlweDef, GlweDimension, RadixDecomposition, Torus, TorusOps,
 };
 

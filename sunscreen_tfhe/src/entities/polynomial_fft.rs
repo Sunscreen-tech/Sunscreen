@@ -47,7 +47,7 @@ where
     /// Create a new polynomial with the given length in the fourier domain.
     pub fn new(data: &[T]) -> Self {
         Self {
-            data: AVec::from_slice(SIMD_ALIGN, data),
+            data: avec_from_slice!(data),
         }
     }
 }

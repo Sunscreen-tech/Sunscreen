@@ -12,6 +12,12 @@ macro_rules! avec_from_iter {
     };
 }
 
+macro_rules! avec_from_slice {
+    ($slice:expr) => {
+        aligned_vec::AVec::from_slice(crate::scratch::SIMD_ALIGN, $slice)
+    }
+}
+
 macro_rules! dst {
     ($(#[$meta:meta])* $t:ty, $ref_t:ty, $wrapper:ty, ($($derive:ident),* $(,)? ), ($($t_bounds:ty),* $(,)? )) => {
         paste::paste! {

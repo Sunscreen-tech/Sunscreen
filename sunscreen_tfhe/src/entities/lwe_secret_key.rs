@@ -1,4 +1,4 @@
-use aligned_vec::AVec;
+
 use num::Zero;
 use serde::{Deserialize, Serialize};
 
@@ -7,7 +7,6 @@ use crate::{
     macros::{impl_binary_op, impl_unary_op},
     ops::encryption::encode_and_encrypt_lwe_ciphertext,
     rand::{binary, uniform_torus},
-    scratch::SIMD_ALIGN,
     LweDef, LweDimension, PlaintextBits, Torus, TorusOps,
 };
 

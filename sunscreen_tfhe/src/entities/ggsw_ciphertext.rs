@@ -54,7 +54,7 @@ where
         assert_eq!(data.len(), elems);
 
         Self {
-            data: AVec::from_slice(SIMD_ALIGN, data),
+            data: avec_from_slice!(data)
         }
     }
 

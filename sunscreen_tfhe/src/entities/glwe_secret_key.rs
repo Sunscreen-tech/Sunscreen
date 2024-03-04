@@ -1,4 +1,4 @@
-use aligned_vec::AVec;
+
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -9,7 +9,6 @@ use crate::{
         decrypt_glwe_ciphertext, encrypt_ggsw_ciphertext, encrypt_glwe_ciphertext_secret,
     },
     rand::{binary, uniform_torus},
-    scratch::SIMD_ALIGN,
     GlweDef, GlweDimension, PlaintextBits, RadixDecomposition, Torus, TorusOps,
 };
 
@@ -182,7 +181,6 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::{high_level::*, GLWE_1_1024_80};
 
     use num::traits::{WrappingAdd, WrappingNeg, WrappingSub};

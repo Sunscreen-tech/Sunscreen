@@ -44,7 +44,7 @@ where
     /// Create a new polynomial from a slice of coefficients.
     pub fn new(data: &[T]) -> Polynomial<T> {
         Polynomial {
-            data: AVec::from_slice(SIMD_ALIGN, data),
+            data: avec_from_slice!(data),
         }
     }
 

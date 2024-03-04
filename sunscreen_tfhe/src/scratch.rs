@@ -368,7 +368,7 @@ mod tests {
 
         #[cfg(target_arch = "x86_64")]
         {
-            assert_eq!(SIMD_ALIGN, 64);    
+            assert_eq!(SIMD_ALIGN, 64);
         }
     }
 }

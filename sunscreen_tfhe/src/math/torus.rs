@@ -212,7 +212,7 @@ impl TorusOps for u32 {}
 
 /// A wrapper around a type that supports Torus operations.
 #[repr(transparent)]
-#[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Eq, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, PartialOrd, Eq, Serialize, Deserialize)]
 #[serde(transparent)]
 pub struct Torus<S: TorusOps = u64>(S);
 

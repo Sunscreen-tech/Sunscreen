@@ -1,11 +1,11 @@
-use linked_list::{Cursor, LinkedList};
+use aligned_vec::{avec_rt, AVec, RuntimeAlign};
 use num::{Complex, Float};
 use rustfft::FftNum;
 use std::{
-    alloc::Layout,
     cell::RefCell,
+    collections::LinkedList,
     marker::PhantomData,
-    mem::{size_of, transmute},
+    mem::{align_of, size_of},
 };
 
 use crate::{Torus, TorusOps};
@@ -26,6 +26,15 @@ macro_rules! allocate_scratch_ref {
 }
 
 pub(crate) use allocate_scratch_ref;
+
+#[cfg(target_feature = "neon")]
+const SIMD_ALIGN: usize = align_of::<std::arch::aarch64::float64x2_t>();
+
+#[cfg(target_feature = "avx2")]
+const SIMD_ALIGN: usize = align_of::<std::arch::x86_64::__m512d>();
+
+#[cfg(not(any(target_feature = "neon", target_feaure = "avx2")))]
+const SIMD_ALIGN: usize = align_of::<u128>();
 
 /// Indicates this is a "Plain Old Data" type. For `T` qualify as such,
 /// all bit patterns must be considered a properly initialized instance of
@@ -91,19 +100,14 @@ where
 /// The references doled out by allocate have `'static``
 /// lifetimes. This is needed so you can have mutable references
 /// to different allocations at the same time.
+///
+/// # Safety
+/// [`Scratch`] must not drop before all its outstanding allocations have done so.
+///
+/// Please note the lack of [`Sync`] and [`Send`] on this object. It is not sound to
+/// share these between threads.
 struct Scratch {
-    // Only accessed through the cursor, so compiler thinks it's unused.
-    #[allow(unused)]
-    stack: Box<LinkedList<Allocation>>,
-    top: *mut Cursor<'static, Allocation>,
-}
-
-impl Drop for Scratch {
-    fn drop(&mut self) {
-        let top = unsafe { Box::from_raw(self.top) };
-
-        std::mem::drop(top);
-    }
+    stack: *mut LinkedList<*mut Allocation>,
 }
 
 impl Scratch {
@@ -111,12 +115,10 @@ impl Scratch {
     /// the only way to use scratch memory, which will allocate memory
     /// using a thread_local allocator.
     fn new() -> Self {
-        let mut list = Box::new(LinkedList::new());
+        let list = Box::new(LinkedList::new());
+        let list = Box::into_raw(list);
 
-        let cursor = Box::new(list.cursor());
-        let top = unsafe { transmute(Box::into_raw(cursor)) };
-
-        Self { stack: list, top }
+        Self { stack: list }
     }
 
     /// Allocate a buffer matching the given specification.
@@ -126,108 +128,101 @@ impl Scratch {
     {
         assert_ne!(size_of::<T>(), 0);
 
-        let top = unsafe { &mut *self.top };
+        let alignment = usize::max(SIMD_ALIGN, align_of::<T>());
+        let u8_len = count * size_of::<T>();
 
-        // Push the top as far down until we hit the bottom or an allocation
-        // currently in use.
-        loop {
-            let prev = top.peek_prev();
+        let allocation = unsafe {
+            let allocation = (*self.stack).pop_back();
 
-            if let Some(x) = prev {
-                if x.is_free {
-                    top.prev().unwrap();
-                    continue;
-                }
-            }
-
-            break;
-        }
-
-        let layout = Layout::array::<T>(count).unwrap();
-        let req_len = layout.size() + layout.align();
-
-        let allocation = match top.peek_next() {
-            Some(d) => {
-                assert!(d.is_free);
-
-                // Resize the allocation if needed.
-                if d.data.len() < req_len {
-                    d.data.resize(req_len, 0u8);
-                }
-
-                d.requested_len = count;
-                top.next().unwrap()
-            }
-            None => {
-                let data = vec![0u8; req_len];
-
+            if allocation.is_none() {
+                // If we don't have an existing allocation, make one
                 let allocation = Allocation {
-                    requested_len: count,
-                    is_free: false,
-                    data,
+                    data: avec_rt!([alignment]| u8::default(); u8_len),
                 };
 
-                top.insert(allocation);
-                top.next().unwrap()
+                let allocation = Box::new(allocation);
+                Box::into_raw(allocation)
+            } else if (*allocation.unwrap()).data.alignment() < alignment
+                || (*allocation.unwrap()).data.len() < u8_len
+            {
+                // If we found an allocation, but its size and len requirements
+                // are insufficient.
+                let allocation = allocation.unwrap();
+                let drop_box = Box::from_raw(allocation);
+                std::mem::drop(drop_box);
+
+                let allocation = Allocation {
+                    data: avec_rt!([alignment]| u8::default(); u8_len),
+                };
+
+                let allocation = Box::new(allocation);
+                Box::into_raw(allocation)
+            } else {
+                // Otherwise, reuse the allocation.
+                allocation.unwrap()
             }
         };
 
-        allocation.is_free = false;
-
         ScratchBuffer {
-            allocation: allocation as *mut Allocation,
+            allocation: allocation,
+            pool: self.stack,
+            requested_len: count,
             _phantom: PhantomData,
         }
     }
 }
 
 struct Allocation {
-    requested_len: usize,
-    data: Vec<u8>,
-    is_free: bool,
+    data: AVec<u8, RuntimeAlign>,
 }
 
+/// An allocation returned by [`Scratch::allocate`].
+///
+/// # Safety
+/// Please note the lack of [`Sync`] and [`Send`] on this object. It is not sound to
+/// share these between threads.
+///
+/// You *may* however share the slice returned by [`Self::as_slice`] or
+/// [`Self::as_mut_slice`], as these obey standard lifetime rules.
 pub struct ScratchBuffer<'a, T> {
     allocation: *mut Allocation,
+    pool: *mut LinkedList<*mut Allocation>,
+    requested_len: usize,
     _phantom: PhantomData<&'a T>,
 }
 
 impl<'a, T> ScratchBuffer<'a, T> {
     #[allow(unused)]
     /// Get a slice to the underlying data.
-    ///
-    /// # Remarks
-    /// While not extremely expensive, this operation does require capturing
-    /// an aligned slice of data in an underlying allocation.  As such,
-    /// you should avoid repeated calls.
+
     pub fn as_slice(&self) -> &[T] {
-        let count = unsafe { (*self.allocation).requested_len };
-        let (_, slice, _) = unsafe { (*self.allocation).data.align_to::<T>() };
-        unsafe { transmute(&slice[0..count]) }
+        let slice =
+            unsafe { std::mem::transmute::<&[u8], &[T]>((*self.allocation).data.as_slice()) };
+
+        &slice[0..self.requested_len]
     }
 
     /// Get a mutable slice to the underlying data.
-    ///
-    /// # Remarks
-    /// While not extremely expensive, this operation does require capturing
-    /// an aligned slice of data in an underlying allocation.  As such,
-    /// you should avoid repeated calls.
     pub fn as_mut_slice(&mut self) -> &mut [T] {
-        let count = unsafe { (*self.allocation).requested_len };
-        let (_pre, slice, _post) = unsafe { (*self.allocation).data.align_to_mut::<T>() };
-        unsafe { transmute(&mut slice[0..count]) }
+        let slice = unsafe {
+            std::mem::transmute::<&mut [u8], &mut [T]>((*self.allocation).data.as_mut_slice())
+        };
+
+        &mut slice[0..self.requested_len]
     }
 }
 
 impl<'a, T> Drop for ScratchBuffer<'a, T> {
     fn drop(&mut self) {
-        unsafe { (*self.allocation).is_free = true };
+        unsafe {
+            (*self.pool).push_back(self.allocation);
+        }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use std::mem::align_of;
+    use std::{arch::is_aarch64_feature_detected, mem::align_of};
 
     use super::*;
 
@@ -243,8 +238,6 @@ mod tests {
         for (i, d_i) in d.iter_mut().enumerate() {
             *d_i = i as u64;
         }
-
-        assert_eq!(scratch.stack.len(), 1);
     }
 
     #[test]
@@ -253,7 +246,6 @@ mod tests {
 
         let b = scratch.allocate::<u64>(64);
 
-        assert_eq!(scratch.stack.len(), 1);
         let b_slice = b.as_slice();
         assert_eq!(b_slice.len(), 64);
         assert_eq!(b_slice.as_ptr().align_offset(align_of::<u64>()), 0);
@@ -264,40 +256,9 @@ mod tests {
         let mut b = scratch.allocate::<u64>(64);
         let b_slice = b.as_mut_slice();
         assert_eq!(first_ptr, b_slice.as_ptr());
-        assert_eq!(scratch.stack.len(), 1);
         assert_eq!(b_slice.len(), 64);
 
         for (i, b_i) in b_slice.iter_mut().enumerate() {
-            *b_i = i as u64;
-        }
-    }
-
-    #[test]
-    #[ignore]
-    fn reallocate_on_bigger_request() {
-        let mut scratch = Scratch::new();
-
-        let mut b = scratch.allocate::<u64>(64);
-
-        assert_eq!(scratch.stack.len(), 1);
-        let b_slice = b.as_mut_slice();
-        assert_eq!(b_slice.len(), 64);
-        assert_eq!(b_slice.as_ptr().align_offset(align_of::<u64>()), 0);
-        let first_ptr = b_slice.as_ptr();
-
-        for (i, b_i) in b_slice.iter_mut().enumerate() {
-            *b_i = i as u64;
-        }
-
-        std::mem::drop(b);
-
-        let mut b = scratch.allocate::<u64>(16384);
-        let b = b.as_mut_slice();
-        assert_ne!(first_ptr, b.as_ptr());
-        assert_eq!(scratch.stack.len(), 1);
-        assert_eq!(b.len(), 16384);
-
-        for (i, b_i) in b.iter_mut().enumerate() {
             *b_i = i as u64;
         }
     }
@@ -314,7 +275,6 @@ mod tests {
 
         assert_eq!(a.len(), 12);
         assert_eq!(b.len(), 12);
-        assert_eq!(scratch.stack.len(), 2);
         assert_ne!(a.as_mut_ptr(), b.as_mut_ptr());
 
         for i in 0..a.len() {
@@ -329,8 +289,6 @@ mod tests {
         let mut buffers = (0..10)
             .map(|_| scratch.allocate::<u128>(10))
             .collect::<Vec<_>>();
-
-        assert_eq!(scratch.stack.len(), 10);
 
         for b in buffers.iter_mut() {
             let b = b.as_mut_slice();
@@ -347,7 +305,7 @@ mod tests {
         // Chose an alignment larger than any reasonable OS's page size
         // to try to force the alignment algorithm into play.
         #[repr(C, align(65536))]
-        #[derive(Copy, Clone)]
+        #[derive(Copy, Clone, Default)]
         struct Foo {
             x: u32,
         }
@@ -371,37 +329,6 @@ mod tests {
     }
 
     #[test]
-    fn stack_coalesces_correctly() {
-        let mut scratch = Scratch::new();
-        let a = scratch.allocate::<u64>(16);
-        let mut b: ScratchBuffer<'_, u64> = scratch.allocate::<u64>(16);
-        let b_ptr = b.as_mut_slice().as_mut_ptr();
-
-        let c: ScratchBuffer<'_, u64> = scratch.allocate::<u64>(16);
-        let d: ScratchBuffer<'_, u64> = scratch.allocate::<u64>(16);
-
-        std::mem::drop(b);
-        assert_eq!(scratch.stack.len(), 4);
-
-        // We can't reuse b's buffer until c, d, e get dropped.
-        let mut e: ScratchBuffer<'_, u64> = scratch.allocate::<u64>(16);
-        assert_ne!(b_ptr, e.as_mut_slice().as_mut_ptr());
-
-        assert_eq!(scratch.stack.len(), 5);
-
-        std::mem::drop(c);
-        std::mem::drop(d);
-        std::mem::drop(e);
-
-        // Now we can reuse b's buffer.
-        let mut f = scratch.allocate::<u64>(16);
-        assert_eq!(f.as_mut_slice().as_mut_ptr(), b_ptr);
-        assert_eq!(scratch.stack.len(), 5);
-
-        std::mem::drop(a);
-    }
-
-    #[test]
     fn zero_size_allocations() {
         let mut scratch = Scratch::new();
         let a = scratch.allocate::<u64>(2);
@@ -410,7 +337,6 @@ mod tests {
         let a_slice = a.as_slice();
         let b_slice = b.as_slice();
 
-        assert_eq!(scratch.stack.len(), 2);
         assert_eq!(a_slice.len(), 2);
         assert_eq!(b_slice.len(), 0);
     }
@@ -418,10 +344,30 @@ mod tests {
     #[test]
     #[should_panic]
     fn zst_allocations_should_panic() {
+        #[derive(Default)]
         struct Foo {}
         unsafe impl Pod for Foo {}
 
         let mut scratch = Scratch::new();
         let _ = scratch.allocate::<Foo>(0x1 << 48);
+    }
+
+    #[test]
+    fn simd_alignment() {
+        #[cfg(target_arch = "aarch64")]
+        {
+            if is_aarch64_feature_detected!("neon") {
+                assert_eq!(SIMD_ALIGN, 16);
+            } else {
+                assert_eq!(SIMD_ALIGN, 16);
+            }
+        }
+
+        #[cfg(target_arch = "x86_64")]
+        {
+            if is_x86_feature_detected!("avx2") {
+                assert_eq!(SIMD_ALIGN, 64);
+            }
+        }
     }
 }

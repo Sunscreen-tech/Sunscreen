@@ -16,9 +16,8 @@ readme = "crates-io.md"
 
 
 [dependencies]
+aligned-vec = { workspace = true }
 bytemuck = { workspace = true }
-# TODO: Remove when Rust stabilizes Cursor API
-linked-list = "0.0.3"
 logproof = { workspace = true, optional = true }
 num = { workspace = true }
 paste = { workspace = true }

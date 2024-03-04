@@ -5,7 +5,7 @@ use std::{
     cell::RefCell,
     collections::LinkedList,
     marker::PhantomData,
-    mem::{align_of, size_of},
+    mem::{align_of, size_of}, rc::Rc,
 };
 
 use crate::{Torus, TorusOps};
@@ -107,14 +107,7 @@ where
 /// Please note the lack of [`Sync`] and [`Send`] on this object. It is not sound to
 /// share these between threads.
 struct Scratch {
-    stack: *mut LinkedList<*mut Allocation>,
-}
-
-impl Drop for Scratch {
-    fn drop(&mut self) {
-        let drop_box = unsafe { Box::from_raw(self.stack) };
-        std::mem::drop(drop_box);
-    }
+    stack: Rc<RefCell<LinkedList<*mut Allocation>>>,
 }
 
 impl Scratch {
@@ -122,10 +115,7 @@ impl Scratch {
     /// the only way to use scratch memory, which will allocate memory
     /// using a thread_local allocator.
     fn new() -> Self {
-        let list = Box::<LinkedList<*mut Allocation>>::default();
-        let list = Box::into_raw(list);
-
-        Self { stack: list }
+        Self { stack: Rc::new(RefCell::new(LinkedList::new())) }
     }
 
     /// Allocate a buffer matching the given specification.
@@ -139,7 +129,7 @@ impl Scratch {
         let u8_len = count * size_of::<T>();
 
         let allocation = unsafe {
-            let allocation = (*self.stack).pop_back();
+            let allocation = self.stack.borrow_mut().pop_back();
 
             if allocation.is_none() {
                 // If we don't have an existing allocation, make one
@@ -172,7 +162,7 @@ impl Scratch {
 
         ScratchBuffer {
             allocation,
-            pool: self.stack,
+            pool: self.stack.clone(),
             requested_len: count,
             _phantom: PhantomData,
         }
@@ -193,7 +183,7 @@ struct Allocation {
 /// [`Self::as_mut_slice`], as these obey standard lifetime rules.
 pub struct ScratchBuffer<'a, T> {
     allocation: *mut Allocation,
-    pool: *mut LinkedList<*mut Allocation>,
+    pool: Rc<RefCell<LinkedList<*mut Allocation>>>,
     requested_len: usize,
     _phantom: PhantomData<&'a T>,
 }
@@ -221,9 +211,7 @@ impl<'a, T> ScratchBuffer<'a, T> {
 
 impl<'a, T> Drop for ScratchBuffer<'a, T> {
     fn drop(&mut self) {
-        unsafe {
-            (*self.pool).push_back(self.allocation);
-        }
+        self.pool.borrow_mut().push_back(self.allocation);
     }
 }
 

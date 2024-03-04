@@ -210,7 +210,7 @@ impl Plaintext {
         let hex_string = CString::new(hex_str).unwrap();
 
         convert_seal_error(unsafe {
-            bindgen::Plaintext_Create4(hex_string.as_ptr() as *mut i8, null_mut(), &mut handle)
+            bindgen::Plaintext_Create4(hex_string.as_ptr() as *mut u8, null_mut(), &mut handle)
         })?;
 
         Ok(Self { handle })

@@ -55,7 +55,7 @@ where
         sk.assert_valid(params);
 
         let mut pk = LwePublicKey {
-            data: vec![Torus::zero(); LwePublicKeyRef::<S>::size(params.dim)],
+            data: avec![Torus::zero(); LwePublicKeyRef::<S>::size(params.dim)],
         };
         let enc_zeros = pk.enc_zeros_mut(params);
 

@@ -42,7 +42,7 @@ where
         let elems = GgswCiphertextRef::<S>::size((params.dim, radix.count));
 
         Self {
-            data: vec![Torus::zero(); elems],
+            data: avec![Torus::zero(); elems],
         }
     }
 
@@ -53,7 +53,7 @@ where
         assert_eq!(data.len(), elems);
 
         Self {
-            data: data.to_vec(),
+            data: avec_from_slice!(data),
         }
     }
 

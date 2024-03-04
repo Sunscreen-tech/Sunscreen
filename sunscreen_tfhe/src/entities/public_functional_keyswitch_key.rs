@@ -36,7 +36,7 @@ impl<S: TorusOps> PublicFunctionalKeyswitchKey<S> {
             PublicFunctionalKeyswitchKeyRef::<S>::size((from_lwe.dim, to_glwe.dim, radix.count));
 
         Self {
-            data: vec![Torus::zero(); len],
+            data: avec![Torus::zero(); len],
         }
     }
 }

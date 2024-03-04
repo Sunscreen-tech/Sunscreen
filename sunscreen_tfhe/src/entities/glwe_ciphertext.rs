@@ -51,9 +51,9 @@ where
 
         let len = GlweCiphertextRef::<S>::size(params.dim);
 
-        let data = (0..len).map(|_| Torus::<S>::zero()).collect::<Vec<_>>();
-
-        GlweCiphertext { data }
+        GlweCiphertext {
+            data: avec![Torus::zero(); len],
+        }
     }
 
     /// Computes the external product of a GLWE ciphertext and a GGSW ciphertext.
@@ -72,10 +72,7 @@ where
         assert_eq!(data.len(), GlweCiphertextRef::<S>::size(params.dim));
 
         GlweCiphertext {
-            data: data
-                .iter()
-                .map(|x| Torus::from(*x))
-                .collect::<Vec<Torus<S>>>(),
+            data: avec_from_iter!(data.iter().map(|x| Torus::from(*x))),
         }
     }
 }

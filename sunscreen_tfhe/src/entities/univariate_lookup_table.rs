@@ -41,7 +41,7 @@ impl<S: TorusOps> UnivariateLookupTable<S> {
         F: Fn(u64) -> u64,
     {
         let mut lut = UnivariateLookupTable {
-            data: vec![Torus::zero(); UnivariateLookupTableRef::<S>::size(glwe.dim)],
+            data: avec![Torus::zero(); UnivariateLookupTableRef::<S>::size(glwe.dim)],
         };
 
         lut.fill_trivial_from_fns(&[map], glwe, plaintext_bits);
@@ -66,7 +66,7 @@ impl<S: TorusOps> UnivariateLookupTable<S> {
         assert!(maps.len() > 1);
 
         let mut lut = UnivariateLookupTable {
-            data: vec![Torus::zero(); UnivariateLookupTableRef::<S>::size(glwe.dim)],
+            data: avec![Torus::zero(); UnivariateLookupTableRef::<S>::size(glwe.dim)],
         };
 
         lut.fill_trivial_from_fns(maps, glwe, plaintext_bits);

@@ -43,9 +43,7 @@ where
         let len = LweSecretKeyRef::<S>::size(params.dim);
 
         LweSecretKey {
-            data: (0..len)
-                .map(|_| torus_element_generator())
-                .collect::<Vec<_>>(),
+            data: avec_from_iter!((0..len).map(|_| torus_element_generator())),
         }
     }
 

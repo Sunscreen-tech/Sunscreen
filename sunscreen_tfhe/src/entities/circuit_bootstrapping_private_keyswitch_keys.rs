@@ -44,7 +44,7 @@ impl<S: TorusOps> CircuitBootstrappingKeyswitchKeys<S> {
         ));
 
         Self {
-            data: vec![Torus::zero(); len],
+            data: avec![Torus::zero(); len],
         }
     }
 }

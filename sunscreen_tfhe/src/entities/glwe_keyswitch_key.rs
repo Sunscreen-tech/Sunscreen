@@ -44,7 +44,7 @@ where
         let elems = GlweKeyswitchKeyRef::<S>::size((params.dim, radix.count));
 
         Self {
-            data: vec![Torus::zero(); elems],
+            data: avec![Torus::zero(); elems],
         }
     }
 }

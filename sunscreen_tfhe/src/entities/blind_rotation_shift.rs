@@ -41,7 +41,7 @@ impl<S: TorusOps> BlindRotationShift<S> {
         let len = BlindRotationShiftRef::<S>::size((params.dim, radix.count));
 
         Self {
-            data: vec![Torus::zero(); len],
+            data: avec![Torus::zero(); len],
         }
     }
 }
@@ -94,7 +94,7 @@ impl BlindRotationShiftFft<Complex<f64>> {
         let len = BlindRotationShiftFftRef::size((params.dim, radix.count));
 
         Self {
-            data: vec![Complex::zero(); len],
+            data: avec![Complex::zero(); len],
         }
     }
 }

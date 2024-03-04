@@ -46,7 +46,7 @@ where
     /// Create a new polynomial with the given length in the fourier domain.
     pub fn new(data: &[T]) -> Self {
         Self {
-            data: data.to_owned(),
+            data: avec_from_slice!(data),
         }
     }
 }

@@ -48,7 +48,7 @@ where
             LweKeyswitchKeyRef::<S>::size((original_params.dim, new_params.dim, radix.count));
 
         Self {
-            data: vec![Torus::zero(); elems],
+            data: avec![Torus::zero(); elems],
         }
     }
 }

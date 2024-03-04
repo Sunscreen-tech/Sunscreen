@@ -2,10 +2,12 @@ use num::{Complex, Zero};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    dst::{NoWrapper, OverlaySize}, entities::{
+    dst::{NoWrapper, OverlaySize},
+    entities::{
         GgswCiphertextFftIterator, GgswCiphertextFftIteratorMut, GgswCiphertextFftRef,
         GgswCiphertextIterator, GgswCiphertextIteratorMut, GgswCiphertextRef,
-    }, GlweDef, GlweDimension, RadixCount, RadixDecomposition, Torus, TorusOps
+    },
+    GlweDef, GlweDimension, RadixCount, RadixDecomposition, Torus, TorusOps,
 };
 
 dst! {
@@ -38,7 +40,7 @@ impl<S: TorusOps> BlindRotationShift<S> {
     pub fn new(params: &GlweDef, radix: &RadixDecomposition) -> Self {
         let len = BlindRotationShiftRef::<S>::size((params.dim, radix.count));
 
-        Self {            
+        Self {
             data: avec![Torus::zero(); len],
         }
     }

@@ -3,7 +3,8 @@ use num::{Complex, Zero};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    dst::OverlaySize, ops::ciphertext::external_product_ggsw_glwe, scratch::SIMD_ALIGN, GlweDef, GlweDimension, RadixCount, RadixDecomposition, Torus, TorusOps
+    dst::OverlaySize, ops::ciphertext::external_product_ggsw_glwe, scratch::SIMD_ALIGN, GlweDef,
+    GlweDimension, RadixCount, RadixDecomposition, Torus, TorusOps,
 };
 
 use super::{

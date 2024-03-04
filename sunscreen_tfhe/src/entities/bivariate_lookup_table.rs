@@ -43,7 +43,7 @@ impl<S: TorusOps> BivariateLookupTable<S> {
         F: Fn(u64, u64) -> u64,
     {
         let mut lut = BivariateLookupTable {
-            data: avec!(Torus::zero(); BivariateLookupTableRef::<S>::size(glwe.dim))
+            data: avec!(Torus::zero(); BivariateLookupTableRef::<S>::size(glwe.dim)),
         };
 
         lut.fill_trivial_from_fn(map, glwe, plaintext_bits, carry_bits);

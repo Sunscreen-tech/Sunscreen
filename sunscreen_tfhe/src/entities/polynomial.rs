@@ -285,12 +285,13 @@ where
     fn add(self, rhs: &PolynomialRef<S>) -> Self::Output {
         assert_eq!(self.data.as_ref().len(), rhs.data.as_ref().len());
 
-        let coeffs = AVec::from_iter(SIMD_ALIGN, self
-            .coeffs()
-            .as_ref()
-            .iter()
-            .zip(rhs.coeffs().as_ref().iter())
-            .map(|(a, b)| *a + *b)
+        let coeffs = AVec::from_iter(
+            SIMD_ALIGN,
+            self.coeffs()
+                .as_ref()
+                .iter()
+                .zip(rhs.coeffs().as_ref().iter())
+                .map(|(a, b)| *a + *b),
         );
 
         Polynomial { data: coeffs }
@@ -326,12 +327,13 @@ where
     fn sub(self, rhs: &PolynomialRef<S>) -> Self::Output {
         assert_eq!(self.data.as_ref().len(), rhs.data.as_ref().len());
 
-        let coeffs = AVec::from_iter(SIMD_ALIGN, self
-            .coeffs()
-            .as_ref()
-            .iter()
-            .zip(rhs.coeffs().as_ref().iter())
-            .map(|(a, b)| *a - *b)
+        let coeffs = AVec::from_iter(
+            SIMD_ALIGN,
+            self.coeffs()
+                .as_ref()
+                .iter()
+                .zip(rhs.coeffs().as_ref().iter())
+                .map(|(a, b)| *a - *b),
         );
 
         Polynomial { data: coeffs }

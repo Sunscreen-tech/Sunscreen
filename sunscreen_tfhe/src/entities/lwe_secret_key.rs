@@ -1,4 +1,3 @@
-
 use num::Zero;
 use serde::{Deserialize, Serialize};
 

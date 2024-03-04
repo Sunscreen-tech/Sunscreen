@@ -3,14 +3,13 @@ use std::{
     ops::{Add, AddAssign, Mul, Sub, SubAssign},
 };
 
-use aligned_vec::AVec;
 use num::{Complex, Zero};
 
 use crate::{
     dst::{FromMutSlice, FromSlice, NoWrapper, OverlaySize},
     fft::negacyclic::get_fft,
     polynomial::{polynomial_add_assign, polynomial_external_mad, polynomial_sub_assign},
-    scratch::{allocate_scratch, SIMD_ALIGN},
+    scratch::allocate_scratch,
     FrequencyTransform, PolynomialDegree, ReinterpretAsSigned, ToF64, Torus, TorusOps,
 };
 
@@ -285,13 +284,12 @@ where
     fn add(self, rhs: &PolynomialRef<S>) -> Self::Output {
         assert_eq!(self.data.as_ref().len(), rhs.data.as_ref().len());
 
-        let coeffs = avec_from_iter!(
-            self.coeffs()
-                .as_ref()
-                .iter()
-                .zip(rhs.coeffs().as_ref().iter())
-                .map(|(a, b)| *a + *b)
-        );
+        let coeffs = avec_from_iter!(self
+            .coeffs()
+            .as_ref()
+            .iter()
+            .zip(rhs.coeffs().as_ref().iter())
+            .map(|(a, b)| *a + *b));
 
         Polynomial { data: coeffs }
     }
@@ -326,13 +324,12 @@ where
     fn sub(self, rhs: &PolynomialRef<S>) -> Self::Output {
         assert_eq!(self.data.as_ref().len(), rhs.data.as_ref().len());
 
-        let coeffs = avec_from_iter!(
-            self.coeffs()
-                .as_ref()
-                .iter()
-                .zip(rhs.coeffs().as_ref().iter())
-                .map(|(a, b)| *a - *b)
-        );
+        let coeffs = avec_from_iter!(self
+            .coeffs()
+            .as_ref()
+            .iter()
+            .zip(rhs.coeffs().as_ref().iter())
+            .map(|(a, b)| *a - *b));
 
         Polynomial { data: coeffs }
     }

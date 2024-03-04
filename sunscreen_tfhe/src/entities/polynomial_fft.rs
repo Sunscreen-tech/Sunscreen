@@ -1,10 +1,9 @@
-use aligned_vec::AVec;
 use num::{traits::MulAdd, Complex};
 
 use crate::{
     dst::{NoWrapper, OverlaySize},
     fft::negacyclic::get_fft,
-    scratch::{allocate_scratch, SIMD_ALIGN},
+    scratch::allocate_scratch,
     FrequencyTransform, FromF64, NumBits, PolynomialDegree,
 };
 

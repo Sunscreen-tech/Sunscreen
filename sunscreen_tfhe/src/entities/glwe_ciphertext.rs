@@ -1,4 +1,3 @@
-
 use num::{Complex, Zero};
 use serde::{Deserialize, Serialize};
 

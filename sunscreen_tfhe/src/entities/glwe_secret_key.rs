@@ -1,4 +1,3 @@
-
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -211,12 +210,11 @@ mod tests {
         let sk = keygen::generate_uniform_glwe_sk(&params);
         let sk2 = keygen::generate_uniform_glwe_sk(&params);
 
-        let sk3_expected = avec_from_iter!(
-            sk.data
-                .iter()
-                .zip(sk2.data.iter())
-                .map(|(a, b)| a.wrapping_add(b))
-        );
+        let sk3_expected = avec_from_iter!(sk
+            .data
+            .iter()
+            .zip(sk2.data.iter())
+            .map(|(a, b)| a.wrapping_add(b)));
 
         let sk3 = sk + sk2;
 
@@ -230,12 +228,11 @@ mod tests {
         let sk = keygen::generate_uniform_glwe_sk(&params);
         let mut sk2 = keygen::generate_uniform_glwe_sk(&params);
 
-        let sk2_expected = avec_from_iter!(
-            sk.data
-                .iter()
-                .zip(sk2.data.iter())
-                .map(|(a, b)| a.wrapping_add(b))
-        );
+        let sk2_expected = avec_from_iter!(sk
+            .data
+            .iter()
+            .zip(sk2.data.iter())
+            .map(|(a, b)| a.wrapping_add(b)));
 
         sk2 += sk;
 
@@ -249,12 +246,11 @@ mod tests {
         let sk = keygen::generate_uniform_glwe_sk(&params);
         let sk2 = keygen::generate_uniform_glwe_sk(&params);
 
-        let sk3_expected = avec_from_iter!(
-            sk.data
-                .iter()
-                .zip(sk2.data.iter())
-                .map(|(a, b)| a.wrapping_add(b))
-        );
+        let sk3_expected = avec_from_iter!(sk
+            .data
+            .iter()
+            .zip(sk2.data.iter())
+            .map(|(a, b)| a.wrapping_add(b)));
 
         let sk3 = sk.as_ref() + sk2.as_ref();
 
@@ -268,12 +264,11 @@ mod tests {
         let sk = keygen::generate_uniform_glwe_sk(&params);
         let sk2 = keygen::generate_uniform_glwe_sk(&params);
 
-        let sk3_expected = avec_from_iter!(
-            sk.data
-                .iter()
-                .zip(sk2.data.iter())
-                .map(|(a, b)| a.wrapping_add(b))
-        );
+        let sk3_expected = avec_from_iter!(sk
+            .data
+            .iter()
+            .zip(sk2.data.iter())
+            .map(|(a, b)| a.wrapping_add(b)));
 
         let sk3 = sk.wrapping_add(&sk2);
 
@@ -289,12 +284,11 @@ mod tests {
         let sk = keygen::generate_uniform_glwe_sk(&params);
         let sk2 = keygen::generate_uniform_glwe_sk(&params);
 
-        let sk3_expected = avec_from_iter!(
-            sk.data
-                .iter()
-                .zip(sk2.data.iter())
-                .map(|(a, b)| a.wrapping_sub(b))
-        );
+        let sk3_expected = avec_from_iter!(sk
+            .data
+            .iter()
+            .zip(sk2.data.iter())
+            .map(|(a, b)| a.wrapping_sub(b)));
 
         let sk3 = sk - sk2;
 
@@ -308,12 +302,11 @@ mod tests {
         let sk = keygen::generate_uniform_glwe_sk(&params);
         let mut sk2 = keygen::generate_uniform_glwe_sk(&params);
 
-        let sk2_expected = avec_from_iter!(
-            sk2.data
-                .iter()
-                .zip(sk.data.iter())
-                .map(|(a, b)| a.wrapping_sub(b))
-        );
+        let sk2_expected = avec_from_iter!(sk2
+            .data
+            .iter()
+            .zip(sk.data.iter())
+            .map(|(a, b)| a.wrapping_sub(b)));
 
         sk2 -= sk;
 
@@ -327,12 +320,11 @@ mod tests {
         let sk = keygen::generate_uniform_glwe_sk(&params);
         let sk2 = keygen::generate_uniform_glwe_sk(&params);
 
-        let sk3_expected = avec_from_iter!(
-            sk.data
-                .iter()
-                .zip(sk2.data.iter())
-                .map(|(a, b)| a.wrapping_sub(b))
-        );
+        let sk3_expected = avec_from_iter!(sk
+            .data
+            .iter()
+            .zip(sk2.data.iter())
+            .map(|(a, b)| a.wrapping_sub(b)));
 
         let sk3 = sk.as_ref() - sk2.as_ref();
 
@@ -346,12 +338,11 @@ mod tests {
         let sk = keygen::generate_uniform_glwe_sk(&params);
         let sk2 = keygen::generate_uniform_glwe_sk(&params);
 
-        let sk3_expected = avec_from_iter!(
-            sk.data
-                .iter()
-                .zip(sk2.data.iter())
-                .map(|(a, b)| a.wrapping_sub(b))
-        );
+        let sk3_expected = avec_from_iter!(sk
+            .data
+            .iter()
+            .zip(sk2.data.iter())
+            .map(|(a, b)| a.wrapping_sub(b)));
 
         let sk3 = sk.wrapping_sub(&sk2);
 

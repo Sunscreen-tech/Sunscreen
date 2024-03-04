@@ -84,7 +84,7 @@ macro_rules! impl_unary_op {
                     // We call the wrapping trait instead of using the dot
                     // syntax because the dot syntax can dereference the value
                     // and can cause problems with Deref.
-                    let data = aligned_vec::AVec::from_iter(crate::scratch::SIMD_ALIGN, self.data.iter().map(|a| num::traits::[<Wrapping $op>]::[<wrapping_ $op:lower>](a)));
+                    let data = avec_from_iter!(self.data.iter().map(|a| num::traits::[<Wrapping $op>]::[<wrapping_ $op:lower>](a)));
 
                     $type { data }
                 }

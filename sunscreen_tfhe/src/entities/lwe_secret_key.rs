@@ -45,7 +45,7 @@ where
         let len = LweSecretKeyRef::<S>::size(params.dim);
 
         LweSecretKey {
-            data: AVec::from_iter(SIMD_ALIGN, (0..len).map(|_| torus_element_generator())),
+            data: avec_from_iter!((0..len).map(|_| torus_element_generator())),
         }
     }
 

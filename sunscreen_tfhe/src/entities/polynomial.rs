@@ -65,7 +65,7 @@ where
 {
     fn from_iter<I: IntoIterator<Item = T>>(iter: I) -> Self {
         Self {
-            data: AVec::from_iter(SIMD_ALIGN, iter),
+            data: avec_from_iter!(iter),
         }
     }
 }
@@ -92,7 +92,7 @@ where
         U: Clone,
     {
         Polynomial {
-            data: AVec::from_iter(SIMD_ALIGN, self.data.iter().map(f)),
+            data: avec_from_iter!(self.data.iter().map(f)),
         }
     }
 
@@ -285,13 +285,12 @@ where
     fn add(self, rhs: &PolynomialRef<S>) -> Self::Output {
         assert_eq!(self.data.as_ref().len(), rhs.data.as_ref().len());
 
-        let coeffs = AVec::from_iter(
-            SIMD_ALIGN,
+        let coeffs = avec_from_iter!(
             self.coeffs()
                 .as_ref()
                 .iter()
                 .zip(rhs.coeffs().as_ref().iter())
-                .map(|(a, b)| *a + *b),
+                .map(|(a, b)| *a + *b)
         );
 
         Polynomial { data: coeffs }
@@ -327,13 +326,12 @@ where
     fn sub(self, rhs: &PolynomialRef<S>) -> Self::Output {
         assert_eq!(self.data.as_ref().len(), rhs.data.as_ref().len());
 
-        let coeffs = AVec::from_iter(
-            SIMD_ALIGN,
+        let coeffs = avec_from_iter!(
             self.coeffs()
                 .as_ref()
                 .iter()
                 .zip(rhs.coeffs().as_ref().iter())
-                .map(|(a, b)| *a - *b),
+                .map(|(a, b)| *a - *b)
         );
 
         Polynomial { data: coeffs }

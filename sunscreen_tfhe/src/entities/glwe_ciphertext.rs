@@ -74,7 +74,7 @@ where
         assert_eq!(data.len(), GlweCiphertextRef::<S>::size(params.dim));
 
         GlweCiphertext {
-            data: AVec::from_iter(SIMD_ALIGN, data.iter().map(|x| Torus::from(*x))),
+            data: avec_from_iter!(data.iter().map(|x| Torus::from(*x))),
         }
     }
 }

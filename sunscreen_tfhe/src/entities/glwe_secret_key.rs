@@ -57,7 +57,7 @@ where
         let len = GlweSecretKeyRef::<S>::size(params.dim);
 
         GlweSecretKey {
-            data: AVec::from_iter(SIMD_ALIGN, (0..len).map(|_| torus_element_generator())),
+            data: avec_from_iter!((0..len).map(|_| torus_element_generator())),
         }
     }
 
@@ -213,12 +213,11 @@ mod tests {
         let sk = keygen::generate_uniform_glwe_sk(&params);
         let sk2 = keygen::generate_uniform_glwe_sk(&params);
 
-        let sk3_expected = AVec::from_iter(
-            SIMD_ALIGN,
+        let sk3_expected = avec_from_iter!(
             sk.data
                 .iter()
                 .zip(sk2.data.iter())
-                .map(|(a, b)| a.wrapping_add(b)),
+                .map(|(a, b)| a.wrapping_add(b))
         );
 
         let sk3 = sk + sk2;
@@ -233,12 +232,11 @@ mod tests {
         let sk = keygen::generate_uniform_glwe_sk(&params);
         let mut sk2 = keygen::generate_uniform_glwe_sk(&params);
 
-        let sk2_expected = AVec::from_iter(
-            SIMD_ALIGN,
+        let sk2_expected = avec_from_iter!(
             sk.data
                 .iter()
                 .zip(sk2.data.iter())
-                .map(|(a, b)| a.wrapping_add(b)),
+                .map(|(a, b)| a.wrapping_add(b))
         );
 
         sk2 += sk;
@@ -253,12 +251,11 @@ mod tests {
         let sk = keygen::generate_uniform_glwe_sk(&params);
         let sk2 = keygen::generate_uniform_glwe_sk(&params);
 
-        let sk3_expected = AVec::from_iter(
-            SIMD_ALIGN,
+        let sk3_expected = avec_from_iter!(
             sk.data
                 .iter()
                 .zip(sk2.data.iter())
-                .map(|(a, b)| a.wrapping_add(b)),
+                .map(|(a, b)| a.wrapping_add(b))
         );
 
         let sk3 = sk.as_ref() + sk2.as_ref();
@@ -273,12 +270,11 @@ mod tests {
         let sk = keygen::generate_uniform_glwe_sk(&params);
         let sk2 = keygen::generate_uniform_glwe_sk(&params);
 
-        let sk3_expected = AVec::from_iter(
-            SIMD_ALIGN,
+        let sk3_expected = avec_from_iter!(
             sk.data
                 .iter()
                 .zip(sk2.data.iter())
-                .map(|(a, b)| a.wrapping_add(b)),
+                .map(|(a, b)| a.wrapping_add(b))
         );
 
         let sk3 = sk.wrapping_add(&sk2);
@@ -295,12 +291,11 @@ mod tests {
         let sk = keygen::generate_uniform_glwe_sk(&params);
         let sk2 = keygen::generate_uniform_glwe_sk(&params);
 
-        let sk3_expected = AVec::from_iter(
-            SIMD_ALIGN,
+        let sk3_expected = avec_from_iter!(
             sk.data
                 .iter()
                 .zip(sk2.data.iter())
-                .map(|(a, b)| a.wrapping_sub(b)),
+                .map(|(a, b)| a.wrapping_sub(b))
         );
 
         let sk3 = sk - sk2;
@@ -315,12 +310,11 @@ mod tests {
         let sk = keygen::generate_uniform_glwe_sk(&params);
         let mut sk2 = keygen::generate_uniform_glwe_sk(&params);
 
-        let sk2_expected = AVec::from_iter(
-            SIMD_ALIGN,
+        let sk2_expected = avec_from_iter!(
             sk2.data
                 .iter()
                 .zip(sk.data.iter())
-                .map(|(a, b)| a.wrapping_sub(b)),
+                .map(|(a, b)| a.wrapping_sub(b))
         );
 
         sk2 -= sk;
@@ -335,12 +329,11 @@ mod tests {
         let sk = keygen::generate_uniform_glwe_sk(&params);
         let sk2 = keygen::generate_uniform_glwe_sk(&params);
 
-        let sk3_expected = AVec::from_iter(
-            SIMD_ALIGN,
+        let sk3_expected = avec_from_iter!(
             sk.data
                 .iter()
                 .zip(sk2.data.iter())
-                .map(|(a, b)| a.wrapping_sub(b)),
+                .map(|(a, b)| a.wrapping_sub(b))
         );
 
         let sk3 = sk.as_ref() - sk2.as_ref();
@@ -355,12 +348,11 @@ mod tests {
         let sk = keygen::generate_uniform_glwe_sk(&params);
         let sk2 = keygen::generate_uniform_glwe_sk(&params);
 
-        let sk3_expected = AVec::from_iter(
-            SIMD_ALIGN,
+        let sk3_expected = avec_from_iter!(
             sk.data
                 .iter()
                 .zip(sk2.data.iter())
-                .map(|(a, b)| a.wrapping_sub(b)),
+                .map(|(a, b)| a.wrapping_sub(b))
         );
 
         let sk3 = sk.wrapping_sub(&sk2);
@@ -376,7 +368,7 @@ mod tests {
 
         let sk = keygen::generate_uniform_glwe_sk(&params);
 
-        let sk2_expected = AVec::from_iter(SIMD_ALIGN, sk.data.iter().map(|a| a.wrapping_neg()));
+        let sk2_expected = avec_from_iter!(sk.data.iter().map(|a| a.wrapping_neg()));
         let sk2 = -sk;
 
         assert_eq!(sk2_expected, sk2.data)
@@ -388,7 +380,7 @@ mod tests {
 
         let sk = keygen::generate_uniform_glwe_sk(&params);
 
-        let sk2_expected = AVec::from_iter(SIMD_ALIGN, sk.data.iter().map(|a| a.wrapping_neg()));
+        let sk2_expected = avec_from_iter!(sk.data.iter().map(|a| a.wrapping_neg()));
         let sk2 = -sk.as_ref();
 
         assert_eq!(sk2_expected, sk2.data)
@@ -400,7 +392,7 @@ mod tests {
 
         let sk = keygen::generate_binary_glwe_sk(&params);
 
-        let sk2_expected = AVec::from_iter(SIMD_ALIGN, sk.data.iter().map(|a| a.wrapping_neg()));
+        let sk2_expected = avec_from_iter!(sk.data.iter().map(|a| a.wrapping_neg()));
         let sk2 = sk.wrapping_neg();
 
         assert_eq!(sk2_expected, sk2.data)

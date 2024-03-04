@@ -34,7 +34,7 @@ impl GlweCiphertextFft<Complex<f64>> {
         let len = GlweCiphertextFftRef::size(params.dim);
 
         Self {
-            data: vec![Complex::zero(); len],
+            data: avec![Complex::zero(); len],
         }
     }
 }

@@ -31,7 +31,7 @@ impl<S: TorusOps> LweCiphertextList<S> {
     /// [`circuit_bootstrap`](crate::ops::bootstrapping::circuit_bootstrap).
     pub fn new(lwe: &LweDef, count: usize) -> Self {
         Self {
-            data: vec![Torus::zero(); LweCiphertextListRef::<S>::size((lwe.dim, count))],
+            data: avec![Torus::zero(); LweCiphertextListRef::<S>::size((lwe.dim, count))],
         }
     }
 }

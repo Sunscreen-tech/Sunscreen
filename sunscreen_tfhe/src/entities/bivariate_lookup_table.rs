@@ -5,7 +5,7 @@ use crate::{
     dst::{FromMutSlice, FromSlice, OverlaySize},
     entities::PolynomialRef,
     ops::{bootstrapping::generate_bivariate_lut, encryption::trivially_encrypt_glwe_ciphertext},
-    scratch::allocate_scratch_ref,
+    scratch::{allocate_scratch_ref, SIMD_ALIGN},
     CarryBits, GlweDef, GlweDimension, PlaintextBits, Torus, TorusOps,
 };
 
@@ -43,7 +43,7 @@ impl<S: TorusOps> BivariateLookupTable<S> {
         F: Fn(u64, u64) -> u64,
     {
         let mut lut = BivariateLookupTable {
-            data: vec![Torus::zero(); BivariateLookupTableRef::<S>::size(glwe.dim)],
+            data: avec!(Torus::zero(); BivariateLookupTableRef::<S>::size(glwe.dim))
         };
 
         lut.fill_trivial_from_fn(map, glwe, plaintext_bits, carry_bits);

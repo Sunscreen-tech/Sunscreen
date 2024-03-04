@@ -28,13 +28,13 @@ macro_rules! allocate_scratch_ref {
 pub(crate) use allocate_scratch_ref;
 
 #[cfg(target_feature = "neon")]
-const SIMD_ALIGN: usize = align_of::<std::arch::aarch64::float64x2_t>();
+pub const SIMD_ALIGN: usize = align_of::<std::arch::aarch64::float64x2_t>();
 
 #[cfg(target_feature = "avx2")]
-const SIMD_ALIGN: usize = align_of::<std::arch::x86_64::__m512d>();
+pub const SIMD_ALIGN: usize = align_of::<std::arch::x86_64::__m512d>();
 
 #[cfg(not(any(target_feature = "neon", target_feaure = "avx2")))]
-const SIMD_ALIGN: usize = align_of::<u128>();
+pub const SIMD_ALIGN: usize = align_of::<u128>();
 
 /// Indicates this is a "Plain Old Data" type. For `T` qualify as such,
 /// all bit patterns must be considered a properly initialized instance of

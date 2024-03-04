@@ -1,9 +1,9 @@
+use aligned_vec::AVec;
 use num::{Complex, Zero};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    dst::OverlaySize, ops::ciphertext::external_product_ggsw_glwe, GlweDef, GlweDimension,
-    RadixCount, RadixDecomposition, Torus, TorusOps,
+    dst::OverlaySize, ops::ciphertext::external_product_ggsw_glwe, scratch::SIMD_ALIGN, GlweDef, GlweDimension, RadixCount, RadixDecomposition, Torus, TorusOps
 };
 
 use super::{
@@ -42,7 +42,7 @@ where
         let elems = GgswCiphertextRef::<S>::size((params.dim, radix.count));
 
         Self {
-            data: vec![Torus::zero(); elems],
+            data: avec![Torus::zero(); elems],
         }
     }
 
@@ -53,7 +53,7 @@ where
         assert_eq!(data.len(), elems);
 
         Self {
-            data: data.to_vec(),
+            data: AVec::from_slice(SIMD_ALIGN, data),
         }
     }
 

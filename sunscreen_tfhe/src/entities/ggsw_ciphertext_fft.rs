@@ -34,7 +34,7 @@ impl GgswCiphertextFft<Complex<f64>> {
         let len = GgswCiphertextFftRef::size((params.dim, radix.count));
 
         GgswCiphertextFft {
-            data: vec![Complex::zero(); len],
+            data: avec![Complex::zero(); len],
         }
     }
 }

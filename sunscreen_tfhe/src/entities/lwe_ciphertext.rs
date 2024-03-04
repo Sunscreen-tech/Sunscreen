@@ -40,7 +40,7 @@ impl<S: TorusOps> LweCiphertext<S> {
 
     /// Create a new LWE ciphertext with all coefficients set to zero.
     pub fn zero(params: &LweDef) -> Self {
-        let data = vec![Torus::zero(); LweCiphertextRef::<S>::size(params.dim)];
+        let data = avec![Torus::zero(); LweCiphertextRef::<S>::size(params.dim)];
 
         Self { data }
     }

@@ -1,5 +1,11 @@
 use crate::scratch::Pod;
 
+macro_rules! avec {
+    ($elem:expr; $count:expr) => {
+        aligned_vec::AVec::__from_elem(crate::scratch::SIMD_ALIGN, $elem, $count)
+    };
+}
+
 macro_rules! dst {
     ($(#[$meta:meta])* $t:ty, $ref_t:ty, $wrapper:ty, ($($derive:ident),* $(,)? ), ($($t_bounds:ty),* $(,)? )) => {
         paste::paste! {
@@ -7,7 +13,7 @@ macro_rules! dst {
             $(#[$meta])*
             #[derive($($derive,)*)]
             pub struct $t<T> where T: Clone $(+ $t_bounds)* {
-                data: Vec<$wrapper<T>>
+                data: aligned_vec::AVec<$wrapper<T>, aligned_vec::ConstAlign<{ crate::scratch::SIMD_ALIGN }>>
             }
 
             /// A reference to the data structure.
@@ -35,14 +41,6 @@ macro_rules! dst {
                 /// Returns a mutable slice view of the data representing a $t.
                 pub fn as_mut_slice(&mut self) -> &mut [$wrapper<T>] {
                     &mut self.data
-                }
-
-                #[allow(unused)]
-                /// Move the contents of rhs into self.
-                pub fn move_from(&mut self, rhs: $t<T>) {
-                    for (l, r) in self.data.iter_mut().zip(rhs.data.into_iter()) {
-                        *l = r;
-                    }
                 }
             }
 
@@ -98,7 +96,7 @@ macro_rules! dst {
                 type Owned = $t<T>;
 
                 fn to_owned(&self) -> Self::Owned {
-                    $t { data: self.data.to_owned() }
+                    $t { data: aligned_vec::AVec::from_slice(crate::scratch::SIMD_ALIGN, &self.data) }
                 }
             }
 

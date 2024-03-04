@@ -1,12 +1,9 @@
+use aligned_vec::AVec;
 use num::Zero;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    dst::{NoWrapper, OverlaySize},
-    macros::{impl_binary_op, impl_unary_op},
-    ops::encryption::encode_and_encrypt_lwe_ciphertext,
-    rand::{binary, uniform_torus},
-    LweDef, LweDimension, PlaintextBits, Torus, TorusOps,
+    dst::{NoWrapper, OverlaySize}, macros::{impl_binary_op, impl_unary_op}, ops::encryption::encode_and_encrypt_lwe_ciphertext, rand::{binary, uniform_torus}, scratch::SIMD_ALIGN, LweDef, LweDimension, PlaintextBits, Torus, TorusOps
 };
 
 use super::{LweCiphertext, LweCiphertextRef};
@@ -43,9 +40,9 @@ where
         let len = LweSecretKeyRef::<S>::size(params.dim);
 
         LweSecretKey {
-            data: (0..len)
+            data: AVec::from_iter(SIMD_ALIGN, (0..len)
                 .map(|_| torus_element_generator())
-                .collect::<Vec<_>>(),
+            ),
         }
     }
 

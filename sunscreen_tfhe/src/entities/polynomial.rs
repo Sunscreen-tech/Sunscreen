@@ -3,13 +3,14 @@ use std::{
     ops::{Add, AddAssign, Mul, Sub, SubAssign},
 };
 
+use aligned_vec::AVec;
 use num::{Complex, Zero};
 
 use crate::{
     dst::{FromMutSlice, FromSlice, NoWrapper, OverlaySize},
     fft::negacyclic::get_fft,
     polynomial::{polynomial_add_assign, polynomial_external_mad, polynomial_sub_assign},
-    scratch::allocate_scratch,
+    scratch::{allocate_scratch, SIMD_ALIGN},
     FrequencyTransform, PolynomialDegree, ReinterpretAsSigned, ToF64, Torus, TorusOps,
 };
 
@@ -43,7 +44,7 @@ where
     /// Create a new polynomial from a slice of coefficients.
     pub fn new(data: &[T]) -> Polynomial<T> {
         Polynomial {
-            data: data.to_owned(),
+            data: AVec::from_slice(SIMD_ALIGN, data),
         }
     }
 
@@ -53,7 +54,7 @@ where
         T: Zero,
     {
         Polynomial {
-            data: vec![T::zero(); len],
+            data: avec![T::zero(); len],
         }
     }
 }
@@ -64,7 +65,7 @@ where
 {
     fn from_iter<I: IntoIterator<Item = T>>(iter: I) -> Self {
         Self {
-            data: iter.into_iter().collect::<Vec<_>>(),
+            data: AVec::from_iter(SIMD_ALIGN, iter),
         }
     }
 }
@@ -91,7 +92,7 @@ where
         U: Clone,
     {
         Polynomial {
-            data: self.data.iter().map(f).collect::<Vec<_>>(),
+            data: AVec::from_iter(SIMD_ALIGN, self.data.iter().map(f)),
         }
     }
 
@@ -284,13 +285,13 @@ where
     fn add(self, rhs: &PolynomialRef<S>) -> Self::Output {
         assert_eq!(self.data.as_ref().len(), rhs.data.as_ref().len());
 
-        let coeffs = self
+        let coeffs = AVec::from_iter(SIMD_ALIGN, self
             .coeffs()
             .as_ref()
             .iter()
             .zip(rhs.coeffs().as_ref().iter())
             .map(|(a, b)| *a + *b)
-            .collect::<Vec<_>>();
+        );
 
         Polynomial { data: coeffs }
     }
@@ -325,13 +326,13 @@ where
     fn sub(self, rhs: &PolynomialRef<S>) -> Self::Output {
         assert_eq!(self.data.as_ref().len(), rhs.data.as_ref().len());
 
-        let coeffs = self
+        let coeffs = AVec::from_iter(SIMD_ALIGN, self
             .coeffs()
             .as_ref()
             .iter()
             .zip(rhs.coeffs().as_ref().iter())
             .map(|(a, b)| *a - *b)
-            .collect::<Vec<_>>();
+        );
 
         Polynomial { data: coeffs }
     }
@@ -358,7 +359,7 @@ where
         assert_eq!(rhs.len(), self.len());
 
         let mut c = Polynomial {
-            data: vec![Torus::zero(); rhs.len()],
+            data: avec![Torus::zero(); rhs.len()],
         };
 
         polynomial_external_mad(&mut c, self, rhs);

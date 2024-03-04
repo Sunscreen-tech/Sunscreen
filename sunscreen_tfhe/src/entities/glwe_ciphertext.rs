@@ -1,12 +1,9 @@
+use aligned_vec::AVec;
 use num::{Complex, Zero};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    dst::{FromMutSlice, FromSlice, OverlaySize},
-    entities::GgswCiphertextRef,
-    macros::{impl_binary_op, impl_unary_op},
-    ops::ciphertext::external_product_ggsw_glwe,
-    GlweDef, GlweDimension, RadixDecomposition, Torus, TorusOps,
+    dst::{FromMutSlice, FromSlice, OverlaySize}, entities::GgswCiphertextRef, macros::{impl_binary_op, impl_unary_op}, ops::ciphertext::external_product_ggsw_glwe, scratch::SIMD_ALIGN, GlweDef, GlweDimension, RadixDecomposition, Torus, TorusOps
 };
 
 use super::{
@@ -51,9 +48,7 @@ where
 
         let len = GlweCiphertextRef::<S>::size(params.dim);
 
-        let data = (0..len).map(|_| Torus::<S>::zero()).collect::<Vec<_>>();
-
-        GlweCiphertext { data }
+        GlweCiphertext { data: avec![Torus::zero(); len] }
     }
 
     /// Computes the external product of a GLWE ciphertext and a GGSW ciphertext.
@@ -72,10 +67,11 @@ where
         assert_eq!(data.len(), GlweCiphertextRef::<S>::size(params.dim));
 
         GlweCiphertext {
-            data: data
+            data: AVec::from_iter(SIMD_ALIGN, 
+                data
                 .iter()
                 .map(|x| Torus::from(*x))
-                .collect::<Vec<Torus<S>>>(),
+            ),
         }
     }
 }

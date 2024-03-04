@@ -31,7 +31,7 @@ where
     /// Create a new polynomial list, where each polynomial has the same degree.
     pub fn new(degree: PolynomialDegree, count: usize) -> Self {
         Self {
-            data: vec![S::zero(); degree.0 * count],
+            data: avec![S::zero(); degree.0 * count],
         }
     }
 }

@@ -2,13 +2,11 @@ use num::{Complex, Zero};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    dst::{NoWrapper, OverlaySize},
-    entities::{
+    dst::{NoWrapper, OverlaySize}, entities::{
         GgswCiphertextFftIterator, GgswCiphertextFftIteratorMut, GgswCiphertextFftRef,
         GgswCiphertextIterator, GgswCiphertextIteratorMut, GgswCiphertextRef,
         ParallelGgswCiphertextIterator, ParallelGgswCiphertextIteratorMut,
-    },
-    GlweDef, GlweDimension, LweDef, LweDimension, RadixCount, RadixDecomposition, Torus, TorusOps,
+    }, scratch::SIMD_ALIGN, GlweDef, GlweDimension, LweDef, LweDimension, RadixCount, RadixDecomposition, Torus, TorusOps
 };
 
 dst! {
@@ -42,7 +40,7 @@ impl<S: TorusOps> BootstrapKey<S> {
         let len = BootstrapKeyRef::<S>::size((lwe_params.dim, glwe_params.dim, radix.count));
 
         Self {
-            data: vec![Torus::zero(); len],
+            data: avec![Torus::zero(); len],
         }
     }
 }
@@ -145,7 +143,7 @@ impl BootstrapKeyFft<Complex<f64>> {
         let len = BootstrapKeyFftRef::size((lwe_params.dim, glwe_params.dim, radix.count));
 
         Self {
-            data: vec![Complex::zero(); len],
+            data: avec![Complex::zero(); len],
         }
     }
 }

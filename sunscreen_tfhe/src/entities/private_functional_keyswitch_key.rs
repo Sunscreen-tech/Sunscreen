@@ -66,7 +66,7 @@ impl<S: TorusOps> PrivateFunctionalKeyswitchKey<S> {
         lwe_count: &PrivateFunctionalKeyswitchLweCount,
     ) -> Self {
         Self {
-            data: vec![
+            data: avec![
                 Torus::zero();
                 PrivateFunctionalKeyswitchKeyRef::<S>::size((
                     from_lwe.dim,

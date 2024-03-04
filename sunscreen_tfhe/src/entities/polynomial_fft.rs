@@ -1,9 +1,10 @@
+use aligned_vec::AVec;
 use num::{traits::MulAdd, Complex};
 
 use crate::{
     dst::{NoWrapper, OverlaySize},
     fft::negacyclic::get_fft,
-    scratch::allocate_scratch,
+    scratch::{allocate_scratch, SIMD_ALIGN},
     FrequencyTransform, FromF64, NumBits, PolynomialDegree,
 };
 
@@ -46,7 +47,7 @@ where
     /// Create a new polynomial with the given length in the fourier domain.
     pub fn new(data: &[T]) -> Self {
         Self {
-            data: data.to_owned(),
+            data: AVec::from_slice(SIMD_ALIGN, data),
         }
     }
 }

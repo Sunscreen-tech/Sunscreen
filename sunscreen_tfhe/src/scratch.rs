@@ -5,7 +5,8 @@ use std::{
     cell::RefCell,
     collections::LinkedList,
     marker::PhantomData,
-    mem::{align_of, size_of}, rc::Rc,
+    mem::{align_of, size_of},
+    rc::Rc,
 };
 
 use crate::{Torus, TorusOps};
@@ -115,7 +116,9 @@ impl Scratch {
     /// the only way to use scratch memory, which will allocate memory
     /// using a thread_local allocator.
     fn new() -> Self {
-        Self { stack: Rc::new(RefCell::new(LinkedList::new())) }
+        Self {
+            stack: Rc::new(RefCell::new(LinkedList::new())),
+        }
     }
 
     /// Allocate a buffer matching the given specification.

@@ -222,7 +222,7 @@ impl<'a, T> Drop for ScratchBuffer<'a, T> {
 
 #[cfg(test)]
 mod tests {
-    use std::{arch::is_aarch64_feature_detected, mem::align_of};
+    use std::mem::align_of;
 
     use super::*;
 

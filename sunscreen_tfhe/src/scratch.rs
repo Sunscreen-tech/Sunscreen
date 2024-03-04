@@ -30,10 +30,10 @@ pub(crate) use allocate_scratch_ref;
 #[cfg(target_feature = "neon")]
 pub const SIMD_ALIGN: usize = align_of::<std::arch::aarch64::float64x2_t>();
 
-#[cfg(target_feature = "avx2")]
+#[cfg(target_arch = "x86_64")]
 pub const SIMD_ALIGN: usize = align_of::<std::arch::x86_64::__m512d>();
 
-#[cfg(not(any(target_feature = "neon", target_feaure = "avx2")))]
+#[cfg(not(any(target_feature = "neon", target_arch = "x86_64")))]
 pub const SIMD_ALIGN: usize = align_of::<u128>();
 
 /// Indicates this is a "Plain Old Data" type. For `T` qualify as such,
@@ -368,9 +368,7 @@ mod tests {
 
         #[cfg(target_arch = "x86_64")]
         {
-            if is_x86_feature_detected!("avx2") {
-                assert_eq!(SIMD_ALIGN, 64);
-            }
+            assert_eq!(SIMD_ALIGN, 64);    
         }
     }
 }

@@ -115,7 +115,7 @@ impl Scratch {
     /// the only way to use scratch memory, which will allocate memory
     /// using a thread_local allocator.
     fn new() -> Self {
-        let list = Box::new(LinkedList::new());
+        let list = Box::<LinkedList<*mut Allocation>>::default();
         let list = Box::into_raw(list);
 
         Self { stack: list }
@@ -164,7 +164,7 @@ impl Scratch {
         };
 
         ScratchBuffer {
-            allocation: allocation,
+            allocation,
             pool: self.stack,
             requested_len: count,
             _phantom: PhantomData,
@@ -356,11 +356,7 @@ mod tests {
     fn simd_alignment() {
         #[cfg(target_arch = "aarch64")]
         {
-            if is_aarch64_feature_detected!("neon") {
-                assert_eq!(SIMD_ALIGN, 16);
-            } else {
-                assert_eq!(SIMD_ALIGN, 16);
-            }
+            assert_eq!(SIMD_ALIGN, 16);
         }
 
         #[cfg(target_arch = "x86_64")]

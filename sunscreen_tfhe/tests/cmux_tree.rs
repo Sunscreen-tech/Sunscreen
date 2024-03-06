@@ -13,9 +13,13 @@ fn cmux_tree_once() {
         .map(|_| rand::random::<bool>() as u64)
         .collect::<Vec<_>>();
 
-    let random_bits = (0..depth)
+    let mut random_bits = (0..depth)
         .map(|_| rand::random::<bool>() as u64)
         .collect::<Vec<_>>();
+
+    // Always start with a 1 so that the first level is always two distinct
+    // values.
+    random_bits[0] = 1;
 
     // Parameters
     let plaintext_bits = PlaintextBits(1);
@@ -102,7 +106,9 @@ fn cmux_tree_once() {
         let sel_bootstrapped_fft =
             high_level::fft::fft_ggsw(&sel_bootstrapped, &level_1_params, &cbs_radix);
 
-        // We use the select bit itself as the one line
+        // We use the random bit on the d1 branch to make it so that the result
+        // is randomly chosen from [0, 1]; if a constant was used, it would be
+        // selected with overwhelming probability.
         let d1_polynomial = Polynomial::new(
             &(0..level_1_params.dim.polynomial_degree.0)
                 .map(|_| *random_bit)

@@ -4,8 +4,7 @@ use sunscreen_tfhe::{
     GLWE_5_256_80, LWE_512_80,
 };
 
-#[test]
-fn cmux_tree() {
+fn cmux_tree_once() {
     // Parameters for the cmux tree
     let depth = 64;
 
@@ -128,4 +127,13 @@ fn cmux_tree() {
         .coeffs()[0];
 
     assert_eq!(result, expected_result);
+}
+
+#[test]
+fn cmux_tree() {
+    // 7 runs is a 0.78% chance of success if the test is broken, so we should
+    // be good.
+    for _ in 0..7 {
+        cmux_tree_once();
+    }
 }

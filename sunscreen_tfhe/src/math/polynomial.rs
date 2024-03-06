@@ -321,7 +321,8 @@ mod tests {
             let a = Polynomial::new(&a);
             let b = (0..n)
                 .map(|_| {
-                    let signed = (rand::thread_rng().next_u64() % 32).reinterpret_as_signed() - 16;
+                    let signed =
+                        (rand::thread_rng().next_u64() % (0x1 << 16)).reinterpret_as_signed() - 16;
 
                     signed.reinterpret_as_unsigned()
                 })
@@ -346,7 +347,7 @@ mod tests {
 
             for (a, e) in actual.coeffs().iter().zip(expected.coeffs().iter()) {
                 let err = normalized_torus_distance(a, e).abs();
-                assert!(err < 1e-12);
+                assert!(err < 1e-9);
             }
         }
     }

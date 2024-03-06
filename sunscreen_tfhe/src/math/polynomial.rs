@@ -321,7 +321,8 @@ mod tests {
             let a = Polynomial::new(&a);
             let b = (0..n)
                 .map(|_| {
-                    let signed = (rand::thread_rng().next_u64() % (0x1 << 16)).reinterpret_as_signed() - 16;
+                    let signed =
+                        (rand::thread_rng().next_u64() % (0x1 << 16)).reinterpret_as_signed() - 16;
 
                     signed.reinterpret_as_unsigned()
                 })

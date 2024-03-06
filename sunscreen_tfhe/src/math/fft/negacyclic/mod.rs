@@ -60,10 +60,13 @@ where
 
         let two_pi = T::from(PI).unwrap() * T::from(2.0).unwrap();
 
-        let w_2n = (Complex::from(two_pi / n_2) * Complex::i()).exp();
-
         let twist = (0..k)
-            .map(|x| w_2n.powf(T::from(x).unwrap()))
+            .map(|x| {
+                let x = T::from(x).unwrap();
+                let (s, c) = (two_pi * x / n_2).sin_cos();
+
+                Complex::new(c, s)
+            })
             .collect::<Vec<_>>();
 
         let twist_inv = twist
@@ -76,7 +79,7 @@ where
             let a_a_inv = a * b;
             let err = a_a_inv - Complex::one();
 
-            err.re.abs() < T::from(1e-12).unwrap() && err.im.abs() < T::from(1e-12).unwrap()
+            err.re.abs() < T::from(1e-15).unwrap() && err.im.abs() < T::from(1e-15).unwrap()
         }));
 
         Self {

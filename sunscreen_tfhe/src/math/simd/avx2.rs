@@ -68,16 +68,19 @@ unsafe fn complex_mad_avx_512_unchecked(
         // stores the complex multiply-add result to c. Thus, it iterates over 16 f64
         // elements from each vector at a time.
         asm!(
-            "vmovapd zmm0, [{a_ptr}+8*{i}]",    // Load 2 __m512d of Complex<f64> from a
+            // Load 2 __m512d of Complex<f64> from a
+            "vmovapd zmm0, [{a_ptr}+8*{i}]",    
             "vmovapd [{probe}], zmm0",
             "vmovapd zmm1, [{a_ptr}+8*{i}+64]",
             "vshufpd zmm2, zmm0, zmm1, $0",   // Extract the re(a) into zmm2
             "vshufpd zmm3, zmm0, zmm1, $255", // Extract the im(a) into zmm3
-            "vmovapd zmm0, [{b_ptr}+8*{i}]",   // Load 2 __m512d of Complex<f64> from b
+            // Load 2 __m512d of Complex<f64> from b
+            "vmovapd zmm0, [{b_ptr}+8*{i}]",   
             "vmovapd zmm1, [{b_ptr}+8*{i}+64]",
             "vshufpd zmm4, zmm0, zmm1, $0",   // Extract the re(b) into zmm4
             "vshufpd zmm5, zmm0, zmm1, $255", // Extract the im(b) into zmm5
-            "vmovapd zmm0, [{c_ptr}+8*{i}]",    // Load 2 __m512d of Complex<f64> from c
+            // Load 2 __m512d of Complex<f64> from c
+            "vmovapd zmm0, [{c_ptr}+8*{i}]",    
             "vmovapd zmm1, [{c_ptr}+8*{i}+64]",
             "vshufpd zmm6, zmm0, zmm1, $0",   // Extract the re(c) into zmm6
             "vshufpd zmm7, zmm0, zmm1, $255", // Extract the im(c) into zmm7

@@ -6,7 +6,7 @@ use core::arch::x86::*;
 
 #[cfg(target_arch = "x86_64")]
 use core::arch::x86_64::*;
-use std::arch::asm;
+use std::{arch::asm, sync::OnceLock};
 
 use super::scalar;
 
@@ -18,7 +18,15 @@ fn avx_512_available() -> bool {
     }
 }
 
+static AVX512_AVAILABLE: OnceLock<bool> = OnceLock::new();
+
 #[inline(always)]
+/// Compute vector `c += a * b` over &[Complex<f64>].
+///
+/// # Panics
+/// If `c.len() != a.len() != b.len()`
+/// If `a.len() % 8 != 0`
+/// If `a`, `b`, `c` are not aligned to a 512-bit boundary.
 pub fn complex_mad(c: &mut [Complex<f64>], a: &[Complex<f64>], b: &[Complex<f64>]) {
     assert_eq!(c.as_ptr().align_offset(core::mem::align_of::<__m512d>()), 0);
     assert_eq!(b.as_ptr().align_offset(core::mem::align_of::<__m512d>()), 0);
@@ -27,7 +35,7 @@ pub fn complex_mad(c: &mut [Complex<f64>], a: &[Complex<f64>], b: &[Complex<f64>
     assert_eq!(b.len(), a.len());
     assert_eq!(a.len() % 8, 0);
 
-    if avx_512_available() {
+    if *AVX512_AVAILABLE.get_or_init(|| avx_512_available()) {
         unsafe { complex_mad_avx_512_unchecked(c, a, b) }
     } else {
         scalar::complex_mad(c, a, b)
@@ -35,6 +43,7 @@ pub fn complex_mad(c: &mut [Complex<f64>], a: &[Complex<f64>], b: &[Complex<f64>
 }
 
 /// Compute vector `c += a * b` over `&[Complex<f64>]`.
+/// This function is very unsafe.
 ///
 /// # Safety
 /// c, a, b must be aligned to a 512-bit boundary. The program will otherwise bus error
@@ -49,8 +58,6 @@ unsafe fn complex_mad_avx_512_unchecked(
     b: &[Complex<f64>],
 ) {
     let mut i = 0;
-
-    let probe = std::mem::MaybeUninit::<__m512d>::uninit();
 
     // Complex<T> is declared as repr(C), so the location of re and im are guaranteed
     // at address offsets 0 and 8 for Complex<f64>. This allows us to treat
@@ -69,18 +76,17 @@ unsafe fn complex_mad_avx_512_unchecked(
         // elements from each vector at a time.
         asm!(
             // Load 2 __m512d of Complex<f64> from a
-            "vmovapd zmm0, [{a_ptr}+8*{i}]",    
-            "vmovapd [{probe}], zmm0",
+            "vmovapd zmm0, [{a_ptr}+8*{i}]",
             "vmovapd zmm1, [{a_ptr}+8*{i}+64]",
             "vshufpd zmm2, zmm0, zmm1, $0",   // Extract the re(a) into zmm2
             "vshufpd zmm3, zmm0, zmm1, $255", // Extract the im(a) into zmm3
             // Load 2 __m512d of Complex<f64> from b
-            "vmovapd zmm0, [{b_ptr}+8*{i}]",   
+            "vmovapd zmm0, [{b_ptr}+8*{i}]",
             "vmovapd zmm1, [{b_ptr}+8*{i}+64]",
             "vshufpd zmm4, zmm0, zmm1, $0",   // Extract the re(b) into zmm4
             "vshufpd zmm5, zmm0, zmm1, $255", // Extract the im(b) into zmm5
             // Load 2 __m512d of Complex<f64> from c
-            "vmovapd zmm0, [{c_ptr}+8*{i}]",    
+            "vmovapd zmm0, [{c_ptr}+8*{i}]",
             "vmovapd zmm1, [{c_ptr}+8*{i}+64]",
             "vshufpd zmm6, zmm0, zmm1, $0",   // Extract the re(c) into zmm6
             "vshufpd zmm7, zmm0, zmm1, $255", // Extract the im(c) into zmm7
@@ -96,7 +102,6 @@ unsafe fn complex_mad_avx_512_unchecked(
             b_ptr = in(reg) b_ptr,
             c_ptr = in(reg) c_ptr,
             i = in(reg) i,
-            probe = in(reg) &probe,
             out("zmm0") _, // Indicate our clobbers
             out("zmm1") _,
             out("zmm2") _,

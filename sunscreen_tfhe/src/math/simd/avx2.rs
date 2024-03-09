@@ -23,8 +23,6 @@ fn avx_512_available() -> bool {
     });
 }
 
-
-
 #[inline(always)]
 /// Compute vector `c += a * b` over &[Complex<f64>].
 ///

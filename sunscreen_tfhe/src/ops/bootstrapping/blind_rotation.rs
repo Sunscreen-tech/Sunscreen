@@ -167,7 +167,7 @@ pub fn rotate_glwe_positive_monomial_negacyclic<S>(
 /// let params = GlweDef {
 ///     dim: GlweDimension {
 ///         size: GlweSize(1),
-///         polynomial_degree: PolynomialDegree(8),
+///         polynomial_degree: PolynomialDegree(32),
 ///     },
 ///     std: Stddev(0.0000000444778278004718),
 /// };
@@ -181,7 +181,8 @@ pub fn rotate_glwe_positive_monomial_negacyclic<S>(
 /// let sk = keygen::generate_binary_glwe_sk(&params);
 ///
 /// // Define and encrypt a message
-/// let msg = Polynomial::new(&[1, 2, 3, 4, 5, 6, 7, 8]);
+/// let mut msg: [u64; 32] = core::array::from_fn(|x| x as u64 + 1);
+/// let msg = Polynomial::new(&msg);
 /// let ct = encryption::encrypt_glwe(&msg, &sk, &params, plaintext_bits);
 ///
 /// // Generate a blind rotation amount
@@ -194,7 +195,9 @@ pub fn rotate_glwe_positive_monomial_negacyclic<S>(
 ///
 /// let decrypted_msg = sk.decrypt_decode_glwe(&rotated_ct, &params, plaintext_bits);
 ///
-/// assert_eq!(decrypted_msg, Polynomial::new(&[2, 3, 4, 5, 6, 7, 8, 15]));
+/// let mut expected: [u64; 32] = core::array::from_fn(|x| (x as u64 + 2) % 16);
+/// expected[expected.len() - 1] = 15;
+/// assert_eq!(decrypted_msg, Polynomial::new(&expected));
 /// ```
 pub fn blind_rotation<S>(
     output: &mut GlweCiphertextRef<S>,
@@ -395,7 +398,7 @@ mod tests {
     fn can_blind_rotate() {
         let params = GlweDef {
             dim: GlweDimension {
-                polynomial_degree: PolynomialDegree(8),
+                polynomial_degree: PolynomialDegree(32),
                 size: GlweSize(2),
             },
             ..TEST_GLWE_DEF_1

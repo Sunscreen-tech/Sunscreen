@@ -40,6 +40,7 @@ codegen-units = 16
 [workspace.dependencies]
 aligned-vec = { version = "0.5.0", features = ["serde"] }
 bytemuck = "1.13.0"
+raw-cpuid = "11.0.1"
 lazy_static = "1.4.0"
 metal = "0.26.0"
 rand = "0.8.5"

@@ -6,3 +6,6 @@ EMCC_CFLAGS = "-sERROR_ON_UNDEFINED_SYMBOLS=0 -sDISABLE_EXCEPTION_CATCHING=0 -sA
 
 [build]
 #rustflags = ['--cfg=curve25519_dalek_bits="32"']
+
+[target.'cfg(any(target_arch = "x86", target_arch = "x86_64"))']
+rustflags = ["-Ctarget-feature=+avx2"]

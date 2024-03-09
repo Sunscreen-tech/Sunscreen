@@ -1,10 +1,10 @@
-use num::{traits::MulAdd, Complex};
+use num::Complex;
 
 use crate::{
     dst::{NoWrapper, OverlaySize},
     fft::negacyclic::get_fft,
     scratch::allocate_scratch,
-    FrequencyTransform, FromF64, NumBits, PolynomialDegree,
+    simd, FrequencyTransform, FromF64, NumBits, PolynomialDegree,
 };
 
 use super::PolynomialRef;
@@ -148,13 +148,6 @@ impl PolynomialFftRef<Complex<f64>> {
         a: &PolynomialFftRef<Complex<f64>>,
         b: &PolynomialFftRef<Complex<f64>>,
     ) {
-        for ((c, a), b) in self
-            .coeffs_mut()
-            .iter_mut()
-            .zip(a.coeffs().iter())
-            .zip(b.coeffs().iter())
-        {
-            *c = a.mul_add(b, c);
-        }
+        simd::complex_mad(self.as_mut_slice(), a.as_slice(), b.as_slice());
     }
 }

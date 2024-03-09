@@ -20,7 +20,7 @@ fn avx_512_available() -> bool {
         } else {
             false
         }
-    });
+    })
 }
 
 #[inline(always)]

@@ -10,15 +10,20 @@ use std::{arch::asm, sync::OnceLock};
 
 use super::scalar;
 
+#[inline(always)]
 fn avx_512_available() -> bool {
-    if let Some(e) = CpuId::new().get_extended_feature_info() {
-        e.has_avx512f()
-    } else {
-        false
-    }
+    static AVX512_AVAILABLE: OnceLock<bool> = OnceLock::new();
+
+    *AVX512_AVAILABLE.get_or_init(|| {
+        if let Some(e) = CpuId::new().get_extended_feature_info() {
+            e.has_avx512f()
+        } else {
+            false
+        }
+    });
 }
 
-static AVX512_AVAILABLE: OnceLock<bool> = OnceLock::new();
+
 
 #[inline(always)]
 /// Compute vector `c += a * b` over &[Complex<f64>].
@@ -35,7 +40,7 @@ pub fn complex_mad(c: &mut [Complex<f64>], a: &[Complex<f64>], b: &[Complex<f64>
     assert_eq!(b.len(), a.len());
     assert_eq!(a.len() % 8, 0);
 
-    if *AVX512_AVAILABLE.get_or_init(|| avx_512_available()) {
+    if avx_512_available() {
         unsafe { complex_mad_avx_512_unchecked(c, a, b) }
     } else {
         scalar::complex_mad(c, a, b)

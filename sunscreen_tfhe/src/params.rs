@@ -220,7 +220,7 @@ pub const LWE_512_128: LweDef = LweDef {
     std: Stddev(0.0004899836456140595),
 };
 
-/// 80-bit secure parameters for a GLWE instance with 5 polynomials of degree 256.
+/// 128-bit secure parameters for a GLWE instance with 5 polynomials of degree 256.
 pub const GLWE_5_256_128: GlweDef = GlweDef {
     dim: GlweDimension {
         size: GlweSize(5),

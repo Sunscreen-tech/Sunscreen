@@ -284,6 +284,10 @@ mod tests {
         println!("LWE 512 128: {}", actual_lwe_std);
         LWE_512_128.assert_security_level(128);
 
+        let actual_glwe_std = lwe_security_level_to_std(5 * 256, 128.0).unwrap();
+        println!("GLWE 5 256 128: {}", actual_glwe_std);
+        GLWE_5_256_128.assert_security_level(129);
+
         let actual_glwe_std = lwe_security_level_to_std(1024, 128.0).unwrap();
         println!("GLWE 1 1024 128: {}", actual_glwe_std);
         GLWE_1_1024_128.assert_security_level(128);
@@ -296,7 +300,7 @@ mod tests {
         println!("LWE 512 80: {}", actual_lwe_std);
         LWE_512_80.assert_security_level(80);
 
-        let actual_glwe_std = lwe_security_level_to_std(256 * 5, 80.0).unwrap();
+        let actual_glwe_std = lwe_security_level_to_std(5 * 256, 80.0).unwrap();
         println!("GLWE 5 256 80: {}", actual_glwe_std);
         GLWE_5_256_80.assert_security_level(80);
 

@@ -324,7 +324,6 @@ impl Drop for EncryptionParameters {
 
 #[cfg(test)]
 mod tests {
-    use crate::CoefficientModulus;
     use crate::*;
 
     #[test]

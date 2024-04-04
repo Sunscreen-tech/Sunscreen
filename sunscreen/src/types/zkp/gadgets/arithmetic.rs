@@ -188,7 +188,7 @@ mod tests {
     use sunscreen_zkp_backend::{bulletproofs::BulletproofsBackend, ZkpBackend};
 
     use crate::types::zkp::Field;
-    use crate::{self as sunscreen, invoke_gadget, Compiler};
+    use crate::{self as sunscreen, Compiler};
 
     use super::*;
 

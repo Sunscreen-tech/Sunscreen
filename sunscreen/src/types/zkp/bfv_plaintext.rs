@@ -270,9 +270,8 @@ mod tests {
 
     use sunscreen_runtime::ZkpRuntime;
     use sunscreen_zkp_backend::bulletproofs::BulletproofsBackend;
-    use sunscreen_zkp_backend::FieldSpec;
 
-    use crate::types::zkp::{BulletproofsField, Field};
+    use crate::types::zkp::BulletproofsField;
     use crate::{self as sunscreen, Compiler, PlainModulusConstraint};
     use crate::{fhe_program, zkp_program};
 

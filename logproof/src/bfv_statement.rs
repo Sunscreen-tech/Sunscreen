@@ -757,7 +757,7 @@ mod tests {
     use merlin::Transcript;
     use rand::Rng;
     use seal_fhe::{
-        BfvEncryptionParametersBuilder, CoefficientModulus, Context, Encryptor, KeyGenerator,
+        BfvEncryptionParametersBuilder, CoefficientModulus, Encryptor, KeyGenerator,
         PlainModulus, SecurityLevel, SymAsym,
     };
 

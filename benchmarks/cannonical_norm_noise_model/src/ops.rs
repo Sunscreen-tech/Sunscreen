@@ -1,5 +1,4 @@
 use seal_fhe::*;
-use std::sync::Mutex;
 use sunscreen_backend::{Error, Result};
 use sunscreen_fhe_program::SchemeType;
 

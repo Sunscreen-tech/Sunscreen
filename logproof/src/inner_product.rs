@@ -10,7 +10,7 @@ use log::trace;
 use merlin::Transcript;
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
-use sha3::{self, digest::Update, Shake256};
+use sha3::{digest::Update, Shake256};
 
 use sunscreen_math::{RistrettoPointVec, ScalarVec};
 

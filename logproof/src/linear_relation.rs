@@ -1356,7 +1356,7 @@ mod test {
         // bounds with different bound sums over each column works properly. We
         // use 16 to promote different b_1 values after taking the log of the
         // column bound sum.
-        let s_coeff = vec![
+        let s_coeff = [
             (0..(k))
                 .map(|x| {
                     [1i64, 2, 3, 4, 5, 6, 7, 8]

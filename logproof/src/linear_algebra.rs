@@ -803,7 +803,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::rings::{ZqRistretto, ZqSeal128_8192};
+    use crate::rings::ZqSeal128_8192;
 
     use super::*;
     use bitvec::vec::BitVec;

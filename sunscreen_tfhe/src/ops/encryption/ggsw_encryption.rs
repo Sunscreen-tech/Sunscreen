@@ -245,7 +245,7 @@ pub fn decrypt_ggsw_ciphertext<S>(
 
 #[cfg(test)]
 mod tests {
-    use crate::{entities::GgswCiphertext, high_level::TEST_GLWE_DEF_1, high_level::*};
+    use crate::{entities::GgswCiphertext, high_level::*};
 
     use super::*;
 

@@ -547,7 +547,7 @@ where
 mod tests {
     use super::*;
     use seal_fhe::*;
-    use sunscreen_fhe_program::{FheProgramTrait, SchemeType};
+    use sunscreen_fhe_program::SchemeType;
 
     fn setup_scheme(
         degree: u64,

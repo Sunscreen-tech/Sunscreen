@@ -1,16 +1,24 @@
+use std::borrow::Borrow;
+
 use criterion::{
     criterion_group, criterion_main, measurement::WallTime, BenchmarkGroup, Criterion,
 };
 
 use sunscreen_tfhe::{
     entities::{
-        GgswCiphertext, GgswCiphertextFft, GlweCiphertext, Polynomial, UnivariateLookupTable,
+        GgswCiphertext, GgswCiphertextFft, GlweCiphertext, Polynomial, PolynomialRef,
+        PublicFunctionalKeyswitchKey, UnivariateLookupTable,
     },
     high_level::{self, *},
-    ops::bootstrapping::circuit_bootstrap,
+    ops::{
+        bootstrapping::circuit_bootstrap,
+        keyswitch::public_functional_keyswitch::{
+            generate_public_functional_keyswitch_key, public_functional_keyswitch,
+        },
+    },
     rand::Stddev,
     GlweDef, GlweDimension, GlweSize, LweDef, LweDimension, PlaintextBits, PolynomialDegree,
-    RadixCount, RadixDecomposition, RadixLog, GLWE_1_1024_80, GLWE_5_256_80, LWE_512_80,
+    RadixCount, RadixDecomposition, RadixLog, Torus, GLWE_1_1024_80, GLWE_5_256_80, LWE_512_80,
 };
 
 fn cmux(c: &mut Criterion) {
@@ -275,11 +283,71 @@ fn keygen(c: &mut Criterion) {
     });
 }
 
+fn public_functional_keyswitching(c: &mut Criterion) {
+    c.bench_function("Public functional keyswitching", |b| {
+        let glwe = high_level::keygen::generate_binary_glwe_sk(&GLWE_1_1024_80);
+
+        let radix = RadixDecomposition {
+            count: RadixCount(8),
+            radix_log: RadixLog(4),
+        };
+
+        let mut puksk = PublicFunctionalKeyswitchKey::new(
+            &GLWE_1_1024_80.as_lwe_def(),
+            &GLWE_1_1024_80,
+            &radix,
+        );
+
+        generate_public_functional_keyswitch_key(
+            &mut puksk,
+            glwe.to_lwe_secret_key(),
+            &glwe,
+            &GLWE_1_1024_80.as_lwe_def(),
+            &GLWE_1_1024_80,
+            &radix,
+        );
+
+        let values = (1..1024)
+            .map(|_| {
+                high_level::encryption::encrypt_lwe_secret(
+                    0,
+                    glwe.to_lwe_secret_key(),
+                    &GLWE_1_1024_80.as_lwe_def(),
+                    PlaintextBits(1),
+                )
+            })
+            .collect::<Vec<_>>();
+
+        b.iter(|| {
+            let mut output = GlweCiphertext::new(&GLWE_1_1024_80);
+
+            let f = |poly: &mut PolynomialRef<Torus<u64>>, tori: &[Torus<u64>]| {
+                for (c, t) in poly.coeffs_mut().iter_mut().zip(tori.iter()) {
+                    *c = *t;
+                }
+            };
+
+            let lwe_refs = values.iter().map(|x| x.borrow()).collect::<Vec<_>>();
+
+            public_functional_keyswitch(
+                &mut output,
+                &lwe_refs,
+                &puksk,
+                f,
+                &GLWE_1_1024_80.as_lwe_def(),
+                &GLWE_1_1024_80,
+                &radix,
+            );
+        });
+    });
+}
+
 criterion_group!(
     benches,
     cmux,
     programmable_bootstrapping,
     circuit_bootstrapping,
-    keygen
+    keygen,
+    public_functional_keyswitching
 );
 criterion_main!(benches);

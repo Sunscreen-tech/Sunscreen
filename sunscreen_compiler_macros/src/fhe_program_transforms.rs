@@ -210,7 +210,6 @@ pub fn emit_signature(args: &[Type], return_types: &[Type]) -> TokenStream2 {
 #[cfg(test)]
 mod test {
     use super::*;
-    use quote::ToTokens;
     use syn::parse_quote;
 
     fn assert_syn_eq<T, U>(a: &T, b: &U)

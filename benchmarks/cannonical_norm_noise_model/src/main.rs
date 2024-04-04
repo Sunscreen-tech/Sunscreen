@@ -61,6 +61,7 @@ impl Results {
     pub fn new() -> Self {
         let mut output_file = File::options()
             .create(true)
+            .truncate(true)
             .write(true)
             .open("Results.csv")
             .unwrap();

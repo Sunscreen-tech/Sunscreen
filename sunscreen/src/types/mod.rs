@@ -74,8 +74,6 @@ mod ops;
  */
 pub mod zkp;
 
-use crate::types::ops::*;
-
 pub use sunscreen_runtime::{
     BfvType, FheType, NumCiphertexts, TryFromPlaintext, TryIntoPlaintext, Type, TypeName,
     TypeNameInstance, Version,

@@ -5,9 +5,12 @@ use crate::TorusOps;
 
 use sunscreen_math::security::lwe_std_to_security_level;
 
-trait SecurityLevel {
+/// A trait for asserting properties about the security parameter.
+pub trait SecurityLevel {
+    /// Return the security level.
     fn security_level(&self) -> f64;
 
+    /// Assert the security level matches the given value.
     fn assert_security_level(&self, specified_security_level: usize) {
         // Our security level should be within 0.5 bits of the specified
         // security level (so +- 0.25 of the desired level).

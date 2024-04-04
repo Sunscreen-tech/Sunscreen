@@ -104,7 +104,6 @@ mod tests {
     use crate::{
         entities::{LweCiphertext, LweKeyswitchKey},
         high_level::*,
-        high_level::{TEST_LWE_DEF_1, TEST_LWE_DEF_2, TEST_RADIX},
         ops::keyswitch::{
             lwe_keyswitch::keyswitch_lwe_to_lwe, lwe_keyswitch_key::generate_keyswitch_key_lwe,
         },

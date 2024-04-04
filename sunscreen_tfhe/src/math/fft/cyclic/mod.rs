@@ -105,8 +105,6 @@ where
 mod tests {
     use num::complex::ComplexFloat;
 
-    use crate::FrequencyTransform;
-
     use super::*;
 
     #[test]

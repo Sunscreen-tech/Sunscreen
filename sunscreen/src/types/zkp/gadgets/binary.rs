@@ -156,7 +156,7 @@ mod tests {
     use sunscreen_zkp_backend::{FieldSpec, ZkpBackend};
 
     use crate::types::zkp::{Field, ToBinary};
-    use crate::{self as sunscreen, invoke_gadget};
+    use crate::{self as sunscreen};
     use crate::{zkp_program, Compiler};
 
     use super::*;

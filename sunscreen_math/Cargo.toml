@@ -4,7 +4,7 @@ version = "0.8.1"
 edition = "2021"
 
 authors = ["Sunscreen"]
-rust-version = "1.56.0"
+rust-version = "1.67.0"
 license = "AGPL-3.0-only"
 description = "This crate contains GPU implementations that support the Sunscreen compiler."
 homepage = "https://sunscreen.tech"

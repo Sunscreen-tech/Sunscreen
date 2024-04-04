@@ -222,8 +222,6 @@ mod tests_one_limb {
         }
     }
 
-    use sunscreen_math::ring::BarrettConfig;
-
     #[test]
     fn can_mul_largish_single_limb_modulus() {
         #[derive(DeriveBarrettConfig)]

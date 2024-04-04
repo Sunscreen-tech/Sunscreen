@@ -9,7 +9,7 @@ use crate::ProofBuilder;
 use crate::VerificationBuilder;
 use crate::ZkpProgramInput;
 use crate::{
-    run_program_unchecked, serialization::WithContext, Ciphertext, CompiledZkpProgram,
+    run_program_unchecked, serialization::WithContext, Ciphertext,
     FheProgramInput, InnerCiphertext, InnerPlaintext, Plaintext, PrivateKey, PublicKey,
     SealCiphertext, SealData, SealPlaintext, TryFromPlaintext, TryIntoPlaintext, TypeNameInstance,
 };

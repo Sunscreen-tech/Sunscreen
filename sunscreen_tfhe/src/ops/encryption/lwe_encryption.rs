@@ -108,7 +108,6 @@ mod tests {
             encode_and_encrypt_lwe_ciphertext(&mut ct, &sk, 3, &params, bits);
 
             assert_eq!(encryption::decrypt_lwe(&ct, &sk, &params, bits), 3);
-        
         }
     }
 

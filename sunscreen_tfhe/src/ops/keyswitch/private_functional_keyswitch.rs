@@ -201,7 +201,7 @@ mod tests {
     use crate::{
         entities::{GlweCiphertext, PrivateFunctionalKeyswitchKey},
         high_level::{keygen, TEST_GLWE_DEF_1, TEST_LWE_DEF_1, TEST_RADIX},
-        PlaintextBits, PrivateFunctionalKeyswitchLweCount,
+        PlaintextBits,
     };
 
     use super::*;

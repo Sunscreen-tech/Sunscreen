@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 authors = ["Sunscreen"]
-rust-version = "1.56.0"
+rust-version = "1.67.0"
 license = "AGPL-3.0-only"
 description = "This crate contains the Sunscreen Torus FHE (TFHE) implementation"
 homepage = "https://sunscreen.tech"
@@ -13,7 +13,6 @@ documentation = "https://docs.sunscreen.tech"
 keywords = ["FHE", "TFHE", "lattice", "cryptography"]
 categories = ["cryptography"]
 readme = "crates-io.md"
-rust = "1.57"
 
 [dependencies]
 aligned-vec = { workspace = true }

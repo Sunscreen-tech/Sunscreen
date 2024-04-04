@@ -1,8 +1,8 @@
 use crate as sunscreen;
 use crate::fhe::{with_fhe_ctx, FheContextOps};
 use crate::types::{
-    bfv::Signed, intern::FheProgramNode, ops::*, BfvType, Cipher, FheType, NumCiphertexts, TryFromPlaintext,
-    TryIntoPlaintext, TypeName,
+    bfv::Signed, intern::FheProgramNode, ops::*, BfvType, Cipher, FheType, NumCiphertexts,
+    TryFromPlaintext, TryIntoPlaintext, TypeName,
 };
 use crate::{FheProgramInputTrait, InnerPlaintext, Params, Plaintext, TypeName};
 use std::cmp::Eq;

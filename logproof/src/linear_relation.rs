@@ -1356,7 +1356,8 @@ mod test {
         // bounds with different bound sums over each column works properly. We
         // use 16 to promote different b_1 values after taking the log of the
         // column bound sum.
-        let s_coeff = [(0..(k))
+        let s_coeff = [
+            (0..(k))
                 .map(|x| {
                     [1i64, 2, 3, 4, 5, 6, 7, 8]
                         .into_iter()
@@ -1365,7 +1366,8 @@ mod test {
                 })
                 .collect::<Vec<Vec<i64>>>(),
             vec![vec![-1, 0, 1, 0, -1, 0, -1]; k],
-            vec![vec![0, -1, 0, 1, -1, 0, 1]; k]];
+            vec![vec![0, -1, 0, 1, -1, 0, 1]; k],
+        ];
 
         let s_poly = s_coeff
             .iter()

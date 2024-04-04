@@ -369,6 +369,7 @@ impl_from!(ZqSeal128_8192, LP4);
 macro_rules! seq_zq {
     ($block:tt) => (
         seq!(N in 1..=4 {
+            #[allow(unused_braces)]
             $block
         })
     )

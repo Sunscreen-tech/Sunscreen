@@ -63,10 +63,8 @@ pub fn apply_insert_relinearizations(ir: &mut FheProgram) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use petgraph::stable_graph::NodeIndex;
-    use sunscreen_compiler_common::GraphQuery;
     use sunscreen_fhe_program::{
-        FheProgramTrait, Literal as FheProgramLiteral, Operation, SchemeType,
+        FheProgramTrait, Literal as FheProgramLiteral, SchemeType,
     };
 
     fn create_test_dag() -> FheProgram {

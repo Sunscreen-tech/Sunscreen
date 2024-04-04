@@ -244,7 +244,6 @@ mod tests {
     use crate::{
         entities::{GgswCiphertext, LweCiphertext, Polynomial},
         high_level::*,
-        high_level::{keygen, TEST_GLWE_DEF_1},
         ops::encryption::{
             decrypt_ggsw_ciphertext, encrypt_ggsw_ciphertext, encrypt_glwe_ciphertext_secret,
             trivially_encrypt_glwe_ciphertext,

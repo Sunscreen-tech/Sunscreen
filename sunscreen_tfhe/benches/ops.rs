@@ -311,7 +311,7 @@ fn public_functional_keyswitching(c: &mut Criterion) {
             .map(|_| {
                 high_level::encryption::encrypt_lwe_secret(
                     0,
-                    &glwe.to_lwe_secret_key(),
+                    glwe.to_lwe_secret_key(),
                     &GLWE_1_1024_80.as_lwe_def(),
                     PlaintextBits(1),
                 )

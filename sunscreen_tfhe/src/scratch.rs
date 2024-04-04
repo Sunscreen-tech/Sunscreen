@@ -12,7 +12,7 @@ use std::{
 use crate::{Torus, TorusOps};
 
 thread_local! {
-    static SCRATCH: RefCell<Option<Scratch>> = RefCell::new(None);
+    static SCRATCH: RefCell<Option<Scratch>> = const { RefCell::new(None) };
 }
 
 macro_rules! allocate_scratch_ref {
@@ -220,8 +220,6 @@ impl<'a, T> Drop for ScratchBuffer<'a, T> {
 
 #[cfg(test)]
 mod tests {
-    use std::mem::align_of;
-
     use super::*;
 
     #[test]

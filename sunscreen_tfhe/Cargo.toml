@@ -13,7 +13,7 @@ documentation = "https://docs.sunscreen.tech"
 keywords = ["FHE", "TFHE", "lattice", "cryptography"]
 categories = ["cryptography"]
 readme = "crates-io.md"
-
+rust = "1.57"
 
 [dependencies]
 aligned-vec = { workspace = true }

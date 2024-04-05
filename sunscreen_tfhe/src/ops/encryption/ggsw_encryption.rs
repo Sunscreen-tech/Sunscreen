@@ -1,11 +1,10 @@
-use std::sync::OnceLock;
 
 use num::Zero;
 
 use crate::{
     dst::FromMutSlice,
     entities::{
-        GgswCiphertextRef, GlweCiphertextRef, GlweSecretKey, GlweSecretKeyRef, Polynomial,
+        GgswCiphertextRef, GlweCiphertextRef, GlweSecretKeyRef, Polynomial,
         PolynomialRef,
     },
     polynomial::{polynomial_external_mad, polynomial_scalar_mad, polynomial_scalar_mul},

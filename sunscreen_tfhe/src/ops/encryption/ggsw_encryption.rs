@@ -1,8 +1,15 @@
+use std::sync::OnceLock;
+
 use num::Zero;
 
 use crate::{
-    entities::{GgswCiphertextRef, GlweCiphertextRef, GlweSecretKeyRef, Polynomial, PolynomialRef},
+    dst::FromMutSlice,
+    entities::{
+        GgswCiphertextRef, GlweCiphertextRef, GlweSecretKey, GlweSecretKeyRef, Polynomial,
+        PolynomialRef,
+    },
     polynomial::{polynomial_external_mad, polynomial_scalar_mad, polynomial_scalar_mul},
+    scratch::allocate_scratch_ref,
     GlweDef, PlaintextBits, RadixDecomposition, Torus, TorusOps,
 };
 
@@ -103,17 +110,19 @@ pub fn encrypt_ggsw_ciphertext<S>(
 pub fn trivially_encrypt_ggsw_ciphertext<S>(
     ggsw_ciphertext: &mut GgswCiphertextRef<S>,
     msg: &PolynomialRef<S>,
-    glwe_secret_key: &GlweSecretKeyRef<S>,
     params: &GlweDef,
     radix: &RadixDecomposition,
     plaintext_bits: PlaintextBits,
 ) where
     S: TorusOps,
 {
+    allocate_scratch_ref!(trivial_key, GlweSecretKeyRef<S>, (params.dim));
+    trivial_key.clear();
+
     encrypt_ggsw_ciphertext_generic(
         ggsw_ciphertext,
         msg,
-        glwe_secret_key,
+        trivial_key,
         params,
         radix,
         plaintext_bits,
@@ -356,7 +365,7 @@ mod tests {
         let msg = Polynomial::new(&coeffs);
 
         let mut ct = GgswCiphertext::new(&params, &radix);
-        trivially_encrypt_ggsw_ciphertext(&mut ct, &msg, &sk, &params, &radix, bits);
+        trivially_encrypt_ggsw_ciphertext(&mut ct, &msg, &params, &radix, bits);
 
         let mut pt = Polynomial::zero(params.dim.polynomial_degree.0);
         decrypt_ggsw_ciphertext(&mut pt, &ct, &sk, &params, &radix);
@@ -377,23 +386,11 @@ mod tests {
         let decomposition_radix_log = radix.radix_log.0;
 
         for i in 0..n_rows {
-            let mut m_times_s = Polynomial::zero(params.dim.polynomial_degree.0);
-            let m_times_s = if i < params.dim.size.0 {
-                // The message is composed of the negated secret key and the message
-                // for all but the last row.
-                let s = sk.s(&params).nth(i).unwrap();
-                polynomial_external_mad(&mut m_times_s, msg.as_torus(), s);
-
-                // Negate the product.
-                for c in m_times_s.coeffs_mut().iter_mut() {
-                    // Have to call the trait directly because deref is implemented on Torus
-                    *c = num::traits::WrappingNeg::wrapping_neg(c);
-                }
-
-                &m_times_s
-            } else {
-                // Last row isn't multiplied by secret key.
+            let m_times_s = Polynomial::zero(params.dim.polynomial_degree.0);
+            let m_times_s = if i == params.dim.size.0 {
                 msg.as_torus()
+            } else {
+                &m_times_s
             };
 
             for j in 0..n_cols {

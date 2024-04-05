@@ -1,12 +1,8 @@
-
 use num::Zero;
 
 use crate::{
     dst::FromMutSlice,
-    entities::{
-        GgswCiphertextRef, GlweCiphertextRef, GlweSecretKeyRef, Polynomial,
-        PolynomialRef,
-    },
+    entities::{GgswCiphertextRef, GlweCiphertextRef, GlweSecretKeyRef, Polynomial, PolynomialRef},
     polynomial::{polynomial_external_mad, polynomial_scalar_mad, polynomial_scalar_mul},
     scratch::allocate_scratch_ref,
     GlweDef, PlaintextBits, RadixDecomposition, Torus, TorusOps,

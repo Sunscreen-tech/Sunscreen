@@ -174,9 +174,7 @@ struct ZkpCompilerData<B> {
 }
 
 enum CompilerData<B> {
-    None,
     Fhe(FheCompilerData),
-    Zkp(ZkpCompilerData<B>),
     FheZkp(FheCompilerData, ZkpCompilerData<B>),
 }
 
@@ -185,17 +183,12 @@ impl<B> CompilerData<B> {
         Self::Fhe(data)
     }
 
-    fn new_zkp(data: ZkpCompilerData<B>) -> Self {
-        Self::Zkp(data)
-    }
-
     fn new_fhe_zkp(fhe_data: FheCompilerData, zkp_data: ZkpCompilerData<B>) -> Self {
         Self::FheZkp(fhe_data, zkp_data)
     }
 
     fn zkp_data_mut(&mut self) -> &mut ZkpCompilerData<B> {
         match self {
-            Self::Zkp(d) => d,
             Self::FheZkp(_, d) => d,
             _ => unreachable!(),
         }
@@ -203,7 +196,6 @@ impl<B> CompilerData<B> {
 
     fn zkp_data(&self) -> &ZkpCompilerData<B> {
         match self {
-            Self::Zkp(d) => d,
             Self::FheZkp(_, d) => d,
             _ => unreachable!(),
         }
@@ -213,7 +205,6 @@ impl<B> CompilerData<B> {
         match self {
             Self::Fhe(d) => d,
             Self::FheZkp(d, _) => d,
-            _ => unreachable!(),
         }
     }
 
@@ -221,43 +212,23 @@ impl<B> CompilerData<B> {
         match self {
             Self::Fhe(d) => d,
             Self::FheZkp(d, _) => d,
-            _ => unreachable!(),
         }
     }
 
-    fn unwrap_zkp(self) -> ZkpCompilerData<B> {
-        match self {
-            Self::Zkp(d) => d,
-            Self::FheZkp(_, d) => d,
-            _ => unreachable!(),
-        }
-    }
-
-    fn unwrap_fhe(self) -> FheCompilerData {
+    fn take_fhe_data(self) -> FheCompilerData {
         match self {
             Self::Fhe(d) => d,
             Self::FheZkp(d, _) => d,
-            _ => unreachable!(),
         }
     }
 }
 
 /// A compiler for Sunscreen FHE programs.
 //
-// A note for developer sanity below: the type strategy here is to have `.fhe_program` enhance to
-// an FHE-capable compiler, and `.zkp_backend` to enhance to a ZKP-capable compiler. For that
-// strategy alone, the only methods that need to be defined in multiple impls are the
-// aforementioned ones, as the returned compiler type will change depending on the current compiler
-// type.
+// Here the markers have the following meanings:
 //
-// But there's one added complication in that the ZKP method `.zkp_program` has type restrictions
-// depending on if the current ZKP-capable compiler is also FHE-capable, so that method also needs
-// multiple definitions.
-//
-// TODO: allow FHE params to be specified for both FHE and ZKP programs. This is
-// surprisingly complicated with the current approach. We may have to split into two markers (one
-// for FHE and one for ZKP) for that to be feasible, without requiring 6 definitions for the same
-// method.
+// - FHE: indicates params are derivable, either through FHE programs or manual params setting.
+// - ZKP: indicates a ZKP backend has been specified, thus user can add ZKP programs.
 pub struct GenericCompiler<T, B> {
     data: CompilerData<B>,
     _phantom: PhantomData<T>,
@@ -275,7 +246,19 @@ impl Compiler {
      */
     pub fn new() -> Self {
         Self {
-            data: CompilerData::None,
+            data: CompilerData::new_fhe(FheCompilerData::default()),
+            _phantom: PhantomData,
+        }
+    }
+
+    /// Don't use the parameter search algorithm, and instead explicitly set the scheme's
+    /// parameters. For expert use and may cause failures.
+    pub fn with_params(self, params: &Params) -> FheCompiler {
+        let mut data = self.data;
+        data.fhe_data_mut().params_mode = ParamsMode::Manual(params.clone());
+
+        FheCompiler {
+            data,
             _phantom: PhantomData,
         }
     }
@@ -287,7 +270,7 @@ impl Compiler {
     where
         F: FheProgramFn + 'static,
     {
-        let mut data = CompilerData::new_fhe(FheCompilerData::default());
+        let mut data = self.data;
         data.fhe_data_mut()
             .fhe_program_fns
             .push(Box::new(fhe_program_fn));
@@ -302,7 +285,7 @@ impl Compiler {
      * Sets the ZKP backend target.
      */
     pub fn zkp_backend<B: ZkpBackend>(self) -> ZkpCompiler<B::Field> {
-        let data = CompilerData::new_zkp(ZkpCompilerData::default());
+        let data = CompilerData::new_fhe_zkp(self.data.take_fhe_data(), ZkpCompilerData::default());
 
         ZkpCompiler {
             data,
@@ -311,9 +294,8 @@ impl Compiler {
     }
 }
 
-// This generic impl can contain public methods where the builder remains the same type, or
-// internal methods that are restricted to FHE-capable builder types.
-impl<T: marker::Fhe, B> GenericCompiler<T, B> {
+// This generic impl can contain public methods where the builder remains the same type
+impl<T, B> GenericCompiler<T, B> {
     /**
      * Set the compiler to search for suitable encryption scheme parameters for the FHE program.
      */
@@ -329,15 +311,6 @@ impl<T: marker::Fhe, B> GenericCompiler<T, B> {
      */
     pub fn plain_modulus_constraint(mut self, p: PlainModulusConstraint) -> Self {
         self.data.fhe_data_mut().plain_modulus_constraint = p;
-        self
-    }
-
-    /**
-     * Don't use the parameter search algorithm, and instead explicitly set the scheme's parameters.
-     * For expert use and may cause failures.
-     */
-    pub fn with_params(mut self, params: &Params) -> Self {
-        self.data.fhe_data_mut().params_mode = ParamsMode::Manual(params.clone());
         self
     }
 
@@ -456,10 +429,13 @@ impl<T: marker::Fhe, B> GenericCompiler<T, B> {
 
         Ok(fhe_programs)
     }
+
+    fn compile_without_zkp(self) -> Result<Application<T>> {
+        Application::new(self.compile_fhe()?, HashMap::new())
+    }
 }
 
-// This generic impl can contain public methods where the builder remains the same type, or
-// internal methods that are restricted to ZKP-capable builder types.
+// This generic impl contains internal methods that are restricted to ZKP-capable builder types.
 impl<T: marker::Zkp, B: FieldSpec> GenericCompiler<T, B> {
     fn compile_zkp(&self, params: Option<&Params>) -> Result<HashMap<String, CompiledZkpProgram>> {
         let zkp_data = self.data.zkp_data();
@@ -510,6 +486,20 @@ impl<T: marker::Zkp, B: FieldSpec> GenericCompiler<T, B> {
 
         Ok(zkp_programs)
     }
+
+    fn compile_with_zkp(self) -> Result<Application<T>> {
+        let fhe_programs = self.compile_fhe()?;
+        let params = fhe_programs
+            .values()
+            .next()
+            .map(|p| &p.metadata.params)
+            .or_else(|| match &self.data.fhe_data().params_mode {
+                ParamsMode::Search => None,
+                ParamsMode::Manual(p) => Some(p),
+            });
+        let zkp_programs = self.compile_zkp(params)?;
+        Application::new(fhe_programs, zkp_programs)
+    }
 }
 
 impl<B> ZkpCompiler<B>
@@ -521,11 +511,25 @@ where
     where
         F: FheProgramFn + 'static,
     {
-        let mut fhe_data = FheCompilerData::default();
-        fhe_data.fhe_program_fns.push(Box::new(fhe_program_fn));
+        let mut data = self.data;
+        data.fhe_data_mut()
+            .fhe_program_fns
+            .push(Box::new(fhe_program_fn));
 
         FheZkpCompiler {
-            data: CompilerData::new_fhe_zkp(fhe_data, self.data.unwrap_zkp()),
+            data,
+            _phantom: PhantomData,
+        }
+    }
+
+    /// Don't use the parameter search algorithm, and instead explicitly set the scheme's
+    /// parameters. For expert use and may cause failures.
+    pub fn with_params(self, params: &Params) -> FheZkpCompiler<B> {
+        let mut data = self.data;
+        data.fhe_data_mut().params_mode = ParamsMode::Manual(params.clone());
+
+        FheZkpCompiler {
+            data,
             _phantom: PhantomData,
         }
     }
@@ -561,18 +565,17 @@ where
     }
 
     /**
-     * Compile the ZKP programs. If successful, returns an
-     * [`Application`] containing a compiled form of each
-     * `zkp_program` argument.
+     * Compile the ZKP programs. If successful, returns an [`Application`] containing a
+     * compiled form of each `zkp_program` arguments.
      *
      * # Remarks
-     * Each specified ZKP program must have a unique name,
-     * regardless of its parent module or crate. `compile` returns
-     * a [`Error::NameCollision`] if two or more ZKP programs
-     * have the same name.
+     *
+     * Each specified program must have a unique name, regardless of its parent module or
+     * crate. `compile` returns a [`Error::NameCollision`] if two or more programs have the
+     * same name.
      */
     pub fn compile(self) -> Result<Application<Zkp>> {
-        Application::new(HashMap::new(), self.compile_zkp(None)?)
+        self.compile_with_zkp()
     }
 }
 
@@ -591,11 +594,18 @@ impl FheCompiler {
         self
     }
 
+    /// Don't use the parameter search algorithm, and instead explicitly set the scheme's
+    /// parameters. For expert use and may cause failures.
+    pub fn with_params(mut self, params: &Params) -> Self {
+        self.data.fhe_data_mut().params_mode = ParamsMode::Manual(params.clone());
+        self
+    }
+
     /**
      * Set a ZKP backend for compiling ZKP programs.
      */
     pub fn zkp_backend<B: ZkpBackend>(self) -> FheZkpCompiler<B::Field> {
-        let data = CompilerData::new_fhe_zkp(self.data.unwrap_fhe(), ZkpCompilerData::default());
+        let data = CompilerData::new_fhe_zkp(self.data.take_fhe_data(), ZkpCompilerData::default());
 
         FheZkpCompiler {
             data,
@@ -606,7 +616,7 @@ impl FheCompiler {
     /**
      * Compile the FHE programs. If successful, returns an
      * [`Application`] containing a compiled form of each
-     * `fhe_program` and argument.
+     * `fhe_program` argument.
      *
      * # Remarks
      * Each compiled FHE program in the returned [`Application`]
@@ -615,14 +625,13 @@ impl FheCompiler {
      *
      * Each specified FHE program must have a unique name,
      * regardless of its parent module or crate. `compile` returns
-     * a [`Error::NameCollision`] if two or more FHE programs
-     * have the same name.
+     * a [`Error::NameCollision`] if two or more programs have the same name.
      *
      * Each FHE program must use the same scheme or `compile`
      * will return a [`Error::NameCollision`] error.
      */
     pub fn compile(self) -> Result<Application<Fhe>> {
-        Application::new(self.compile_fhe()?, HashMap::new())
+        self.compile_without_zkp()
     }
 }
 
@@ -641,6 +650,13 @@ where
             .fhe_data_mut()
             .fhe_program_fns
             .push(Box::new(fhe_program_fn));
+        self
+    }
+
+    /// Don't use the parameter search algorithm, and instead explicitly set the scheme's
+    /// parameters. For expert use and may cause failures.
+    pub fn with_params(mut self, params: &Params) -> Self {
+        self.data.fhe_data_mut().params_mode = ParamsMode::Manual(params.clone());
         self
     }
 
@@ -688,35 +704,27 @@ where
      *
      * Each specified FHE and ZKP program must have a unique name,
      * regardless of its parent module or crate. `compile` returns
-     * a [`Error::NameCollision`] if two or more FHE programs
-     * have the same name.
+     * a [`Error::NameCollision`] if two or more programs have the same name.
      *
      * Each FHE program must use the same scheme or `compile`
      * will return a [`Error::NameCollision`] error.
      */
     pub fn compile(self) -> Result<Application<FheZkp>> {
-        let fhe_programs = self.compile_fhe()?;
-        let params = fhe_programs
-            .values()
-            .next()
-            .map(|p| &p.metadata.params)
-            .or_else(|| match &self.data.fhe_data().params_mode {
-                ParamsMode::Search => None,
-                ParamsMode::Manual(p) => Some(p),
-            });
-        let zkp_programs = self.compile_zkp(params)?;
-        Application::new(fhe_programs, zkp_programs)
+        self.compile_with_zkp()
     }
 }
 
 /**
- * A compiler that has not yet been types. After calling
+ * A compiler that has not yet been typed. After calling
  * [`Compiler::new`], the builder type evolves as you specify parameters
  * and new configurations become valid.
  */
 pub type Compiler = GenericCompiler<(), ()>;
+/// A compiler with FHE parameters set or derivable.
 pub type FheCompiler = GenericCompiler<Fhe, ()>;
+/// A compiler with a specified ZKP backend.
 pub type ZkpCompiler<B> = GenericCompiler<Zkp, B>;
+/// A compiler with both FHE parameters set/derivable and specified ZKP backend.
 pub type FheZkpCompiler<B> = GenericCompiler<FheZkp, B>;
 
 #[cfg(test)]
@@ -734,7 +742,6 @@ mod tests {
     #[test]
     fn raw_compiler_has_correct_type() {
         let c = Compiler::new();
-
         assert_eq!(c.type_id(), TypeId::of::<Compiler>());
     }
 
@@ -744,6 +751,19 @@ mod tests {
         fn kitty() {}
 
         let c = Compiler::new().fhe_program(kitty);
+
+        assert_eq!(c.type_id(), TypeId::of::<FheCompiler>());
+    }
+
+    #[test]
+    fn with_params_yields_fhe_compiler() {
+        let c = Compiler::new().with_params(&Params {
+            lattice_dimension: 128,
+            coeff_modulus: vec![0x1],
+            plain_modulus: 32,
+            scheme_type: SchemeType::Bfv,
+            security_level: sunscreen::SecurityLevel::TC128,
+        });
 
         assert_eq!(c.type_id(), TypeId::of::<FheCompiler>());
     }

@@ -118,6 +118,38 @@ impl<'a> FheProgram<'a> {
             .collect()
     }
 
+    // The arg types of the FnOnce returned from `as_spf`.
+    fn spf_arg_types(&self) -> Vec<TokenStream> {
+        self.unwrapped_inputs
+            .iter()
+            .map(|(_, ty, _)| {
+                let ty = map_spf_type(ty).unwrap();
+                quote! { #ty }
+            })
+            .collect()
+    }
+
+    // The return types of the FnOnce returned from `as_spf`.
+    fn spf_return_types(&self) -> Vec<TokenStream> {
+        self.return_types
+            .iter()
+            .map(|ty| {
+                let ty = map_spf_type(ty).unwrap();
+                quote! { #ty }
+            })
+            .collect()
+    }
+
+    // The closure args in the implementation of `as_spf`.
+    fn spf_args(&self) -> Vec<TokenStream> {
+        self.unwrapped_inputs
+            .iter()
+            .map(|(_, _, name)| {
+                quote! { #name }
+            })
+            .collect()
+    }
+
     // Variable declarations like (but not exactly):
     // `__c_0: FheProgramNode<Cipher<Signed>> = FheProgramNode::input()`
     fn fhe_arg_var_decl(&self) -> Vec<TokenStream> {
@@ -195,6 +227,12 @@ impl<'a> FheProgram<'a> {
             Ident::new(&format!("{}_struct", fhe_program_name), Span::call_site());
 
         let fhe_program_name_literal = format!("{}", fhe_program_name);
+
+        let spf_arg_types = self.spf_arg_types();
+        let spf_return_type = pack_into_tuple(&self.spf_return_types());
+        let spf_args = self.spf_args();
+        let spf_return_idents = inner_return_idents;
+        let spf_return_tuple = pack_into_tuple(&spf_return_idents);
 
         quote! {
             #[allow(non_camel_case_types)]
@@ -286,6 +324,30 @@ impl<'a> FheProgram<'a> {
                     use sunscreen::FheProgramFn;
 
                     self.name()
+                }
+            }
+
+            impl #fhe_program_struct_name {
+                pub fn as_spf<'a>(
+                    &'a self,
+                    public_key: &'a sunscreen::PublicKey,
+                ) -> impl FnOnce(
+                    #(#spf_arg_types),*
+                ) -> sunscreen::Result<#spf_return_type> + 'a {
+                    |#(#spf_args),*| {
+                        let runtime = sunscreen::FheProgramFnExt::runtime(self)?;
+                        let prog = sunscreen::FheProgramFnExt::compile(self)?;
+                        let inputs: ::std::vec::Vec<sunscreen::FheProgramInput> = ::std::vec![
+                            #(
+                                #spf_args.into(),
+                            )*
+                        ];
+                        let mut results = runtime.run(&prog, inputs, public_key)?;
+                        #(
+                            let #spf_return_idents = results.remove(0);
+                        )*;
+                        Ok(#spf_return_tuple)
+                    }
                 }
             }
 

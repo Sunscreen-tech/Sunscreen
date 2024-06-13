@@ -1,6 +1,8 @@
 use proc_macro2::{Span, TokenStream as TokenStream2};
 use quote::{format_ident, quote, quote_spanned, ToTokens};
-use syn::{parse_quote, parse_quote_spanned, spanned::Spanned, Ident, Index, ReturnType, Type};
+use syn::{
+    parse_quote, parse_quote_spanned, spanned::Spanned, Ident, Index, ReturnType, Type, TypePath,
+};
 
 #[derive(Debug)]
 pub enum MapFheTypeError {
@@ -17,6 +19,34 @@ pub fn map_fhe_type(arg_type: &Type) -> Result<Type, MapFheTypeError> {
         Type::Path(ty) => parse_quote_spanned! {ty.span() => FheProgramNode<#ty> },
         Type::Array(a) => {
             let inner_type = map_fhe_type(&a.elem)?;
+            let len = &a.len;
+
+            parse_quote_spanned! {a.span() =>
+                [#inner_type; #len]
+            }
+        }
+        _ => {
+            return Err(MapFheTypeError::IllegalType(arg_type.span()));
+        }
+    };
+
+    Ok(transformed_type)
+}
+
+/**
+ * Given an input type T, returns
+ * * sunscreen::Ciphertext when T is a Cipher<_> or [[..[Cipher<_>; N];.. M]; Q]
+ * * T otherwise
+ */
+pub fn map_spf_type(arg_type: &Type) -> Result<Type, MapFheTypeError> {
+    let transformed_type = match arg_type {
+        // Hack
+        ty if is_inner_cipher(ty) => {
+            parse_quote_spanned! {ty.span() => sunscreen::Ciphertext }
+        }
+        Type::Path(ty) => parse_quote_spanned! {ty.span() => #ty },
+        Type::Array(a) => {
+            let inner_type = map_spf_type(&a.elem)?;
             let len = &a.len;
 
             parse_quote_spanned! {a.span() =>
@@ -205,6 +235,31 @@ pub fn emit_signature(args: &[Type], return_types: &[Type]) -> TokenStream2 {
             num_ciphertexts: vec![#(#return_type_sizes)*],
         }
     }
+}
+
+// Hack: we should also change [Cipher<T>] to accept [Ciphertext] rather than Ciphertext.
+fn is_inner_cipher(arr: &Type) -> bool {
+    match arr {
+        Type::Array(a) => is_inner_cipher(&a.elem),
+        Type::Path(ty) => is_path_cipher(ty),
+        _ => false,
+    }
+}
+
+// Hack: we should actually use `Cipher<T>` instead of `Ciphertext` more broadly.
+fn is_path_cipher(ty: &TypePath) -> bool {
+    // Ensure there exists some Cipher<T> in sunscreen::types::Cipher<T>
+    let cipher_seg = match ty.path.segments.last() {
+        Some(seg) => seg,
+        None => return false,
+    };
+    // Ensure there exists some T in Cipher<T>
+    match &cipher_seg.arguments {
+        syn::PathArguments::AngleBracketed(ab) if ab.args.len() == 1 => (),
+        _ => return false,
+    }
+    // Ensure the Cipher in Cipher<T>
+    cipher_seg.ident == "Cipher"
 }
 
 #[cfg(test)]

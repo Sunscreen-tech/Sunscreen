@@ -75,7 +75,7 @@ mod ops;
 pub mod zkp;
 
 pub use sunscreen_runtime::{
-    BfvType, FheType, NumCiphertexts, TryFromPlaintext, TryIntoPlaintext, Type, TypeName,
+    BfvType, Cipher, FheType, NumCiphertexts, TryFromPlaintext, TryIntoPlaintext, Type, TypeName,
     TypeNameInstance, Version,
 };
 
@@ -102,36 +102,6 @@ pub trait LaneCount {
      * The number of lanes.
      */
     fn lane_count() -> usize;
-}
-
-#[derive(Copy, Clone, Debug)]
-/**
- * Declares a type T as being encrypted in an [`fhe_program`](crate::fhe_program).
- */
-pub struct Cipher<T>
-where
-    T: FheType,
-{
-    _val: T,
-}
-
-impl<T> NumCiphertexts for Cipher<T>
-where
-    T: FheType,
-{
-    const NUM_CIPHERTEXTS: usize = T::NUM_CIPHERTEXTS;
-}
-
-impl<T> TypeName for Cipher<T>
-where
-    T: FheType + TypeName,
-{
-    fn type_name() -> Type {
-        Type {
-            is_encrypted: true,
-            ..T::type_name()
-        }
-    }
 }
 
 /// Creates new FHE variables from literals.

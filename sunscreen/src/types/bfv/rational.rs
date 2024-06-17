@@ -4,10 +4,10 @@ use crate::types::{
     bfv::Signed, intern::FheProgramNode, ops::*, BfvType, Cipher, FheType, NumCiphertexts,
     TryFromPlaintext, TryIntoPlaintext, TypeName,
 };
-use crate::{FheProgramInputTrait, InnerPlaintext, Params, Plaintext, TypeName};
+use crate::{FheProgramPlaintextInput, InnerPlaintext, Params, Plaintext, TypeName};
 use std::cmp::Eq;
 use std::ops::*;
-use sunscreen_runtime::Error;
+use sunscreen_runtime::{impl_into_fhe_program_plaintext_input, Error};
 
 use num::Rational64;
 
@@ -96,7 +96,8 @@ impl TryIntoPlaintext for Rational {
     }
 }
 
-impl FheProgramInputTrait for Rational {}
+impl FheProgramPlaintextInput for Rational {}
+impl_into_fhe_program_plaintext_input!(Rational);
 impl FheType for Rational {}
 impl BfvType for Rational {}
 

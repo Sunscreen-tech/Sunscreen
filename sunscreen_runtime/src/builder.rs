@@ -232,7 +232,7 @@ mod linked {
     };
 
     use crate::{
-        marker, Ciphertext, CompiledZkpProgram, Fhe, FheRuntime, FheZkp, FheZkpRuntime,
+        marker, Cipher, Ciphertext, CompiledZkpProgram, Fhe, FheRuntime, FheZkp, FheZkpRuntime,
         GenericRuntime, LinkedProof, NumCiphertexts, Params, Plaintext, PrivateKey, PublicKey,
         Result, Sdlp, SdlpProverKnowledge, SdlpVerifierKnowledge, TryFromPlaintext,
         TryIntoPlaintext, ZkpProgramInput,
@@ -274,31 +274,61 @@ mod linked {
     ///
     /// Due to some quirks in the visibility warnings, this is marked `pub` and manually excluded
     /// from the `pub use linked::{}` export above.
-    #[derive(Clone, Debug)]
-    pub struct MessageInternal<Z = ()> {
+    #[derive(Debug)]
+    pub struct MessageInternal<T, Z = ()> {
         id: usize,
         len: usize,
         pt: Arc<PlaintextTyped>,
         zkp_type: Z,
+        _pt_marker: std::marker::PhantomData<T>,
+    }
+    impl<T, Z: Clone> Clone for MessageInternal<T, Z> {
+        fn clone(&self) -> Self {
+            let MessageInternal {
+                id,
+                len,
+                pt,
+                zkp_type,
+                _pt_marker,
+            } = self;
+            MessageInternal {
+                id: *id,
+                len: *len,
+                pt: pt.clone(),
+                zkp_type: zkp_type.clone(),
+                _pt_marker: *_pt_marker,
+            }
+        }
     }
 
     /// A [`Plaintext`] message that can be [encrypted again](`LogProofBuilder::reencrypt`).
     #[derive(Clone, Debug)]
-    pub struct Message(MessageInternal<()>);
+    pub struct Message<T>(MessageInternal<T, ()>);
 
     /// A [`Plaintext`] message that can be [encrypted again](`LogProofBuilder::reencrypt`) or
     /// [linked to a ZKP program](`LogProofBuilder::linked_input`). Create this with
     /// [`LogProofBuilder::encrypt_returning_link`].
     #[derive(Debug)]
-    pub struct LinkedMessage(MessageInternal<Type>);
+    pub struct LinkedMessage<T>(MessageInternal<T, Type>);
 
-    impl LinkedMessage {
-        fn from_message(msg: Message, zkp_type: Type) -> Self {
+    impl<T> LinkedMessage<T> {
+        fn from_message(msg: Message<T>, zkp_type: Type) -> Self {
             LinkedMessage(MessageInternal {
                 id: msg.0.id,
                 len: msg.0.len,
                 pt: msg.0.pt,
                 zkp_type,
+                _pt_marker: std::marker::PhantomData,
+            })
+        }
+
+        fn coerce<V>(self) -> LinkedMessage<V> {
+            LinkedMessage(MessageInternal {
+                id: self.0.id,
+                len: self.0.len,
+                pt: self.0.pt,
+                zkp_type: self.0.zkp_type,
+                _pt_marker: std::marker::PhantomData,
             })
         }
     }
@@ -306,31 +336,32 @@ mod linked {
     mod private {
 
         pub trait Sealed {}
-        impl Sealed for super::Message {}
-        impl Sealed for super::LinkedMessage {}
+        impl<T> Sealed for super::Message<T> {}
+        impl<T> Sealed for super::LinkedMessage<T> {}
     }
 
     /// Indicates that the message is already added to the SDLP, and hence can be used as an
     /// argument to [`LogProofBuilder::reencrypt`].
-    pub trait ExistingMessage: private::Sealed {
+    pub trait ExistingMessage<T>: private::Sealed {
         /// Convert the message to the internal type.
-        fn as_internal(&self) -> MessageInternal<()>;
+        fn as_internal(&self) -> MessageInternal<T, ()>;
     }
 
-    impl ExistingMessage for Message {
-        fn as_internal(&self) -> MessageInternal<()> {
+    impl<T> ExistingMessage<T> for Message<T> {
+        fn as_internal(&self) -> MessageInternal<T, ()> {
             self.0.clone()
         }
     }
 
-    impl ExistingMessage for LinkedMessage {
-        fn as_internal(&self) -> MessageInternal<()> {
+    impl<T> ExistingMessage<T> for LinkedMessage<T> {
+        fn as_internal(&self) -> MessageInternal<T, ()> {
             let msg = self.0.clone();
             MessageInternal {
                 id: msg.id,
                 len: msg.len,
                 pt: msg.pt,
                 zkp_type: (),
+                _pt_marker: std::marker::PhantomData,
             }
         }
     }
@@ -405,7 +436,8 @@ mod linked {
 
         // linked proof fields
         compiled_zkp_program: Option<&'z CompiledZkpProgram>,
-        linked_inputs: Vec<LinkedMessage>,
+        // we don't need the type information after recording the input
+        linked_inputs: Vec<LinkedMessage<()>>,
         private_inputs: Vec<ZkpProgramInput>,
         public_inputs: Vec<ZkpProgramInput>,
         constant_inputs: Vec<ZkpProgramInput>,
@@ -468,7 +500,7 @@ mod linked {
         ///
         /// If you do not want to add the encryption statement to the proof, just use [the
         /// runtime](`crate::GenericRuntime::encrypt`) directly.
-        pub fn encrypt<P>(&mut self, message: &P, public_key: &'k PublicKey) -> Result<Ciphertext>
+        pub fn encrypt<P>(&mut self, message: &P, public_key: &'k PublicKey) -> Result<Cipher<P>>
         where
             P: TryIntoPlaintext + TypeName,
         {
@@ -484,7 +516,7 @@ mod linked {
             &mut self,
             message: &P,
             private_key: &'k PrivateKey,
-        ) -> Result<Ciphertext>
+        ) -> Result<Cipher<P>>
         where
             P: TryIntoPlaintext + TypeName,
         {
@@ -502,7 +534,7 @@ mod linked {
             &mut self,
             message: &P,
             public_key: &'k PublicKey,
-        ) -> Result<(Ciphertext, Message)>
+        ) -> Result<(Cipher<P>, Message<P>)>
         where
             P: TryIntoPlaintext + TypeName,
         {
@@ -519,7 +551,7 @@ mod linked {
             &mut self,
             message: &P,
             private_key: &'k PrivateKey,
-        ) -> Result<(Ciphertext, Message)>
+        ) -> Result<(Cipher<P>, Message<P>)>
         where
             P: TryIntoPlaintext + TypeName,
         {
@@ -531,7 +563,7 @@ mod linked {
             message: &P,
             key: Key<'k>,
             bounds: Option<Bounds>,
-        ) -> Result<(Ciphertext, Message)>
+        ) -> Result<(Cipher<P>, Message<P>)>
         where
             P: TryIntoPlaintext + TypeName,
         {
@@ -555,6 +587,7 @@ mod linked {
                 pt: Arc::new(plaintext_typed),
                 len: idx_end - idx_start,
                 zkp_type: (),
+                _pt_marker: std::marker::PhantomData,
             };
             Ok((ct, Message(msg_internal)))
         }
@@ -565,11 +598,11 @@ mod linked {
         /// plaintext. If this is not what you want, use [`Self::encrypt`].
         ///
         /// This method assumes that you've created the `message` argument with _this_ builder.
-        pub fn reencrypt<E: ExistingMessage>(
+        pub fn reencrypt<P, E: ExistingMessage<P>>(
             &mut self,
             message: &E,
             public_key: &'k PublicKey,
-        ) -> Result<Ciphertext> {
+        ) -> Result<Cipher<P>> {
             // The existing message already has bounds, no need to recompute them.
             let bounds = None;
             self.encrypt_asymmetric_internal(
@@ -586,11 +619,11 @@ mod linked {
         /// plaintext. If this is not what you want, use [`Self::encrypt_symmetric`].
         ///
         /// This method assumes that you've created the `message` argument with _this_ builder.
-        pub fn reencrypt_symmetric<E: ExistingMessage>(
+        pub fn reencrypt_symmetric<P, E: ExistingMessage<P>>(
             &mut self,
             message: &E,
             private_key: &'k PrivateKey,
-        ) -> Result<Ciphertext> {
+        ) -> Result<Cipher<P>> {
             // The existing message already has bounds, no need to recompute them.
             let bounds = None;
             self.encrypt_symmetric_internal(
@@ -614,9 +647,9 @@ mod linked {
         /// linked ZKP program.
         pub fn decrypt_returning_msg<P>(
             &mut self,
-            ciphertext: &Ciphertext,
+            ciphertext: &Cipher<P>,
             private_key: &'k PrivateKey,
-        ) -> Result<(P, Message)>
+        ) -> Result<(P, Message<P>)>
         where
             P: TryIntoPlaintext + TryFromPlaintext + TypeName,
         {
@@ -625,10 +658,10 @@ mod linked {
 
         fn decrypt_internal<P>(
             &mut self,
-            ciphertext: &Ciphertext,
+            ciphertext: &Cipher<P>,
             private_key: &'k PrivateKey,
             bounds: Option<Bounds>,
-        ) -> Result<(P, Message)>
+        ) -> Result<(P, Message<P>)>
         where
             P: TryIntoPlaintext + TryFromPlaintext + TypeName,
         {
@@ -665,20 +698,23 @@ mod linked {
                 pt,
                 len: end_idx - start_idx,
                 zkp_type: (),
+                _pt_marker: std::marker::PhantomData,
             };
             Ok((p, Message(msg_internal)))
         }
 
-        fn encrypt_asymmetric_internal<T>(
+        fn encrypt_asymmetric_internal<P, T>(
             &mut self,
             message: Msg<T>,
             public_key: &'k PublicKey,
             bounds: Option<Bounds>,
-        ) -> Result<Ciphertext> {
+        ) -> Result<Cipher<P>> {
             let existing_idx = message.existing_id();
             let mut i = 0;
-            self.runtime
-                .encrypt_map_components(&message, public_key, |m, ct, components| {
+            let ct = self.runtime.encrypt_map_components(
+                &message,
+                public_key,
+                |m, ct, components| {
                     let message_id = if let Some(idx) = existing_idx {
                         idx + i
                     } else {
@@ -698,18 +734,20 @@ mod linked {
                     self.witness
                         .push(BfvWitness::PublicKeyEncryption(components));
                     i += 1;
-                })
+                },
+            )?;
+            Ok(Cipher::new(ct.inner))
         }
 
-        fn encrypt_symmetric_internal<T>(
+        fn encrypt_symmetric_internal<P, T>(
             &mut self,
             message: Msg<T>,
             private_key: &'k PrivateKey,
             bounds: Option<Bounds>,
-        ) -> Result<Ciphertext> {
+        ) -> Result<Cipher<P>> {
             let existing_idx = message.existing_id();
             let mut i = 0;
-            self.runtime.encrypt_symmetric_map_components(
+            let ct = self.runtime.encrypt_symmetric_map_components(
                 &message,
                 private_key,
                 |m, ct, components| {
@@ -734,7 +772,8 @@ mod linked {
                     });
                     i += 1;
                 },
-            )
+            )?;
+            Ok(Cipher::new(ct.inner))
         }
 
         fn plaintext_typed<P>(&self, pt: &P) -> Result<PlaintextTyped>
@@ -809,7 +848,7 @@ mod linked {
             &mut self,
             message: &P,
             public_key: &'k PublicKey,
-        ) -> Result<(Ciphertext, LinkedMessage)>
+        ) -> Result<(Cipher<P>, LinkedMessage<P>)>
         where
             P: LinkWithZkp + TryIntoPlaintext + TypeName,
         {
@@ -833,7 +872,7 @@ mod linked {
             &mut self,
             message: &P,
             private_key: &'k PrivateKey,
-        ) -> Result<(Ciphertext, LinkedMessage)>
+        ) -> Result<(Cipher<P>, LinkedMessage<P>)>
         where
             P: LinkWithZkp + TryIntoPlaintext + TypeName,
         {
@@ -858,9 +897,9 @@ mod linked {
         /// instead, and prove equality within a linked ZKP program.
         pub fn decrypt_returning_link<P>(
             &mut self,
-            ciphertext: &Ciphertext,
+            ciphertext: &Cipher<P>,
             private_key: &'k PrivateKey,
-        ) -> Result<(P, LinkedMessage)>
+        ) -> Result<(P, LinkedMessage<P>)>
         where
             P: LinkWithZkp + TryIntoPlaintext + TryFromPlaintext + TypeName,
         {
@@ -891,8 +930,8 @@ mod linked {
         /// Add a linked private input to the ZKP program.
         ///
         /// This method assumes that you've created the `message` argument with _this_ builder.
-        pub fn linked_input(&mut self, message: LinkedMessage) -> &mut Self {
-            self.linked_inputs.push(message);
+        pub fn linked_input<P>(&mut self, message: LinkedMessage<P>) -> &mut Self {
+            self.linked_inputs.push(message.coerce());
             self
         }
 

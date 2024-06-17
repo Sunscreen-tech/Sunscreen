@@ -6,14 +6,14 @@ use crate::{
         BfvType, FheType, LaneCount, NumCiphertexts, SwapRows, TryFromPlaintext, TryIntoPlaintext,
         Type, TypeName, TypeNameInstance, Version,
     },
-    FheProgramInputTrait, InnerPlaintext, Params, Plaintext, WithContext,
+    FheProgramPlaintextInput, InnerPlaintext, Params, Plaintext, WithContext,
 };
 use seal_fhe::{
     BFVEncoder, BfvEncryptionParametersBuilder, Context as SealContext, Modulus,
     Result as SealResult,
 };
 use std::ops::*;
-use sunscreen_runtime::{Error as RuntimeError, Result as RuntimeResult};
+use sunscreen_runtime::{Error as RuntimeError, FheProgramInput, Result as RuntimeResult};
 
 /**
  * A Batched vector of signed integers. The vector has 2 rows of `LANES`
@@ -91,7 +91,12 @@ impl<const LANES: usize> TypeNameInstance for Batched<LANES> {
     }
 }
 
-impl<const LANES: usize> FheProgramInputTrait for Batched<LANES> {}
+impl<const LANES: usize> FheProgramPlaintextInput for Batched<LANES> {}
+impl<const LANES: usize> From<Batched<LANES>> for FheProgramInput {
+    fn from(value: Batched<LANES>) -> Self {
+        Self::Plaintext(Box::new(value))
+    }
+}
 impl<const LANES: usize> FheType for Batched<LANES> {}
 impl<const LANES: usize> BfvType for Batched<LANES> {}
 

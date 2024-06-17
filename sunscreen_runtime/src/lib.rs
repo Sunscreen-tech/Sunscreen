@@ -14,7 +14,7 @@ mod run;
 mod runtime;
 mod serialization;
 
-use std::sync::Arc;
+use std::{ops::Deref, sync::Arc};
 
 use seal_fhe::{Ciphertext as SealCiphertext, Plaintext as SealPlaintext};
 use serde::{Deserialize, Serialize};
@@ -179,6 +179,72 @@ impl InnerCiphertext {
 
 #[derive(Clone, Deserialize, Serialize)]
 /**
+ * A typed variant of [`Ciphertext`].
+ */
+// TODO: possibly restrict T: FheType
+pub struct Cipher<T> {
+    /// The inner ciphertext
+    pub inner: Ciphertext,
+    _marker: std::marker::PhantomData<T>,
+}
+
+impl<T> Deref for Cipher<T> {
+    type Target = Ciphertext;
+
+    fn deref(&self) -> &Self::Target {
+        &self.inner
+    }
+}
+
+impl<T> Cipher<T> {
+    pub(crate) fn new(inner: Ciphertext) -> Cipher<T> {
+        Self {
+            inner,
+            _marker: std::marker::PhantomData,
+        }
+    }
+}
+
+impl<T: TypeName> Cipher<T> {
+    /// Cast a [`Ciphertext`] to a typed [`Cipher<T>`]. Returns an error if the underlying
+    /// ciphertext datatype does not match `T`.
+    pub fn cast(ciphertext: Ciphertext) -> Result<Cipher<T>> {
+        let expected_type = Type {
+            is_encrypted: true,
+            ..T::type_name()
+        };
+        if expected_type != ciphertext.data_type {
+            Err(Error::type_mismatch(&expected_type, &ciphertext.data_type))
+        } else {
+            Ok(Self {
+                inner: ciphertext,
+                _marker: std::marker::PhantomData,
+            })
+        }
+    }
+}
+
+impl<T> NumCiphertexts for Cipher<T>
+where
+    T: NumCiphertexts,
+{
+    const NUM_CIPHERTEXTS: usize = T::NUM_CIPHERTEXTS;
+}
+
+impl<T> TypeName for Cipher<T>
+where
+    T: FheType + TypeName,
+{
+    fn type_name() -> Type {
+        Type {
+            is_encrypted: true,
+            ..T::type_name()
+        }
+    }
+}
+
+#[derive(Clone, Deserialize, Serialize)]
+/**
  * An encryption of the given data type. Note, the data type is
  * stored in plaintext and is considered part of Sunscreen's runtime
  * protocol.
@@ -209,7 +275,10 @@ impl Ciphertext {
  * A trait that denotes this type can be used as an
  * argument to an FHE program.
  */
-pub trait FheProgramInputTrait: TryIntoPlaintext + TypeNameInstance {}
+pub trait FheProgramPlaintextInput: TryIntoPlaintext + TypeNameInstance {}
+
+/// A trait that denotes this type can be used as a ciphertext argument to an FHE program.
+pub trait FheProgramCiphertextInput: IntoCiphertext {}
 
 /**
  * An input argument to an Fhe Program. See [`crate::Runtime::run`].
@@ -218,12 +287,32 @@ pub enum FheProgramInput {
     /**
      * The argument is a ciphertext.
      */
-    Ciphertext(Ciphertext),
+    Ciphertext(Box<dyn FheProgramCiphertextInput>),
 
     /**
      * The argument is a plaintext.
      */
-    Plaintext(Box<dyn FheProgramInputTrait>),
+    Plaintext(Box<dyn FheProgramPlaintextInput>),
+}
+
+impl<T: FheProgramCiphertextInput + 'static> From<T> for FheProgramInput {
+    fn from(value: T) -> Self {
+        Self::Ciphertext(Box::new(value))
+    }
+}
+
+// Without specialization, can't have two blanket impls, so provide:
+/// A macro to cover the boilerplate for implementing `Into<FheProgramInput>` for a plaintext
+/// type.`
+#[macro_export]
+macro_rules! impl_into_fhe_program_plaintext_input {
+    ($t:ty) => {
+        impl From<$t> for sunscreen::FheProgramInput {
+            fn from(value: $t) -> Self {
+                Self::Plaintext(Box::new(value))
+            }
+        }
+    };
 }
 
 /**
@@ -258,24 +347,9 @@ impl TypeNameInstance for ZkpProgramInput {
 impl TypeNameInstance for FheProgramInput {
     fn type_name_instance(&self) -> Type {
         match self {
-            Self::Ciphertext(c) => c.data_type.clone(),
+            Self::Ciphertext(c) => c.into_ciphertext().data_type.type_name_instance(),
             Self::Plaintext(p) => p.type_name_instance(),
         }
-    }
-}
-
-impl From<Ciphertext> for FheProgramInput {
-    fn from(val: Ciphertext) -> Self {
-        Self::Ciphertext(val)
-    }
-}
-
-impl<T> From<T> for FheProgramInput
-where
-    T: FheProgramInputTrait + 'static,
-{
-    fn from(val: T) -> Self {
-        Self::Plaintext(Box::new(val))
     }
 }
 
@@ -294,6 +368,28 @@ impl TryIntoPlaintext for Plaintext {
         Ok(self.clone())
     }
 }
+
+/// This trait dentoes one may attempt to turn this type into a ciphertext.
+#[allow(clippy::wrong_self_convention)]
+pub trait IntoCiphertext {
+    /// Attempts to convert this type into a [`Ciphertext`].
+    fn into_ciphertext(&self) -> Ciphertext;
+}
+
+impl IntoCiphertext for Ciphertext {
+    fn into_ciphertext(&self) -> Ciphertext {
+        self.clone()
+    }
+}
+
+impl<T> IntoCiphertext for Cipher<T> {
+    fn into_ciphertext(&self) -> Ciphertext {
+        self.inner.clone()
+    }
+}
+
+impl FheProgramCiphertextInput for Ciphertext {}
+impl<T> FheProgramCiphertextInput for Cipher<T> {}
 
 /**
  * A trait for converting values into fields used by ZKPs.
@@ -345,7 +441,7 @@ pub trait NumCiphertexts {
  * Denotes the given rust type is an encoding in an FHE scheme
  */
 pub trait FheType:
-    TypeNameInstance + TryIntoPlaintext + TryFromPlaintext + FheProgramInputTrait + NumCiphertexts
+    TypeNameInstance + TryIntoPlaintext + TryFromPlaintext + FheProgramPlaintextInput + NumCiphertexts
 {
 }
 

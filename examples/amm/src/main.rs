@@ -1,7 +1,7 @@
 use sunscreen::{
     fhe_program,
     types::{bfv::Rational, Cipher},
-    Ciphertext, CompiledFheProgram, Compiler, Error, FheRuntime, Params, PrivateKey, PublicKey,
+    CompiledFheProgram, Compiler, Error, FheRuntime, Params, PrivateKey, PublicKey,
 };
 
 #[fhe_program(scheme = "bfv")]
@@ -37,14 +37,10 @@ impl Miner {
 
     pub fn run_contract(
         &self,
-        nu_tokens_to_trade: Ciphertext,
+        nu_tokens_to_trade: Cipher<Rational>,
         public_key: &PublicKey,
-    ) -> Result<Ciphertext, Error> {
-        let results =
-            self.runtime
-                .run(&self.compiled_swap_nu, vec![nu_tokens_to_trade], public_key)?;
-
-        Ok(results[0].clone())
+    ) -> Result<Cipher<Rational>, Error> {
+        swap_nu.run(&self.runtime, public_key, nu_tokens_to_trade)
     }
 }
 
@@ -73,13 +69,13 @@ impl Alice {
         })
     }
 
-    pub fn create_transaction(&self, amount: f64) -> Result<Ciphertext, Error> {
+    pub fn create_transaction(&self, amount: f64) -> Result<Cipher<Rational>, Error> {
         Ok(self
             .runtime
             .encrypt(Rational::try_from(amount)?, &self.public_key)?)
     }
 
-    pub fn check_received_eth(&self, received_eth: Ciphertext) -> Result<(), Error> {
+    pub fn check_received_eth(&self, received_eth: Cipher<Rational>) -> Result<(), Error> {
         let received_eth: Rational = self.runtime.decrypt(&received_eth, &self.private_key)?;
 
         let received_eth: f64 = received_eth.into();

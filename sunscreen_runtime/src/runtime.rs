@@ -3,11 +3,11 @@ use std::time::Instant;
 
 use merlin::Transcript;
 
-use crate::error::*;
 use crate::metadata::*;
 use crate::ProofBuilder;
 use crate::VerificationBuilder;
 use crate::ZkpProgramInput;
+use crate::{error::*, Cipher};
 use crate::{
     run_program_unchecked, serialization::WithContext, Ciphertext, FheProgramInput,
     InnerCiphertext, InnerPlaintext, Plaintext, PrivateKey, PublicKey, SealCiphertext, SealData,
@@ -140,7 +140,21 @@ where
     T: self::marker::Fhe,
 {
     /**
-     * Decrypts the given ciphertext into the type P.
+     * Decrypts the given ciphertext into the underlying type P.
+     */
+    // TODO replace decrypt with this function, leaving the other named `decrypt_opaque`.
+    #[allow(unused)]
+    pub fn decrypt_TODO<P>(&self, ciphertext: &Cipher<P>, private_key: &PrivateKey) -> Result<P>
+    where
+        P: TryFromPlaintext + TypeName,
+    {
+        let fhe_data = self.runtime_data.unwrap_fhe();
+        let pt = self.decrypt_map_components::<P>(&ciphertext.inner, private_key, |_, _| ())?;
+        P::try_from_plaintext(&pt, &fhe_data.params)
+    }
+
+    /**
+     * Decrypts the given opaque ciphertext into the provided type P.
      */
     pub fn decrypt<P>(&self, ciphertext: &Ciphertext, private_key: &PrivateKey) -> Result<P>
     where
@@ -353,13 +367,16 @@ where
 
                 for i in arguments.drain(0..) {
                     match i {
-                        FheProgramInput::Ciphertext(c) => match c.inner {
-                            InnerCiphertext::Seal(mut c) => {
-                                for j in c.drain(0..) {
-                                    inputs.push(SealData::Ciphertext(j.data));
+                        FheProgramInput::Ciphertext(c) => {
+                            let c = c.into_ciphertext();
+                            match c.inner {
+                                InnerCiphertext::Seal(mut c) => {
+                                    for j in c.drain(0..) {
+                                        inputs.push(SealData::Ciphertext(j.data));
+                                    }
                                 }
                             }
-                        },
+                        }
                         FheProgramInput::Plaintext(p) => {
                             let p = p.try_into_plaintext(&fhe_data.params)?;
 
@@ -421,7 +438,7 @@ where
      * Returns [`Error::ParameterMismatch`] if the plaintext is incompatible with this runtime's
      * scheme.
      */
-    pub fn encrypt<P>(&self, val: P, public_key: &PublicKey) -> Result<Ciphertext>
+    pub fn encrypt<P>(&self, val: P, public_key: &PublicKey) -> Result<Cipher<P>>
     where
         P: TryIntoPlaintext + TypeName,
     {
@@ -442,7 +459,7 @@ where
     ///
     /// Returns [`Error::ParameterMismatch`] if the plaintext is incompatible with this runtime's
     /// scheme.
-    pub fn encrypt_symmetric<P>(&self, val: P, private_key: &PrivateKey) -> Result<Ciphertext>
+    pub fn encrypt_symmetric<P>(&self, val: P, private_key: &PrivateKey) -> Result<Cipher<P>>
     where
         P: TryIntoPlaintext + TypeName,
     {
@@ -541,7 +558,7 @@ where
         val: &P,
         public_key: &PublicKey,
         mut f: impl FnMut(&SealPlaintext, &SealCiphertext, AsymmetricComponents),
-    ) -> Result<Ciphertext>
+    ) -> Result<Cipher<P>>
     where
         P: TryIntoPlaintext + TypeNameInstance,
     {
@@ -574,7 +591,7 @@ where
         val: &P,
         private_key: &PrivateKey,
         mut f: impl FnMut(&SealPlaintext, &SealCiphertext, SymmetricComponents),
-    ) -> Result<Ciphertext>
+    ) -> Result<Cipher<P>>
     where
         P: TryIntoPlaintext + TypeNameInstance,
     {
@@ -597,11 +614,11 @@ where
     // Use a seal encryption function to encrypt a list of inner seal plaintexts `pts`,
     // representing a runtime level plaintext of type `pt_type`, and return a runtime ciphertext
     // consisting of the list of respective inner seal ciphertexts.
-    fn aggregate_ciphertexts<F>(
+    fn aggregate_ciphertexts<P, F>(
         pt_type: &Type,
         pts: &[WithContext<SealPlaintext>],
         mut enc_fn: F,
-    ) -> Result<Ciphertext>
+    ) -> Result<Cipher<P>>
     where
         F: FnMut(&SealPlaintext) -> seal_fhe::Result<SealCiphertext>,
     {
@@ -614,13 +631,13 @@ where
                 })
             })
             .collect::<Result<Vec<_>>>()?;
-        Ok(Ciphertext {
+        Ok(Cipher::new(Ciphertext {
             data_type: Type {
                 is_encrypted: true,
                 ..pt_type.clone()
             },
             inner: InnerCiphertext::Seal(cts),
-        })
+        }))
     }
 }
 

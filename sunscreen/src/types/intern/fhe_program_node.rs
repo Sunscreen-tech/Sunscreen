@@ -12,7 +12,7 @@ use sunscreen_runtime::TypeNameInstance;
 
 use std::ops::{Add, Div, Mul, Neg, Shl, Shr, Sub};
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq)]
 /**
  * A type that wraps an FheType during graph construction. It is an implementation
  * detail and you should not construct these directly.
@@ -54,6 +54,17 @@ pub struct FheProgramNode<T: NumCiphertexts, S = ()> {
 
     /// Marks the type of the value that this graph node corresponds to.
     _phantom: std::marker::PhantomData<T>,
+}
+
+impl<T: sunscreen_runtime::NumCiphertexts, S: Copy> Copy for FheProgramNode<T, S> {}
+impl<T: sunscreen_runtime::NumCiphertexts, S: Clone> Clone for FheProgramNode<T, S> {
+    fn clone(&self) -> Self {
+        Self {
+            ids: self.ids,
+            stage: self.stage.clone(),
+            _phantom: self._phantom,
+        }
+    }
 }
 
 impl<T: NumCiphertexts> FheProgramNode<T> {

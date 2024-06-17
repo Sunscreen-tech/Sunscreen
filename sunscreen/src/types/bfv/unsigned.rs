@@ -5,7 +5,7 @@ use paste::paste;
 use seal_fhe::Plaintext as SealPlaintext;
 
 use sunscreen_runtime::{
-    InnerPlaintext, NumCiphertexts, Plaintext, TryFromPlaintext, TryIntoPlaintext,
+    FheProgramInput, InnerPlaintext, NumCiphertexts, Plaintext, TryFromPlaintext, TryIntoPlaintext,
 };
 
 use crate as sunscreen;
@@ -23,7 +23,7 @@ use crate::{
 };
 use crate::{
     types::{intern::FheProgramNode, BfvType, FheType, TypeNameInstance},
-    FheProgramInputTrait, Params, TypeName as DeriveTypeName, WithContext,
+    FheProgramPlaintextInput, Params, TypeName as DeriveTypeName, WithContext,
 };
 
 #[derive(Debug, Clone, Copy, DeriveTypeName, PartialEq, Eq)]
@@ -38,7 +38,12 @@ impl<const LIMBS: usize> NumCiphertexts for Unsigned<LIMBS> {
     const NUM_CIPHERTEXTS: usize = 1;
 }
 
-impl<const LIMBS: usize> FheProgramInputTrait for Unsigned<LIMBS> {}
+impl<const LIMBS: usize> FheProgramPlaintextInput for Unsigned<LIMBS> {}
+impl<const LIMBS: usize> From<Unsigned<LIMBS>> for FheProgramInput {
+    fn from(value: Unsigned<LIMBS>) -> Self {
+        Self::Plaintext(Box::new(value))
+    }
+}
 impl<const LIMBS: usize> FheType for Unsigned<LIMBS> {}
 impl<const LIMBS: usize> BfvType for Unsigned<LIMBS> {}
 

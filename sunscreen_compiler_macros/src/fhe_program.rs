@@ -150,6 +150,19 @@ impl<'a> FheProgram<'a> {
             .collect()
     }
 
+    // The closure args in the implementation of `as_spf`.
+    fn run_args(&self) -> Vec<TokenStream> {
+        self.unwrapped_inputs
+            .iter()
+            .map(|(_, ty, name)| {
+                let ty = map_spf_type(ty).unwrap();
+                quote! {
+                    #name: #ty
+                }
+            })
+            .collect()
+    }
+
     // Variable declarations like (but not exactly):
     // `__c_0: FheProgramNode<Cipher<Signed>> = FheProgramNode::input()`
     fn fhe_arg_var_decl(&self) -> Vec<TokenStream> {
@@ -233,6 +246,7 @@ impl<'a> FheProgram<'a> {
         let spf_args = self.spf_args();
         let spf_return_idents = inner_return_idents;
         let spf_return_tuple = pack_into_tuple(&spf_return_idents);
+        let run_args = self.run_args();
 
         quote! {
             #[allow(non_camel_case_types)]
@@ -336,18 +350,28 @@ impl<'a> FheProgram<'a> {
                 ) -> sunscreen::Result<#spf_return_type> + 'a {
                     |#(#spf_args),*| {
                         let runtime = sunscreen::FheProgramFnExt::runtime(self)?;
-                        let prog = sunscreen::FheProgramFnExt::compile(self)?;
-                        let inputs: ::std::vec::Vec<sunscreen::FheProgramInput> = ::std::vec![
-                            #(
-                                #spf_args.into(),
-                            )*
-                        ];
-                        let mut results = runtime.run(&prog, inputs, public_key)?;
-                        #(
-                            let #spf_return_idents = results.remove(0);
-                        )*;
-                        Ok(#spf_return_tuple)
+                        self.run(&runtime, public_key, #(#spf_args),*)
                     }
+                }
+
+                pub fn run<'a, T: sunscreen::marker::Fhe, B>(
+                    &'a self,
+                    runtime: &'a sunscreen::GenericRuntime<T, B>,
+                    public_key: &'a sunscreen::PublicKey,
+                    #(#run_args),*
+                ) -> sunscreen::Result<#spf_return_type> {
+                    // TODO cache this in a Lazy field? would need to export type from sunscreen lib
+                    let prog = sunscreen::FheProgramFnExt::compile(self)?;
+                    let inputs: ::std::vec::Vec<sunscreen::FheProgramInput> = ::std::vec![
+                        #(
+                            #spf_args.into(),
+                        )*
+                    ];
+                    let mut results = runtime.run(&prog, inputs, public_key)?;
+                    #(
+                        let #spf_return_idents = sunscreen::types::Cipher::cast(results.remove(0))?;
+                    )*;
+                    Ok(#spf_return_tuple)
                 }
             }
 

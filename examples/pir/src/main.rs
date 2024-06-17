@@ -3,8 +3,7 @@
 use sunscreen::{
     fhe_program,
     types::{bfv::Signed, Cipher},
-    Ciphertext, CompiledFheProgram, Compiler, Error, FheProgramInput, FheRuntime, Params,
-    PrivateKey, PublicKey,
+    CompiledFheProgram, Compiler, Error, FheRuntime, Params, PrivateKey, PublicKey,
 };
 
 const SQRT_DATABASE_SIZE: usize = 10;
@@ -67,10 +66,10 @@ impl Server {
 
     pub fn run_query(
         &self,
-        col_query: Ciphertext,
-        row_query: Ciphertext,
+        col_query: [Cipher<Signed>; SQRT_DATABASE_SIZE],
+        row_query: [Cipher<Signed>; SQRT_DATABASE_SIZE],
         public_key: &PublicKey,
-    ) -> Result<Ciphertext, Error> {
+    ) -> Result<Cipher<Signed>, Error> {
         // Our database will consist of values between 400 and 500.
         let mut database = [[Signed::from(0); SQRT_DATABASE_SIZE]; SQRT_DATABASE_SIZE];
         let mut val = Signed::from(400);
@@ -82,11 +81,7 @@ impl Server {
             }
         }
 
-        let args: Vec<FheProgramInput> = vec![col_query.into(), row_query.into(), database.into()];
-
-        let results = self.runtime.run(&self.compiled_lookup, args, public_key)?;
-
-        Ok(results[0].clone())
+        lookup.run(&self.runtime, public_key, col_query, row_query, database)
     }
 }
 
@@ -116,7 +111,16 @@ impl Alice {
         })
     }
 
-    pub fn create_query(&self, index: usize) -> Result<(Ciphertext, Ciphertext), Error> {
+    pub fn create_query(
+        &self,
+        index: usize,
+    ) -> Result<
+        (
+            [Cipher<Signed>; SQRT_DATABASE_SIZE],
+            [Cipher<Signed>; SQRT_DATABASE_SIZE],
+        ),
+        Error,
+    > {
         let col = index % SQRT_DATABASE_SIZE;
         let row = index / SQRT_DATABASE_SIZE;
 
@@ -126,12 +130,12 @@ impl Alice {
         row_query[row] = Signed::from(1);
 
         Ok((
-            self.runtime.encrypt(col_query, &self.public_key)?,
-            self.runtime.encrypt(row_query, &self.public_key)?,
+            col_query.map(|x| self.runtime.encrypt(x, &self.public_key).unwrap()),
+            row_query.map(|x| self.runtime.encrypt(x, &self.public_key).unwrap()),
         ))
     }
 
-    pub fn check_response(&self, value: Ciphertext) -> Result<(), Error> {
+    pub fn check_response(&self, value: Cipher<Signed>) -> Result<(), Error> {
         let value: Signed = self.runtime.decrypt(&value, &self.private_key)?;
 
         let value: i64 = value.into();

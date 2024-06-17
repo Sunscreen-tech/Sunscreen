@@ -169,7 +169,7 @@ fn run_fhe<F, T, U>(
 ) -> Result<(), Error>
 where
     F: FheProgramFn + Clone + 'static + AsRef<str>,
-    U: From<T> + FheType + TypeName + std::fmt::Display,
+    U: From<T> + FheType + TypeName + std::fmt::Display + 'static,
 {
     let start = Instant::now();
 

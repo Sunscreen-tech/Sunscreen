@@ -94,11 +94,7 @@ mod sdlp_tests {
         fn double(x: sunscreen::types::Cipher<Signed>) -> sunscreen::types::Cipher<Signed> {
             x + x
         }
-        let double_compiled = double.compile().unwrap();
-        let computed_ct = rt
-            .run(&double_compiled, vec![initial_ct], &public_key)
-            .unwrap()
-            .remove(0);
+        let computed_ct = double.run(&rt, &public_key, initial_ct).unwrap();
 
         let mut logproof_builder = SdlpBuilder::new(&rt);
         let (_, msg) = logproof_builder

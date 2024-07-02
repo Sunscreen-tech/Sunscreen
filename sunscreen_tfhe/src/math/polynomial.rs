@@ -348,7 +348,7 @@ mod tests {
             let error_limit = 1e-9;
             for (a, e) in actual.coeffs().iter().zip(expected.coeffs().iter()) {
                 let err = normalized_torus_distance(a, e).abs();
-                assert!(err < error_limit, "Error: {} >= {}", err, error_limit);
+                assert!(err < error_limit, "Error: {:e} >= {:e}", err, error_limit);
             }
         }
     }

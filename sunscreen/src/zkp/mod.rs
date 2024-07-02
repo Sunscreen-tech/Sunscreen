@@ -146,9 +146,9 @@ pub trait ZkpProgramFnExt {
     /// # Ok(())
     /// # }
     /// ```
-    fn runtime_with<B: ZkpBackend>(&self, backend: B) -> Result<ZkpRuntime<B>>
+    fn runtime_with<B>(&self, backend: B) -> Result<ZkpRuntime<B>>
     where
-        B: 'static,
+        B: ZkpBackend + 'static,
         Self: ZkpProgramFn<B::Field, Link = NotLinked>,
         Self: Sized + Clone + AsRef<str> + 'static,
     {
@@ -180,9 +180,9 @@ pub trait ZkpProgramFnExt {
     /// # Ok(())
     /// # }
     /// ```
-    fn runtime<B: ZkpBackend + Default>(&self) -> Result<ZkpRuntime<B>>
+    fn runtime<B>(&self) -> Result<ZkpRuntime<B>>
     where
-        B: 'static,
+        B: ZkpBackend + Default + 'static,
         Self: ZkpProgramFn<B::Field, Link = NotLinked>,
         Self: Sized + Clone + AsRef<str> + 'static,
     {

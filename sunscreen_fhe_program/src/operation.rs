@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use serde::{Deserialize, Serialize};
 use sunscreen_compiler_common::Operation as OperationTrait;
 
@@ -91,9 +93,9 @@ pub enum Operation {
     OutputCiphertext,
 }
 
-impl ToString for Operation {
-    fn to_string(&self) -> String {
-        format!("{self:#?}")
+impl Display for Operation {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{self:#?}",)
     }
 }
 

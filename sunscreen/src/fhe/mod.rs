@@ -151,7 +151,7 @@ impl OperationTrait for FheOperation {
 pub type FheContext = Context<FheOperation, Params>;
 
 /**
- *
+ * The result of frontend compilation of an FHE program.
  */
 pub type FheFrontendCompilation = CompilationResult<FheOperation>;
 

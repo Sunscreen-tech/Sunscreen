@@ -94,7 +94,7 @@ impl<T: NumCiphertexts, S> FheProgramNode<T, S> {
             // remain.
             // We invoke the dark transmutation ritual to turn a finite lifetime into a 'static.
             Self {
-                ids: unsafe { std::mem::transmute(ids_dest) },
+                ids: unsafe { std::mem::transmute::<&mut [NodeIndex], &[NodeIndex]>(ids_dest) },
                 stage,
                 _phantom: std::marker::PhantomData,
             }

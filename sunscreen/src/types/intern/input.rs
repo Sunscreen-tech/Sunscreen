@@ -87,6 +87,7 @@ fn can_create_inputs() {
         });
 
         ctx.swap(&RefCell::new(Some(unsafe {
+            // Transmute to same type to make context live long enough.
             transmute::<
                 &mut sunscreen_compiler_common::Context<FheOperation, Params>,
                 &mut sunscreen_compiler_common::Context<FheOperation, Params>,

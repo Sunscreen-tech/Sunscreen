@@ -150,7 +150,8 @@ pub fn probability_away_from_mean_gaussian(x: f64, std: f64) -> f64 {
 
 /// Returns the LWE standard deviation for a given dimension and security level,
 /// normalized to the ciphertext modulus (calculated with 2^64 as the modulus).
-/// Valid from 368 to 2048 dimensions and 78 to 130 bits of security.
+/// Valid from 368 to 2048 dimensions and 78 to 130 bits of security. Assumes
+/// that the private key is binary.
 ///
 /// There are constraints on the input space above 1472 dimensions, where the
 /// security level at the smallest amount of noise possible is higher than 78
@@ -227,7 +228,8 @@ pub fn lwe_security_level_to_std(dimension: usize, security_level: f64) -> Stand
 
 /// Returns the LWE security level for a given dimension and standard deviation,
 /// normalized to the ciphertext modulus (calculated with 2^64 as the modulus).
-/// Valid from 368 to 2048 dimensions and 78 to 130 bits of security.
+/// Valid from 368 to 2048 dimensions and 78 to 130 bits of security. Assumes
+/// that the private key is binary.
 ///
 /// The valid standard deviations are functions of the dimension, and hence not
 /// all standard deviations are valid for all dimensions. If a standard

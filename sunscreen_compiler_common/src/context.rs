@@ -1,4 +1,4 @@
-use std::fmt::Debug;
+use std::fmt::{Debug, Display};
 use std::ops::{Deref, DerefMut};
 
 use petgraph::algo::is_isomorphic_matching;
@@ -44,12 +44,12 @@ where
     }
 }
 
-impl<O> ToString for NodeInfo<O>
+impl<O> Display for NodeInfo<O>
 where
     O: Operation,
 {
-    fn to_string(&self) -> String {
-        self.render()
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.render())
     }
 }
 

@@ -42,7 +42,7 @@ impl<T> std::fmt::Debug for ProgramNode<T> {
 }
 
 /// Convenience function to create a ZKP program node
-pub fn zkp_node<F: FieldSpec, L>(lit: L) -> ProgramNode<Field<F>>
+pub fn zkp_node<F, L>(lit: L) -> ProgramNode<Field<F>>
 where
     F: FieldSpec,
     Field<F>: From<L>,
@@ -92,7 +92,7 @@ impl<T> ProgramNode<T> {
             // remain.
             // We invoke the dark transmutation ritual to turn a finite lifetime into a 'static.
             Self {
-                ids: unsafe { std::mem::transmute(ids_dest) },
+                ids: unsafe { std::mem::transmute::<&mut [NodeIndex], &[NodeIndex]>(ids_dest) },
                 _phantom: std::marker::PhantomData,
             }
         })

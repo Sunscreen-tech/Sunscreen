@@ -86,7 +86,13 @@ fn can_create_inputs() {
             security_level: SecurityLevel::TC128,
         });
 
-        ctx.swap(&RefCell::new(Some(unsafe { transmute(&mut context) })));
+        ctx.swap(&RefCell::new(Some(unsafe {
+            // Transmute to same type to make context live long enough.
+            transmute::<
+                &mut sunscreen_compiler_common::Context<FheOperation, Params>,
+                &mut sunscreen_compiler_common::Context<FheOperation, Params>,
+            >(&mut context)
+        })));
 
         let scalar_node: FheProgramNode<Rational> = FheProgramNode::input();
         let mut offset = 0;

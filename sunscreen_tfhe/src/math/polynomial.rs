@@ -345,9 +345,10 @@ mod tests {
             let mut actual = Polynomial::<Torus<u64>>::zero(a.len());
             c_fft.ifft(&mut actual);
 
+            let error_limit = 1e-9;
             for (a, e) in actual.coeffs().iter().zip(expected.coeffs().iter()) {
                 let err = normalized_torus_distance(a, e).abs();
-                assert!(err < 1e-9);
+                assert!(err < error_limit, "Error: {} >= {}", err, error_limit);
             }
         }
     }

@@ -91,12 +91,15 @@ fn multidimensional_arrays() {
     let result = runtime
         .run(
             app.get_fhe_program(determinant).unwrap(),
-            vec![a_c],
+            vec![a_c.clone()],
             &public_key,
         )
         .unwrap();
 
-    let c: Signed = runtime.decrypt(&result[0], &private_key).unwrap();
+    let spf = determinant.as_spf(&public_key);
+    let res = spf(a_c).unwrap();
+
+    let c: Signed = runtime.decrypt(&res, &private_key).unwrap();
 
     assert_eq!(c, Signed::from(-3));
     assert_eq!(c, determinant_impl(matrix));

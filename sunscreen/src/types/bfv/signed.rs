@@ -15,11 +15,12 @@ use crate::{
 };
 use crate::{
     types::{intern::FheProgramNode, BfvType, FheType, TypeNameInstance},
-    FheProgramInputTrait, Params, TypeName as DeriveTypeName, WithContext,
+    FheProgramPlaintextInput, Params, TypeName as DeriveTypeName, WithContext,
 };
 
 use sunscreen_runtime::{
-    InnerPlaintext, NumCiphertexts, Plaintext, TryFromPlaintext, TryIntoPlaintext,
+    impl_into_fhe_program_plaintext_input, InnerPlaintext, NumCiphertexts, Plaintext,
+    TryFromPlaintext, TryIntoPlaintext,
 };
 
 use std::ops::*;
@@ -52,7 +53,8 @@ mod sharing {
     }
 }
 
-impl FheProgramInputTrait for Signed {}
+impl FheProgramPlaintextInput for Signed {}
+impl_into_fhe_program_plaintext_input!(Signed);
 impl FheType for Signed {}
 impl BfvType for Signed {}
 

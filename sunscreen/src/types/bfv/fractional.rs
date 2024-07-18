@@ -14,12 +14,12 @@ use crate::{
 };
 use crate::{
     types::{intern::FheProgramNode, BfvType, FheType, Type, Version},
-    FheProgramInputTrait, Params, WithContext,
+    FheProgramPlaintextInput, Params, WithContext,
 };
 
 use sunscreen_runtime::{
-    InnerPlaintext, NumCiphertexts, Plaintext, TryFromPlaintext, TryIntoPlaintext, TypeName,
-    TypeNameInstance,
+    FheProgramInput, InnerPlaintext, NumCiphertexts, Plaintext, TryFromPlaintext, TryIntoPlaintext,
+    TypeName, TypeNameInstance,
 };
 
 use std::ops::*;
@@ -174,7 +174,12 @@ impl<const INT_BITS: usize> NumCiphertexts for Fractional<INT_BITS> {
     const NUM_CIPHERTEXTS: usize = 1;
 }
 
-impl<const INT_BITS: usize> FheProgramInputTrait for Fractional<INT_BITS> {}
+impl<const INT_BITS: usize> FheProgramPlaintextInput for Fractional<INT_BITS> {}
+impl<const INT_BITS: usize> From<Fractional<INT_BITS>> for FheProgramInput {
+    fn from(value: Fractional<INT_BITS>) -> Self {
+        Self::Plaintext(Box::new(value))
+    }
+}
 
 impl<const INT_BITS: usize> Default for Fractional<INT_BITS> {
     fn default() -> Self {

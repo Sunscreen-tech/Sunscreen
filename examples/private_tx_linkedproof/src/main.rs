@@ -17,8 +17,8 @@ use sunscreen::{
         },
         Cipher,
     },
-    zkp_program, zkp_var, Ciphertext, CompiledFheProgram, CompiledZkpProgram, Compiler,
-    FheProgramInput, FheZkpApplication, FheZkpRuntime, Params, PrivateKey, PublicKey, Result,
+    zkp_program, zkp_var, CompiledFheProgram, CompiledZkpProgram, Compiler, FheZkpApplication,
+    FheZkpRuntime, Params, PrivateKey, PublicKey, Result,
 };
 
 /// Subtract the transaction amount from the sender's balance.
@@ -229,7 +229,7 @@ impl User {
 pub struct Register {
     proof: LinkedProof,
     public_key: PublicKey,
-    encrypted_amount: Ciphertext,
+    encrypted_amount: Cipher<Signed>,
     deposit: Deposit,
 }
 
@@ -249,9 +249,9 @@ pub struct Deposit {
 pub struct Transfer {
     proof: LinkedProof,
     // Transfer amount encrypted under sender's key
-    encrypted_amount_sender: Ciphertext,
+    encrypted_amount_sender: Cipher<Signed>,
     // Transfer amount encrypted under receiver's key
-    encrypted_amount_receiver: Ciphertext,
+    encrypted_amount_receiver: Cipher<Signed>,
     sender: Username,
     receiver: Username,
 }
@@ -265,7 +265,7 @@ pub struct Transfer {
 #[derive(Clone)]
 pub struct RefreshBalance {
     proof: LinkedProof,
-    fresh_balance: Ciphertext,
+    fresh_balance: Cipher<Signed>,
     name: Username,
 }
 
@@ -285,7 +285,7 @@ pub enum Transaction {
 /// "send" functionalities, i.e. sending transactions that can mutate chain data.
 pub struct Chain {
     /// The current balances
-    balances: HashMap<Username, Ciphertext>,
+    balances: HashMap<Username, Cipher<Signed>>,
     /// The user's public keys
     keys: HashMap<Username, PublicKey>,
     /// Ledger of transactions
@@ -345,14 +345,12 @@ impl Chain {
         // Deposit into the user's balance
         let pk = self.keys.get(&name).unwrap();
         let curr_bal = self.balances.get_mut(&name).unwrap();
-        *curr_bal = self
-            .runtime
-            .run::<FheProgramInput>(
-                self.app.get_deposit_to_fhe(),
-                vec![curr_bal.clone().into(), Signed::from(public_amount).into()],
-                pk,
-            )?
-            .remove(0);
+        *curr_bal = deposit_to.run(
+            &self.runtime,
+            pk,
+            curr_bal.clone(),
+            Signed::from(public_amount),
+        )?;
         Ok(())
     }
 
@@ -386,26 +384,22 @@ impl Chain {
         // Update the sender's balance:
         let sender_pk = self.keys.get(&sender).unwrap();
         let sender_balance = self.balances.get_mut(&sender).unwrap();
-        *sender_balance = self
-            .runtime
-            .run(
-                self.app.get_transfer_from_fhe(),
-                vec![sender_balance.clone(), encrypted_amount_sender],
-                sender_pk,
-            )?
-            .remove(0);
+        *sender_balance = transfer_from.run(
+            &self.runtime,
+            sender_pk,
+            sender_balance.clone(),
+            encrypted_amount_sender,
+        )?;
 
         // Update receiver's balance
         let receiver_pk = self.keys.get(&receiver).unwrap();
         let receiver_balance = self.balances.get_mut(&receiver).unwrap();
-        *receiver_balance = self
-            .runtime
-            .run(
-                self.app.get_transfer_to_fhe(),
-                vec![receiver_balance.clone(), encrypted_amount_receiver],
-                receiver_pk,
-            )?
-            .remove(0);
+        *receiver_balance = transfer_to.run(
+            &self.runtime,
+            receiver_pk,
+            receiver_balance.clone(),
+            encrypted_amount_receiver,
+        )?;
         Ok(())
     }
 

@@ -32,6 +32,15 @@ pub fn map_fhe_type(arg_type: &Type) -> Result<Type, MapFheTypeError> {
 }
 
 /**
+ * Given an input type T, returns
+ * * sunscreen::Ciphertext when T is a Cipher<_> or [[..[Cipher<_>; N];.. M]; Q]
+ * * T otherwise
+ */
+pub fn map_spf_type(arg_type: &Type) -> Result<Type, MapFheTypeError> {
+    Ok(arg_type.clone())
+}
+
+/**
  * Emits code to make an FHE program node for the given
  * type T.
  */

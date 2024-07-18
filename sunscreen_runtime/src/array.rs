@@ -1,8 +1,9 @@
 use crate::{
-    Error, FheProgramInputTrait, InnerPlaintext, NumCiphertexts, Params, Plaintext, Result,
-    TryFromPlaintext, TryIntoPlaintext, Type, TypeName, TypeNameInstance, WithContext,
+    Ciphertext, Error, FheProgramCiphertextInput, FheProgramPlaintextInput, InnerCiphertext,
+    InnerPlaintext, IntoCiphertext, NumCiphertexts, Params, Plaintext, Result, TryFromPlaintext,
+    TryIntoPlaintext, Type, TypeName, TypeNameInstance, WithContext,
 };
-use seal_fhe::Plaintext as SealPlaintext;
+use seal_fhe::{Ciphertext as SealCiphertext, Plaintext as SealPlaintext};
 
 impl<T, const N: usize> TryIntoPlaintext for [T; N]
 where
@@ -68,7 +69,7 @@ where
     }
 }
 
-impl<T, const N: usize> FheProgramInputTrait for [T; N] where T: TypeName + TryIntoPlaintext {}
+impl<T, const N: usize> FheProgramPlaintextInput for [T; N] where T: TypeName + TryIntoPlaintext {}
 
 impl<T, const N: usize> NumCiphertexts for [T; N]
 where
@@ -76,3 +77,26 @@ where
 {
     const NUM_CIPHERTEXTS: usize = T::NUM_CIPHERTEXTS * N;
 }
+
+impl<T, const N: usize> IntoCiphertext for [T; N]
+where
+    T: IntoCiphertext,
+    Self: TypeName,
+{
+    fn into_ciphertext(&self) -> Ciphertext {
+        let element_ciphertexts = self
+            .iter()
+            .map(|v| v.into_ciphertext())
+            .flat_map(|p| match p.inner {
+                InnerCiphertext::Seal(v) => v,
+            })
+            .collect::<Vec<WithContext<SealCiphertext>>>();
+
+        Ciphertext {
+            inner: InnerCiphertext::Seal(element_ciphertexts),
+            data_type: Self::type_name(),
+        }
+    }
+}
+
+impl<T, const N: usize> FheProgramCiphertextInput for [T; N] where T: TypeName + IntoCiphertext {}

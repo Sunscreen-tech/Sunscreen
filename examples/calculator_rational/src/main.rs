@@ -7,7 +7,7 @@ use sunscreen::FheRuntime;
 use sunscreen::{
     fhe_program,
     types::{bfv::Rational, Cipher},
-    Ciphertext, Compiler, FheApplication, Params, PlainModulusConstraint, PublicKey, RuntimeError,
+    Compiler, FheApplication, Params, PlainModulusConstraint, PublicKey, RuntimeError,
 };
 
 fn help() {
@@ -26,7 +26,7 @@ fn help() {
 enum Term {
     Ans,
     F64(f64),
-    Encrypted(Ciphertext),
+    Encrypted(Cipher<Rational>),
 }
 
 enum Operand {
@@ -116,7 +116,7 @@ fn alice(
     send_pub: Sender<PublicKey>,
     send_calc: Sender<Expression>,
     recv_params: Receiver<Params>,
-    recv_res: Receiver<Ciphertext>,
+    recv_res: Receiver<Cipher<Rational>>,
 ) -> JoinHandle<()> {
     thread::spawn(move || {
         let stdin = io::stdin();
@@ -173,7 +173,7 @@ fn alice(
                 .unwrap();
 
             // Get our result from Bob and print it.
-            let result: Ciphertext = recv_res.recv().unwrap();
+            let result: Cipher<Rational> = recv_res.recv().unwrap();
             let result: Rational = match runtime.decrypt(&result, &private_key) {
                 Ok(v) => v,
                 Err(RuntimeError::TooMuchNoise) => {
@@ -189,27 +189,27 @@ fn alice(
     })
 }
 
+#[fhe_program(scheme = "bfv")]
+fn add(a: Cipher<Rational>, b: Cipher<Rational>) -> Cipher<Rational> {
+    a + b
+}
+
+#[fhe_program(scheme = "bfv")]
+fn sub(a: Cipher<Rational>, b: Cipher<Rational>) -> Cipher<Rational> {
+    a - b
+}
+
+#[fhe_program(scheme = "bfv")]
+fn mul(a: Cipher<Rational>, b: Cipher<Rational>) -> Cipher<Rational> {
+    a * b
+}
+
+#[fhe_program(scheme = "bfv")]
+fn div(a: Cipher<Rational>, b: Cipher<Rational>) -> Cipher<Rational> {
+    a / b
+}
+
 fn compile_fhe_programs() -> FheApplication {
-    #[fhe_program(scheme = "bfv")]
-    fn add(a: Cipher<Rational>, b: Cipher<Rational>) -> Cipher<Rational> {
-        a + b
-    }
-
-    #[fhe_program(scheme = "bfv")]
-    fn sub(a: Cipher<Rational>, b: Cipher<Rational>) -> Cipher<Rational> {
-        a - b
-    }
-
-    #[fhe_program(scheme = "bfv")]
-    fn mul(a: Cipher<Rational>, b: Cipher<Rational>) -> Cipher<Rational> {
-        a * b
-    }
-
-    #[fhe_program(scheme = "bfv")]
-    fn div(a: Cipher<Rational>, b: Cipher<Rational>) -> Cipher<Rational> {
-        a / b
-    }
-
     // We compile all the programs together so they have compatible
     // scheme parameters
     Compiler::new()
@@ -228,7 +228,7 @@ fn bob(
     recv_pub: Receiver<PublicKey>,
     recv_calc: Receiver<Expression>,
     send_params: Sender<Params>,
-    send_res: Sender<Ciphertext>,
+    send_res: Sender<Cipher<Rational>>,
 ) -> JoinHandle<()> {
     thread::spawn(move || {
         let app = compile_fhe_programs();
@@ -258,39 +258,14 @@ fn bob(
                 _ => panic!("Alice sent us a plaintext!"),
             };
 
-            let mut c = match op {
-                Operand::Add => runtime
-                    .run(
-                        app.get_fhe_program("add").unwrap(),
-                        vec![left, right],
-                        &public_key,
-                    )
-                    .unwrap(),
-                Operand::Sub => runtime
-                    .run(
-                        app.get_fhe_program("sub").unwrap(),
-                        vec![left, right],
-                        &public_key,
-                    )
-                    .unwrap(),
-                Operand::Mul => runtime
-                    .run(
-                        app.get_fhe_program("mul").unwrap(),
-                        vec![left, right],
-                        &public_key,
-                    )
-                    .unwrap(),
-                Operand::Div => runtime
-                    .run(
-                        app.get_fhe_program("div").unwrap(),
-                        vec![left, right],
-                        &public_key,
-                    )
-                    .unwrap(),
+            let c = match op {
+                Operand::Add => add.run(&runtime, &public_key, left, right).unwrap(),
+                Operand::Sub => sub.run(&runtime, &public_key, left, right).unwrap(),
+                Operand::Mul => mul.run(&runtime, &public_key, left, right).unwrap(),
+                Operand::Div => div.run(&runtime, &public_key, left, right).unwrap(),
             };
 
             // Our FHE program produces a single value, so move the value out of the vector.
-            let c = c.drain(0..).next().unwrap();
             ans = c.clone();
 
             send_res.send(c).unwrap();
@@ -309,7 +284,7 @@ fn main() {
     let (send_bob_params, receive_bob_params) = std::sync::mpsc::channel::<Params>();
 
     // A channel for Bob to send calculation results to Alice.
-    let (send_bob_result, receive_bob_result) = std::sync::mpsc::channel::<Ciphertext>();
+    let (send_bob_result, receive_bob_result) = std::sync::mpsc::channel::<Cipher<Rational>>();
 
     // We intentionally break Alice and Bob's roles into different functions to clearly
     // show the separation of their roles. In a real application, they're usually on

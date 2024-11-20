@@ -57,13 +57,13 @@ fn emit_limbs(x: &BigInt, num_limbs: usize) -> TokenStream2 {
 /// `#[barrett_config]` accepts `modulus`, `num_limbs`, and `is_field` as
 /// arguments.
 /// * `modulus` (required) - The modulus `q` defining the finite ring. This
-/// must be a string literal containing either a decimal or hex number. Hex
-/// values are prefixed with `0x`.
+///   must be a string literal containing either a decimal or hex number. Hex
+///   values are prefixed with `0x`.
 /// * `num_limbs` (required) - The number of 64-bit bigint limbs desired to
-/// represent Z_q.
+///   represent Z_q.
 /// * is_field (optional) - If `q` is prime, you may set this to true to
-/// define `Z_q` as a field. This additionally allows you to compute
-/// inverses.
+///   define `Z_q` as a field. This additionally allows you to compute
+///   inverses.
 pub fn derive_barrett_config(input: proc_macro::TokenStream) -> TokenStream {
     let input = parse_macro_input!(input);
     let opts = Opts::from_derive_input(&input);
@@ -155,7 +155,7 @@ pub fn derive_barrett_config(input: proc_macro::TokenStream) -> TokenStream {
 /// use std::ops::Add;
 /// use sunscreen_math_macros::refify_binary_op;
 ///
-/// pub trait WrappingSemantics:     
+/// pub trait WrappingSemantics:
 ///     Copy + Clone + std::fmt::Debug + WrappingAdd + WrappingMul + WrappingSub + WrappingNeg
 /// {
 /// }

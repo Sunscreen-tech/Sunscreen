@@ -11,7 +11,7 @@ use super::scalar_mul_ciphertext_mad;
 /// * `b` is a LEV ciphertext.
 /// * `c` is a LWE ciphertext.
 /// * \[*\] is the external product between a LEV ciphertext and the decomposed
-/// LWE ciphertext.
+///     LWE ciphertext.
 ///
 /// # Remarks
 /// This functions takes a PolynomialRadixIterator to perform the decomposition.

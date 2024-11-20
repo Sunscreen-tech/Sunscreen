@@ -105,8 +105,8 @@ impl PrivateFunctionalKeyswitchLweCount {
 /// * `count` must be greater than zero.
 /// * `radix_log` must be greater than zero.
 /// * `count * radix_log` must be less than equal to the number of bits in the
-/// [`Torus`](crate::Torus) element used in the operation(s) performing radix
-/// decomposition.
+///   [`Torus`](crate::Torus) element used in the operation(s) performing radix
+///   decomposition.
 ///
 /// Calling [`assert_valid`](Self::assert_valid) will panic if the parameters are invalid.
 pub struct RadixDecomposition {

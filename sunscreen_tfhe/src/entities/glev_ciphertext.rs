@@ -1,7 +1,9 @@
-use num::Complex;
+use num::{Complex, Zero};
 use serde::{Deserialize, Serialize};
 
-use crate::{dst::OverlaySize, GlweDef, GlweDimension, RadixCount, Torus, TorusOps};
+use crate::{
+    dst::OverlaySize, GlweDef, GlweDimension, RadixCount, RadixDecomposition, Torus, TorusOps,
+};
 
 use super::{
     GlevCiphertextFftRef, GlweCiphertextIterator, GlweCiphertextIteratorMut, GlweCiphertextRef,
@@ -26,6 +28,20 @@ where
 
     fn size(t: Self::Inputs) -> usize {
         GlweCiphertextRef::<S>::size(t.0) * t.1 .0
+    }
+}
+
+impl<S> GlevCiphertext<S>
+where
+    S: TorusOps,
+{
+    /// Create a new zero GGSW ciphertext with the given parameters.
+    pub fn new(params: &GlweDef, radix: &RadixDecomposition) -> Self {
+        let elems = GlevCiphertextRef::<S>::size((params.dim, radix.count));
+
+        Self {
+            data: avec![Torus::zero(); elems],
+        }
     }
 }
 
@@ -54,5 +70,13 @@ where
         {
             i.fft(fft, params);
         }
+    }
+
+    /// Assert that this entityt is valid.
+    pub fn assert_valid(&self, params: &GlweDef, radix: &RadixDecomposition) {
+        assert_eq!(
+            self.data.len(),
+            GlevCiphertextRef::<S>::size((params.dim, radix.count))
+        );
     }
 }

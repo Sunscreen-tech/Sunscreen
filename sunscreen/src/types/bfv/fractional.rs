@@ -107,7 +107,7 @@ use std::ops::*;
  * * The underlying [`f64`] is infinite.
  * * The underlying [`f64`] is NaN
  * * The integer portion of the underlying [`f64`] exceeds the precision for
- * `INT_BITS`
+ *   `INT_BITS`
  *
  * Subnormals flush to 0, while normals are represented without precision loss.
  *
@@ -126,13 +126,13 @@ use std::ops::*;
  *
  * To mitigate these issues, you should do some mix of the following:
  * * Ensure inputs never result in either of these scenarios. Inputs to a
- * FHE program need to have small enough digits to avoid digit overflow, values
- * are small enough to avoid integer underflow, and have few enough decimal
- * places to avoid decimal underflow.
+ *   FHE program need to have small enough digits to avoid digit overflow, values
+ *   are small enough to avoid integer underflow, and have few enough decimal
+ *   places to avoid decimal underflow.
  * * Alice can periodically decrypt values, call turn the [`Fractional`] into
- * an [`f64`], turn that back into a [`Fractional`], and re-encrypt. This will
- * propagate carries and truncate the decimal portion to at most 53
- * places (radix 2).
+ *   an [`f64`], turn that back into a [`Fractional`], and re-encrypt. This will
+ *   propagate carries and truncate the decimal portion to at most 53
+ *   places (radix 2).
  *
  * ```rust
  * # use sunscreen::types::bfv::Fractional;
@@ -154,9 +154,9 @@ use std::ops::*;
  *
  * Overflow aside, decryption can result in more acceptable and exprected precision loss:
  * * If `INT_BITS > 1024`, the [`Fractional`]'s int can exceed [`f64::MAX`],
- * resulting in [`f64::INFINITY`].
+ *   resulting in [`f64::INFINITY`].
  * * Decrypion will truncate precision beyond the 53 floating point mantissa bits (52 for subnormals). As previously mentioned, encrypting a subnormal
- *  flushes to 0.
+ *   flushes to 0.
  */
 pub struct Fractional<const INT_BITS: usize> {
     val: f64,

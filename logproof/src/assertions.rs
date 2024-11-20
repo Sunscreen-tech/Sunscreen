@@ -276,10 +276,10 @@ pub mod linear_relation {
      * The identity is given below (compile docs with mathjax support to view):
      *
      * $
-     * \left<\mathbf{A}(\alpha)^T \vec{\gamma} \otimes \vec{\beta} \otimes \vec{\alpha}_d \otimes \vec{2}_b, \mathrm{Binary}_b(\vec{s})\right>
-     * + \left<q\vec{\gamma} \otimes \vec{\beta} \otimes \vec{\alpha}_{2d-1} \otimes \vec{2}_{b_1}, \mathrm{Binary}_{b_1}(\vec{r_1}) \right>
-     * + \left< \mathbf{f}(\alpha)\vec{\gamma} \otimes \vec{\beta} \otimes \vec{\alpha}_{d-1} \otimes \vec{2}_{b_2}, \mathrm{Binary}_{b_2}(\vec{r_2}) \right>
-     * = \vec{\gamma}^T \mathbf{T}(\alpha)\vec{\beta}
+     * \left<\mathbf{A}(\alpha)^T \vec{\gamma} \otimes \vec{\beta} \otimes \vec{\alpha}_d \otimes \vec{2}_b, \mathrm{Binary}_b(\vec{s})\right> +
+     * \left<q\vec{\gamma} \otimes \vec{\beta} \otimes \vec{\alpha}_{2d-1} \otimes \vec{2}_{b_1}, \mathrm{Binary}_{b_1}(\vec{r_1}) \right> +
+     * \left< \mathbf{f}(\alpha)\vec{\gamma} \otimes \vec{\beta} \otimes \vec{\alpha}_{d-1} \otimes \vec{2}_{b_2}, \mathrm{Binary}_{b_2}(\vec{r_2}) \right> =
+     * \vec{\gamma}^T \mathbf{T}(\alpha)\vec{\beta}
      * $
      */
     pub fn assert_equation_19<Q>(

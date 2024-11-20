@@ -187,19 +187,19 @@ impl Plaintext {
      * rules:
      * 1. Terms are listed in order of strictly decreasing exponent
      * 2. Coefficient values are non-negative and in hexadecimal format (upper
-     * and lower case letters are both supported)
+     *    and lower case letters are both supported)
      * 3. Exponents are positive and in decimal format
      * 4. Zero coefficient terms (including the constant term) may be (but do
-     * not have to be) omitted
+     *    not have to be) omitted
      * 5. Term with the exponent value of one must be exactly written as x^1
      * 6. Term with the exponent value of zero (the constant term) must be written
-     * as just a hexadecimal number without exponent
+     *    as just a hexadecimal number without exponent
      * 7. Terms must be separated by exactly \[space\]+\[space\] and minus is not
-     * allowed
+     *    allowed
      * 8. Other than the +, no other terms should have whitespace
      *
      * * `hex_str`: The formatted polynomial string specifying the plaintext
-     * polynomial.
+     *   polynomial.
      *
      * # Panics
      * Panics if `hex_str` contains a null character anywhere but the end of the string.

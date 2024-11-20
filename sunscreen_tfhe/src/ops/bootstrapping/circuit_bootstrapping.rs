@@ -59,15 +59,15 @@ use crate::{
 ///
 /// # Panics
 /// * If `bsk` is not valid for bootrapping from parameters `lwe_0` to `glwe_2`
-/// (reinterpreted as LWE) with radix decomposition `pbs_radix`.
+///   (reinterpreted as LWE) with radix decomposition `pbs_radix`.
 /// * If `cbsksk` is not a valid keyswitch key set for switching from `glwe_2`
-/// (reintrerpreted as LWE) to `glwe_1` with `glwe_1.dim.size` entries and radix
-/// decomposition `pfks_radix`.
+///   (reintrerpreted as LWE) to `glwe_1` with `glwe_1.dim.size` entries and radix
+///   decomposition `pfks_radix`.
 /// * If `output` is not the correct length for a GGSW ciphertext under `glwe_1`
-/// parameters with `cbs_radix` decomposition.
+///   parameters with `cbs_radix` decomposition.
 /// * If `input` is not a valid LWE ciphertext under `lwe_0` parameters.
 /// * If `lwe_0`, `glwe_1`, `glwe_2`, `cbs_radix`, `pfks_radix`, `pbs_radix` are
-/// invalid.
+///   invalid.
 ///
 /// # Example
 /// ```

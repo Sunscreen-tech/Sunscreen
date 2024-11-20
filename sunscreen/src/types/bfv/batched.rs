@@ -46,11 +46,11 @@ use sunscreen_runtime::{Error as RuntimeError, Result as RuntimeResult};
  * wrap around rather than truncate. The Batched type exposes these as the
  * `<<`, `>>`, and `swap_rows` operators:
  * * `x << n`, where n is a u64 rotates each row n places to the left.
- * For example, `[0, 1, 2, 3; 4, 5, 6, 7] << 3` yields
- * `[3, 0, 1, 2; 7, 4, 5, 6]` (note that real vectors have many more
- * columns).
+ *   For example, `[0, 1, 2, 3; 4, 5, 6, 7] << 3` yields
+ *   `[3, 0, 1, 2; 7, 4, 5, 6]` (note that real vectors have many more
+ *   columns).
  * * `x << n`, where n is a u64 rotates each lane n places to the left.
- * For example, `[0, 1, 2, 3; 4, 5, 6, 7] >> 1` yields `[3, 0, 1, 2; 7, 4, 5, 6]`.
+ *   For example, `[0, 1, 2, 3; 4, 5, 6, 7] >> 1` yields `[3, 0, 1, 2; 7, 4, 5, 6]`.
  * * `x.swap_rows()` swaps the rows. For example, `[0, 1, 2, 3; 4, 5, 6, 7].swap_rows()` yields `[4, 5, 6, 7; 0, 1, 2, 3]`.
  *
  * # Performance

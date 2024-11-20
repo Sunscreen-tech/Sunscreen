@@ -16,29 +16,30 @@
  * provides types that transparently encode data you might actually want
  * to use into and out of polynomials. These include:
  * * The [`Signed`](crate::types::bfv::Signed) type represents a signed integer that
- * encodes a binary value decomposed into a number of digits. This encoding
- * allows for somewhat efficiently representing integers, but has unusual
- * overflow semantics developers need to understand. This type supports
- * addition, subtraction, multiplication, and negation.
+ *   encodes a binary value decomposed into a number of digits. This encoding
+ *   allows for somewhat efficiently representing integers, but has unusual
+ *   overflow semantics developers need to understand. This type supports
+ *   addition, subtraction, multiplication, and negation.
  * * The [`Fractional`](crate::types::bfv::Fractional) type is a quasi fixed-point
- * value. It allows you to homomorphically compute decimal values as
- * efficiently as the [`Signed`](crate::types::bfv::Signed) type. This type has complex overflow
- * conditions. This type intrinsically supports homomorphic addition
- * multiplication, and negation. Dividing by an [`f64`] constant is supported.
- * Dividing by ciphertext is not possible.
+ *   value. It allows you to homomorphically compute decimal values as
+ *   efficiently as the [`Signed`](crate::types::bfv::Signed) type. This type has complex overflow
+ *   conditions. This type intrinsically supports homomorphic addition
+ *   multiplication, and negation. Dividing by an [`f64`] constant is supported.
+ *   Dividing by ciphertext is not possible.
  * * The [`Rational`](crate::types::bfv::Rational) type allows quasi fixed-point
- * representation. This type interally uses 2 ciphertexts, and is thus requires
- * twice as much space as other types. Its overflow semantics are effectively
- * those of two [`Signed`](crate::types::bfv::Signed) values. However, this type is
- * less efficient than [`Fractional`](crate::types::bfv::Fractional), as it
- * requires 2 multiplications for addition and subtraction. Unlike other types,
- * [`Rational`](crate::types::bfv::Rational) supports ciphertext-ciphertext
- * division.
+ *   representation. This type interally uses 2 ciphertexts, and is thus requires
+ *   twice as much space as other types. Its overflow semantics are effectively
+ *   those of two [`Signed`](crate::types::bfv::Signed) values. However, this type is
+ *   less efficient than [`Fractional`](crate::types::bfv::Fractional), as it
+ *   requires 2 multiplications for addition and subtraction. Unlike other types,
+ *   [`Rational`](crate::types::bfv::Rational) supports ciphertext-ciphertext
+ *   division.
  * * The [`Batched`](crate::types::bfv::Batched) type packs thousands of signed integers
- * into lanes by exploiting the Chinese remainder theorem for cyclotomic polynomials.
- * Arithmetic operations semantically execute per-lane, enabling high-throughput;
- * e.g. a single addition operation `a + b` will element-wise add the many lanes of a to the
- * many lanes in b.
+ *   into lanes by exploiting the Chinese remainder theorem for cyclotomic polynomials.
+ *   Arithmetic operations semantically execute per-lane, enabling high-throughput;
+ *   e.g. a single addition operation `a + b` will element-wise add the many lanes of a to the
+ *   many lanes in b.
+ *
  * Type comparison:
  *
  * | Type       | # ciphertexts | overflow conditions | values            | ops/add        | ops/mul | ops/sub        | ops/neg | ops/div |

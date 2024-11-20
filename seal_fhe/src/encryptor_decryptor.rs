@@ -230,8 +230,8 @@ impl<T: marker::Asym> Encryptor<T> {
      * The encryption parameters for the resulting ciphertext correspond to:
      * 1) in BFV, the highest (data) level in the modulus switching chain,
      * 2) in CKKS, the encryption parameters of the plaintext.
-     * Dynamic memory allocations in the process are allocated from the memory
-     * pool pointed to by the given MemoryPoolHandle.
+     *    Dynamic memory allocations in the process are allocated from the memory
+     *    pool pointed to by the given MemoryPoolHandle.
      *
      * * `plainext` - The plaintext to encrypt.
      */
@@ -261,8 +261,8 @@ impl<T: marker::Asym> Encryptor<T> {
      * The encryption parameters for the resulting ciphertext correspond to:
      * 1) in BFV, the highest (data) level in the modulus switching chain,
      * 2) in CKKS, the encryption parameters of the plaintext.
-     * Dynamic memory allocations in the process are allocated from the memory
-     * pool pointed to by the given MemoryPoolHandle.
+     *    Dynamic memory allocations in the process are allocated from the memory
+     *    pool pointed to by the given MemoryPoolHandle.
      *
      * * `plainext` - The plaintext to encrypt.
      */
@@ -408,8 +408,8 @@ impl<T: marker::Sym> Encryptor<T> {
      * The encryption parameters for the resulting ciphertext correspond to:
      * 1) in BFV, the highest (data) level in the modulus switching chain,
      * 2) in CKKS, the encryption parameters of the plaintext.
-     * Dynamic memory allocations in the process are allocated from the memory
-     * pool pointed to by the given MemoryPoolHandle.
+     *    Dynamic memory allocations in the process are allocated from the memory
+     *    pool pointed to by the given MemoryPoolHandle.
      *
      * * `plainext` - The plaintext to encrypt.
      */
@@ -482,8 +482,8 @@ impl<T: marker::Sym> Encryptor<T> {
     /// The encryption parameters for the resulting ciphertext correspond to:
     /// 1) in BFV, the highest (data) level in the modulus switching chain,
     /// 2) in CKKS, the encryption parameters of the plaintext.
-    /// Dynamic memory allocations in the process are allocated from the memory
-    /// pool pointed to by the given MemoryPoolHandle.
+    ///    Dynamic memory allocations in the process are allocated from the memory
+    ///    pool pointed to by the given MemoryPoolHandle.
     ///
     /// * `plainext` - The plaintext to encrypt.
     pub fn encrypt_symmetric_return_components(

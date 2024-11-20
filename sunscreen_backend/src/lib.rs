@@ -4,7 +4,7 @@
 //! This crate contains the backend compiler for sunscreen FHE programs. It includes the
 //! following useful operations:
 //! * [`compile`] takes either an FHE program from the compiler frontend and applies a set
-//! of transformations.
+//!   of transformations.
 
 mod error;
 /**

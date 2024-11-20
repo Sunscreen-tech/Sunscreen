@@ -20,8 +20,8 @@ const VECLENDIV2: usize = 4096;
  * Writing the implementation generically allows us to:
  * * Run it without using FHE.
  * * Share the implementation for different data types. Imagine we
- * had another encryption scheme that supported Batched, this implementation
- * would work for that as well!
+ *   had another encryption scheme that supported Batched, this implementation
+ *   would work for that as well!
  */
 fn dot_product_impl<T>(a: T, b: T) -> T
 where

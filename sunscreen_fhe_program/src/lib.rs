@@ -43,17 +43,17 @@ pub enum SchemeType {
      * meanings onto these coefficients:
      *
      * * An integer x modulo p by setting the x^0 term to x and the remaining terms to 0 (i.e. scalar encoder).
-     * This encoding requires p be the desired maximum representable value. Overflow causes wrapping as
-     * one would expect. This encoding is generally inefficient.
+     *   This encoding requires p be the desired maximum representable value. Overflow causes wrapping as
+     *   one would expect. This encoding is generally inefficient.
      * * An integer x decomposed into digits, where each digit is a coefficient in the plaintext polynomial.
-     * One may represent numbers larger than p with this technique. P should be chosen to accomodate the number
-     * of operations one wishes to perform so that no digit overflows under addition and multiplication. Overflow
-     * causes weird answers. Since this encoding typically allows for a smaller plaintext modulo, Sunscreen
-     * can choose parameters that result in low latency.
+     *   One may represent numbers larger than p with this technique. P should be chosen to accomodate the number
+     *   of operations one wishes to perform so that no digit overflows under addition and multiplication. Overflow
+     *   causes weird answers. Since this encoding typically allows for a smaller plaintext modulo, Sunscreen
+     *   can choose parameters that result in low latency.
      * * A 2x(N/2) Batched vector of integers modulo p. Overflow wraps lane-wise, as expected. This encoding
-     * generally maximizes throughput when calulating many numbers. While the representation forms a matrix,
-     * multiplication and addition both execute element-wise; multiplication is *not* defined as matrix multiplation.
-     * This Batched computation is also referred to on the literature as batching.
+     *   generally maximizes throughput when calulating many numbers. While the representation forms a matrix,
+     *   multiplication and addition both execute element-wise; multiplication is *not* defined as matrix multiplation.
+     *   This Batched computation is also referred to on the literature as batching.
      *
      * Each of these encoding schemes supports both signed and unsigned values.
      *
@@ -86,7 +86,7 @@ pub enum SchemeType {
      * Cons:
      * * Bootstrapping not natively supported and isn't fast if one does implement it.
      * * Some operations (e.g. comparison, division) are not easy to implement and any implementation
-     * will be approximate and/or particular to the scheme parameters.
+     *   will be approximate and/or particular to the scheme parameters.
      */
     Bfv,
 }

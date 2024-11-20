@@ -86,7 +86,7 @@ impl Context {
      *
      * * `params` - The encryption parameters.
      * * `expand_mod_chain` - Determines whether the modulus switching chain
-     * should be created.
+     *   should be created.
      */
     #[cfg(feature = "insecure-params")]
     pub fn new_insecure(params: &EncryptionParameters, expand_mod_chain: bool) -> Result<Self> {

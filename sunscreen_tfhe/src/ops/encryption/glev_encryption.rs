@@ -156,7 +156,7 @@ mod tests {
         let params = &TEST_GLWE_DEF_1;
         let radix = &TEST_RADIX;
 
-        let sk = keygen::generate_binary_glwe_sk(&params);
+        let sk = keygen::generate_binary_glwe_sk(params);
 
         let msg = 1u64;
         let mut poly_msg = Polynomial::zero(params.dim.polynomial_degree.0);
@@ -166,8 +166,8 @@ mod tests {
         let mut glev_ciphertext = GlevCiphertext::new(params, radix);
         let mut output_msg = Polynomial::zero(params.dim.polynomial_degree.0);
 
-        encrypt_glev_ciphertext(&mut glev_ciphertext, poly_msg, &sk, &params, radix);
-        decrypt_glev_ciphertext(&mut output_msg, &glev_ciphertext, &sk, &params, radix);
+        encrypt_glev_ciphertext(&mut glev_ciphertext, poly_msg, &sk, params, radix);
+        decrypt_glev_ciphertext(&mut output_msg, &glev_ciphertext, &sk, params, radix);
 
         assert_eq!(output_msg.coeffs()[0], msg.into());
 

@@ -10,7 +10,7 @@ use super::{
 };
 
 dst! {
-    /// A GLEV ciphertext. For the FFT variant, see
+    /// A GLev ciphertext. For the FFT variant, see
     /// [`GlevCiphertextFft`](crate::entities::GlevCiphertextFft).
     GlevCiphertext,
     GlevCiphertextRef,
@@ -35,7 +35,7 @@ impl<S> GlevCiphertext<S>
 where
     S: TorusOps,
 {
-    /// Create a new zero GGSW ciphertext with the given parameters.
+    /// Create a new zero GLev ciphertext with the given parameters.
     pub fn new(params: &GlweDef, radix: &RadixDecomposition) -> Self {
         let elems = GlevCiphertextRef::<S>::size((params.dim, radix.count));
 

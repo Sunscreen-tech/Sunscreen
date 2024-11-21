@@ -47,7 +47,7 @@ pub(crate) fn encrypt_glev_ciphertext_generic<S>(
 
 #[allow(dead_code)]
 /// Encrypt a GLev ciphertext with a given message polynomial and secret key.
-pub(crate) fn encrypt_glev_ciphertext<S>(
+pub fn encrypt_glev_ciphertext<S>(
     glev_ciphertext: &mut GlevCiphertextRef<S>,
     msg: &PolynomialRef<Torus<S>>,
     glwe_secret_key: &GlweSecretKeyRef<S>,
@@ -70,7 +70,7 @@ pub(crate) fn encrypt_glev_ciphertext<S>(
 /// Encrypt a GLev ciphertext with a given message polynomial and secret key.
 /// This is a trivial encryption that doesn't use the secret key and is not
 /// secure.
-pub(crate) fn trivially_encrypt_glev_ciphertext<S>(
+pub fn trivially_encrypt_glev_ciphertext<S>(
     glev_ciphertext: &mut GlevCiphertextRef<S>,
     msg: &PolynomialRef<Torus<S>>,
     params: &GlweDef,
@@ -128,7 +128,7 @@ where
 
 #[allow(dead_code)]
 /// Decrypt a GLev ciphertext with a given secret key.
-pub(crate) fn decrypt_glev_ciphertext<S>(
+pub fn decrypt_glev_ciphertext<S>(
     msg: &mut PolynomialRef<Torus<S>>,
     glev_ciphertext: &GlevCiphertextRef<S>,
     glwe_secret_key: &GlweSecretKeyRef<S>,

@@ -16,9 +16,7 @@ pub fn get_fft(log_n: usize) -> &'static TwistedFft<f64> {
     // Can FFT powers of 2 from N=1 up to 4096.
     assert!(log_n < 13);
 
-    let cache = FFT_CACHE.get_or_init(|| {
-        (0..13).map(|i| TwistedFft::new(0x1 << i)).collect()
-    });
+    let cache = FFT_CACHE.get_or_init(|| (0..13).map(|i| TwistedFft::new(0x1 << i)).collect());
 
     &cache[log_n]
 }

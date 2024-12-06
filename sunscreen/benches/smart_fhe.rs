@@ -8,7 +8,6 @@ use sunscreen::{
 
 /// This program benchmarks all the FHE pieces of private transactions with
 /// SMART FHE.
-
 fn benchmark(params: &Params) {
     println!("Benchmarking for {:#?}", params);
 

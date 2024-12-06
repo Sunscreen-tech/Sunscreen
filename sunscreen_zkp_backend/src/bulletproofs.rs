@@ -338,7 +338,7 @@ impl BulletproofsBackend {
         constant_inputs: &[BigInt],
         pc_gens: &'g PedersenGens,
         transcript: &'g mut Transcript,
-    ) -> Result<Prover<'g, &mut Transcript>> {
+    ) -> Result<Prover<'g, &'g mut Transcript>> {
         let prog = self.jit_prover(program, private_inputs, public_inputs, constant_inputs)?;
 
         let inputs = [public_inputs, private_inputs].concat();

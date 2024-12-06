@@ -414,7 +414,7 @@ mod linked {
     /// A builder for an [`Sdlp`] (without any linked ZKP program).
     pub type SdlpBuilder<'r, 'k> = LogProofBuilder<'r, 'k, 'static, Fhe, ()>;
 
-    impl<'r, 'k> SdlpBuilder<'r, 'k> {
+    impl<'r> SdlpBuilder<'r, '_> {
         /// Create a new [`SdlpBuilder`].
         pub fn new(runtime: &'r FheRuntime) -> Self {
             LogProofBuilder::new_internal(runtime)
@@ -430,7 +430,7 @@ mod linked {
     pub type LinkedProofBuilder<'r, 'k, 'z> =
         LogProofBuilder<'r, 'k, 'z, FheZkp, BulletproofsBackend>;
 
-    impl<'r, 'k, 'z> LinkedProofBuilder<'r, 'k, 'z> {
+    impl<'r> LinkedProofBuilder<'r, '_, '_> {
         /// Create a new [`LinkedProofBuilder`].
         pub fn new(runtime: &'r FheZkpRuntime<BulletproofsBackend>) -> Self {
             LogProofBuilder::new_internal(runtime)
@@ -447,7 +447,7 @@ mod linked {
         }
     }
 
-    impl<'r, 'k, 'z, M: marker::Fhe, Z> LogProofBuilder<'r, 'k, 'z, M, Z> {
+    impl<'r, 'k, M: marker::Fhe, Z> LogProofBuilder<'r, 'k, '_, M, Z> {
         /// Create a new [`LogProofBuilder`].
         fn new_internal(runtime: &'r GenericRuntime<M, Z>) -> Self {
             Self {
@@ -799,7 +799,7 @@ mod linked {
         }
     }
 
-    impl<'r, 'k, 'z, M: marker::Fhe + marker::Zkp> LogProofBuilder<'r, 'k, 'z, M, BulletproofsBackend> {
+    impl<'k, 'z, M: marker::Fhe + marker::Zkp> LogProofBuilder<'_, 'k, 'z, M, BulletproofsBackend> {
         /// Encrypt a plaintext intended for linking.
         ///
         /// The returned `LinkedMessage` can be used:
@@ -999,7 +999,7 @@ mod linked {
     pub type SdlpVerificationBuilder<'r, 'k> =
         LogProofVerificationBuilder<'r, 'k, 'static, Fhe, ()>;
 
-    impl<'r, 'k> SdlpVerificationBuilder<'r, 'k> {
+    impl<'r> SdlpVerificationBuilder<'r, '_> {
         /// Create a new [`SdlpVerificationBuilder`].
         pub fn new(runtime: &'r FheRuntime) -> Self {
             LogProofVerificationBuilder::new_internal(runtime)
@@ -1027,7 +1027,7 @@ mod linked {
     pub type LinkedProofVerificationBuilder<'r, 'k, 'z> =
         LogProofVerificationBuilder<'r, 'k, 'z, FheZkp, BulletproofsBackend>;
 
-    impl<'r, 'k, 'z> LinkedProofVerificationBuilder<'r, 'k, 'z> {
+    impl<'r> LinkedProofVerificationBuilder<'r, '_, '_> {
         /// Create a new [`LinkedProofVerificationBuilder`].
         pub fn new(runtime: &'r FheZkpRuntime<BulletproofsBackend>) -> Self {
             LogProofVerificationBuilder::new_internal(runtime)
@@ -1059,7 +1059,7 @@ mod linked {
         }
     }
 
-    impl<'r, 'k, 'z, M: marker::Fhe, Z> LogProofVerificationBuilder<'r, 'k, 'z, M, Z> {
+    impl<'r, 'k, M: marker::Fhe, Z> LogProofVerificationBuilder<'r, 'k, '_, M, Z> {
         fn new_internal(runtime: &'r GenericRuntime<M, Z>) -> Self {
             Self {
                 runtime,
@@ -1272,8 +1272,8 @@ mod linked {
         }
     }
 
-    impl<'r, 'k, 'z, M: marker::Fhe + marker::Zkp>
-        LogProofVerificationBuilder<'r, 'k, 'z, M, BulletproofsBackend>
+    impl<'k, 'z, M: marker::Fhe + marker::Zkp>
+        LogProofVerificationBuilder<'_, 'k, 'z, M, BulletproofsBackend>
     {
         /// Add verifier knowledge for [`LogProofBuilder::encrypt_returning_link`].
         pub fn encrypt_returning_link<P>(

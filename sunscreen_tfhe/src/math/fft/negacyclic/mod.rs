@@ -1,6 +1,6 @@
 use std::{
     f64::consts::PI,
-    sync::{Arc, Once},
+    sync::{Arc, OnceLock},
 };
 
 use num::{Complex, Float, One};
@@ -9,21 +9,16 @@ use rustfft::{Fft, FftPlanner};
 
 use crate::{scratch::allocate_scratch, FrequencyTransform};
 
-static FFT_CACHE_INIT: Once = Once::new();
-static mut FFT_CACHE: Vec<TwistedFft<f64>> = vec![];
+static FFT_CACHE: OnceLock<Vec<TwistedFft<f64>>> = OnceLock::new();
 
 /// Get a [TwistedFft] for a given log N.
 pub fn get_fft(log_n: usize) -> &'static TwistedFft<f64> {
     // Can FFT powers of 2 from N=1 up to 4096.
     assert!(log_n < 13);
 
-    FFT_CACHE_INIT.call_once(|| {
-        for i in 0..13 {
-            unsafe { FFT_CACHE.push(TwistedFft::new(0x1 << i)) };
-        }
-    });
+    let cache = FFT_CACHE.get_or_init(|| (0..13).map(|i| TwistedFft::new(0x1 << i)).collect());
 
-    unsafe { &FFT_CACHE[log_n] }
+    &cache[log_n]
 }
 
 /// Perform FFT with a twist so points can be used for

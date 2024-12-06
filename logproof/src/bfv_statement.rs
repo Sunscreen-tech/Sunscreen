@@ -69,7 +69,7 @@ pub enum BfvProofStatement<'p> {
     },
 }
 
-impl<'p> BfvProofStatement<'p> {
+impl BfvProofStatement<'_> {
     /// Get the message index of this statement.
     pub fn message_id(&self) -> usize {
         match self {

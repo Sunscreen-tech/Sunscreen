@@ -3,8 +3,8 @@ use num::Complex;
 use crate::{
     dst::{FromMutSlice, OverlaySize},
     entities::{
-        GgswCiphertextFftRef, GlevCiphertextFftRef, GlweCiphertextFftRef, GlweCiphertextRef,
-        PolynomialFftRef, PolynomialRef,
+        GgswCiphertextFftRef, GlevCiphertextFftRef, GlevCiphertextRef, GlweCiphertextFftRef,
+        GlweCiphertextRef, PolynomialFftRef, PolynomialRef, SchemeSwitchKeyFftRef,
     },
     ops::ciphertext::{add_glwe_ciphertexts, sub_glwe_ciphertexts},
     radix::PolynomialRadixIterator,
@@ -59,6 +59,7 @@ pub fn glwe_ggsw_mad<S>(
 ///
 /// # Remarks
 /// This functions takes a PolynomialRadixIterator to perform the decomposition.
+/// This function is also known as the gadget product.
 pub fn decomposed_polynomial_glev_mad<S>(
     c: &mut GlweCiphertextFftRef<Complex<f64>>,
     mut a: PolynomialRadixIterator<S>,
@@ -165,17 +166,263 @@ pub fn cmux<S>(
     add_glwe_ciphertexts(c, prod, d_0, params);
 }
 
+/// This is the same as `generate_encrypted_secret_key_component` but it assumes
+/// that all the positions where the index is not being written are already
+/// zeroed out.
+fn update_encrypted_secret_key_component_fft<S>(
+    output: &mut GlweCiphertextFftRef<Complex<f64>>,
+    glwe_ciphertext: &GlweCiphertextRef<S>,
+    index: usize,
+    params: &GlweDef,
+) where
+    S: TorusOps,
+{
+    assert!(
+        index < params.dim.size.0,
+        "update_encrypted_secret_key_component: index out of bounds"
+    );
+
+    let b = glwe_ciphertext.b(params);
+
+    b.fft(output.a_mut(params).nth(index).unwrap());
+}
+
+/// The operation that happens on each GLWE ciphertext during
+/// scheme switching.
+fn scheme_switch_glwe_operation<S>(
+    j: usize,
+    k: usize,
+    y_i_j: &mut GlweCiphertextFftRef<Complex<f64>>,
+    x_i: &GlweCiphertextRef<S>,
+    ssk_fft: &SchemeSwitchKeyFftRef<Complex<f64>>,
+    params: &GlweDef,
+    radix_ss: &RadixDecomposition,
+) where
+    S: TorusOps,
+{
+    // Skip complex processing for the last row, just do FFT
+    if j == k {
+        x_i.fft(y_i_j, params);
+        return;
+    }
+
+    // Thread-local scratch space
+    allocate_scratch_ref!(scratch, PolynomialRef<S>, (params.dim.polynomial_degree));
+
+    let a_i = x_i.a(params);
+
+    // Generate encrypted secret key component for this specific GLWE
+    update_encrypted_secret_key_component_fft(y_i_j, x_i, j, params);
+
+    // Process each polynomial in the mask
+    for (r, a_i_r) in a_i.enumerate() {
+        let decomp = PolynomialRadixIterator::new(a_i_r, scratch, radix_ss);
+
+        // Get the corresponding GLev from the scheme switching key
+        let ssk_fft_glev = ssk_fft.get_glev_at_index(j, r, params, radix_ss);
+
+        decomposed_polynomial_glev_mad(y_i_j, decomp, ssk_fft_glev, params);
+    }
+}
+
+/// Converts a GLev ciphertext into a GGSW ciphertext in the FFT domain using a
+/// scheme switching key.
+///
+/// # Arguments
+///
+/// * `output` - The GGSW FFT ciphertext to store the result
+/// * `glev_ciphertext` - The input GLev ciphertext to convert, encrypted under
+///   the GGSW radix parameters
+/// * `ssk_fft` - The scheme switching key in FFT domain used for conversion, encrypted under the
+///   scheme switch radix parameters
+/// * `params` - GLWE parameters defining dimensions and sizes
+/// * `radix_ggsw` - Radix decomposition parameters for GGSW operations
+/// * `radix_ss` - Radix decomposition parameters for scheme switching
+/// * `method` - Whether to compute the scheme switch in parallel or sequentially
+///
+/// # Example
+///
+/// ```rust
+/// use sunscreen_tfhe::{
+///     entities::{
+///         GgswCiphertext, GgswCiphertextFft, GlevCiphertext, GlweSecretKey,
+///         Polynomial, SchemeSwitchKey, SchemeSwitchKeyFft,
+///     },
+///     ops::{
+///         bootstrapping::{generate_scheme_switch_key},
+///         encryption::encrypt_glev_ciphertext,
+///         fft_ops::scheme_switch_fft,
+///     },
+///     GlweDef, GlweDimension, GlweSize, PolynomialDegree, rand::Stddev,
+///     RadixDecomposition, RadixCount, RadixLog,
+///     Torus,
+/// };
+///
+/// // Setup parameters. These are example values, and are not secure.
+/// let params = GlweDef {
+///     dim: GlweDimension {
+///         polynomial_degree: PolynomialDegree(256),
+///         size: GlweSize(3),
+///     },
+///     std: Stddev(1e-16),
+/// };
+/// let radix_ggsw = RadixDecomposition {
+///     count: RadixCount(6),
+///     radix_log: RadixLog(4),
+/// };
+/// let radix_ss = RadixDecomposition {
+///     count: RadixCount(8),
+///     radix_log: RadixLog(7),
+/// };
+///
+/// let polynomial_degree = params.dim.polynomial_degree.0;
+///
+/// // Create message polynomial (encrypting 1)
+/// let mut m_coeffs = vec![Torus::from(0u64); polynomial_degree];
+/// m_coeffs[0] = Torus::from(1u64);
+/// let m = Polynomial::new(&m_coeffs);
+///
+/// // Generate keys
+/// let sk = GlweSecretKey::generate_binary(&params);
+/// let mut ssk = SchemeSwitchKey::new(&params, &radix_ss);
+/// generate_scheme_switch_key(&mut ssk, &sk, &params, &radix_ss);
+///
+/// // Convert scheme switch key to FFT domain
+/// let mut ssk_fft = SchemeSwitchKeyFft::new(&params, &radix_ss);
+/// ssk.fft(&mut ssk_fft, &params, &radix_ss);
+///
+/// // Encrypt message as GLev
+/// let mut glev = GlevCiphertext::new(&params, &radix_ggsw);
+/// encrypt_glev_ciphertext(&mut glev, &m, &sk, &params, &radix_ggsw);
+///
+/// // Convert to GGSW in FFT domain
+/// let mut ggsw_fft = GgswCiphertextFft::new(&params, &radix_ggsw);
+/// scheme_switch_fft(&mut ggsw_fft, &glev, &ssk_fft, &params, &radix_ggsw, &radix_ss);
+/// ```
+///
+/// # See Also
+///
+/// * [`generate_scheme_switch_key`](crate::ops::bootstrapping::generate_scheme_switch_key)
+/// * [`scheme_switch`](crate::ops::bootstrapping::scheme_switch)
+///
+/// # Notes
+///
+/// ## Mathematical Background
+///
+/// The scheme switching process relies on a key observation about GLWE ciphertexts:
+///
+/// Given a GLWE ciphertext $(\vec{a}, b)$ encrypting message $m$, we can construct a special
+/// ciphertext $t_p(b)=((0, ..., b, ... 0), 0)$ where $b$ is placed at position $p$. When
+/// decrypted under key $\vec{s}$, this yields:
+///
+/// $$ m = - b \cdot s_p $$
+///
+/// where s_p is the p'th polynomial in the secret key.
+///
+/// For the scheme switch itself, given a GLev encryption $x=\mathsf{GLev}(m)$ with components
+/// $x_i=\mathsf{GLWE}(\frac{q}{\beta^{i+1}}m)=(\vec{a}^{(i)}, b^{(i)})$, we compute for each
+/// $i \in [0, \ell_{ggsw}), j \in [0, k)$:
+///
+/// $$ y_{i,j} = t_j(b^{(i)}) + \sum_{r=0}^{k-1} a^{(i)}_r \odot \mathsf{GLev}_{\vec{s}}(s_j \cdot s_r) $$
+///
+/// Combining all the $y_{i,j}$ GLWE encryptions over index i into a single GLev
+/// ciphertext results in a GLWE encryption of $m \cdot s_j$ under the secret
+/// key $\vec{s}$.
+///
+/// $$ z_j = \mathsf{GLev}_{\vec{s}}(m \cdot s_j) = (y_{0,j}, y_{1,j}, ..., y_{\ell_{ggsw}-1,j}) $$
+///
+/// Combining all the $z_j$ GLev encryptions into a single GGSW ciphertext
+/// results in a GGSW encryption of m.
+///
+/// $$ \mathsf{GGSW}_{\vec{s}}(m)=(z_0, z_1, ..., z_{k-1}, x) $$
+///
+/// The FFT version performs these operations in the frequency domain for improved performance.
+///
+/// # References
+///
+/// This specific scheme switching process is based on the following paper but
+/// modified to support GGSW ciphertexts instead of just RGSW:
+///
+/// Wang, R., Wen, Y., Li, Z., Lu, X., Wei, B., Liu, K., & Wang, K. (2024, May).
+/// Circuit bootstrapping: faster and smaller. In Annual International
+/// Conference on the Theory and Applications of Cryptographic Techniques (pp.
+/// 342-372). Cham: Springer Nature Switzerland.
+pub fn scheme_switch_fft<S>(
+    output: &mut GgswCiphertextFftRef<Complex<f64>>,
+    glev_ciphertext: &GlevCiphertextRef<S>,
+    ssk_fft: &SchemeSwitchKeyFftRef<Complex<f64>>,
+    params: &GlweDef,
+    radix_ggsw: &RadixDecomposition,
+    radix_ss: &RadixDecomposition,
+) where
+    S: TorusOps,
+{
+    ssk_fft.assert_valid(params, radix_ss);
+    output.assert_valid(params, radix_ggsw);
+    glev_ciphertext.assert_valid(params, radix_ggsw);
+
+    let k = params.dim.size.0;
+
+    // Create iterator for all GLWEs across all rows
+    let glwe_operations: Vec<_> = output
+        .rows_mut(params, radix_ggsw)
+        .enumerate()
+        .flat_map(|(j, output_glev_fft)| {
+            output_glev_fft
+                .glwe_ciphertexts_mut(params)
+                .zip(glev_ciphertext.glwe_ciphertexts(params))
+                .map(move |(y_i_j, x_i)| (j, y_i_j, x_i))
+        })
+        .collect();
+
+    // Process all GLWEs
+    let f = |(j, y_i_j, x_i)| {
+        scheme_switch_glwe_operation(j, k, y_i_j, x_i, ssk_fft, params, radix_ss);
+    };
+
+    // We attempted to increase performance by parallelizing the operation
+    // across all GLWEs; however, only a small performance improvement was
+    // observed when using large parameter sets that are not as used in
+    // practice. For common parameters such as the GLWE level 1 parameters, the
+    // parallel version was actually slower by 2.5x.
+    glwe_operations.into_iter().for_each(f);
+}
+
 #[cfg(test)]
 mod tests {
+    use std::time::Duration;
+
+    use encryption::{decrypt_glwe, encrypt_glwe};
     use rand::{thread_rng, RngCore};
 
     use crate::{
-        entities::{GgswCiphertextFft, GlweCiphertext, GlweCiphertextFft, Polynomial},
+        entities::{
+            GgswCiphertext, GgswCiphertextFft, GlevCiphertext, GlweCiphertext, GlweCiphertextFft,
+            GlweSecretKey, Polynomial, SchemeSwitchKey, SchemeSwitchKeyFft,
+        },
         high_level::*,
-        PlaintextBits, Torus,
+        ops::{
+            bootstrapping::{generate_scheme_switch_key, scheme_switch},
+            encryption::{
+                decrypt_ggsw_ciphertext, decrypt_glev_ciphertext, encrypt_glev_ciphertext,
+            },
+        },
+        polynomial::polynomial_external_mad,
+        PlaintextBits, RadixCount, RadixLog, Torus, GLWE_1_1024_80,
     };
 
     use super::*;
+
+    // CMUX_5 parameters from the paper
+    const RADIX_SS: RadixDecomposition = RadixDecomposition {
+        count: RadixCount(2),
+        radix_log: RadixLog(19),
+    };
+
+    const RADIX_GGSW: RadixDecomposition = RadixDecomposition {
+        count: RadixCount(2),
+        radix_log: RadixLog(8),
+    };
 
     #[test]
     fn can_fft_external_product_glwe_ggsw() {
@@ -287,6 +534,220 @@ mod tests {
             let zero = Polynomial::<Torus<u64>>::zero(TEST_GLWE_DEF_1.dim.polynomial_degree.0);
 
             assert_ne!(a.to_owned(), zero);
+        }
+    }
+
+    #[test]
+    fn scheme_switch_fft_matches_non_fft() {
+        let params = TEST_GLWE_DEF_2;
+        let polynomial_degree = params.dim.polynomial_degree.0;
+
+        // Create message polynomial (encrypting 1)
+        let mut m_coeffs = vec![Torus::from(0u64); polynomial_degree];
+        m_coeffs[0] = Torus::from(1u64);
+        let m = Polynomial::new(&m_coeffs);
+
+        // Generate keys
+        let sk = GlweSecretKey::<u64>::generate_binary(&params);
+        let mut ssk = SchemeSwitchKey::new(&params, &RADIX_SS);
+        generate_scheme_switch_key(&mut ssk, &sk, &params, &RADIX_SS);
+
+        let mut ssk_fft = SchemeSwitchKeyFft::new(&params, &RADIX_SS);
+        ssk.fft(&mut ssk_fft, &params, &RADIX_SS);
+
+        // Encrypt message as GLev
+        let mut glev = GlevCiphertext::new(&params, &RADIX_GGSW);
+        encrypt_glev_ciphertext(&mut glev, &m, &sk, &params, &RADIX_GGSW);
+
+        // Perform regular scheme switch
+        let mut ggsw = GgswCiphertext::new(&params, &RADIX_GGSW);
+        scheme_switch(&mut ggsw, &glev, &ssk, &params, &RADIX_GGSW, &RADIX_SS);
+
+        // Perform FFT scheme switch
+        let mut ggsw_fft = GgswCiphertextFft::new(&params, &RADIX_GGSW);
+        let mut ggsw_from_fft = GgswCiphertext::new(&params, &RADIX_GGSW);
+
+        scheme_switch_fft(
+            &mut ggsw_fft,
+            &glev,
+            &ssk_fft,
+            &params,
+            &RADIX_GGSW,
+            &RADIX_SS,
+        );
+        ggsw_fft.ifft(&mut ggsw_from_fft, &params, &RADIX_GGSW);
+
+        // Decrypt both results
+        let mut decrypted_regular = Polynomial::zero(polynomial_degree);
+        let mut decrypted_fft = Polynomial::zero(polynomial_degree);
+
+        decrypt_ggsw_ciphertext(&mut decrypted_regular, &ggsw, &sk, &params, &RADIX_GGSW);
+        decrypt_ggsw_ciphertext(
+            &mut decrypted_fft,
+            &ggsw_from_fft,
+            &sk,
+            &params,
+            &RADIX_GGSW,
+        );
+
+        assert_eq!(decrypted_regular, decrypted_fft);
+    }
+
+    fn _scheme_switch_fft_correct_message(message: u64) -> Duration {
+        let params = GLWE_1_1024_80;
+        let polynomial_degree = params.dim.polynomial_degree.0;
+
+        // Create the message polynomial
+        let mut m_coeffs = vec![Torus::from(0u64); polynomial_degree];
+        m_coeffs[0] = Torus::from(message);
+        let m = Polynomial::new(&m_coeffs);
+
+        // Generate the keys
+        let sk = GlweSecretKey::<u64>::generate_binary(&params);
+        let mut ssk = SchemeSwitchKey::new(&params, &RADIX_SS);
+        generate_scheme_switch_key(&mut ssk, &sk, &params, &RADIX_SS);
+
+        let mut ssk_fft = SchemeSwitchKeyFft::new(&params, &RADIX_SS);
+        ssk.fft(&mut ssk_fft, &params, &RADIX_SS);
+
+        // Encrypt the message
+        let mut glev_ciphertext = GlevCiphertext::new(&params, &RADIX_GGSW);
+        encrypt_glev_ciphertext(&mut glev_ciphertext, &m, &sk, &params, &RADIX_GGSW);
+
+        // Perform the scheme switch with FFT
+        let mut ggsw_fft = GgswCiphertextFft::new(&params, &RADIX_GGSW);
+        let mut ggsw = GgswCiphertext::new(&params, &RADIX_GGSW);
+
+        let now = std::time::Instant::now();
+        scheme_switch_fft(
+            &mut ggsw_fft,
+            &glev_ciphertext,
+            &ssk_fft,
+            &params,
+            &RADIX_GGSW,
+            &RADIX_SS,
+        );
+        let elapsed = now.elapsed();
+
+        ggsw_fft.ifft(&mut ggsw, &params, &RADIX_GGSW);
+
+        let mut decrypted_ggsw = Polynomial::zero(polynomial_degree);
+        decrypt_ggsw_ciphertext(&mut decrypted_ggsw, &ggsw, &sk, &params, &RADIX_GGSW);
+
+        assert_eq!(
+            m.coeffs(),
+            decrypted_ggsw.coeffs(),
+            "The decrypted message did not match the expected message."
+        );
+
+        // Check that all the GLev ciphertexts are correct
+        for (i, (glev_component, sk_component)) in ggsw
+            .rows(&params, &RADIX_GGSW)
+            .zip(sk.s(&params))
+            .enumerate()
+        {
+            let mut decrypted_glev_component = Polynomial::zero(polynomial_degree);
+            decrypt_glev_ciphertext(
+                &mut decrypted_glev_component,
+                glev_component,
+                &sk,
+                &params,
+                &RADIX_GGSW,
+            );
+
+            let mut expected = Polynomial::zero(polynomial_degree);
+
+            // Need to negate here because we are using the opposite convention
+            // for the encryption equation where b is negative.
+            let neg_sk = sk_component.map(|x| x.wrapping_neg());
+            polynomial_external_mad(&mut expected, &m, &neg_sk);
+
+            let expected = expected.map(|x| Torus::from(x.inner() % (1 << RADIX_GGSW.radix_log.0)));
+
+            assert_eq!(
+                expected, decrypted_glev_component,
+                "{} glev decryption failed",
+                i
+            );
+        }
+
+        elapsed
+    }
+
+    #[test]
+    fn scheme_switch_fft_correct_message() {
+        let n = 100;
+        for _ in 0..n {
+            let message = thread_rng().next_u64() % 2;
+            _scheme_switch_fft_correct_message(message);
+        }
+    }
+
+    fn _can_cmux_after_scheme_switch_fft(message: u64) {
+        let params = TEST_GLWE_DEF_2;
+
+        let polynomial_degree = params.dim.polynomial_degree.0;
+        let plaintext_bits = PlaintextBits(1);
+
+        // Create the message polynomial
+        let mut m_coeffs = vec![Torus::from(0u64); polynomial_degree];
+        m_coeffs[0] = Torus::from(message);
+        let m = Polynomial::new(&m_coeffs);
+
+        // Generate the keys
+        let sk = GlweSecretKey::<u64>::generate_binary(&params);
+        let mut ssk = SchemeSwitchKey::new(&params, &RADIX_SS);
+        generate_scheme_switch_key(&mut ssk, &sk, &params, &RADIX_SS);
+
+        let mut ssk_fft = SchemeSwitchKeyFft::new(&params, &RADIX_SS);
+        ssk.fft(&mut ssk_fft, &params, &RADIX_SS);
+
+        // Encrypt the message
+        let mut glev_ciphertext = GlevCiphertext::new(&params, &RADIX_GGSW);
+        encrypt_glev_ciphertext(&mut glev_ciphertext, &m, &sk, &params, &RADIX_GGSW);
+
+        // Convert to GGSW using FFT
+        let mut ggsw_fft = GgswCiphertextFft::new(&params, &RADIX_GGSW);
+        scheme_switch_fft(
+            &mut ggsw_fft,
+            &glev_ciphertext,
+            &ssk_fft,
+            &params,
+            &RADIX_GGSW,
+            &RADIX_SS,
+        );
+
+        // Generate the GLWE encryptions of 0 and 1
+        let zero = Polynomial::zero(polynomial_degree);
+        let mut one = Polynomial::zero(polynomial_degree);
+        one.coeffs_mut()[0] = 1;
+
+        let glwe_zero = encrypt_glwe(&zero, &sk, &params, plaintext_bits);
+        let glwe_one = encrypt_glwe(&one, &sk, &params, plaintext_bits);
+
+        // Perform the cmux operation
+        let mut c = GlweCiphertext::new(&params);
+        cmux(
+            &mut c,
+            &glwe_zero,
+            &glwe_one,
+            &ggsw_fft,
+            &params,
+            &RADIX_GGSW,
+        );
+
+        // Decrypt the result
+        let c_decrypted = decrypt_glwe(&c, &sk, &params, plaintext_bits);
+
+        let expected = if message == 0 { zero } else { one };
+        assert_eq!(expected, c_decrypted);
+    }
+
+    #[test]
+    fn can_cmux_after_scheme_switch_fft() {
+        for _ in 0..10 {
+            let message = thread_rng().next_u64() % 2;
+            _can_cmux_after_scheme_switch_fft(message);
         }
     }
 }

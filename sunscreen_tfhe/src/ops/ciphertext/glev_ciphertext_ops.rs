@@ -14,6 +14,7 @@ use super::{glwe_polynomial_mad, glwe_scalar_mad};
 ///
 /// # Remarks
 /// This functions takes a PolynomialRadixIterator to perform the decomposition.
+/// This function is also known as the gadget product.
 pub fn decomposed_polynomial_glev_mad<S>(
     c: &mut GlweCiphertextRef<S>,
     mut a: PolynomialRadixIterator<S>,

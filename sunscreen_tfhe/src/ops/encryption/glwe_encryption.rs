@@ -47,6 +47,11 @@ pub fn encrypt_glwe_ciphertext_secret_generic<S>(
     // b = A * S + m
     polynomial_add_assign(b, msg);
 
+    // Do not add e if the standard deviation is zero
+    if params.std.0 == 0.0 {
+        return;
+    }
+
     let e = Polynomial::new(
         &(0..msg.len())
             .map(|_| normal_torus::<S>(params.std))

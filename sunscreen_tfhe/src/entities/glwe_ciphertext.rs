@@ -157,4 +157,104 @@ where
             GlweCiphertextRef::<S>::size(params.dim)
         )
     }
+
+    /// Sets all coefficients of the polynomial at the specified index in the
+    /// GLWE ciphertext's mask (a) to zero.
+    ///
+    /// # Arguments
+    /// * `index` - The index of the polynomial in the mask to zero out
+    /// * `params` - The GLWE parameters defining the ciphertext structure
+    ///
+    /// # Panics
+    /// Panics if `index` is greater than or equal to the mask dimension (number of polynomials in a).
+    ///
+    /// # See also
+    /// * [`fill_a_at_index`] - Fills a polynomial at a specific index with provided coefficients
+    /// * [`zero_a_except_at_index`] - Zeros out all polynomials except at the specified index
+    #[allow(unused)]
+    pub(crate) fn zero_out_a_at_index(&mut self, index: usize, params: &GlweDef) {
+        assert!(index < params.dim.size.0, "index out of bounds");
+        self.a_mut(params)
+            .nth(index)
+            .unwrap()
+            .coeffs_mut()
+            .fill(Torus::from(<S as num::Zero>::zero()));
+    }
+
+    /// Copies the coefficients from the provided polynomial into the GLWE
+    /// ciphertext's mask (a) at the specified index.
+    ///
+    /// # Arguments
+    /// * `polynomial` - The source polynomial whose coefficients will be copied
+    /// * `index` - The index in the mask where the polynomial should be placed
+    /// * `params` - The GLWE parameters defining the ciphertext structure
+    ///
+    /// # Panics
+    /// * Panics if `index` is greater than or equal to the mask dimension
+    /// * Panics if the provided polynomial's length doesn't match the polynomial degree in params
+    ///
+    /// # See also
+    /// * [`zero_out_a_at_index`] - Zeros out a polynomial at a specific index
+    /// * [`zero_a_except_at_index`] - Zeros out all polynomials except at the specified index
+    pub(crate) fn fill_a_at_index(
+        &mut self,
+        polynomial: &PolynomialRef<Torus<S>>,
+        index: usize,
+        params: &GlweDef,
+    ) {
+        assert!(index < params.dim.size.0, "Index out of bounds");
+        assert_eq!(
+            polynomial.len(),
+            params.dim.polynomial_degree.0,
+            "Polynomial size mismatch"
+        );
+
+        self.a_mut(params)
+            .nth(index)
+            .unwrap()
+            .coeffs_mut()
+            .copy_from_slice(polynomial.coeffs());
+    }
+
+    /// Copies the coefficients from the provided polynomial into the GLWE
+    /// ciphertext's mask (a) at the specified index while setting all other
+    /// polynomials in the mask to zero.
+    ///
+    /// # Arguments
+    /// * `polynomial` - The source polynomial whose coefficients will be copied
+    /// * `index` - The index where the polynomial should be placed while zeroing out others
+    /// * `params` - The GLWE parameters defining the ciphertext structure
+    ///
+    /// # Panics
+    /// * Panics if `index` is greater than or equal to the mask dimension
+    /// * Panics if the provided polynomial's length doesn't match the polynomial degree in params
+    ///
+    /// # See also
+    /// * [`zero_out_a_at_index`] - Zeros out a polynomial at a specific index
+    /// * [`fill_a_at_index`] - Fills a polynomial at a specific index with provided coefficients
+    pub(crate) fn zero_a_except_at_index(
+        &mut self,
+        polynomial: &PolynomialRef<Torus<S>>,
+        index: usize,
+        params: &GlweDef,
+    ) {
+        assert!(index < params.dim.size.0, "Index out of bounds");
+        assert_eq!(
+            polynomial.len(),
+            params.dim.polynomial_degree.0,
+            "Polynomial size mismatch"
+        );
+
+        // Get iterator over all polynomials in the mask
+        for (i, poly) in self.a_mut(params).enumerate() {
+            if i == index {
+                // Fill with provided polynomial at specified index
+                poly.coeffs_mut().copy_from_slice(polynomial.coeffs());
+            } else {
+                // Zero out all other positions
+                poly.coeffs_mut()
+                    .fill(Torus::from(<S as num::Zero>::zero()));
+            }
+        }
+    }
 }

@@ -6,6 +6,9 @@
 #[macro_use]
 mod dst;
 
+/// Methods for iterating over data structures.
+pub(crate) mod iteration;
+
 /// The entities module contains the main data structures used in the library.
 pub mod entities;
 

@@ -6,3 +6,6 @@ pub use circuit_bootstrapping::*;
 
 mod programmable_bootstrapping;
 pub use programmable_bootstrapping::*;
+
+mod scheme_switch;
+pub use scheme_switch::*;

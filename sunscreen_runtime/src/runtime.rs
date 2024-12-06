@@ -821,7 +821,7 @@ where
     pub fn verification_builder<'r, 'p>(
         &'r self,
         program: &'p CompiledZkpProgram,
-    ) -> VerificationBuilder<'r, 'p, '_, T, B> {
+    ) -> VerificationBuilder<'r, 'p, 'r, T, B> {
         VerificationBuilder::new(self, program)
     }
 }

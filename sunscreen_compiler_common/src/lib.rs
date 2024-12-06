@@ -109,7 +109,7 @@ impl Serialize for Type {
 
 struct TypeNameVisitor;
 
-impl<'de> Visitor<'de> for TypeNameVisitor {
+impl Visitor<'_> for TypeNameVisitor {
     type Value = String;
 
     fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {

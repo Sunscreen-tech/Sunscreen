@@ -191,10 +191,9 @@ pub struct ScratchBuffer<'a, T> {
     _phantom: PhantomData<&'a T>,
 }
 
-impl<'a, T> ScratchBuffer<'a, T> {
+impl<T> ScratchBuffer<'_, T> {
     #[allow(unused)]
     /// Get a slice to the underlying data.
-
     pub fn as_slice(&self) -> &[T] {
         let slice =
             unsafe { std::mem::transmute::<&[u8], &[T]>((*self.allocation).data.as_slice()) };
@@ -212,7 +211,7 @@ impl<'a, T> ScratchBuffer<'a, T> {
     }
 }
 
-impl<'a, T> Drop for ScratchBuffer<'a, T> {
+impl<T> Drop for ScratchBuffer<'_, T> {
     fn drop(&mut self) {
         self.pool.borrow_mut().push_back(self.allocation);
     }

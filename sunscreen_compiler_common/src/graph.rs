@@ -136,7 +136,7 @@ where
  * Any other graph mutation will likely result in unvisited nodes.
  *
  * * `callback`: A closure that receives the current node index and an
- *   object allowing you to make graph queries. This closure returns a    
+ *   object allowing you to make graph queries. This closure returns a
  *   transform list or an error.
  *   On success, [`reverse_traverse`] will apply these transformations
  *   before continuing the traversal. Errors will be propagated to the
@@ -165,7 +165,7 @@ where
  * Any other graph mutation will likely result in unvisited nodes.
  *
  * * `callback`: A closure that receives the current node index and an
- *   object allowing you to make graph queries. This closure returns a    
+ *   object allowing you to make graph queries. This closure returns a
  *   transform list or an error.
  *   On success, [`reverse_traverse`] will apply these transformations
  *   before continuing the traversal. Errors will be propagated to the
@@ -356,7 +356,7 @@ pub enum GraphQueryError {
 
 const_assert!(std::mem::size_of::<GraphQueryError>() <= 8);
 
-impl<'a, O> GraphQuery<'a, NodeInfo<O>, EdgeInfo>
+impl<O> GraphQuery<'_, NodeInfo<O>, EdgeInfo>
 where
     O: Operation,
 {

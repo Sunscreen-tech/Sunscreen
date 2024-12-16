@@ -57,7 +57,7 @@ impl core::fmt::Debug for SymmetricComponents {
  * Encrypts Plaintext objects into Ciphertext objects.
  *
  * Constructing an Encryptor requires a SEALContext with valid encryption parameters, the public
- * key and/or the secret key. If an Encrytor is given a secret key, it supports symmetric-key
+ * key and/or the secret key. If an Encryptor is given a secret key, it supports symmetric-key
  * encryption. If an Encryptor is given a public key, it supports asymmetric-key encryption.
  *
  * Overloads

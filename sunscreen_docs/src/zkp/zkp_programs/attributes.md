@@ -43,3 +43,9 @@ threshold for issuing transactions.
 We do not discuss these in the main docs; please see the [advanced
 section](../advanced/constant_inputs.md) if you're interested in working with
 constant arguments.
+
+## Linked
+
+Lastly, there is also a `#[linked]` attribute available when the `linkedproofs`
+feature is enabled. This attribute is used when linking together our FHE and ZKP
+compilers; see the [linked section](/linked/intro/intro.md) for more details.

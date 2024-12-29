@@ -4,7 +4,10 @@ use rand::{thread_rng, Rng, RngCore};
 use rand_distr::Normal;
 use serde::{Deserialize, Serialize};
 
-use crate::math::{Torus, TorusOps};
+use crate::{
+    entities::PolynomialRef,
+    math::{Torus, TorusOps},
+};
 
 #[derive(Debug, Copy, Clone, Serialize, Deserialize)]
 #[serde(transparent)]
@@ -34,6 +37,21 @@ pub fn uniform_torus<S: TorusOps>() -> Torus<S> {
 /// Generate a random binary torus element
 pub fn binary<S: TorusOps>() -> S {
     S::from_u64(thread_rng().next_u64() % 2)
+}
+
+/// Fill in a polynomial with random binary coefficients
+pub fn binary_torus_polynomial<S: TorusOps>(out: &mut PolynomialRef<S>) {
+    for c in out.coeffs_mut().iter_mut() {
+        *c = binary();
+    }
+}
+
+/// Sample a random polynomial with coefficients chosen from a normal distribution
+/// with a mean of 0 and the given stddev
+pub fn normal_torus_polynomial<S: TorusOps>(out: &mut PolynomialRef<Torus<S>>, std: Stddev) {
+    for c in out.coeffs_mut().iter_mut() {
+        *c = normal_torus(std);
+    }
 }
 
 #[cfg(test)]

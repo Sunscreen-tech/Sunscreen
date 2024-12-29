@@ -119,7 +119,7 @@ mod tests {
             pk.clear();
             rlwe_generate_public_key(&mut pk, &sk, &glwe);
 
-            let acutal = sk.decrypt_decode_glwe(&pk.zero_encryption(), &glwe, PlaintextBits(1));
+            let acutal = sk.decrypt_decode_glwe(pk.zero_encryption(), &glwe, PlaintextBits(1));
 
             assert_eq!(acutal, Polynomial::zero(glwe.dim.polynomial_degree.0));
         }
@@ -142,7 +142,7 @@ mod tests {
             rlwe_generate_public_key(&mut pk, &sk, &glwe);
             rlwe_encode_encrypt_public(&mut ct, &msg, &pk, &PlaintextBits(1), &glwe);
 
-            let actual = sk.decrypt_decode_glwe(&mut ct, &glwe, PlaintextBits(1));
+            let actual = sk.decrypt_decode_glwe(&ct, &glwe, PlaintextBits(1));
 
             assert_eq!(msg, actual);
         }

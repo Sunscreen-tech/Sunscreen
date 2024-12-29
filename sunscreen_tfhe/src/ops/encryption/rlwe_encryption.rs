@@ -1,11 +1,10 @@
 use crate::{
-    dst::{FromMutSlice, FromSlice, OverlaySize},
+    dst::FromMutSlice,
     entities::{
-        GlweCiphertext, GlweCiphertextRef, GlweSecretKeyRef, Polynomial, PolynomialRef,
-        RlwePublicKey, RlwePublicKeyRef,
+        GlweCiphertext, GlweSecretKeyRef, Polynomial, PolynomialRef, RlwePublicKeyRef,
     },
     ops::encryption::encrypt_glwe_ciphertext_secret,
-    polynomial::{polynomial_add, polynomial_add_assign, polynomial_external_mad},
+    polynomial::{polynomial_add_assign, polynomial_external_mad},
     rand::{binary_torus_polynomial, normal_torus_polynomial},
     scratch::allocate_scratch_ref,
     GlweDef, PlaintextBits, Torus, TorusOps,
@@ -107,7 +106,7 @@ fn rlwe_encrypt_public_impl<S>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{entities::GlweSecretKey, rand::Stddev, GLWE_1_1024_128};
+    use crate::{entities::{GlweSecretKey, RlwePublicKey}, GLWE_1_1024_128};
 
     #[test]
     fn rlwe_public_key_encrypts_zero() {

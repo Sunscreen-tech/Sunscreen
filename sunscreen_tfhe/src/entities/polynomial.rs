@@ -365,6 +365,20 @@ where
     }
 }
 
+impl<T: PartialEq + Clone> PartialEq for PolynomialRef<T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.coeffs() == other.coeffs()
+    }
+}
+
+impl<T: std::fmt::Debug + Clone> std::fmt::Debug for PolynomialRef<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("PolynomialRef")
+            .field("coeffs", &self.coeffs())
+            .finish()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::ops::Deref;

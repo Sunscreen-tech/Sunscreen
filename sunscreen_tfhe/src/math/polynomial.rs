@@ -123,6 +123,22 @@ pub fn polynomial_external_mad<S>(
 /// Compute `c += a * b` where `*` the multiplication of the two polynomials of
 /// degree (N - 1) modulo (X^N + 1). This is done with the naive algorithm, and
 /// hence has O(N^2) time.
+pub fn polynomial_mad_by_wrap<S>(
+    c: &mut PolynomialRef<S>,
+    a: &PolynomialRef<S>,
+    b: &PolynomialRef<S>,
+) where
+    S: TorusOps,
+    Wrapping<S>: Sub<Wrapping<S>, Output = Wrapping<S>>
+        + Add<Wrapping<S>, Output = Wrapping<S>>
+        + Mul<Wrapping<S>, Output = Wrapping<S>>,
+{
+    polynomial_mad_impl(c.as_wrapping_mut(), a.as_wrapping(), b.as_wrapping())
+}
+
+/// Compute `c += a * b` where `*` the multiplication of the two polynomials of
+/// degree (N - 1) modulo (X^N + 1). This is done with the naive algorithm, and
+/// hence has O(N^2) time.
 pub fn polynomial_mad<S>(
     c: &mut PolynomialRef<Wrapping<S>>,
     a: &PolynomialRef<Wrapping<S>>,

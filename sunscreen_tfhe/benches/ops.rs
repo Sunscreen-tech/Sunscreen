@@ -6,12 +6,15 @@ use criterion::{
 
 use sunscreen_tfhe::{
     entities::{
-        GgswCiphertext, GgswCiphertextFft, GlweCiphertext, Polynomial, PolynomialRef,
-        PublicFunctionalKeyswitchKey, UnivariateLookupTable,
+        GgswCiphertext, GgswCiphertextFft, GlevCiphertext, GlweCiphertext, Polynomial,
+        PolynomialRef, PublicFunctionalKeyswitchKey, SchemeSwitchKey, SchemeSwitchKeyFft,
+        UnivariateLookupTable,
     },
     high_level::{self, *},
     ops::{
-        bootstrapping::circuit_bootstrap,
+        bootstrapping::{circuit_bootstrap, generate_scheme_switch_key},
+        encryption::encrypt_glev_ciphertext,
+        fft_ops::scheme_switch_fft,
         keyswitch::public_functional_keyswitch::{
             generate_public_functional_keyswitch_key, public_functional_keyswitch,
         },
@@ -234,6 +237,53 @@ fn circuit_bootstrapping(c: &mut Criterion) {
     });
 }
 
+fn scheme_switch(c: &mut Criterion) {
+    let ss_radix = RadixDecomposition {
+        count: RadixCount(2),
+        radix_log: RadixLog(19),
+    };
+    let ggsw_radix = RadixDecomposition {
+        count: RadixCount(1),
+        radix_log: RadixLog(11),
+    };
+
+    let params = GLWE_1_1024_80;
+    let polynomial_degree = params.dim.polynomial_degree.0;
+
+    // Generate the keys
+    let sk = keygen::generate_binary_glwe_sk(&params);
+
+    let mut ssk = SchemeSwitchKey::new(&params, &ss_radix);
+    generate_scheme_switch_key(&mut ssk, &sk, &params, &ss_radix);
+
+    let mut ssk_fft = SchemeSwitchKeyFft::new(&params, &ss_radix);
+    ssk.fft(&mut ssk_fft, &params, &ss_radix);
+
+    // Generate the message 1
+    let mut m_coeffs = vec![Torus::from(0u64); polynomial_degree];
+    m_coeffs[0] = Torus::from(1);
+    let m = Polynomial::new(&m_coeffs);
+
+    // Encrypt the message
+    let mut glev_ciphertext = GlevCiphertext::new(&params, &ggsw_radix);
+    encrypt_glev_ciphertext(&mut glev_ciphertext, &m, &sk, &params, &ggsw_radix);
+
+    let mut ggsw_fft = GgswCiphertextFft::new(&params, &ggsw_radix);
+
+    c.bench_function("Scheme Switch", |b| {
+        b.iter(|| {
+            scheme_switch_fft(
+                &mut ggsw_fft,
+                &glev_ciphertext,
+                &ssk_fft,
+                &params,
+                &ggsw_radix,
+                &ss_radix,
+            );
+        });
+    });
+}
+
 fn keygen(c: &mut Criterion) {
     c.bench_function("LWE Secret keygen", |b| {
         b.iter(|| {
@@ -347,6 +397,7 @@ criterion_group!(
     cmux,
     programmable_bootstrapping,
     circuit_bootstrapping,
+    scheme_switch,
     keygen,
     public_functional_keyswitching
 );

@@ -69,3 +69,9 @@ pub use polynomial_fft::*;
 
 mod polynomial_list;
 pub use polynomial_list::*;
+
+mod scheme_switch_key;
+pub use scheme_switch_key::*;
+
+mod scheme_switch_key_fft;
+pub use scheme_switch_key_fft::*;

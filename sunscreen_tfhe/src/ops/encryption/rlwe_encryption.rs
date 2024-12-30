@@ -126,7 +126,6 @@ where
     ct.assert_valid(glwe);
     public_key.assert_valid(glwe);
 
-    // TODO: Return the noise
     let mut u = Polynomial::<S>::zero(glwe.dim.polynomial_degree.0);
     binary_torus_polynomial(&mut u);
 

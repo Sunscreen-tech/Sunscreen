@@ -299,16 +299,6 @@ pub fn scheme_switch<S>(
             // where the b_i is at the j-th position.
             update_encrypted_secret_key_component(encoded_b_i, x_i, j, params);
 
-            // If we are in debug mode, we can assert that the ciphertext is
-            // correctly shaped.
-            #[cfg(debug_assertions)]
-            assert_encrypted_secret_key_component_correct_shape(
-                encoded_b_i,
-                x_i.b(params),
-                j,
-                params,
-            );
-
             // We can clone directly into y_i_j since this will overwrite it.
             y_i_j.clone_from_ref(encoded_b_i);
 
@@ -327,51 +317,6 @@ pub fn scheme_switch<S>(
             }
         }
     }
-}
-
-#[allow(unused)]
-pub(crate) fn assert_encrypted_secret_key_component_correct_shape<S>(
-    glwe: &GlweCiphertextRef<S>,
-    b: &PolynomialRef<Torus<S>>,
-    index: usize,
-    params: &GlweDef,
-) where
-    S: TorusOps,
-{
-    // Verify the output:
-    // 1. The mask (a) should be zero everywhere except at index
-    // 2. At index, it should contain the body of the input ciphertext
-    // 3. The body (b) should be zero
-
-    for (i, a_i) in glwe.a(params).enumerate() {
-        if i == index {
-            // At index, coefficients should match input body
-            assert_eq!(
-                a_i.coeffs(),
-                b.coeffs(),
-                "Coefficients at index {} don't match input body",
-                index
-            );
-        } else {
-            // All other positions should be zero
-            assert!(
-                a_i.coeffs()
-                    .iter()
-                    .all(|x| *x == Torus::from(<S as num::Zero>::zero())),
-                "Non-zero coefficients found at index {} (should be all zero)",
-                i
-            );
-        }
-    }
-
-    // Verify body is zero
-    assert!(
-        glwe.b(params)
-            .coeffs()
-            .iter()
-            .all(|x| *x == Torus::from(<S as num::Zero>::zero())),
-        "Output body contains non-zero values"
-    );
 }
 
 #[cfg(test)]
@@ -409,6 +354,50 @@ mod tests {
         count: RadixCount(6),
         radix_log: RadixLog(4),
     };
+
+    pub(crate) fn assert_encrypted_secret_key_component_correct_shape<S>(
+        glwe: &GlweCiphertextRef<S>,
+        b: &PolynomialRef<Torus<S>>,
+        index: usize,
+        params: &GlweDef,
+    ) where
+        S: TorusOps,
+    {
+        // Verify the output:
+        // 1. The mask (a) should be zero everywhere except at index
+        // 2. At index, it should contain the body of the input ciphertext
+        // 3. The body (b) should be zero
+
+        for (i, a_i) in glwe.a(params).enumerate() {
+            if i == index {
+                // At index, coefficients should match input body
+                assert_eq!(
+                    a_i.coeffs(),
+                    b.coeffs(),
+                    "Coefficients at index {} don't match input body",
+                    index
+                );
+            } else {
+                // All other positions should be zero
+                assert!(
+                    a_i.coeffs()
+                        .iter()
+                        .all(|x| *x == Torus::from(<S as num::Zero>::zero())),
+                    "Non-zero coefficients found at index {} (should be all zero)",
+                    i
+                );
+            }
+        }
+
+        // Verify body is zero
+        assert!(
+            glwe.b(params)
+                .coeffs()
+                .iter()
+                .all(|x| *x == Torus::from(<S as num::Zero>::zero())),
+            "Output body contains non-zero values"
+        );
+    }
 
     #[test]
     fn basic_scheme_switch_key_generation() {

@@ -86,7 +86,10 @@ where
 ///
 /// # Algorithm
 /// This method uses the double-lwe trick, which is efficient but introduces
-/// more noise than Regev's trick (i.e. summing many encryptions of zero).
+/// more noise than Regev's trick (i.e. summing many encryptions of zero). We adapt this
+/// algorithm from the BFV public key algorithm presented in the Microsoft SEAL manual.
+/// While being a different FHE scheme, BFV also uses RLWE encryption, so the algorithm
+/// is compatible.
 ///
 /// Given that a [`RlwePublicKey`](RlwePublicKeyRef) is an encryption of zero, we write
 /// `(p0, p1) = public_key` and `m = encoded_msg`.

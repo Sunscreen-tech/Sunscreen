@@ -319,5 +319,9 @@ mod tests {
         let actual_glwe_std = lwe_security_level_to_std(1024, 80.0).unwrap();
         println!("GLWE 1 1024 80: {}", actual_glwe_std);
         GLWE_1_1024_80.assert_security_level(80);
+
+        let actual_glwe_std = lwe_security_level_to_std(512, 128.0).unwrap();
+        println!("GLWE 1 512 128: {}", actual_glwe_std);
+        GLWE_1_512_128.assert_security_level(128);
     }
 }

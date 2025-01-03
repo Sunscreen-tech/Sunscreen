@@ -112,6 +112,15 @@ where
             .for_each(|(d, s)| *d = f(s));
     }
 
+    /// Returns the degree of the polynomial.
+    ///
+    /// # Remarks
+    /// This returns the same value as [`len`](`Self::len`), but wrapped in a [`PolynomialDegree`].
+    #[inline]
+    pub fn degree(&self) -> PolynomialDegree {
+        PolynomialDegree(self.data.len())
+    }
+
     /// Returns the number of coefficients in the polynomial.
     #[inline]
     pub fn len(&self) -> usize {

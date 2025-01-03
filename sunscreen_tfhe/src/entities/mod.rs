@@ -61,6 +61,9 @@ pub use lwe_keyswitch_key::*;
 mod glwe_keyswitch_key;
 pub use glwe_keyswitch_key::*;
 
+mod rlwe_public_key;
+pub use rlwe_public_key::*;
+
 mod polynomial;
 pub use polynomial::*;
 

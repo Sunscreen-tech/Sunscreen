@@ -168,10 +168,10 @@ fn div_rem_bigint<const N: usize>(a: BigInt<N>, b: BigInt<N>) -> (BigInt<N>, Big
         let i = 64 * N as u32 - 1 - i as u32;
 
         let mut b_shift = b;
-        b_shift.muln(i);
+        b_shift <<= i;
 
         let mut pow = BigInt::<N>::one();
-        pow.muln(i);
+        pow <<= i;
 
         if b_shift <= rem {
             rem.sub_with_borrow(&b_shift);

@@ -89,6 +89,7 @@ rlp = "0.6"
 fs_extra = "1.2"
 reqwest = { version = "0.12", features = ["blocking"] }
 rand_distr = "0.4"
+statrs = "0.18"
 
 curve25519-dalek = { version = "0.8.1", package = "sunscreen_curve25519", path = "./sunscreen_curve25519", features = [
     "serde",

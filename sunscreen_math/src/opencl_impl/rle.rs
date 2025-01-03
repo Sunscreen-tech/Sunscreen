@@ -11,9 +11,6 @@ use super::{
 /// values and run_lengths are stored as `rows x stride` row-major dense matrices.
 /// The actual
 pub struct RunLengthEncoding {
-    /// The number of items per row.
-    pub stride: u32,
-
     /// The values. The ith value appears run_lengths[i] times.
     pub values: MappedBuffer<u32>,
 
@@ -41,7 +38,6 @@ pub fn run_length_encoding(data: &MappedBuffer<u32>, rows: u32, cols: u32) -> Ru
     let (run_lengths, values) = compute_runs(data, &compacted, &num_runs, rows, cols);
 
     RunLengthEncoding {
-        stride: cols,
         values,
         run_lengths,
         num_runs,

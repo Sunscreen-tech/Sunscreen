@@ -154,26 +154,37 @@ impl<'a, T: GpuVec> Iterator for GpuVecIter<'a, T> {
     }
 }
 
+///
+/// A vector of items stored on the GPU. This trait is agnostic as to the
+/// data layout.
+///
 pub trait GpuVec
 where
     Self: Sized,
 {
+    /// The type of item iterated over.
     type Item;
 
+    /// Gets the underlying [`MappedBuffer`] object.
     fn get_buffer(&self) -> &MappedBuffer<u32>;
 
+    /// Returns the length in [`Self::Item`]s.
     fn len(&self) -> usize;
 
+    /// Returns the length in number of [`u32`] elements
     fn u32_len(&self) -> usize {
         self.len() * size_of::<Self::Item>() / size_of::<u32>()
     }
 
+    /// Returns the `i`-th item.
     fn get(&self, i: usize) -> <Self as GpuVec>::Item;
 
+    /// Whether or not the vector has no values.
     fn is_empty(&self) -> bool {
         self.len() == 0
     }
 
+    /// Gets a host iterator over the items.
     fn iter(&self) -> GpuVecIter<Self> {
         GpuVecIter {
             index: 0,
@@ -181,6 +192,7 @@ where
         }
     }
 
+    /// Consume this type and return an iterator over its items.
     fn into_iter(self) -> IntoGpuVecIter<Self> {
         IntoGpuVecIter {
             vec: self,
@@ -188,6 +200,7 @@ where
         }
     }
 
+    /// Run a GPU kernel with one argument.
     fn unary_gpu_kernel(&self, kernel_name: &'static str) -> MappedBuffer<u32> {
         let runtime = Runtime::get();
         let out_buf = unsafe { runtime.alloc_internal(self.u32_len()) };
@@ -210,6 +223,7 @@ where
         }
     }
 
+    /// Run a GPU kernel with 2 arguments.
     fn binary_gpu_kernel<Rhs: GpuVec>(
         &self,
         kernel_name: &'static str,

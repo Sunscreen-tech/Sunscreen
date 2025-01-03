@@ -159,8 +159,11 @@ fn compile_wgsl_shaders() {
     use std::io::Write;
     use std::path::PathBuf;
 
-    use naga::valid::{Capabilities, ValidationFlags};
-    use wgpu_core::pipeline::{CreateShaderModuleError, ShaderError};
+    use naga::{
+        error::ShaderError,
+        valid::{Capabilities, ValidationFlags},
+    };
+    use wgpu_core::pipeline::CreateShaderModuleError;
 
     let outdir = PathBuf::from(std::env::var("OUT_DIR").unwrap());
     let shader_dir = PathBuf::from(".")

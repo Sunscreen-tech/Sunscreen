@@ -5,7 +5,7 @@ use curve25519_dalek::scalar::Scalar;
 
 use crate::opencl_impl::Runtime;
 
-use super::{GpuVec, GpuVecIter, IntoGpuVecIter, MappedBuffer};
+use super::{GpuVec, IntoGpuVecIter, MappedBuffer};
 
 #[derive(Clone)]
 /// A vector of scalars laid out in a way that enables coalescing on
@@ -23,6 +23,7 @@ pub struct GpuScalarVec {
 // unsafe impl Send for GpuScalarVec {}
 
 impl GpuScalarVec {
+    /// Create a [`GpuScalarVec`]
     pub fn new(x: &[Scalar]) -> Self {
         assert_eq!(size_of::<Scalar>(), u32::BITS as usize);
 
@@ -50,10 +51,8 @@ impl GpuScalarVec {
         }
     }
 
-    pub fn iter(&self) -> GpuVecIter<Self> {
-        <Self as GpuVec>::iter(self)
-    }
-
+    /// Produce a new [`GpuScalarVec`] containing the inverse of each scalar field
+    /// element in `self`.
     pub fn invert(&self) -> Self {
         GpuScalarVec {
             data: self.unary_gpu_kernel("scalar_invert"),

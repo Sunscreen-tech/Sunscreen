@@ -250,7 +250,7 @@ fn scheme_switch_glwe_operation<S>(
 ///     },
 ///     ops::{
 ///         bootstrapping::{generate_scheme_switch_key},
-///         encryption::encrypt_glev_ciphertext,
+///         encryption::encrypt_secret_glev_ciphertext,
 ///         fft_ops::scheme_switch_fft,
 ///     },
 ///     GlweDef, GlweDimension, GlweSize, PolynomialDegree, rand::Stddev,
@@ -293,7 +293,7 @@ fn scheme_switch_glwe_operation<S>(
 ///
 /// // Encrypt message as GLev
 /// let mut glev = GlevCiphertext::new(&params, &radix_ggsw);
-/// encrypt_glev_ciphertext(&mut glev, &m, &sk, &params, &radix_ggsw);
+/// encrypt_secret_glev_ciphertext(&mut glev, &m, &sk, &params, &radix_ggsw);
 ///
 /// // Convert to GGSW in FFT domain
 /// let mut ggsw_fft = GgswCiphertextFft::new(&params, &radix_ggsw);
@@ -404,7 +404,7 @@ mod tests {
         ops::{
             bootstrapping::{generate_scheme_switch_key, scheme_switch},
             encryption::{
-                decrypt_ggsw_ciphertext, decrypt_glev_ciphertext, encrypt_glev_ciphertext,
+                decrypt_ggsw_ciphertext, decrypt_glev_ciphertext, encrypt_secret_glev_ciphertext,
             },
         },
         polynomial::polynomial_external_mad,
@@ -557,7 +557,7 @@ mod tests {
 
         // Encrypt message as GLev
         let mut glev = GlevCiphertext::new(&params, &RADIX_GGSW);
-        encrypt_glev_ciphertext(&mut glev, &m, &sk, &params, &RADIX_GGSW);
+        encrypt_secret_glev_ciphertext(&mut glev, &m, &sk, &params, &RADIX_GGSW);
 
         // Perform regular scheme switch
         let mut ggsw = GgswCiphertext::new(&params, &RADIX_GGSW);
@@ -612,7 +612,7 @@ mod tests {
 
         // Encrypt the message
         let mut glev_ciphertext = GlevCiphertext::new(&params, &RADIX_GGSW);
-        encrypt_glev_ciphertext(&mut glev_ciphertext, &m, &sk, &params, &RADIX_GGSW);
+        encrypt_secret_glev_ciphertext(&mut glev_ciphertext, &m, &sk, &params, &RADIX_GGSW);
 
         // Perform the scheme switch with FFT
         let mut ggsw_fft = GgswCiphertextFft::new(&params, &RADIX_GGSW);
@@ -704,7 +704,7 @@ mod tests {
 
         // Encrypt the message
         let mut glev_ciphertext = GlevCiphertext::new(&params, &RADIX_GGSW);
-        encrypt_glev_ciphertext(&mut glev_ciphertext, &m, &sk, &params, &RADIX_GGSW);
+        encrypt_secret_glev_ciphertext(&mut glev_ciphertext, &m, &sk, &params, &RADIX_GGSW);
 
         // Convert to GGSW using FFT
         let mut ggsw_fft = GgswCiphertextFft::new(&params, &RADIX_GGSW);

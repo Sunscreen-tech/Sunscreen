@@ -1,7 +1,7 @@
 use crate::{
     dst::FromMutSlice,
     entities::{GgswCiphertextRef, GlweCiphertextRef, GlweSecretKeyRef, Polynomial, PolynomialRef},
-    ops::encryption::encrypt_glev_ciphertext_generic,
+    ops::encryption::encrypt_secret_glev_ciphertext_generic,
     polynomial::polynomial_external_mad,
     scratch::allocate_scratch_ref,
     GlweDef, PlaintextBits, RadixDecomposition, Torus, TorusOps,
@@ -59,7 +59,14 @@ pub(crate) fn encrypt_ggsw_ciphertext_generic<S>(
             msg.as_torus()
         };
 
-        encrypt_glev_ciphertext_generic(row, m_times_s, glwe_secret_key, params, radix, &encrypt);
+        encrypt_secret_glev_ciphertext_generic(
+            row,
+            m_times_s,
+            glwe_secret_key,
+            params,
+            radix,
+            &encrypt,
+        );
     }
 }
 
@@ -145,14 +152,11 @@ fn decrypt_glwe_in_ggsw<S>(
     radix: &RadixDecomposition,
     row: usize,
     column: usize,
-) -> Option<()>
-where
+) where
     S: TorusOps,
 {
-    let glev = ggsw_ciphertext.rows(params, radix).nth(row)?;
-    decrypt_glwe_in_glev(msg, glev, glwe_secret_key, params, radix, column)?;
-
-    Some(())
+    let glev = ggsw_ciphertext.rows(params, radix).nth(row).unwrap();
+    decrypt_glwe_in_glev(msg, glev, glwe_secret_key, params, radix, column);
 }
 
 /// Decrypt a GGSW ciphertext with a given secret key.
@@ -176,7 +180,7 @@ pub fn decrypt_ggsw_ciphertext<S>(
     // the last row and divide them by their decomposition factor; we choose the
     // first GLWE ciphertext.
     let row = params.dim.size.0;
-    decrypt_glwe_in_ggsw(msg, ggsw_ciphertext, glwe_secret_key, params, radix, row, 0).unwrap();
+    decrypt_glwe_in_ggsw(msg, ggsw_ciphertext, glwe_secret_key, params, radix, row, 0);
 }
 
 #[cfg(test)]
@@ -271,7 +275,7 @@ mod tests {
                     *c = Torus::from(c.inner() & mask);
                 }
 
-                decrypt_glwe_in_ggsw(&mut pt, &ct, &sk, &params, &radix, i, j).unwrap();
+                decrypt_glwe_in_ggsw(&mut pt, &ct, &sk, &params, &radix, i, j);
 
                 assert_eq!(pt, msg);
             }
@@ -330,7 +334,7 @@ mod tests {
                     *c = Torus::from(c.inner() & mask);
                 }
 
-                decrypt_glwe_in_ggsw(&mut pt, &ct, &sk, &params, &radix, i, j).unwrap();
+                decrypt_glwe_in_ggsw(&mut pt, &ct, &sk, &params, &radix, i, j);
 
                 assert_eq!(pt, msg);
             }

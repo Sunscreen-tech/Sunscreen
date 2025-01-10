@@ -21,6 +21,15 @@ pub const TEST_GLWE_DEF_1: GlweDef = GlweDef {
 };
 
 #[doc(hidden)]
+pub const TEST_RLWE_DEF: GlweDef = GlweDef {
+    dim: GlweDimension {
+        polynomial_degree: PolynomialDegree(256),
+        size: GlweSize(1),
+    },
+    std: Stddev(1e-16),
+};
+
+#[doc(hidden)]
 pub const TEST_GLWE_DEF_2: GlweDef = GlweDef {
     dim: GlweDimension {
         polynomial_degree: PolynomialDegree(256),
@@ -52,10 +61,11 @@ pub mod keygen {
     use crate::{
         entities::{
             BootstrapKey, CircuitBootstrappingKeyswitchKeys, GlweSecretKey, GlweSecretKeyRef,
-            LweKeyswitchKey, LwePublicKey, LweSecretKey, LweSecretKeyRef,
+            LweKeyswitchKey, LwePublicKey, LweSecretKey, LweSecretKeyRef, RlwePublicKey,
         },
         ops::{
             bootstrapping::generate_bootstrap_key,
+            encryption::rlwe_generate_public_key,
             keyswitch::{
                 lwe_keyswitch_key::generate_keyswitch_key_lwe,
                 private_functional_keyswitch::generate_circuit_bootstrapping_pfks_keys,
@@ -299,17 +309,37 @@ pub mod keygen {
 
         cbs_ksk
     }
+
+    /// Generate an RLWE public key. This can be used to create RLWE encryptions of
+    /// polynomials.
+    ///
+    /// # Remarks
+    /// RLWE is a special case of GLWE where `glwe.dim.size == 1`.
+    ///
+    /// # Panics
+    /// If `glwe.dim.size != 1`.
+    pub fn generate_rlwe_public_key(sk: &GlweSecretKey<u64>, glwe: &GlweDef) -> RlwePublicKey<u64> {
+        let mut pk = RlwePublicKey::new(glwe);
+
+        rlwe_generate_public_key(&mut pk, sk, glwe);
+
+        pk
+    }
 }
 
 /// TFHE functionality related to encryption.
 pub mod encryption {
     use crate::{
         entities::{
-            GgswCiphertext, GgswCiphertextRef, GlweCiphertext, GlweCiphertextRef, GlweSecretKeyRef,
-            LweCiphertext, LweCiphertextRef, LwePublicKeyRef, LweSecretKeyRef, Polynomial,
-            PolynomialRef, TlwePublicEncRandomness,
+            GgswCiphertext, GgswCiphertextRef, GlevCiphertext, GlweCiphertext, GlweCiphertextRef,
+            GlweSecretKeyRef, LweCiphertext, LweCiphertextRef, LwePublicKeyRef, LweSecretKeyRef,
+            Polynomial, PolynomialRef, RlwePublicKeyRef, TlwePublicEncRandomness,
         },
-        ops::encryption::{encrypt_ggsw_ciphertext_scalar, trivially_encrypt_lwe_ciphertext},
+        ops::encryption::{
+            encrypt_ggsw_ciphertext_scalar, encrypt_rlev_ciphertext,
+            encrypt_secret_glev_ciphertext, trivially_encode_encrypt_glev_ciphertext,
+            trivially_encrypt_lwe_ciphertext,
+        },
         CarryBits, GlweDef, LweDef, PlaintextBits, RadixDecomposition, Torus,
     };
 
@@ -678,6 +708,71 @@ pub mod encryption {
         crate::ops::encryption::decrypt_ggsw_ciphertext(&mut msg, ct, sk, params, radix);
 
         msg.map(|x| x.inner())
+    }
+
+    /// Encrypt the given polynonial `msg` under
+    /// [`GlweSecretKey`](crate::entities::GlweSecretKey) `sk` as a [`GlevCiphertext`].
+    ///
+    /// # Remarks
+    /// `msg` must contain binary coefficients.
+    ///
+    /// # Panics
+    /// If `radix` parameters are invalid.
+    /// If `msg` or `sk` are invalid under `params`.
+    pub fn encrypt_binary_msg_secret_glev(
+        msg: &PolynomialRef<u64>,
+        sk: &GlweSecretKeyRef<u64>,
+        params: &GlweDef,
+        radix: &RadixDecomposition,
+    ) -> GlevCiphertext<u64> {
+        let mut ct = GlevCiphertext::new(params, radix);
+
+        encrypt_secret_glev_ciphertext(&mut ct, msg.as_torus(), sk, params, radix);
+
+        ct
+    }
+
+    /// Create a trivial GLEV encryption of `msg`.
+    ///
+    /// # Remarks
+    /// This ciphertext provides no securtity, but is useful as constants.
+    ///
+    /// # Panics
+    /// If `radix` parameters are invalid.
+    /// If `msg` or `sk` are invalid under `params`.
+    pub fn trivial_glev(
+        msg: &PolynomialRef<u64>,
+        params: &GlweDef,
+        radix: &RadixDecomposition,
+        plaintext_bits: PlaintextBits,
+    ) -> GlevCiphertext<u64> {
+        let mut ct = GlevCiphertext::new(params, radix);
+
+        trivially_encode_encrypt_glev_ciphertext(&mut ct, msg, params, radix, plaintext_bits);
+
+        ct
+    }
+
+    /// Encrypt an RLEV ciphertext of `msg` using the
+    /// [`RlwePublicKey`](crate::entities::RlwePublicKey) `pk`.
+    ///
+    /// # Remarks
+    /// RLEV is a special case of GLEV where `params.dim.size == 1`
+    /// `msg` must contain binary coefficients.
+    ///
+    /// # Panics
+    /// If `params.dim.size != 1`.
+    pub fn encrypt_binary_msg_rlev(
+        msg: &PolynomialRef<u64>,
+        pk: &RlwePublicKeyRef<u64>,
+        params: &GlweDef,
+        radix: &RadixDecomposition,
+    ) -> GlevCiphertext<u64> {
+        let mut ct = GlevCiphertext::new(params, radix);
+
+        encrypt_rlev_ciphertext(&mut ct, msg.as_torus(), pk, params, radix);
+
+        ct
     }
 }
 

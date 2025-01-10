@@ -132,6 +132,12 @@ where
     pub fn is_empty(&self) -> bool {
         self.data.is_empty()
     }
+
+    /// Asserts that this polynomial is valid for the given degree.
+    #[inline]
+    pub fn assert_valid(&self, degree: PolynomialDegree) {
+        assert_eq!(self.degree(), degree);
+    }
 }
 
 impl<T> PolynomialRef<T>

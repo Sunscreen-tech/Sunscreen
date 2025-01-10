@@ -3,10 +3,10 @@ use crate::{
     entities::{
         GlevCiphertextRef, GlweCiphertextRef, GlweSecretKeyRef, PolynomialRef, RlwePublicKeyRef,
     },
-    ops::{encryption::rlwe_encrypt_public, polynomial::encode_polynomial},
+    ops::encryption::rlwe_encrypt_public,
     polynomial::polynomial_scalar_mul,
     scratch::allocate_scratch_ref,
-    GlweDef, PlaintextBits, RadixDecomposition, Torus, TorusOps,
+    GlweDef, RadixDecomposition, Torus, TorusOps,
 };
 
 use super::{
@@ -113,29 +113,6 @@ pub fn trivially_encrypt_glev_ciphertext<S>(
         radix,
         trivially_encrypt_glwe_with_sk_argument,
     );
-}
-
-#[allow(dead_code)]
-/// Encrypt a GLev ciphertext with a given message polynomial and secret key.
-/// This is a trivial encryption that doesn't use the secret key and is not
-/// secure.
-pub fn trivially_encode_encrypt_glev_ciphertext<S>(
-    glev_ciphertext: &mut GlevCiphertextRef<S>,
-    msg: &PolynomialRef<S>,
-    params: &GlweDef,
-    radix: &RadixDecomposition,
-    plain_bits: PlaintextBits,
-) where
-    S: TorusOps,
-{
-    allocate_scratch_ref!(
-        encoded_msg,
-        PolynomialRef<Torus<S>>,
-        (params.dim.polynomial_degree)
-    );
-    encode_polynomial(encoded_msg, msg, plain_bits);
-
-    trivially_encrypt_glev_ciphertext(glev_ciphertext, &encoded_msg, params, radix);
 }
 
 /// Encrypts `msg` as an RLEV ciphertext using `rlwe_public_key`.

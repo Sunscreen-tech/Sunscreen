@@ -337,7 +337,7 @@ pub mod encryption {
         },
         ops::encryption::{
             encrypt_ggsw_ciphertext_scalar, encrypt_rlev_ciphertext,
-            encrypt_secret_glev_ciphertext, trivially_encode_encrypt_glev_ciphertext,
+            encrypt_secret_glev_ciphertext, trivially_encrypt_glev_ciphertext,
             trivially_encrypt_lwe_ciphertext,
         },
         CarryBits, GlweDef, LweDef, PlaintextBits, RadixDecomposition, Torus,
@@ -740,15 +740,14 @@ pub mod encryption {
     /// # Panics
     /// If `radix` parameters are invalid.
     /// If `msg` or `sk` are invalid under `params`.
-    pub fn trivial_glev(
+    pub fn trivial_binary_glev(
         msg: &PolynomialRef<u64>,
         params: &GlweDef,
         radix: &RadixDecomposition,
-        plaintext_bits: PlaintextBits,
     ) -> GlevCiphertext<u64> {
         let mut ct = GlevCiphertext::new(params, radix);
 
-        trivially_encode_encrypt_glev_ciphertext(&mut ct, msg, params, radix, plaintext_bits);
+        trivially_encrypt_glev_ciphertext(&mut ct, msg.as_torus(), params, radix);
 
         ct
     }

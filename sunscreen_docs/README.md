@@ -62,7 +62,7 @@ The polynomials in FHE make use of modular arithmetic. The degree is actually mo
 
 So if I tell you to take the degree mod 3 and the coefficients mod 7, 8x<sup>5</sup> + 5x<sup>2</sup> + x + 13 would turn into 1x<sup>2</sup> + 5x<sup>2</sup> + x + 6. 
 
-To get good performance in FHE, you need to know how to set these parameters (N, P) *just right*. If the parameters are too small, you'll be very limited in terms of the computations you can do. Alternatively, if you make the paramters too big, you'll end with poor performance and large ciphertext sizes. Even worse, you need to base your parameter choices off the maximum sequence of multiplications you plan on doing along with the desired security level. It's also not clear how to efficiently translate integer math to polynomial math.
+To get good performance in FHE, you need to know how to set these parameters (N, P) *just right*. If the parameters are too small, you'll be very limited in terms of the computations you can do. Alternatively, if you make the parameters too big, you'll end with poor performance and large ciphertext sizes. Even worse, you need to base your parameter choices off the maximum sequence of multiplications you plan on doing along with the desired security level. It's also not clear how to efficiently translate integer math to polynomial math.
 
 I've neglected to mention how FHE programs actually work. Under the hood, FHE uses circuits. For the BFV scheme, we have [arithmetic circuits](https://en.wikipedia.org/wiki/Arithmetic_circuit_complexity#:~:text=In%20computational%20complexity%20theory%2C%20arithmetic,expressions%20it%20has%20already%20computed.) (some other FHE schemes use binary circuits). When was the last time you tried to work directly with circuits (if ever)? 
 

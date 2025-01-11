@@ -50,7 +50,7 @@ pub(crate) fn encrypt_secret_glev_ciphertext_generic<S>(
 
     for (j, glwe) in glev_ciphertext.glwe_ciphertexts_mut(params).enumerate() {
         scale_msg(scaled_msg, msg, decomposition_radix_log, j);
-        encrypt(glwe, &scaled_msg, glwe_secret_key, params);
+        encrypt(glwe, scaled_msg, glwe_secret_key, params);
     }
 }
 
@@ -150,7 +150,7 @@ pub fn encrypt_rlev_ciphertext<S>(
 
         dbg!(&scaled_msg.coeffs()[0..16]);
 
-        rlwe_encrypt_public(glwe, &scaled_msg, rlwe_public_key, params);
+        rlwe_encrypt_public(glwe, scaled_msg, rlwe_public_key, params);
     }
 }
 

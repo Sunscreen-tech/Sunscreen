@@ -356,7 +356,7 @@ mod tests {
         let mut ct = GlevCiphertext::new(&params, &radix);
 
         for _ in 0..100 {
-            encrypt_rlev_ciphertext(&mut ct, &msg.as_torus(), &pk, &params, &radix);
+            encrypt_rlev_ciphertext(&mut ct, msg.as_torus(), &pk, &params, &radix);
 
             let mut actual = Polynomial::zero(params.dim.polynomial_degree.0);
 

@@ -17,3 +17,6 @@ pub mod ciphertext;
 
 /// Methods for encrypting and decrypting to various ciphertext types.
 pub mod encryption;
+
+/// Methods for working with polynomials.
+pub mod polynomial;

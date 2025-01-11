@@ -40,7 +40,7 @@ impl LweDimension {
     }
 }
 
-#[derive(Debug, Copy, Clone, Serialize, Deserialize)]
+#[derive(Debug, Copy, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(transparent)]
 /// The degree of the modulus polynomial `(x^N+1)` in a GLWE instance.
 ///

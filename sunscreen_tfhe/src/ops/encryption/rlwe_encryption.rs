@@ -1,6 +1,9 @@
 use crate::{
     dst::FromMutSlice,
-    entities::{GlweCiphertext, GlweSecretKeyRef, Polynomial, PolynomialRef, RlwePublicKeyRef},
+    entities::{
+        GlweCiphertext, GlweCiphertextRef, GlweSecretKeyRef, Polynomial, PolynomialRef,
+        RlwePublicKeyRef,
+    },
     ops::encryption::encrypt_glwe_ciphertext_secret,
     polynomial::{polynomial_add_assign, polynomial_external_mad},
     rand::{binary_torus_polynomial, normal_torus_polynomial},
@@ -84,6 +87,10 @@ where
 
 /// Encrypts an encoded polynomial message using the given [`RlwePublicKey`](RlwePublicKeyRef).
 ///
+/// # Remarks
+/// This method will first call [`GlweCiphertextRef::clear`] on your behalf so you don't
+/// have to.
+///
 /// # Algorithm
 /// This method uses the double-lwe trick, which is efficient but introduces
 /// more noise than Regev's trick (i.e. summing many encryptions of zero). We adapt this
@@ -104,7 +111,7 @@ where
 /// # Panics
 /// If `glwe.dim.size != 1` or if the parameters don't match `ct`, `msg`, or `public_key`.
 pub fn rlwe_encrypt_public<S>(
-    ct: &mut GlweCiphertext<S>,
+    ct: &mut GlweCiphertextRef<S>,
     encoded_msg: &PolynomialRef<Torus<S>>,
     public_key: &RlwePublicKeyRef<S>,
     glwe: &GlweDef,
@@ -116,7 +123,7 @@ where
 }
 
 fn rlwe_encrypt_public_impl<S>(
-    ct: &mut GlweCiphertext<S>,
+    ct: &mut GlweCiphertextRef<S>,
     encoded_msg: &PolynomialRef<Torus<S>>,
     public_key: &RlwePublicKeyRef<S>,
     glwe: &GlweDef,
@@ -128,6 +135,8 @@ where
     assert_eq!(encoded_msg.len(), glwe.dim.polynomial_degree.0);
     ct.assert_valid(glwe);
     public_key.assert_valid(glwe);
+
+    ct.clear();
 
     let mut u = Polynomial::<S>::zero(glwe.dim.polynomial_degree.0);
     binary_torus_polynomial(&mut u);

@@ -10,7 +10,7 @@ use crate::{
         PolynomialFft, PolynomialRef, SchemeSwitchKeyRef,
     },
     iteration::TriangularPairsExt,
-    ops::{ciphertext::decomposed_polynomial_glev_mad, encryption::encrypt_glev_ciphertext},
+    ops::{ciphertext::decomposed_polynomial_glev_mad, encryption::encrypt_secret_glev_ciphertext},
     radix::PolynomialRadixIterator,
     scratch::allocate_scratch_ref,
     GlweDef, RadixDecomposition, Torus, TorusOps,
@@ -59,7 +59,7 @@ pub fn generate_scheme_switch_key<S>(
         s_i_j_fft.ifft(&mut s_i_j);
 
         // Encrypt the secret key under itself
-        encrypt_glev_ciphertext(glev_ciphertext, s_i_j.as_torus(), sk, params, radix)
+        encrypt_secret_glev_ciphertext(glev_ciphertext, s_i_j.as_torus(), sk, params, radix)
     });
 }
 
@@ -162,7 +162,7 @@ pub(crate) fn update_encrypted_secret_key_component<S>(
 ///         SchemeSwitchKey,
 ///     },
 ///     ops::{
-///         encryption::encrypt_glev_ciphertext,
+///         encryption::encrypt_secret_glev_ciphertext,
 ///         bootstrapping::{generate_scheme_switch_key, scheme_switch},
 ///     },
 ///     GlweDef, GlweDimension, GlweSize, PolynomialDegree, rand::Stddev,
@@ -201,7 +201,7 @@ pub(crate) fn update_encrypted_secret_key_component<S>(
 ///
 /// // Encrypt message as GLev
 /// let mut glev = GlevCiphertext::new(&params, &radix_ggsw);
-/// encrypt_glev_ciphertext(&mut glev, &m, &sk, &params, &radix_ggsw);
+/// encrypt_secret_glev_ciphertext(&mut glev, &m, &sk, &params, &radix_ggsw);
 ///
 /// // Convert to GGSW
 /// let mut ggsw = GgswCiphertext::new(&params, &radix_ggsw);
@@ -687,7 +687,7 @@ mod tests {
 
         // Encrypt the message
         let mut glev_ciphertext = GlevCiphertext::new(&params, &RADIX_GGSW);
-        encrypt_glev_ciphertext(&mut glev_ciphertext, &m, &sk, &params, &RADIX_GGSW);
+        encrypt_secret_glev_ciphertext(&mut glev_ciphertext, &m, &sk, &params, &RADIX_GGSW);
 
         // Perform the scheme switch
         let mut ggsw_ciphertext = GgswCiphertext::new(&params, &RADIX_GGSW);
@@ -778,7 +778,7 @@ mod tests {
 
         // Encrypt the message
         let mut glev_ciphertext = GlevCiphertext::new(&params, &RADIX_GGSW);
-        encrypt_glev_ciphertext(&mut glev_ciphertext, &m, &sk, &params, &RADIX_GGSW);
+        encrypt_secret_glev_ciphertext(&mut glev_ciphertext, &m, &sk, &params, &RADIX_GGSW);
 
         // Perform the scheme switch
         let mut ggsw_ciphertext = GgswCiphertext::new(&params, &RADIX_GGSW);

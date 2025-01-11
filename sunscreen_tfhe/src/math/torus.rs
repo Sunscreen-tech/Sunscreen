@@ -274,6 +274,10 @@ impl<S: TorusOps> Torus<S> {
     /// Encode a value into a [Torus] that supports up to plain_bits of values.
     /// This encodes the value on the equispaced `2^plaintext_bits` positions on
     /// a larger torus.
+    ///
+    /// # Remarks
+    /// We encode messages in FHE as noise grows in the lower bits of a ciphertext as
+    /// computation unfolds.
     pub fn encode(val: S, plain_bits: PlaintextBits) -> Self {
         assert!(plain_bits.0 < S::BITS);
 

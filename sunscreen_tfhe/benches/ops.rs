@@ -13,7 +13,7 @@ use sunscreen_tfhe::{
     high_level::{self, *},
     ops::{
         bootstrapping::{circuit_bootstrap, generate_scheme_switch_key},
-        encryption::encrypt_glev_ciphertext,
+        encryption::encrypt_secret_glev_ciphertext,
         fft_ops::scheme_switch_fft,
         keyswitch::public_functional_keyswitch::{
             generate_public_functional_keyswitch_key, public_functional_keyswitch,
@@ -266,7 +266,7 @@ fn scheme_switch(c: &mut Criterion) {
 
     // Encrypt the message
     let mut glev_ciphertext = GlevCiphertext::new(&params, &ggsw_radix);
-    encrypt_glev_ciphertext(&mut glev_ciphertext, &m, &sk, &params, &ggsw_radix);
+    encrypt_secret_glev_ciphertext(&mut glev_ciphertext, &m, &sk, &params, &ggsw_radix);
 
     let mut ggsw_fft = GgswCiphertextFft::new(&params, &ggsw_radix);
 

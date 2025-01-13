@@ -60,7 +60,7 @@ pub(crate) fn encrypt_secret_glev_ciphertext_generic<S>(
 /// # Remarks
 /// GLEV ciphertexts feature redundant encryptions of `msg` where each message is scaled
 /// by a corresponding gadget factor. This sets up some clever algebraic cancellation
-/// that enables the GGSW [x] GLWE outer product.
+/// that enables the GGSW-times-GLWE outer product.
 pub fn scale_msg_by_gadget_factor<S>(
     scaled_msg: &mut PolynomialRef<Torus<S>>,
     msg: &PolynomialRef<Torus<S>>,

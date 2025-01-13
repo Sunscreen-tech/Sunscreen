@@ -1001,7 +1001,7 @@ pub mod evaluation {
     /// For step 2, we use private functional keyswitching (PFKS) to transform the
     /// `cbs_radix.count` [LweCiphertext]s encrypted under `glwe_2` into
     /// `cbs_radix.count * glwe_2.size + 1` [GlweCiphertext]s. The PFKS operations multiply each
-    /// [GlevCiphertext](crate::entities::GlevCiphertext) by the corresponding polynomial in
+    /// [GlevCiphertext] by the corresponding polynomial in
     /// the `glwe_1` [GlweSecretKey](crate::entities::GlweSecretKey) to create a valid
     /// [GgswCiphertext].
     ///

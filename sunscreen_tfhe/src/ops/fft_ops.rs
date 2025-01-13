@@ -132,6 +132,16 @@ pub fn glwe_polynomial_mad(
 /// where the output `c` is a different encryption than either of the initial
 /// inputs.  Note that this will result in higher noise than in the original
 /// ciphertexts.
+///
+/// # Remarks
+/// To make some internal computations, this function actually homomorphically computes
+///
+/// ```text
+/// c += cmux(d_0, d_1, b_fft);
+/// ```
+///
+/// Unless you want this behavior, you should first call `c.clear()`, use a freshly
+/// allocated `c`, or use [crate::high_level::evaluation::cmux].
 pub fn cmux<S>(
     c: &mut GlweCiphertextRef<S>,
     d_0: &GlweCiphertextRef<S>,
@@ -164,6 +174,45 @@ pub fn cmux<S>(
     prod_fft.ifft(prod, params);
 
     add_glwe_ciphertexts(c, prod, d_0, params);
+}
+
+/// Compute a cmux between [`GlevCiphertext`](crate::entities::GlevCiphertext)s `d_0`,
+/// `d_1`, and select bit `b_fft`.
+///
+/// # Remarks
+/// A glev_cmux simply computes a cmux over each of the constituent GLWE ciphertexts within
+/// the
+///
+/// `ggsw_radix` describes the [`RadixDecomposition`] of the `b_fft`
+/// [`GgswCiphertextFft`](crate::entities::GgswCiphertextFft), ciphertext, not the GLEV
+/// decomposition.
+///
+/// # Remarks
+/// To make some internal computations, this function actually homomorphically computes
+///
+/// ```text
+/// c += cmux(d_0, d_1, b_fft);
+/// ```
+///
+/// Unless you want this behavior, you should first call `c.clear()`, use a freshly
+/// allocated `c`, or use [crate::high_level::evaluation::glev_cmux].
+pub fn glev_cmux<S>(
+    c: &mut GlevCiphertextRef<S>,
+    d_0: &GlevCiphertextRef<S>,
+    d_1: &GlevCiphertextRef<S>,
+    b_fft: &GgswCiphertextFftRef<Complex<f64>>,
+    params: &GlweDef,
+    ggsw_radix: &RadixDecomposition,
+) where
+    S: TorusOps,
+{
+    for ((c, d_0), d_1) in c
+        .glwe_ciphertexts_mut(params)
+        .zip(d_0.glwe_ciphertexts(params))
+        .zip(d_1.glwe_ciphertexts(params))
+    {
+        cmux(c, d_0, d_1, b_fft, params, ggsw_radix);
+    }
 }
 
 /// This is the same as `generate_encrypted_secret_key_component` but it assumes
@@ -400,11 +449,12 @@ mod tests {
             GgswCiphertext, GgswCiphertextFft, GlevCiphertext, GlweCiphertext, GlweCiphertextFft,
             GlweSecretKey, Polynomial, SchemeSwitchKey, SchemeSwitchKeyFft,
         },
-        high_level::*,
+        high_level::{self, *},
         ops::{
             bootstrapping::{generate_scheme_switch_key, scheme_switch},
             encryption::{
                 decrypt_ggsw_ciphertext, decrypt_glev_ciphertext, encrypt_secret_glev_ciphertext,
+                scale_msg_by_gadget_factor,
             },
         },
         polynomial::polynomial_external_mad,
@@ -748,6 +798,63 @@ mod tests {
         for _ in 0..10 {
             let message = thread_rng().next_u64() % 2;
             _can_cmux_after_scheme_switch_fft(message);
+        }
+    }
+
+    #[test]
+    fn can_glev_cmux() {
+        let params = TEST_RLWE_DEF;
+        let radix = TEST_RADIX;
+
+        let sk = keygen::generate_binary_glwe_sk(&params);
+
+        let zero = Polynomial::zero(params.dim.polynomial_degree.0);
+        let zero_ct = high_level::encryption::trivial_binary_glev(&zero, &params, &radix);
+
+        let mut one = Polynomial::zero(params.dim.polynomial_degree.0);
+        zero.map_into(&mut one, |_| 1);
+        let one_ct = high_level::encryption::trivial_binary_glev(&one, &params, &radix);
+
+        for _ in 0..100 {
+            let sel_0 =
+                high_level::encryption::encrypt_ggsw(0, &sk, &params, &radix, PlaintextBits(1));
+            let sel_0 = high_level::fft::fft_ggsw(&sel_0, &params, &radix);
+
+            let sel_1 =
+                high_level::encryption::encrypt_ggsw(1, &sk, &params, &radix, PlaintextBits(1));
+            let sel_1 = high_level::fft::fft_ggsw(&sel_1, &params, &radix);
+
+            let mut result = GlevCiphertext::new(&params, &radix);
+
+            glev_cmux(&mut result, &zero_ct, &one_ct, &sel_0, &params, &radix);
+
+            for glwe in result.glwe_ciphertexts(&params) {
+                let actual =
+                    high_level::encryption::decrypt_glwe(glwe, &sk, &params, PlaintextBits(1));
+
+                assert_eq!(actual, zero);
+            }
+
+            glev_cmux(&mut result, &zero_ct, &one_ct, &sel_1, &params, &radix);
+
+            for (i, glwe) in result.glwe_ciphertexts(&params).enumerate() {
+                // The i'th decomposition factor requires (i + 1) * radix_log.0 bits of
+                // message space.
+                let pt_bits = PlaintextBits(((i + 1) * radix.radix_log.0) as u32);
+                let actual = high_level::encryption::decrypt_glwe(glwe, &sk, &params, pt_bits);
+
+                let mut scaled = Polynomial::zero(params.dim.polynomial_degree.0);
+
+                // Compute 1 / beta^(i + 1). This will be shifted into the MSBs, so we
+                // need to decode this message before we can compare
+                scale_msg_by_gadget_factor(&mut scaled, one.as_torus(), radix.radix_log.0, i);
+
+                // Decode expected msg. No need to round because we didn't encrypt it
+                // hence no noise.
+                let expected = scaled.map(|x| x.inner() >> (u64::BITS - pt_bits.0));
+
+                assert_eq!(actual, expected);
+            }
         }
     }
 }

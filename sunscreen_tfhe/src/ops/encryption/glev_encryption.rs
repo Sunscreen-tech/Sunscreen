@@ -49,12 +49,19 @@ pub(crate) fn encrypt_secret_glev_ciphertext_generic<S>(
     );
 
     for (j, glwe) in glev_ciphertext.glwe_ciphertexts_mut(params).enumerate() {
-        scale_msg(scaled_msg, msg, decomposition_radix_log, j);
+        scale_msg_by_gadget_factor(scaled_msg, msg, decomposition_radix_log, j);
         encrypt(glwe, scaled_msg, glwe_secret_key, params);
     }
 }
 
-fn scale_msg<S>(
+/// Multiplies each [`Torus`] coefficient in `msg` by `1/beta^(j + 1)`, writing the result
+/// to `scaled_msg`.
+///
+/// # Remarks
+/// GLEV ciphertexts feature redundant encryptions of `msg` where each message is scaled
+/// by a corresponding gadget factor. This sets up some clever algebraic cancellation
+/// that enables the GGSW-times-GLWE outer product.
+pub fn scale_msg_by_gadget_factor<S>(
     scaled_msg: &mut PolynomialRef<Torus<S>>,
     msg: &PolynomialRef<Torus<S>>,
     decomposition_radix_log: usize,
@@ -146,7 +153,7 @@ pub fn encrypt_rlev_ciphertext<S>(
     );
 
     for (j, glwe) in rlev_ciphertext.glwe_ciphertexts_mut(params).enumerate() {
-        scale_msg(scaled_msg, msg, radix.radix_log.0, j);
+        scale_msg_by_gadget_factor(scaled_msg, msg, radix.radix_log.0, j);
 
         dbg!(&scaled_msg.coeffs()[0..16]);
 

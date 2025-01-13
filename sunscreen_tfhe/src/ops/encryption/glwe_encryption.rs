@@ -98,6 +98,9 @@ pub fn trivially_encrypt_glwe_ciphertext<S>(
 }
 
 /// Decrypt GLWE ciphertext `ct` into `msg` using secret key `sk`.
+///
+/// # Remarks
+/// This method does not decode the resulting `msg`.
 pub fn decrypt_glwe_ciphertext<S>(
     msg: &mut PolynomialRef<Torus<S>>,
     ct: &GlweCiphertextRef<S>,

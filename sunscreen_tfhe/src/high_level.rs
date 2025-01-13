@@ -863,8 +863,9 @@ pub mod evaluation {
     use crate::{
         entities::{
             BootstrapKeyFft, BootstrapKeyFftRef, CircuitBootstrappingKeyswitchKeysRef,
-            GgswCiphertext, GgswCiphertextFftRef, GlweCiphertext, GlweCiphertextRef, LweCiphertext,
-            LweCiphertextRef, LweKeyswitchKeyRef, UnivariateLookupTableRef,
+            GgswCiphertext, GgswCiphertextFftRef, GlevCiphertext, GlevCiphertextRef,
+            GlweCiphertext, GlweCiphertextRef, LweCiphertext, LweCiphertextRef, LweKeyswitchKeyRef,
+            UnivariateLookupTableRef,
         },
         GlweDef, LweDef, RadixDecomposition,
     };
@@ -899,6 +900,41 @@ pub mod evaluation {
         let mut result = GlweCiphertext::new(params);
 
         crate::ops::fft_ops::cmux(&mut result, d_0, d_1, b_fft, params, radix);
+
+        result
+    }
+
+    /// Perform a multiplexing operation over [`GlevCiphertext`]s.
+    /// When `b_fft` encrypts a zero polynomial, the resulting [`GlevCiphertext`] will
+    /// the same message as `d_0`. When `b_fft` encrypts the 1 polynomial, the result will
+    /// contain the same message as `d_1`.
+    ///
+    /// # Remarks
+    /// `b_fft`, `d_0`, and `d_1` must all be encrypted under the same
+    /// [`GlweSecretKey`](crate::entities::GlweSecretKey). This implies `params` must
+    /// correspond with all three values.
+    ///
+    /// Additionally, `radix` must correspond to `b_fft`.
+    ///
+    /// For
+    /// [`GgswCiphertext`] resulting from [`circuit_bootstrap`] operations,
+    /// `radix` must be the same as `cbs_radix` and `params` must be the same as
+    /// `glwe_1`.
+    ///
+    /// # Panics
+    /// If `params` doesn't correspond with `b_fft`, `d_0`, `d_1`.
+    /// If `radix` doesn't correspond with `b_fft`.
+    /// If `radix` or `params` are invalid.
+    pub fn glev_cmux(
+        b_fft: &GgswCiphertextFftRef<Complex<f64>>,
+        d_0: &GlevCiphertextRef<u64>,
+        d_1: &GlevCiphertextRef<u64>,
+        params: &GlweDef,
+        radix: &RadixDecomposition,
+    ) -> GlevCiphertext<u64> {
+        let mut result = GlevCiphertext::new(params, radix);
+
+        crate::ops::fft_ops::glev_cmux(&mut result, d_0, d_1, b_fft, params, radix);
 
         result
     }
@@ -965,7 +1001,7 @@ pub mod evaluation {
     /// For step 2, we use private functional keyswitching (PFKS) to transform the
     /// `cbs_radix.count` [LweCiphertext]s encrypted under `glwe_2` into
     /// `cbs_radix.count * glwe_2.size + 1` [GlweCiphertext]s. The PFKS operations multiply each
-    /// [GlevCiphertext](crate::entities::GlevCiphertext) by the corresponding polynomial in
+    /// [GlevCiphertext] by the corresponding polynomial in
     /// the `glwe_1` [GlweSecretKey](crate::entities::GlweSecretKey) to create a valid
     /// [GgswCiphertext].
     ///

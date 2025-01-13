@@ -134,8 +134,7 @@ pub fn glwe_polynomial_mad(
 /// ciphertexts.
 ///
 /// # Remarks
-/// This implementation actually homomorphically to make some internal computations
-/// more efficient.
+/// To make some internal computations, this function actually homomorphically computes
 ///
 /// ```text
 /// c += cmux(d_0, d_1, b_fft);
@@ -189,8 +188,7 @@ pub fn cmux<S>(
 /// decomposition.
 ///
 /// # Remarks
-/// This implementation actually homomorphically to make some internal computations
-/// more efficient.
+/// To make some internal computations, this function actually homomorphically computes
 ///
 /// ```text
 /// c += cmux(d_0, d_1, b_fft);
@@ -843,13 +841,13 @@ mod tests {
                 // The i'th decomposition factor requires (i + 1) * radix_log.0 bits of
                 // message space.
                 let pt_bits = PlaintextBits(((i + 1) * radix.radix_log.0) as u32);
-                let actual = high_level::encryption::decrypt_glwe(&glwe, &sk, &params, pt_bits);
+                let actual = high_level::encryption::decrypt_glwe(glwe, &sk, &params, pt_bits);
 
                 let mut scaled = Polynomial::zero(params.dim.polynomial_degree.0);
 
                 // Compute 1 / beta^(i + 1). This will be shifted into the MSBs, so we
                 // need to decode this message before we can compare
-                scale_msg_by_gadget_factor(&mut scaled, &one.as_torus(), radix.radix_log.0, i);
+                scale_msg_by_gadget_factor(&mut scaled, one.as_torus(), radix.radix_log.0, i);
 
                 // Decode expected msg. No need to round because we didn't encrypt it
                 // hence no noise.

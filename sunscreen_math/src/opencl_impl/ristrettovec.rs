@@ -12,9 +12,7 @@ use crate::{
     GpuScalarVec,
 };
 
-use super::{
-    multiexp::multiscalar_multiplication, GpuVec, GpuVecIter, IntoGpuVecIter, MappedBuffer,
-};
+use super::{multiexp::multiscalar_multiplication, GpuVec, IntoGpuVecIter, MappedBuffer};
 
 /// A vector of [`RistrettoPoint`] elements laid out in a way that enables coalesced
 /// reads and writes on a GPU.
@@ -35,6 +33,8 @@ pub struct GpuRistrettoPointVec {
 impl GpuRistrettoPointVec {
     #[allow(clippy::erasing_op)]
     #[allow(clippy::identity_op)]
+    /// Create a new [`GpuRistrettoPointVec`] and initialize it with the given slice
+    /// x.
     pub fn new(x: &[RistrettoPoint]) -> Self {
         let len = x.len();
 
@@ -92,10 +92,11 @@ impl GpuRistrettoPointVec {
         }
     }
 
-    pub fn iter(&self) -> GpuVecIter<Self> {
-        <Self as GpuVec>::iter(self)
-    }
-
+    /// Compute a multiscalar multiplication between this set of elliptic curve points
+    /// and the passed [`scalars`].
+    ///
+    /// # Panics
+    /// If `self.len() != scalars.len()`.
     pub fn multiscalar_multiplication(&self, scalars: &GpuScalarVec) -> RistrettoPoint {
         multiscalar_multiplication(self, scalars)
     }

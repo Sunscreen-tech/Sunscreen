@@ -129,9 +129,9 @@ jobs:
           ~/.cargo/registry/cache/
           ~/.cargo/git/db/
           target/
-        key: ${{ runner.os }}-cargo-doc-${{ hashFiles('**/Cargo.lock') }}
+        key: ${{ runner.os }}-cargo-emscripten-${{ hashFiles('**/Cargo.lock') }}
         restore-keys: |
-          ${{ runner.os }}-cargo-doc-
+          ${{ runner.os }}-cargo-emscripten-
           ${{ runner.os }}-cargo-
     - name: Install gcc-multilib (32-bit headers)
       run: |

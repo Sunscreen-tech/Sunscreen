@@ -181,6 +181,8 @@ fn main() {
 
     let bindings = builder.generate().unwrap();
 
+    println!("{}", bindings);
+
     bindings
         .write_to_file(out_path.join("bindings.rs"))
         .expect("Failed to write bindings");

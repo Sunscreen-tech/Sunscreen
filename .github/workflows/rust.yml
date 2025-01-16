@@ -50,7 +50,7 @@ jobs:
 
     # Check that common feature permutations compile
     - name: Core compile check
-      run: cargo check --release
+      run: cargo check --release -vv
     - name: Full compile check
       run: cargo check --release --features deterministic,linkedproofs,logproof
 

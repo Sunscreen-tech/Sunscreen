@@ -45,6 +45,12 @@ jobs:
     # We do everything in release mode so tests run quickly and steps cache each other.
     # Check the submitted change meets style guidelines
 
+    - name: Print cargo version
+      run: cargo --version
+
+    - name: Print clang version
+      run: clang --version
+
     - name: Cargo Format
       run: cargo fmt --check
 

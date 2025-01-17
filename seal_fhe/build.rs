@@ -136,7 +136,7 @@ fn main() {
     }
 
     let mut builder = bindgen::builder()
-        .clang_arg(format!("-I{}", out_path.join("include/SEAL-3.7").display()))
+        .clang_arg(format!("-I{}", out_path.join("include/SEAL-4.0").display()))
         .clang_arg("-ISEAL/native/src")
         .clang_arg("-xc++")
         .clang_arg("-std=c++17");

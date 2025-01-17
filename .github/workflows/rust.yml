@@ -55,8 +55,6 @@ jobs:
     - name: Cargo Format
       run: cargo fmt --check
 
-    - uses: lhotari/action-upterm@v1
-
     # Check that common feature permutations compile
     - name: Core compile check
       run: cargo check --release -vv

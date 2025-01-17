@@ -136,7 +136,7 @@ fn main() {
     }
 
     let mut builder = bindgen::builder()
-        .clang_arg(format!("-I{}", out_path.join("include/SEAL-3.7").display()))
+        .clang_arg(format!("-I{}", out_path.join("include/SEAL-4.0").display()))
         .clang_arg("-ISEAL/native/src")
         .clang_arg("-xc++")
         .clang_arg("-std=c++17");
@@ -153,7 +153,7 @@ fn main() {
     let builder = builder
         .detect_include_paths(true)
         .header("bindgen_wrapper.h")
-        .parse_callbacks(Box::new(bindgen::CargoCallbacks))
+        .parse_callbacks(Box::new(bindgen::CargoCallbacks::new()))
         .allowlist_function("BatchEncoder_.*")
         .allowlist_function("Ciphertext_.*")
         .allowlist_function("CKKSEncoder_.*")
@@ -180,6 +180,8 @@ fn main() {
         .allowlist_function("ValCheck_.*");
 
     let bindings = builder.generate().unwrap();
+
+    println!("{}", bindings);
 
     bindings
         .write_to_file(out_path.join("bindings.rs"))

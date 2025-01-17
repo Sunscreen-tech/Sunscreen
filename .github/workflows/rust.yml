@@ -5,7 +5,8 @@ on:
     branches: [ main ]
   pull_request:
     branches: [ main, debugger ]
-
+  workflow_dispatch:
+    
 env:
   CARGO_TERM_COLOR: always
 
@@ -45,12 +46,18 @@ jobs:
     # We do everything in release mode so tests run quickly and steps cache each other.
     # Check the submitted change meets style guidelines
 
+    - name: Print cargo version
+      run: cargo --version
+
+    - name: Print clang version
+      run: clang --version
+
     - name: Cargo Format
       run: cargo fmt --check
 
     # Check that common feature permutations compile
     - name: Core compile check
-      run: cargo check --release
+      run: cargo check --release -vv
     - name: Full compile check
       run: cargo check --release --features deterministic,linkedproofs,logproof
 
@@ -129,9 +136,9 @@ jobs:
           ~/.cargo/registry/cache/
           ~/.cargo/git/db/
           target/
-        key: ${{ runner.os }}-cargo-doc-${{ hashFiles('**/Cargo.lock') }}
+        key: ${{ runner.os }}-cargo-emscripten-${{ hashFiles('**/Cargo.lock') }}
         restore-keys: |
-          ${{ runner.os }}-cargo-doc-
+          ${{ runner.os }}-cargo-emscripten-
           ${{ runner.os }}-cargo-
     - name: Install gcc-multilib (32-bit headers)
       run: |

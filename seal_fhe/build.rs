@@ -1,3 +1,4 @@
+use bindgen::CargoCallbacks;
 use cmake::Config;
 use emsdk::Config as EmConfig;
 
@@ -153,7 +154,7 @@ fn main() {
     let builder = builder
         .detect_include_paths(true)
         .header("bindgen_wrapper.h")
-        .parse_callbacks(Box::new(bindgen::CargoCallbacks))
+        .parse_callbacks(Box::new(CargoCallbacks::new()))
         .allowlist_function("BatchEncoder_.*")
         .allowlist_function("Ciphertext_.*")
         .allowlist_function("CKKSEncoder_.*")

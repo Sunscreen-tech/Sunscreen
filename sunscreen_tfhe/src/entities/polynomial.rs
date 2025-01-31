@@ -4,6 +4,7 @@ use std::{
 };
 
 use num::{Complex, Zero};
+use serde::{Deserialize, Serialize};
 
 use crate::{
     dst::{FromMutSlice, FromSlice, NoWrapper, OverlaySize},
@@ -20,7 +21,7 @@ dst! {
     Polynomial,
     PolynomialRef,
     NoWrapper,
-    (Debug, Clone, PartialEq, Eq,),
+    (Debug, Clone, PartialEq, Eq, Serialize, Deserialize),
     ()
 }
 dst_iter! { PolynomialIterator, PolynomialIteratorMut, ParallelPolynomialIterator, ParallelPolynomialIteratorMut, NoWrapper, PolynomialRef, () }

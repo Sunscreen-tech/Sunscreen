@@ -745,7 +745,7 @@ fn strip_trailing_value<T>(mut v: Vec<T>, trim_value: T) -> Vec<T>
 where
     T: Eq,
 {
-    while v.last().map_or(false, |c| *c == trim_value) {
+    while v.last().is_some_and(|c| *c == trim_value) {
         v.pop();
     }
 

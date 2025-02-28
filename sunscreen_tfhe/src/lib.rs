@@ -5,6 +5,7 @@
 
 #[macro_use]
 mod dst;
+pub use dst::OverlaySize;
 
 /// Methods for iterating over data structures.
 pub(crate) mod iteration;

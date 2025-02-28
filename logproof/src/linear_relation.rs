@@ -1507,7 +1507,7 @@ mod test {
         assert_eq!(bit_vec.len(), 9 * vals.len());
 
         let sign_extend = |mut x: u16| {
-            let sign = (x & 0x1 << 8) >> 8;
+            let sign = (x & (0x1 << 8)) >> 8;
 
             for i in 9..16 {
                 x |= sign << i;

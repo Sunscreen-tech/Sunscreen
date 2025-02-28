@@ -371,7 +371,7 @@ mod tests {
             let mut signed_encoding = [0; <Signed as LinkWithZkp>::DEGREE_BOUND];
             let abs_val = val.unsigned_abs();
             for (i, c) in signed_encoding.iter_mut().take(64).enumerate() {
-                let bit = (abs_val & 0x1 << i) >> i;
+                let bit = (abs_val & (0x1 << i)) >> i;
                 *c = if val.is_negative() {
                     bit * (plain_modulus - bit)
                 } else {

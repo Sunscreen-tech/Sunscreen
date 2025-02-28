@@ -479,7 +479,7 @@ impl<const INT_BITS: usize> TryIntoPlaintext for Fractional<INT_BITS> {
         }
 
         for i in 0..f64::MANTISSA_DIGITS {
-            let bit_value = (mantissa & 0x1 << i) >> i;
+            let bit_value = (mantissa & (0x1 << i)) >> i;
             let bit_power = power - (f64::MANTISSA_DIGITS - i - 1) as i64;
 
             let coeff_index = if bit_power >= 0 {

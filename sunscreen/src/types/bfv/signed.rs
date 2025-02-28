@@ -93,7 +93,7 @@ impl TryIntoPlaintext for Signed {
         seal_plaintext.resize(sig_bits);
 
         for i in 0..sig_bits {
-            let bit_value = (signed_val & 0x1 << i) >> i;
+            let bit_value = (signed_val & (0x1 << i)) >> i;
 
             let coeff_value = if self.val < 0 {
                 bit_value * (params.plain_modulus - bit_value)

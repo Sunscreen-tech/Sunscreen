@@ -462,9 +462,12 @@ macro_rules! dst_iter {
 
 pub type NoWrapper<T> = T;
 
+/// Describes how large an entity will be for the given parameters.
 pub trait OverlaySize {
+    /// The inputs that determine this entity's size
     type Inputs: Copy + Clone;
 
+    /// Get the size of the entity.
     fn size(t: Self::Inputs) -> usize;
 }
 

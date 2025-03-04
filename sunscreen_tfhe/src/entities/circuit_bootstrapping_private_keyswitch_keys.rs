@@ -2,8 +2,9 @@ use serde::{Deserialize, Serialize};
 use sunscreen_math::Zero;
 
 use crate::{
-    dst::OverlaySize, GlweDef, GlweDimension, LweDef, LweDimension,
-    PrivateFunctionalKeyswitchLweCount, RadixCount, RadixDecomposition, Torus, TorusOps,
+    dst::{AsMutSlice, AsSlice, OverlaySize},
+    GlweDef, GlweDimension, LweDef, LweDimension, PrivateFunctionalKeyswitchLweCount, RadixCount,
+    RadixDecomposition, Torus, TorusOps,
 };
 
 use super::{
@@ -116,18 +117,5 @@ impl<S: TorusOps> CircuitBootstrappingKeyswitchKeysRef<S> {
         ));
 
         ParallelPrivateFunctionalKeyswitchKeyIterMut::new(self.as_mut_slice(), stride)
-    }
-
-    #[inline(always)]
-    /// Assert these keys are valid under the given parameters.
-    pub fn assert_valid(&self, from_lwe: &LweDef, to_glwe: &GlweDef, radix: &RadixDecomposition) {
-        assert_eq!(
-            self.as_slice().len(),
-            CircuitBootstrappingKeyswitchKeysRef::<S>::size((
-                from_lwe.dim,
-                to_glwe.dim,
-                radix.count,
-            ))
-        );
     }
 }

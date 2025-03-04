@@ -109,10 +109,4 @@ impl<S: TorusOps> UnivariateLookupTableRef<S> {
             *o = Torus::encode(val, plaintext_bits);
         }
     }
-
-    #[inline(always)]
-    /// Asserts this LUT is valid under the given [`GlweDef`] parameters.
-    pub fn assert_valid(&self, glwe: &GlweDef) {
-        assert_eq!(Self::size(glwe.dim), self.data.len());
-    }
 }

@@ -91,7 +91,7 @@ where
     /// [Self::decrypt] for a function that performs the decoding automatically.
     pub fn decrypt_without_decode(&self, ct: &LweCiphertextRef<S>, params: &LweDef) -> Torus<S> {
         params.assert_valid();
-        ct.assert_valid(params);
+        ct.assert_is_valid(params.dim);
 
         let (a, b) = ct.a_b(params);
 
@@ -116,19 +116,11 @@ where
     ) -> S {
         params.assert_valid();
         assert!(plaintext_bits.0 < S::BITS);
-        ct.assert_valid(params);
+        ct.assert_is_valid(params.dim);
 
         let msg = self.decrypt_without_decode(ct, params);
 
         msg.decode(plaintext_bits)
-    }
-
-    /// Asserts that a given secret key is valid for a given LWE dimension.
-    pub fn assert_valid(&self, params: &LweDef) {
-        assert_eq!(
-            self.as_slice().len(),
-            LweSecretKeyRef::<S>::size(params.dim)
-        );
     }
 }
 

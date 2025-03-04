@@ -18,7 +18,7 @@ use crate::{
         fft_ops::cmux,
     },
     scratch::allocate_scratch_ref,
-    CarryBits, GlweDef, LweDef, PlaintextBits, RadixDecomposition, Torus, TorusOps,
+    CarryBits, GlweDef, LweDef, OverlaySize, PlaintextBits, RadixDecomposition, Torus, TorusOps,
 };
 
 use super::rotate_glwe_negative_monomial_negacyclic;
@@ -44,9 +44,9 @@ pub fn generate_bootstrap_key<S>(
     lwe.assert_valid();
     glwe.assert_valid();
     radix.assert_valid::<S>();
-    bootstrap_key.assert_valid(lwe, glwe, radix);
-    sk.assert_valid(glwe);
-    sk_to_encrypt.assert_valid(lwe);
+    bootstrap_key.assert_is_valid((lwe.dim, glwe.dim, radix.count));
+    sk.assert_is_valid(glwe.dim);
+    sk_to_encrypt.assert_is_valid(lwe.dim);
 
     sk_to_encrypt
         .s()
@@ -352,10 +352,10 @@ pub fn generalized_programmable_bootstrap<S>(
     lwe_params.assert_valid();
     glwe_params.assert_valid();
     radix.assert_valid::<S>();
-    bootstrap_key.assert_valid(lwe_params, glwe_params, radix);
-    lut.assert_valid(glwe_params);
-    input.assert_valid(lwe_params);
-    output.assert_valid(glwe_params);
+    bootstrap_key.assert_is_valid((lwe_params.dim, glwe_params.dim, radix.count));
+    lut.assert_is_valid(glwe_params.dim);
+    input.assert_is_valid(lwe_params.dim);
+    output.assert_is_valid(glwe_params.dim);
 
     // Steps:
     // 1. Modulus switch the ciphertext to 2N.

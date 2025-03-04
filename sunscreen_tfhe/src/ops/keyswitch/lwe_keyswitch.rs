@@ -7,7 +7,7 @@ use crate::{
     },
     radix::PolynomialRadixIterator,
     scratch::allocate_scratch_ref,
-    LweDef, PolynomialDegree, RadixDecomposition, TorusOps,
+    LweDef, OverlaySize, PolynomialDegree, RadixDecomposition, TorusOps,
 };
 
 /// Switches a ciphertext under the original key to a ciphertext under the new
@@ -33,9 +33,9 @@ pub fn keyswitch_lwe_to_lwe<S>(
     old_params.assert_valid();
     new_params.assert_valid();
     radix.assert_valid::<S>();
-    output.assert_valid(new_params);
-    ciphertext_under_original_key.assert_valid(old_params);
-    keyswitch_key.assert_valid(old_params, new_params, radix);
+    output.assert_is_valid(new_params.dim);
+    ciphertext_under_original_key.assert_is_valid(old_params.dim);
+    keyswitch_key.assert_is_valid((old_params.dim, new_params.dim, radix.count));
 
     let (ciphertext_a, ciphertext_b) = ciphertext_under_original_key.a_b(old_params);
 

@@ -100,7 +100,7 @@ where
     {
         params.assert_valid();
         assert!(plaintext_bits.0 < S::BITS);
-        ct.assert_valid(params);
+        ct.assert_is_valid(params.dim);
 
         let mut result = Polynomial::zero(ct.a_b(params).1.len());
 
@@ -155,15 +155,6 @@ where
     /// [`sample_extract`](crate::ops::ciphertext::sample_extract).
     pub fn to_lwe_secret_key(&self) -> &LweSecretKeyRef<S> {
         LweSecretKeyRef::from_slice(&self.data)
-    }
-
-    #[inline(always)]
-    /// Asserts that this entity is valid for the given `params`
-    pub fn assert_valid(&self, params: &GlweDef) {
-        assert_eq!(
-            self.as_slice().len(),
-            GlweSecretKeyRef::<S>::size(params.dim)
-        );
     }
 }
 

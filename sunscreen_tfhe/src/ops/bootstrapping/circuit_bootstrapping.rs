@@ -13,8 +13,8 @@ use crate::{
         keyswitch::private_functional_keyswitch::private_functional_keyswitch,
     },
     scratch::allocate_scratch_ref,
-    GlweDef, LweDef, PlaintextBits, PrivateFunctionalKeyswitchLweCount, RadixDecomposition, Torus,
-    TorusOps,
+    GlweDef, LweDef, OverlaySize, PlaintextBits, PrivateFunctionalKeyswitchLweCount,
+    RadixDecomposition, Torus, TorusOps,
 };
 
 /// Bootstraps a LWE ciphertext to a GGSW ciphertext.
@@ -163,10 +163,10 @@ pub fn circuit_bootstrap<S: TorusOps>(
     pbs_radix.assert_valid::<S>();
     cbs_radix.assert_valid::<S>();
     pfks_radix.assert_valid::<S>();
-    cbsksk.assert_valid(&glwe_2.as_lwe_def(), glwe_1, pfks_radix);
-    bsk.assert_valid(lwe_0, glwe_2, pbs_radix);
-    output.assert_valid(glwe_1, cbs_radix);
-    input.assert_valid(lwe_0);
+    cbsksk.assert_is_valid((glwe_2.as_lwe_def().dim, glwe_1.dim, pfks_radix.count));
+    bsk.assert_is_valid((lwe_0.dim, glwe_2.dim, pbs_radix.count));
+    output.assert_is_valid((glwe_1.dim, cbs_radix.count));
+    input.assert_is_valid(lwe_0.dim);
 
     // Step 1, for each l in cbs_radix.count, use bootstrapping to base decompose the
     // plaintext in input. We bootstrap from level 0 -> level 2.

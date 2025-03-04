@@ -2,7 +2,7 @@ use num::{Complex, Zero};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    dst::{NoWrapper, OverlaySize},
+    dst::{AsMutSlice, AsSlice, NoWrapper, OverlaySize},
     entities::SchemeSwitchKeyRef,
     GlweDef, GlweDimension, RadixCount, RadixDecomposition, TorusOps,
 };
@@ -156,11 +156,5 @@ impl SchemeSwitchKeyFftRef<Complex<f64>> {
         {
             s.ifft(r, params);
         }
-    }
-
-    #[inline(always)]
-    /// Asserts that this entity is valid under the passed parameters.
-    pub fn assert_valid(&self, glwe: &GlweDef, radix: &RadixDecomposition) {
-        assert_eq!(Self::size((glwe.dim, radix.count)), self.data.len());
     }
 }

@@ -10,13 +10,13 @@ use crate::ops::fft_ops::decomposed_polynomial_glev_mad;
 use crate::polynomial::polynomial_add_assign;
 use crate::radix::PolynomialRadixIterator;
 use crate::scratch::allocate_scratch;
-use crate::Torus;
 use crate::{
     entities::{GlweCiphertextFftRef, GlweSecretKeyRef, PublicFunctionalKeyswitchKeyRef},
     radix::scale_by_decomposition_factor,
     scratch::allocate_scratch_ref,
     GlweDef, LweDef, RadixDecomposition, TorusOps,
 };
+use crate::{OverlaySize, Torus};
 
 /// Generate a public functional keyswitch key, which is used to transform a
 /// list of LWE ciphertexts into a GLWE ciphertext while applying a provided
@@ -34,9 +34,9 @@ pub fn generate_public_functional_keyswitch_key<S: TorusOps>(
     to_glwe: &GlweDef,
     radix: &RadixDecomposition,
 ) {
-    from_sk.assert_valid(from_lwe);
-    to_sk.assert_valid(to_glwe);
-    output.assert_valid(from_lwe, to_glwe, radix);
+    from_sk.assert_is_valid(from_lwe.dim);
+    to_sk.assert_is_valid(to_glwe.dim);
+    output.assert_is_valid((from_lwe.dim, to_glwe.dim, radix.count));
 
     allocate_scratch_ref!(pt, PolynomialRef<Torus<S>>, (to_glwe.dim.polynomial_degree));
     pt.clear();
@@ -83,11 +83,11 @@ pub fn public_functional_keyswitch<S, F>(
     S: TorusOps,
     F: Fn(&mut PolynomialRef<Torus<S>>, &[Torus<S>]),
 {
-    pufksk.assert_valid(from_lwe, to_glwe, radix);
-    output.assert_valid(to_glwe);
+    pufksk.assert_is_valid((from_lwe.dim, to_glwe.dim, radix.count));
+    output.assert_is_valid(to_glwe.dim);
 
     for i in inputs {
-        i.assert_valid(from_lwe);
+        i.assert_is_valid(from_lwe.dim);
     }
 
     assert!(inputs.len() <= to_glwe.dim.polynomial_degree.0);

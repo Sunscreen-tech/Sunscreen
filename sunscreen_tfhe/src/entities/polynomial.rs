@@ -7,7 +7,7 @@ use num::{Complex, Zero};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    dst::{FromMutSlice, FromSlice, NoWrapper, OverlaySize},
+    dst::{AsMutSlice, FromMutSlice, FromSlice, NoWrapper, OverlaySize},
     fft::negacyclic::get_fft,
     polynomial::{polynomial_add_assign, polynomial_external_mad, polynomial_sub_assign},
     scratch::allocate_scratch,
@@ -132,12 +132,6 @@ where
     #[inline]
     pub fn is_empty(&self) -> bool {
         self.data.is_empty()
-    }
-
-    /// Asserts that this polynomial is valid for the given degree.
-    #[inline]
-    pub fn assert_valid(&self, degree: PolynomialDegree) {
-        assert_eq!(self.degree(), degree);
     }
 }
 

@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use sunscreen_math::Zero;
 
 use crate::{
-    dst::OverlaySize,
+    dst::{AsMutSlice, AsSlice, OverlaySize},
     entities::{GlevCiphertextIterator, GlevCiphertextIteratorMut, GlevCiphertextRef},
     GlweDef, GlweDimension, LweDef, LweDimension, RadixCount, RadixDecomposition, Torus, TorusOps,
 };
@@ -62,13 +62,5 @@ impl<S: TorusOps> PublicFunctionalKeyswitchKeyRef<S> {
         let stride = GlevCiphertextRef::<S>::size((to_glwe.dim, radix.count));
 
         GlevCiphertextIteratorMut::new(self.as_mut_slice(), stride)
-    }
-
-    /// Asserts that the key is valid for the given parameters.
-    pub fn assert_valid(&self, from_lwe: &LweDef, to_glwe: &GlweDef, radix: &RadixDecomposition) {
-        assert_eq!(
-            self.as_slice().len(),
-            PublicFunctionalKeyswitchKeyRef::<S>::size((from_lwe.dim, to_glwe.dim, radix.count))
-        );
     }
 }

@@ -1,7 +1,7 @@
 use crate::{
     entities::{LweKeyswitchKeyRef, LweSecretKeyRef},
     ops::encryption::encrypt_lwe_ciphertext,
-    LweDef, RadixDecomposition, Torus, TorusOps,
+    LweDef, OverlaySize, RadixDecomposition, Torus, TorusOps,
 };
 
 /// Generates a keyswitch key from an original LWE key to a new LWE key. The
@@ -26,10 +26,10 @@ pub fn generate_keyswitch_key_lwe<S>(
     old_params.assert_valid();
     new_params.assert_valid();
     radix.assert_valid::<S>();
-    new_lwe_secret_key.assert_valid(new_params);
-    original_lwe_secret_key.assert_valid(old_params);
-    new_lwe_secret_key.assert_valid(new_params);
-    keyswitch_key.assert_valid(old_params, new_params, radix);
+    new_lwe_secret_key.assert_is_valid(new_params.dim);
+    original_lwe_secret_key.assert_is_valid(old_params.dim);
+    new_lwe_secret_key.assert_is_valid(new_params.dim);
+    keyswitch_key.assert_is_valid((old_params.dim, new_params.dim, radix.count));
 
     let decomposition_radix_log = radix.radix_log.0;
 

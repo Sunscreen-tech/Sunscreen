@@ -52,7 +52,7 @@ where
     /// then using the resulting ciphertext as the public key.
     pub fn generate(sk: &LweSecretKeyRef<S>, params: &LweDef) -> Self {
         params.assert_valid();
-        sk.assert_valid(params);
+        sk.assert_is_valid(params.dim);
 
         let mut pk = LwePublicKey {
             data: avec![Torus::zero(); LwePublicKeyRef::<S>::size(params.dim)],
@@ -90,7 +90,7 @@ where
         plaintext_bits: PlaintextBits,
     ) -> (LweCiphertext<S>, TlwePublicEncRandomness<S>) {
         params.assert_valid();
-        self.assert_valid(params);
+        self.assert_is_valid(params.dim);
         assert!(plaintext_bits.0 < S::BITS);
 
         let msg = Torus::<S>::encode(msg, plaintext_bits);
@@ -128,12 +128,6 @@ where
         let noise = TlwePublicEncRandomness { r: r_noise, e };
 
         (acc, noise)
-    }
-
-    #[inline(always)]
-    /// Assert this entity is valid under the given `lwe`.
-    pub fn assert_valid(&self, lwe: &LweDef) {
-        assert_eq!(Self::size(lwe.dim), self.data.len());
     }
 }
 

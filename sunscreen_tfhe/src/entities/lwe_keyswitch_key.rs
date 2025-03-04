@@ -80,20 +80,6 @@ where
 
         LevCiphertextIteratorMut::new(&mut self.data, stride)
     }
-
-    /// Asserts that the keyswitch key is valid for the given parameters.
-    #[inline(always)]
-    pub fn assert_valid(
-        &self,
-        original_params: &LweDef,
-        new_params: &LweDef,
-        radix: &RadixDecomposition,
-    ) {
-        assert_eq!(
-            self.as_slice().len(),
-            LweKeyswitchKeyRef::<S>::size((original_params.dim, new_params.dim, radix.count))
-        );
-    }
 }
 
 #[cfg(test)]

@@ -4,7 +4,7 @@ use std::{
 };
 
 use crate::{
-    dst::FromMutSlice,
+    dst::{AsSlice, FromMutSlice},
     entities::{
         GgswCiphertextRef, GlevCiphertextRef, GlweCiphertextRef, GlweSecretKeyRef, Polynomial,
         PolynomialFft, PolynomialRef, SchemeSwitchKeyRef,
@@ -13,7 +13,7 @@ use crate::{
     ops::{ciphertext::decomposed_polynomial_glev_mad, encryption::encrypt_secret_glev_ciphertext},
     radix::PolynomialRadixIterator,
     scratch::allocate_scratch_ref,
-    GlweDef, RadixDecomposition, Torus, TorusOps,
+    GlweDef, OverlaySize, RadixDecomposition, Torus, TorusOps,
 };
 use num::{Complex, Zero};
 
@@ -33,8 +33,8 @@ pub fn generate_scheme_switch_key<S>(
     params.assert_valid();
     radix.assert_valid::<S>();
 
-    scheme_switch_key.assert_valid(params, radix);
-    sk.assert_valid(params);
+    scheme_switch_key.assert_is_valid((params.dim, radix.count));
+    sk.assert_is_valid(params.dim);
 
     let polynomial_size = params.dim.polynomial_degree.0;
 
@@ -261,9 +261,9 @@ pub fn scheme_switch<S>(
 ) where
     S: TorusOps,
 {
-    ssk.assert_valid(params, radix_ss);
-    output.assert_valid(params, radix_ggsw);
-    glev_ciphertext.assert_valid(params, radix_ggsw);
+    ssk.assert_is_valid((params.dim, radix_ss.count));
+    output.assert_is_valid((params.dim, radix_ggsw.count));
+    glev_ciphertext.assert_is_valid((params.dim, radix_ggsw.count));
 
     let k = params.dim.size.0;
 
@@ -417,7 +417,7 @@ mod tests {
         generate_scheme_switch_key(&mut ssk, &sk, &params, &radix);
 
         // Basic validity checks
-        ssk.assert_valid(&params, &radix);
+        ssk.assert_is_valid((params.dim, radix.count));
 
         // Check dimensions
         let expected_glev_count = (glwe_size * (glwe_size + 1)) / 2;

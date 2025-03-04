@@ -38,7 +38,8 @@ lto = false
 codegen-units = 16
 
 [workspace.dependencies]
-aligned-vec = { git = "https://github.com/Sunscreen-tech/aligned-vec.git", branch = "fix_deserialization", features = ["serde"] }
+# We must have our upstreamed security fix that addresses a panic during bincode deserialization when the length is malformed or malicious.
+aligned-vec = { version = ">=0.6.2", features = ["serde"] }
 bytemuck = "1.13.0"
 raw-cpuid = "11.0.1"
 lazy_static = "1.4.0"

@@ -24,13 +24,14 @@ macro_rules! dst {
         paste::paste! {
 
             $(#[$meta])*
-            #[derive($($derive,)*)]
+            #[derive($($derive,)* PartialEq)]
             pub struct $t<T> where T: Clone $(+ $t_bounds)* {
                 data: aligned_vec::AVec<$wrapper<T>, aligned_vec::ConstAlign<{ crate::scratch::SIMD_ALIGN }>>
             }
 
             /// A reference to the data structure.
             #[repr(transparent)]
+            #[derive(PartialEq)]
             pub struct $ref_t<T> where T: Clone $(+ $t_bounds)* {
                 data: [$wrapper<T>],
             }

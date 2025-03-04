@@ -12,7 +12,7 @@ dst! {
    PolynomialList,
    PolynomialListRef,
    NoWrapper,
-   (Debug, Clone, PartialEq, Eq,),
+   (Debug, Clone),
    ()
 }
 

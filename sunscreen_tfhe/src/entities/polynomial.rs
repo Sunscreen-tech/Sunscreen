@@ -21,7 +21,7 @@ dst! {
     Polynomial,
     PolynomialRef,
     NoWrapper,
-    (Debug, Clone, PartialEq, Eq, Serialize, Deserialize),
+    (Debug, Clone, Serialize, Deserialize),
     ()
 }
 dst_iter! { PolynomialIterator, PolynomialIteratorMut, ParallelPolynomialIterator, ParallelPolynomialIteratorMut, NoWrapper, PolynomialRef, () }
@@ -375,12 +375,6 @@ where
     }
 }
 
-impl<T: PartialEq + Clone> PartialEq for PolynomialRef<T> {
-    fn eq(&self, other: &Self) -> bool {
-        self.coeffs() == other.coeffs()
-    }
-}
-
 impl<T: std::fmt::Debug + Clone> std::fmt::Debug for PolynomialRef<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("PolynomialRef")
@@ -398,7 +392,6 @@ mod tests {
     #[test]
     fn can_add_polynomials() {
         let a = Polynomial::new(&[1, 2, 3]);
-
         let b = Polynomial::new(&[4, 5, 6]);
 
         let expected = Polynomial::new(&[5, 7, 9]);

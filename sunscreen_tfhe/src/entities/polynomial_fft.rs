@@ -15,7 +15,7 @@ dst! {
     PolynomialFft,
     PolynomialFftRef,
     NoWrapper,
-    (Debug, Clone, PartialEq, Eq,),
+    (Debug, Clone),
     ()
 }
 dst_iter!(

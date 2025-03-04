@@ -2,8 +2,7 @@ use num::Zero;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    dst::{AsSlice, OverlaySize},
-    LweDef, LweDimension, RadixCount, RadixDecomposition, Torus, TorusOps,
+    dst::OverlaySize, LweDef, LweDimension, RadixCount, RadixDecomposition, Torus, TorusOps,
 };
 
 use super::{LevCiphertextIterator, LevCiphertextIteratorMut, LevCiphertextRef};
@@ -80,20 +79,6 @@ where
         let stride = LevCiphertextRef::<S>::size((new_params.dim, radix.count));
 
         LevCiphertextIteratorMut::new(&mut self.data, stride)
-    }
-
-    /// Asserts that the keyswitch key is valid for the given parameters.
-    #[inline(always)]
-    pub fn assert_valid(
-        &self,
-        original_params: &LweDef,
-        new_params: &LweDef,
-        radix: &RadixDecomposition,
-    ) {
-        assert_eq!(
-            self.as_slice().len(),
-            LweKeyswitchKeyRef::<S>::size((original_params.dim, new_params.dim, radix.count))
-        );
     }
 }
 

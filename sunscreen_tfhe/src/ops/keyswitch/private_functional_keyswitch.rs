@@ -13,7 +13,8 @@ use crate::{
     },
     radix::{scale_by_decomposition_factor, ScalarRadixIterator},
     scratch::allocate_scratch_ref,
-    GlweDef, LweDef, PrivateFunctionalKeyswitchLweCount, RadixDecomposition, Torus, TorusOps,
+    GlweDef, LweDef, OverlaySize, PrivateFunctionalKeyswitchLweCount, RadixDecomposition, Torus,
+    TorusOps,
 };
 
 /// Initialize `output`, a
@@ -51,10 +52,10 @@ pub fn generate_private_functional_keyswitch_key<S, F>(
     S: TorusOps,
     F: Fn(&mut PolynomialRef<Torus<S>>, &[Torus<S>]),
 {
-    output.assert_valid(from_lwe, to_glwe, radix, lwe_count);
+    output.assert_is_valid((from_lwe.dim, to_glwe.dim, radix.count, *lwe_count));
     radix.assert_valid::<S>();
-    from_key.assert_valid(from_lwe);
-    to_key.assert_valid(to_glwe);
+    from_key.assert_is_valid(from_lwe.dim);
+    to_key.assert_is_valid(to_glwe.dim);
     to_glwe.assert_valid();
     from_lwe.assert_valid();
     lwe_count.assert_valid();
@@ -101,8 +102,8 @@ pub fn private_functional_keyswitch<S: TorusOps>(
     radix: &RadixDecomposition,
     lwe_count: &PrivateFunctionalKeyswitchLweCount,
 ) {
-    output.assert_valid(to_glwe);
-    pfksk.assert_valid(from_lwe, to_glwe, radix, lwe_count);
+    output.assert_is_valid(to_glwe.dim);
+    pfksk.assert_is_valid((from_lwe.dim, to_glwe.dim, radix.count, *lwe_count));
     from_lwe.assert_valid();
     to_glwe.assert_valid();
     radix.assert_valid::<S>();
@@ -138,10 +139,10 @@ pub fn generate_circuit_bootstrapping_pfks_keys<S: TorusOps>(
     to_glwe: &GlweDef,
     radix: &RadixDecomposition,
 ) {
-    output.assert_valid(from_lwe, to_glwe, radix);
-    from_key.assert_valid(from_lwe);
+    output.assert_is_valid((from_lwe.dim, to_glwe.dim, radix.count));
+    from_key.assert_is_valid(from_lwe.dim);
     to_glwe.assert_valid();
-    to_key.assert_valid(to_glwe);
+    to_key.assert_is_valid(to_glwe.dim);
     radix.assert_valid::<S>();
     from_lwe.assert_valid();
 

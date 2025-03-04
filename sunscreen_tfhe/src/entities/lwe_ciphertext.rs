@@ -2,7 +2,7 @@ use num::Zero;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    dst::{AsSlice, OverlaySize},
+    dst::OverlaySize,
     macros::{impl_binary_op, impl_unary_op},
     LweDef, LweDimension, Torus, TorusOps,
 };
@@ -91,15 +91,6 @@ impl<S: TorusOps> LweCiphertextRef<S> {
         let (_, b) = self.a_b_mut(params);
 
         b
-    }
-
-    /// Asserts that the LWE ciphertext is valid for a given LWE dimension.
-    #[inline(always)]
-    pub fn assert_valid(&self, params: &LweDef) {
-        assert_eq!(
-            self.as_slice().len(),
-            LweCiphertextRef::<S>::size(params.dim)
-        );
     }
 }
 

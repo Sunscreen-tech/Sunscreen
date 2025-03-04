@@ -76,10 +76,4 @@ impl GgswCiphertextFftRef<Complex<f64>> {
             s.ifft(r, params);
         }
     }
-
-    #[inline(always)]
-    /// Asserts that this entity is valid under the passed parameters.
-    pub fn assert_valid(&self, glwe: &GlweDef, radix: &RadixDecomposition) {
-        assert_eq!(Self::size((glwe.dim, radix.count)), self.data.len());
-    }
 }

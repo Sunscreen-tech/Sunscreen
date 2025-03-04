@@ -71,12 +71,4 @@ where
             i.fft(fft, params);
         }
     }
-
-    /// Assert that this entityt is valid.
-    pub fn assert_valid(&self, params: &GlweDef, radix: &RadixDecomposition) {
-        assert_eq!(
-            self.data.len(),
-            GlevCiphertextRef::<S>::size((params.dim, radix.count))
-        );
-    }
 }

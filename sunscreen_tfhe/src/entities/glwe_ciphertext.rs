@@ -2,7 +2,7 @@ use num::{Complex, Zero};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    dst::{AsSlice, FromMutSlice, FromSlice, OverlaySize},
+    dst::{FromMutSlice, FromSlice, OverlaySize},
     entities::GgswCiphertextRef,
     macros::{impl_binary_op, impl_unary_op},
     ops::ciphertext::external_product_ggsw_glwe,
@@ -139,23 +139,14 @@ where
 
     /// Create an FFT transformed version of `self` stored to result.
     pub fn fft(&self, result: &mut GlweCiphertextFftRef<Complex<f64>>, params: &GlweDef) {
-        self.assert_valid(params);
-        result.assert_valid(params);
+        self.assert_is_valid(params.dim);
+        result.assert_is_valid(params.dim);
 
         for (a, fft) in self.a(params).zip(result.a_mut(params)) {
             a.fft(fft);
         }
 
         self.b(params).fft(result.b_mut(params));
-    }
-
-    #[inline(always)]
-    /// Asserts that this entity is valid for the given `params`
-    pub fn assert_valid(&self, params: &GlweDef) {
-        assert_eq!(
-            self.as_slice().len(),
-            GlweCiphertextRef::<S>::size(params.dim)
-        )
     }
 
     /// Sets all coefficients of the polynomial at the specified index in the

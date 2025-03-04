@@ -118,10 +118,4 @@ impl<S: TorusOps> CircuitBootstrappingKeyswitchKeysRef<S> {
 
         ParallelPrivateFunctionalKeyswitchKeyIterMut::new(self.as_mut_slice(), stride)
     }
-
-    #[inline(always)]
-    /// Assert these keys are valid under the given parameters.
-    pub fn assert_valid(&self, from_lwe: &LweDef, to_glwe: &GlweDef, radix: &RadixDecomposition) {
-        self.assert_is_valid((from_lwe.dim, to_glwe.dim, radix.count))
-    }
 }

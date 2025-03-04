@@ -10,7 +10,7 @@ use crate::{
     },
     radix::PolynomialRadixIterator,
     scratch::allocate_scratch_ref,
-    GlweDef, RadixDecomposition, TorusOps,
+    GlweDef, OverlaySize, RadixDecomposition, TorusOps,
 };
 
 /**
@@ -36,7 +36,7 @@ pub fn sample_extract<S>(
 ) where
     S: TorusOps,
 {
-    glwe.assert_valid(params);
+    glwe.assert_is_valid(params.dim);
     assert!(h < params.dim.polynomial_degree.0);
 
     // We are copying parts of the GLWE ciphertext out according to the following rule:

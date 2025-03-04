@@ -2,9 +2,8 @@ use num::{Complex, Zero};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    dst::{AsSlice, OverlaySize},
-    ops::ciphertext::external_product_ggsw_glwe,
-    GlweDef, GlweDimension, RadixCount, RadixDecomposition, Torus, TorusOps,
+    dst::OverlaySize, ops::ciphertext::external_product_ggsw_glwe, GlweDef, GlweDimension,
+    RadixCount, RadixDecomposition, Torus, TorusOps,
 };
 
 use super::{
@@ -102,17 +101,11 @@ where
         params: &GlweDef,
         radix: &RadixDecomposition,
     ) {
-        self.assert_valid(params, radix);
-        result.assert_valid(params, radix);
+        self.assert_is_valid((params.dim, radix.count));
+        result.assert_is_valid((params.dim, radix.count));
 
         for (s, r) in self.rows(params, radix).zip(result.rows_mut(params, radix)) {
             s.fft(r, params);
         }
-    }
-
-    #[inline(always)]
-    /// Assert that the GGSW ciphertext is valid for the given parameters.
-    pub fn assert_valid(&self, glwe: &GlweDef, radix: &RadixDecomposition) {
-        assert_eq!(self.as_slice().len(), Self::size((glwe.dim, radix.count)));
     }
 }

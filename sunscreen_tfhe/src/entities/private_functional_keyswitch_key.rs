@@ -113,24 +113,4 @@ impl<S: TorusOps> PrivateFunctionalKeyswitchKeyRef<S> {
             GlevCiphertextRef::<S>::size((to_glwe.dim, radix.count)),
         )
     }
-
-    #[inline(always)]
-    /// Assert this value is correct for the given parameters.
-    pub fn assert_valid(
-        &self,
-        from_lwe: &LweDef,
-        to_glwe: &GlweDef,
-        radix: &RadixDecomposition,
-        lwe_count: &PrivateFunctionalKeyswitchLweCount,
-    ) {
-        assert_eq!(
-            self.as_slice().len(),
-            PrivateFunctionalKeyswitchKeyRef::<S>::size((
-                from_lwe.dim,
-                to_glwe.dim,
-                radix.count,
-                *lwe_count
-            ))
-        )
-    }
 }

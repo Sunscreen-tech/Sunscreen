@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use sunscreen_math::Zero;
 
-use crate::dst::{AsSlice, FromMutSlice, FromSlice};
+use crate::dst::{FromMutSlice, FromSlice};
 use crate::GlweDef;
 use crate::{dst::OverlaySize, GlweDimension, Torus, TorusOps};
 
@@ -62,13 +62,5 @@ where
         let (mut p0, p1) = self.zero_encryption().a_b(glwe);
 
         (p0.next().unwrap(), p1)
-    }
-
-    /// Asserts this (`RlwePublicKey`)[RlwePublicKey] matches the given glwe parameters.
-    pub fn assert_valid(&self, glwe: &GlweDef) {
-        assert_eq!(
-            self.as_slice().len(),
-            GlweCiphertextRef::<S>::size(glwe.dim)
-        )
     }
 }

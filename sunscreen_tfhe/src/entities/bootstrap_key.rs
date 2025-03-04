@@ -96,21 +96,12 @@ impl<S: TorusOps> BootstrapKeyRef<S> {
         glwe: &GlweDef,
         radix: &RadixDecomposition,
     ) {
-        self.assert_valid(lwe, glwe, radix);
-        result.assert_valid(lwe, glwe, radix);
+        self.assert_is_valid((lwe.dim, glwe.dim, radix.count));
+        result.assert_is_valid((lwe.dim, glwe.dim, radix.count));
 
         for (s, r) in self.rows(glwe, radix).zip(result.rows_mut(glwe, radix)) {
             s.fft(r, glwe, radix);
         }
-    }
-
-    #[inline(always)]
-    /// Asserts that this entity is valid under the passed parameters.
-    pub fn assert_valid(&self, lwe: &LweDef, glwe: &GlweDef, radix: &RadixDecomposition) {
-        assert_eq!(
-            Self::size((lwe.dim, glwe.dim, radix.count)),
-            self.data.len()
-        );
     }
 }
 
@@ -183,14 +174,5 @@ impl BootstrapKeyFftRef<Complex<f64>> {
         for (s, r) in self.rows(params, radix).zip(result.rows_mut(params, radix)) {
             s.ifft(r, params, radix);
         }
-    }
-
-    /// Asserts that the [BootstrapKeyFft] is valid for the given parameters.
-    #[inline(always)]
-    pub fn assert_valid(&self, lwe: &LweDef, glwe: &GlweDef, radix: &RadixDecomposition) {
-        assert_eq!(
-            self.as_slice().len(),
-            BootstrapKeyFftRef::size((lwe.dim, glwe.dim, radix.count))
-        );
     }
 }

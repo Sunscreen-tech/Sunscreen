@@ -63,12 +63,4 @@ impl<S: TorusOps> PublicFunctionalKeyswitchKeyRef<S> {
 
         GlevCiphertextIteratorMut::new(self.as_mut_slice(), stride)
     }
-
-    /// Asserts that the key is valid for the given parameters.
-    pub fn assert_valid(&self, from_lwe: &LweDef, to_glwe: &GlweDef, radix: &RadixDecomposition) {
-        assert_eq!(
-            self.as_slice().len(),
-            PublicFunctionalKeyswitchKeyRef::<S>::size((from_lwe.dim, to_glwe.dim, radix.count))
-        );
-    }
 }

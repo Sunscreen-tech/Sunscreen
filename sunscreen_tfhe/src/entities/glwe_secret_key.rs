@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    dst::{FromSlice, NoWrapper, OverlaySize},
+    dst::{AsSlice, FromSlice, NoWrapper, OverlaySize},
     entities::GgswCiphertext,
     macros::{impl_binary_op, impl_unary_op},
     ops::encryption::{

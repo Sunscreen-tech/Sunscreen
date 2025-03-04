@@ -1,6 +1,7 @@
 use sunscreen_math::Zero;
 
 use crate::{
+    dst::AsSlice,
     entities::{LweCiphertextRef, LweSecretKeyRef},
     math::{Torus, TorusOps},
     rand::{normal_torus, uniform_torus},

@@ -2,7 +2,7 @@ use rayon::iter::{IndexedParallelIterator, ParallelIterator};
 use sunscreen_math::Zero;
 
 use crate::{
-    dst::FromMutSlice,
+    dst::{AsSlice, FromMutSlice},
     entities::{
         CircuitBootstrappingKeyswitchKeysRef, GlweCiphertextRef, GlweSecretKeyRef,
         LweCiphertextRef, LweSecretKeyRef, PolynomialRef, PrivateFunctionalKeyswitchKeyRef,

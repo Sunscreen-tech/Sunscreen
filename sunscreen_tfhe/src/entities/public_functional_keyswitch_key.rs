@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use sunscreen_math::Zero;
 
 use crate::{
-    dst::OverlaySize,
+    dst::{AsMutSlice, AsSlice, OverlaySize},
     entities::{GlevCiphertextIterator, GlevCiphertextIteratorMut, GlevCiphertextRef},
     GlweDef, GlweDimension, LweDef, LweDimension, RadixCount, RadixDecomposition, Torus, TorusOps,
 };

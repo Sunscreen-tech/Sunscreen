@@ -2,7 +2,8 @@ use num::Zero;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    dst::OverlaySize, LweDef, LweDimension, RadixCount, RadixDecomposition, Torus, TorusOps,
+    dst::{AsSlice, OverlaySize},
+    LweDef, LweDimension, RadixCount, RadixDecomposition, Torus, TorusOps,
 };
 
 use super::{LevCiphertextIterator, LevCiphertextIteratorMut, LevCiphertextRef};

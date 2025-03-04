@@ -2,7 +2,7 @@ use num::Zero;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    dst::{NoWrapper, OverlaySize},
+    dst::{AsSlice, NoWrapper, OverlaySize},
     macros::{impl_binary_op, impl_unary_op},
     ops::encryption::encode_and_encrypt_lwe_ciphertext,
     rand::{binary, uniform_torus},

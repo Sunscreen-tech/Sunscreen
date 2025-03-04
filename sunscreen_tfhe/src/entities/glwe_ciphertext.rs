@@ -2,7 +2,7 @@ use num::{Complex, Zero};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    dst::{FromMutSlice, FromSlice, OverlaySize},
+    dst::{AsSlice, FromMutSlice, FromSlice, OverlaySize},
     entities::GgswCiphertextRef,
     macros::{impl_binary_op, impl_unary_op},
     ops::ciphertext::external_product_ggsw_glwe,

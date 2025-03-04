@@ -2,7 +2,7 @@ use num::{Complex, Zero};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    dst::{NoWrapper, OverlaySize},
+    dst::{AsMutSlice, AsSlice, NoWrapper, OverlaySize},
     entities::SchemeSwitchKeyRef,
     GlweDef, GlweDimension, RadixCount, RadixDecomposition, TorusOps,
 };

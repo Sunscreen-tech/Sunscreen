@@ -4,7 +4,7 @@ use std::{
 };
 
 use crate::{
-    dst::FromMutSlice,
+    dst::{AsSlice, FromMutSlice},
     entities::{
         GgswCiphertextRef, GlevCiphertextRef, GlweCiphertextRef, GlweSecretKeyRef, Polynomial,
         PolynomialFft, PolynomialRef, SchemeSwitchKeyRef,

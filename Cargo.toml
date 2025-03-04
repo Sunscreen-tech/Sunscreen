@@ -38,7 +38,7 @@ lto = false
 codegen-units = 16
 
 [workspace.dependencies]
-aligned-vec = { version = "0.5.0", features = ["serde"] }
+aligned-vec = { git = "https://github.com/Sunscreen-tech/aligned-vec.git", branch = "fix_deserialization", features = ["serde"] }
 bytemuck = "1.13.0"
 raw-cpuid = "11.0.1"
 lazy_static = "1.4.0"
@@ -60,8 +60,8 @@ find_cuda_helper = "0.2.0"
 criterion = { version = "0.5.1", default-features = false }
 darling = "0.20.3"
 proc-macro2 = "1.0"
-quote = "1.0.32"
-syn = { version = "2.0.28", features = ["full"] }
+quote = "1"
+syn = { version = "2", features = ["full"] }
 petgraph = { version = "0.6.0", features = ["serde-1"] }
 serde = { version = "1.0.147", features = ["derive"] }
 static_assertions = "1.1.0"

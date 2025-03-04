@@ -2,7 +2,7 @@ use num::Zero;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    dst::OverlaySize,
+    dst::{AsSlice, OverlaySize},
     macros::{impl_binary_op, impl_unary_op},
     LweDef, LweDimension, Torus, TorusOps,
 };

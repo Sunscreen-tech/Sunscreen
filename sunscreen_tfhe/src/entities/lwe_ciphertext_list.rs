@@ -1,7 +1,10 @@
 use serde::{Deserialize, Serialize};
 use sunscreen_math::Zero;
 
-use crate::{dst::OverlaySize, LweDef, LweDimension, Torus, TorusOps};
+use crate::{
+    dst::{AsMutSlice, AsSlice, OverlaySize},
+    LweDef, LweDimension, Torus, TorusOps,
+};
 
 use super::{LweCiphertextIterator, LweCiphertextIteratorMut, LweCiphertextRef};
 

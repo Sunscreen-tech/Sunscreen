@@ -37,3 +37,7 @@ pub mod high_level;
 /// Zero Knowledge proofs for TFHE.
 #[cfg(feature = "logproof")]
 pub mod zkp;
+
+/// Container [`Error`] and [`Result`] types for this crate.
+mod error;
+pub use error::*;

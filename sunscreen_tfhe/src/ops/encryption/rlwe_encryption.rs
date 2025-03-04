@@ -8,7 +8,7 @@ use crate::{
     polynomial::{polynomial_add_assign, polynomial_external_mad},
     rand::{binary_torus_polynomial, normal_torus_polynomial},
     scratch::allocate_scratch_ref,
-    GlweDef, PlaintextBits, Torus, TorusOps,
+    GlweDef, OverlaySize, PlaintextBits, Torus, TorusOps,
 };
 
 /// The randomness used to generate a public-key RLWE encryption of a message.
@@ -133,8 +133,8 @@ where
 {
     assert_eq!(glwe.dim.size.0, 1);
     assert_eq!(encoded_msg.len(), glwe.dim.polynomial_degree.0);
-    ct.assert_valid(glwe);
-    public_key.assert_valid(glwe);
+    ct.assert_is_valid(glwe.dim);
+    public_key.assert_is_valid(glwe.dim);
 
     ct.clear();
 

@@ -1,4 +1,4 @@
-use crate::{entities::LweCiphertextRef, LweDef, Torus, TorusOps};
+use crate::{entities::LweCiphertextRef, LweDef, OverlaySize, Torus, TorusOps};
 
 /// Add `amount` to each torus element (mod q) in the ciphertext.
 /// This shifts where messages lie on the torus and adds no noise.
@@ -12,8 +12,8 @@ pub fn rotate<S: TorusOps>(
     amount: Torus<S>,
     lwe: &LweDef,
 ) {
-    output.assert_valid(lwe);
-    input.assert_valid(lwe);
+    output.assert_is_valid(lwe.dim);
+    input.assert_is_valid(lwe.dim);
 
     output.a_mut(lwe).clone_from_slice(input.a(lwe));
     *output.b_mut(lwe) = input.b(lwe) + amount;

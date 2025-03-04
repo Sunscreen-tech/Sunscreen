@@ -1,10 +1,11 @@
 use sunscreen_math::Zero;
 
 use crate::{
+    dst::AsSlice,
     entities::{LweCiphertextRef, LweSecretKeyRef},
     math::{Torus, TorusOps},
     rand::{normal_torus, uniform_torus},
-    LweDef, PlaintextBits,
+    LweDef, OverlaySize, PlaintextBits,
 };
 
 /// Generate a trivial GLWE encryption. Note that the caller will need to scale
@@ -17,7 +18,7 @@ pub fn trivially_encrypt_lwe_ciphertext<S>(
     S: TorusOps,
 {
     params.assert_valid();
-    c.assert_valid(params);
+    c.assert_is_valid(params.dim);
 
     let (a, b) = c.a_b_mut(params);
 

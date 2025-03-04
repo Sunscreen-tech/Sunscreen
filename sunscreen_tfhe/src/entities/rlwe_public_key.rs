@@ -63,12 +63,4 @@ where
 
         (p0.next().unwrap(), p1)
     }
-
-    /// Asserts this (`RlwePublicKey`)[RlwePublicKey] matches the given glwe parameters.
-    pub fn assert_valid(&self, glwe: &GlweDef) {
-        assert_eq!(
-            self.as_slice().len(),
-            GlweCiphertextRef::<S>::size(glwe.dim)
-        )
-    }
 }

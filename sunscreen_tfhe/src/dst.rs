@@ -1,3 +1,4 @@
+use crate::error::*;
 use crate::scratch::Pod;
 
 macro_rules! avec {
@@ -42,29 +43,44 @@ macro_rules! dst {
                         *l = r.clone();
                     }
                 }
+            }
 
+            impl<T> crate::dst::AsSlice<$wrapper<T>> for $ref_t<T> where T: Clone $(+ $t_bounds)* {
                 #[allow(unused)]
                 /// Returns a slice view of the data representing a $t.
-                pub fn as_slice(&self) -> &[$wrapper<T>] {
+                fn as_slice(&self) -> &[$wrapper<T>] {
                     &self.data
                 }
+            }
 
-                #[allow(unused)]
+            impl<T> crate::dst::AsMutSlice<$wrapper<T>> for $ref_t<T> where T: Clone $(+ $t_bounds)* {
+                #[inline(always)]
                 /// Returns a mutable slice view of the data representing a $t.
-                pub fn as_mut_slice(&mut self) -> &mut [$wrapper<T>] {
+                fn as_mut_slice(&mut self) -> &mut [$wrapper<T>] {
                     &mut self.data
                 }
             }
 
             impl<T> crate::dst::FromSlice<$wrapper<T>> for $ref_t<T> where T: Clone $(+ $t_bounds)* {
                 fn from_slice(s: &[$wrapper<T>]) -> &$ref_t<T> {
+                    // Casting the slice to the ref type is sound because it is #[repr(transparent)]
                     unsafe { &*(s as *const [$wrapper<T>] as *const $ref_t<T>) }
                 }
             }
 
             impl<T> crate::dst::FromMutSlice<$wrapper<T>> for $ref_t<T> where T: Clone $(+ $t_bounds)* {
                 fn from_mut_slice(s: &mut [$wrapper<T>]) -> &mut $ref_t<T> {
+                    // Casting the mut slice to the mut ref type is sound because it is #[repr(transparent)]
                     unsafe { &mut *(s as *mut [$wrapper<T>] as *mut $ref_t<T>) }
+                }
+            }
+
+            impl<T> crate::dst::Len for $ref_t<T> where T: Clone $(+ $t_bounds)* {
+                #[inline(always)]
+                fn len(&self) -> usize {
+                    use crate::dst::AsSlice;
+
+                    self.as_slice().len()
                 }
             }
 
@@ -72,6 +88,7 @@ macro_rules! dst {
                 #[allow(unused)]
                 /// Clears the contents of self to contain zero
                 pub fn clear(&mut self) {
+                    use crate::dst::AsMutSlice;
 
                     for x in self.as_mut_slice() {
                         *x = <$wrapper<T> as num::Zero>::zero();
@@ -462,13 +479,50 @@ macro_rules! dst_iter {
 
 pub type NoWrapper<T> = T;
 
+pub(crate) trait AsSlice<T> {
+    fn as_slice(&self) -> &[T];
+}
+
+pub(crate) trait AsMutSlice<T> {
+    fn as_mut_slice(&mut self) -> &mut [T];
+}
+
+/// The length of an entity in fundamental elements (i.e. the type of polynomial coefficients in the underlying scheme).
+pub trait Len {
+    /// Gets the length of this entity in fundamental elements.
+    fn len(&self) -> usize;
+}
+
 /// Describes how large an entity will be for the given parameters.
-pub trait OverlaySize {
+pub trait OverlaySize: Len {
     /// The inputs that determine this entity's size
     type Inputs: Copy + Clone;
 
     /// Get the size of the entity.
     fn size(t: Self::Inputs) -> usize;
+
+    #[inline(always)]
+    /// Returns if this entity is the correct length for the given input parameters
+    fn check_is_valid(&self, t: Self::Inputs) -> Result<()> {
+        if self.len() == Self::size(t) {
+            Ok(())
+        } else {
+            Err(Error::InvalidSize)
+        }
+    }
+
+    #[inline(always)]
+    /// Panics if this entity is not of the correct length.
+    fn assert_is_valid(&self, t: Self::Inputs) {
+        self.check_is_valid(t)
+            .expect("Entity was not the correct length.");
+    }
+}
+
+impl<S: Pod> Len for [S] {
+    fn len(&self) -> usize {
+        self.len()
+    }
 }
 
 impl<S: Pod> OverlaySize for [S] {

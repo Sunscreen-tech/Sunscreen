@@ -154,10 +154,10 @@ pub fn cmux<S>(
 {
     params.assert_valid();
     radix.assert_valid::<S>();
-    c.assert_valid(params);
-    d_0.assert_valid(params);
-    d_1.assert_valid(params);
-    b_fft.assert_valid(params, radix);
+    c.assert_is_valid(params.dim);
+    d_0.assert_is_valid(params.dim);
+    d_1.assert_is_valid(params.dim);
+    b_fft.assert_is_valid((params.dim, radix.count));
 
     allocate_scratch_ref!(diff, GlweCiphertextRef<S>, (params.dim));
 
@@ -406,9 +406,9 @@ pub fn scheme_switch_fft<S>(
 ) where
     S: TorusOps,
 {
-    ssk_fft.assert_valid(params, radix_ss);
-    output.assert_valid(params, radix_ggsw);
-    glev_ciphertext.assert_valid(params, radix_ggsw);
+    ssk_fft.assert_is_valid((params.dim, radix_ss.count));
+    output.assert_is_valid((params.dim, radix_ggsw.count));
+    glev_ciphertext.assert_is_valid((params.dim, radix_ggsw.count));
 
     let k = params.dim.size.0;
 

@@ -1,7 +1,7 @@
 use num::Complex;
 
 use crate::{
-    dst::{NoWrapper, OverlaySize},
+    dst::{AsMutSlice, AsSlice, NoWrapper, OverlaySize},
     fft::negacyclic::get_fft,
     scratch::allocate_scratch,
     simd, FrequencyTransform, FromF64, NumBits, PolynomialDegree,

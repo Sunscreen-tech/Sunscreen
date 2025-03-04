@@ -2,7 +2,7 @@ use num::{Complex, Zero};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    dst::{NoWrapper, OverlaySize},
+    dst::{AsMutSlice, AsSlice, NoWrapper, OverlaySize},
     entities::GgswCiphertextRef,
     GlweDef, GlweDimension, RadixCount, RadixDecomposition, TorusOps,
 };
@@ -75,11 +75,5 @@ impl GgswCiphertextFftRef<Complex<f64>> {
         for (s, r) in self.rows(params, radix).zip(result.rows_mut(params, radix)) {
             s.ifft(r, params);
         }
-    }
-
-    #[inline(always)]
-    /// Asserts that this entity is valid under the passed parameters.
-    pub fn assert_valid(&self, glwe: &GlweDef, radix: &RadixDecomposition) {
-        assert_eq!(Self::size((glwe.dim, radix.count)), self.data.len());
     }
 }

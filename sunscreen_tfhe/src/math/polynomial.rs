@@ -6,7 +6,10 @@ use std::{
 use num::traits::MulAdd;
 
 use crate::{
-    dst::FromMutSlice, entities::PolynomialRef, scratch::allocate_scratch, ToF64, Torus, TorusOps,
+    dst::{AsMutSlice, AsSlice, FromMutSlice},
+    entities::PolynomialRef,
+    scratch::allocate_scratch,
+    ToF64, Torus, TorusOps,
 };
 
 /// Polynomial subtraction in place. This is equivalent to `a -= b` for each

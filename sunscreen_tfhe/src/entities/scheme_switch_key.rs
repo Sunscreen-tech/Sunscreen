@@ -177,8 +177,8 @@ where
         params: &GlweDef,
         radix: &RadixDecomposition,
     ) {
-        self.assert_valid(params, radix);
-        result.assert_valid(params, radix);
+        self.assert_is_valid((params.dim, radix.count));
+        result.assert_is_valid((params.dim, radix.count));
 
         for (s, r) in self
             .glev_ciphertexts(params, radix)
@@ -186,12 +186,6 @@ where
         {
             s.fft(r, params);
         }
-    }
-
-    #[inline(always)]
-    /// Asserts that this entity is valid under the passed parameters.
-    pub fn assert_valid(&self, params: &GlweDef, radix: &RadixDecomposition) {
-        assert_eq!(Self::size((params.dim, radix.count)), self.data.len());
     }
 }
 

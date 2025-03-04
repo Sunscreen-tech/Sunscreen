@@ -4,7 +4,7 @@ use crate::{
     ops::encryption::encrypt_secret_glev_ciphertext_generic,
     polynomial::polynomial_external_mad,
     scratch::allocate_scratch_ref,
-    GlweDef, PlaintextBits, RadixDecomposition, Torus, TorusOps,
+    GlweDef, OverlaySize, PlaintextBits, RadixDecomposition, Torus, TorusOps,
 };
 
 use super::{
@@ -172,8 +172,8 @@ pub fn decrypt_ggsw_ciphertext<S>(
     assert_eq!(msg.len(), params.dim.polynomial_degree.0);
     params.assert_valid();
     radix.assert_valid::<S>();
-    ggsw_ciphertext.assert_valid(params, radix);
-    glwe_secret_key.assert_valid(params);
+    ggsw_ciphertext.assert_is_valid((params.dim, radix.count));
+    glwe_secret_key.assert_is_valid(params.dim);
 
     // To decrypt a GGSW ciphertext, it suffices to decrypt the first GLWE
     // ciphertext in the last row. We can decrypt any of the GLWE ciphertexts in

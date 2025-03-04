@@ -94,7 +94,7 @@ pub fn generate_keyswitch_key_glwe<S>(
 mod tests {
 
     use crate::{
-        dst::FromSlice,
+        dst::{AsSlice, FromSlice},
         entities::{GlweKeyswitchKey, GlweKeyswitchKeyRef},
         high_level::{TEST_GLWE_DEF_1, TEST_RADIX},
         Torus,

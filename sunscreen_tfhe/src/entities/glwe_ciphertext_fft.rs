@@ -2,7 +2,7 @@ use num::{complex::Complex64, Complex, Zero};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    dst::{FromMutSlice, FromSlice, NoWrapper, OverlaySize},
+    dst::{AsMutSlice, AsSlice, FromMutSlice, FromSlice, NoWrapper, OverlaySize},
     GlweDef, GlweDimension, TorusOps,
 };
 
@@ -108,12 +108,6 @@ impl GlweCiphertextFftRef<Complex<f64>> {
         }
 
         self.b(params).ifft(result.b_mut(params));
-    }
-
-    #[inline(always)]
-    /// Asserts this entity is valid for the given `params`.
-    pub fn assert_valid(&self, params: &GlweDef) {
-        assert_eq!(Self::size(params.dim), self.data.len());
     }
 }
 

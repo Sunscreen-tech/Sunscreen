@@ -6,7 +6,7 @@ use crate::{
     ops::encryption::rlwe_encrypt_public,
     polynomial::polynomial_scalar_mul,
     scratch::allocate_scratch_ref,
-    GlweDef, RadixDecomposition, Torus, TorusOps,
+    GlweDef, OverlaySize, RadixDecomposition, Torus, TorusOps,
 };
 
 use super::{
@@ -36,9 +36,9 @@ pub(crate) fn encrypt_secret_glev_ciphertext_generic<S>(
     S: TorusOps,
 {
     radix.assert_valid::<S>();
-    glev_ciphertext.assert_valid(params, radix);
-    msg.assert_valid(params.dim.polynomial_degree);
-    glwe_secret_key.assert_valid(params);
+    glev_ciphertext.assert_is_valid((params.dim, radix.count));
+    msg.assert_is_valid(params.dim.polynomial_degree);
+    glwe_secret_key.assert_is_valid(params.dim);
 
     let decomposition_radix_log = radix.radix_log.0;
 
@@ -142,9 +142,9 @@ pub fn encrypt_rlev_ciphertext<S>(
     S: TorusOps,
 {
     radix.assert_valid::<S>();
-    msg.assert_valid(params.dim.polynomial_degree);
-    rlev_ciphertext.assert_valid(params, radix);
-    rlwe_public_key.assert_valid(params);
+    msg.assert_is_valid(params.dim.polynomial_degree);
+    rlev_ciphertext.assert_is_valid((params.dim, radix.count));
+    rlwe_public_key.assert_is_valid(params.dim);
 
     allocate_scratch_ref!(
         scaled_msg,
@@ -172,10 +172,10 @@ pub(crate) fn decrypt_glwe_in_glev<S>(
     S: TorusOps,
 {
     radix.assert_valid::<S>();
-    msg.assert_valid(params.dim.polynomial_degree);
+    msg.assert_is_valid(params.dim.polynomial_degree);
     params.assert_valid();
-    glev_ciphertext.assert_valid(params, radix);
-    glwe_secret_key.assert_valid(params);
+    glev_ciphertext.assert_is_valid((params.dim, radix.count));
+    glwe_secret_key.assert_is_valid(params.dim);
 
     let decomposition_radix_log = radix.radix_log.0;
 

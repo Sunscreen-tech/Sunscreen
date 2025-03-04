@@ -481,10 +481,6 @@ pub type NoWrapper<T> = T;
 
 pub(crate) trait AsSlice<T> {
     fn as_slice(&self) -> &[T];
-
-    fn len(&self) -> usize {
-        self.as_slice().len()
-    }
 }
 
 pub(crate) trait AsMutSlice<T> {
@@ -492,7 +488,8 @@ pub(crate) trait AsMutSlice<T> {
 }
 
 /// The length of an entity in fundamental elements (i.e. the type of polynomial coefficients in the underlying scheme).
-pub(crate) trait Len {
+pub trait Len {
+    /// Gets the length of this entity in fundamental elements.
     fn len(&self) -> usize;
 }
 

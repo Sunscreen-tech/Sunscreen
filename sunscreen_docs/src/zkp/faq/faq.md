@@ -3,12 +3,10 @@
 ### Why did you create your own ZKP compiler?
 We created our own ZKP compiler mainly to ensure compatibility with our FHE compiler&mdash;existing ZKP compilers were not designed with FHE's needs in mind.
 
-### How will this fit in with Sunscreen's FHE compiler?
-Our ZKP compiler is currently offered as a standalone product.
-
-In the future, Sunscreen's FHE compiler and ZKP compiler will be linked together so that you can prove statements about FHE-encrypted inputs! This is especially important in trustless settings like web3. You will still be able to use either of these offerings independently if desired.
-
-As part of linking together our FHE and ZKP compiler, we're working on an implementation of a proof system that allows us to (somewhat efficiently) show that FHE ciphertexts are well-formed. This proof system is called [Short Discrete Log Proofs for FHE and Ring-LWE Ciphertexts](https://eprint.iacr.org/2019/057) (SDLP). Once we have linked our FHE compiler with SDLP and SDLP with our ZKP compiler, you'll be able to use our FHE and ZKP compilers together.
+### How does this fit in with Sunscreen's FHE compiler?
+While our ZKP compiler can be used as a standalone product, it is uniquely
+useful when used in [conjunction with our FHE compiler](/linked/intro/intro.md) to prove statements about
+FHE-encrypted inputs!
 
 ### Why Bulletproofs as the proof backend? Aren't there more performant proof systems?
 As mentioned earlier, our ZKP compiler was designed with the end goal of it being used in conjunction with our FHE compiler.

@@ -1,9 +1,9 @@
 [book]
-authors = ["Rick Weber", "Ravital Solomon", "Sam Tay"]
+authors = ["Sunscreen Team"]
 language = "en"
 multilingual = false
 src = "src"
-title = "Sunscreen Documentation"
+title = "Sunscreen BFV Documentation"
 
 [output.html]
 mathjax-support = true

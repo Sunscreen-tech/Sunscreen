@@ -1,3 +1,5 @@
+This documentation is about the BFV version of our compiler; for our new FHE compiler based on the TFHE scheme, see our [TFHE Compiler](https://docs.sunscreen.tech) documentation.
+
 # Introduction to FHE and our compiler
 
 Fully homomorphic encryption (FHE) is the next generation of public key encryption schemes. Standard public key encryption allows anyone to share data in a secure way. However, you can't really *do* anything with this encrypted data, apart from decrypting it. That's where FHE comes in! 

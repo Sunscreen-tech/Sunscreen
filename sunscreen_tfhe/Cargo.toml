@@ -9,7 +9,6 @@ license = "AGPL-3.0-only"
 description = "This crate contains the Sunscreen Torus FHE (TFHE) implementation"
 homepage = "https://sunscreen.tech"
 repository = "https://github.com/Sunscreen-tech/Sunscreen"
-documentation = "https://docs.sunscreen.tech"
 keywords = ["FHE", "TFHE", "lattice", "cryptography"]
 categories = ["cryptography"]
 readme = "crates-io.md"

@@ -9,7 +9,6 @@ license = "AGPL-3.0-only"
 description = "A crate for building C++ projects with emcake. This facilitates building wasm binaries with both Rust and C++ code."
 homepage = "https://sunscreen.tech"
 repository = "https://github.com/Sunscreen-tech/Sunscreen"
-documentation = "https://docs.sunscreen.tech"
 keywords = ["emsdk", "emcc", "emcmake"]
 categories = ["development-tools"]
 readme = "crates-io.md"

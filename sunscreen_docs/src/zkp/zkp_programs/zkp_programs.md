@@ -1,6 +1,6 @@
 # What's in a ZKP program?
 
-If you've already read through [our FHE compiler documentation](https://docs.sunscreen.tech/), you'll find that ZKPs
+If you've already read through [our FHE compiler documentation](https://github.com/Sunscreen-tech/Sunscreen/blob/main/sunscreen_docs/src/SUMMARY.md), you'll find that ZKPs
 are, in many ways, much simpler. This is perhaps unsurprising; whereas FHE
 enables general purpose private computation, ZKPs have a narrower purpose. For
 example, ZKP programs don't even have return values!

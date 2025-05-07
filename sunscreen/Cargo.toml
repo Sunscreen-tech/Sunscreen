@@ -12,7 +12,6 @@ license = "AGPL-3.0-only"
 description = "A Fully Homomorphic Encryption (FHE) compiler supporting the Brakerski/Fan-Vercauteren (BFV) scheme."
 homepage = "https://sunscreen.tech"
 repository = "https://github.com/Sunscreen-tech/Sunscreen"
-documentation = "https://docs.sunscreen.tech"
 keywords = ["FHE", "BFV", "lattice", "cryptography"]
 categories = ["cryptography"]
 readme = "crates-io.md"

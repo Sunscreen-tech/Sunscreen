@@ -9,6 +9,7 @@ license = "AGPL-3.0-only"
 description = "The backend for the Sunscreen compiler."
 homepage = "https://sunscreen.tech"
 repository = "https://github.com/Sunscreen-tech/Sunscreen"
+documentation = "https://bfv-docs.sunscreen.tech"
 keywords = ["FHE", "BFV", "lattice", "cryptography"]
 categories = ["cryptography"]
 readme = "crates-io.md"

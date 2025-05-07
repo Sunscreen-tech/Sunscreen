@@ -9,7 +9,7 @@ Sunscreen is an ecosystem for building privacy-preserving applications using ful
 
 If you'd like to try out our FHE compiler before downloading it, we offer [a playground](https://playground.sunscreen.tech).
 
-Extensive documentation can be found [here](https://docs.sunscreen.tech).
+Extensive documentation can be found [here](https://github.com/Sunscreen-tech/Sunscreen/blob/main/sunscreen_docs/src/SUMMARY.md).
 
 *WARNING!* This library is meant for experiments only. It has not been externally audited and is not intended for use in production. 
 

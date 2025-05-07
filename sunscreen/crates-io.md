@@ -44,7 +44,7 @@ fn main() -> Result<(), Error> {
 ```
 
 # Docs
-* [User guide](https://docs.sunscreen.tech)
+* [User guide](https://github.com/Sunscreen-tech/Sunscreen/blob/main/sunscreen_docs/src/SUMMARY.md)
 * [API docs](https://docs.rs/sunscreen)
 
 # Getting help

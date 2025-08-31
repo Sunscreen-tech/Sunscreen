@@ -1,4 +1,4 @@
-# This repository contains the BFV version of our compiler; for our new FHE compiler based on the TFHE scheme, see our [HPU](https://github.com/Sunscreen-tech/hpu/) repository.
+# This repository contains the BFV version of our compiler; for our new FHE compiler based on the TFHE scheme, see our [SPF](https://github.com/Sunscreen-tech/spf/) repository.
 
 
 [![Rust](https://github.com/Sunscreen-tech/Sunscreen/workflows/CI/badge.svg)](https://github.com/Sunscreen-tech/Sunscreen/actions/workflows/rust.yml)

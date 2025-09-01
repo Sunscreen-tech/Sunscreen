@@ -31,7 +31,7 @@ Using apt:
 ```sudo apt install build-essential clang cmake3 libssl-dev git```
 
 After installing prereqs, make a link to `cmake3` named `cmake`
-```sudo ln /usr/bin/cmake3 <somwhere/under/$PATH/>cmake```
+```sudo ln /usr/bin/cmake3 <somewhere/under/$PATH/>cmake```
 
 ## Windows
 We recommend developing sunscreen on macOS or Linux, as Windows is really slow.

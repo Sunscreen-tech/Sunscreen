@@ -77,9 +77,8 @@ pub use sunscreen_zkp_backend::{Error as ZkpError, Proof, Result as ZkpResult, Z
 pub use zkp::{invoke_gadget, ZkpProgramFn, ZkpProgramFnExt};
 
 #[derive(Clone)]
-/**
- * The outcome of successful compilation. Contains one or more [`CompiledFheProgram`].
- */
+/// The outcome of successful compilation. Contains [`CompiledFheProgram`]s and
+/// [`CompiledZkpProgram`]s.
 pub struct Application<T> {
     fhe_programs: HashMap<String, CompiledFheProgram>,
     zkp_programs: HashMap<String, CompiledZkpProgram>,
@@ -96,7 +95,7 @@ impl<T> Application<T> {
      * The programs [`HashMap`] must contain at least 1 program or this
      * function will return [`Error::NoPrograms`].
      *
-     * You should generally not call this function
+     * You should generally not call this function.
      * It is an implementation detail of compilation.
      */
     pub(crate) fn new(
@@ -112,22 +111,6 @@ impl<T> Application<T> {
             zkp_programs,
             _phantom: PhantomData,
         })
-    }
-}
-
-impl<T> Application<T>
-where
-    T: marker::Fhe,
-{
-    /**
-     * Returns the [`Params`] suitable for running each contained [`CompiledFheProgram`].
-     * These parameters were chosen during compilation.
-     *
-     * # Remarks
-     * If no [`fhe_program`] was specified, this function panics.
-     */
-    pub fn params(&self) -> &Params {
-        &self.fhe_programs.values().next().unwrap().metadata.params
     }
 
     #[deprecated]
@@ -180,12 +163,7 @@ where
     {
         self.fhe_programs.remove(name.as_ref())
     }
-}
 
-impl<T> Application<T>
-where
-    T: marker::Zkp,
-{
     /**
      * Returns the [`CompiledZkpProgram`] with the given name
      * or [`None`] if not present.
@@ -214,6 +192,32 @@ where
         N: AsRef<str>,
     {
         self.zkp_programs.remove(name.as_ref())
+    }
+}
+
+impl<T> Application<T>
+where
+    T: marker::Fhe,
+{
+    /**
+     * Returns the [`Params`] suitable for running each contained program.
+     * These parameters were chosen (or manually set) during compilation.
+     */
+    pub fn params(&self) -> &Params {
+        // This unwrap should be safe. You could almost get to an `Application<T: Fhe>` by
+        // compiling with manual params and without programs, however if this application was
+        // created with the `Application::new` method above, we would have thrown a
+        // `NoPrograms` error.
+        self.fhe_programs
+            .values()
+            .next()
+            .map(|p| &p.metadata.params)
+            .or_else(|| {
+                self.zkp_programs
+                    .values()
+                    .find_map(|p| p.metadata.params.as_ref())
+            })
+            .expect("bug: params should be present on at least one program")
     }
 }
 
